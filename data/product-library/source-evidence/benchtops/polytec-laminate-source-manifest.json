@@ -1,0 +1,3574 @@
+{
+  "verifiedAt": "2026-09-11",
+  "sourceUrl": "https://www.polytec.com.au/specify/product-by-application/benchtops/benchtops/",
+  "sourceHttpStatus": 200,
+  "sourceSha256": "7213b12e4182649b021f50ade6c7f149b5dbf580de051b6877245ea3a57bf161",
+  "listingColourFinishCount": 226,
+  "groupedColourCount": 202,
+  "pages": [
+    {
+      "url": "https://www.polytec.com.au/colour/adriatic/",
+      "finalUrl": "https://www.polytec.com.au/colour/adriatic/",
+      "httpStatus": 200,
+      "sha256": "6e280a8969ce33d5bd8847b7c88049d8bbe4c361ce809ed6f6571dae761e026e",
+      "colourName": "Adriatic",
+      "finishes": [
+        "Smooth"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/aegean-oak/",
+      "finalUrl": "https://www.polytec.com.au/colour/aegean-oak/",
+      "httpStatus": 200,
+      "sha256": "a2fa405d92ecbbaae6be84964bbc7d832748c1d74d258e7ccb9579e685c8881b",
+      "colourName": "Aegean Oak",
+      "finishes": [
+        "Ravine"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/agave/",
+      "finalUrl": "https://www.polytec.com.au/colour/agave/",
+      "httpStatus": 200,
+      "sha256": "8cfe1a6e2c15008611860eed24cba29258fd9616664ef72f260ebafdf88233f5",
+      "colourName": "Agave",
+      "finishes": [
+        "Smooth"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/alabaster/",
+      "finalUrl": "https://www.polytec.com.au/colour/alabaster/",
+      "httpStatus": 200,
+      "sha256": "7828777ca12e74e6d4ba2e69e925dff85b3fb30e343d1e92a9ca4d4a5ef3b9a3",
+      "colourName": "Alabaster",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/alboran-stone/",
+      "finalUrl": "https://www.polytec.com.au/colour/alboran-stone/",
+      "httpStatus": 200,
+      "sha256": "91d8398f9d1106234e5875f0a002e0d2b259ef43840dca9615d7753122534064",
+      "colourName": "Alboran Stone",
+      "finishes": [
+        "Smooth"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/alicante-stone/",
+      "finalUrl": "https://www.polytec.com.au/colour/alicante-stone/",
+      "httpStatus": 200,
+      "sha256": "8967533f1d539ab45afa08cce2a5ecb82b3f73e5d09b44d84516200edd7c5b9d",
+      "colourName": "Alicante Stone",
+      "finishes": [
+        "Smooth"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/aluminium/",
+      "finalUrl": "https://www.polytec.com.au/colour/aluminium/",
+      "httpStatus": 200,
+      "sha256": "a2e18d73d189abdb9863e990a679f6b19b30e7f24d90157df98a54296ac1d586",
+      "colourName": "Aluminium",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/amaro/",
+      "finalUrl": "https://www.polytec.com.au/colour/amaro/",
+      "httpStatus": 200,
+      "sha256": "d3654d710bd2ffb6dbc76ad75cb92987c90eff697d96c5f1d1d68151b6fde0c6",
+      "colourName": "Amaro",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/angora-oak/",
+      "finalUrl": "https://www.polytec.com.au/colour/angora-oak/",
+      "httpStatus": 200,
+      "sha256": "a314d81e5ad7896c9a99a7dadf5f9bda6fda9d881055535050c5c6b4205bb469",
+      "colourName": "Angora Oak",
+      "finishes": [
+        "Woodmatt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/antico-oak/",
+      "finalUrl": "https://www.polytec.com.au/colour/antico-oak/",
+      "httpStatus": 200,
+      "sha256": "f5c5cc538f55751aa0af5b66abdc1529f85d0fbadacb2272e3bef793ca3d174b",
+      "colourName": "Antico Oak",
+      "finishes": [
+        "Woodmatt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/antique/",
+      "finalUrl": "https://www.polytec.com.au/colour/antique/",
+      "httpStatus": 200,
+      "sha256": "4dd8c4031f0a3787da355131d5a22a9b078e76fbf5634e1848b13988f3a1a99f",
+      "colourName": "Antique",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/arabica/",
+      "finalUrl": "https://www.polytec.com.au/colour/arabica/",
+      "httpStatus": 200,
+      "sha256": "bc74ef0ca008a2af4339d2d2447cd6aa52a0a354461f48e8b4bc60738d887d8f",
+      "colourName": "Arabica",
+      "finishes": [
+        "Smooth"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/arcadia-oak/",
+      "finalUrl": "https://www.polytec.com.au/colour/arcadia-oak/",
+      "httpStatus": 200,
+      "sha256": "41eb0e2f6063aae74459aff24f321b02e0c872d1c942b79ad7295287b92b47bd",
+      "colourName": "Arcadia Oak",
+      "finishes": [
+        "Woodmatt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/ardesia-stone/",
+      "finalUrl": "https://www.polytec.com.au/colour/ardesia-stone/",
+      "httpStatus": 200,
+      "sha256": "ba5397a03f30e333a955d5d7b45566b669687ed21deb6c86ba0ca8858b5ff19e",
+      "colourName": "Ardesia Stone",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/argento-stone/",
+      "finalUrl": "https://www.polytec.com.au/colour/argento-stone/",
+      "httpStatus": 200,
+      "sha256": "96ab57609465fea0051b797d9e295033b1560240c88db773ed0009c3812ba528",
+      "colourName": "Argento Stone",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/artisan-oak/",
+      "finalUrl": "https://www.polytec.com.au/colour/artisan-oak/",
+      "httpStatus": 200,
+      "sha256": "71c65097c0b773ef7ead932fe459dd25ef480bd78ef9c7d6a27f5114606ea3d4",
+      "colourName": "Artisan Oak",
+      "finishes": [
+        "Matt",
+        "Ravine"
+      ],
+      "manufacturerSkuCount": 5,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/aspen-stone/",
+      "finalUrl": "https://www.polytec.com.au/colour/aspen-stone/",
+      "httpStatus": 200,
+      "sha256": "9d25f1edae201a118c471143872553a77ec2bf7082aadf40d4f1a7513c05479d",
+      "colourName": "Aspen Stone",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/aston-white/",
+      "finalUrl": "https://www.polytec.com.au/colour/aston-white/",
+      "httpStatus": 200,
+      "sha256": "164f0b978e1418696d670d96d7c7a4017e314d74c9e1a4545d78b34ac0f1a27b",
+      "colourName": "Aston White",
+      "finishes": [
+        "Smooth"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/athena-stone/",
+      "finalUrl": "https://www.polytec.com.au/colour/athena-stone/",
+      "httpStatus": 200,
+      "sha256": "cc789d93ed15854e50659787c09deffb3d04c8e11ee5e4c1156770cee1b56228",
+      "colourName": "Athena Stone",
+      "finishes": [
+        "Smooth"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/australian-native/",
+      "finalUrl": "https://www.polytec.com.au/colour/australian-native/",
+      "httpStatus": 200,
+      "sha256": "8cd80028bb7af279e5867f96d72dfb5f468db4f28d1a627dd75b2c3588fd6681",
+      "colourName": "Australian Native",
+      "finishes": [
+        "Woodmatt"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/avion-grey/",
+      "finalUrl": "https://www.polytec.com.au/colour/avion-grey/",
+      "httpStatus": 200,
+      "sha256": "fba9dd93c9cf6e7e1a8ddd2c720c2535fc9a48b673cc2060f45558be5aa5e06d",
+      "colourName": "Avion Grey",
+      "finishes": [
+        "Matt",
+        "Ravine"
+      ],
+      "manufacturerSkuCount": 2,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/barrington-marble/",
+      "finalUrl": "https://www.polytec.com.au/colour/barrington-marble/",
+      "httpStatus": 200,
+      "sha256": "86cf02fa71e2db8910cd3ceef319a2f511b1dbb5bdd8d459f160b18081262158",
+      "colourName": "Barrington Marble",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/batten-oak/",
+      "finalUrl": "https://www.polytec.com.au/colour/batten-oak/",
+      "httpStatus": 200,
+      "sha256": "d9f372f12e9c6037b249de4e312160836316619b027360c2aa084d28a7cfa1ed",
+      "colourName": "Batten Oak",
+      "finishes": [
+        "Woodmatt"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/beige-travertine/",
+      "finalUrl": "https://www.polytec.com.au/colour/beige-travertine/",
+      "httpStatus": 200,
+      "sha256": "9cc303a073b3ea3cc2b679b3229782e8213875b8a91b752f87ec7eda3e4eff5d",
+      "colourName": "Beige Travertine",
+      "finishes": [
+        "Smooth"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/belgian-oak/",
+      "finalUrl": "https://www.polytec.com.au/colour/belgian-oak/",
+      "httpStatus": 200,
+      "sha256": "b1987e8d9b67e50e73196938081f6183f120825f2ed1fee4d0c9bf8a47d00098",
+      "colourName": "Belgian Oak",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/bernini-marble/",
+      "finalUrl": "https://www.polytec.com.au/colour/bernini-marble/",
+      "httpStatus": 200,
+      "sha256": "2db23f27d14dc559b4e6356af469b2889ae1c5d69f0bb20a17b4fa9aa2844242",
+      "colourName": "Bernini Marble",
+      "finishes": [
+        "Smooth"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/bespoke/",
+      "finalUrl": "https://www.polytec.com.au/colour/bespoke/",
+      "httpStatus": 200,
+      "sha256": "9565126e9f94d7caa2010ca0deed69ef666491ad55b6677563b04345e8818f99",
+      "colourName": "Bespoke",
+      "finishes": [
+        "Woodmatt"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/black/",
+      "finalUrl": "https://www.polytec.com.au/colour/black/",
+      "httpStatus": 200,
+      "sha256": "b1aa6dd3ef3dae310cd491b340e9c265aeba108ee8407d15eeec3e1a09e3e945",
+      "colourName": "Black",
+      "finishes": [
+        "Matt",
+        "Texture",
+        "Woodmatt",
+        "Venette"
+      ],
+      "manufacturerSkuCount": 10,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/black-ply/",
+      "finalUrl": "https://www.polytec.com.au/colour/black-ply/",
+      "httpStatus": 200,
+      "sha256": "0b8fa4624ad9c838655db2a5e1a652a8056eececf8fdee5e805a6c6f0fc5586f",
+      "colourName": "Black Ply",
+      "finishes": [
+        "Woodmatt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/black-wenge/",
+      "finalUrl": "https://www.polytec.com.au/colour/black-wenge/",
+      "httpStatus": 200,
+      "sha256": "e251cba70f38ac026cb22533a5321f28ba9b11937d311234b4aefa6e9ccc051b",
+      "colourName": "Black Wenge",
+      "finishes": [
+        "Matt",
+        "Ravine"
+      ],
+      "manufacturerSkuCount": 2,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/blackened-oak/",
+      "finalUrl": "https://www.polytec.com.au/colour/blackened-oak/",
+      "httpStatus": 200,
+      "sha256": "2b754d60fac2ead9458042e349ff4c11f8730b27ecdb524cacc12b660a8c131d",
+      "colourName": "Blackened Oak",
+      "finishes": [
+        "Woodmatt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/blackrock/",
+      "finalUrl": "https://www.polytec.com.au/colour/blackrock/",
+      "httpStatus": 200,
+      "sha256": "a64b7ff2fc8c3c54dab5c425b24621440a971c569c38ba1a14a02cac1fead5bb",
+      "colourName": "Blackrock",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/blanco-marquina/",
+      "finalUrl": "https://www.polytec.com.au/colour/blanco-marquina/",
+      "httpStatus": 200,
+      "sha256": "23b2d93d88e8057c5d10db714baef0e82964be2ac31230f760a40b0f729a45dc",
+      "colourName": "Blanco Marquina",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/bleached-walnut/",
+      "finalUrl": "https://www.polytec.com.au/colour/bleached-walnut/",
+      "httpStatus": 200,
+      "sha256": "9e5109fa836975a90df59833b97ea637edb6c8ac32cf9b063549fb50fb1a0e4a",
+      "colourName": "Bleached Walnut",
+      "finishes": [
+        "Ravine"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/blonde-oak/",
+      "finalUrl": "https://www.polytec.com.au/colour/blonde-oak/",
+      "httpStatus": 200,
+      "sha256": "6f18c1c59d01de2debff7abc7070bf80145c8a059fa1026b17e7f9e27405bc03",
+      "colourName": "Blonde Oak",
+      "finishes": [
+        "Woodmatt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/blossom-white/",
+      "finalUrl": "https://www.polytec.com.au/colour/blossom-white/",
+      "httpStatus": 200,
+      "sha256": "31578a9ae56f384023046b852a38c01f26c2c3f7d95e96b78e3d5c53970218cf",
+      "colourName": "Blossom White",
+      "finishes": [
+        "Matt",
+        "Woodmatt",
+        "Ravine"
+      ],
+      "manufacturerSkuCount": 3,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/boston-oak/",
+      "finalUrl": "https://www.polytec.com.au/colour/boston-oak/",
+      "httpStatus": 200,
+      "sha256": "dc17dc3cd774a0a683bf170ddc3887c77f68ecc0146c6f053684ed39f44e4f13",
+      "colourName": "Boston Oak",
+      "finishes": [
+        "Woodmatt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/botanic/",
+      "finalUrl": "https://www.polytec.com.au/colour/botanic/",
+      "httpStatus": 200,
+      "sha256": "dc8dfa7c667b6f27fc04944c9e648daf74135eec756317ead8eb1dba6542fd19",
+      "colourName": "Botanic",
+      "finishes": [
+        "Smooth"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/botany-oak/",
+      "finalUrl": "https://www.polytec.com.au/colour/botany-oak/",
+      "httpStatus": 200,
+      "sha256": "927f5c5ca8890e7cdce148c55fcc91a33c25f14aeb7b4312b49d4f8e78fa2ec6",
+      "colourName": "Botany Oak",
+      "finishes": [
+        "Woodmatt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/bottega-oak/",
+      "finalUrl": "https://www.polytec.com.au/colour/bottega-oak/",
+      "httpStatus": 200,
+      "sha256": "b1e25ae7d4339cbabb4888f3df980e7bd63f1e7639af1fa5d9eba6f80140b95f",
+      "colourName": "Bottega Oak",
+      "finishes": [
+        "Woodmatt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/bottocino/",
+      "finalUrl": "https://www.polytec.com.au/colour/bottocino/",
+      "httpStatus": 200,
+      "sha256": "235f0d10beb81a7ce2e26588e338091ed1e6d71a71e70aba770bb38979451e38",
+      "colourName": "Bottocino",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/bronze-gold-leaf/",
+      "finalUrl": "https://www.polytec.com.au/colour/bronze-gold-leaf/",
+      "httpStatus": 200,
+      "sha256": "479cc65877185d5e323fca6f9ee668c49002dcc4c831234524cc218384728f86",
+      "colourName": "Bronze Gold Leaf",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/bronzed-oak/",
+      "finalUrl": "https://www.polytec.com.au/colour/bronzed-oak/",
+      "httpStatus": 200,
+      "sha256": "538a6f2f6a1613a06a014b49c75ca8a3627c3c7919e797851d2de0abf38b81dc",
+      "colourName": "Bronzed Oak",
+      "finishes": [
+        "Woodmatt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/brushed-aluminium/",
+      "finalUrl": "https://www.polytec.com.au/colour/brushed-aluminium/",
+      "httpStatus": 200,
+      "sha256": "064b5fa4a2d2827930bded96c683b3be38463174de2f2be7d1a2977754ca8d41",
+      "colourName": "Brushed Aluminium",
+      "finishes": [],
+      "manufacturerSkuCount": 0,
+      "finishVariantsWithoutOrderingCodes": [
+        "Metallic"
+      ],
+      "excluded": true
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/brushed-stainless/",
+      "finalUrl": "https://www.polytec.com.au/colour/brushed-stainless/",
+      "httpStatus": 200,
+      "sha256": "e2061e1b67281826532f64924e84194b3a50e436322c69344a4cba378408decb",
+      "colourName": "Brushed Stainless",
+      "finishes": [],
+      "manufacturerSkuCount": 0,
+      "finishVariantsWithoutOrderingCodes": [
+        "Metallic"
+      ],
+      "excluded": true
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/buller-stone/",
+      "finalUrl": "https://www.polytec.com.au/colour/buller-stone/",
+      "httpStatus": 200,
+      "sha256": "e6e2eb04ef5f0243d61363e62f0d371f758d4f303c8326cdb7e7f4f9922c112e",
+      "colourName": "Buller Stone",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/byzantine-oak/",
+      "finalUrl": "https://www.polytec.com.au/colour/byzantine-oak/",
+      "httpStatus": 200,
+      "sha256": "f51fd83ba1371db920356d61a19c9f21243042dfd6b602111ad9e4f75957e2f6",
+      "colourName": "Byzantine Oak",
+      "finishes": [
+        "Ravine"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/cafe-cream/",
+      "finalUrl": "https://www.polytec.com.au/colour/cafe-cream/",
+      "httpStatus": 200,
+      "sha256": "9de21d8bc192cca494476161cea0a191ef4e8e2b9cf38a154cc3a8d1a1c5714f",
+      "colourName": "Cafe Cream",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/cafe-oak/",
+      "finalUrl": "https://www.polytec.com.au/colour/cafe-oak/",
+      "httpStatus": 200,
+      "sha256": "d17260b9624c8d1bed27903b425d668dfd92d59e7e1f10c604a753c3ee25f577",
+      "colourName": "Cafe Oak",
+      "finishes": [
+        "Ravine"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/calacutta-doro/",
+      "finalUrl": "https://www.polytec.com.au/colour/calacutta-doro/",
+      "httpStatus": 200,
+      "sha256": "90e38a69d16ee82ccc505593e15f8a93634ab862762bf59fcea32424c1d15d0d",
+      "colourName": "Calacutta D'oro",
+      "finishes": [
+        "Smooth"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/calacutta-grey/",
+      "finalUrl": "https://www.polytec.com.au/colour/calacutta-grey/",
+      "httpStatus": 200,
+      "sha256": "97bfc63d5defe9cfc404f8c42e7370e047a66780c777ed4fb5262faeb9f8ad8d",
+      "colourName": "Calacutta Grey",
+      "finishes": [
+        "Smooth"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/canterbury-grey/",
+      "finalUrl": "https://www.polytec.com.au/colour/canterbury-grey/",
+      "httpStatus": 200,
+      "sha256": "8f4409fdcf9109dab5892ee271c14d1fb2160c92c55c1d4fb4f64f37ce0d4406",
+      "colourName": "Canterbury Grey",
+      "finishes": [
+        "Matt",
+        "Ravine"
+      ],
+      "manufacturerSkuCount": 2,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/carmine-oak/",
+      "finalUrl": "https://www.polytec.com.au/colour/carmine-oak/",
+      "httpStatus": 200,
+      "sha256": "4cb916aaba305a74325e9aca9b06102680aa8d5d5dc2d010d6b518ebcb300eb1",
+      "colourName": "Carmine Oak",
+      "finishes": [
+        "Ravine"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/carrara/",
+      "finalUrl": "https://www.polytec.com.au/colour/carrara/",
+      "httpStatus": 200,
+      "sha256": "0221590a0cdc3569056aab2c2f63699f26059c25806800fd3d09d547833506c1",
+      "colourName": "Carrara",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/casastone/",
+      "finalUrl": "https://www.polytec.com.au/colour/casastone/",
+      "httpStatus": 200,
+      "sha256": "2434de93013df8b0d34377ac55226805b291a83f50df1dee8d3e76e6924df602",
+      "colourName": "Casastone",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/casentino-beech/",
+      "finalUrl": "https://www.polytec.com.au/colour/casentino-beech/",
+      "httpStatus": 200,
+      "sha256": "ba35ea7249d15861742e64a5b543cf6665453b50dd5e1eb74f4b01477cf99f45",
+      "colourName": "Casentino Beech",
+      "finishes": [
+        "Woodmatt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/catalina-marble/",
+      "finalUrl": "https://www.polytec.com.au/colour/catalina-marble/",
+      "httpStatus": 200,
+      "sha256": "3e229cf64206ff359742e4dc7f733e06bfd2734bdc432248d50f0b90521c22ef",
+      "colourName": "Catalina Marble",
+      "finishes": [
+        "Smooth"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/cavia-lini/",
+      "finalUrl": "https://www.polytec.com.au/colour/cavia-lini/",
+      "httpStatus": 200,
+      "sha256": "20582fcfda06d99d901a8f71d9221a15bf0c2417be5f7341d815df3f7f82b43f",
+      "colourName": "Cavia Lini",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/chambord/",
+      "finalUrl": "https://www.polytec.com.au/colour/chambord/",
+      "httpStatus": 200,
+      "sha256": "ed4561f4f03e4b65a09a1870d915bc6c449a54d08e9c8bed5fbf94e98203ed2e",
+      "colourName": "Chambord",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/char-oak/",
+      "finalUrl": "https://www.polytec.com.au/colour/char-oak/",
+      "httpStatus": 200,
+      "sha256": "40d2f437dfbee6ae12cb9029d5c8c0dd1cb251d549e42b85553632eba8ee83ee",
+      "colourName": "Char Oak",
+      "finishes": [
+        "Matt",
+        "Ravine"
+      ],
+      "manufacturerSkuCount": 2,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/charcoal-fabrini/",
+      "finalUrl": "https://www.polytec.com.au/colour/charcoal-fabrini/",
+      "httpStatus": 200,
+      "sha256": "6727cf43576ba29ea41471bbce871ff5ccdabe6025be78609e0470ad3a62225b",
+      "colourName": "Charcoal Fabrini",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/cinder/",
+      "finalUrl": "https://www.polytec.com.au/colour/cinder/",
+      "httpStatus": 200,
+      "sha256": "d1216d55a57728a6bd8966d13b83fff7cbbfd5613453fc194f4faaa2952e2d55",
+      "colourName": "Cinder",
+      "finishes": [
+        "Matt",
+        "Woodmatt"
+      ],
+      "manufacturerSkuCount": 2,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/citrine-oak/",
+      "finalUrl": "https://www.polytec.com.au/colour/citrine-oak/",
+      "httpStatus": 200,
+      "sha256": "bd3c7846c2637c5bc6d6aa9d11be221bd421ab9138c35d04c65f8375cfefdcb0",
+      "colourName": "Citrine Oak",
+      "finishes": [
+        "Ravine"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/classic-white/",
+      "finalUrl": "https://www.polytec.com.au/colour/classic-white/",
+      "httpStatus": 200,
+      "sha256": "d435cc8a80c2f10fc64b2f23b64b23358de91679318d048ac5a48bea9a4cb44c",
+      "colourName": "Classic White",
+      "finishes": [
+        "Texture",
+        "Matt"
+      ],
+      "manufacturerSkuCount": 8,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/coastal-oak/",
+      "finalUrl": "https://www.polytec.com.au/colour/coastal-oak/",
+      "httpStatus": 200,
+      "sha256": "464bdd5781b84664f6f3fe756332eaa98ce4a0d187f06cb76455527f82bbec1f",
+      "colourName": "Coastal Oak",
+      "finishes": [
+        "Woodmatt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/concrete-fabrini/",
+      "finalUrl": "https://www.polytec.com.au/colour/concrete-fabrini/",
+      "httpStatus": 200,
+      "sha256": "ea26a79905f1b8e9c06c529e4d34a1d57f6c0ebed8d5139245cce80040e846e5",
+      "colourName": "Concrete Fabrini",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/copper-leaf/",
+      "finalUrl": "https://www.polytec.com.au/colour/copper-leaf/",
+      "httpStatus": 200,
+      "sha256": "584f37ad4556bab9b7ae784b64a1a88c311759d8058cabd94bc477fadf4a814c",
+      "colourName": "Copper Leaf",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/corsica/",
+      "finalUrl": "https://www.polytec.com.au/colour/corsica/",
+      "httpStatus": 200,
+      "sha256": "973e40644b14f5e79e98e9c4a09f4c60053787b0922ee554c3611fe34eef7f19",
+      "colourName": "Corsica",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/cosmic-granite/",
+      "finalUrl": "https://www.polytec.com.au/colour/cosmic-granite/",
+      "httpStatus": 200,
+      "sha256": "96488c0fa1fb50e15230d670afbd3ad7b4754cf61d7864789ef421b6db1f3e7d",
+      "colourName": "Cosmic Granite",
+      "finishes": [
+        "Smooth"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/crema-lini/",
+      "finalUrl": "https://www.polytec.com.au/colour/crema-lini/",
+      "httpStatus": 200,
+      "sha256": "a54a30746f976d87ef2221c476aa517cd9cb959ef0302c4f878777187a055e33",
+      "colourName": "Crema Lini",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/danish-rattan/",
+      "finalUrl": "https://www.polytec.com.au/colour/danish-rattan/",
+      "httpStatus": 200,
+      "sha256": "485ef489d04eeddfb804035e7d0cc79c99a28bbb0aea56f2ad53e3b36432435f",
+      "colourName": "Danish Rattan",
+      "finishes": [
+        "Woodmatt"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/dark-batten-oak/",
+      "finalUrl": "https://www.polytec.com.au/colour/dark-batten-oak/",
+      "httpStatus": 200,
+      "sha256": "1dddd3ed09c259fc8d25e7a39a0086803cc92d4082baf6e4a243118072cb40f2",
+      "colourName": "Dark Batten Oak",
+      "finishes": [
+        "Woodmatt"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/dark-cement/",
+      "finalUrl": "https://www.polytec.com.au/colour/dark-cement/",
+      "httpStatus": 200,
+      "sha256": "48ba3f278cdd4b470549f39e4966057a597bec50af85ac87c3895a8953a4d48d",
+      "colourName": "Dark Cement",
+      "finishes": [
+        "Smooth"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/dawnshade/",
+      "finalUrl": "https://www.polytec.com.au/colour/dawnshade/",
+      "httpStatus": 200,
+      "sha256": "2567e2ccec1ae2bdc0e3fde83a091b16c0e39b9ce3ee8e1a918cb51ac9f96fe5",
+      "colourName": "Dawnshade",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/desideria-marble/",
+      "finalUrl": "https://www.polytec.com.au/colour/desideria-marble/",
+      "httpStatus": 200,
+      "sha256": "118bbb31a0036f572c34802138227edf8ba8ddf66ddc3a28bf8b563fbd81c0d8",
+      "colourName": "Desideria Marble",
+      "finishes": [
+        "Smooth"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/designer-white/",
+      "finalUrl": "https://www.polytec.com.au/colour/designer-white/",
+      "httpStatus": 200,
+      "sha256": "216a714bd8b486d92cfa80056f615e12bcfbc676103c413db2175f3a2f0717e6",
+      "colourName": "Designer White",
+      "finishes": [
+        "Texture"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/distressed-wood/",
+      "finalUrl": "https://www.polytec.com.au/colour/distressed-wood/",
+      "httpStatus": 200,
+      "sha256": "5ca3b89cf33ad74643ae0a33ca01b8b7dfa60d590f3e05229f1c38b4c3010a95",
+      "colourName": "Distressed Wood",
+      "finishes": [
+        "Ravine"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/district-oak/",
+      "finalUrl": "https://www.polytec.com.au/colour/district-oak/",
+      "httpStatus": 200,
+      "sha256": "d8ab9525012d5faeb109b73ee7524db2bfd38a800cd27c6ae094a55021045070",
+      "colourName": "District Oak",
+      "finishes": [
+        "Woodmatt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/drifted-oak/",
+      "finalUrl": "https://www.polytec.com.au/colour/drifted-oak/",
+      "httpStatus": 200,
+      "sha256": "4da7b609626de03e49b2901c753741a6d72469f9daf148e562b439718e06e487",
+      "colourName": "Drifted Oak",
+      "finishes": [
+        "Ravine"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/ecru-oak/",
+      "finalUrl": "https://www.polytec.com.au/colour/ecru-oak/",
+      "httpStatus": 200,
+      "sha256": "5a4453eea68e6e351c72b3dd1439aa01d4feb31799e6f02b19c08e9c5dc3fbbd",
+      "colourName": "Ecru Oak",
+      "finishes": [
+        "Woodmatt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/elemental-grey/",
+      "finalUrl": "https://www.polytec.com.au/colour/elemental-grey/",
+      "httpStatus": 200,
+      "sha256": "f240ec77f59146ca10a6d5da900a7ddaa1357aff4c3c3dfad152fabc3cf86aa6",
+      "colourName": "Elemental Grey",
+      "finishes": [
+        "Ravine",
+        "Smooth"
+      ],
+      "manufacturerSkuCount": 5,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/emperor-stone/",
+      "finalUrl": "https://www.polytec.com.au/colour/emperor-stone/",
+      "httpStatus": 200,
+      "sha256": "4499ed5b9323485722c77e37b280d24504746a741979b9475e5706c9af1ace63",
+      "colourName": "Emperor Stone",
+      "finishes": [
+        "Smooth"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/empire-oak/",
+      "finalUrl": "https://www.polytec.com.au/colour/empire-oak/",
+      "httpStatus": 200,
+      "sha256": "353e7606045ad382a577b937c2e7fe5765e895c475d59a264694101867e50baf",
+      "colourName": "Empire Oak",
+      "finishes": [
+        "Woodmatt",
+        "Matt"
+      ],
+      "manufacturerSkuCount": 8,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/espresso-fabrini/",
+      "finalUrl": "https://www.polytec.com.au/colour/espresso-fabrini/",
+      "httpStatus": 200,
+      "sha256": "02448123d224f676af4e466ea406a6b5e33c5f50d68b411b8a508e6c55b9ad0f",
+      "colourName": "Espresso Fabrini",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/estella-oak/",
+      "finalUrl": "https://www.polytec.com.au/colour/estella-oak/",
+      "httpStatus": 200,
+      "sha256": "689634824340c0b40fa9611599996720bb9c29118a313073f1e9165cd88a0a1a",
+      "colourName": "Estella Oak",
+      "finishes": [
+        "Woodmatt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/european-walnut/",
+      "finalUrl": "https://www.polytec.com.au/colour/european-walnut/",
+      "httpStatus": 200,
+      "sha256": "9baeace6e70b263ed6e14e4dd28c99240aba33c35d24c7299135b7aefbc4bda7",
+      "colourName": "European Walnut",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/feldspar-shimmer/",
+      "finalUrl": "https://www.polytec.com.au/colour/feldspar-shimmer/",
+      "httpStatus": 200,
+      "sha256": "1b32492c350e37e7037187987565cc0e7ac28b7f8923ebe4811cd7e251d9d38c",
+      "colourName": "Feldspar Shimmer",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/ferro/",
+      "finalUrl": "https://www.polytec.com.au/colour/ferro/",
+      "httpStatus": 200,
+      "sha256": "337027a42281e304cf924b5cbacc857c9e042945cdbb577eee67a2e70a4a48a2",
+      "colourName": "Ferro",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/florentine-walnut/",
+      "finalUrl": "https://www.polytec.com.au/colour/florentine-walnut/",
+      "httpStatus": 200,
+      "sha256": "3db9a749eac26e114bd836efb9b89de2b60d8e2c257afa02c7928fb3f3201678",
+      "colourName": "Florentine Walnut",
+      "finishes": [
+        "Woodmatt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/fontaine/",
+      "finalUrl": "https://www.polytec.com.au/colour/fontaine/",
+      "httpStatus": 200,
+      "sha256": "1965277aa9a9295f6b9fa48083d2c20ffc1b9a090058e88fa9765454b4395a25",
+      "colourName": "Fontaine",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/forage/",
+      "finalUrl": "https://www.polytec.com.au/colour/forage/",
+      "httpStatus": 200,
+      "sha256": "3008e13da68355d1355de27ef1edabc30091d4f6b2bfb946ee280c4f0331f51a",
+      "colourName": "Forage",
+      "finishes": [
+        "Smooth"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/french-stone/",
+      "finalUrl": "https://www.polytec.com.au/colour/french-stone/",
+      "httpStatus": 200,
+      "sha256": "6c0bf0a1896e3bfc45e63b0a5b5a70525b0b0028b9c9a2044ab013c9dd4376f0",
+      "colourName": "French Stone",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/gesso-lini/",
+      "finalUrl": "https://www.polytec.com.au/colour/gesso-lini/",
+      "httpStatus": 200,
+      "sha256": "7eee04a4c7266b87b7e7fcac8056fdd413f1649f3d583cc90ba84fe047c2b4a5",
+      "colourName": "Gesso Lini",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/gossamer-white/",
+      "finalUrl": "https://www.polytec.com.au/colour/gossamer-white/",
+      "httpStatus": 200,
+      "sha256": "60d649690ff976a049bc63141cd92679140a8bc740807059fa4d97daaedd8778",
+      "colourName": "Gossamer White",
+      "finishes": [
+        "Ravine",
+        "Smooth"
+      ],
+      "manufacturerSkuCount": 5,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/graphite/",
+      "finalUrl": "https://www.polytec.com.au/colour/graphite/",
+      "httpStatus": 200,
+      "sha256": "f92ebb5b66233796b481f06ba182fc045223baee08be1c9a9a2f7de02e2994b9",
+      "colourName": "Graphite",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/greige/",
+      "finalUrl": "https://www.polytec.com.au/colour/greige/",
+      "httpStatus": 200,
+      "sha256": "9e8fe4a1ce24def04194b1179142ea12d947795c1b3619564829367a045ed4bf",
+      "colourName": "Greige",
+      "finishes": [
+        "Matt",
+        "Ravine"
+      ],
+      "manufacturerSkuCount": 2,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/grey-cement/",
+      "finalUrl": "https://www.polytec.com.au/colour/grey-cement/",
+      "httpStatus": 200,
+      "sha256": "01a3466b4a60f336255d1e93bd6f808d0f2b866395fa0afb75ad636775e8f075",
+      "colourName": "Grey Cement",
+      "finishes": [
+        "Smooth"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/grey-taj/",
+      "finalUrl": "https://www.polytec.com.au/colour/grey-taj/",
+      "httpStatus": 200,
+      "sha256": "82074a975afe3d244e69ab547dace9f1f0cbe21610e35c3524a0343371effd1d",
+      "colourName": "Grey Taj",
+      "finishes": [
+        "Smooth"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/greystone/",
+      "finalUrl": "https://www.polytec.com.au/colour/greystone/",
+      "httpStatus": 200,
+      "sha256": "6864aaa9182dbf51b94350632c6e5d239d20fb7057f6af8627d1571a8feabbb7",
+      "colourName": "Greystone",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/habitat/",
+      "finalUrl": "https://www.polytec.com.au/colour/habitat/",
+      "httpStatus": 200,
+      "sha256": "3f212a234ee7d56e87eae059004bb938adec6679bc668de868d9f72c7648aea3",
+      "colourName": "Habitat",
+      "finishes": [
+        "Smooth"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/havana-oak/",
+      "finalUrl": "https://www.polytec.com.au/colour/havana-oak/",
+      "httpStatus": 200,
+      "sha256": "440a4deb7c11a9db400e11b51a46ecb27a28278a8a7b2c5a3ce375dfe6821e38",
+      "colourName": "Havana Oak",
+      "finishes": [
+        "Woodmatt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/hazel-oak/",
+      "finalUrl": "https://www.polytec.com.au/colour/hazel-oak/",
+      "httpStatus": 200,
+      "sha256": "aa7f2603050d7ef89a1dac16b934ef8a4193936abeaeb01700e3254addf5df02",
+      "colourName": "Hazel Oak",
+      "finishes": [
+        "Woodmatt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/husk/",
+      "finalUrl": "https://www.polytec.com.au/colour/husk/",
+      "httpStatus": 200,
+      "sha256": "f8142cc7dd5aff16da0178146c06f93a658888afbe6766e7c0ed4ef626f2655f",
+      "colourName": "Husk",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/ink-fabrini/",
+      "finalUrl": "https://www.polytec.com.au/colour/ink-fabrini/",
+      "httpStatus": 200,
+      "sha256": "0524a4571533c06431bf20f3e222d5f150ce976eb80fc4410101baa3815c3b93",
+      "colourName": "Ink Fabrini",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/italian-cotton/",
+      "finalUrl": "https://www.polytec.com.au/colour/italian-cotton/",
+      "httpStatus": 200,
+      "sha256": "275d85151d7855b794ceb29b96b4c5688347ea494c3b2bc0e4ce61d5eb47a91f",
+      "colourName": "Italian Cotton",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/ivorio-travertine/",
+      "finalUrl": "https://www.polytec.com.au/colour/ivorio-travertine/",
+      "httpStatus": 200,
+      "sha256": "76dda7ac718b4f1625433bcd84a9b025b0d1a7af773b17cd6c98dd9179d7149e",
+      "colourName": "Ivorio Travertine",
+      "finishes": [
+        "Smooth"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/jamaican-walnut/",
+      "finalUrl": "https://www.polytec.com.au/colour/jamaican-walnut/",
+      "httpStatus": 200,
+      "sha256": "864d7d2f9426fd32c087e619b067c5ee57531e5a1e9b64cc56cbd2f0f134ffa4",
+      "colourName": "Jamaican Walnut",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/laurel-oak/",
+      "finalUrl": "https://www.polytec.com.au/colour/laurel-oak/",
+      "httpStatus": 200,
+      "sha256": "e2a1596aebabb7ca1b2607df08da669445a68d11c5d4d43c1df41e2cf4f3dc17",
+      "colourName": "Laurel Oak",
+      "finishes": [
+        "Woodmatt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/light-brass-leaf/",
+      "finalUrl": "https://www.polytec.com.au/colour/light-brass-leaf/",
+      "httpStatus": 200,
+      "sha256": "87bbbd0ba60cb713d76ebcc66ba7bcc2c6de992afd6896ac8a4a54042c81681f",
+      "colourName": "Light Brass Leaf",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/lightstone/",
+      "finalUrl": "https://www.polytec.com.au/colour/lightstone/",
+      "httpStatus": 200,
+      "sha256": "51dd7998ebe7199aa32076640bb2ae46f6fa469eefb0e1d4c516cae48aae1c1a",
+      "colourName": "Lightstone",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/ligurian-walnut/",
+      "finalUrl": "https://www.polytec.com.au/colour/ligurian-walnut/",
+      "httpStatus": 200,
+      "sha256": "e277261519aa5e1bd950e49d323f91ffe04f98d563a4d04c792297cb670dcb46",
+      "colourName": "Ligurian Walnut",
+      "finishes": [
+        "Woodmatt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/madeira-oak/",
+      "finalUrl": "https://www.polytec.com.au/colour/madeira-oak/",
+      "httpStatus": 200,
+      "sha256": "9bce6ac93e6a6621724435d2bddbb91c7462fc1754d44cd26b829333ea1d8e8f",
+      "colourName": "Madeira Oak",
+      "finishes": [
+        "Ravine"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/maison-oak/",
+      "finalUrl": "https://www.polytec.com.au/colour/maison-oak/",
+      "httpStatus": 200,
+      "sha256": "612dc41af44f0b5811a72c8f6c3d5afe2516c71e7cac7bf9186851a51b7ecaba",
+      "colourName": "Maison Oak",
+      "finishes": [
+        "Ravine",
+        "Matt"
+      ],
+      "manufacturerSkuCount": 2,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/malt/",
+      "finalUrl": "https://www.polytec.com.au/colour/malt/",
+      "httpStatus": 200,
+      "sha256": "e3a386f911d02edfd19a080cec076d876791da96ba2f6c25ecea432796390f0f",
+      "colourName": "Malt",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/manor-oak/",
+      "finalUrl": "https://www.polytec.com.au/colour/manor-oak/",
+      "httpStatus": 200,
+      "sha256": "96047fa3197b5bb612966600f41dd95091e799af61b8e95c9a33bf1bd64edc78",
+      "colourName": "Manor Oak",
+      "finishes": [
+        "Woodmatt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/marmo-di-monte/",
+      "finalUrl": "https://www.polytec.com.au/colour/marmo-di-monte/",
+      "httpStatus": 200,
+      "sha256": "71cedff5d91659c18df20aec8af211b572a58ec24638f345c2b2de2be5f7d6f9",
+      "colourName": "Marmo di Monte",
+      "finishes": [
+        "Smooth"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/marmo-di-torre/",
+      "finalUrl": "https://www.polytec.com.au/colour/marmo-di-torre/",
+      "httpStatus": 200,
+      "sha256": "b61785637e71738371d5a693b879f6d3f0e614c13c2b94b6d8e6a9bcb01d78dd",
+      "colourName": "Marmo di Torre",
+      "finishes": [
+        "Smooth"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/marni-lini/",
+      "finalUrl": "https://www.polytec.com.au/colour/marni-lini/",
+      "httpStatus": 200,
+      "sha256": "07699c6e6e2075d5476ba31980db4a51632f0fec5309990cd5b12fa9764b4e51",
+      "colourName": "Marni Lini",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/maroso-milan/",
+      "finalUrl": "https://www.polytec.com.au/colour/maroso-milan/",
+      "httpStatus": 200,
+      "sha256": "fe912a162310a73890e9bb0a7b700f7e680bf9767ebdb815e14ebfbb095e1827",
+      "colourName": "Maroso Milan",
+      "finishes": [
+        "Ravine"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/mercurio-grey/",
+      "finalUrl": "https://www.polytec.com.au/colour/mercurio-grey/",
+      "httpStatus": 200,
+      "sha256": "d855c8232d18312c2de420b444f54044a008e6927e9a7728eb7808ca0f172f33",
+      "colourName": "Mercurio Grey",
+      "finishes": [
+        "Smooth"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/mocha-fabrini/",
+      "finalUrl": "https://www.polytec.com.au/colour/mocha-fabrini/",
+      "httpStatus": 200,
+      "sha256": "d7c3172b72885389f5675a1ea93d0c88138d935d4dcd68aad42ac2fc371018bd",
+      "colourName": "Mocha Fabrini",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/moss-grey/",
+      "finalUrl": "https://www.polytec.com.au/colour/moss-grey/",
+      "httpStatus": 200,
+      "sha256": "6c253c58e5c2dc6826747224466212587a28f40aeb289d785dec55b8c474d905",
+      "colourName": "Moss Grey",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/natural-cotton/",
+      "finalUrl": "https://www.polytec.com.au/colour/natural-cotton/",
+      "httpStatus": 200,
+      "sha256": "e1fbad374c7873c706658e779d28eab4809e20a48b8c59aeb81baacb9a65a001",
+      "colourName": "Natural Cotton",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/natural-oak/",
+      "finalUrl": "https://www.polytec.com.au/colour/natural-oak/",
+      "httpStatus": 200,
+      "sha256": "dbbafc20887fc2c6936c3fb918d367de118e6ee84af61930fa78ee65a2b06d9c",
+      "colourName": "Natural Oak",
+      "finishes": [
+        "Matt",
+        "Ravine"
+      ],
+      "manufacturerSkuCount": 2,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/natural-ply/",
+      "finalUrl": "https://www.polytec.com.au/colour/natural-ply/",
+      "httpStatus": 200,
+      "sha256": "83965b264d1694429d0dd6c902512a28f697b6d4e843e39d046f51288ce0c2c3",
+      "colourName": "Natural Ply",
+      "finishes": [
+        "Woodmatt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/natural-white/",
+      "finalUrl": "https://www.polytec.com.au/colour/natural-white/",
+      "httpStatus": 200,
+      "sha256": "7ab405db0f4d8ae18f8fccb25adb74eb5f104a12adf4cbb1365b167db2302384",
+      "colourName": "Natural White",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/navona-stone/",
+      "finalUrl": "https://www.polytec.com.au/colour/navona-stone/",
+      "httpStatus": 200,
+      "sha256": "c95fa5a98ab28f4097991e56abe8be9f5cb0aed802383e037695a52482ca370d",
+      "colourName": "Navona Stone",
+      "finishes": [
+        "Smooth"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/nero-granite/",
+      "finalUrl": "https://www.polytec.com.au/colour/nero-granite/",
+      "httpStatus": 200,
+      "sha256": "bf82cc7e90f2813122d5113f7ed51903f03920fec6fdd036b5021e87baf6697b",
+      "colourName": "Nero Granite",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/new-antique-white/",
+      "finalUrl": "https://www.polytec.com.au/colour/new-antique-white/",
+      "httpStatus": 200,
+      "sha256": "8392332e225e2776ef414b811ccdda362aaf9142e76e11c269ff875a72025c6f",
+      "colourName": "New Antique White",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/nickel/",
+      "finalUrl": "https://www.polytec.com.au/colour/nickel/",
+      "httpStatus": 200,
+      "sha256": "9be3245432cf76be92df2ebe4e16176dada622c70649b4e1b14a5121df325910",
+      "colourName": "Nickel",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/nomad/",
+      "finalUrl": "https://www.polytec.com.au/colour/nomad/",
+      "httpStatus": 200,
+      "sha256": "14729cea15a4b73393c0c20529c1d824c0be415cd997ccacf6a93724e95cef7c",
+      "colourName": "Nomad",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/nordic-oak/",
+      "finalUrl": "https://www.polytec.com.au/colour/nordic-oak/",
+      "httpStatus": 200,
+      "sha256": "669ca0a628d5bc2343ffd380c74bb1056e1b61b7a96e4aac5eb10f218ff9e47a",
+      "colourName": "Nordic Oak",
+      "finishes": [
+        "Woodmatt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/norfolk-terrazzo/",
+      "finalUrl": "https://www.polytec.com.au/colour/norfolk-terrazzo/",
+      "httpStatus": 200,
+      "sha256": "1d79250e66f4463317b945f112d3e2226ed4e98c143612ecad61777e5acf1dc7",
+      "colourName": "Norfolk Terrazzo",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/notaio-walnut/",
+      "finalUrl": "https://www.polytec.com.au/colour/notaio-walnut/",
+      "httpStatus": 200,
+      "sha256": "bc28a4282168ea8b6a632f57ac4e6368b32903844949876b24f5812ac05c95f0",
+      "colourName": "Notaio Walnut",
+      "finishes": [
+        "Woodmatt",
+        "Matt"
+      ],
+      "manufacturerSkuCount": 8,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/nouveau-grey/",
+      "finalUrl": "https://www.polytec.com.au/colour/nouveau-grey/",
+      "httpStatus": 200,
+      "sha256": "4c190e0d5ab3f3bb8e9c17fd27a6521051a69d04d4293227c339b0257c83084f",
+      "colourName": "Nouveau Grey",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/oasis/",
+      "finalUrl": "https://www.polytec.com.au/colour/oasis/",
+      "httpStatus": 200,
+      "sha256": "a6316cdc36ab311927e772628990758ba0751e5a50274ef0f54e8dafa4b2476d",
+      "colourName": "Oasis",
+      "finishes": [
+        "Smooth"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/ochre-figured-wood/",
+      "finalUrl": "https://www.polytec.com.au/colour/ochre-figured-wood/",
+      "httpStatus": 200,
+      "sha256": "9b21720cc58173c2dff9dd44498ff6f232008a04c95de3f39eb2886596292671",
+      "colourName": "Ochre Figured-Wood",
+      "finishes": [
+        "Smooth"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/onyx-figured-wood/",
+      "finalUrl": "https://www.polytec.com.au/colour/onyx-figured-wood/",
+      "httpStatus": 200,
+      "sha256": "c33a898760512cb211762b8327e1f7f079dbcc91273f67ecd83d21177787e223",
+      "colourName": "Onyx Figured-Wood",
+      "finishes": [
+        "Smooth"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/oxford/",
+      "finalUrl": "https://www.polytec.com.au/colour/oxford/",
+      "httpStatus": 200,
+      "sha256": "ebce60e88ae2200735b388fdb9fe54face4ace857fc6ac228500ab8714ac416b",
+      "colourName": "Oxford",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/oyster-grey/",
+      "finalUrl": "https://www.polytec.com.au/colour/oyster-grey/",
+      "httpStatus": 200,
+      "sha256": "22ee4a3931eaac9b562114c8867f0742ea125ccccb44500edf5aee20889d6331",
+      "colourName": "Oyster Grey",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/palace-teak/",
+      "finalUrl": "https://www.polytec.com.au/colour/palace-teak/",
+      "httpStatus": 200,
+      "sha256": "206547ba204f71bd7b352ccae0da59cf177d066a7236306ef622730347c335ef",
+      "colourName": "Palace Teak",
+      "finishes": [
+        "Woodmatt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/palatino/",
+      "finalUrl": "https://www.polytec.com.au/colour/palatino/",
+      "httpStatus": 200,
+      "sha256": "58dc6a5d878e7a428beb21c4c9d9898609ab03c69e61a973524f38a2fd736cb5",
+      "colourName": "Palatino",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/pallido/",
+      "finalUrl": "https://www.polytec.com.au/colour/pallido/",
+      "httpStatus": 200,
+      "sha256": "883b19f66afa1fcba7e04354d9f9eeebec9a48bb8291ce2c5c01c3dec91f1ccd",
+      "colourName": "Pallido",
+      "finishes": [
+        "Smooth"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/palomera-oak/",
+      "finalUrl": "https://www.polytec.com.au/colour/palomera-oak/",
+      "httpStatus": 200,
+      "sha256": "8e770066aedbef1f369e6389477b59986ceab3fd79449e2e99c5c1d02fbb5fd0",
+      "colourName": "Palomera Oak",
+      "finishes": [
+        "Woodmatt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/parchment/",
+      "finalUrl": "https://www.polytec.com.au/colour/parchment/",
+      "httpStatus": 200,
+      "sha256": "865327efbb08e2f03c2c64dcfed02bb792425510e0d0258507d38b8defb82f07",
+      "colourName": "Parchment",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/peacock-oak/",
+      "finalUrl": "https://www.polytec.com.au/colour/peacock-oak/",
+      "httpStatus": 200,
+      "sha256": "6f96b605518d2865fa324339e246a020d75008a9de203ee8af3aaa597d1a341d",
+      "colourName": "Peacock Oak",
+      "finishes": [
+        "Ravine"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/pearl-fabrini/",
+      "finalUrl": "https://www.polytec.com.au/colour/pearl-fabrini/",
+      "httpStatus": 200,
+      "sha256": "10ba75198e949c99671d23d8e589ce90d385a380b3c677ecfaa7fc058b30a284",
+      "colourName": "Pearl Fabrini",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/persian-oak/",
+      "finalUrl": "https://www.polytec.com.au/colour/persian-oak/",
+      "httpStatus": 200,
+      "sha256": "ea96a5d4ea0ae43856a58d0cf4c5cf2cdd2cd518f07f6ac1591493f2fb7d2587",
+      "colourName": "Persian Oak",
+      "finishes": [
+        "Ravine"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/perugian-walnut/",
+      "finalUrl": "https://www.polytec.com.au/colour/perugian-walnut/",
+      "httpStatus": 200,
+      "sha256": "7de5f69f78461d379ea9ba938e795c5af6c484a2f255f2cc88808aba357671fa",
+      "colourName": "Perugian Walnut",
+      "finishes": [
+        "Woodmatt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/plantation-ash/",
+      "finalUrl": "https://www.polytec.com.au/colour/plantation-ash/",
+      "httpStatus": 200,
+      "sha256": "0edd4d47c2ffc218914d9999719612633a4d47d0d91275e999f2cfd409008e40",
+      "colourName": "Plantation Ash",
+      "finishes": [
+        "Woodmatt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/platinum-leaf/",
+      "finalUrl": "https://www.polytec.com.au/colour/platinum-leaf/",
+      "httpStatus": 200,
+      "sha256": "3fd3f857d7ef604017aa6c98f6a5c8566c01bd37fe4dc0b92604ca1801ea832a",
+      "colourName": "Platinum Leaf",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/polar-white/",
+      "finalUrl": "https://www.polytec.com.au/colour/polar-white/",
+      "httpStatus": 200,
+      "sha256": "c050ca02fc0a30d2fd8d0d6c150bba5dfe379bc4f6e00ee790181c8e07a4e63d",
+      "colourName": "Polar White",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/portland-stone/",
+      "finalUrl": "https://www.polytec.com.au/colour/portland-stone/",
+      "httpStatus": 200,
+      "sha256": "b1829cb6707503d19cd8c51f1417767dae18b01c5ff972e9ffdedb296b56298e",
+      "colourName": "Portland Stone",
+      "finishes": [
+        "Smooth"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/portofino-stone/",
+      "finalUrl": "https://www.polytec.com.au/colour/portofino-stone/",
+      "httpStatus": 200,
+      "sha256": "ea9e0577ca1d68b64008b4fbbb18cc918e7fbaddafb2165d2a57d57010119b14",
+      "colourName": "Portofino Stone",
+      "finishes": [
+        "Smooth"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/prime-oak/",
+      "finalUrl": "https://www.polytec.com.au/colour/prime-oak/",
+      "httpStatus": 200,
+      "sha256": "bfd58afcbb6ad894244f26067ea1e8261f8e4a8220285764f8236d66353dd079",
+      "colourName": "Prime Oak",
+      "finishes": [
+        "Woodmatt",
+        "Matt"
+      ],
+      "manufacturerSkuCount": 8,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/provincial-limestone/",
+      "finalUrl": "https://www.polytec.com.au/colour/provincial-limestone/",
+      "httpStatus": 200,
+      "sha256": "b797cab0af3c5d0fa57322723debc72f41a22fc81cf5a482d5ff0afd77839773",
+      "colourName": "Provincial Limestone",
+      "finishes": [
+        "Smooth"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/pure-gold-leaf/",
+      "finalUrl": "https://www.polytec.com.au/colour/pure-gold-leaf/",
+      "httpStatus": 200,
+      "sha256": "c754354393c2161d3f09b08e62a08d207e9ea4eb9a190810bbc7da0988631006",
+      "colourName": "Pure Gold Leaf",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/quartiera-maple/",
+      "finalUrl": "https://www.polytec.com.au/colour/quartiera-maple/",
+      "httpStatus": 200,
+      "sha256": "5a519542d3b9c466d707583af382c73d6db5f7047a7e539b19e4df5817133272",
+      "colourName": "Quartiera Maple",
+      "finishes": [
+        "Woodmatt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/rocco-lini/",
+      "finalUrl": "https://www.polytec.com.au/colour/rocco-lini/",
+      "httpStatus": 200,
+      "sha256": "74abf495739d9ecd2da13440be3245e85f1091337cd63c5a9319fc9e875b541a",
+      "colourName": "Rocco Lini",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/rojo-walnut/",
+      "finalUrl": "https://www.polytec.com.au/colour/rojo-walnut/",
+      "httpStatus": 200,
+      "sha256": "acc5d7b5b1ff25157ee2299cd975e4a8686c9286e82c1fb455da2b592b3be2c3",
+      "colourName": "Rojo Walnut",
+      "finishes": [
+        "Woodmatt"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/roman-ceppo/",
+      "finalUrl": "https://www.polytec.com.au/colour/roman-ceppo/",
+      "httpStatus": 200,
+      "sha256": "9648c1e84c7584210c00eb879491260fa6a9c18d1885b6387d1fc7d1a31a1888",
+      "colourName": "Roman Ceppo",
+      "finishes": [
+        "Smooth"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/rose-gold-leaf/",
+      "finalUrl": "https://www.polytec.com.au/colour/rose-gold-leaf/",
+      "httpStatus": 200,
+      "sha256": "276de66f6f822fbaedc2765dd6d24fc1a9cfce3dc997496865238e55679de1eb",
+      "colourName": "Rose Gold Leaf",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/rubra-oak/",
+      "finalUrl": "https://www.polytec.com.au/colour/rubra-oak/",
+      "httpStatus": 200,
+      "sha256": "4a671fe6d7f9ebc5293b93865e1464d1b00351d74e9e152d7ebae797158b71fa",
+      "colourName": "Rubra Oak",
+      "finishes": [
+        "Woodmatt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/saffron-oak/",
+      "finalUrl": "https://www.polytec.com.au/colour/saffron-oak/",
+      "httpStatus": 200,
+      "sha256": "84dfadb88e3208ed1baf6850e6f8c2d8a874353fc3dee0d640c4ea9db2ebbea7",
+      "colourName": "Saffron Oak",
+      "finishes": [
+        "Ravine"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/satra-wood/",
+      "finalUrl": "https://www.polytec.com.au/colour/satra-wood/",
+      "httpStatus": 200,
+      "sha256": "134ec2eb4cebc09db6e7c260729061045146a623446838a6ca47c19afd52c6bb",
+      "colourName": "Satra Wood",
+      "finishes": [
+        "Ravine"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/sepia-oak/",
+      "finalUrl": "https://www.polytec.com.au/colour/sepia-oak/",
+      "httpStatus": 200,
+      "sha256": "a631d3423b754f4a0f7911f3fe35d8f476c73cea12d4fba72a93c392d8b90392",
+      "colourName": "Sepia Oak",
+      "finishes": [
+        "Ravine"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/serene/",
+      "finalUrl": "https://www.polytec.com.au/colour/serene/",
+      "httpStatus": 200,
+      "sha256": "3ff8d542944380f119ab8ded2f208938cacab16076016e34409377e74514cceb",
+      "colourName": "Serene",
+      "finishes": [
+        "Woodmatt"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/shannon-oak/",
+      "finalUrl": "https://www.polytec.com.au/colour/shannon-oak/",
+      "httpStatus": 200,
+      "sha256": "df11f9edffd1b69d13ca819186054f7c4207ad49a163bfb1cc41b6bbe39a34f5",
+      "colourName": "Shannon Oak",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/sienna-figured-wood/",
+      "finalUrl": "https://www.polytec.com.au/colour/sienna-figured-wood/",
+      "httpStatus": 200,
+      "sha256": "1ffa96e9e74c88ef328422e33a2f000a869391480823c7a6a37580619118ced3",
+      "colourName": "Sienna Figured-Wood",
+      "finishes": [
+        "Smooth"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/silk/",
+      "finalUrl": "https://www.polytec.com.au/colour/silk/",
+      "httpStatus": 200,
+      "sha256": "b7375a93b9613156b9c98bdf8f414d296b9c5dff38d8b64d24d240fae630200f",
+      "colourName": "Silk",
+      "finishes": [
+        "Woodmatt",
+        "Matt"
+      ],
+      "manufacturerSkuCount": 2,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/snow-fabrini/",
+      "finalUrl": "https://www.polytec.com.au/colour/snow-fabrini/",
+      "httpStatus": 200,
+      "sha256": "7fe357acf41b7a1d22da512cab7cb2284aac948135667bf9027a80d7fa3ff4d2",
+      "colourName": "Snow Fabrini",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/society-oak/",
+      "finalUrl": "https://www.polytec.com.au/colour/society-oak/",
+      "httpStatus": 200,
+      "sha256": "f1d70cdb4561228021f1a84fe8dea133cddf3bef8d0c1dc1322288fe285da4a0",
+      "colourName": "Society Oak",
+      "finishes": [
+        "Woodmatt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/soft-walnut/",
+      "finalUrl": "https://www.polytec.com.au/colour/soft-walnut/",
+      "httpStatus": 200,
+      "sha256": "144eb6d6716cfcba4c05b23fa6e4e5fcab9629e071607b4235622a52a3533a2e",
+      "colourName": "Soft Walnut",
+      "finishes": [
+        "Matt",
+        "Ravine"
+      ],
+      "manufacturerSkuCount": 2,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/solara/",
+      "finalUrl": "https://www.polytec.com.au/colour/solara/",
+      "httpStatus": 200,
+      "sha256": "91c1726c1e92855a3b96b5a8b0909a62e871eddc4d7274ad3104738472db7ae9",
+      "colourName": "Solara",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/stone-fabrini/",
+      "finalUrl": "https://www.polytec.com.au/colour/stone-fabrini/",
+      "httpStatus": 200,
+      "sha256": "1d348cccd1abf791038f803f5ef14703f4239a9a8f0ccdf004cafa686b75365c",
+      "colourName": "Stone Fabrini",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/stone-grey/",
+      "finalUrl": "https://www.polytec.com.au/colour/stone-grey/",
+      "httpStatus": 200,
+      "sha256": "f788a8ee2583029d835afa79129a4777183788149fea4afd8ac141bc1ced3a6a",
+      "colourName": "Stone Grey",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/storm/",
+      "finalUrl": "https://www.polytec.com.au/colour/storm/",
+      "httpStatus": 200,
+      "sha256": "4892563a88b39df481e6da27e6ba42cd5e18346571f8659e9e0a30437578b09a",
+      "colourName": "Storm",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/strata-grey/",
+      "finalUrl": "https://www.polytec.com.au/colour/strata-grey/",
+      "httpStatus": 200,
+      "sha256": "4d0ab0657773135a4a8aeb684dde5dc1b15022d50193ebb8f7a1959281b163b7",
+      "colourName": "Strata Grey",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/swiss-rattan/",
+      "finalUrl": "https://www.polytec.com.au/colour/swiss-rattan/",
+      "httpStatus": 200,
+      "sha256": "b9989ac54c57474aa06fb7c651c317947088b6eb17bef33b9633895e22bd9a23",
+      "colourName": "Swiss Rattan",
+      "finishes": [
+        "Woodmatt"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/taj-mahal/",
+      "finalUrl": "https://www.polytec.com.au/colour/taj-mahal/",
+      "httpStatus": 200,
+      "sha256": "5a2f39f41753ed7f9e748298a01c885da293179970802e38b9db414d743052ae",
+      "colourName": "Taj Mahal",
+      "finishes": [
+        "Smooth"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/tasmanian-oak/",
+      "finalUrl": "https://www.polytec.com.au/colour/tasmanian-oak/",
+      "httpStatus": 200,
+      "sha256": "02c2620b9a0dec84f34a981dd6434065fd62e85098b844af3f255d703a8e6be0",
+      "colourName": "Tasmanian Oak",
+      "finishes": [
+        "Woodmatt",
+        "Matt"
+      ],
+      "manufacturerSkuCount": 8,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/taupe/",
+      "finalUrl": "https://www.polytec.com.au/colour/taupe/",
+      "httpStatus": 200,
+      "sha256": "2d3e0fe56846eb5f73402e68f5df3f18ef01917f056870c0e9f6a03ead4d0fd7",
+      "colourName": "Taupe",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/temple-stone/",
+      "finalUrl": "https://www.polytec.com.au/colour/temple-stone/",
+      "httpStatus": 200,
+      "sha256": "876b03aaf67a2f81be589c37cc4b73c559ee9a3086320befdf3d355a9e48c961",
+      "colourName": "Temple Stone",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/tessuto-milan/",
+      "finalUrl": "https://www.polytec.com.au/colour/tessuto-milan/",
+      "httpStatus": 200,
+      "sha256": "6ab83911da7fd8867d53031a86ef356ad79e723f94544a3d3c3312de7745f7f7",
+      "colourName": "Tessuto Milan",
+      "finishes": [
+        "Matt",
+        "Ravine"
+      ],
+      "manufacturerSkuCount": 2,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/titanium/",
+      "finalUrl": "https://www.polytec.com.au/colour/titanium/",
+      "httpStatus": 200,
+      "sha256": "bff86ef612a00238a24b19189142046b3fdcd2ffe9ec937430ab17566df416b9",
+      "colourName": "Titanium",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/tivoli-ceppo/",
+      "finalUrl": "https://www.polytec.com.au/colour/tivoli-ceppo/",
+      "httpStatus": 200,
+      "sha256": "6949785019105d1cc2fa810321c57dc5ea956929c3af19a9b651dd2a8e815854",
+      "colourName": "Tivoli Ceppo",
+      "finishes": [
+        "Smooth"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/topiary/",
+      "finalUrl": "https://www.polytec.com.au/colour/topiary/",
+      "httpStatus": 200,
+      "sha256": "221610aeb704bfa7728e7a01cbc58496e0c04aa89c43d4bf35089d5a994f943b",
+      "colourName": "Topiary",
+      "finishes": [
+        "Smooth"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/truffle-lini/",
+      "finalUrl": "https://www.polytec.com.au/colour/truffle-lini/",
+      "httpStatus": 200,
+      "sha256": "c22f1a45fb32a64d776b400057ff2bf67a9f75e47b0c5e051e5fb8804ff4a269",
+      "colourName": "Truffle Lini",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/tunisia-stone/",
+      "finalUrl": "https://www.polytec.com.au/colour/tunisia-stone/",
+      "httpStatus": 200,
+      "sha256": "a38546e9bf9e883f904f132e039e92ad3ae02d2842e9f41127edcce05cfdda0e",
+      "colourName": "Tunisia Stone",
+      "finishes": [
+        "Smooth"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/tuross-oak/",
+      "finalUrl": "https://www.polytec.com.au/colour/tuross-oak/",
+      "httpStatus": 200,
+      "sha256": "bdad72896193ea3b849ad52d6055b0f4ea370e98c1a78451a030265034f037a6",
+      "colourName": "Tuross Oak",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/urban-slate/",
+      "finalUrl": "https://www.polytec.com.au/colour/urban-slate/",
+      "httpStatus": 200,
+      "sha256": "8d895f492a187ade3f29f3c6485af7abf983983b63ec6af59948a50711d9501b",
+      "colourName": "Urban Slate",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/verde-oak/",
+      "finalUrl": "https://www.polytec.com.au/colour/verde-oak/",
+      "httpStatus": 200,
+      "sha256": "e16372c75bc5bae50477f1e318d28495aa5f2689e2966ecd1195f05273a8deda",
+      "colourName": "Verde Oak",
+      "finishes": [
+        "Ravine"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/verdelho/",
+      "finalUrl": "https://www.polytec.com.au/colour/verdelho/",
+      "httpStatus": 200,
+      "sha256": "8b51c60aad735136581e3e390a30dd27ce0154477a1ea6b099febe8f096a1b6a",
+      "colourName": "Verdelho",
+      "finishes": [
+        "Smooth"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/vesuvius-ceppo/",
+      "finalUrl": "https://www.polytec.com.au/colour/vesuvius-ceppo/",
+      "httpStatus": 200,
+      "sha256": "6bc0092da3604451bdfcf55016b37d5f0067aaccdc2ae69dc8a744eb37a740ac",
+      "colourName": "Vesuvius Ceppo",
+      "finishes": [
+        "Smooth"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/visoni-stone/",
+      "finalUrl": "https://www.polytec.com.au/colour/visoni-stone/",
+      "httpStatus": 200,
+      "sha256": "6afb79dbd8b566b02b12fd32093df7fc7dab76f93ea5789a509585ce104a1080",
+      "colourName": "Visoni Stone",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/volcanic-stone/",
+      "finalUrl": "https://www.polytec.com.au/colour/volcanic-stone/",
+      "httpStatus": 200,
+      "sha256": "c61ffbae26545009b21af2ebc07acac4137db0790cbee484bce0ec5a6b55cedf",
+      "colourName": "Volcanic Stone",
+      "finishes": [
+        "Smooth"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/white-cement/",
+      "finalUrl": "https://www.polytec.com.au/colour/white-cement/",
+      "httpStatus": 200,
+      "sha256": "c01fa382c2b8e814bd6b2f16dece57e3fadbc835b8274a3477d87e666c57dd8a",
+      "colourName": "White Cement",
+      "finishes": [
+        "Smooth"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/white-cotton/",
+      "finalUrl": "https://www.polytec.com.au/colour/white-cotton/",
+      "httpStatus": 200,
+      "sha256": "95e9f228716de456c1b60923d65809d774e6d3aa078c07645a862b66be2b1980",
+      "colourName": "White Cotton",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 4,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/white-mist/",
+      "finalUrl": "https://www.polytec.com.au/colour/white-mist/",
+      "httpStatus": 200,
+      "sha256": "a4869e8c0ddddfb930a0abc1cc724f4b80cd953d72a04394e04f066a880bb3a1",
+      "colourName": "White Mist",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/whitewood/",
+      "finalUrl": "https://www.polytec.com.au/colour/whitewood/",
+      "httpStatus": 200,
+      "sha256": "e6477240b82fdd5527f56129025db52739e8cb113b5f98359595451cd4042d5a",
+      "colourName": "Whitewood",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/wild-clay/",
+      "finalUrl": "https://www.polytec.com.au/colour/wild-clay/",
+      "httpStatus": 200,
+      "sha256": "412c3c5851f8c88b9f1634a61a3eac11954a111401ba804a274f9562379059ab",
+      "colourName": "Wild Clay",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    },
+    {
+      "url": "https://www.polytec.com.au/colour/wispwood/",
+      "finalUrl": "https://www.polytec.com.au/colour/wispwood/",
+      "httpStatus": 200,
+      "sha256": "f2660107b0edd699a747134ac1d53e1fa0438e1de036edf7bfdcea01d9abd2a6",
+      "colourName": "Wispwood",
+      "finishes": [
+        "Matt"
+      ],
+      "manufacturerSkuCount": 1,
+      "finishVariantsWithoutOrderingCodes": []
+    }
+  ],
+  "images": [
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/adriatic.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/aegean-oak-ravine.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/agave.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/alabaster.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/alboran-stone.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/alicante-stone.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/aluminium.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/amaro.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/angora-oak.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/antico-oak.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/antique-matt.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/arabica.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/arcadia-oak.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/ardesia-stone.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/argento-stone.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/artisan-oak.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/aspen-stone.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/aston-white.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/athena-stone.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/australian-native.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/avion-grey-ravine.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/avion-grey.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/barrington-marble.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/batten-oak.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/beige-travertine.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/belgian-oak.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/bernini-marble.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/bespoke-woodmatt.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/black-matt.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/black-ply.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/black-texture.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/black-venette.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/black-wenge-matt.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/black-wenge-ravine.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/black-woodmatt.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/blackened-oak.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/blackrock.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/blanco-marquina.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/bleached-walnut.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/blonde-oak.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/blossom-white-ravine.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/blossom-white-woodmatt.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/blossom-white.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/boston-oak.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/botanic.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/botany-oak.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/bottega-oak.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/bottocino.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/bronze-gold-leaf.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/bronzed-oak.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/buller-stone.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/byzantine-oak.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/cafe-cream-matt.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/cafe-oak.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/calacutta-doro.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/calacutta-grey.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/canterbury-grey-ravine.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/canterbury-grey.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/carmine-oak.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/carrara.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/casastone.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/casentino-beech.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/catalina-marble.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/cavia-lini.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/chambord.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/char-oak.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/charcoal-fabrini.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/cinder-woodmatt.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/cinder.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/citrine-oak.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/classic-white-matt.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/classic-white-texture.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/coastal-oak.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/concrete-fabrini.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/copper-leaf.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/corsica.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/cosmic-granite.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/crema-lini.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/danish-rattan.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/dark-batten-oak.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/dark-cement.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/dawnshade.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/desideria-marble.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/designer-white.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/distressed-wood-ravine.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/district-oak.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/drifted-oak.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/ecru-oak.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/elemental-grey-ravine.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/elemental-grey.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/emperor-stone.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/empire-oak.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/espresso-fabrini.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/estella-oak.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/european-walnut.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/feldspar-shimmer.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/ferro.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/florentine-walnut.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/fontaine.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/forage.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/french-stone.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/gesso-lini.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/gossamer-white-ravine.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/gossamer-white.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/graphite-matt.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/greige-ravine.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/greige.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/grey-cement.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/grey-taj.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/greystone.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/habitat.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/havana-oak.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/hazel-oak.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/husk.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/ink-fabrini.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/italian-cotton.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/ivorio-travertine.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/jamaican-walnut.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/laurel-oak.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/light-brass-leaf.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/lightstone.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/ligurian-walnut.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/madeira-oak.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/maison-oak.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/malt-matt.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/manor-oak.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/marmo-di-monte.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/marmo-di-torre.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/marni-lini.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/maroso-milan.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/mercurio-grey.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/mocha-fabrini.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/moss-grey.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/natural-cotton.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/natural-oak.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/natural-ply.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/natural-white.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/navona-stone.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/nero-granite.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/new-antique-white.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/nickel.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/nomad.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/nordic-oak.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/norfolk-terrazzo.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/notaio-walnut.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/nouveau-grey.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/oasis.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/ochre-figured-wood.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/onyx-figured-wood.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/oxford.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/oyster-grey.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/palace-teak.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/palatino.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/pallido.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/palomera-oak.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/parchment.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/peacock-oak.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/pearl-fabrini.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/persian-oak.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/perugian-walnut.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/plantation-ash.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/platinum-leaf.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/polar-white.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/portland-stone.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/portofino-stone.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/prime-oak.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/provincial-limestone.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/pure-gold-leaf.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/quartiera-maple.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/rocco-lini.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/rojo-walnut.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/roman-ceppo.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/rose-gold-leaf.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/rubra-oak.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/saffron-oak.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/satra-wood.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/sepia-oak.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/serene-woodmatt.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/shannon-oak.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/sienna-figured-wood.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/silk-woodmatt.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/silk.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/snow-fabrini.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/society-oak.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/soft-walnut.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/solara.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/stone-fabrini.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/stone-grey.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/storm.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/strata-grey.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/swiss-rattan.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/taj-mahal.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/tasmanian-oak.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/taupe.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/temple-stone.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/tessuto-milan.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/titanium.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/tivoli-ceppo.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/topiary.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/truffle-lini.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/tunisia-stone.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/tuross-oak.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/urban-slate.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/verde-oak.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/verdelho.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/vesuvius-ceppo.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/visoni-stone.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/volcanic-stone.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/white-cement.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/white-cotton.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/white-mist.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/whitewood.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/wild-clay.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "https://www.polytec.com.au/img/products/960-960/wispwood.jpg",
+      "httpStatus": 200,
+      "contentType": "image/jpeg"
+    }
+  ],
+  "exclusions": [
+    {
+      "colourName": "Brushed Aluminium",
+      "finish": "Metallic",
+      "sourceUrl": "https://www.polytec.com.au/colour/brushed-aluminium/",
+      "reason": "No Laminate benchtop sheet product rows; the manufacturer's published ordering rows are kickboard products.",
+      "publishedProductNames": [
+        {
+          "sku": "5836",
+          "productName": "Kickboard Laminate (only) Brushed Aluminium 3600 x 1200"
+        },
+        {
+          "sku": "12744",
+          "productName": "Particle 1636150 Face Lam Brushed Aluminium / Back Carcass Melamine MR Kickboard"
+        },
+        {
+          "sku": "10678",
+          "productName": "Particle 163612 Face Lam Brushed Aluminium / Back Carcass Melamine MR Kickboard"
+        }
+      ]
+    },
+    {
+      "colourName": "Brushed Stainless",
+      "finish": "Metallic",
+      "sourceUrl": "https://www.polytec.com.au/colour/brushed-stainless/",
+      "reason": "No Laminate benchtop sheet product rows; the manufacturer's published ordering rows are kickboard products.",
+      "publishedProductNames": [
+        {
+          "sku": "6428",
+          "productName": "Kickboard Laminate (only) Brushed Stainless 3600 x 1200"
+        },
+        {
+          "sku": "12745",
+          "productName": "Particle 1636150 Face Lam Brushed Stainless / Back Carcass Melamine MR Kickboard"
+        },
+        {
+          "sku": "10679",
+          "productName": "Particle 163612 Face Lam Brushed Stainless / Back Carcass Melamine MR Kickboard"
+        }
+      ]
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 
 const CATALOGUE_PATH = "data/product-library/catalogues/exterior/AU-EXTERIOR-FINISHES-CATALOGUE.json";
-const AUDIT_PATH = "test-results/beacon-outdoor-catalogue/beacon-outdoor-products.audit.json";
+const AUDIT_PATH = "artifacts/test-results/beacon-outdoor-catalogue/beacon-outdoor-products.audit.json";
 const VERIFIED_AT = "2026-08-27";
 const NOT_PUBLISHED = "Not published by supplier";
 
@@ -236,7 +236,7 @@ async function main() {
     ],
   };
   await fs.writeFile(CATALOGUE_PATH, `${JSON.stringify(catalogue, null, 2)}\n`);
-  await fs.writeFile("test-results/beacon-outdoor-catalogue/beacon-catalogue-reconciliation.json", `${JSON.stringify(catalogue.beaconExteriorLightingCatalogue, null, 2)}\n`);
+  await fs.writeFile("artifacts/test-results/beacon-outdoor-catalogue/beacon-catalogue-reconciliation.json", `${JSON.stringify(catalogue.beaconExteriorLightingCatalogue, null, 2)}\n`);
   console.log(`Imported ${beaconRecords.length} Beacon exterior lighting products.`);
 }
 

@@ -9,7 +9,7 @@ dotenv.config({ path: ".env", quiet: true });
 
 const baseUrl = process.env.PRODUCT_LIBRARY_TEST_URL || "http://localhost:3012/modules/estimate-builder?page=dataInput";
 const ownerEmail = process.env.PRODUCT_LIBRARY_TEST_EMAIL || "support@gr8result.com";
-const outDir = path.join(process.cwd(), "test-artifacts", "recovery-copy-on-write", String(Date.now()));
+const outDir = path.join(process.cwd(), "artifacts/test-artifacts", "recovery-copy-on-write", String(Date.now()));
 fs.mkdirSync(outDir, { recursive: true });
 
 async function mintSession() {

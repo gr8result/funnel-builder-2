@@ -41,6 +41,22 @@ export default async function handler(req, res) {
 
     if (!email) return res.status(400).send("Email is required");
 
+    if ((funnel_id && !step_id) || (!funnel_id && step_id)) {
+      return res.status(400).send("funnel_id and step_id must be provided together");
+    }
+
+    if (funnel_id) {
+      const { data: step, error: stepError } = await supabaseAdmin
+        .from("funnel_steps")
+        .select("id")
+        .eq("id", step_id)
+        .eq("funnel_id", funnel_id)
+        .maybeSingle();
+
+      if (stepError) throw stepError;
+      if (!step) return res.status(400).send("Invalid funnel step");
+    }
+
     // Find owner via list (simple and reliable)
     let user_id = null;
     if (list_id) {

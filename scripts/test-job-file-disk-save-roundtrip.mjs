@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { readJob, saveJob, writeJob } from "../lib/jobFile.ts";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const outDir = path.join(root, "test-results", "job-file-disk-save-roundtrip");
+const outDir = path.join(root, "artifacts/test-results", "job-file-disk-save-roundtrip");
 await fs.mkdir(outDir, { recursive: true });
 const filePath = path.join(outDir, "Save Roundtrip Test.gr8job");
 await fs.rm(filePath, { force: true });

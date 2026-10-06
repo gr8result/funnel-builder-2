@@ -13,7 +13,7 @@ const baseUrl = process.env.OPEN_JOB_VERIFY_BASE_URL || "http://localhost:3000";
 const projectId = "c4404954-6310-4aaa-bf47-3a988330274f";
 const jobNumber = "05/07";
 const workspaceId = "846885cd-25b9-4eca-b9f9-3fd02f5882d8";
-const outDir = path.join(root, "test-results", "estimate-builder-open-job");
+const outDir = path.join(root, "artifacts/test-results", "estimate-builder-open-job");
 fs.mkdirSync(outDir, { recursive: true });
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;

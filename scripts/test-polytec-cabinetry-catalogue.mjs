@@ -14,6 +14,7 @@ const cataloguePath = path.join(ROOT, "data/product-library/catalogues/cabinetry
 const reportPath = path.join(ROOT, "data/product-library/catalogues/cabinetry/AU-POLYTEC-CABINETRY-COLOURS.report.json");
 const selectionsSource = fs.readFileSync(path.join(ROOT, "pages/modules/builders/selections-book.js"), "utf8");
 const productLibraryServiceSource = fs.readFileSync(path.join(ROOT, "lib/product-library/catalogueService.js"), "utf8");
+const cabinetrySelectorSource = fs.readFileSync(path.join(ROOT, "lib/product-library/cabinetryCatalogueSelectors.js"), "utf8");
 const catalogue = JSON.parse(fs.readFileSync(cataloguePath, "utf8"));
 const report = JSON.parse(fs.readFileSync(reportPath, "utf8"));
 const active = POLYTEC_CABINETRY_CATALOGUE.filter((record) => record.availabilityStatus !== "inactive");
@@ -77,8 +78,9 @@ assert.match(selectionsSource, /function normaliseCabinetryColourSelectionRecord
 assert.match(selectionsSource, /Choose where this colour will be used/, "Colour selection modal must show area guidance when no application area is selected");
 assert.doesNotMatch(selectionsSource, /compatibleRecords\.length === 1/, "Single-combination colours must still open the shared area-confirmation modal");
 assert.doesNotMatch(selectionsSource, /Visit Laminex Website<\/a> : null/, "supplier website button must not be hard-coded to Laminex");
-assert.match(productLibraryServiceSource, /AU-POLYTEC-CABINETRY-COLOURS\.json/, "Product Library must import Polytec catalogue data");
-assert.match(productLibraryServiceSource, /polytecColourToMasterProduct/, "Product Library must map Polytec catalogue records");
+assert.match(productLibraryServiceSource, /getProductLibraryCabinetryMasterProducts/, "Product Library must use the canonical cabinetry selector");
+assert.match(cabinetrySelectorSource, /AU-POLYTEC-CABINETRY-COLOURS\.js/, "The canonical selector must import Polytec catalogue data");
+assert.match(cabinetrySelectorSource, /cabinetryColourToMasterProduct/, "Product Library must map Polytec catalogue records through the shared colour adapter");
 
 const selected = active.find((record) => record.colourName === "Adriatic" && record.finish === "Venette") || active[0];
 const selection = normaliseCabinetrySelection({

@@ -1,0 +1,41 @@
+{
+  "checkedAt": "2026-09-11",
+  "dryRun": false,
+  "targets": 3,
+  "imported": 0,
+  "results": [
+    {
+      "model": "OI90Z",
+      "brand": "Omega",
+      "family": "cooktops",
+      "name": "OMEGA 90CM INDUCTION COOKTOP OI90Z",
+      "status": "unresolved",
+      "reason": "no candidate page on the manufacturer site | archive-img omegaappliances.com.au -> 0 name matches, none usable",
+      "pageUrl": "",
+      "imageUrl": "",
+      "why": ""
+    },
+    {
+      "model": "ORC60X",
+      "brand": "Omega",
+      "family": "rangehoods",
+      "name": "OMEGA 600MM CANOPY RANGEHOOD OPTION - OMEGA 60CM CANOPY RANGEHOOD ORC60X",
+      "status": "unresolved",
+      "reason": "no candidate page on the manufacturer site | archive-img omegaappliances.com.au -> 0 name matches, none usable",
+      "pageUrl": "",
+      "imageUrl": "",
+      "why": ""
+    },
+    {
+      "model": "ORC90X",
+      "brand": "Omega",
+      "family": "rangehoods",
+      "name": "OMEGA 90CM CANOPY RANGEHOOD ORC90X",
+      "status": "unresolved",
+      "reason": "no candidate page on the manufacturer site | archive-img omegaappliances.com.au -> 0 name matches, none usable",
+      "pageUrl": "",
+      "imageUrl": "",
+      "why": ""
+    }
+  ]
+}

@@ -35,27 +35,115 @@ const legacyProducts = [
     officialProductUrl: "https://www.smeg.com/products/SFP6301TVX",
     imageAttribution: "Product image sourced from Smeg official SFP6301TVX product page. Legacy Client Selections SKU SFA6301TVX was corrected to the verifiable SFP6301TVX model.",
   }),
-  migratedOption("cooktop", "Westinghouse", "Westinghouse 600mm Gas Cooktop", "WHG644SC", "Stainless steel", "Harvey Norman Commercial", "Westinghouse 600mm stainless gas cooktop.", 850, 850, "cooktops", ROOM_GROUPS.kitchen),
-  migratedOption("cooktop", "Bosch", "Bosch 600mm Gas Cooktop", "PCR6A5B90A", "Stainless steel", "Harvey Norman Commercial", "Bosch 600mm gas cooktop.", 850, 1270, "cooktops", ROOM_GROUPS.kitchen),
-  migratedOption("cooktop", "Smeg", "Smeg 750mm Gas Cooktop", "PGA75", "Stainless steel", "Harvey Norman Commercial", "Smeg 750mm gas cooktop.", 850, 2030, "cooktops", ROOM_GROUPS.kitchen),
-  migratedOption("rangehood", "Westinghouse", "Westinghouse Slideout Rangehood", "WRR604SB", "Stainless steel", "Harvey Norman Commercial", "Westinghouse 600mm slideout rangehood.", 520, 520, "rangehoods", ROOM_GROUPS.kitchen),
+  migratedOption("cooktop", "Westinghouse", "Westinghouse 600mm Gas Cooktop", "WHG644SC", "Stainless steel", "Harvey Norman Commercial", "Westinghouse 600mm stainless gas cooktop.", 850, 850, "cooktops", ROOM_GROUPS.kitchen, {
+    primaryImageUrl: "/images/catalogues/appliances/products/westinghouse/whg644sc.png",
+    thumbnailUrl: "/images/catalogues/appliances/products/westinghouse/whg644sc.png",
+    imageSourceUrl: "https://www.westinghouse.com.au/cooking/cooktops/whg644sc/",
+    imageSourceType: "official-australian-manufacturer-local",
+    officialProductUrl: "https://www.westinghouse.com.au/cooking/cooktops/whg644sc/",
+    imageAttribution: "Product image sourced from Westinghouse Australia official WHG644SC product imagery.",
+  }),
+  // Retain this historical ID and pricing, but do not offer the retired model again.
+  { ...migratedOption("cooktop", "Bosch", "Bosch 600mm Gas Cooktop", "PCR6A5B90A", "Stainless steel", "Harvey Norman Commercial", "Bosch 600mm gas cooktop.", 850, 1270, "cooktops", ROOM_GROUPS.kitchen), active: false },
+  // PGA75 is no longer listed on Harvey Norman Commercial ("No products available."
+  // at /products/PGA75, confirmed 2026-09-13 via rendered browser check). HNC's
+  // current 750mm Smeg gas cooktop is the next-generation PGA75-4 - same width,
+  // type and brand, differing only by Smeg's revision suffix. Retained for
+  // historical pricing; do not offer it again.
+  { ...migratedOption("cooktop", "Smeg", "Smeg 750mm Gas Cooktop", "PGA75", "Stainless steel", "Harvey Norman Commercial", "Smeg 750mm gas cooktop.", 850, 2030, "cooktops", ROOM_GROUPS.kitchen), active: false },
+  migratedOption("cooktop", "Smeg", "Smeg 750mm Gas Cooktop", "PGA75-4", "Stainless steel", "Harvey Norman Commercial", "Smeg 750mm gas cooktop, 5 cook zones, natural gas, automatic ignition, gas safety valves. W720 x D511 x H78mm.", 850, 2789, "cooktops", ROOM_GROUPS.kitchen, {
+    primaryImageUrl: "/images/catalogues/appliances/products/smeg/pga75-4.jpg",
+    thumbnailUrl: "/images/catalogues/appliances/products/smeg/pga75-4.jpg",
+    imageSourceUrl: "https://backend.harveynormancommercial.com.au/media/catalog/product/p/g/pga754_smeg_web.jpg",
+    imageSourceType: "authorised-supplier-media",
+    officialProductUrl: "https://www.harveynormancommercial.com.au/products/PGA75-4",
+    imageAttribution: "Product image and listing sourced from Harvey Norman Commercial's live PGA75-4 product page (rendered browser check, 2026-09-13); this is the current model that supersedes the legacy PGA75 catalogue entry.",
+  }),
+  migratedOption("rangehood", "Westinghouse", "Westinghouse Slideout Rangehood", "WRR604SB", "Stainless steel", "Harvey Norman Commercial", "Westinghouse 600mm slideout rangehood.", 520, 520, "rangehoods", ROOM_GROUPS.kitchen, {
+    primaryImageUrl: "/images/catalogues/appliances/products/westinghouse/wrr604sb.jpg",
+    thumbnailUrl: "/images/catalogues/appliances/products/westinghouse/wrr604sb.jpg",
+    imageSourceUrl: "https://www.westinghouse.com.au/contentassets/553607052a024a1386aae76c3119a6d4/wrr604sb.png",
+    imageSourceType: "archived-official-australian-manufacturer-local",
+    officialProductUrl: "https://www.westinghouse.com.au/cooking/rangehoods/wrr604sb/",
+    imageAttribution: "Product image sourced from Westinghouse Australia official WRR604SB asset, recovered from the 2022-03-06 Internet Archive capture; the live asset now 404s.",
+  }),
   migratedOption("rangehood", "Bosch", "Bosch Canopy Rangehood", "DWP66BC50A", "Stainless steel", "Harvey Norman Commercial", "Bosch 600mm canopy rangehood.", 520, 980, "rangehoods", ROOM_GROUPS.kitchen),
   migratedOption("dishwasher", "Westinghouse", "Westinghouse Dishwasher", "WSF6606XA", "Stainless steel", "Harvey Norman Commercial", "Westinghouse freestanding dishwasher.", 850, 850, "dishwashers", ROOM_GROUPS.kitchen),
-  migratedOption("dishwasher", "Bosch", "Bosch Serie 4 Dishwasher", "SMS4HTI01A", "Stainless steel", "Harvey Norman Commercial", "Bosch Serie 4 dishwasher.", 850, 1320, "dishwashers", ROOM_GROUPS.kitchen),
+  // Superseded by the canonical, image-verified catalogue entry
+  // product:dishwashers:bosch:sms4hti01a (data/product-library/catalogues/appliances/AU-APPLIANCE-CATALOGUE.json),
+  // which carries this model's real HNC product photo and its current SRP
+  // ($1299, verified 2026-09-16). This legacy row had no image and a stale
+  // price; retained for historical pricing reference but not offered again.
+  { ...migratedOption("dishwasher", "Bosch", "Bosch Serie 4 Dishwasher", "SMS4HTI01A", "Stainless steel", "Harvey Norman Commercial", "Bosch Serie 4 dishwasher.", 850, 1320, "dishwashers", ROOM_GROUPS.kitchen), active: false },
   migratedOption("microwave", "Westinghouse", "Westinghouse Microwave", "WMF2302WA", "White", "Harvey Norman Commercial", "Westinghouse microwave allowance.", 280, 280, "microwaves", ROOM_GROUPS.kitchen),
   migratedOption("microwave", "Bosch", "Bosch Built-in Microwave", "BFL523MS0A", "Stainless steel", "Harvey Norman Commercial", "Bosch built-in microwave.", 280, 890, "microwaves", ROOM_GROUPS.kitchen),
-  migratedOption("sink", "Oliveri", "Oliveri Diaz Sink", "DZ153", "Stainless steel", "Reece", "Oliveri Diaz stainless steel inset sink.", 480, 480, "kitchen-sinks", ["kitchen", "butlers-pantry", "laundry"]),
-  migratedOption("sink", "Franke", "Franke Mythos Sink", "MYX210-50", "Stainless steel", "Reece", "Franke undermount stainless sink.", 480, 1120, "kitchen-sinks", ["kitchen", "butlers-pantry", "laundry"]),
-  migratedOption("kitchen-tap", "Phoenix", "Phoenix Vivid Sink Mixer", "VS733", "Chrome", "Reece", "Phoenix Vivid kitchen sink mixer.", 420, 420, "kitchen-sink-mixers", ["kitchen", "butlers-pantry", "laundry"]),
-  migratedOption("kitchen-tap", "Caroma", "Caroma Urbane II Sink Mixer", "99616C", "Brushed nickel", "Reece", "Caroma premium kitchen mixer.", 420, 760, "kitchen-sink-mixers", ["kitchen", "butlers-pantry", "laundry"]),
+  migratedOption("sink", "Oliveri", "Oliveri Diaz Sink", "DZ153", "Stainless steel", "Reece", "Oliveri Diaz stainless steel inset sink.", 480, 480, "kitchen-sinks", ["kitchen", "butlers-pantry", "laundry"], {
+    primaryImageUrl: "/images/catalogues/kitchen/sinks/oliveri-dz153.png",
+    thumbnailUrl: "/images/catalogues/kitchen/sinks/oliveri-dz153.png",
+    imageSourceUrl: "https://www.oliveri.com.au/products/diaz-double-bowl-sink-with-double-drainer/",
+    imageSourceType: "official-australian-manufacturer-local",
+    officialProductUrl: "https://www.oliveri.com.au/products/diaz-double-bowl-sink-with-double-drainer/",
+    imageAttribution: "Product image sourced from the Oliveri Australia official DZ153 product page.",
+  }),
+  // Deactivated: no exact current HNC product page, and no image was ever
+  // resolved for this record (image_status stayed "missing" since the
+  // original 2026-09-04 one-time Client Selections migration - no
+  // primaryImageUrl was ever supplied to migratedOption() for it). Checked
+  // directly against HNC on 2026-09-19 (https://www.harveynormancommercial.com.au/products/MYX210-50
+  // renders "No products available") - not currently sold there. Kept
+  // (not deleted) so any existing job referencing this canonical ID still
+  // resolves; no longer presented as current/selectable stock.
+  { ...migratedOption("sink", "Franke", "Franke Mythos Sink", "MYX210-50", "Stainless steel", "Reece", "Franke undermount stainless sink.", 480, 1120, "kitchen-sinks", ["kitchen", "butlers-pantry", "laundry"]), active: false },
+  // Deactivated for the same reason: no exact current HNC product page
+  // (https://www.harveynormancommercial.com.au/products/VS733 also renders
+  // "No products available", checked 2026-09-19) and no image was ever
+  // resolved. Kept inactive rather than deleted for historical job references.
+  { ...migratedOption("kitchen-tap", "Phoenix", "Phoenix Vivid Sink Mixer", "VS733", "Chrome", "Reece", "Phoenix Vivid kitchen sink mixer.", 420, 420, "kitchen-sink-mixers", ["kitchen", "butlers-pantry", "laundry"]), active: false },
+  // Superseded below: image resolved against Caroma's official site under
+  // the verified SKU 99671BN56AF (this record's original code, 99616C,
+  // could not be verified against any current Caroma source).
+  { ...migratedOption("kitchen-tap", "Caroma", "Caroma Urbane II Sink Mixer", "99616C", "Brushed nickel", "Reece", "Caroma premium kitchen mixer.", 420, 760, "kitchen-sink-mixers", ["kitchen", "butlers-pantry", "laundry"]), active: false },
+  migratedOption("kitchen-tap", "Caroma", "Caroma Urbane II Sink Mixer", "99671BN56AF", "Brushed nickel", "Caroma", "Caroma Urbane II sink mixer, lead free, brushed nickel finish.", 420, 760, "kitchen-sink-mixers", ["kitchen", "butlers-pantry", "laundry"], {
+    primaryImageUrl: "/images/catalogues/plumbing/mixers-tapware/99671bn56af.jpg",
+    thumbnailUrl: "/images/catalogues/plumbing/mixers-tapware/99671bn56af.jpg",
+    imageSourceUrl: "https://stsharedaueastprodn8wg.blob.core.windows.net/pim-assets/ProductThumbnail/99671BN56A Urbane II Sink Mixer - Brushed Nickel.jpg",
+    imageSourceType: "official-australian-manufacturer-local",
+    officialProductUrl: "https://www.caroma.com/au/product/caroma-urbane-ii-sink-mixer-lead-free-brushed-nickel-117269/",
+    imageAttribution: "Product image sourced from Caroma's official Urbane II Sink Mixer 99671BN56AF product page.",
+  }),
   migratedOption("vanity", "Timberline", "Timberline Wall Hung Vanity", "Silk 1200", "Polyurethane white", "Reece", "Wall hung vanity with soft close drawers.", 1320, 1320, "cabinetry", ROOM_GROUPS.wetAreas, { canonicalType: "cabinet_unit", fixtureType: "vanity" }),
   migratedOption("vanity", "Timberline", "Timberline Premium Vanity", "Aria 1200", "Prime oak", "Reece", "Premium wall hung vanity with stone top allowance.", 1320, 2450, "cabinetry", ROOM_GROUPS.wetAreas, { canonicalType: "cabinet_unit", fixtureType: "vanity" }),
   migratedOption("basin", "Caroma", "Caroma Cube Basin", "Cube Above Counter", "White", "Reece", "Caroma ceramic above counter basin.", 350, 350, "tapware", ROOM_GROUPS.wetAreas, { fixtureType: "basin" }),
   migratedOption("basin", "Caroma", "Caroma Luna Basin", "Luna Inset", "White", "Reece", "Caroma premium inset basin.", 350, 620, "tapware", ROOM_GROUPS.wetAreas, { fixtureType: "basin" }),
   migratedOption("tap", "Phoenix", "Phoenix Vivid Basin Mixer", "Vivid Slimline", "Chrome", "Reece", "Phoenix Vivid basin mixer.", 290, 290, "tapware", ROOM_GROUPS.wetAreas, { fixtureType: "basin-mixer" }),
   migratedOption("tap", "Caroma", "Caroma Urbane II Mixer", "Urbane II", "Brushed nickel", "Reece", "Premium basin mixer.", 290, 580, "tapware", ROOM_GROUPS.wetAreas, { fixtureType: "basin-mixer" }),
-  migratedOption("toilet", "Caroma", "Caroma Luna Toilet Suite", "Luna Cleanflush", "White", "Reece", "Caroma Luna back to wall toilet suite.", 620, 620, "tapware", ROOM_GROUPS.wetAreas, { fixtureType: "toilet" }),
-  migratedOption("toilet", "Caroma", "Caroma Urbane II Toilet", "Urbane II Cleanflush", "White", "Reece", "Premium back to wall toilet suite.", 620, 980, "tapware", ROOM_GROUPS.wetAreas, { fixtureType: "toilet" }),
+  // Superseded by the corrected records below (exact Caroma SKU + real
+  // image) - kept and deactivated rather than mutated in place, so any
+  // existing job/selection referencing this original canonical ID still
+  // resolves. See CS-toilet-caroma-caroma-luna-cleanflush... below.
+  { ...migratedOption("toilet", "Caroma", "Caroma Luna Toilet Suite", "Luna Cleanflush", "White", "Reece", "Caroma Luna back to wall toilet suite.", 620, 620, "tapware", ROOM_GROUPS.wetAreas, { fixtureType: "toilet" }), active: false },
+  { ...migratedOption("toilet", "Caroma", "Caroma Urbane II Toilet", "Urbane II Cleanflush", "White", "Reece", "Premium back to wall toilet suite.", 620, 980, "tapware", ROOM_GROUPS.wetAreas, { fixtureType: "toilet" }), active: false },
+  // Corrected replacements: exact Caroma SKU and image sourced from Caroma's
+  // own official product page - not carried by HNC's current toilet range,
+  // so the manufacturer is used per the documented fallback order.
+  migratedOption("toilet", "Caroma", "Caroma Luna Cleanflush Close Coupled Toilet Suite", "844710W", "White", "Caroma", "Caroma Luna Cleanflush close coupled toilet suite, S trap, bottom inlet.", 620, 620, "tapware", ROOM_GROUPS.wetAreas, {
+    fixtureType: "toilet",
+    primaryImageUrl: "/images/catalogues/plumbing/toilets/844710w.jpg",
+    thumbnailUrl: "/images/catalogues/plumbing/toilets/844710w.jpg",
+    imageSourceUrl: "https://stsharedaueastprodn8wg.blob.core.windows.net/pim-assets/ProductThumbnail/Caroma_Coolibah_Luna_Cleanflush_Close_Coupled_Toilet_Suite_844710W_HI_79645.jpg",
+    imageSourceType: "official-australian-manufacturer-local",
+    officialProductUrl: "https://www.caroma.com/au/product/caroma-luna-cleanflush-close-coupled-toilet-suite-s-trap-bi-white-79733/",
+    imageAttribution: "Product image sourced from Caroma's official Luna Cleanflush 844710W product page.",
+  }),
+  migratedOption("toilet", "Caroma", "Caroma Urbane II Cleanflush Wall Faced Close Coupled Toilet Suite", "746350W", "White", "Caroma", "Caroma Urbane II Cleanflush wall faced close coupled toilet suite (back entry) with GermGard antimicrobial seat protection.", 620, 980, "tapware", ROOM_GROUPS.wetAreas, {
+    fixtureType: "toilet",
+    primaryImageUrl: "/images/catalogues/plumbing/toilets/746350w.jpg",
+    thumbnailUrl: "/images/catalogues/plumbing/toilets/746350w.jpg",
+    imageSourceUrl: "https://stsharedaueastprodn8wg.blob.core.windows.net/pim-assets/ProductThumbnail/746350W URBANE II CF WFCC BE 4S SUITE & VOGUE SC SEAT.jpg",
+    imageSourceType: "official-australian-manufacturer-local",
+    officialProductUrl: "https://www.caroma.com/au/product/caroma-urbane-ii-cleanflush-wall-faced-close-coupled-toilet-suite-with-germgard-white-106229/",
+    imageAttribution: "Product image sourced from Caroma's official Urbane II Cleanflush 746350W product page.",
+  }),
   migratedOption("floor-tile", "National Tiles", "Ceramic Floor Tile", "Manhattan 600x600", "Light grey", "National Tiles", "Ceramic floor tile 600 x 600mm.", 45, 45, "tiles", ROOM_GROUPS.wetAndLaundry, { fixtureType: "floor-tile", swatchHex: "#d8d2c8" }),
   migratedOption("floor-tile", "National Tiles", "Porcelain Floor Tile", "Stoneform 600x600", "Warm grey", "National Tiles", "Premium porcelain floor tile.", 45, 82, "tiles", ROOM_GROUPS.wetAndLaundry, { fixtureType: "floor-tile", swatchHex: "#c7beb3" }),
   migratedOption("wall-tile", "National Tiles", "Ceramic Wall Tile", "White Gloss Rectified", "White gloss", "National Tiles", "Ceramic wall tile 300 x 600mm.", 35, 35, "tiles", ROOM_GROUPS.wetAndLaundry, { fixtureType: "wall-tile", swatchHex: "#f4f2ee" }),
@@ -357,7 +445,7 @@ function categoryForFamily(familyKey, fixtureType = "") {
   if (familyKey === "tapware" && fixtureType === "basin-mixer") return "Basin Mixers";
   if (familyKey === "tiles") return "Tiles";
   if (familyKey === "flooring") return "Flooring";
-  if (familyKey === "paint") return "Internal Paint Colours";
+  if (familyKey === "paint") return "Painting Materials";
   if (familyKey === "cabinetry" && fixtureType === "vanity") return "Vanities";
   if (familyKey === "kitchen-sink-mixers") return "Kitchen Mixers";
   if (familyKey === "kitchen-sinks") return "Kitchen Sinks";

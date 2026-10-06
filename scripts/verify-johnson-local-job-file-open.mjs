@@ -78,7 +78,7 @@ try {
   await clickRequirementCard(page, "cabinetry");
   await page.waitForSelector('[data-testid="guided-cabinetry-workflow"]', { timeout: 120000 });
   await waitForNoRuntimeErrors(runtimeErrors);
-  await page.screenshot({ path: path.join(root, "test-results", "johnson-cabinetry-open-after-fix.png"), fullPage: true });
+  await page.screenshot({ path: path.join(root, "artifacts/test-results", "johnson-cabinetry-open-after-fix.png"), fullPage: true });
   console.log("Johnson Cabinetry opened without runtime errors");
   await clickButton(page, "Back");
   if (await hasVisibleRequirementCard(page, "cabinetry")) await clickButton(page, "Back");

@@ -1,0 +1,7 @@
+{
+  "url": "https://www.euromaid.com/en-au/live-search?keywords=GC90S",
+  "retrievedAt": "2026-09-16T06:18:24.764Z",
+  "status": 200,
+  "sha256": "1e52438cb5b463270aa495c611eaef47531af0cf03955e265d7108421314192a",
+  "text": "[{\"command\":\"liveSearchResults\",\"content\":\"\\u003Cdiv class=\\u0022gd-search-suggestions\\u0022\\u003E\\n  \\u003Cdiv class=\\u0022prod-results\\u0022\\u003E\\n        \\n              \\u003Cdiv id=\\u0022gd-search-see-all\\u0022 class=\\u0022search-see-all\\u0022\\u003E\\n        \\u003Cspan class=\\u0022no-results-text\\u0022\\u003ENo results found for\\u003C\\/span\\u003E\\n        \\u003Ca class=\\u0022gd-search__view-all-link\\u0022  href=\\u0022\\/en-au\\/search-results?keywords=GC90S\\u0022\\u003E \\u0027GC90S\\u0027\\u003C\\/a\\u003E\\n      \\u003C\\/div\\u003E\\n      \\u003C\\/div\\u003E\\n\\n  \\u003Cdiv class=\\u0022content-results\\u0022\\u003E\\n          \\u003C\\/div\\u003E\\n\\u003C\\/div\\u003E\\n\"},{\"command\":\"gtagEvent\",\"event_name\":\"search\",\"data\":{\"search_term\":\"gc90s\"}}]"
+}

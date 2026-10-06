@@ -1,0 +1,22 @@
+
+query GetSkuSuggestions($sku: String!) {
+  products(search: $sku) {
+    items {
+      sku
+      vendorcode
+      name
+      gp_product_group
+      image {
+          url
+      }
+      thumbnail {
+          url
+      }
+      product_images {
+        thumbnail
+        small
+        base
+      }
+    }
+  }
+}

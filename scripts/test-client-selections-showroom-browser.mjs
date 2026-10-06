@@ -3,7 +3,7 @@ import path from "node:path";
 import puppeteer from "puppeteer";
 
 const baseUrl = process.env.CLIENT_SELECTIONS_BASE_URL || "http://localhost:3000";
-const outDir = path.resolve("test-results", "client-selections-showroom");
+const outDir = path.resolve("artifacts/test-results", "client-selections-showroom");
 fs.mkdirSync(outDir, { recursive: true });
 
 const browser = await puppeteer.launch({

@@ -72,7 +72,11 @@
       "source_name": "Builder configurable kitchen cabinetry",
       "source_url": "",
       "source_verified_at": "2026-08-15",
-      "attributes": { "construction": "Builder selected", "configuration": "Project configured", "priceBasis": "Joinery quote" }
+      "attributes": {
+        "construction": "Builder selected",
+        "configuration": "Project configured",
+        "priceBasis": "Joinery quote"
+      }
     },
     {
       "product_code": "CABFIN-LAMINEX-POLAR-WHITE-ABSOLUTEMATTE",
@@ -104,7 +108,10 @@
       "source_name": "Laminex Polar White AbsoluteMatte product page",
       "source_url": "https://www.laminex.com.au/products/polar-white/AbsoluteMatte/p/AU1004041",
       "source_verified_at": "2026-08-15",
-      "attributes": { "substrate": "Decorated MDF", "colourSelectionMode": "manufacturer_colour" }
+      "attributes": {
+        "substrate": "Decorated MDF",
+        "colourSelectionMode": "manufacturer_colour"
+      }
     },
     {
       "product_code": "HANDLE-KETHY-E2081-STAINLESS",
@@ -135,7 +142,10 @@
       "source_name": "Kethy E2081 product page",
       "source_url": "https://www.kethy.com.au/product/e2081",
       "source_verified_at": "2026-08-15",
-      "attributes": { "material": "Stainless steel", "handleType": "D handle" }
+      "attributes": {
+        "material": "Stainless steel",
+        "handleType": "D handle"
+      }
     },
     {
       "product_code": "HANDLE-KETHY-E2085-STAINLESS",
@@ -166,7 +176,10 @@
       "source_name": "Kethy E2085 product page",
       "source_url": "https://www.kethy.com.au/product/e2085",
       "source_verified_at": "2026-08-15",
-      "attributes": { "material": "Stainless steel", "handleType": "D handle" }
+      "attributes": {
+        "material": "Stainless steel",
+        "handleType": "D handle"
+      }
     },
     {
       "product_code": "BENCH-CAESARSTONE-6011-INTENSE-WHITE",
@@ -200,10 +213,24 @@
       "source_url": "https://www.caesarstone.com.au/colours/6011-intense-white/",
       "source_verified_at": "2026-08-15",
       "variants": [
-        { "variantName": "20mm polished", "thickness": "20mm", "finish": "Polished" },
-        { "variantName": "40mm mitred edge", "thickness": "40mm", "finish": "Polished" }
+        {
+          "variantName": "20mm polished",
+          "thickness": "20mm",
+          "finish": "Polished"
+        },
+        {
+          "variantName": "40mm mitred edge",
+          "thickness": "40mm",
+          "finish": "Polished"
+        }
       ],
-      "attributes": { "thicknesses": ["20mm", "40mm"], "colourSelectionMode": "exact_colour" }
+      "attributes": {
+        "thicknesses": [
+          "20mm",
+          "40mm"
+        ],
+        "colourSelectionMode": "exact_colour"
+      }
     },
     {
       "product_code": "BENCH-SMARTSTONE-STATUARIO-GRIGIO",
@@ -220,10 +247,10 @@
       "colour": "Statuario Grigio",
       "finish": "Sintered surface",
       "material": "Sintered stone",
-      "primary_image_url": "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=1200&q=80",
+      "primary_image_url": "",
       "image_source_url": "https://www.smartstone.com.au/stone-benchtops/statuario-grigio",
-      "image_source_type": "reviewed_range_fallback",
-      "image_status": "review_required",
+      "image_source_type": "unavailable",
+      "image_status": "missing",
       "image_verified_at": "2026-08-15",
       "official_product_url": "https://www.smartstone.com.au/stone-benchtops/statuario-grigio",
       "price_status": "quote_required",
@@ -235,7 +262,11 @@
       "source_name": "Smartstone Statuario Grigio product page",
       "source_url": "https://www.smartstone.com.au/stone-benchtops/statuario-grigio",
       "source_verified_at": "2026-08-15",
-      "attributes": { "colourSelectionMode": "manufacturer_colour", "imageReviewReason": "Official page verified, exact image not exposed in static metadata" }
+      "attributes": {
+        "colourSelectionMode": "manufacturer_colour",
+        "imageReviewReason": "Official page verified, exact image not exposed in static metadata"
+      },
+      "image_note": "Generic stock photo removed; it showed a styled room scene rather than this product. No exact product image sourced yet."
     },
     {
       "product_code": "SPLASHBACK-BUILDER-TILED",
@@ -249,10 +280,10 @@
       "product_name": "Tiled kitchen splashback selection",
       "material": "Ceramic / porcelain tile",
       "finish": "Builder selected",
-      "primary_image_url": "https://images.unsplash.com/photo-1556909212-d5b604d0c90d?auto=format&fit=crop&w=1200&q=80",
+      "primary_image_url": "",
       "image_source_url": "https://unsplash.com/photos/d5b604d0c90d",
-      "image_source_type": "family_fallback",
-      "image_status": "family_fallback",
+      "image_source_type": "unavailable",
+      "image_status": "missing",
       "image_verified_at": "2026-08-15",
       "price_status": "quote_required",
       "price_unit": "m2 quote",
@@ -262,7 +293,8 @@
       "source_type": "builder_configurable_system",
       "source_name": "Builder configurable tiled splashback",
       "source_url": "",
-      "source_verified_at": "2026-08-15"
+      "source_verified_at": "2026-08-15",
+      "image_note": "Generic stock photo removed; it showed a styled room scene rather than this product. No exact product image sourced yet."
     },
     {
       "product_code": "SINK-OLIVERI-DZ153",
@@ -279,10 +311,10 @@
       "configuration": "Double bowl / double drainer",
       "material": "Stainless steel",
       "finish": "Stainless steel",
-      "primary_image_url": "https://images.unsplash.com/photo-1556912172-45b7abe8b7e1?auto=format&fit=crop&w=1200&q=80",
-      "image_source_url": "https://www.oliveri.com.au/products/diaz-double-bowl-sink-with-double-drainer/",
-      "image_source_type": "reviewed_family_fallback",
-      "image_status": "review_required",
+      "primary_image_url": "/images/catalogues/kitchen/sinks/oliveri-dz153.png",
+      "image_source_url": "https://www.oliveri.com.au/assets/Products/DZ153__FitWzE0NDEsMTQ0MV0.png",
+      "image_source_type": "official_manufacturer_page",
+      "image_status": "verified_exact",
       "image_verified_at": "2026-08-15",
       "official_product_url": "https://www.oliveri.com.au/products/diaz-double-bowl-sink-with-double-drainer/",
       "price_status": "price_pending",
@@ -294,7 +326,10 @@
       "source_name": "Oliveri DZ153 product page",
       "source_url": "https://www.oliveri.com.au/products/diaz-double-bowl-sink-with-double-drainer/",
       "source_verified_at": "2026-08-15",
-      "attributes": { "installationType": "Inset", "bowlConfiguration": "Double bowl" }
+      "attributes": {
+        "installationType": "Inset",
+        "bowlConfiguration": "Double bowl"
+      }
     },
     {
       "product_code": "SINK-BUILDER-UNDERMOUNT-STAINLESS",
@@ -309,10 +344,10 @@
       "configuration": "Single or double bowl",
       "material": "Stainless steel",
       "finish": "Stainless steel",
-      "primary_image_url": "https://images.unsplash.com/photo-1556912172-45b7abe8b7e1?auto=format&fit=crop&w=1200&q=80",
+      "primary_image_url": "",
       "image_source_url": "https://unsplash.com/photos/45b7abe8b7e1",
-      "image_source_type": "family_fallback",
-      "image_status": "family_fallback",
+      "image_source_type": "unavailable",
+      "image_status": "missing",
       "image_verified_at": "2026-08-15",
       "price_status": "quote_required",
       "price_unit": "each",
@@ -322,7 +357,8 @@
       "source_type": "builder_configurable_system",
       "source_name": "Builder configurable undermount sink",
       "source_url": "",
-      "source_verified_at": "2026-08-15"
+      "source_verified_at": "2026-08-15",
+      "image_note": "Generic stock kitchen photo removed; no exact product image sourced for this model."
     },
     {
       "product_code": "MIXER-PHOENIX-VIVID-SLIMLINE-GOOSENECK",
@@ -337,10 +373,10 @@
       "product_name": "Phoenix Vivid Slimline Sink Mixer 220mm Gooseneck Lead Free",
       "model": "Vivid Slimline 220mm Gooseneck",
       "finish": "Chrome",
-      "primary_image_url": "https://images.unsplash.com/photo-1584622781564-1d987f7333c1?auto=format&fit=crop&w=1200&q=80",
+      "primary_image_url": "",
       "image_source_url": "https://www.phoenixtapware.com.au/product/vivid-slimline-sink-mixer-220mm-gooseneck-lead-free/",
-      "image_source_type": "reviewed_family_fallback",
-      "image_status": "review_required",
+      "image_source_type": "unavailable",
+      "image_status": "missing",
       "image_verified_at": "2026-08-15",
       "official_product_url": "https://www.phoenixtapware.com.au/product/vivid-slimline-sink-mixer-220mm-gooseneck-lead-free/",
       "price_status": "price_pending",
@@ -352,7 +388,11 @@
       "source_name": "Phoenix Vivid Slimline sink mixer product page",
       "source_url": "https://www.phoenixtapware.com.au/product/vivid-slimline-sink-mixer-220mm-gooseneck-lead-free/",
       "source_verified_at": "2026-08-15",
-      "attributes": { "style": "Gooseneck", "leadFree": true }
+      "attributes": {
+        "style": "Gooseneck",
+        "leadFree": true
+      },
+      "image_note": "Generic stock photo removed; it showed a styled room scene rather than this product. No exact product image sourced yet."
     },
     {
       "product_code": "OVEN-WESTINGHOUSE-WVE6515SD",
@@ -384,7 +424,11 @@
       "source_name": "Westinghouse WVE6515SD product page",
       "source_url": "https://www.westinghouse.com.au/cooking/ovens/wve6515sd/",
       "source_verified_at": "2026-08-15",
-      "attributes": { "width": "60cm", "ovenFunctions": 7, "fuelType": "Electric" }
+      "attributes": {
+        "width": "60cm",
+        "ovenFunctions": 7,
+        "fuelType": "Electric"
+      }
     },
     {
       "product_code": "OVEN-WESTINGHOUSE-WVE6516SD",
@@ -416,7 +460,12 @@
       "source_name": "Westinghouse WVE6516SD product page",
       "source_url": "https://www.westinghouse.com.au/cooking/ovens/wve6516sd/",
       "source_verified_at": "2026-08-15",
-      "attributes": { "width": "60cm", "ovenFunctions": 8, "fuelType": "Electric", "feature": "AirFry" }
+      "attributes": {
+        "width": "60cm",
+        "ovenFunctions": 8,
+        "fuelType": "Electric",
+        "feature": "AirFry"
+      }
     },
     {
       "product_code": "OVEN-WESTINGHOUSE-WVE6314SD",
@@ -448,7 +497,11 @@
       "source_name": "Westinghouse WVE6314SD product page",
       "source_url": "https://www.westinghouse.com.au/cooking/ovens/wve6314sd/",
       "source_verified_at": "2026-08-15",
-      "attributes": { "width": "60cm", "ovenFunctions": 5, "fuelType": "Electric" }
+      "attributes": {
+        "width": "60cm",
+        "ovenFunctions": 5,
+        "fuelType": "Electric"
+      }
     },
     {
       "product_code": "OVEN-WESTINGHOUSE-WVE6525SD",
@@ -480,7 +533,11 @@
       "source_name": "Westinghouse WVE6525SD product page",
       "source_url": "https://www.westinghouse.com.au/cooking/ovens/wve6525sd/",
       "source_verified_at": "2026-08-15",
-      "attributes": { "width": "60cm", "ovenFunctions": "8/5", "fuelType": "Electric" }
+      "attributes": {
+        "width": "60cm",
+        "ovenFunctions": "8/5",
+        "fuelType": "Electric"
+      }
     },
     {
       "product_code": "OVEN-WESTINGHOUSE-WVE6526DD",
@@ -512,7 +569,12 @@
       "source_name": "Westinghouse WVE6526DD product page",
       "source_url": "https://www.westinghouse.com.au/cooking/ovens/wve6526dd/",
       "source_verified_at": "2026-08-15",
-      "attributes": { "width": "60cm", "ovenFunctions": "8/5", "fuelType": "Electric", "feature": "AirFry" }
+      "attributes": {
+        "width": "60cm",
+        "ovenFunctions": "8/5",
+        "fuelType": "Electric",
+        "feature": "AirFry"
+      }
     },
     {
       "product_code": "COOKTOP-WESTINGHOUSE-WHG644SC",
@@ -544,7 +606,11 @@
       "source_name": "Westinghouse WHG644SC product page",
       "source_url": "https://www.westinghouse.com.au/cooking/cooktops/whg644sc/",
       "source_verified_at": "2026-08-15",
-      "attributes": { "width": "60cm", "fuelType": "Gas", "burners": 4 }
+      "attributes": {
+        "width": "60cm",
+        "fuelType": "Gas",
+        "burners": 4
+      }
     },
     {
       "product_code": "COOKTOP-WESTINGHOUSE-WHG640SC",
@@ -576,7 +642,11 @@
       "source_name": "Westinghouse WHG640SC product page",
       "source_url": "https://www.westinghouse.com.au/cooking/cooktops/whg640sc/",
       "source_verified_at": "2026-08-15",
-      "attributes": { "width": "60cm", "fuelType": "Gas", "burners": 4 }
+      "attributes": {
+        "width": "60cm",
+        "fuelType": "Gas",
+        "burners": 4
+      }
     },
     {
       "product_code": "COOKTOP-WESTINGHOUSE-WHI643BC",
@@ -608,7 +678,11 @@
       "source_name": "Westinghouse WHI643BC product page",
       "source_url": "https://www.westinghouse.com.au/cooking/cooktops/whi643bc/",
       "source_verified_at": "2026-08-15",
-      "attributes": { "width": "60cm", "fuelType": "Induction", "zones": 4 }
+      "attributes": {
+        "width": "60cm",
+        "fuelType": "Induction",
+        "zones": 4
+      }
     },
     {
       "product_code": "COOKTOP-WESTINGHOUSE-WHI643BE",
@@ -640,7 +714,12 @@
       "source_name": "Westinghouse WHI643BE product page",
       "source_url": "https://www.westinghouse.com.au/cooking/cooktops/whi643be/",
       "source_verified_at": "2026-08-15",
-      "attributes": { "width": "60cm", "fuelType": "Induction", "zones": 4, "feature": "BoilProtect" }
+      "attributes": {
+        "width": "60cm",
+        "fuelType": "Induction",
+        "zones": 4,
+        "feature": "BoilProtect"
+      }
     },
     {
       "product_code": "COOKTOP-WESTINGHOUSE-WHI945BC",
@@ -672,7 +751,11 @@
       "source_name": "Westinghouse WHI945BC product page",
       "source_url": "https://www.westinghouse.com.au/cooking/cooktops/whi945bc/",
       "source_verified_at": "2026-08-15",
-      "attributes": { "width": "90cm", "fuelType": "Induction", "zones": 4 }
+      "attributes": {
+        "width": "90cm",
+        "fuelType": "Induction",
+        "zones": 4
+      }
     },
     {
       "product_code": "RANGEHOOD-WESTINGHOUSE-WRR604SB",
@@ -704,7 +787,10 @@
       "source_name": "Westinghouse WRR604SB product page",
       "source_url": "https://www.westinghouse.com.au/cooking/rangehoods/wrr604sb/",
       "source_verified_at": "2026-08-15",
-      "attributes": { "width": "60cm", "rangehoodType": "Slide out" }
+      "attributes": {
+        "width": "60cm",
+        "rangehoodType": "Slide out"
+      }
     },
     {
       "product_code": "RANGEHOOD-WESTINGHOUSE-WRC614SC",
@@ -736,7 +822,10 @@
       "source_name": "Westinghouse WRC614SC product page",
       "source_url": "https://www.westinghouse.com.au/cooking/rangehoods/wrc614sc/",
       "source_verified_at": "2026-08-15",
-      "attributes": { "width": "60cm", "rangehoodType": "Canopy" }
+      "attributes": {
+        "width": "60cm",
+        "rangehoodType": "Canopy"
+      }
     },
     {
       "product_code": "RANGEHOOD-WESTINGHOUSE-WRF610WA",
@@ -768,7 +857,10 @@
       "source_name": "Westinghouse WRF610WA product page",
       "source_url": "https://www.westinghouse.com.au/cooking/rangehoods/wrf610wa/",
       "source_verified_at": "2026-08-15",
-      "attributes": { "width": "60cm", "rangehoodType": "Fixed" }
+      "attributes": {
+        "width": "60cm",
+        "rangehoodType": "Fixed"
+      }
     },
     {
       "product_code": "DISHWASHER-WESTINGHOUSE-WSF6606XA",
@@ -799,7 +891,9 @@
       "source_name": "Westinghouse WSF6606XA product page",
       "source_url": "https://www.westinghouse.com.au/dishwashing/dishwashers/wsf6606xa/",
       "source_verified_at": "2026-08-15",
-      "attributes": { "dishwasherType": "Freestanding" }
+      "attributes": {
+        "dishwasherType": "Freestanding"
+      }
     },
     {
       "product_code": "DISHWASHER-WESTINGHOUSE-WSF6608XA",
@@ -830,7 +924,9 @@
       "source_name": "Westinghouse WSF6608XA product page",
       "source_url": "https://www.westinghouse.com.au/dishwashing/dishwashers/wsf6608xa/",
       "source_verified_at": "2026-08-15",
-      "attributes": { "dishwasherType": "Freestanding" }
+      "attributes": {
+        "dishwasherType": "Freestanding"
+      }
     },
     {
       "product_code": "MICROWAVE-WESTINGHOUSE-WMF2302WA",
@@ -862,7 +958,10 @@
       "source_name": "Westinghouse WMF2302WA product page",
       "source_url": "https://www.westinghouse.com.au/cooking/microwaves/wmf2302wa/",
       "source_verified_at": "2026-08-15",
-      "attributes": { "microwaveType": "Countertop", "capacity": "23L" }
+      "attributes": {
+        "microwaveType": "Countertop",
+        "capacity": "23L"
+      }
     },
     {
       "product_code": "FRIDGE-WESTINGHOUSE-WBE4504SC",
@@ -879,10 +978,10 @@
       "size": "453L",
       "finish": "Stainless steel",
       "configuration": "Freestanding bottom mount",
-      "primary_image_url": "https://www.westinghouse.com.au/resourceimageelectrolux/Public/Image2/product/110770/73779.png?width=1200&height=630",
+      "primary_image_url": "",
       "image_source_url": "https://www.westinghouse.com.au/fridges-and-freezers/fridges/wbe4504sc/",
-      "image_source_type": "official_manufacturer_page",
-      "image_status": "verified_exact",
+      "image_source_type": "unavailable",
+      "image_status": "missing",
       "image_verified_at": "2026-08-30",
       "official_product_url": "https://www.westinghouse.com.au/fridges-and-freezers/fridges/wbe4504sc/",
       "price_status": "quote_required",
@@ -894,7 +993,11 @@
       "source_name": "Westinghouse WBE4504SC product page",
       "source_url": "https://www.westinghouse.com.au/fridges-and-freezers/fridges/wbe4504sc/",
       "source_verified_at": "2026-08-30",
-      "attributes": { "fridgeType": "Bottom mount", "capacity": "453L" }
+      "attributes": {
+        "fridgeType": "Bottom mount",
+        "capacity": "453L"
+      },
+      "image_note": "Electrolux retired asset product/110770/73779.png; the WBE4504SC product page now redirects to the fridge category and no Internet Archive capture of the asset exists. Cleared so the card shows the refrigerator category illustration rather than a broken image."
     },
     {
       "product_code": "FLOORING-BUILDER-KITCHEN-HYBRID",
@@ -908,10 +1011,10 @@
       "product_name": "Kitchen hybrid flooring selection",
       "material": "Hybrid flooring",
       "finish": "Builder selected",
-      "primary_image_url": "https://images.unsplash.com/photo-1600566752355-35792bedcfea?auto=format&fit=crop&w=1200&q=80",
+      "primary_image_url": "",
       "image_source_url": "https://unsplash.com/photos/35792bedcfea",
-      "image_source_type": "family_fallback",
-      "image_status": "family_fallback",
+      "image_source_type": "unavailable",
+      "image_status": "missing",
       "image_verified_at": "2026-08-15",
       "price_status": "quote_required",
       "price_unit": "m2 quote",
@@ -921,7 +1024,8 @@
       "source_type": "builder_configurable_system",
       "source_name": "Builder configurable kitchen flooring",
       "source_url": "",
-      "source_verified_at": "2026-08-15"
+      "source_verified_at": "2026-08-15",
+      "image_note": "Generic stock photo removed; it showed a styled room scene rather than this product. No exact product image sourced yet."
     }
   ]
 }

@@ -3,8 +3,8 @@ import path from "node:path";
 
 const ROOT = process.cwd();
 const cataloguePath = path.join(ROOT, "data/product-library/catalogues/appliances/AU-APPLIANCE-CATALOGUE.json");
-const imageAuditPath = path.join(ROOT, "APPLIANCE_PRODUCT_IMAGE_AUDIT.csv");
-const missingImagePath = path.join(ROOT, "APPLIANCE_MISSING_IMAGE_REVIEW.csv");
+const imageAuditPath = path.join(ROOT, "data/catalogue/reconciliation/APPLIANCE_PRODUCT_IMAGE_AUDIT.csv");
+const missingImagePath = path.join(ROOT, "data/catalogue/reconciliation/APPLIANCE_MISSING_IMAGE_REVIEW.csv");
 
 const verifiedImages = new Map([
   ["product:appliances:cooktops:smeg:pga64", "https://assets.4flow.cloud/THUMB_PGA64.jpg.jpg?pEFs=cVY2M1MyN1ZOMFFadEQ5ZlVOMzhVeUdiMU5kUXRGaGxrNnNZVGRqQmlIb01KMnVOQ05LWjZVQ05QYjZnQVBtYjluYjhaQ2tzTm45VnhUNmM1bG5aWU9wRmY1K3FMZlZCZzRMRnB6VjVQYjBTRzJkVWttaW54ZUZ6TU02eGd1OGdCRmJSeFZCNlFpUS9rMGU1bGtpR1JXQ0VIYWJNQWFpWk52OU55VGI0Y3Z3PQ"],

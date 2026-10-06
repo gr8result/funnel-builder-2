@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import AuthGate from '../../../components/AuthGate';
-import { FUNNEL_TYPES, assemblePage, getFunnelTemplateLibraryAssets } from '../../../lib/funnelSections';
+import { FUNNEL_TYPES, assemblePage, getFunnelTemplateLibraryAssets } from '../../../modules/funnels/index.js';
 import { supabase } from '../../../lib/supabaseClient';
 import { getWebsiteBuilderAssets, saveWebsiteBuilderAssets } from '../../../lib/website-builder/projectStore';
 

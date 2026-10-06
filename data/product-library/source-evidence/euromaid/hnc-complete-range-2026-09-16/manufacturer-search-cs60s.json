@@ -1,0 +1,7 @@
+{
+  "url": "https://www.euromaid.com/en-au/live-search?keywords=CS60S",
+  "retrievedAt": "2026-09-16T06:18:25.873Z",
+  "status": 200,
+  "sha256": "074d407d0ad9714d3294bdafc1ed74e019e25226cad313eeb3c7411ca7ccb443",
+  "text": "[{\"command\":\"liveSearchResults\",\"content\":\"\\u003Cdiv class=\\u0022gd-search-suggestions\\u0022\\u003E\\n  \\u003Cdiv class=\\u0022prod-results\\u0022\\u003E\\n        \\n              \\u003Cdiv id=\\u0022gd-search-see-all\\u0022 class=\\u0022search-see-all\\u0022\\u003E\\n        \\u003Cspan class=\\u0022no-results-text\\u0022\\u003ENo results found for\\u003C\\/span\\u003E\\n        \\u003Ca class=\\u0022gd-search__view-all-link\\u0022  href=\\u0022\\/en-au\\/search-results?keywords=CS60S\\u0022\\u003E \\u0027CS60S\\u0027\\u003C\\/a\\u003E\\n      \\u003C\\/div\\u003E\\n      \\u003C\\/div\\u003E\\n\\n  \\u003Cdiv class=\\u0022content-results\\u0022\\u003E\\n          \\u003C\\/div\\u003E\\n\\u003C\\/div\\u003E\\n\"},{\"command\":\"gtagEvent\",\"event_name\":\"search\",\"data\":{\"search_term\":\"cs60s\"}}]"
+}

@@ -53,7 +53,7 @@ try {
   await page.waitForSelector('[data-testid="builder-module-banner"]');
   await page.waitForFunction(() => document.querySelector('[data-testid="builder-module-banner-title"]')?.textContent?.trim() === "Quotation Builder");
 
-  const screenshotDir = path.join(root, "test-artifacts", "quotation-builder-header");
+  const screenshotDir = path.join(root, "artifacts/test-artifacts", "quotation-builder-header");
   fs.mkdirSync(screenshotDir, { recursive: true });
   const screenshotPath = path.join(screenshotDir, "quotation-builder-header.png");
 

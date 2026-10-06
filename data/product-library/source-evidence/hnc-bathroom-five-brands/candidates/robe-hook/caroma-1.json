@@ -1,0 +1,2957 @@
+{
+  "data": {
+    "products": {
+      "total_count": 25,
+      "page_info": {
+        "total_pages": 1
+      },
+      "items": [
+        {
+          "id": 26149,
+          "sku": "520031C",
+          "vendorcode": "520031C",
+          "name": "Riviere Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520031C_Caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520031C_Caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520031C_Caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520031C_Caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520031C_Caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520031C_Caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "• High quality metal construction ensures durability\n• 3 point fixing for added strength\n• Australian designed & engineered\n• PVD finish"
+          },
+          "short_description": {
+            "html": "Riviere Robe Hook"
+          },
+          "product_dimensions": "W44 x D97 x H87mm",
+          "price_store": 52,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W44 x D97 x H87mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Riviere"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "520031C"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 26148,
+          "sku": "520031BN",
+          "vendorcode": "520031BN",
+          "name": "Riviere Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520031bn_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520031bn_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520031bn_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520031bn_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520031bn_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520031bn_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• High quality metal construction ensures durability<br>• 3 point fixing for added strength<br>• Australian designed &amp; engineered<br>• PVD finish</p>"
+          },
+          "short_description": {
+            "html": "<p>Riviere Robe Hook</p>"
+          },
+          "product_dimensions": "W44 x D97 x H87mm",
+          "price_store": 68,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W44 x D97 x H87mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Riviere"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "520031BN"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 26147,
+          "sku": "520031BBZ",
+          "vendorcode": "520031BBZ",
+          "name": "Riviere Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520031BBZ_Caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520031BBZ_Caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520031BBZ_Caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520031BBZ_Caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520031BBZ_Caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520031BBZ_Caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "• High quality metal construction ensures durability\n• 3 point fixing for added strength\n• Australian designed & engineered\n• PVD finish"
+          },
+          "short_description": {
+            "html": "Riviere Robe Hook"
+          },
+          "product_dimensions": "W44 x D97 x H87mm",
+          "price_store": 68,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W44 x D97 x H87mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Riviere"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Bronze",
+                    "value": "935"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "520031BBZ"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Bronze"
+              }
+            ]
+          }
+        },
+        {
+          "id": 26146,
+          "sku": "520031BB",
+          "vendorcode": "520031BB",
+          "name": "Riviere Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520031BB_Caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520031BB_Caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520031BB_Caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520031BB_Caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520031BB_Caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520031BB_Caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "• High quality metal construction ensures durability\n• 3 point fixing for added strength\n• Australian designed & engineered\n• PVD finish"
+          },
+          "short_description": {
+            "html": "Riviere Robe Hook"
+          },
+          "product_dimensions": "W44 x D97 x H87mm",
+          "price_store": 68,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W44 x D97 x H87mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Riviere"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "520031BB"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Brass"
+              }
+            ]
+          }
+        },
+        {
+          "id": 20669,
+          "sku": "849041C",
+          "vendorcode": "849041C",
+          "name": "Contura II Small Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849041c_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849041c_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/8/4/849041c_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/8/4/849041c_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849041c_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849041c_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• High quality metal construction<br>• Matches with Contura bathroom</p>"
+          },
+          "short_description": {
+            "html": "<p>Contura II Small Robe Hook</p>"
+          },
+          "product_dimensions": "W39 x D23 x H52mm",
+          "price_store": 59,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W39 x D23 x H52mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Contura"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "849041C"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 20668,
+          "sku": "849041BN",
+          "vendorcode": "849041BN",
+          "name": "Contura II Small Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849041bn_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849041bn_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/8/4/849041bn_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/8/4/849041bn_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849041bn_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849041bn_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• High quality metal construction<br>• Matches with Contura bathroom</p>"
+          },
+          "short_description": {
+            "html": "<p>Contura II Small Robe Hook</p>"
+          },
+          "product_dimensions": "W39 x D23 x H52mm",
+          "price_store": 75,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W39 x D23 x H52mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Contura"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "849041BN"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 20667,
+          "sku": "849041BBZ",
+          "vendorcode": "849041BBZ",
+          "name": "Contura II Small Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849041bbz_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849041bbz_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/8/4/849041bbz_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/8/4/849041bbz_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849041bbz_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849041bbz_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• High quality metal construction<br>• Matches with Contura bathroom<br>• Brushed bronze finish</p>"
+          },
+          "short_description": {
+            "html": "<p>Contura II Small Robe Hook</p>"
+          },
+          "product_dimensions": "W39 x D23 x H52mm",
+          "price_store": 75,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W39 x D23 x H52mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Contura"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Bronze",
+                    "value": "935"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "849041BBZ"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Bronze"
+              }
+            ]
+          }
+        },
+        {
+          "id": 20666,
+          "sku": "849041BB",
+          "vendorcode": "849041BB",
+          "name": "Contura II Small Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849041bb_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849041bb_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/8/4/849041bb_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/8/4/849041bb_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849041bb_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849041bb_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• High quality metal construction<br>• Matches with Contura bathroom</p>"
+          },
+          "short_description": {
+            "html": "<p>Contura II Small Robe Hook</p>"
+          },
+          "product_dimensions": "W39 x D23 x H52mm",
+          "price_store": 75,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W39 x D23 x H52mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Contura"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "849041BB"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Brass"
+              }
+            ]
+          }
+        },
+        {
+          "id": 20665,
+          "sku": "849041B",
+          "vendorcode": "849041B",
+          "name": "Contura II Small Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849041b_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849041b_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/8/4/849041b_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/8/4/849041b_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849041b_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849041b_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• High quality metal construction<br>• Matches with Contura bathroom</p>"
+          },
+          "short_description": {
+            "html": "<p>Contura II Small Robe Hook</p>"
+          },
+          "product_dimensions": "W39 x D23 x H52mm",
+          "price_store": 65,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W39 x D23 x H52mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Contura"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Matte Black",
+                    "value": "940"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "849041B"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Black"
+              }
+            ]
+          }
+        },
+        {
+          "id": 20587,
+          "sku": "849042C",
+          "vendorcode": "849042C",
+          "name": "Contura II Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849042c_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849042c_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/8/4/849042c_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/8/4/849042c_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849042c_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849042c_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• High quality metal construction<br>• Matches with Contura bathroom</p>"
+          },
+          "short_description": {
+            "html": "<p>Contura II Robe Hook</p>"
+          },
+          "product_dimensions": "W55 x D23 x H70mm",
+          "price_store": 65,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W55 x D23 x H70mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Contura"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "849042C"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 20586,
+          "sku": "849042BN",
+          "vendorcode": "849042BN",
+          "name": "Contura II Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849042bn_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849042bn_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/8/4/849042bn_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/8/4/849042bn_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849042bn_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849042bn_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• High quality metal construction<br>• Matches with Contura bathroom</p>"
+          },
+          "short_description": {
+            "html": "<p>Contura II Robe Hook</p>"
+          },
+          "product_dimensions": "W55 x D23 x H70mm",
+          "price_store": 82,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W55 x D23 x H70mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Contura"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "849042BN"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 20585,
+          "sku": "849042BBZ",
+          "vendorcode": "849042BBZ",
+          "name": "Contura II Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849042bbz_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849042bbz_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/8/4/849042bbz_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/8/4/849042bbz_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849042bbz_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849042bbz_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Brushed bronze finish<br>• High quality metal construction<br>• Matches with Contura bathroom</p>"
+          },
+          "short_description": {
+            "html": "<p>Contura II Robe Hook</p>"
+          },
+          "product_dimensions": "W55 x D23 x H70mm",
+          "price_store": 82,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W55 x D23 x H70mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Contura"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Bronze",
+                    "value": "935"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "849042BBZ"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Bronze"
+              }
+            ]
+          }
+        },
+        {
+          "id": 20584,
+          "sku": "849042BB",
+          "vendorcode": "849042BB",
+          "name": "Contura II Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849042bb_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849042bb_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/8/4/849042bb_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/8/4/849042bb_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849042bb_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849042bb_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• High quality metal construction<br>• Matches with Contura bathroom</p>"
+          },
+          "short_description": {
+            "html": "<p>Contura II Robe Hook</p>"
+          },
+          "product_dimensions": "W55 x D23 x H70mm",
+          "price_store": 82,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W55 x D23 x H70mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Contura"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "849042BB"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Brass"
+              }
+            ]
+          }
+        },
+        {
+          "id": 20583,
+          "sku": "849042B",
+          "vendorcode": "849042B",
+          "name": "Contura II Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849042b_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849042b_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/8/4/849042b_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/8/4/849042b_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849042b_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849042b_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• High quality metal construction<br>• Matches with Contura bathroom</p>"
+          },
+          "short_description": {
+            "html": "<p>Contura II Robe Hook</p>"
+          },
+          "product_dimensions": "W55 x D23 x H70mm",
+          "price_store": 70,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W55 x D23 x H70mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Contura"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Matte Black",
+                    "value": "940"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "849042B"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Black"
+              }
+            ]
+          }
+        },
+        {
+          "id": 15687,
+          "sku": "99608BN",
+          "vendorcode": "99608BN",
+          "name": "Luna Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99608bn_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99608bn_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/9/9/99608bn_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/9/9/99608bn_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99608bn_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99608bn_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Designed to match Luna tapware and basins<br />&bull; Long lasting chrome finish<br />&bull; Dual fixings for added strength</p>"
+          },
+          "short_description": {
+            "html": "<p>Luna Robe Hook</p>"
+          },
+          "product_dimensions": "W25 x D40 x H53mm",
+          "price_store": 43,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W25 x D40 x H53mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Luna"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "99608BN"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 15675,
+          "sku": "99621GM",
+          "vendorcode": "99621GM",
+          "name": "Urbane II Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99621gm_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99621gm_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/9/9/99621gm_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/9/9/99621gm_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99621gm_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99621gm_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Metal construction ensures durability<br />&bull; Contemporary design and thin&nbsp;edge details to suit modern bathroom<br /><br /></p>"
+          },
+          "short_description": {
+            "html": "<p>Urbane II Robe Hook</p>"
+          },
+          "product_dimensions": "W25 x D35 x H48mm",
+          "price_store": 67,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W25 x D35 x H48mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Urbane"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Gun Metal",
+                    "value": "947"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "99621GM"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Gunmetal"
+              }
+            ]
+          }
+        },
+        {
+          "id": 15674,
+          "sku": "99621BB",
+          "vendorcode": "99621BB",
+          "name": "Urbane II Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99621bb_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99621bb_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/9/9/99621bb_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/9/9/99621bb_caroma_tech_1.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99621bb_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99621bb_caroma_tech_1.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Metal construction ensures durability<br />&bull; Contemporary design and thin&nbsp;edge details to suit modern bathroom<br /><br /></p>"
+          },
+          "short_description": {
+            "html": "<p>Urbane II Robe Hook</p>"
+          },
+          "product_dimensions": "W25 x D35 x H48mm",
+          "price_store": 67,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W25 x D35 x H48mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Urbane"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "99621BB"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Brass"
+              }
+            ]
+          }
+        },
+        {
+          "id": 15673,
+          "sku": "99621B",
+          "vendorcode": "99621B",
+          "name": "Urbane II Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99621b_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99621b_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/9/9/99621b_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/9/9/99621b_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99621b_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99621b_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Metal construction ensures durability<br />&bull; Contemporary design and thin&nbsp;edge details to suit modern bathroom<br /><br /></p>"
+          },
+          "short_description": {
+            "html": "<p>Urbane II Robe Hook</p>"
+          },
+          "product_dimensions": "W25 x D35 x H48mm",
+          "price_store": 58,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W25 x D35 x H48mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Urbane"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Matte Black",
+                    "value": "940"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "99621B"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Black"
+              }
+            ]
+          }
+        },
+        {
+          "id": 15630,
+          "sku": "99621BN",
+          "vendorcode": "99621BN",
+          "name": "Urbane II Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99621bn_caroma_web_1.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99621bn_caroma_web_1.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/9/9/99621bn_caroma_web_1.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/9/9/99621bn_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99621bn_caroma_web_1.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99621bn_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Metal construction ensures durability<br />&bull; Contemporary design and thin&nbsp;edge details to suit modern bathroom<br /><br /></p>"
+          },
+          "short_description": {
+            "html": "<p>Urbane II Robe Hook</p>"
+          },
+          "product_dimensions": "W25 x D35 x H48mm",
+          "price_store": 67,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W25 x D35 x H48mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Urbane"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "99621BN"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 15609,
+          "sku": "99608BL",
+          "vendorcode": "99608BL",
+          "name": "Luna Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99608bl_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99608bl_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/9/9/99608bl_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/9/9/99608bl_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99608bl_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99608bl_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Designed to match Luna tapware and basins<br />&bull; Long lasting chrome finish<br />&bull; Dual fixings for added strength</p>"
+          },
+          "short_description": {
+            "html": "<p>Luna Robe Hook</p>"
+          },
+          "product_dimensions": "W25 x D40 x H53mm",
+          "price_store": 43,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W25 x D40 x H53mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Luna"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Black",
+                    "value": "937"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "99608BL"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Satin Black"
+              }
+            ]
+          }
+        },
+        {
+          "id": 15608,
+          "sku": "99608BB",
+          "vendorcode": "99608BB",
+          "name": "Luna Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99608bb_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99608bb_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/9/9/99608bb_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/9/9/99608bb_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99608bb_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99608bb_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Designed to match Luna tapware and basins<br />&bull; Long lasting chrome finish<br />&bull; Dual fixings for added strength</p>"
+          },
+          "short_description": {
+            "html": "<p>Luna Robe Hook</p>"
+          },
+          "product_dimensions": "W25 x D40 x H53mm",
+          "price_store": 43,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W25 x D40 x H53mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Luna"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "99608BB"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Brass"
+              }
+            ]
+          }
+        },
+        {
+          "id": 15574,
+          "sku": "99621C",
+          "vendorcode": "99621C",
+          "name": "Urbane II Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99621c_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99621c_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/9/9/99621c_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/9/9/99621c_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99621c_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99621c_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Metal construction ensures durability<br />&bull; Contemporary design and thin&nbsp;edge details to suit modern bathroom<br /><br /></p>"
+          },
+          "short_description": {
+            "html": "<p>Urbane II Robe Hook</p>"
+          },
+          "product_dimensions": "W25 x D35 x H48mm",
+          "price_store": 52,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W25 x D35 x H48mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Urbane"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "99621C"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 12258,
+          "sku": "99608C",
+          "vendorcode": "99608C",
+          "name": "Luna Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99608c_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99608c_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/9/9/99608c_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/9/9/99608c_caroma_web_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99608c_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99608c_caroma_web_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Designed to match Luna tapware and basins <br />&bull; Long lasting chrome finish<br />&bull; Dual fixings for added strength</p>"
+          },
+          "short_description": {
+            "html": "<p>Luna Robe Hook</p>"
+          },
+          "product_dimensions": "W25 x D40 x H53mm",
+          "price_store": 39,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W25 x D40 x H53mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Luna"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "99608C"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 6922,
+          "sku": "90726C",
+          "vendorcode": "90726C",
+          "name": "Quatro Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/0/90726c_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/0/90726c_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/9/0/90726c_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/9/0/90726c_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/0/90726c_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/0/90726c_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Single hook <br />&bull; Durable metal construction <br />&bull; Dual fixings for added strength</p>"
+          },
+          "short_description": {
+            "html": "<p>Quatro Robe Hook</p>"
+          },
+          "product_dimensions": null,
+          "price_store": 40,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Quatro"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "90726C"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 416,
+          "sku": "309128C",
+          "vendorcode": "309128C",
+          "name": "Cosmo Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/3/0/309128c_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/3/0/309128c_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/3/0/309128c_web_1.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/3/0/309128c_web.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/3/0/309128c_web_1.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/3/0/309128c_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/3/0/309128c_tech_1.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Smooth clean lines<br /> &bull; Modern bathrooms <br />&bull; Durable metal construction <br />&bull; Designed to suit the Cosmo range <br />&bull; Suitable in all plastered &amp; tiled bathrooms</p>"
+          },
+          "short_description": {
+            "html": "<p>Cosmo Robe Hook</p>"
+          },
+          "product_dimensions": null,
+          "price_store": 37,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Cosmo"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "309128C"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

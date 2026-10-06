@@ -16,7 +16,7 @@ const johnsonJobFilePath = "C:\\Users\\grant\\Downloads\\Johnson 123.gr8job";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
-const outDir = path.join(root, "test-results", "client-selections-appliance-catalogue");
+const outDir = path.join(root, "artifacts/test-results", "client-selections-appliance-catalogue");
 fs.mkdirSync(outDir, { recursive: true });
 
 if (!supabaseUrl || !anonKey || !serviceKey) throw new Error("Missing Supabase environment values.");

@@ -1,0 +1,3 @@
+import fs from 'node:fs/promises';import {source} from './inspect-door-furniture-sources.mjs';
+const {doc}=await source('https://stairmaster.com.au/');doc.querySelectorAll('script,style,header,footer,nav').forEach(e=>e.remove());
+await fs.writeFile('data/product-library/source-evidence/internal-finishing/stairmaster-details.json',JSON.stringify({text:doc.body.textContent.replace(/\s+/g,' '),images:[...doc.querySelectorAll('img')].map(i=>({url:i.getAttribute('data-src')||i.src,alt:i.alt})),links:[...doc.querySelectorAll('a[href]')].map(a=>({url:a.href,text:a.textContent.trim()}))},null,2));doc.defaultView.close();

@@ -11,7 +11,7 @@ const SOURCES = [
   ["Outdoor Floodlights", "https://www.beaconlighting.com.au/led-outdoor-flood-lights"],
 ];
 
-const OUT_DIR = path.join(process.cwd(), "test-results", "beacon-outdoor-catalogue");
+const OUT_DIR = path.join(process.cwd(), "artifacts/test-results", "beacon-outdoor-catalogue");
 
 function cleanText(value = "") {
   return String(value).replace(/\s+/g, " ").trim();

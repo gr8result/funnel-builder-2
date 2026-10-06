@@ -49,7 +49,11 @@ async function transformJob(job, encode, assets = new Map()) {
         const { dataUrl, ...metadata } = page;
         if (!assets.has(dataUrl)) assets.set(dataUrl, putAsset(dataUrl));
         result.push({ ...metadata, dataUrlAssetId: await assets.get(dataUrl), dataUrlBytes: new TextEncoder().encode(dataUrl).length });
-      } else if (!encode && page?.dataUrlAssetId) {
+      } else if (!encode && page?.dataUrlAssetId && !(typeof page?.dataUrl === 'string' && page.dataUrl.startsWith('data:'))) {
+        // Only reach for the local asset store when the page has no image of its own.
+        // A job file carried from another machine embeds the image but keeps the asset
+        // id from where it was saved; preferring the id there would look up an asset
+        // this profile has never held, throw, and leave the takeoff page blank.
         result.push({ ...page, dataUrl: await readPlanAsset(page.dataUrlAssetId) });
       } else result.push(page);
     }
@@ -84,5 +88,16 @@ export async function externalizeTakeoffRecoverySnapshot(snapshot) {
   if (portable.takeoffJob) next.takeoffJob = portable.takeoffJob === portable.takeoffData
     ? next.takeoffData : await transformJob(portable.takeoffJob, true, assets);
   if (portable.plan) next.plan = (await transformJob({ plan: portable.plan }, true, assets)).plan;
+  return { ...snapshot, portableTakeoff: next };
+}
+
+export async function materializeTakeoffRecoverySnapshot(snapshot) {
+  const portable = snapshot?.portableTakeoff;
+  if (!portable) return snapshot;
+  const next = { ...portable };
+  if (portable.takeoffData) next.takeoffData = await transformJob(portable.takeoffData, false);
+  if (portable.takeoffJob) next.takeoffJob = portable.takeoffJob === portable.takeoffData
+    ? next.takeoffData : await transformJob(portable.takeoffJob, false);
+  if (portable.plan) next.plan = (await transformJob({ plan: portable.plan }, false)).plan;
   return { ...snapshot, portableTakeoff: next };
 }

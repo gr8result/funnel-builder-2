@@ -13,7 +13,7 @@ const workspaceId = "846885cd-25b9-4eca-b9f9-3fd02f5882d8";
 const runId = new Date().toISOString().replace(/[-:.TZ]/g, "").slice(0, 14);
 const email = `codex-product-library-migration-${runId}@example.test`;
 const password = `Codex-${runId}-Pass!`;
-const outDir = path.join(process.cwd(), "test-artifacts", "client-selections-product-library-migration-live");
+const outDir = path.join(process.cwd(), "artifacts/test-artifacts", "client-selections-product-library-migration-live");
 fs.mkdirSync(outDir, { recursive: true });
 
 const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;

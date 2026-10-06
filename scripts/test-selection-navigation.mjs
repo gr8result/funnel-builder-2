@@ -24,5 +24,26 @@ assert.equal(normalizeSelectionDestination(internal).searchParams.get('selection
 window.location.href = internal;
 assert.equal(await safeSelectionNavigate(router, '/modules/estimate-builder?selectionRequirement=skirting&selectionArea=interior&page=clientSelections'), false);
 assert.equal(calls.length, 1, 'Internal selection routing uses the same sorted-query guard.');
+
+// Next can display a route before its push promise settles. Going to another
+// tab and back in that interval must not discard the return click as a duplicate.
+const tabCalls = [];
+const completions = [];
+const tabsRouter = { push: url => {
+  tabCalls.push(url);
+  window.location.href = `http://localhost:3000${url}`;
+  return new Promise(resolve => completions.push(resolve));
+} };
+window.location.href = 'http://localhost:3000/modules/estimate-builder?page=formulaSheet';
+const enterData = safeSelectionNavigate(tabsRouter, '/modules/estimate-builder?page=dataInput');
+const enterQuote = safeSelectionNavigate(tabsRouter, '/modules/estimate-builder?page=quotation');
+const returnToData = safeSelectionNavigate(tabsRouter, '/modules/estimate-builder?page=dataInput');
+assert.deepEqual(tabCalls, [
+  '/modules/estimate-builder?page=dataInput',
+  '/modules/estimate-builder?page=quotation',
+  '/modules/estimate-builder?page=dataInput',
+], 'Returning to Data Input must supersede an unfinished earlier navigation');
+completions.forEach(resolve => resolve(true));
+await Promise.all([enterData, enterQuote, returnToData]);
 delete globalThis.window;
 console.log('Selection navigation guards passed.');

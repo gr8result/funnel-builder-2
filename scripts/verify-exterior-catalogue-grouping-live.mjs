@@ -14,7 +14,7 @@ dotenv.config({ path: ".env", quiet: true });
 
 const baseUrl = process.env.PRODUCT_LIBRARY_TEST_URL || "http://localhost:3000/modules/estimate-builder?page=productLibrary";
 const ownerEmail = process.env.PRODUCT_LIBRARY_TEST_EMAIL || "support@gr8result.com";
-const outDir = path.join(process.cwd(), "test-artifacts", "exterior-catalogue-grouping", String(Date.now()));
+const outDir = path.join(process.cwd(), "artifacts/test-artifacts", "exterior-catalogue-grouping", String(Date.now()));
 fs.mkdirSync(outDir, { recursive: true });
 
 async function mintSession() {
@@ -97,10 +97,11 @@ try {
  await page.waitForSelector('.category-tile[data-room-category="entry-doors"]',{timeout:90000});
  const cards=await page.$$eval('.category-tile',nodes=>nodes.map(n=>({key:n.dataset.roomCategory,text:n.innerText})));
  report.cards=cards;
- for(const removed of ['gutters','fascia','downpipes','external-door-furniture','door-furniture'])assert(!cards.some(c=>c.key===removed),`Unexpected card ${removed}`);
+ for(const removed of ['gutters','fascia','downpipes','door-furniture'])assert(!cards.some(c=>c.key===removed),`Unexpected card ${removed}`);
  assert(cards.filter(c=>c.key==='roofing').length===1,'One roofing card');
- assert(cards.some(c=>c.text.includes('Entry Doors & Door Furniture')),'Combined doors card');
- const image=await page.$eval('[data-room-category="entry-doors"] .tile-image',n=>getComputedStyle(n).backgroundImage);
+ assert(cards.some(c=>c.key==='entry-doors'&&c.text.includes('Doors / Entry Doors')),'Separate entry doors card');
+ assert(cards.some(c=>c.key==='external-door-furniture'&&c.text.includes('Door Furniture / Handles')),'Separate hardware card');
+ const image=await page.$eval('[data-room-category="external-door-furniture"] .tile-image',n=>getComputedStyle(n).backgroundImage);
  assert(image.includes('entrance-door-lockset.jpg'),'Local entrance lockset photo');
  await page.screenshot({path:path.join(outDir,'01-exterior.png')});
  for(const [parent,sections] of Object.entries(EXTERIOR_CATALOGUE_SECTIONS)) {

@@ -81,11 +81,11 @@ assert.ok(hookSource.includes("setDirty(false)") && hookSource.includes("if (!ha
 assert.ok(hookSource.includes("const close = useCallback"), "Close Job clears file handle, file name and dirty state");
 assert.ok(hookSource.includes("fallbackToSaveAs: true"), "Save Job uses Save As/download when no writable computer-file handle exists");
 
-assert.ok(workbookShellSource.includes("dirty: jobFile.hasActiveJob && jobFile.dirty"), "local-file replacement prompt ignores stale dirty state when no job is open");
+assert.ok(workbookShellSource.includes("dirty: !openJobDetails.noJobOpen && sheet.dirty"), "local-file replacement prompt ignores stale dirty state when no job is open");
 assert.ok(workbookShellSource.includes("const hasOpenWorkbook = !openJobDetails.noJobOpen"), "workbook identity is the restored local-job source of truth");
 assert.ok(workbookShellSource.includes("...(hasOpenWorkbook ? ["), "save commands are hidden until a workbook job is active");
 assert.ok(workbookShellSource.includes("jobFile.open()"), "Open Job File From Computer uses the File System Access path where available");
-assert.ok(workbookShellSource.includes("Save Job As"), "Save As wording is clear");
+assert.ok(workbookShellSource.includes("Save Job to Computer"), "Computer-file save wording is clear");
 assert.ok(workbookShellSource.includes("Download Backup Copy"), "backup export wording is clear");
 assert.ok(workbookShellSource.includes("jobFile.close?.();"), "Close Job clears both workbook and file-hook state");
 assert.ok(workbookShellSource.includes("openParsedJob(prompt.parsed"), "selected local file is opened exactly after validation");

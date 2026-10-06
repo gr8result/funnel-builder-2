@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 420" role="img" aria-label="Tapware image required">
+  <rect width="640" height="420" fill="#eef3f7"/>
+  <rect x="232" y="286" width="176" height="26" rx="10" fill="#ffffff" stroke="#1f3448" stroke-width="11"/>
+  <path d="M320 286V150a58 58 0 0 1 58-58h26" fill="none" stroke="#1f3448" stroke-width="14" stroke-linecap="round"/>
+  <path d="M404 92v56" stroke="#19a0bd" stroke-width="14" stroke-linecap="round"/>
+  <path d="M320 150h-58" stroke="#19a0bd" stroke-width="13" stroke-linecap="round"/>
+  <circle cx="248" cy="150" r="17" fill="none" stroke="#1f3448" stroke-width="10"/>
+  <text x="320" y="370" fill="#1f3448" font-family="Arial, sans-serif" font-size="28" text-anchor="middle">Exact tapware image required</text>
+</svg>

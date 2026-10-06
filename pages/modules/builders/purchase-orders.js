@@ -663,14 +663,17 @@ function buildAvailableItems({ boqItems, procurementItems, supplierById }) {
       rows.push(normaliseSourceItem({ procurement, supplierById }));
     }
   });
-  return rows.filter((row) => row.status !== "archived" && row.status !== "removed_from_quote");
+  const boardSupplier = rows.find((row) => row.status !== "archived" && row.status !== "removed_from_quote" && row.supplierGroup === "Plasterboard" && (row.supplierId || row.supplierName));
+  return rows.filter((row) => row.status !== "archived" && row.status !== "removed_from_quote").map((row) => row.supplierGroup === "Plasterboard" && !row.supplierId && !row.supplierName && boardSupplier
+    ? { ...row, supplierId: boardSupplier.supplierId, supplierName: boardSupplier.supplierName } : row);
 }
 
 function normaliseSourceItem({ boq = null, procurement = null, supplierById }) {
   const sourceRow = boq?.source_row || {};
   const supplierId = procurement?.supplier_id || boq?.supplier_id || "";
   const supplier = supplierId ? supplierById.get(supplierId) : null;
-  const supplierName = supplier?.name || procurement?.metadata?.supplier || sourceRow.supplier || boq?.rate_source || "";
+  const supplierGroup = procurement?.metadata?.supplierGroup || procurement?.source_item?.supplierGroup || boq?.metadata?.supplierGroup || "";
+  const supplierName = supplier?.name || procurement?.metadata?.supplier || sourceRow.supplier || (supplierGroup ? "" : boq?.rate_source) || "";
   const quantity = firstNumber(procurement?.quantity, boq?.quantity);
   const totalCost = firstNumber(procurement?.estimated_total, sourceRow.costTotal, sourceRow.totalCost, sourceRow.importedCost, sourceRow.cost, boq?.line_total);
   const unitCost = firstNumber(procurement?.estimated_rate, boq?.unit_rate, quantity ? totalCost / quantity : 0);
@@ -682,10 +685,11 @@ function normaliseSourceItem({ boq = null, procurement = null, supplierById }) {
     procurementItemId: procurement?.id || "",
     supplierId,
     supplierName,
+    supplierGroup,
     sourceQuoteRowId: procurement?.source_quote_row_id || boq?.source_quote_row_id || "",
     sourceProcurementItemId: procurement?.source_procurement_item_id || "",
     sectionName: procurement?.section_name || boq?.source_section_name || "",
-    sourceLabel: supplierName || procurement?.procurement_category || boq?.rate_source || "No supplier assigned",
+    sourceLabel: supplierName || supplierGroup || procurement?.procurement_category || boq?.rate_source || "No supplier assigned",
     description,
     quantity,
     unit: procurement?.unit || boq?.unit || "",

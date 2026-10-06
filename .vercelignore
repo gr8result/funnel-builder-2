@@ -5,6 +5,7 @@ node_modules/
 .next-build/
 .next-dev.lock.json
 .next-build.lock.json
+.next-*/
 out/
 build/
 coverage/
@@ -26,6 +27,8 @@ tmp-public-schema.sql
 
 # Local editor and OS artifacts
 .history/
+.venv/
+.cache/
 .vscode/
 .claude/
 .DS_Store
@@ -36,7 +39,7 @@ tmp-public-schema.sql
 *.old
 
 # Test, diagnostic, and screenshot output
-test-results/
+artifacts/
 tmp/
 tmp-thumbs/
 tmp-trade-check/
@@ -48,7 +51,7 @@ website-builder-sites/_emergency-drafts/
 website-builder-sites-backup-*/
 website-builder-sites-*-backup-*/
 website-builder-backups/
-2208a52a-8175-477e-823c-fc6de7fe4afe/
+archive/
 
 # Generated website-builder local snapshots
 website-builder-sites/**/full-project.json

@@ -26,7 +26,7 @@ const TERMS = [
   "Somplace",
 ];
 
-const outDir = path.resolve("test-results/johnson-template-chain", new Date().toISOString().replace(/[:.]/g, "-"));
+const outDir = path.resolve("artifacts/test-results/johnson-template-chain", new Date().toISOString().replace(/[:.]/g, "-"));
 await fs.mkdir(outDir, { recursive: true });
 
 function hash(value) {
@@ -150,7 +150,7 @@ for (const prefix of storagePrefixes) {
   storage.push({ bucket: "assets", prefix, error: error?.message || null, data: data || [] });
 }
 
-const browserExportPath = path.resolve("test-results/johnson-browser-storage/2026-08-28T05-36-30-389Z/browser-storage-export.json");
+const browserExportPath = path.resolve("artifacts/test-results/johnson-browser-storage/2026-08-28T05-36-30-389Z/browser-storage-export.json");
 let browserExport = null;
 try {
   browserExport = JSON.parse(await fs.readFile(browserExportPath, "utf8"));
@@ -158,7 +158,7 @@ try {
   browserExport = { error: error.message };
 }
 
-const gr8ReportPath = path.resolve("test-results/johnson-recovery/2026-08-28T05-01-49-581Z/recovery-audit-report.json");
+const gr8ReportPath = path.resolve("artifacts/test-results/johnson-recovery/2026-08-28T05-01-49-581Z/recovery-audit-report.json");
 let gr8Report = null;
 try {
   gr8Report = JSON.parse(await fs.readFile(gr8ReportPath, "utf8"));

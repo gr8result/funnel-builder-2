@@ -15,11 +15,11 @@ This is a Next.js-based funnel builder application with modular components for s
 - `/data/`: Static data files (pricing.js, website-templates.js)
 - `/pages/`: Next.js pages/routes
 - `/n8n-automation/`: Docker setup for n8n workflow automation
-- `reset-dev.ps1`: PowerShell script for full development environment reset
+- `deploy/reset-dev.ps1`: PowerShell script for full development environment reset
 
 ## Development Workflows
 - **Start dev server**: `npm run dev` (runs Next.js dev server)
-- **Full reset**: Run `.\reset-dev.ps1` to clean caches, reinstall deps, and restart (useful when builds break)
+- **Full reset**: Run `deploy/reset-dev.ps1` (from anywhere -- it re-roots itself) to clean caches, reinstall deps, and restart (useful when builds break)
 - **n8n automation**: `docker-compose up` in `/n8n-automation/` for workflow testing
 - **Environment**: Requires `.env.local` with Supabase, SendGrid, Stripe, Twilio keys
 

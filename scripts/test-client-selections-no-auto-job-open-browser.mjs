@@ -15,7 +15,7 @@ const workspaceId = "846885cd-25b9-4eca-b9f9-3fd02f5882d8";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
-const outDir = path.join(root, "test-results", "client-selections-no-auto-job-open");
+const outDir = path.join(root, "artifacts/test-results", "client-selections-no-auto-job-open");
 fs.mkdirSync(outDir, { recursive: true });
 
 if (!supabaseUrl || !anonKey || !serviceKey) throw new Error("Missing Supabase environment values.");

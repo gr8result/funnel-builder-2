@@ -1,0 +1,113 @@
+{
+  "data": {
+    "products": {
+      "items": [
+        {
+          "id": 25124,
+          "sku": "WRT9350AU",
+          "vendorcode": "WRT9350AU",
+          "name": "900mm Ceramic Cooktop",
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/w/r/wrt9350au_whirlpool_web.jpeg"
+          },
+          "product_images": {
+            "thumbnail": "https://backend.harveynormancommercial.com.au/static/version1767508927/frontend/Hnc/Lumachild/en_US/Magento_Catalog/images/product/placeholder/thumbnail.jpg",
+            "small": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/1df791769d8cdc80e3c05129fe5437cf/w/r/wrt9350au_whirlpool_web.jpeg",
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/w/r/wrt9350au_whirlpool_web.jpeg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/w/r/wrt9350au_whirlpool_web.jpeg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/w/r/wrt9350au_whirpool_tech.png"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/w/r/wrt9350au_whirlpool_web.jpeg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/w/r/wrt9350au_whirpool_tech.png"
+            }
+          ],
+          "description": {
+            "html": "<p>• 5 cooking zones <br>• Triple &amp; Oval expandable cooking zones<br>• Cast Iron Trivets<br>• Stop &amp; Go function for cooking convenience<br>• Child Lock function</p>"
+          },
+          "product_dimensions": "W900 x  D520 x H51mm ",
+          "price_promo": 0,
+          "price_store": 1098,
+          "wels_reg_number": "",
+          "gp_product_group": "COOKTOPS",
+          "__typename": "SimpleProduct"
+        }
+      ],
+      "aggregations": [
+        {
+          "attribute_code": "category_id",
+          "label": "Category",
+          "options": [
+            {
+              "label": "Kitchen",
+              "value": "16",
+              "count": 1
+            },
+            {
+              "label": "Cooktops",
+              "value": "23",
+              "count": 1
+            },
+            {
+              "label": "Electric Cooktops ",
+              "value": "108",
+              "count": 1
+            },
+            {
+              "label": "Products",
+              "value": "1036",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "attribute_code": "brand",
+          "label": "Brand",
+          "options": [
+            {
+              "label": "Whirlpool",
+              "value": "1084",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "attribute_code": "colours",
+          "label": "Colour",
+          "options": [
+            {
+              "label": "Black Glass",
+              "value": "938",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "attribute_code": "size_cooktop",
+          "label": "Cooktop Size",
+          "options": [
+            {
+              "label": "891mm +",
+              "value": "1087",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "attribute_code": "stock_line_filter",
+          "label": "Stock Line",
+          "options": [
+            {
+              "label": "No",
+              "value": "673",
+              "count": 1
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

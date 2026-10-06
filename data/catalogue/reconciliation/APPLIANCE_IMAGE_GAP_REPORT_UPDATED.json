@@ -1,0 +1,109 @@
+{
+    "totalActiveSelectable":  116,
+    "validExactImages":  107,
+    "missingImagesAFTER":  9,
+    "placeholderImagesAFTER":  0,
+    "wrongModelImagesAFTER":  0,
+    "brokenPathsAFTER":  0,
+    "technicalDrawingImagesAFTER":  0,
+    "missingDetails":  [
+                           {
+                               "brand":  "Euromaid",
+                               "model":  "ECCK900",
+                               "category":  "cooktops",
+                               "sourceURL":  ""
+                           },
+                           {
+                               "brand":  "Euromaid",
+                               "model":  "GC90S",
+                               "category":  "cooktops",
+                               "sourceURL":  ""
+                           },
+                           {
+                               "brand":  "Omega",
+                               "model":  "OI90Z",
+                               "category":  "cooktops",
+                               "sourceURL":  "https://images.squarespace-cdn.com/content/v1/6434bb26a48593544005e14d/1136c961-88a8-4658-91dd-2e7b1f124e15/Omega_Family-in-Kitchen.png"
+                           },
+                           {
+                               "brand":  "Euromaid",
+                               "model":  "EDW14S",
+                               "category":  "dishwashers",
+                               "sourceURL":  ""
+                           },
+                           {
+                               "brand":  "Euromaid",
+                               "model":  "CS60S",
+                               "category":  "rangehoods",
+                               "sourceURL":  ""
+                           },
+                           {
+                               "brand":  "Euromaid",
+                               "model":  "FS90S",
+                               "category":  "rangehoods",
+                               "sourceURL":  ""
+                           },
+                           {
+                               "brand":  "Omega",
+                               "model":  "ORC60X",
+                               "category":  "rangehoods",
+                               "sourceURL":  "https://images.squarespace-cdn.com/content/v1/6434bb26a48593544005e14d/1136c961-88a8-4658-91dd-2e7b1f124e15/Omega_Family-in-Kitchen.png"
+                           },
+                           {
+                               "brand":  "Omega",
+                               "model":  "ORC90X",
+                               "category":  "rangehoods",
+                               "sourceURL":  "https://images.squarespace-cdn.com/content/v1/6434bb26a48593544005e14d/1136c961-88a8-4658-91dd-2e7b1f124e15/Omega_Family-in-Kitchen.png"
+                           },
+                           {
+                               "brand":  "Westinghouse",
+                               "model":  "WRI930SB",
+                               "category":  "rangehoods",
+                               "sourceURL":  ""
+                           }
+                       ],
+    "summaryByBrand":  [
+                           {
+                               "Name":  "Euromaid",
+                               "Count":  22
+                           },
+                           {
+                               "Name":  "Omega",
+                               "Count":  13
+                           },
+                           {
+                               "Name":  "Smeg",
+                               "Count":  14
+                           },
+                           {
+                               "Name":  "Westinghouse",
+                               "Count":  14
+                           },
+                           {
+                               "Name":  "Bosch",
+                               "Count":  53
+                           }
+                       ],
+    "summaryByCategory":  [
+                              {
+                                  "Name":  "cooktops",
+                                  "Count":  37
+                              },
+                              {
+                                  "Name":  "dishwashers",
+                                  "Count":  4
+                              },
+                              {
+                                  "Name":  "freestanding-cookers",
+                                  "Count":  4
+                              },
+                              {
+                                  "Name":  "ovens",
+                                  "Count":  32
+                              },
+                              {
+                                  "Name":  "rangehoods",
+                                  "Count":  39
+                              }
+                          ]
+}

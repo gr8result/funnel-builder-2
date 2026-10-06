@@ -15,14 +15,14 @@ mkdirSync(resolve("data/product-library/catalogues/appliances"), { recursive: tr
 
 writeJson("data/product-library/catalogues/appliances/AU-APPLIANCE-CATALOGUE.json", result.catalogue);
 writeJson("data/product-library/catalogues/appliances/AU-APPLIANCE-PACKS.json", result.packCatalogue);
-writeFileSync(resolve("APPLIANCE_PRODUCT_ENRICHMENT_REPORT.md"), renderEnrichmentReport(result));
-writeFileSync(resolve("APPLIANCE_IMAGE_AND_SOURCE_AUDIT.csv"), csvFromRows(result.imageAuditRows));
-writeFileSync(resolve("APPLIANCE_MANUAL_REVIEW_QUEUE.csv"), csvFromRows(result.manualReviewQueue));
-writeFileSync(resolve("APPLIANCE_CATALOGUE_COVERAGE_REPORT.md"), renderCoverageReport(result));
-writeFileSync(resolve("APPLIANCE_IDENTITY_VARIATION_RESOLUTION.csv"), csvFromRows(identityVariationRows(result)));
-writeFileSync(resolve("APPLIANCE_PRODUCT_RESEARCH_LOG.csv"), csvFromRows(result.researchLogRows));
-writeFileSync(resolve("APPLIANCE_FIELD_SOURCE_AUDIT.csv"), csvFromRows(result.fieldSourceAuditRows));
-writeFileSync(resolve("APPLIANCE_IMAGE_LICENSING_REVIEW.csv"), csvFromRows(result.imageLicensingRows));
+writeFileSync(resolve("docs/catalogue/APPLIANCE_PRODUCT_ENRICHMENT_REPORT.md"), renderEnrichmentReport(result));
+writeFileSync(resolve("data/catalogue/reconciliation/APPLIANCE_IMAGE_AND_SOURCE_AUDIT.csv"), csvFromRows(result.imageAuditRows));
+writeFileSync(resolve("data/catalogue/reconciliation/APPLIANCE_MANUAL_REVIEW_QUEUE.csv"), csvFromRows(result.manualReviewQueue));
+writeFileSync(resolve("docs/catalogue/APPLIANCE_CATALOGUE_COVERAGE_REPORT.md"), renderCoverageReport(result));
+writeFileSync(resolve("data/catalogue/reconciliation/APPLIANCE_IDENTITY_VARIATION_RESOLUTION.csv"), csvFromRows(identityVariationRows(result)));
+writeFileSync(resolve("data/catalogue/reconciliation/APPLIANCE_PRODUCT_RESEARCH_LOG.csv"), csvFromRows(result.researchLogRows));
+writeFileSync(resolve("data/catalogue/reconciliation/APPLIANCE_FIELD_SOURCE_AUDIT.csv"), csvFromRows(result.fieldSourceAuditRows));
+writeFileSync(resolve("data/catalogue/reconciliation/APPLIANCE_IMAGE_LICENSING_REVIEW.csv"), csvFromRows(result.imageLicensingRows));
 
 console.log(JSON.stringify(result.report, null, 2));
 
@@ -74,7 +74,7 @@ Products with exact model pages and visible page imagery are marked \`imageStatu
 
 Specification records are marked \`partial\` because no manufacturer source has verified dimensions beyond width, capacity, controls, energy ratings, water ratings, extraction rates or electrical requirements.
 
-Research attempts are recorded in \`APPLIANCE_PRODUCT_RESEARCH_LOG.csv\`. Field-level provenance is recorded in \`APPLIANCE_FIELD_SOURCE_AUDIT.csv\`. Image licence status is recorded in \`APPLIANCE_IMAGE_LICENSING_REVIEW.csv\`.
+Research attempts are recorded in \`data/catalogue/reconciliation/APPLIANCE_PRODUCT_RESEARCH_LOG.csv\`. Field-level provenance is recorded in \`data/catalogue/reconciliation/APPLIANCE_FIELD_SOURCE_AUDIT.csv\`. Image licence status is recorded in \`data/catalogue/reconciliation/APPLIANCE_IMAGE_LICENSING_REVIEW.csv\`.
 
 ## Not Connected
 

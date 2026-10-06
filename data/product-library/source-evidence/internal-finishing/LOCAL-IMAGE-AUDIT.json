@@ -1,0 +1,16 @@
+{
+  "passed": true,
+  "enabledRecords": 966,
+  "distinctLocalImages": 838,
+  "corinthianRecords": 246,
+  "corinthianModels": 160,
+  "sharedDesigns": [
+    {
+      "image": "/images/product-library/internal-areas/corinthian-front/28644fca162d79185eb0a02c.jpg",
+      "models": [
+        "PMDF",
+        "Premium PMDF"
+      ]
+    }
+  ]
+}

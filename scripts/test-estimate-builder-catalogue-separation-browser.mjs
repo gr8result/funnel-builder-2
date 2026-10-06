@@ -4,7 +4,7 @@ import path from "node:path";
 import puppeteer from "puppeteer";
 
 const baseUrl = process.env.ESTIMATE_BUILDER_BASE_URL || "http://localhost:3000";
-const outDir = path.resolve("test-results", "estimate-builder-catalogue-separation");
+const outDir = path.resolve("artifacts/test-results", "estimate-builder-catalogue-separation");
 fs.mkdirSync(outDir, { recursive: true });
 
 const browser = await puppeteer.launch({

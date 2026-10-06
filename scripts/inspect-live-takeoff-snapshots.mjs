@@ -17,7 +17,8 @@ const server=http.createServer(async(req,res)=>{
 });
 server.listen(0,'127.0.0.1',()=>{
  const endpoint=`http://127.0.0.1:${server.address().port}/${token}`;
- const url='http://localhost:3000/takeoff-snapshot-inspection.html?bridge='+encodeURIComponent(endpoint)+(process.argv.includes('--keys-only')?'&keysOnly=1':'')+(process.argv.includes('--new-only')?'&newOnly=1':'');
+ const page=process.argv.includes('--inventory')?'takeoff-storage-inventory.html':'takeoff-snapshot-inspection.html';
+ const url='http://localhost:3000/'+page+'?bridge='+encodeURIComponent(endpoint)+(process.argv.includes('--keys-only')?'&keysOnly=1':'')+(process.argv.includes('--new-only')?'&newOnly=1':'');
  spawn('C:/Program Files/Google/Chrome/Application/chrome.exe',['--profile-directory=Profile 6',url],{detached:true,stdio:'ignore'}).unref();
  console.log('Read-only inspection started',out);
 });

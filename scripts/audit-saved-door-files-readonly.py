@@ -1,6 +1,6 @@
 ﻿import json,zipfile,os
 from pathlib import Path
-out=Path('test-artifacts/manual-entry-door-recovery');report=[]
+out=Path('artifacts/test-artifacts/manual-entry-door-recovery');report=[]
 for filename in ['Johnson 123.gr8job','New Job 03 09.gr8job']:
  p=Path(os.environ['USERPROFILE'])/'Downloads'/filename
  if not p.exists():continue

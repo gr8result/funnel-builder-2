@@ -1,0 +1,2064 @@
+{
+  "schemaVersion": "product-library.hnc-product-evidence.v1",
+  "sourceOrganisation": "Harvey Norman Commercial",
+  "checkedAt": "2026-09-11",
+  "scope": "Four HNC Euromaid gas cooktops",
+  "status": "ready",
+  "listing": {
+    "url": "https://www.harveynormancommercial.com.au/kitchen/cooktops?page=1&category_id=23&sort=position&dir=ASC&brand=59",
+    "retrievedAt": "2026-09-11T05:57:24.922Z",
+    "request": {
+      "operationName": "GetLayeredNavigation",
+      "variables": {
+        "categoryId": [
+          "23"
+        ],
+        "brand": [
+          "59"
+        ],
+        "pageSize": 28,
+        "currentPage": 1,
+        "sort": {
+          "position": "ASC"
+        }
+      },
+      "query": "query GetLayeredNavigation($categoryId: [String]!, $colours: [String], $brand: [String], $price_from: String, $price_to: String, $sku: String, $wels_water_rating: [String], $energy_rating: [String], $stock_line_filter: [String], $size_mm: [String], $size_cooktop: [String], $size_litre: [String], $size_oven: [String], $tvs_size_dd: [String], $baths_general_materials: [String], $overflow: [String], $inlet: [String], $bowls: [String], $pageSize: Int!, $currentPage: Int!, $sort: ProductAttributeSortInput) {\n  products(\n    filter: {category_id: {in: $categoryId}, colours: {in: $colours}, brand: {in: $brand}, price_store: {from: $price_from, to: $price_to}, sku: {eq: $sku}, wels_water_rating: {in: $wels_water_rating}, energy_rating: {in: $energy_rating}, stock_line_filter: {in: $stock_line_filter}, size_mm: {in: $size_mm}, size_cooktop: {in: $size_cooktop}, size_litre: {in: $size_litre}, size_oven: {in: $size_oven}, tvs_size_dd: {in: $tvs_size_dd}, baths_general_materials: {in: $baths_general_materials}, overflow: {in: $overflow}, inlet: {in: $inlet}, bowls: {in: $bowls}}\n    sort: $sort\n    pageSize: $pageSize\n    currentPage: $currentPage\n  ) {\n    aggregations {\n      attribute_code\n      label\n      options {\n        label\n        value\n        count\n        __typename\n      }\n      __typename\n    }\n    items {\n      id\n      name\n      sku\n      vendorcode\n      image {\n        url\n        __typename\n      }\n      thumbnail {\n        url\n        __typename\n      }\n      product_images {\n        thumbnail\n        small\n        base\n        __typename\n      }\n      description {\n        html\n        __typename\n      }\n      price_store\n      price_trade\n      stock_line_filter\n      gp_product_group\n      __typename\n      ... on SimpleProduct {\n        price_range {\n          minimum_price {\n            regular_price {\n              value\n              currency\n              __typename\n            }\n            __typename\n          }\n          __typename\n        }\n        __typename\n      }\n      ... on ConfigurableProduct {\n        configurable_options {\n          attribute_code\n          attribute_id\n          label\n          values {\n            label\n            value_index\n            __typename\n          }\n          __typename\n        }\n        variants {\n          product {\n            sku\n            name\n            price_range {\n              minimum_price {\n                regular_price {\n                  value\n                  currency\n                  __typename\n                }\n                final_price {\n                  value\n                  currency\n                  __typename\n                }\n                __typename\n              }\n              __typename\n            }\n            __typename\n          }\n          attributes {\n            code\n            value_index\n            __typename\n          }\n          __typename\n        }\n        __typename\n      }\n    }\n    page_info {\n      total_pages\n      __typename\n    }\n    total_count\n    __typename\n  }\n}"
+    },
+    "response": {
+      "data": {
+        "products": {
+          "aggregations": [
+            {
+              "attribute_code": "category_id",
+              "label": "Category",
+              "options": [
+                {
+                  "label": "Kitchen",
+                  "value": "16",
+                  "count": 8,
+                  "__typename": "AggregationOption"
+                },
+                {
+                  "label": "Cooktops",
+                  "value": "23",
+                  "count": 8,
+                  "__typename": "AggregationOption"
+                },
+                {
+                  "label": "Products",
+                  "value": "1036",
+                  "count": 8,
+                  "__typename": "AggregationOption"
+                },
+                {
+                  "label": "Gas Cooktops ",
+                  "value": "107",
+                  "count": 4,
+                  "__typename": "AggregationOption"
+                },
+                {
+                  "label": "Electric Cooktops ",
+                  "value": "108",
+                  "count": 2,
+                  "__typename": "AggregationOption"
+                },
+                {
+                  "label": "Induction Cooktops ",
+                  "value": "109",
+                  "count": 2,
+                  "__typename": "AggregationOption"
+                }
+              ],
+              "__typename": "Aggregation"
+            },
+            {
+              "attribute_code": "brand",
+              "label": "Brand",
+              "options": [
+                {
+                  "label": "Euromaid",
+                  "value": "59",
+                  "count": 8,
+                  "__typename": "AggregationOption"
+                }
+              ],
+              "__typename": "Aggregation"
+            },
+            {
+              "attribute_code": "colours",
+              "label": "Colour",
+              "options": [
+                {
+                  "label": "Black",
+                  "value": "937",
+                  "count": 4,
+                  "__typename": "AggregationOption"
+                },
+                {
+                  "label": "Black Glass",
+                  "value": "938",
+                  "count": 2,
+                  "__typename": "AggregationOption"
+                },
+                {
+                  "label": "Stainless Steel",
+                  "value": "943",
+                  "count": 2,
+                  "__typename": "AggregationOption"
+                }
+              ],
+              "__typename": "Aggregation"
+            },
+            {
+              "attribute_code": "size_mm",
+              "label": "Size (mm)",
+              "options": [
+                {
+                  "label": "600",
+                  "value": "746",
+                  "count": 1,
+                  "__typename": "AggregationOption"
+                },
+                {
+                  "label": "900",
+                  "value": "833",
+                  "count": 2,
+                  "__typename": "AggregationOption"
+                },
+                {
+                  "label": "890",
+                  "value": "852",
+                  "count": 1,
+                  "__typename": "AggregationOption"
+                }
+              ],
+              "__typename": "Aggregation"
+            },
+            {
+              "attribute_code": "size_cooktop",
+              "label": "Cooktop Size",
+              "options": [
+                {
+                  "label": "891mm +",
+                  "value": "1087",
+                  "count": 2,
+                  "__typename": "AggregationOption"
+                },
+                {
+                  "label": "300 - 600mm",
+                  "value": "1090",
+                  "count": 5,
+                  "__typename": "AggregationOption"
+                }
+              ],
+              "__typename": "Aggregation"
+            },
+            {
+              "attribute_code": "stock_line_filter",
+              "label": "Stock Line",
+              "options": [
+                {
+                  "label": "Yes",
+                  "value": "672",
+                  "count": 3,
+                  "__typename": "AggregationOption"
+                },
+                {
+                  "label": "No",
+                  "value": "673",
+                  "count": 5,
+                  "__typename": "AggregationOption"
+                }
+              ],
+              "__typename": "Aggregation"
+            }
+          ],
+          "items": [
+            {
+              "id": 24930,
+              "name": "900mm Induction Cooktop",
+              "sku": "ECI950TE",
+              "vendorcode": "ECI950TE",
+              "image": {
+                "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/eci950te_euromaid_web1.jpg",
+                "__typename": "ProductImage"
+              },
+              "thumbnail": {
+                "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/eci950te_euromaid_web1.jpg",
+                "__typename": "ProductImage"
+              },
+              "product_images": {
+                "thumbnail": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/07ba508bbc2444c0df3c958b3d918048/e/c/eci950te_euromaid_web1.jpg",
+                "small": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/1df791769d8cdc80e3c05129fe5437cf/e/c/eci950te_euromaid_web1.jpg",
+                "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/eci950te_euromaid_web1.jpg",
+                "__typename": "ProductImages"
+              },
+              "description": {
+                "html": "<p>• 5 cooking zones with 9 power levels<br>• Boost function<br>• Slide-touch controls<br>• ECO shift</p>",
+                "__typename": "ComplexTextValue"
+              },
+              "price_store": 1187,
+              "price_trade": "0.000000",
+              "stock_line_filter": 673,
+              "gp_product_group": "COOKTOPS",
+              "__typename": "SimpleProduct",
+              "price_range": {
+                "minimum_price": {
+                  "regular_price": {
+                    "value": 0,
+                    "currency": "AUD",
+                    "__typename": "Money"
+                  },
+                  "__typename": "ProductPrice"
+                },
+                "__typename": "PriceRange"
+              }
+            },
+            {
+              "id": 24929,
+              "name": "600mm Induction Cooktop",
+              "sku": "ECI640TE",
+              "vendorcode": "ECI640TE",
+              "image": {
+                "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/eci640te_euromaid_web1.jpg",
+                "__typename": "ProductImage"
+              },
+              "thumbnail": {
+                "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/eci640te_euromaid_web1.jpg",
+                "__typename": "ProductImage"
+              },
+              "product_images": {
+                "thumbnail": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/07ba508bbc2444c0df3c958b3d918048/e/c/eci640te_euromaid_web1.jpg",
+                "small": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/1df791769d8cdc80e3c05129fe5437cf/e/c/eci640te_euromaid_web1.jpg",
+                "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/eci640te_euromaid_web1.jpg",
+                "__typename": "ProductImages"
+              },
+              "description": {
+                "html": "<p>• 4 cooking zones with 9 power levels<br>• Boost function<br>• Slide-touch controls<br>• ECO shift</p>",
+                "__typename": "ComplexTextValue"
+              },
+              "price_store": 791,
+              "price_trade": "0.000000",
+              "stock_line_filter": 673,
+              "gp_product_group": "COOKTOPS",
+              "__typename": "SimpleProduct",
+              "price_range": {
+                "minimum_price": {
+                  "regular_price": {
+                    "value": 0,
+                    "currency": "AUD",
+                    "__typename": "Money"
+                  },
+                  "__typename": "ProductPrice"
+                },
+                "__typename": "PriceRange"
+              }
+            },
+            {
+              "id": 24928,
+              "name": "600mm Induction Cooktop",
+              "sku": "ECE641T",
+              "vendorcode": "ECE641T",
+              "image": {
+                "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ece641t_euromaid_web1.jpg",
+                "__typename": "ProductImage"
+              },
+              "thumbnail": {
+                "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ece641t_euromaid_web1.jpg",
+                "__typename": "ProductImage"
+              },
+              "product_images": {
+                "thumbnail": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/07ba508bbc2444c0df3c958b3d918048/e/c/ece641t_euromaid_web1.jpg",
+                "small": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/1df791769d8cdc80e3c05129fe5437cf/e/c/ece641t_euromaid_web1.jpg",
+                "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ece641t_euromaid_web1.jpg",
+                "__typename": "ProductImages"
+              },
+              "description": {
+                "html": "<p>• Ceramic glass cooktop<br>• 4 cooking zones with 9 power levels<br>• Slide-touch controls<br>• Extendable zone<br>• Cooking timer</p>",
+                "__typename": "ComplexTextValue"
+              },
+              "price_store": 593,
+              "price_trade": "0.000000",
+              "stock_line_filter": 673,
+              "gp_product_group": "COOKTOPS",
+              "__typename": "SimpleProduct",
+              "price_range": {
+                "minimum_price": {
+                  "regular_price": {
+                    "value": 0,
+                    "currency": "AUD",
+                    "__typename": "Money"
+                  },
+                  "__typename": "ProductPrice"
+                },
+                "__typename": "PriceRange"
+              }
+            },
+            {
+              "id": 22486,
+              "name": "600mm Ceramic Cooktop",
+              "sku": "ECE640K",
+              "vendorcode": "ECE640K",
+              "image": {
+                "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ece640k_euromaid_web.jpg",
+                "__typename": "ProductImage"
+              },
+              "thumbnail": {
+                "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ece640k_euromaid_web.jpg",
+                "__typename": "ProductImage"
+              },
+              "product_images": {
+                "thumbnail": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/07ba508bbc2444c0df3c958b3d918048/e/c/ece640k_euromaid_web.jpg",
+                "small": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/1df791769d8cdc80e3c05129fe5437cf/e/c/ece640k_euromaid_web.jpg",
+                "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ece640k_euromaid_web.jpg",
+                "__typename": "ProductImages"
+              },
+              "description": {
+                "html": "<p>• 4 cooking zones<br>• Knob controls<br>• Hot surface indicators<br>• On/off key<br>• 9 power levels</p>",
+                "__typename": "ComplexTextValue"
+              },
+              "price_store": 494,
+              "price_trade": "0.000000",
+              "stock_line_filter": 673,
+              "gp_product_group": "COOKTOPS",
+              "__typename": "SimpleProduct",
+              "price_range": {
+                "minimum_price": {
+                  "regular_price": {
+                    "value": 0,
+                    "currency": "AUD",
+                    "__typename": "Money"
+                  },
+                  "__typename": "ProductPrice"
+                },
+                "__typename": "PriceRange"
+              }
+            },
+            {
+              "id": 18966,
+              "name": "600mm Gas Cooktop",
+              "sku": "EC64GS",
+              "vendorcode": "EC64GS",
+              "image": {
+                "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec64gs_euromaid_web.jpg",
+                "__typename": "ProductImage"
+              },
+              "thumbnail": {
+                "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec64gs_euromaid_web.jpg",
+                "__typename": "ProductImage"
+              },
+              "product_images": {
+                "thumbnail": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/07ba508bbc2444c0df3c958b3d918048/e/c/ec64gs_euromaid_web.jpg",
+                "small": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/1df791769d8cdc80e3c05129fe5437cf/e/c/ec64gs_euromaid_web.jpg",
+                "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec64gs_euromaid_web.jpg",
+                "__typename": "ProductImages"
+              },
+              "description": {
+                "html": "<p>• 4 burners with 1 wok burner<br>• Raised cast-iron trivets<br>• Eclipse Series knob controls<br>• Auto ignition &amp; flame safety device<br>• LPG conversion kit</p>",
+                "__typename": "ComplexTextValue"
+              },
+              "price_store": 692,
+              "price_trade": "0.000000",
+              "stock_line_filter": 672,
+              "gp_product_group": "COOKTOPS",
+              "__typename": "SimpleProduct",
+              "price_range": {
+                "minimum_price": {
+                  "regular_price": {
+                    "value": 0,
+                    "currency": "AUD",
+                    "__typename": "Money"
+                  },
+                  "__typename": "ProductPrice"
+                },
+                "__typename": "PriceRange"
+              }
+            },
+            {
+              "id": 15852,
+              "name": "Eclipse 600mm Gas Cooktop",
+              "sku": "EC64GB",
+              "vendorcode": "EC64GB",
+              "image": {
+                "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec64gb_euromaid_web.jpg",
+                "__typename": "ProductImage"
+              },
+              "thumbnail": {
+                "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec64gb_euromaid_web.jpg",
+                "__typename": "ProductImage"
+              },
+              "product_images": {
+                "thumbnail": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/07ba508bbc2444c0df3c958b3d918048/e/c/ec64gb_euromaid_web.jpg",
+                "small": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/1df791769d8cdc80e3c05129fe5437cf/e/c/ec64gb_euromaid_web.jpg",
+                "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec64gb_euromaid_web.jpg",
+                "__typename": "ProductImages"
+              },
+              "description": {
+                "html": "<p>&bull; Four Italian gas burners<br />&bull; Powerful wok burner with brass cap<br />&bull; LPG conversion kit<br />&bull; Automatic Ignition<br />&bull; Raised cast-iron trivets</p>",
+                "__typename": "ComplexTextValue"
+              },
+              "price_store": 939,
+              "price_trade": "0.000000",
+              "stock_line_filter": 672,
+              "gp_product_group": "COOKTOPS",
+              "__typename": "SimpleProduct",
+              "price_range": {
+                "minimum_price": {
+                  "regular_price": {
+                    "value": 0,
+                    "currency": "AUD",
+                    "__typename": "Money"
+                  },
+                  "__typename": "ProductPrice"
+                },
+                "__typename": "PriceRange"
+              }
+            },
+            {
+              "id": 15849,
+              "name": "Eclipse 600mm Gas Cooktop",
+              "sku": "EC95GLB",
+              "vendorcode": "EC95GLB",
+              "image": {
+                "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec95glb_euromaid_web.jpg",
+                "__typename": "ProductImage"
+              },
+              "thumbnail": {
+                "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec95glb_euromaid_web.jpg",
+                "__typename": "ProductImage"
+              },
+              "product_images": {
+                "thumbnail": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/07ba508bbc2444c0df3c958b3d918048/e/c/ec95glb_euromaid_web.jpg",
+                "small": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/1df791769d8cdc80e3c05129fe5437cf/e/c/ec95glb_euromaid_web.jpg",
+                "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec95glb_euromaid_web.jpg",
+                "__typename": "ProductImages"
+              },
+              "description": {
+                "html": "<p>&bull; Five matte black Italian gas burners<br />&bull; Powerful wok burner with Dual-Valve control + brass burner cap<br />&bull; Raised Cast-Iron Trivets<br />&bull; Automatic ignition<br />&bull; LGP conversion kit included</p>",
+                "__typename": "ComplexTextValue"
+              },
+              "price_store": 1385,
+              "price_trade": "0.000000",
+              "stock_line_filter": 673,
+              "gp_product_group": "COOKTOPS",
+              "__typename": "SimpleProduct",
+              "price_range": {
+                "minimum_price": {
+                  "regular_price": {
+                    "value": 0,
+                    "currency": "AUD",
+                    "__typename": "Money"
+                  },
+                  "__typename": "ProductPrice"
+                },
+                "__typename": "PriceRange"
+              }
+            },
+            {
+              "id": 15467,
+              "name": "900mm Gas Cooktop ",
+              "sku": "EC95GLS",
+              "vendorcode": "EC95GLS",
+              "image": {
+                "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec95gls3_euromaid_web_1.jpg",
+                "__typename": "ProductImage"
+              },
+              "thumbnail": {
+                "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec95gls3_euromaid_web_1.jpg",
+                "__typename": "ProductImage"
+              },
+              "product_images": {
+                "thumbnail": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/07ba508bbc2444c0df3c958b3d918048/e/c/ec95gls3_euromaid_web_1.jpg",
+                "small": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/1df791769d8cdc80e3c05129fe5437cf/e/c/ec95gls3_euromaid_web_1.jpg",
+                "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec95gls3_euromaid_web_1.jpg",
+                "__typename": "ProductImages"
+              },
+              "description": {
+                "html": "<p>&bull; 5 matte black Italian gas burners &amp; x1 high power wok burner - 14.4MJ/h<br />&bull; Raised Cast-Iron Trivets<br />&bull; Eclipse Series knob controls<br />&bull; Automatic ignition<br />&bull; Flame safety device</p>",
+                "__typename": "ComplexTextValue"
+              },
+              "price_store": 1187,
+              "price_trade": "0.000000",
+              "stock_line_filter": 672,
+              "gp_product_group": "COOKTOPS",
+              "__typename": "SimpleProduct",
+              "price_range": {
+                "minimum_price": {
+                  "regular_price": {
+                    "value": 0,
+                    "currency": "AUD",
+                    "__typename": "Money"
+                  },
+                  "__typename": "ProductPrice"
+                },
+                "__typename": "PriceRange"
+              }
+            }
+          ],
+          "page_info": {
+            "total_pages": 1,
+            "__typename": "SearchResultPageInfo"
+          },
+          "total_count": 8,
+          "__typename": "Products"
+        }
+      }
+    },
+    "renderedText": "PRODUCTS\nKitchen\nBathroom\nLaundry\nOutdoor & BBQ's\nHeating & Cooling\nAudio/Visual\nHot Water\nCommercial\nProducts By Colour\nProducts By Brand\nMENU\nPRODUCTS\nKitchen\nBathroom\nLaundry\nOutdoor & BBQ's\nHeating & Cooling\nAudio / Visual\nHot Water\nCommercial Equipment\nProducts By Colour\nProducts By Brand\nSHOWROOMS\nTaren Point NSW\nSomersby NSW\nNowra NSW\nMitchell ACT\nOther States\nCasula (Dist. Centre)\nRESOURCES\nCatalogues\nMedia Gallery\nProjects\nQantas Business Rewards\nABOUT\nAbout Us\nSustainability Statement\nOur Brands\nPROJECTS\nNSW\nACT\nVIC\nQLD\nDIVISIONS\nPromotions\nSolar\nAir Conditioning\nSmart Technologies\nCommercial Equipment\nClearance\nCUSTOMER SERVICE\nContact Us\nCustomer Service Request - NSW/ACT\nCustomer Service Request - WA\nCustomer Service Hot Water - NSW/ACT\nHome\n/\nKitchen\n/\nCooktops\nCooktops\nLoading sort options…\nCategory\nCOOKTOPS (8)\nGAS COOKTOPS (4)\nELECTRIC COOKTOPS (2)\nINDUCTION COOKTOPS (2)\nApply\nBrand\nEUROMAID (8)\nApply\nColour\nBLACK (4)\nBLACK GLASS (2)\nSTAINLESS STEEL (2)\nApply\nSize (mm)\n600 (1)\n890 (1)\n900 (2)\nApply\nCooktop Size\n300 - 600MM (5)\n891MM + (2)\nApply\nStock Line\nYES (3)\nApply\nClear all\n900mm Induction Cooktop\nECI950TE\nSRP (INC. GST): $1187\nCOMPARE\n600mm Induction Cooktop\nECI640TE\nSRP (INC. GST): $791\nCOMPARE\n600mm Induction Cooktop\nECE641T\nSRP (INC. GST): $593\nCOMPARE\n600mm Ceramic Cooktop\nECE640K\nSRP (INC. GST): $494\nCOMPARE\n600mm Gas Cooktop\nEC64GS\nSRP (INC. GST): $692\nCOMPARE\nEclipse 600mm Gas Cooktop\nEC64GB\nSRP (INC. GST): $939\nCOMPARE\nEclipse 600mm Gas Cooktop\nEC95GLB\nSRP (INC. GST): $1385\nCOMPARE\n900mm Gas Cooktop\nEC95GLS\nSRP (INC. GST): $1187\nCOMPARE\n< Prev\n1\nNext >\nNSW COMMERCIAL HEAD OFFICE\n\n15-21 Atkinson Road, Taren Point NSW 2229\n\n(02) 9710 4155\n\nhncnsw.enquiries@au.harveynorman.com\n\nMon-Thur: 8AM-5PM. Friday: 8AM-4PM\n\nENQUIRY\n\nPRODUCTS\n\nKitchen\nBathroom\nLaundry\nOutdoor & BBQ's\nHeating & Cooling\nAudio / Visual\nHot Water\nCommercial\nProducts By Colour\n\nQUICK LINKS\n\nAbout Us\nSustainability Statement\nOur Brands\nCustomer Service Request - NSW/ACT\nCustomer Service Request - WA\nCustomer Service Request - Hot Water\nContact Us\n\nSHOWROOMS\n\nTaren Point NSW\nSomersby NSW\nNowra NSW\nMitchell ACT\nOther States\nWarehouses\n\nRESOURCES\n\nCatalogues\nMedia Gallery\nProjects\nQantas Business Rewards\nPrivacy Policy\nTerms & Conditions\nSitemap\n\nOTHER WEBSITES\n\nBlog\nPromotions\nSolar\nAir Conditioning\nSmart Technologies\nHospitality & Comm. Equipment\nClearance\nHarvey Norman Commercial VIC\nHarvey Norman Commercial QLD\nHarvey Norman Retail\nBLOG\n© 2026 Harvey Norman Commercial Division. All prices are inclusive of GST unless specified otherwise. All rights reserved. This site is for trade only. Harvey Norman Commercial Division is operated by Blae Commercial Pty Ltd, an independent franchisee. Blae Commercial Pty Ltd As Trustee for Blae Commercial No.2 Trust - Trading as Harvey Norman Commercial Division. ACN 665 839 109. ABN 21 985 428 230 We respect and acknowledge the traditional custodians of the land and also pay respect to elders both past and present."
+  },
+  "identifiedGasModels": [
+    "EC64GB",
+    "EC64GS",
+    "EC95GLB",
+    "EC95GLS"
+  ],
+  "allListingModels": [
+    "ECI950TE",
+    "ECI640TE",
+    "ECE641T",
+    "ECE640K",
+    "EC64GS",
+    "EC64GB",
+    "EC95GLB",
+    "EC95GLS"
+  ],
+  "recommendation": "Append EC64GB and EC64GS; retain EC95GLB and EC95GLS exact IDs and refresh verified fields. Do not substitute these model images onto legacy ECCK900, GC90S, KCS4 or WK60S records.",
+  "records": [
+    {
+      "productId": "product:appliances:cooktops:euromaid:ec64gb",
+      "schemaVersion": "product-library.appliance-catalogue.v1",
+      "categoryId": "category:appliances",
+      "familyId": "cooktops",
+      "subfamilyId": "",
+      "productType": "physical-product",
+      "brandId": "brand:euromaid",
+      "brandName": "Euromaid",
+      "rangeId": "",
+      "rangeName": "",
+      "manufacturerModel": "EC64GB",
+      "sku": "EC64GB",
+      "productName": "Eclipse 600mm Gas Cooktop",
+      "shortDescription": "Eclipse 600mm Gas Cooktop",
+      "fullDescription": "Four Italian gas burners\nPowerful wok burner with brass cap\nLPG conversion kit\nAutomatic Ignition\nRaised cast-iron trivets",
+      "descriptionStatus": "verified-authorised-supplier",
+      "specifications": {
+        "family": "cooktops",
+        "manufacturerModel": "EC64GB",
+        "width": "600 mm",
+        "widthMm": 600,
+        "height": "45 mm",
+        "heightMm": 45,
+        "depth": "521 mm",
+        "depthMm": 521,
+        "dimensions": "W600 x D521 x H45mm",
+        "features": [
+          "Four Italian gas burners",
+          "Powerful wok burner with brass cap",
+          "LPG conversion kit",
+          "Automatic Ignition",
+          "Raised cast-iron trivets"
+        ],
+        "finish": "Black Glass",
+        "fuelOrEnergyType": "Gas",
+        "cooktopType": "Gas",
+        "installationType": "",
+        "cookingZonesOrBurners": 4,
+        "controlType": null,
+        "gasOrElectricalRequirements": null
+      },
+      "specificationStatus": "partial",
+      "specificationSources": {
+        "family": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC64GB",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "manufacturerModel": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC64GB",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "width": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC64GB",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "widthMm": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC64GB",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "height": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC64GB",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "heightMm": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC64GB",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "depth": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC64GB",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "depthMm": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC64GB",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "dimensions": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC64GB",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "features": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC64GB",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "finish": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC64GB",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "fuelOrEnergyType": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC64GB",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "cooktopType": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC64GB",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "installationType": {
+          "status": "pending-verification",
+          "source": ""
+        },
+        "cookingZonesOrBurners": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC64GB",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "controlType": {
+          "status": "pending-verification",
+          "source": ""
+        },
+        "gasOrElectricalRequirements": {
+          "status": "pending-verification",
+          "source": ""
+        }
+      },
+      "width": "600 mm",
+      "widthMm": 600,
+      "height": "45 mm",
+      "heightMm": 45,
+      "depth": "521 mm",
+      "depthMm": 521,
+      "capacity": null,
+      "colour": "Black Glass",
+      "finish": "Black Glass",
+      "availableColours": [
+        "Black Glass"
+      ],
+      "availableFinishes": [
+        "Black Glass"
+      ],
+      "fuelOrEnergyType": "Gas",
+      "installationType": "",
+      "unit": "EACH",
+      "costPrice": 939,
+      "sourceCostPrice": 939,
+      "sellPrice": 939,
+      "importedSourceCost": 939,
+      "tenantSellPrice": 939,
+      "currentRetailReference": 939,
+      "currentRetailReferenceSourceUrl": "https://www.harveynormancommercial.com.au/products/EC64GB",
+      "gstStatus": "inclusive",
+      "priceStatus": "fixed",
+      "priceSource": {
+        "sourceOrganisation": "Harvey Norman Commercial",
+        "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC64GB",
+        "sourceCheckedAt": "2026-09-11",
+        "priceType": "listed-srp",
+        "sourceField": "price_store",
+        "priceLabel": "SRP (inc. GST)",
+        "currency": "AUD",
+        "listedPrice": 939,
+        "gstIncluded": true,
+        "verificationStatus": "verified-listed-price",
+        "note": "Public HNC listed SRP; trade and GraphQL regular_price fields are zero and are not treated as prices."
+      },
+      "supplierId": "supplier:harvey-norman-commercial",
+      "supplierName": "Harvey Norman Commercial",
+      "primaryImage": "/images/catalogues/appliances/products/euromaid/ec64gb.jpg",
+      "additionalImages": [],
+      "imageStatus": "verified-authorised-supplier-local",
+      "imageSourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec64gb_euromaid_web.jpg",
+      "imageSourceOrganisation": "Harvey Norman Commercial",
+      "imageSourceType": "authorised_supplier_listing",
+      "imageCheckedAt": "2026-09-11",
+      "imageVerifiedAt": "2026-09-11",
+      "imageVerificationStatus": "verified-exact-model",
+      "imageAttribution": "Harvey Norman Commercial",
+      "productPageUrl": "https://www.harveynormancommercial.com.au/products/EC64GB",
+      "productPageStatus": "verified-exact-model",
+      "documentUrls": [],
+      "applicableRooms": [
+        "kitchen"
+      ],
+      "selectable": true,
+      "active": true,
+      "discontinued": false,
+      "discontinuedStatus": "not-verified",
+      "source": {
+        "type": "authorised_supplier_listing",
+        "file": "data/product-library/source-evidence/euromaid/hnc-cooktop-range-2026-09-11.json",
+        "sourceName": "Harvey Norman Commercial exact-model product page and Euromaid cooktop listing",
+        "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC64GB",
+        "listingUrl": "https://www.harveynormancommercial.com.au/kitchen/cooktops?page=1&category_id=23&sort=position&dir=ASC&brand=59",
+        "sourceVerifiedAt": "2026-09-11"
+      },
+      "research": {
+        "verificationStatus": "verified-basic",
+        "sourceType": "authorised_supplier_listing",
+        "sourceOrganisation": "Harvey Norman Commercial",
+        "checkedAt": "2026-09-11"
+      },
+      "evidence": {
+        "sourceOrganisation": "Harvey Norman Commercial",
+        "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC64GB",
+        "sourceCheckedAt": "2026-09-11",
+        "evidenceStatus": "verified-authorised-supplier",
+        "price": {
+          "sourceOrganisation": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC64GB",
+          "sourceCheckedAt": "2026-09-11",
+          "priceType": "listed-srp",
+          "sourceField": "price_store",
+          "priceLabel": "SRP (inc. GST)",
+          "currency": "AUD",
+          "listedPrice": 939,
+          "gstIncluded": true,
+          "verificationStatus": "verified-listed-price",
+          "note": "Public HNC listed SRP; trade and GraphQL regular_price fields are zero and are not treated as prices."
+        }
+      },
+      "sourceCheckedAt": "2026-09-11",
+      "sourceRowIds": [],
+      "createdAt": "2026-09-11",
+      "updatedAt": "2026-09-11",
+      "manualReviewRequired": false,
+      "manualReviewReason": "",
+      "modelVerificationNote": "Exact HNC SKU and vendorcode EC64GB verified in the live listing and product page. Primary photograph belongs to that model; technical drawing excluded.",
+      "priceSourceUrl": "https://www.harveynormancommercial.com.au/products/EC64GB",
+      "priceVerifiedAt": "2026-09-11",
+      "currency": "AUD"
+    },
+    {
+      "productId": "product:appliances:cooktops:euromaid:ec64gs",
+      "schemaVersion": "product-library.appliance-catalogue.v1",
+      "categoryId": "category:appliances",
+      "familyId": "cooktops",
+      "subfamilyId": "",
+      "productType": "physical-product",
+      "brandId": "brand:euromaid",
+      "brandName": "Euromaid",
+      "rangeId": "",
+      "rangeName": "",
+      "manufacturerModel": "EC64GS",
+      "sku": "EC64GS",
+      "productName": "600mm Gas Cooktop",
+      "shortDescription": "600mm Gas Cooktop",
+      "fullDescription": "4 burners with 1 wok burner\nRaised cast-iron trivets\nEclipse Series knob controls\nAuto ignition & flame safety device\nLPG conversion kit",
+      "descriptionStatus": "verified-authorised-supplier",
+      "specifications": {
+        "family": "cooktops",
+        "manufacturerModel": "EC64GS",
+        "width": "580 mm",
+        "widthMm": 580,
+        "height": "83 mm",
+        "heightMm": 83,
+        "depth": "500 mm",
+        "depthMm": 500,
+        "dimensions": "W580 x D500 x H83mm",
+        "features": [
+          "4 burners with 1 wok burner",
+          "Raised cast-iron trivets",
+          "Eclipse Series knob controls",
+          "Auto ignition & flame safety device",
+          "LPG conversion kit"
+        ],
+        "finish": "Stainless Steel",
+        "fuelOrEnergyType": "Gas",
+        "cooktopType": "Gas",
+        "installationType": "",
+        "cookingZonesOrBurners": 4,
+        "controlType": "Eclipse Series knob controls",
+        "gasOrElectricalRequirements": null
+      },
+      "specificationStatus": "partial",
+      "specificationSources": {
+        "family": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC64GS",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "manufacturerModel": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC64GS",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "width": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC64GS",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "widthMm": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC64GS",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "height": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC64GS",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "heightMm": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC64GS",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "depth": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC64GS",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "depthMm": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC64GS",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "dimensions": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC64GS",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "features": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC64GS",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "finish": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC64GS",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "fuelOrEnergyType": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC64GS",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "cooktopType": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC64GS",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "installationType": {
+          "status": "pending-verification",
+          "source": ""
+        },
+        "cookingZonesOrBurners": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC64GS",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "controlType": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC64GS",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "gasOrElectricalRequirements": {
+          "status": "pending-verification",
+          "source": ""
+        }
+      },
+      "width": "580 mm",
+      "widthMm": 580,
+      "height": "83 mm",
+      "heightMm": 83,
+      "depth": "500 mm",
+      "depthMm": 500,
+      "capacity": null,
+      "colour": "Stainless Steel",
+      "finish": "Stainless Steel",
+      "availableColours": [
+        "Stainless Steel"
+      ],
+      "availableFinishes": [
+        "Stainless Steel"
+      ],
+      "fuelOrEnergyType": "Gas",
+      "installationType": "",
+      "unit": "EACH",
+      "costPrice": 692,
+      "sourceCostPrice": 692,
+      "sellPrice": 692,
+      "importedSourceCost": 692,
+      "tenantSellPrice": 692,
+      "currentRetailReference": 692,
+      "currentRetailReferenceSourceUrl": "https://www.harveynormancommercial.com.au/products/EC64GS",
+      "gstStatus": "inclusive",
+      "priceStatus": "fixed",
+      "priceSource": {
+        "sourceOrganisation": "Harvey Norman Commercial",
+        "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC64GS",
+        "sourceCheckedAt": "2026-09-11",
+        "priceType": "listed-srp",
+        "sourceField": "price_store",
+        "priceLabel": "SRP (inc. GST)",
+        "currency": "AUD",
+        "listedPrice": 692,
+        "gstIncluded": true,
+        "verificationStatus": "verified-listed-price",
+        "note": "Public HNC listed SRP; trade and GraphQL regular_price fields are zero and are not treated as prices."
+      },
+      "supplierId": "supplier:harvey-norman-commercial",
+      "supplierName": "Harvey Norman Commercial",
+      "primaryImage": "/images/catalogues/appliances/products/euromaid/ec64gs.jpg",
+      "additionalImages": [],
+      "imageStatus": "verified-authorised-supplier-local",
+      "imageSourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec64gs_euromaid_web.jpg",
+      "imageSourceOrganisation": "Harvey Norman Commercial",
+      "imageSourceType": "authorised_supplier_listing",
+      "imageCheckedAt": "2026-09-11",
+      "imageVerifiedAt": "2026-09-11",
+      "imageVerificationStatus": "verified-exact-model",
+      "imageAttribution": "Harvey Norman Commercial",
+      "productPageUrl": "https://www.harveynormancommercial.com.au/products/EC64GS",
+      "productPageStatus": "verified-exact-model",
+      "documentUrls": [],
+      "applicableRooms": [
+        "kitchen"
+      ],
+      "selectable": true,
+      "active": true,
+      "discontinued": false,
+      "discontinuedStatus": "not-verified",
+      "source": {
+        "type": "authorised_supplier_listing",
+        "file": "data/product-library/source-evidence/euromaid/hnc-cooktop-range-2026-09-11.json",
+        "sourceName": "Harvey Norman Commercial exact-model product page and Euromaid cooktop listing",
+        "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC64GS",
+        "listingUrl": "https://www.harveynormancommercial.com.au/kitchen/cooktops?page=1&category_id=23&sort=position&dir=ASC&brand=59",
+        "sourceVerifiedAt": "2026-09-11"
+      },
+      "research": {
+        "verificationStatus": "verified-basic",
+        "sourceType": "authorised_supplier_listing",
+        "sourceOrganisation": "Harvey Norman Commercial",
+        "checkedAt": "2026-09-11"
+      },
+      "evidence": {
+        "sourceOrganisation": "Harvey Norman Commercial",
+        "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC64GS",
+        "sourceCheckedAt": "2026-09-11",
+        "evidenceStatus": "verified-authorised-supplier",
+        "price": {
+          "sourceOrganisation": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC64GS",
+          "sourceCheckedAt": "2026-09-11",
+          "priceType": "listed-srp",
+          "sourceField": "price_store",
+          "priceLabel": "SRP (inc. GST)",
+          "currency": "AUD",
+          "listedPrice": 692,
+          "gstIncluded": true,
+          "verificationStatus": "verified-listed-price",
+          "note": "Public HNC listed SRP; trade and GraphQL regular_price fields are zero and are not treated as prices."
+        }
+      },
+      "sourceCheckedAt": "2026-09-11",
+      "sourceRowIds": [],
+      "createdAt": "2026-09-11",
+      "updatedAt": "2026-09-11",
+      "manualReviewRequired": false,
+      "manualReviewReason": "",
+      "modelVerificationNote": "Exact HNC SKU and vendorcode EC64GS verified in the live listing and product page. Primary photograph belongs to that model; technical drawing excluded.",
+      "priceSourceUrl": "https://www.harveynormancommercial.com.au/products/EC64GS",
+      "priceVerifiedAt": "2026-09-11",
+      "currency": "AUD"
+    },
+    {
+      "productId": "product:appliances:cooktops:euromaid:ec95glb",
+      "schemaVersion": "product-library.appliance-catalogue.v1",
+      "categoryId": "category:appliances",
+      "familyId": "cooktops",
+      "subfamilyId": "",
+      "productType": "physical-product",
+      "brandId": "brand:euromaid",
+      "brandName": "Euromaid",
+      "rangeId": "",
+      "rangeName": "",
+      "manufacturerModel": "EC95GLB",
+      "sku": "EC95GLB",
+      "productName": "Eclipse 600mm Gas Cooktop",
+      "shortDescription": "Eclipse 600mm Gas Cooktop",
+      "fullDescription": "Five matte black Italian gas burners\nPowerful wok burner with Dual-Valve control + brass burner cap\nRaised Cast-Iron Trivets\nAutomatic ignition\nLGP conversion kit included",
+      "descriptionStatus": "verified-authorised-supplier",
+      "specifications": {
+        "family": "cooktops",
+        "manufacturerModel": "EC95GLB",
+        "width": "880 mm",
+        "widthMm": 880,
+        "height": "105 mm",
+        "heightMm": 105,
+        "depth": "521 mm",
+        "depthMm": 521,
+        "dimensions": "W880 x D521x H105* (height includes trivets*)",
+        "features": [
+          "Five matte black Italian gas burners",
+          "Powerful wok burner with Dual-Valve control + brass burner cap",
+          "Raised Cast-Iron Trivets",
+          "Automatic ignition",
+          "LGP conversion kit included"
+        ],
+        "finish": "Black Glass",
+        "fuelOrEnergyType": "Gas",
+        "cooktopType": "Gas",
+        "installationType": "",
+        "cookingZonesOrBurners": 5,
+        "controlType": null,
+        "gasOrElectricalRequirements": null,
+        "dimensionNote": "Height includes trivets"
+      },
+      "specificationStatus": "partial",
+      "specificationSources": {
+        "family": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC95GLB",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "manufacturerModel": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC95GLB",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "width": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC95GLB",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "widthMm": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC95GLB",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "height": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC95GLB",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "heightMm": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC95GLB",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "depth": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC95GLB",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "depthMm": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC95GLB",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "dimensions": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC95GLB",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "features": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC95GLB",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "finish": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC95GLB",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "fuelOrEnergyType": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC95GLB",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "cooktopType": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC95GLB",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "installationType": {
+          "status": "pending-verification",
+          "source": ""
+        },
+        "cookingZonesOrBurners": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC95GLB",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "controlType": {
+          "status": "pending-verification",
+          "source": ""
+        },
+        "gasOrElectricalRequirements": {
+          "status": "pending-verification",
+          "source": ""
+        },
+        "dimensionNote": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC95GLB",
+          "sourceCheckedAt": "2026-09-11"
+        }
+      },
+      "width": "880 mm",
+      "widthMm": 880,
+      "height": "105 mm",
+      "heightMm": 105,
+      "depth": "521 mm",
+      "depthMm": 521,
+      "capacity": null,
+      "colour": "Black Glass",
+      "finish": "Black Glass",
+      "availableColours": [
+        "Black Glass"
+      ],
+      "availableFinishes": [
+        "Black Glass"
+      ],
+      "fuelOrEnergyType": "Gas",
+      "installationType": "",
+      "unit": "EACH",
+      "costPrice": 1385,
+      "sourceCostPrice": 1385,
+      "sellPrice": 1385,
+      "importedSourceCost": 1385,
+      "tenantSellPrice": 1385,
+      "currentRetailReference": 1385,
+      "currentRetailReferenceSourceUrl": "https://www.harveynormancommercial.com.au/products/EC95GLB",
+      "gstStatus": "inclusive",
+      "priceStatus": "fixed",
+      "priceSource": {
+        "sourceOrganisation": "Harvey Norman Commercial",
+        "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC95GLB",
+        "sourceCheckedAt": "2026-09-11",
+        "priceType": "listed-srp",
+        "sourceField": "price_store",
+        "priceLabel": "SRP (inc. GST)",
+        "currency": "AUD",
+        "listedPrice": 1385,
+        "gstIncluded": true,
+        "verificationStatus": "verified-listed-price",
+        "note": "Public HNC listed SRP; trade and GraphQL regular_price fields are zero and are not treated as prices."
+      },
+      "supplierId": "supplier:harvey-norman-commercial",
+      "supplierName": "Harvey Norman Commercial",
+      "primaryImage": "/images/catalogues/appliances/products/euromaid/ec95glb.jpg",
+      "additionalImages": [],
+      "imageStatus": "verified-authorised-supplier-local",
+      "imageSourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec95glb_euromaid_web.jpg",
+      "imageSourceOrganisation": "Harvey Norman Commercial",
+      "imageSourceType": "authorised_supplier_listing",
+      "imageCheckedAt": "2026-09-11",
+      "imageVerifiedAt": "2026-09-11",
+      "imageVerificationStatus": "verified-exact-model",
+      "imageAttribution": "Harvey Norman Commercial",
+      "productPageUrl": "https://www.harveynormancommercial.com.au/products/EC95GLB",
+      "productPageStatus": "verified-exact-model",
+      "documentUrls": [],
+      "applicableRooms": [
+        "kitchen"
+      ],
+      "selectable": true,
+      "active": true,
+      "discontinued": false,
+      "discontinuedStatus": "not-verified",
+      "source": {
+        "type": "authorised_supplier_listing",
+        "file": "data/product-library/source-evidence/euromaid/hnc-cooktop-range-2026-09-11.json",
+        "sourceName": "Harvey Norman Commercial exact-model product page and Euromaid cooktop listing",
+        "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC95GLB",
+        "listingUrl": "https://www.harveynormancommercial.com.au/kitchen/cooktops?page=1&category_id=23&sort=position&dir=ASC&brand=59",
+        "sourceVerifiedAt": "2026-09-11"
+      },
+      "research": {
+        "verificationStatus": "manual-review-required",
+        "sourceType": "authorised_supplier_listing",
+        "sourceOrganisation": "Harvey Norman Commercial",
+        "checkedAt": "2026-09-11",
+        "verificationNote": "HNC listing and product-page title state 600mm, while the size field states W880 x D521 x H105; the exact HNC title and physical dimensions are preserved without inferring a corrected title."
+      },
+      "evidence": {
+        "sourceOrganisation": "Harvey Norman Commercial",
+        "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC95GLB",
+        "sourceCheckedAt": "2026-09-11",
+        "evidenceStatus": "verified-authorised-supplier",
+        "price": {
+          "sourceOrganisation": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC95GLB",
+          "sourceCheckedAt": "2026-09-11",
+          "priceType": "listed-srp",
+          "sourceField": "price_store",
+          "priceLabel": "SRP (inc. GST)",
+          "currency": "AUD",
+          "listedPrice": 1385,
+          "gstIncluded": true,
+          "verificationStatus": "verified-listed-price",
+          "note": "Public HNC listed SRP; trade and GraphQL regular_price fields are zero and are not treated as prices."
+        }
+      },
+      "sourceCheckedAt": "2026-09-11",
+      "sourceRowIds": [],
+      "createdAt": "2026-09-11",
+      "updatedAt": "2026-09-11",
+      "manualReviewRequired": true,
+      "manualReviewReason": "HNC listing and product-page title state 600mm, while the size field states W880 x D521 x H105; the exact HNC title and physical dimensions are preserved without inferring a corrected title.",
+      "modelVerificationNote": "Exact HNC SKU and vendorcode EC95GLB verified in the live listing and product page. Primary photograph belongs to that model; technical drawing excluded.",
+      "priceSourceUrl": "https://www.harveynormancommercial.com.au/products/EC95GLB",
+      "priceVerifiedAt": "2026-09-11",
+      "currency": "AUD"
+    },
+    {
+      "productId": "product:appliances:cooktops:euromaid:ec95gls",
+      "schemaVersion": "product-library.appliance-catalogue.v1",
+      "categoryId": "category:appliances",
+      "familyId": "cooktops",
+      "subfamilyId": "",
+      "productType": "physical-product",
+      "brandId": "brand:euromaid",
+      "brandName": "Euromaid",
+      "rangeId": "",
+      "rangeName": "",
+      "manufacturerModel": "EC95GLS",
+      "sku": "EC95GLS",
+      "productName": "900mm Gas Cooktop",
+      "shortDescription": "900mm Gas Cooktop",
+      "fullDescription": "5 matte black Italian gas burners & x1 high power wok burner - 14.4MJ/h\nRaised Cast-Iron Trivets\nEclipse Series knob controls\nAutomatic ignition\nFlame safety device",
+      "descriptionStatus": "verified-authorised-supplier",
+      "specifications": {
+        "family": "cooktops",
+        "manufacturerModel": "EC95GLS",
+        "width": "860 mm",
+        "widthMm": 860,
+        "height": "87 mm",
+        "heightMm": 87,
+        "depth": "500 mm",
+        "depthMm": 500,
+        "dimensions": "W860 x D500 x H87mm",
+        "features": [
+          "5 matte black Italian gas burners & x1 high power wok burner - 14.4MJ/h",
+          "Raised Cast-Iron Trivets",
+          "Eclipse Series knob controls",
+          "Automatic ignition",
+          "Flame safety device"
+        ],
+        "finish": "Stainless Steel",
+        "fuelOrEnergyType": "Gas",
+        "cooktopType": "Gas",
+        "installationType": "",
+        "cookingZonesOrBurners": 5,
+        "controlType": "Eclipse Series knob controls",
+        "gasOrElectricalRequirements": null
+      },
+      "specificationStatus": "partial",
+      "specificationSources": {
+        "family": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC95GLS",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "manufacturerModel": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC95GLS",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "width": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC95GLS",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "widthMm": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC95GLS",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "height": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC95GLS",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "heightMm": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC95GLS",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "depth": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC95GLS",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "depthMm": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC95GLS",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "dimensions": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC95GLS",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "features": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC95GLS",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "finish": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC95GLS",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "fuelOrEnergyType": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC95GLS",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "cooktopType": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC95GLS",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "installationType": {
+          "status": "pending-verification",
+          "source": ""
+        },
+        "cookingZonesOrBurners": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC95GLS",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "controlType": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC95GLS",
+          "sourceCheckedAt": "2026-09-11"
+        },
+        "gasOrElectricalRequirements": {
+          "status": "pending-verification",
+          "source": ""
+        }
+      },
+      "width": "860 mm",
+      "widthMm": 860,
+      "height": "87 mm",
+      "heightMm": 87,
+      "depth": "500 mm",
+      "depthMm": 500,
+      "capacity": null,
+      "colour": "Stainless Steel",
+      "finish": "Stainless Steel",
+      "availableColours": [
+        "Stainless Steel"
+      ],
+      "availableFinishes": [
+        "Stainless Steel"
+      ],
+      "fuelOrEnergyType": "Gas",
+      "installationType": "",
+      "unit": "EACH",
+      "costPrice": 1187,
+      "sourceCostPrice": 1187,
+      "sellPrice": 1187,
+      "importedSourceCost": 1187,
+      "tenantSellPrice": 1187,
+      "currentRetailReference": 1187,
+      "currentRetailReferenceSourceUrl": "https://www.harveynormancommercial.com.au/products/EC95GLS",
+      "gstStatus": "inclusive",
+      "priceStatus": "fixed",
+      "priceSource": {
+        "sourceOrganisation": "Harvey Norman Commercial",
+        "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC95GLS",
+        "sourceCheckedAt": "2026-09-11",
+        "priceType": "listed-srp",
+        "sourceField": "price_store",
+        "priceLabel": "SRP (inc. GST)",
+        "currency": "AUD",
+        "listedPrice": 1187,
+        "gstIncluded": true,
+        "verificationStatus": "verified-listed-price",
+        "note": "Public HNC listed SRP; trade and GraphQL regular_price fields are zero and are not treated as prices."
+      },
+      "supplierId": "supplier:harvey-norman-commercial",
+      "supplierName": "Harvey Norman Commercial",
+      "primaryImage": "/images/catalogues/appliances/products/euromaid/ec95gls.jpg",
+      "additionalImages": [],
+      "imageStatus": "verified-authorised-supplier-local",
+      "imageSourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec95gls3_euromaid_web_1.jpg",
+      "imageSourceOrganisation": "Harvey Norman Commercial",
+      "imageSourceType": "authorised_supplier_listing",
+      "imageCheckedAt": "2026-09-11",
+      "imageVerifiedAt": "2026-09-11",
+      "imageVerificationStatus": "verified-exact-model",
+      "imageAttribution": "Harvey Norman Commercial",
+      "productPageUrl": "https://www.harveynormancommercial.com.au/products/EC95GLS",
+      "productPageStatus": "verified-exact-model",
+      "documentUrls": [],
+      "applicableRooms": [
+        "kitchen"
+      ],
+      "selectable": true,
+      "active": true,
+      "discontinued": false,
+      "discontinuedStatus": "not-verified",
+      "source": {
+        "type": "authorised_supplier_listing",
+        "file": "data/product-library/source-evidence/euromaid/hnc-cooktop-range-2026-09-11.json",
+        "sourceName": "Harvey Norman Commercial exact-model product page and Euromaid cooktop listing",
+        "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC95GLS",
+        "listingUrl": "https://www.harveynormancommercial.com.au/kitchen/cooktops?page=1&category_id=23&sort=position&dir=ASC&brand=59",
+        "sourceVerifiedAt": "2026-09-11"
+      },
+      "research": {
+        "verificationStatus": "verified-basic",
+        "sourceType": "authorised_supplier_listing",
+        "sourceOrganisation": "Harvey Norman Commercial",
+        "checkedAt": "2026-09-11"
+      },
+      "evidence": {
+        "sourceOrganisation": "Harvey Norman Commercial",
+        "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC95GLS",
+        "sourceCheckedAt": "2026-09-11",
+        "evidenceStatus": "verified-authorised-supplier",
+        "price": {
+          "sourceOrganisation": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC95GLS",
+          "sourceCheckedAt": "2026-09-11",
+          "priceType": "listed-srp",
+          "sourceField": "price_store",
+          "priceLabel": "SRP (inc. GST)",
+          "currency": "AUD",
+          "listedPrice": 1187,
+          "gstIncluded": true,
+          "verificationStatus": "verified-listed-price",
+          "note": "Public HNC listed SRP; trade and GraphQL regular_price fields are zero and are not treated as prices."
+        }
+      },
+      "sourceCheckedAt": "2026-09-11",
+      "sourceRowIds": [],
+      "createdAt": "2026-09-11",
+      "updatedAt": "2026-09-11",
+      "manualReviewRequired": false,
+      "manualReviewReason": "",
+      "modelVerificationNote": "Exact HNC SKU and vendorcode EC95GLS verified in the live listing and product page. Primary photograph belongs to that model; technical drawing excluded.",
+      "priceSourceUrl": "https://www.harveynormancommercial.com.au/products/EC95GLS",
+      "priceVerifiedAt": "2026-09-11",
+      "currency": "AUD"
+    }
+  ],
+  "evidence": [
+    {
+      "model": "EC64GB",
+      "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC64GB",
+      "checkedAt": "2026-09-11",
+      "retrievedAt": "2026-09-11T05:58:29.559Z",
+      "rawHncProduct": {
+        "__typename": "SimpleProduct",
+        "id": 15852,
+        "sku": "EC64GB",
+        "vendorcode": "EC64GB",
+        "name": "Eclipse 600mm Gas Cooktop",
+        "image": {
+          "__typename": "ProductImage",
+          "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec64gb_euromaid_web.jpg"
+        },
+        "product_images": {
+          "__typename": "ProductImages",
+          "thumbnail": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/07ba508bbc2444c0df3c958b3d918048/e/c/ec64gb_euromaid_web.jpg",
+          "small": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/1df791769d8cdc80e3c05129fe5437cf/e/c/ec64gb_euromaid_web.jpg",
+          "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec64gb_euromaid_web.jpg",
+          "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/e/c/ec64gb_euromaid_web.jpg",
+          "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/e/c/ec64gb_euromaid_tech.jpg"
+        },
+        "media_gallery": [
+          {
+            "__typename": "ProductImage",
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec64gb_euromaid_web.jpg"
+          },
+          {
+            "__typename": "ProductImage",
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec64gb_euromaid_tech.jpg"
+          }
+        ],
+        "thumbnail": {
+          "__typename": "ProductImage",
+          "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec64gb_euromaid_web.jpg"
+        },
+        "description": {
+          "__typename": "ComplexTextValue",
+          "html": "<p>&bull; Four Italian gas burners<br />&bull; Powerful wok burner with brass cap<br />&bull; LPG conversion kit<br />&bull; Automatic Ignition<br />&bull; Raised cast-iron trivets</p>"
+        },
+        "product_dimensions": "W600 x D521 x H45mm",
+        "price_promo": 0,
+        "price_store": 939,
+        "price_trade": "0.000000",
+        "wels_reg_number": "",
+        "gp_product_group": "COOKTOPS",
+        "price_range": {
+          "__typename": "PriceRange",
+          "minimum_price": {
+            "__typename": "ProductPrice",
+            "regular_price": {
+              "__typename": "Money",
+              "value": 0,
+              "currency": "AUD"
+            }
+          }
+        }
+      },
+      "listingProduct": {
+        "id": 15852,
+        "name": "Eclipse 600mm Gas Cooktop",
+        "sku": "EC64GB",
+        "vendorcode": "EC64GB",
+        "image": {
+          "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec64gb_euromaid_web.jpg",
+          "__typename": "ProductImage"
+        },
+        "thumbnail": {
+          "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec64gb_euromaid_web.jpg",
+          "__typename": "ProductImage"
+        },
+        "product_images": {
+          "thumbnail": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/07ba508bbc2444c0df3c958b3d918048/e/c/ec64gb_euromaid_web.jpg",
+          "small": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/1df791769d8cdc80e3c05129fe5437cf/e/c/ec64gb_euromaid_web.jpg",
+          "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec64gb_euromaid_web.jpg",
+          "__typename": "ProductImages"
+        },
+        "description": {
+          "html": "<p>&bull; Four Italian gas burners<br />&bull; Powerful wok burner with brass cap<br />&bull; LPG conversion kit<br />&bull; Automatic Ignition<br />&bull; Raised cast-iron trivets</p>",
+          "__typename": "ComplexTextValue"
+        },
+        "price_store": 939,
+        "price_trade": "0.000000",
+        "stock_line_filter": 672,
+        "gp_product_group": "COOKTOPS",
+        "__typename": "SimpleProduct",
+        "price_range": {
+          "minimum_price": {
+            "regular_price": {
+              "value": 0,
+              "currency": "AUD",
+              "__typename": "Money"
+            },
+            "__typename": "ProductPrice"
+          },
+          "__typename": "PriceRange"
+        }
+      },
+      "htmlSha256": "09ac14b31238b6d7f7159bbdabd9bb816004be35a9133bdcc04c9da8be5645f6",
+      "displayedColour": "Black Glass",
+      "displayedPrice": {
+        "label": "SRP (inc. GST)",
+        "value": 939,
+        "currency": "AUD"
+      },
+      "sourceFeatures": [
+        "Four Italian gas burners",
+        "Powerful wok burner with brass cap",
+        "LPG conversion kit",
+        "Automatic Ignition",
+        "Raised cast-iron trivets"
+      ],
+      "sourceDiscrepancies": [],
+      "image": {
+        "sourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec64gb_euromaid_web.jpg",
+        "listingSourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec64gb_euromaid_web.jpg",
+        "localPath": "public/images/catalogues/appliances/products/euromaid/ec64gb.jpg",
+        "bytes": 496886,
+        "sha256": "d0cc3f1ed96806f44bc4df91b3237be5059ff2ab7193fa82bc98a09142b05829",
+        "reusedExistingAsset": false,
+        "contentType": "image/jpeg",
+        "visualVerification": "verified-product-photograph",
+        "visualVerificationNote": "Visually inspected downloaded local image: black-glass four-burner Euromaid gas cooktop photograph with front-left brass-cap wok burner. No drawing or placeholder."
+      },
+      "excludedGalleryImages": [
+        {
+          "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec64gb_euromaid_tech.jpg",
+          "reason": "Technical drawing excluded from card imagery."
+        }
+      ],
+      "operation": "append-new-exact-model"
+    },
+    {
+      "model": "EC64GS",
+      "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC64GS",
+      "checkedAt": "2026-09-11",
+      "retrievedAt": "2026-09-11T05:58:30.224Z",
+      "rawHncProduct": {
+        "__typename": "SimpleProduct",
+        "id": 18966,
+        "sku": "EC64GS",
+        "vendorcode": "EC64GS",
+        "name": "600mm Gas Cooktop",
+        "image": {
+          "__typename": "ProductImage",
+          "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec64gs_euromaid_web.jpg"
+        },
+        "product_images": {
+          "__typename": "ProductImages",
+          "thumbnail": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/07ba508bbc2444c0df3c958b3d918048/e/c/ec64gs_euromaid_web.jpg",
+          "small": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/1df791769d8cdc80e3c05129fe5437cf/e/c/ec64gs_euromaid_web.jpg",
+          "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec64gs_euromaid_web.jpg",
+          "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/e/c/ec64gs_euromaid_web.jpg",
+          "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/e/c/ec64gs_euromaid_tech.jpg"
+        },
+        "media_gallery": [
+          {
+            "__typename": "ProductImage",
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec64gs_euromaid_web.jpg"
+          },
+          {
+            "__typename": "ProductImage",
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec64gs_euromaid_tech.jpg"
+          }
+        ],
+        "thumbnail": {
+          "__typename": "ProductImage",
+          "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec64gs_euromaid_web.jpg"
+        },
+        "description": {
+          "__typename": "ComplexTextValue",
+          "html": "<p>• 4 burners with 1 wok burner<br>• Raised cast-iron trivets<br>• Eclipse Series knob controls<br>• Auto ignition &amp; flame safety device<br>• LPG conversion kit</p>"
+        },
+        "product_dimensions": "W580 x D500 x H83mm",
+        "price_promo": 0,
+        "price_store": 692,
+        "price_trade": "0.000000",
+        "wels_reg_number": "",
+        "gp_product_group": "COOKTOPS",
+        "price_range": {
+          "__typename": "PriceRange",
+          "minimum_price": {
+            "__typename": "ProductPrice",
+            "regular_price": {
+              "__typename": "Money",
+              "value": 0,
+              "currency": "AUD"
+            }
+          }
+        }
+      },
+      "listingProduct": {
+        "id": 18966,
+        "name": "600mm Gas Cooktop",
+        "sku": "EC64GS",
+        "vendorcode": "EC64GS",
+        "image": {
+          "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec64gs_euromaid_web.jpg",
+          "__typename": "ProductImage"
+        },
+        "thumbnail": {
+          "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec64gs_euromaid_web.jpg",
+          "__typename": "ProductImage"
+        },
+        "product_images": {
+          "thumbnail": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/07ba508bbc2444c0df3c958b3d918048/e/c/ec64gs_euromaid_web.jpg",
+          "small": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/1df791769d8cdc80e3c05129fe5437cf/e/c/ec64gs_euromaid_web.jpg",
+          "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec64gs_euromaid_web.jpg",
+          "__typename": "ProductImages"
+        },
+        "description": {
+          "html": "<p>• 4 burners with 1 wok burner<br>• Raised cast-iron trivets<br>• Eclipse Series knob controls<br>• Auto ignition &amp; flame safety device<br>• LPG conversion kit</p>",
+          "__typename": "ComplexTextValue"
+        },
+        "price_store": 692,
+        "price_trade": "0.000000",
+        "stock_line_filter": 672,
+        "gp_product_group": "COOKTOPS",
+        "__typename": "SimpleProduct",
+        "price_range": {
+          "minimum_price": {
+            "regular_price": {
+              "value": 0,
+              "currency": "AUD",
+              "__typename": "Money"
+            },
+            "__typename": "ProductPrice"
+          },
+          "__typename": "PriceRange"
+        }
+      },
+      "htmlSha256": "46ec56d61a19903a9331cc300408745eee5fa837f8ef5dc13d794d154ada051b",
+      "displayedColour": "Stainless Steel",
+      "displayedPrice": {
+        "label": "SRP (inc. GST)",
+        "value": 692,
+        "currency": "AUD"
+      },
+      "sourceFeatures": [
+        "4 burners with 1 wok burner",
+        "Raised cast-iron trivets",
+        "Eclipse Series knob controls",
+        "Auto ignition & flame safety device",
+        "LPG conversion kit"
+      ],
+      "sourceDiscrepancies": [],
+      "image": {
+        "sourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec64gs_euromaid_web.jpg",
+        "listingSourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec64gs_euromaid_web.jpg",
+        "localPath": "public/images/catalogues/appliances/products/euromaid/ec64gs.jpg",
+        "bytes": 381291,
+        "sha256": "0fc6edabe248280d03cc9cfbffcc126c35a5529eab0ba2c7b26311bfe98d97a5",
+        "reusedExistingAsset": false,
+        "contentType": "image/jpeg",
+        "visualVerification": "verified-product-photograph",
+        "visualVerificationNote": "Visually inspected downloaded local image: stainless-steel four-burner Euromaid gas cooktop photograph with front-left wok burner. No drawing or placeholder."
+      },
+      "excludedGalleryImages": [
+        {
+          "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec64gs_euromaid_tech.jpg",
+          "reason": "Technical drawing excluded from card imagery."
+        }
+      ],
+      "operation": "append-new-exact-model"
+    },
+    {
+      "model": "EC95GLB",
+      "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC95GLB",
+      "checkedAt": "2026-09-11",
+      "retrievedAt": "2026-09-11T05:58:31.422Z",
+      "rawHncProduct": {
+        "__typename": "SimpleProduct",
+        "id": 15849,
+        "sku": "EC95GLB",
+        "vendorcode": "EC95GLB",
+        "name": "Eclipse 600mm Gas Cooktop",
+        "image": {
+          "__typename": "ProductImage",
+          "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec95glb_euromaid_web.jpg"
+        },
+        "product_images": {
+          "__typename": "ProductImages",
+          "thumbnail": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/07ba508bbc2444c0df3c958b3d918048/e/c/ec95glb_euromaid_web.jpg",
+          "small": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/1df791769d8cdc80e3c05129fe5437cf/e/c/ec95glb_euromaid_web.jpg",
+          "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec95glb_euromaid_web.jpg",
+          "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/e/c/ec95glb_euromaid_web.jpg",
+          "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/e/c/ec95glb_euromaid_tech.jpg"
+        },
+        "media_gallery": [
+          {
+            "__typename": "ProductImage",
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec95glb_euromaid_web.jpg"
+          },
+          {
+            "__typename": "ProductImage",
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec95glb_euromaid_tech.jpg"
+          }
+        ],
+        "thumbnail": {
+          "__typename": "ProductImage",
+          "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec95glb_euromaid_web.jpg"
+        },
+        "description": {
+          "__typename": "ComplexTextValue",
+          "html": "<p>&bull; Five matte black Italian gas burners<br />&bull; Powerful wok burner with Dual-Valve control + brass burner cap<br />&bull; Raised Cast-Iron Trivets<br />&bull; Automatic ignition<br />&bull; LGP conversion kit included</p>"
+        },
+        "product_dimensions": "W880 x D521x H105* (height includes trivets*)",
+        "price_promo": 0,
+        "price_store": 1385,
+        "price_trade": "0.000000",
+        "wels_reg_number": "",
+        "gp_product_group": "COOKTOPS",
+        "price_range": {
+          "__typename": "PriceRange",
+          "minimum_price": {
+            "__typename": "ProductPrice",
+            "regular_price": {
+              "__typename": "Money",
+              "value": 0,
+              "currency": "AUD"
+            }
+          }
+        }
+      },
+      "listingProduct": {
+        "id": 15849,
+        "name": "Eclipse 600mm Gas Cooktop",
+        "sku": "EC95GLB",
+        "vendorcode": "EC95GLB",
+        "image": {
+          "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec95glb_euromaid_web.jpg",
+          "__typename": "ProductImage"
+        },
+        "thumbnail": {
+          "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec95glb_euromaid_web.jpg",
+          "__typename": "ProductImage"
+        },
+        "product_images": {
+          "thumbnail": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/07ba508bbc2444c0df3c958b3d918048/e/c/ec95glb_euromaid_web.jpg",
+          "small": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/1df791769d8cdc80e3c05129fe5437cf/e/c/ec95glb_euromaid_web.jpg",
+          "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec95glb_euromaid_web.jpg",
+          "__typename": "ProductImages"
+        },
+        "description": {
+          "html": "<p>&bull; Five matte black Italian gas burners<br />&bull; Powerful wok burner with Dual-Valve control + brass burner cap<br />&bull; Raised Cast-Iron Trivets<br />&bull; Automatic ignition<br />&bull; LGP conversion kit included</p>",
+          "__typename": "ComplexTextValue"
+        },
+        "price_store": 1385,
+        "price_trade": "0.000000",
+        "stock_line_filter": 673,
+        "gp_product_group": "COOKTOPS",
+        "__typename": "SimpleProduct",
+        "price_range": {
+          "minimum_price": {
+            "regular_price": {
+              "value": 0,
+              "currency": "AUD",
+              "__typename": "Money"
+            },
+            "__typename": "ProductPrice"
+          },
+          "__typename": "PriceRange"
+        }
+      },
+      "htmlSha256": "9a897794e776253407272ff60ec177106b6982a0f3ae7e8257b92338c39d23a8",
+      "displayedColour": "Black Glass",
+      "displayedPrice": {
+        "label": "SRP (inc. GST)",
+        "value": 1385,
+        "currency": "AUD"
+      },
+      "sourceFeatures": [
+        "Five matte black Italian gas burners",
+        "Powerful wok burner with Dual-Valve control + brass burner cap",
+        "Raised Cast-Iron Trivets",
+        "Automatic ignition",
+        "LGP conversion kit included"
+      ],
+      "sourceDiscrepancies": [
+        "HNC listing and product-page title state 600mm, while the size field states W880 x D521 x H105; the exact HNC title and physical dimensions are preserved without inferring a corrected title."
+      ],
+      "image": {
+        "sourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec95glb_euromaid_web.jpg",
+        "listingSourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec95glb_euromaid_web.jpg",
+        "localPath": "public/images/catalogues/appliances/products/euromaid/ec95glb.jpg",
+        "bytes": 334477,
+        "sha256": "6b0971328e56951353534a5f8e7ea252f3141c39984e8df6ce40c7b5ecf4f02b",
+        "reusedExistingAsset": true,
+        "contentType": "image/jpeg",
+        "visualVerification": "verified-product-photograph",
+        "visualVerificationNote": "Previously visually inspected local black-glass five-burner cooktop photograph. Fresh HNC download SHA-256 matches the exact same verified asset."
+      },
+      "excludedGalleryImages": [
+        {
+          "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec95glb_euromaid_tech.jpg",
+          "reason": "Technical drawing excluded from card imagery."
+        }
+      ],
+      "operation": "update-exact-model-preserve-id"
+    },
+    {
+      "model": "EC95GLS",
+      "sourceUrl": "https://www.harveynormancommercial.com.au/products/EC95GLS",
+      "checkedAt": "2026-09-11",
+      "retrievedAt": "2026-09-11T05:58:33.725Z",
+      "rawHncProduct": {
+        "__typename": "SimpleProduct",
+        "id": 15467,
+        "sku": "EC95GLS",
+        "vendorcode": "EC95GLS",
+        "name": "900mm Gas Cooktop ",
+        "image": {
+          "__typename": "ProductImage",
+          "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec95gls3_euromaid_web_1.jpg"
+        },
+        "product_images": {
+          "__typename": "ProductImages",
+          "thumbnail": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/07ba508bbc2444c0df3c958b3d918048/e/c/ec95gls3_euromaid_web_1.jpg",
+          "small": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/1df791769d8cdc80e3c05129fe5437cf/e/c/ec95gls3_euromaid_web_1.jpg",
+          "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec95gls3_euromaid_web_1.jpg",
+          "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/e/c/ec95gls3_euromaid_web_1.jpg",
+          "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/e/u/euromaid_ec95gls_tech_1.jpg"
+        },
+        "media_gallery": [
+          {
+            "__typename": "ProductImage",
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec95gls3_euromaid_web_1.jpg"
+          },
+          {
+            "__typename": "ProductImage",
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/u/euromaid_ec95gls_tech_1.jpg"
+          }
+        ],
+        "thumbnail": {
+          "__typename": "ProductImage",
+          "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec95gls3_euromaid_web_1.jpg"
+        },
+        "description": {
+          "__typename": "ComplexTextValue",
+          "html": "<p>&bull; 5 matte black Italian gas burners &amp; x1 high power wok burner - 14.4MJ/h<br />&bull; Raised Cast-Iron Trivets<br />&bull; Eclipse Series knob controls<br />&bull; Automatic ignition<br />&bull; Flame safety device</p>"
+        },
+        "product_dimensions": "W860 x D500 x H87mm ",
+        "price_promo": 0,
+        "price_store": 1187,
+        "price_trade": "0.000000",
+        "wels_reg_number": "",
+        "gp_product_group": "COOKTOPS",
+        "price_range": {
+          "__typename": "PriceRange",
+          "minimum_price": {
+            "__typename": "ProductPrice",
+            "regular_price": {
+              "__typename": "Money",
+              "value": 0,
+              "currency": "AUD"
+            }
+          }
+        }
+      },
+      "listingProduct": {
+        "id": 15467,
+        "name": "900mm Gas Cooktop ",
+        "sku": "EC95GLS",
+        "vendorcode": "EC95GLS",
+        "image": {
+          "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec95gls3_euromaid_web_1.jpg",
+          "__typename": "ProductImage"
+        },
+        "thumbnail": {
+          "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec95gls3_euromaid_web_1.jpg",
+          "__typename": "ProductImage"
+        },
+        "product_images": {
+          "thumbnail": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/07ba508bbc2444c0df3c958b3d918048/e/c/ec95gls3_euromaid_web_1.jpg",
+          "small": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/1df791769d8cdc80e3c05129fe5437cf/e/c/ec95gls3_euromaid_web_1.jpg",
+          "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec95gls3_euromaid_web_1.jpg",
+          "__typename": "ProductImages"
+        },
+        "description": {
+          "html": "<p>&bull; 5 matte black Italian gas burners &amp; x1 high power wok burner - 14.4MJ/h<br />&bull; Raised Cast-Iron Trivets<br />&bull; Eclipse Series knob controls<br />&bull; Automatic ignition<br />&bull; Flame safety device</p>",
+          "__typename": "ComplexTextValue"
+        },
+        "price_store": 1187,
+        "price_trade": "0.000000",
+        "stock_line_filter": 672,
+        "gp_product_group": "COOKTOPS",
+        "__typename": "SimpleProduct",
+        "price_range": {
+          "minimum_price": {
+            "regular_price": {
+              "value": 0,
+              "currency": "AUD",
+              "__typename": "Money"
+            },
+            "__typename": "ProductPrice"
+          },
+          "__typename": "PriceRange"
+        }
+      },
+      "htmlSha256": "28657815a0986cce21f5be52c5e7e75a1ba1740ea6fc070a98d8e09f742ac7b9",
+      "displayedColour": "Stainless Steel",
+      "displayedPrice": {
+        "label": "SRP (inc. GST)",
+        "value": 1187,
+        "currency": "AUD"
+      },
+      "sourceFeatures": [
+        "5 matte black Italian gas burners & x1 high power wok burner - 14.4MJ/h",
+        "Raised Cast-Iron Trivets",
+        "Eclipse Series knob controls",
+        "Automatic ignition",
+        "Flame safety device"
+      ],
+      "sourceDiscrepancies": [],
+      "image": {
+        "sourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec95gls3_euromaid_web_1.jpg",
+        "listingSourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec95gls3_euromaid_web_1.jpg",
+        "localPath": "public/images/catalogues/appliances/products/euromaid/ec95gls.jpg",
+        "bytes": 600048,
+        "sha256": "09cecc69deba50ab59b0ac2369846c0b33439028c0cff7c2e68e76092b4de940",
+        "reusedExistingAsset": true,
+        "contentType": "image/jpeg",
+        "visualVerification": "verified-product-photograph",
+        "visualVerificationNote": "Previously visually inspected local stainless-steel five-burner cooktop photograph. Fresh HNC download SHA-256 matches the exact same verified asset."
+      },
+      "excludedGalleryImages": [
+        {
+          "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/u/euromaid_ec95gls_tech_1.jpg",
+          "reason": "Technical drawing excluded from card imagery."
+        }
+      ],
+      "operation": "update-exact-model-preserve-id"
+    }
+  ]
+}

@@ -2,8 +2,8 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
 
-const root = path.resolve("test-results/johnson-browser-storage/2026-08-28T05-36-30-389Z/raw-copy/Profile 6/IndexedDB/http_localhost_3000.indexeddb.blob");
-const outDir = path.resolve("test-results/johnson-indexeddb-blob-classification", new Date().toISOString().replace(/[:.]/g, "-"));
+const root = path.resolve("artifacts/test-results/johnson-browser-storage/2026-08-28T05-36-30-389Z/raw-copy/Profile 6/IndexedDB/http_localhost_3000.indexeddb.blob");
+const outDir = path.resolve("artifacts/test-results/johnson-indexeddb-blob-classification", new Date().toISOString().replace(/[:.]/g, "-"));
 await fs.mkdir(outDir, { recursive: true });
 
 const terms = [

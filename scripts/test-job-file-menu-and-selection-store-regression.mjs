@@ -8,11 +8,11 @@ const selectionsSource = readFileSync("pages/modules/builders/selections-book.js
 
 for (const label of [
   "New Job",
-  "Open Platform Job",
-  "Open Job File From Computer",
-  "Open Template",
+  "Open Saved Job",
+  "Open Job File from Computer",
+  "Create New Job From Master Template",
   "Save Job",
-  "Save Job As",
+  "Save Job to Computer",
   "Download Backup Copy",
   "RECENT JOBS",
 ]) {
@@ -39,16 +39,17 @@ assert.ok(!workbookSource.includes("projectId: \"\",\n        commercialProjectI
 
 assert.ok(jobFileHookSource.includes("filter(isGenuineRecentJob).slice(0, 3)"), "Local recent jobs must be filtered and capped.");
 assert.ok(jobFileHookSource.includes("fallbackToSaveAs: true"), "Save Job must invoke Save As/download when no writable computer-file handle exists.");
-assert.ok(jobFileHookSource.includes("Job saved in the platform. Use Download Backup Copy to update the computer file."), "No-handle save must give the required message.");
+assert.ok(jobFileHookSource.includes("saveJob(currentJobData, currentHandle, { fallbackToSaveAs: true })"), "No-handle save must write a complete master job through Save As/download.");
 assert.ok(jobFileHookSource.includes("downloadBackupCopy"), "Download Backup Copy must use the job-file package exporter.");
 assert.ok(jobFileHookSource.includes("hasActiveJob"), "Job-file hook must track whether a real job is active.");
 assert.ok(jobFileHookSource.includes("storageLocation"), "Job-file hook must expose where the master job is stored.");
 assert.ok(jobFileHookSource.includes("const close = useCallback"), "Job-file hook must clear active file state on Close Job.");
 assert.ok(jobFileHookSource.includes("if (!hasActiveJob)"), "No active job must never report stale dirty state.");
 
-assert.ok(workbookHookSource.includes("async function updateClientSelectionsBook"), "Workbook hook must expose active-project Client Selections persistence.");
+assert.ok(workbookHookSource.includes("function updateClientSelectionsBook("), "Workbook hook must expose active-project Client Selections persistence.");
 assert.ok(workbookHookSource.includes("Client Selections save verification failed."), "Client Selections save must verify read-back identity/revision.");
-assert.ok(workbookHookSource.includes("commercialProjectId: parsedIdentity.projectId"), "Local file load must keep canonical project identity.");
+assert.ok(workbookHookSource.includes("commercialProjectId: effectiveProjectId"), "Local file load must keep its recorded commercial-project alias.");
+assert.ok(workbookHookSource.includes("workbookPayload?.jobId || parsed?.jobId"), "Local file load must preserve the permanent master job ID.");
 assert.ok(workbookHookSource.includes("filter(isGenuineRecentEstimateJob).slice(0, 3)"), "Platform recent jobs must be filtered and capped.");
 
 assert.ok(selectionsSource.includes("onClientSelectionsSave = null"), "Embedded selections page must accept the active workbook save callback.");

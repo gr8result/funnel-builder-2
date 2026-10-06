@@ -7,7 +7,7 @@ import puppeteer from 'puppeteer';
 import {createEstimateBuilderWorkbookDefaults} from '../lib/construction-estimation/estimateBuilderWorkbookDefaults.js';
 dotenv.config({path:'.env.local',quiet:true});dotenv.config({path:'.env',quiet:true});
 const baseUrl=process.env.ENTRY_DOOR_TEST_BASE_URL||'http://localhost:3000';
-const out=path.resolve('test-artifacts/entry-door-furniture-live');fs.mkdirSync(out,{recursive:true});
+const out=path.resolve('artifacts/test-artifacts/entry-door-furniture-live');fs.mkdirSync(out,{recursive:true});
 const projectId='door-furniture-verification-20260905';
 const defaults=createEstimateBuilderWorkbookDefaults();
 const workbook={...defaults,templateType:'job',page:'clientSelections',projectId,commercialProjectId:projectId,registeredJobId:projectId,registeredJob:{jobId:projectId,jobName:'Door Furniture Verification',jobNumber:'DF-TEST',clientName:'Test client',siteAddress:'Test address'},jobFileMeta:{projectId,jobName:'Door Furniture Verification',jobNumber:'DF-TEST',clientName:'Test client',address:'Test address'},takeoffSchedule:{items:[{id:'D01',mark:'ED1',type:'Exterior entry door',level:'Ground',location:'Entry',quantity:1},{id:'D02',mark:'ED2',type:'Exterior entry door',level:'Upper',location:'Terrace',quantity:1}]} };

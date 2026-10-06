@@ -1,7 +1,7 @@
 ﻿import Link from "next/link";
 import { useRouter } from "next/router";
 import { useState, useEffect } from "react";
-import { LineChart } from "lucide-react";
+import { ChevronLeft, ChevronRight, LineChart } from "lucide-react";
 import ICONS from "./iconMap";
 import { useWorkspace } from "../hooks/useWorkspace";
 
@@ -84,7 +84,7 @@ const MODULE_ITEMS = [
   { href: "/modules/agency",                   label: "Agency Dashboard",      icon: ICONS.agency,         color: "u19", roles: MGMT,    comingSoon: true, emoji: "🏢" },
 ];
 
-export default function SideNav() {
+export default function SideNav({ collapsed = false, onToggleCollapsed }) {
   const router = useRouter();
   const [activePath, setActivePath] = useState(router.pathname);
   const { role, loading: wsLoading } = useWorkspace();
@@ -105,13 +105,16 @@ export default function SideNav() {
   const visibleModules = MODULE_ITEMS.filter((item) => canSee(item, effectiveRole));
 
   return (
-    <aside className="sidenav">
+    <aside className={`sidenav${collapsed ? " collapsed" : ""}`}>
       <div className="branding">
         <img src="/logo.png" alt="Company Logo" className="logo" />
         <div className="brand-text">
           <div>GR8 RESULT</div>
           <div>Digital Solutions</div>
         </div>
+        <button type="button" className="collapse-button" onClick={onToggleCollapsed} aria-label={collapsed ? "Expand navigation" : "Collapse navigation"} title={collapsed ? "Expand navigation" : "Collapse navigation"}>
+          {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+        </button>
       </div>
 
       <div className="sections">
@@ -179,6 +182,17 @@ export default function SideNav() {
           scrollbar-color: #374151 #111827;
           z-index: 100;
         }
+
+        .sidenav.collapsed { width: 68px; padding: 18px 10px 80px; }
+        .sidenav.collapsed .brand-text,
+        .sidenav.collapsed h4,
+        .sidenav.collapsed .label { display: none; }
+        .sidenav.collapsed .branding { justify-content: center; gap: 0; }
+        .sidenav.collapsed .logo { width: 36px; height: 36px; }
+        .sidenav.collapsed .nav-item { justify-content: center; padding: 12px 8px; }
+        .sidenav.collapsed .nav-item .icon { margin-right: 0; }
+        .collapse-button { margin-left: auto; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid #475569; border-radius: 4px; background: #1f2937; color: #ffffff; cursor: pointer; }
+        .sidenav.collapsed .collapse-button { position: absolute; top: 56px; right: 2px; margin: 0; }
 
         .branding {
           display: flex;

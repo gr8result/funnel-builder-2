@@ -18,11 +18,11 @@ import {
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const workbookTemplatePath = path.join(repoRoot, "lib", "construction-estimation", "importedExcelWorkbookTemplate.json");
 const outputPaths = {
-  sourceAudit: path.join(repoRoot, "MASTER_CATALOGUE_SOURCE_AUDIT.md"),
-  quotationMapping: path.join(repoRoot, "MASTER_CATALOGUE_QUOTATION_MAPPING.csv"),
-  cabinetryMapping: path.join(repoRoot, "CABINETRY_PRODUCT_LIBRARY_MAPPING.md"),
-  productTemplate: path.join(repoRoot, "PRODUCT_LIBRARY_IMPORT_TEMPLATE.csv"),
-  estimatingTemplate: path.join(repoRoot, "ESTIMATING_CATALOGUE_IMPORT_TEMPLATE.csv"),
+  sourceAudit: path.join(repoRoot, "docs/catalogue/MASTER_CATALOGUE_SOURCE_AUDIT.md"),
+  quotationMapping: path.join(repoRoot, "data/catalogue/reconciliation/MASTER_CATALOGUE_QUOTATION_MAPPING.csv"),
+  cabinetryMapping: path.join(repoRoot, "docs/catalogue/CABINETRY_PRODUCT_LIBRARY_MAPPING.md"),
+  productTemplate: path.join(repoRoot, "data/catalogue/imports/PRODUCT_LIBRARY_IMPORT_TEMPLATE.csv"),
+  estimatingTemplate: path.join(repoRoot, "data/catalogue/imports/ESTIMATING_CATALOGUE_IMPORT_TEMPLATE.csv"),
 };
 
 const productRecords = loadMasterProducts();

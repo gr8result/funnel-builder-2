@@ -35,9 +35,6 @@ function getThemeAccent(slug = "") {
 
 export default function ThemePreviewPage() {
   const router = useRouter();
-  const [session, setSession] = useState(null);
-  const [hasMounted, setHasMounted] = useState(false);
-  const [defaultsVersion, setDefaultsVersion] = useState(0);
   const routeParams = useMemo(() => {
     const query = router.query || {};
     return {
@@ -52,6 +49,13 @@ export default function ThemePreviewPage() {
     return <ProjectPreviewPage />;
   }
 
+  return <TemplatePreviewContent router={router} routeParams={routeParams} />;
+}
+
+function TemplatePreviewContent({ router, routeParams }) {
+  const [session, setSession] = useState(null);
+  const [hasMounted, setHasMounted] = useState(false);
+  const [defaultsVersion, setDefaultsVersion] = useState(0);
   const templateSlug = routeParams.templateSlug;
   const pageKey = routeParams.pageKey;
   const previewRouteReady = router.isReady || (hasMounted && Boolean(templateSlug));

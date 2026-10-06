@@ -5,6 +5,7 @@
 // keeps running unchanged as a local recovery cache. This hook is the
 // authoritative, organisation-scoped, database-backed save path.
 import { useCallback, useEffect, useRef, useState } from "react";
+import { documentLock } from "../../../../lib/nonStealingLock.js";
 import {
   getExistingInstance,
   getOrCreateInstance,
@@ -32,9 +33,11 @@ export function useProjectEstimateInstanceSync({
   const instanceRef = useRef({ id: null, templateId: null, updatedAt: null });
   const saveTimerRef = useRef(null);
   const loadedRef = useRef(false);
+  const [reloadVersion, setReloadVersion] = useState(0);
 
   const applyInstanceToBuilder = useCallback((instance, cancelled = false) => {
     if (cancelled || !instance?.id) return;
+    if (instance.workspaceId !== workspaceId || instance.projectId !== projectId) throw new Error("Saved estimate belongs to another workspace or job. It was not loaded.");
     instanceRef.current = { id: instance.id, templateId: instance.templateId, updatedAt: instance.updatedAt };
     const localHasContent = Array.isArray(builder?.pages)
       && builder.pages.some((page) => Array.isArray(page.blocks) && page.blocks.length);
@@ -53,7 +56,7 @@ export function useProjectEstimateInstanceSync({
     } else {
       setBuilder((current) => ({ ...current, instanceId: instance.id, templateId: instance.templateId }));
     }
-  }, [builder?.pages, dirtyRef, hydratePage, preserveSavedDocument, setBuilder]);
+  }, [builder?.pages, dirtyRef, hydratePage, preserveSavedDocument, setBuilder, workspaceId, projectId]);
 
   useEffect(() => {
     if (localFileOnly) {
@@ -70,11 +73,11 @@ export function useProjectEstimateInstanceSync({
     loadedRef.current = true;
     let cancelled = false;
     setStatus("loading");
-    getExistingInstance(workspaceId, { projectId: projectId || undefined })
+    documentLock(`${workspaceId}/${projectId}`, () => getExistingInstance(workspaceId, { projectId }))
       .then(({ instance }) => {
         if (cancelled) return;
         applyInstanceToBuilder(instance);
-        setStatus("idle");
+        setStatus(reloadVersion ? "recovered" : "idle");
       })
       .catch((error) => {
         if (cancelled) return;
@@ -84,20 +87,20 @@ export function useProjectEstimateInstanceSync({
           setErrorMessage("The saved Project Estimate could not be loaded. No replacement document has been created.");
           return;
         }
-        setStatus("save_failed");
+        setStatus("load_failed");
         setErrorMessage(error?.message || "Could not load your saved Project Estimate.");
       });
     return () => {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workspaceId, projectId, readonly, localFileOnly]);
+  }, [workspaceId, projectId, readonly, localFileOnly, reloadVersion]);
 
   const createFromTemplate = useCallback((templateId) => {
     if (readonly || localFileOnly || !workspaceId || !projectId) return Promise.resolve(null);
     setStatus("loading");
     setErrorMessage("");
-    return getOrCreateInstance(workspaceId, { projectId: projectId || undefined, templateId: templateId || undefined, createIfMissing: true })
+    return documentLock(`${workspaceId}/${projectId}`, () => getOrCreateInstance(workspaceId, { projectId, templateId: templateId || undefined, createIfMissing: true }))
       .then(({ instance, created }) => {
         applyInstanceToBuilder(instance);
         setStatus(created ? "created_from_template" : "idle");
@@ -118,7 +121,7 @@ export function useProjectEstimateInstanceSync({
     const pages = (nextBuilder.pages || []).map((page, index) => (
       builderPageToApiPage(page, index, nextBuilder.importedDocuments)
     ));
-    return saveInstance(workspaceId, instanceId, {
+    return documentLock(`${workspaceId}/${projectId}`, () => saveInstance(workspaceId, instanceId, {
       pages,
       pageOrder: pages.map((page) => page.pageKey),
       expectedUpdatedAt: instanceRef.current.updatedAt || undefined,
@@ -127,7 +130,7 @@ export function useProjectEstimateInstanceSync({
       instanceRef.current.updatedAt = instance.updatedAt;
       setStatus("saved");
       return instance;
-    }).catch((error) => {
+    })).catch((error) => {
       if (error instanceof ProjectEstimateApiError && error.conflict) {
         setStatus("conflict");
         setErrorMessage(error.message);
@@ -137,11 +140,12 @@ export function useProjectEstimateInstanceSync({
       setErrorMessage(error?.message || "Save failed");
       return null;
     });
-  }, [workspaceId, readonly, localFileOnly]);
+  }, [workspaceId, projectId, readonly, localFileOnly]);
 
   const scheduleSave = useCallback((nextBuilder) => {
     if (!instanceRef.current.id || readonly || localFileOnly) return;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    setStatus("unsaved");
     saveTimerRef.current = setTimeout(() => persistNow(nextBuilder), SAVE_DEBOUNCE_MS);
   }, [persistNow, readonly, localFileOnly]);
 
@@ -155,6 +159,7 @@ export function useProjectEstimateInstanceSync({
     scheduleSave,
     persistNow,
     createFromTemplate,
+    retryLoad: () => setReloadVersion(value => value + 1),
     get instanceId() { return instanceRef.current.id; },
     get templateId() { return instanceRef.current.templateId; },
     setTemplateId: (templateId) => { instanceRef.current.templateId = templateId; },

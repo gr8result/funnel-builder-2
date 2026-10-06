@@ -38,6 +38,6 @@ assert(upload.includes("createStandardInclusionsOnlyOfficeDocument"), "Upload ro
 assert(callback.includes("if (![2, 6].includes(status))"), "Callback saves only ONLYOFFICE ready-to-save statuses");
 assert(callback.includes("revision_history"), "Callback appends saved PPTX revisions");
 assert(editor.includes("new DocsAPI.DocEditor"), "Client component mounts the native ONLYOFFICE editor");
-assert(fs.existsSync(path.join(root, "supabase/migrations/20260720_standard_inclusions_onlyoffice.sql")), "Database migration for ONLYOFFICE document records exists");
+assert(fs.existsSync(path.join(root, "supabase/migrations/20260813093700_standard_inclusions_onlyoffice.sql")), "Database migration for ONLYOFFICE document records exists");
 
 if (process.exitCode) process.exit(process.exitCode);

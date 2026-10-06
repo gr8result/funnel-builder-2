@@ -6,11 +6,13 @@ import { getProductLibraryRoomCategories, getProductLibraryRoomCategory, product
 const master = getMasterProducts();
 const before = JSON.stringify(master);
 const exterior = getProductLibraryRoomCategories('exterior');
-for (const key of ['gutters', 'fascia', 'downpipes', 'external-door-furniture', 'door-furniture']) assert(!exterior.some(c => c.key === key));
+for (const key of ['gutters', 'fascia', 'downpipes', 'door-furniture']) assert(!exterior.some(c => c.key === key));
 assert.equal(exterior.filter(c => c.key === 'roofing').length, 1);
-assert.equal(exterior.find(c => c.key === 'entry-doors').name, 'Entry Doors & Door Furniture');
+assert.equal(exterior.find(c => c.key === 'entry-doors').name, 'Doors / Entry Doors');
+assert.equal(exterior.find(c => c.key === 'external-door-furniture').name, 'Door Furniture / Handles');
 const counts = {};
 for (const [parent, sections] of Object.entries(EXTERIOR_CATALOGUE_SECTIONS)) {
+  if (!exterior.some(category => category.key === parent)) continue;
   const products = master.filter(p => productBelongsToRoomCategory(p, getProductLibraryRoomCategory(parent)));
   const grouped = sections.slice(1).flatMap(([key]) => {
     const records = products.filter(p => exteriorSectionForProduct(p, parent) === key);
@@ -26,13 +28,14 @@ for (const [parent, sections] of Object.entries(EXTERIOR_CATALOGUE_SECTIONS)) {
   assert.equal(new Set(grouped.map(p => p.productId)).size, products.length);
 }
 for (const p of master.filter(p => p.familyKey === 'entry-door-furniture')) {
-  assert(productBelongsToRoomCategory(p, getProductLibraryRoomCategory('entry-doors')));
+  assert(!productBelongsToRoomCategory(p, getProductLibraryRoomCategory('entry-doors')));
+  assert(productBelongsToRoomCategory(p, getProductLibraryRoomCategory('external-door-furniture')));
   assert(!productBelongsToRoomCategory(p, getProductLibraryRoomCategory('door-furniture')));
   assert(!productBelongsToRoomCategory(p, getProductLibraryRoomCategory('cabinet-handles')));
 }
 for (const p of master.filter(p => productBelongsToRoomCategory(p, getProductLibraryRoomCategory('cabinet-handles')))) assert(!exteriorSectionForProduct(p, 'entry-doors'));
 assert.equal(exteriorSectionForProduct({familyKey:'roofing',configuration:'gutters',productName:'Gutter for fascia system'},'roofing'),'gutters');
-for (const [name, expected] of [['Smart entrance lock','smart-digital-locks'],['Mortice lock','mortice-locks'],['Deadbolt','deadbolts'],['Trilock entrance set','entrance-locksets'],['Pull handle','entrance-handles'],['Hinge','hinges'],['Door closer','door-closers']]) assert.equal(exteriorSectionForProduct({familyKey:'entry-door-furniture',productName:name},'entry-doors'),expected);
+for (const [name, expected] of [['Smart entrance lock','smart-digital-locks'],['Mortice lock','mortice-locks'],['Deadbolt','deadbolts'],['Trilock entrance set','entrance-locksets'],['Pull handle','entrance-handles'],['Hinge','hinges'],['Door closer','door-closers']]) assert.equal(exteriorSectionForProduct({familyKey:'entry-door-furniture',productName:name},'external-door-furniture'),expected);
 assert.equal(resolveProductLibrarySectionForQuotationRow({current_description:'Entrance door handle'}),'doors-door-furniture');
 assert.equal(resolveProductLibrarySectionForQuotationRow({current_description:'Cabinet handle'}),'cabinetry-joinery');
 assert.equal(JSON.stringify(master), before, 'Browsing must not mutate canonical products');

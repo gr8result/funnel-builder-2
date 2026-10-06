@@ -1,0 +1,6 @@
+import fs from 'node:fs/promises';import {source} from './inspect-door-furniture-sources.mjs';
+const dir='data/product-library/source-evidence/stair-workflow';await fs.mkdir(dir,{recursive:true});
+for(const url of ['https://stairpro.com.au/node/25','https://stairpro.com.au/stairs-gallery','https://stairpro.com.au/balustrading-gallery','https://stairpro.com.au/handrails','https://stairlock.com.au/products/custom-staircases/','https://stairlock.com.au/products/american-oak/']){
+ try{const {doc}=await source(url);const images=[...doc.querySelectorAll('img')].map(i=>({url:i.closest('a')?.href?.match(/\.(jpg|jpeg|png)/i)?i.closest('a').href:i.src,alt:i.alt,title:i.title,context:i.parentElement.textContent.trim().slice(0,100)})).filter(i=>!/(logo|bannerreadmore|imagecache\/banner)/i.test(i.url));
+ const record={url,title:doc.title,images,links:[...doc.querySelectorAll('a[href]')].map(a=>({url:a.href,label:a.textContent.trim()})),text:doc.body.textContent.replace(/\s+/g,' ')};doc.defaultView.close();await fs.writeFile(`${dir}/${new URL(url).pathname.split('/').filter(Boolean).at(-1)}.json`,JSON.stringify(record,null,2));console.log(url,images.length,images.slice(0,3));}catch(e){console.log(e.message);}
+}

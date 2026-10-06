@@ -17,14 +17,14 @@ import {
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sourceCsvPath = process.env.APPLIANCE_LEGACY_CSV_PATH || "C:\\Users\\grant\\Downloads\\appliance options.csv";
 const outputPaths = {
-  mapping: path.join(repoRoot, "APPLIANCE_LEGACY_CSV_MAPPING.md"),
-  report: path.join(repoRoot, "APPLIANCE_CATALOGUE_IMPORT_REPORT.md"),
-  dedupe: path.join(repoRoot, "APPLIANCE_PRODUCT_DEDUPLICATION.csv"),
-  packs: path.join(repoRoot, "APPLIANCE_PACK_COMPONENT_MAPPING.csv"),
-  unresolved: path.join(repoRoot, "APPLIANCE_UNRESOLVED_ROWS.csv"),
-  reconciliation: path.join(repoRoot, "APPLIANCE_CHECKPOINT1_RECONCILIATION.md"),
-  comparison: path.join(repoRoot, "APPLIANCE_CHECKPOINT1_RESULT_COMPARISON.csv"),
-  priceReview: path.join(repoRoot, "APPLIANCE_PRICE_CONFLICT_REVIEW.csv"),
+  mapping: path.join(repoRoot, "docs/catalogue/APPLIANCE_LEGACY_CSV_MAPPING.md"),
+  report: path.join(repoRoot, "docs/catalogue/APPLIANCE_CATALOGUE_IMPORT_REPORT.md"),
+  dedupe: path.join(repoRoot, "data/catalogue/reconciliation/APPLIANCE_PRODUCT_DEDUPLICATION.csv"),
+  packs: path.join(repoRoot, "data/catalogue/reconciliation/APPLIANCE_PACK_COMPONENT_MAPPING.csv"),
+  unresolved: path.join(repoRoot, "data/catalogue/reconciliation/APPLIANCE_UNRESOLVED_ROWS.csv"),
+  reconciliation: path.join(repoRoot, "docs/catalogue/APPLIANCE_CHECKPOINT1_RECONCILIATION.md"),
+  comparison: path.join(repoRoot, "data/catalogue/reconciliation/APPLIANCE_CHECKPOINT1_RESULT_COMPARISON.csv"),
+  priceReview: path.join(repoRoot, "data/catalogue/reconciliation/APPLIANCE_PRICE_CONFLICT_REVIEW.csv"),
 };
 
 if (!fs.existsSync(sourceCsvPath)) {
@@ -110,7 +110,7 @@ ${markdownTable(["Index", "Field", "Description"], APPLIANCE_LEGACY_FIELDS.map((
 
 The legacy parser is deliberately separated from the future Product Library CSV import. A later tenant import should map uploaded rows into canonical product fields: category, family, brand, range, model, SKU/product code, supplier, product name, description, unit, price status, optional price, image fields, applicable rooms, selectable flag, active flag, and tenant/workspace ownership.
 
-Unknown future brands are accepted through normalization; this parser does not hardcode Euromaid, Ariston, Westinghouse, Smeg, Blanco, and Omega as the only permitted brands.
+Unknown future brands are accepted through normalization; this parser does not hardcode individual catalogue brand names as the only permitted brands.
 `;
 }
 
@@ -174,7 +174,7 @@ ${reconciliation.priceConflicts.length ? markdownTable(["Identity", "Brand", "Mo
     Units: conflict.units.join("|"),
     Selectable: conflict.selectable.join("|"),
     Active: conflict.active.join("|"),
-  }))) : "No actual price or unit conflicts were detected for repeated brand/model components. Eighteen same-model description/selectable variations are retained in `APPLIANCE_PRICE_CONFLICT_REVIEW.csv` because the latest disputed run counted them as price conflicts."}
+  }))) : "No actual price or unit conflicts were detected for repeated brand/model components. Eighteen same-model description/selectable variations are retained in `data/catalogue/reconciliation/APPLIANCE_PRICE_CONFLICT_REVIEW.csv` because the latest disputed run counted them as price conflicts."}
 
 ## Appliance Hierarchy Prepared
 
@@ -494,13 +494,13 @@ The corrected canonical implementation is \`lib/construction-estimation/catalogu
 - 100 versus 83 unique products: ${productIdentityDiscrepancies.length} source rows change product identity. The difference is 17 physical identities, mostly option-labelled dishwasher and rangehood rows that should collapse into existing brand/model products.
 - 159 versus 128 relationships: the latest disputed implementation created one selected component per required family, losing 31 source-row component relationships. The authoritative output restores all 159 EACH rows as pack-component relationships.
 - 59 versus 76 duplicate rows: once 17 option-labelled records collapse into physical model identities, duplicate rows increase by 17.
-- 18 alleged price conflicts: all 18 are same-price/same-unit identity variation groups. They are reviewed in \`APPLIANCE_PRICE_CONFLICT_REVIEW.csv\`; none are actual price conflicts.
+- 18 alleged price conflicts: all 18 are same-price/same-unit identity variation groups. They are reviewed in \`data/catalogue/reconciliation/APPLIANCE_PRICE_CONFLICT_REVIEW.csv\`; none are actual price conflicts.
 - 5 versus 6 freestanding cookers: \`OMEGA 90CM 9 FUNCTION FREESTANDING OVEN OF916FX\` is classified as freestanding-cookers because the source explicitly says freestanding.
 
 ## Row-Level Review Files
 
-- \`APPLIANCE_CHECKPOINT1_RESULT_COMPARISON.csv\` contains ${comparisonRows.length} row-level comparisons.
-- \`APPLIANCE_PRICE_CONFLICT_REVIEW.csv\` contains ${priceReviewRows.length} alleged conflict groups, with actual conflict flags.
+- \`data/catalogue/reconciliation/APPLIANCE_CHECKPOINT1_RESULT_COMPARISON.csv\` contains ${comparisonRows.length} row-level comparisons.
+- \`data/catalogue/reconciliation/APPLIANCE_PRICE_CONFLICT_REVIEW.csv\` contains ${priceReviewRows.length} alleged conflict groups, with actual conflict flags.
 
 ## Deprecated Implementation
 

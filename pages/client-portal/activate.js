@@ -1,2 +1,2 @@
-export { default } from "../../Client Portal/ActivatePage";
+export { default } from "../../client-portal/ActivatePage";
 

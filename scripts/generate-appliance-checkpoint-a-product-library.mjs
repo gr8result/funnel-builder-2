@@ -49,12 +49,12 @@ brandCatalogue.sourceSheet = sourceSheet;
 brandCatalogue.sourceSha256 = sourceSha256;
 writeJson(brandsPath, brandCatalogue);
 
-writeFile("APPLIANCE_COMPLETE_CATALOGUE_REPORT.md", renderCompleteCatalogueReport({ result, workbookSummary, brandCatalogue, sourceSha256 }));
-writeFile("APPLIANCE_PRODUCT_IMAGE_AUDIT.csv", csvFromRows(imageAuditRows(result)));
-writeFile("APPLIANCE_PRODUCT_SOURCE_AUDIT.csv", csvFromRows(sourceAuditRows(result)));
-writeFile("APPLIANCE_MISSING_IMAGE_REVIEW.csv", csvFromRows(missingImageRows(result)));
-writeFile("APPLIANCE_BRAND_COVERAGE.csv", csvFromRows(brandCoverageRows(result, brandCatalogue)));
-writeFile("APPLIANCE_WORKBOOK_RECONCILIATION.csv", csvFromRows(workbookReconciliationRows(result)));
+writeFile("docs/catalogue/APPLIANCE_COMPLETE_CATALOGUE_REPORT.md", renderCompleteCatalogueReport({ result, workbookSummary, brandCatalogue, sourceSha256 }));
+writeFile("data/catalogue/reconciliation/APPLIANCE_PRODUCT_IMAGE_AUDIT.csv", csvFromRows(imageAuditRows(result)));
+writeFile("data/catalogue/reconciliation/APPLIANCE_PRODUCT_SOURCE_AUDIT.csv", csvFromRows(sourceAuditRows(result)));
+writeFile("data/catalogue/reconciliation/APPLIANCE_MISSING_IMAGE_REVIEW.csv", csvFromRows(missingImageRows(result)));
+writeFile("data/catalogue/reconciliation/APPLIANCE_BRAND_COVERAGE.csv", csvFromRows(brandCoverageRows(result, brandCatalogue)));
+writeFile("data/catalogue/reconciliation/APPLIANCE_WORKBOOK_RECONCILIATION.csv", csvFromRows(workbookReconciliationRows(result)));
 
 console.log(JSON.stringify({
   sourceFile,

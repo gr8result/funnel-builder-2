@@ -23,7 +23,12 @@ import {
 import { KITCHEN_REQUIREMENTS } from "../lib/builders/clientSelectionWorkflow.js";
 
 const requiredLocations = ["Kitchen", "Butler's Pantry", "Bathroom", "Ensuite", "Powder Room", "Laundry", "Other"];
-const requiredAreas = ["lowerDoorsDrawers", "islandBenchBack", "endPanels", "overheadDoors", "kickPanels", "bulkheads"];
+// Kick panels and bulkheads are deliberately excluded from the upper Cabinet Areas list - they
+// have their own dedicated Kick-panel Finish / Bulkhead Finish sections (kickPanelFinishMode /
+// bulkheadFinishMode) and must not be selectable/required twice. They remain valid values in the
+// broader CABINETRY_AREA_KEYS set the dedicated sections and areaSelections still use.
+const requiredAreas = ["lowerDoorsDrawers", "islandBenchBack", "endPanels", "overheadDoors"];
+const excludedLocationAreas = ["kickPanels", "bulkheads"];
 const requiredBathroomAreas = [
   "floorVanityDoors",
   "floorVanityDrawers",
@@ -55,7 +60,6 @@ const requiredScheduleTypes = [
 let draft = defaultCabinetryDraft({ workspaceId: "workspace-1", projectId: "project-1" });
 
 assert.deepEqual(CABINETRY_WORKFLOW_STAGES, [
-  "Scope",
   "Cabinet Schedule",
   "Doors & Panels",
   "Colours & Finishes",
@@ -69,6 +73,10 @@ assert.equal(draft.locations.length, 0, "cabinetry does not auto-create rooms");
 assert.equal(draft.schedule.length, 0, "cabinetry does not auto-create schedule rows");
 requiredLocations.forEach((location) => assert.ok(CABINETRY_LOCATIONS.includes(location), `${location} source-of-truth location is available`));
 requiredAreas.forEach((areaKey) => assert.ok(CABINETRY_LOCATION_AREA_KEYS.includes(areaKey), `${areaKey} source-of-truth cabinetry area is available`));
+excludedLocationAreas.forEach((areaKey) => {
+  assert.ok(!CABINETRY_LOCATION_AREA_KEYS.includes(areaKey), `${areaKey} must not be offered in the upper Cabinet Areas list - it has a dedicated Finish section`);
+  assert.ok(CABINETRY_AREA_KEYS.includes(areaKey), `${areaKey} must still be a valid cabinetry area key for its dedicated Finish section`);
+});
 requiredBathroomAreas.forEach((areaKey) => assert.ok(CABINETRY_AREA_KEYS.includes(areaKey), `${areaKey} Bathroom cabinetry area is available`));
 requiredScheduleTypes.forEach((unitType) => assert.ok(CABINETRY_SCHEDULE_TYPE_OPTIONS.includes(unitType), `${unitType} schedule type is available`));
 draft = normaliseCabinetrySelection({
@@ -82,7 +90,7 @@ draft = normaliseCabinetrySelection({
     areaSelections: { lowerDoorsDrawers: POLYTEC_CABINETRY_CATALOGUE[0] },
   })),
   schedule: [
-    { componentId: "CAB-KIT-001", location: "Kitchen", unitType: "Standard base unit", quantity: 4, handleQuantity: 4 },
+    { componentId: "CAB-KIT-001", location: "Kitchen", cabinetTypeId: "base_unit_1200_2door", unitType: "2 door base unit - 1200mm", quantity: 4, handleQuantity: 4 },
     { componentId: "CAB-BTH-001", location: "Bathroom", unitType: "Standard base unit", quantity: 1, handleQuantity: 1 },
   ],
 });
@@ -335,10 +343,10 @@ const pantryColourDraft = normaliseCabinetrySelection({
   } : location),
   schedule: [
     ...draft.schedule,
-    { componentId: "CAB-PANTRY-MANUAL-BASE", location: "Butler's Pantry", unitType: "Standard base unit", quantity: 2, notes: "Manual pantry row" },
-    { componentId: "CAB-PANTRY-MANUAL-SINK", location: "Butler's Pantry", unitType: "Sink cupboard", quantity: 1, notes: "Manual pantry row" },
-    { componentId: "CAB-KIT-COPIED-OVEN-butler-s-pantry-1", location: "Butler's Pantry", unitType: "Underbench oven cabinet", quantity: 1, notes: "Builder-defined schedule - Copied from Kitchen" },
-    { componentId: "CAB-KIT-COPIED-DISH-butler-s-pantry-2", location: "Butler's Pantry", unitType: "Dishwasher cabinet", quantity: 1, notes: "Copied from Kitchen" },
+    { componentId: "CAB-PANTRY-MANUAL-BASE", location: "Butler's Pantry", cabinetTypeId: "base_unit_1200_2door", unitType: "2 door base unit - 1200mm", quantity: 2, notes: "Manual pantry row" },
+    { componentId: "CAB-PANTRY-MANUAL-SINK", location: "Butler's Pantry", cabinetTypeId: "sink_base", unitType: "Sink base cabinet", quantity: 1, notes: "Manual pantry row" },
+    { componentId: "CAB-KIT-COPIED-OVEN-butler-s-pantry-1", location: "Butler's Pantry", cabinetTypeId: "microwave_cabinet", unitType: "Microwave cabinet", quantity: 1, notes: "Builder-defined schedule - Copied from Kitchen" },
+    { componentId: "CAB-KIT-COPIED-DISH-butler-s-pantry-2", location: "Butler's Pantry", cabinetTypeId: "dishwasher_opening", unitType: "Dishwasher cabinet", quantity: 1, notes: "Copied from Kitchen" },
   ],
 });
 assert.equal(pantryColourDraft.schedule.filter(kitchenPantryCopiedScheduleLine).length, 2, "incorrect Kitchen-to-Pantry copied schedule rows are detected by copy marker");
@@ -352,8 +360,18 @@ const colourOnlyPantryRoom = colourOnlyPantry.locations.find((item) => item.loca
 assert.equal(colourOnlyPantryRoom.areaSelections.lowerDoorsDrawers?.colourName, colourOnlyKitchen.areaSelections.lowerDoorsDrawers?.colourName, "Kitchen lower door colour copies to existing Pantry lower doors");
 assert.equal(colourOnlyPantryRoom.areaSelections.overheadDoors?.colourName, colourOnlyKitchen.areaSelections.overheadDoors?.colourName, "Kitchen overhead colour copies to existing Pantry overheads");
 assert.equal(colourOnlyPantryRoom.areaSelections.endPanels?.colourName, "Agave", "existing Pantry colour is preserved by default");
-assert.equal(colourOnlyPantryRoom.areaSelections.kickPanels, null, "Kitchen kick panels are not added when Pantry kick panels are not enabled");
-assert.equal(colourOnlyPantryRoom.areaSelections.bulkheads, null, "Kitchen bulkheads are not added when Pantry bulkheads are not enabled");
+assert.deepEqual(colourOnlyPantryRoom.areaSelections.kickPanels, colourOnlyKitchen.areaSelections.kickPanels, "explicitly requested Kitchen kick-panel finish copies to the Pantry");
+assert.deepEqual(colourOnlyPantryRoom.areaSelections.bulkheads, colourOnlyKitchen.areaSelections.bulkheads, "explicitly requested Kitchen bulkhead finish copies to the Pantry");
+for (const areaKey of ["kickPanels", "bulkheads"]) {
+  assert.ok(colourOnlyPantryRoom.enabledAreaKeys.includes(areaKey), `explicitly requested ${areaKey} finish area is enabled in the Pantry`);
+  assert.notStrictEqual(colourOnlyPantryRoom.areaSelections[areaKey], colourOnlyKitchen.areaSelections[areaKey], `${areaKey} finish is copied independently from the Kitchen`);
+}
+assert.deepEqual(colourOnlyPantry.schedule, cleanedPantryDraft.schedule, "copying finishes preserves the complete cleaned schedule");
+assert.deepEqual(colourOnlyPantry.schedule.map((item) => [item.componentId, item.quantity]), cleanedPantryDraft.schedule.map((item) => [item.componentId, item.quantity]), "copying finishes preserves all room quantities");
+const pantryBeforeColourCopy = cleanedPantryDraft.locations.find((item) => item.location === "Butler's Pantry");
+for (const key of ["id", "name", "location", "locationType", "cabinetSchedule", "doorMaterialGroup", "doorAndPanelSelections", "benchtop", "benchtops", "handles", "hardware", "featureOptions", "features", "integratedAppliances", "notes"]) {
+  assert.deepEqual(colourOnlyPantryRoom[key], pantryBeforeColourCopy[key], `copying finish areas preserves Pantry ${key}`);
+}
 assert.equal(colourOnlyPantryRoom.benchtop.range, "Manual pantry top", "Pantry benchtop is not copied from Kitchen");
 assert.equal(colourOnlyPantryRoom.handles.base.productName, "Manual pantry handle", "Pantry handles are not copied from Kitchen");
 const pantryOverhead = LAMINEX_CABINETRY_CATALOGUE.find((item) => item.colourName && item.colourName !== colourOnlyKitchen.areaSelections.overheadDoors?.colourName);
@@ -372,14 +390,15 @@ assert.match(selectionsSource, /Select at least one cabinetry area before applyi
 assert.match(cabinetryUiContractSource, /Raw MDF - painted to match walls/, "Bulkheads expose Raw MDF painted-to-wall option");
 assert.match(cabinetryUiContractSource, /Brushed aluminium/, "Kick panels expose brushed aluminium option");
 assert.match(selectionsSource, /WET_AREA_CABINETRY_CONFIG/, "Bathroom and Ensuite share one wet-area cabinetry configuration");
-assert.match(cabinetryUiContractSource, /Select the vanity cabinetry required in the/, "wet-area Scope uses active room-specific copy");
+assert.doesNotMatch(selectionsSource, /cabinetry-location-stage|Select the vanity cabinetry required in the|Enable only the cabinetry areas that exist/, "the Scope step is gone: the Cabinet Schedule defines the room");
 assert.match(cabinetryUiContractSource, /Floor-mounted vanity/, "wet-area schedule has floor-mounted vanity group");
 assert.match(cabinetryUiContractSource, /Wall-mounted vanity/, "wet-area schedule has wall-mounted vanity group");
 assert.match(cabinetryUiContractSource, /Additional bathroom cabinetry/, "wet-area schedule groups tall linen, shaving cabinet and bulkhead choices");
 assert.match(cabinetryUiContractSource, /Bulkhead over tall cupboard/, "Bathroom bulkhead is specific to tall cupboard workflow");
 assert.match(cabinetryUiContractSource, /Stone with mitred drop front/, "Bathroom wall-mounted vanity benchtop retains mitred drop-front option");
-assert.match(selectionsSource, /bathroomStoneTargetKey/, "Bathroom stone benchtop catalogue targets one vanity at a time");
-assert.match(selectionsSource, /bathroom-\$\{targetKey\}-stone-benchtop-selector/, "Bathroom vanity benchtops use the visual stone catalogue selector");
+// Vanity benchtops and joinery benchtops share one setup-first workflow (benchtopProfile decides what is asked).
+assert.match(selectionsSource, /<BenchtopSelectionWorkflow/, "Benchtops (joinery rooms and vanities) use the setup-first benchtop workflow");
+assert.doesNotMatch(selectionsSource, /renderBathroomBenchtops|stone-benchtop-configurator|Actual slab thickness|Finished edge thickness|Full slab viewed/, "the old vanity benchtop form and its fabricator fields are gone");
 assert.ok(!selectionsSource.includes('<label><span>Supplier</span><input value={current.supplier || ""}'), "Bathroom vanity benchtops no longer start with disconnected supplier text fields");
 assert.match(selectionsSource, /bathroom-cabinetry-review-summary/, "Bathroom review renders a room-specific grouped summary");
 assert.match(selectionsSource, /WET_AREA_CABINETRY_ROOM_NAMES/, "Ensuite resolves to wet-area cabinetry before any Kitchen fallback");

@@ -11,7 +11,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 dotenv.config({ path: path.join(root, ".env.local") });
 dotenv.config({ path: path.join(root, ".env") });
 
-const outDir = path.join(root, "test-results", "johnson-clean-restart");
+const outDir = path.join(root, "artifacts/test-results", "johnson-clean-restart");
 const reportPath = path.join(outDir, "clean-restart-report.json");
 const report = JSON.parse(fs.readFileSync(reportPath, "utf8"));
 const baseUrl = report.baseUrl || process.env.JOHNSON_VERIFY_BASE_URL || "http://localhost:3000";

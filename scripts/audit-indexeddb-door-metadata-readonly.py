@@ -1,6 +1,6 @@
 ﻿import sys,types,os,json
 from pathlib import Path
-sys.path.insert(0,'test-artifacts/manual-entry-door-recovery/python-deps')
+sys.path.insert(0,'artifacts/test-artifacts/manual-entry-door-recovery/python-deps')
 ns={};source=Path('scripts/audit-local-door-selections-readonly.py').read_text(encoding='utf-8-sig');exec(source[:source.index('latest={}')],ns)
 sys.modules['snappy']=types.SimpleNamespace(decompress=ns['snappy'])
 import compression.zstd
@@ -18,4 +18,4 @@ for raw in level.FolderReader(folder).GetRecords(use_manifest=True):
    item={'key':key,'sequence':rec.sequence_number,'databaseId':rec.database_id,'storeId':rec.object_store_id,'value':str(value)[:3000]}
    report.append(item)
  except Exception as e:report.append({'error':str(e)})
-p=Path('test-artifacts/manual-entry-door-recovery/indexeddb-metadata-audit.json');p.write_text(json.dumps(report,indent=2),encoding='utf-8');print(json.dumps(report,indent=2))
+p=Path('artifacts/test-artifacts/manual-entry-door-recovery/indexeddb-metadata-audit.json');p.write_text(json.dumps(report,indent=2),encoding='utf-8');print(json.dumps(report,indent=2))

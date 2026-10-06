@@ -6,9 +6,9 @@ import {
 } from "../lib/product-library/productLibraryTaxonomy.js";
 
 const ROOT = process.cwd();
-const SOURCE = path.join(ROOT, "MASTER_CATALOGUE_RECONCILED_MAPPING.csv");
-const CSV_OUT = path.join(ROOT, "PRODUCT_LIBRARY_QUOTATION_PRODUCT_MAPPING.csv");
-const REPORT_OUT = path.join(ROOT, "PRODUCT_LIBRARY_TAXONOMY_CORRECTION_REPORT.md");
+const SOURCE = path.join(ROOT, "data/catalogue/reconciliation/MASTER_CATALOGUE_RECONCILED_MAPPING.csv");
+const CSV_OUT = path.join(ROOT, "data/catalogue/reconciliation/PRODUCT_LIBRARY_QUOTATION_PRODUCT_MAPPING.csv");
+const REPORT_OUT = path.join(ROOT, "docs/catalogue/PRODUCT_LIBRARY_TAXONOMY_CORRECTION_REPORT.md");
 
 function parseCsv(text) {
   const rows = [];

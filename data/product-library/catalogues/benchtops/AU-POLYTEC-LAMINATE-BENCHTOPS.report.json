@@ -1,0 +1,64 @@
+{
+  "verifiedAt": "2026-09-11",
+  "sourceUrl": "https://www.polytec.com.au/specify/product-by-application/benchtops/benchtops/",
+  "rawRecords": 200,
+  "finishVariants": 224,
+  "productVariants": 629,
+  "manufacturerSheetSkus": 629,
+  "images": 200,
+  "availableRecords": 200,
+  "duplicateIds": 0,
+  "excludedSourceEntries": [
+    {
+      "colourName": "Brushed Aluminium",
+      "finish": "Metallic",
+      "sourceUrl": "https://www.polytec.com.au/colour/brushed-aluminium/",
+      "reason": "No Laminate benchtop sheet product rows; the manufacturer's published ordering rows are kickboard products.",
+      "publishedProductNames": [
+        {
+          "sku": "5836",
+          "productName": "Kickboard Laminate (only) Brushed Aluminium 3600 x 1200"
+        },
+        {
+          "sku": "12744",
+          "productName": "Particle 1636150 Face Lam Brushed Aluminium / Back Carcass Melamine MR Kickboard"
+        },
+        {
+          "sku": "10678",
+          "productName": "Particle 163612 Face Lam Brushed Aluminium / Back Carcass Melamine MR Kickboard"
+        }
+      ]
+    },
+    {
+      "colourName": "Brushed Stainless",
+      "finish": "Metallic",
+      "sourceUrl": "https://www.polytec.com.au/colour/brushed-stainless/",
+      "reason": "No Laminate benchtop sheet product rows; the manufacturer's published ordering rows are kickboard products.",
+      "publishedProductNames": [
+        {
+          "sku": "6428",
+          "productName": "Kickboard Laminate (only) Brushed Stainless 3600 x 1200"
+        },
+        {
+          "sku": "12745",
+          "productName": "Particle 1636150 Face Lam Brushed Stainless / Back Carcass Melamine MR Kickboard"
+        },
+        {
+          "sku": "10679",
+          "productName": "Particle 163612 Face Lam Brushed Stainless / Back Carcass Melamine MR Kickboard"
+        }
+      ]
+    }
+  ],
+  "verifiedSwatchUrls": 214,
+  "priceStatus": "All supplier quote required. No retail prices imported.",
+  "thicknessScope": "Actual laminate sheet thickness from manufacturer SKU rows; no fabricated benchtop thickness inferred.",
+  "availabilityScope": "Currently manufacturer-listed Laminate benchtop colours; local inventory not verified.",
+  "excludedRanges": [
+    "Compact laminate",
+    "Xenolith",
+    "Decorative doors and panels",
+    "Commercial-only colour lists"
+  ],
+  "evidencePath": "data/product-library/source-evidence/benchtops/polytec-laminate-source-manifest.json"
+}

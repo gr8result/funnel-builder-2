@@ -7,7 +7,7 @@ import {
   vectoriseSemanticWallMasks,
 } from "../modules/takeoff-v2/detection/index.js";
 
-const outDir = path.resolve("test-results", "semantic-wall-pipeline");
+const outDir = path.resolve("artifacts/test-results", "semantic-wall-pipeline");
 fs.mkdirSync(outDir, { recursive: true });
 
 const masks = makeFixtureMasks();

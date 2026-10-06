@@ -37,15 +37,18 @@ const requirements = [
 
 const clientVisible = selectors.getClientVisibleApplianceRecords();
 const adminRecords = selectors.getAdministrativeApplianceRecords();
-assert.equal(adminRecords.length, 83, "admin Product Library retains all 83 appliance products");
-assert.equal(clientVisible.length, 83, "client flow exposes the full active Product Library appliance baseline");
+// Baseline grown since the original 83-product workbook import: Ariston (14)
+// was deliberately removed as an unsupported brand, and Bosch plus additional
+// Euromaid cooktops were added from live Harvey Norman Commercial sourcing.
+assert.equal(adminRecords.length, 130, "admin Product Library retains all 130 appliance products");
+assert.equal(clientVisible.length, 116, "client flow exposes the full active Product Library appliance baseline");
 assert.ok(clientVisible.every((record) => record.active !== false && record.selectable !== false && !record.discontinued && !record.hidden), "client records are active/selectable/not hidden");
 assert.ok(clientVisible.some((record) => record.eligibility === "legacy"), "legacy source lineage remains review metadata, not a client visibility gate");
 
 const ovens = applianceRecordsForRequirement(clientVisible, requirements[0]);
 const cooktops = applianceRecordsForRequirement(clientVisible, requirements[1]);
-assert.equal(ovens.length, 12, "Oven family filters to client-visible oven products");
-assert.equal(cooktops.length, 23, "Cooktop family filters to client-visible cooktop products");
+assert.equal(ovens.length, 32, "Oven family filters to client-visible oven products");
+assert.equal(cooktops.length, 37, "Cooktop family filters to client-visible cooktop products");
 assert.ok(ovens.every((record) => record.familyId === "ovens"), "Oven brand/model flow does not leak other families");
 
 const brandSummaries = applianceBrandSummaries(clientVisible, safeAppliancePackagesForBrand({ packs: selectors.getAppliancePacks(), records: clientVisible, requirements }));

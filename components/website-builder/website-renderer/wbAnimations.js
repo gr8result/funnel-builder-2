@@ -1,6 +1,7 @@
 import React from "react";
 import { FaArrowDown, FaArrowRight } from "react-icons/fa";
 import { getAssetFromLibrary, resolveAssetField } from "../../../lib/website-builder/mediaAssets";
+import { resolveInternalPageHref } from "../../../lib/website-builder/buttonLinks";
 import { renderGridLibraryIcon } from "../gridIconLibrary";
 
 // colorWithAlpha is also defined in wbVariantStyles; duplicated here (no-export) so that
@@ -557,6 +558,10 @@ function resolvePublishedNavHref(link, navigationContext) {
     if (pageHref) return pageHref;
   }
   if (!href) return "#";
+  if (/^\/?\?/.test(href)) {
+    const internalHref = resolveInternalPageHref(href, navigationContext);
+    if (internalHref) return internalHref;
+  }
   const canonicalRoutes = {
     home: "/",
     "about-us": "/about-us",

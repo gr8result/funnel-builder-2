@@ -1,4 +1,4 @@
-import { getAuthenticatedUser, supabaseAdmin, normaliseEmail } from "../../../Client Portal/serverShared";
+import { getAuthenticatedUser, supabaseAdmin, normaliseEmail } from "../../../client-portal/serverShared";
 
 export default async function resolveClientPortalProjectHandler(req, res) {
   if (req.method !== "GET") return res.status(405).json({ ok: false, error: "Method not allowed" });

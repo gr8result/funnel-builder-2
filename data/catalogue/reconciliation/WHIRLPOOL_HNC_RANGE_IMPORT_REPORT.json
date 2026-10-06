@@ -1,0 +1,280 @@
+{
+  "checkedAt": "2026-09-16",
+  "source": "https://www.harveynormancommercial.com.au/brands/whirlpool",
+  "complete": true,
+  "expectedTotal": 41,
+  "pageSize": 25,
+  "pages": [
+    {
+      "page": 1,
+      "declaredTotal": 41,
+      "totalPages": 2,
+      "count": 25,
+      "models": [
+        "W7MWBLAUS",
+        "WMF250GAUS",
+        "WDFS3R4PBSAU",
+        "AKC640IXOC",
+        "WDFS3R4NBSAU",
+        "WMH9900BLAUS",
+        "WRT6140AUS",
+        "W3OMK55HR0BC",
+        "IWSH6041CAUS",
+        "WDFS3R4NIXAU",
+        "WIE2C19AUSA",
+        "WRK6140AUS",
+        "W4OMK581HU1BA",
+        "W4OMK581RU1XA",
+        "WS8865NEP",
+        "AKC950CIXOC",
+        "FWEB9012IW",
+        "GMWL758IXLAUS",
+        "HWEC8002IW",
+        "IWHH9050CC",
+        "IWSH9051CAUS",
+        "VWED1202IG",
+        "VWHD1502IG",
+        "W3OMK55HR0XC",
+        "W4OMK381HU0BA"
+      ]
+    },
+    {
+      "page": 2,
+      "declaredTotal": 41,
+      "totalPages": 2,
+      "count": 16,
+      "models": [
+        "W4OMK381HU0XA",
+        "W4OMK581HU1XAUS",
+        "W4OMK581RU1BA",
+        "W4OMSK581RU1SBA",
+        "W6OMPBSOC",
+        "WDFS3I4PBSAU",
+        "WDFS3R4NWEAU",
+        "WDFS3R4OBSAU",
+        "WDFS3R4OIXAU",
+        "WDFS3R4PIXAU",
+        "WIO3033PELAUS",
+        "WMP9170BLAUS",
+        "WRT9350AU",
+        "WT9BTABC",
+        "WT9BTAXA",
+        "WWPB8502IW"
+      ]
+    }
+  ],
+  "brandPageAndUnfilteredBrandModelsMatch": true,
+  "sourceCategoryAggregations": [
+    {
+      "label": "Products",
+      "value": "1036",
+      "count": 41
+    },
+    {
+      "label": "Kitchen",
+      "value": "16",
+      "count": 36
+    },
+    {
+      "label": "Ovens",
+      "value": "22",
+      "count": 12
+    },
+    {
+      "label": "Single Oven Electric Wall/Undermount ",
+      "value": "99",
+      "count": 12
+    },
+    {
+      "label": "Cooktops",
+      "value": "23",
+      "count": 10
+    },
+    {
+      "label": "Dishwashers",
+      "value": "28",
+      "count": 10
+    },
+    {
+      "label": "Freestanding/Built in Dishwashers ",
+      "value": "136",
+      "count": 8
+    },
+    {
+      "label": "Laundry",
+      "value": "18",
+      "count": 5
+    },
+    {
+      "label": "Washing Machines",
+      "value": "34",
+      "count": 4
+    },
+    {
+      "label": "Induction Cooktops ",
+      "value": "109",
+      "count": 4
+    },
+    {
+      "label": "Gas Cooktops ",
+      "value": "107",
+      "count": 3
+    },
+    {
+      "label": "Electric Cooktops ",
+      "value": "108",
+      "count": 3
+    },
+    {
+      "label": "Microwaves",
+      "value": "24",
+      "count": 2
+    },
+    {
+      "label": "Rangehoods",
+      "value": "25",
+      "count": 2
+    },
+    {
+      "label": "Canopy Rangehoods ",
+      "value": "115",
+      "count": 2
+    },
+    {
+      "label": "Fully integrated Dishwashers ",
+      "value": "138",
+      "count": 2
+    },
+    {
+      "label": "Topload Washers ",
+      "value": "142",
+      "count": 2
+    },
+    {
+      "label": "Frontload Washers ",
+      "value": "143",
+      "count": 2
+    },
+    {
+      "label": "Built In Microwaves",
+      "value": "941",
+      "count": 2
+    },
+    {
+      "label": "Clothes Dryers",
+      "value": "35",
+      "count": 1
+    },
+    {
+      "label": "Heat Pump Dryer",
+      "value": "145",
+      "count": 1
+    }
+  ],
+  "familyCounts": {
+    "ovens": 12,
+    "cooktops": 10,
+    "rangehoods": 2,
+    "dishwashers": 10,
+    "freestanding-cookers": 0,
+    "microwaves": 2,
+    "fridges": 0,
+    "freezers": 0,
+    "washing-machines": 4,
+    "dryers": 1,
+    "washer-dryers": 0,
+    "appliance-accessories": 0
+  },
+  "imageCount": 41,
+  "missingPrices": [
+    "WIO3033PELAUS",
+    "W6OMPBSOC"
+  ],
+  "manufacturerArchived": [
+    {
+      "model": "W7MWBLAUS",
+      "hncUrl": "https://www.harveynormancommercial.com.au/products/W7MWBLAUS",
+      "manufacturerUrl": "https://whirlpool.com.au/products/45cm-built-in-6th-sense-combi-microwave-w7mwblaus",
+      "status": "HNC-listed; manufacturer labels Archive"
+    },
+    {
+      "model": "W6OMPBSOC",
+      "hncUrl": "https://www.harveynormancommercial.com.au/products/W6OMPBSOC",
+      "manufacturerUrl": "https://whirlpool.com.au/products/whirlpool-w-collection-60cm-built-in-pyrolytic-black-oven-w6ompbsoc",
+      "status": "HNC-listed; manufacturer labels Archive"
+    }
+  ],
+  "problems": [],
+  "logo": {
+    "path": "/images/catalogues/appliances/brands/whirlpool-official.png",
+    "sourceUrl": "https://whirlpool.com.au/cdn/shop/files/whirlpool_logo-black-01_200x@2x.png?v=1723438793",
+    "sourcePageUrl": "https://whirlpool.com.au/",
+    "sourceOrganisation": "Whirlpool Australia",
+    "checkedAt": "2026-09-16",
+    "width": 400,
+    "height": 177,
+    "bytes": 17696,
+    "sha256": "87a9b38e7698545f931f3f2603ee2e3a529e6e9ac3f8cef6f5c51d13a56d10df"
+  },
+  "outputPath": "data\\product-library\\catalogues\\appliances\\AU-WHIRLPOOL-HNC-RANGE.json",
+  "notes": [
+    "All HNC Whirlpool brand results enumerated without family filters; zero-count categories are verified absent from this HNC brand result set, not asserted absent globally.",
+    "HNC SRP inc GST is reference pricing; no cost, tenant price, or supplier trade price is inferred.",
+    "Manufacturer Archive flags are reported separately; HNC presence does not prove manufacturer current production.",
+    "Official manufacturer description may differ from HNC feature counts; both sources remain separate."
+  ],
+  "sourceConflicts": [
+    {
+      "model": "W7MWBLAUS",
+      "field": "cookingFunctions",
+      "status": "unresolved-source-conflict",
+      "reason": "HNC publishes 16 cooking functions; Whirlpool Australia publishes 17 versatile functions for this exact model. The differing counts remain unresolved.",
+      "sources": [
+        {
+          "organisation": "Harvey Norman Commercial",
+          "url": "https://www.harveynormancommercial.com.au/products/W7MWBLAUS",
+          "value": 16,
+          "sourceField": "description.html",
+          "evidenceText": "16 cooking functions inc. steam, boil & crisp",
+          "checkedAt": "2026-09-16"
+        },
+        {
+          "organisation": "Whirlpool Australia",
+          "url": "https://whirlpool.com.au/products/45cm-built-in-6th-sense-combi-microwave-w7mwblaus",
+          "value": 17,
+          "sourceField": "body_html",
+          "evidenceText": "17 versatile functions",
+          "checkedAt": "2026-09-16"
+        }
+      ]
+    },
+    {
+      "model": "FWEB9012IW",
+      "field": "washingCapacity",
+      "status": "unresolved-source-conflict",
+      "reason": "HNC publishes 10kg; Whirlpool Australia publishes 9kg for this exact model. Neither source has been substituted or treated as resolved.",
+      "sources": [
+        {
+          "organisation": "Harvey Norman Commercial",
+          "url": "https://www.harveynormancommercial.com.au/products/FWEB9012IW",
+          "value": "10kg",
+          "sourceField": "name",
+          "evidenceText": "10kg Front Load Washer",
+          "checkedAt": "2026-09-16"
+        },
+        {
+          "organisation": "Whirlpool Australia",
+          "url": "https://whirlpool.com.au/products/essentials-9kg-front-load-washing-machine-white-fweb9012iw",
+          "value": "9kg",
+          "sourceField": "Washing Capacity",
+          "evidenceText": "9kg",
+          "checkedAt": "2026-09-16"
+        }
+      ]
+    }
+  ],
+  "manualReviewModels": [
+    "W7MWBLAUS",
+    "FWEB9012IW"
+  ]
+}

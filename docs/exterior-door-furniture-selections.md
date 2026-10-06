@@ -21,7 +21,7 @@ All 292 records have manufacturer model identifiers and local product images. So
 
 Run `node --import ./scripts/register-json-loader.mjs scripts/test-entry-door-furniture.mjs` for catalogue, per-door association, apply-all, change/remove, generated schedule cleanup, final inclusions and navigation assertions.
 
-Run `node --import ./scripts/register-json-loader.mjs scripts/verify-entry-door-furniture-live.mjs` for Chrome verification with a separate synthetic job containing ED1 (Ground / Entry) and ED2 (Upper / Terrace). It selects an entry door, follows the real furniture navigation, confirms a Lockwood Paradigm in Matt Black with quantity 2, checks Review Schedule, refreshes, exports/reopens the saved job, and checks the same options. It also checks normal administration has no Select controls. The runtime report and screenshots are in `test-artifacts/entry-door-furniture-live/`.
+Run `node --import ./scripts/register-json-loader.mjs scripts/verify-entry-door-furniture-live.mjs` for Chrome verification with a separate synthetic job containing ED1 (Ground / Entry) and ED2 (Upper / Terrace). It selects an entry door, follows the real furniture navigation, confirms a Lockwood Paradigm in Matt Black with quantity 2, checks Review Schedule, refreshes, exports/reopens the saved job, and checks the same options. It also checks normal administration has no Select controls. The runtime report and screenshots are in `artifacts/test-artifacts/entry-door-furniture-live/`.
 
 Additional checks: typecheck, lint, quotation save/reopen regression, exterior doors regression, navigation guard tests and Takeoff recovery contracts. No catalogue reset or deletion is used by these checks.
 

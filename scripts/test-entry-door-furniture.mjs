@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import catalogue from '../data/product-library/catalogues/exterior/AU-ENTRY-DOOR-FURNITURE-CATALOGUE.json' with {type:'json'};
+const catalogue = JSON.parse(fs.readFileSync(new URL('../data/product-library/catalogues/exterior/AU-ENTRY-DOOR-FURNITURE-CATALOGUE.json', import.meta.url), 'utf8'));
 import {exteriorEntryDoors,entryDoorHardwareLine,upsertEntryDoorSelection,entryDoorSelectionSchedules,connectEntryDoorFurnitureSchedules,updateDoorFurnitureBook,doorFurnitureSelections} from '../lib/builders/entryDoorFurnitureSelection.js';
 import {normalizeSelectionDestination,canonicalNavigationUrl} from '../lib/navigation/selectionNavigation.js';
 import {getMasterProducts, getEffectiveProductCatalogue} from '../lib/product-library/catalogueService.js';
@@ -9,7 +9,7 @@ import {createProjectInclusionsSnapshot,renderFinalInclusionsScheduleHtml} from 
 const products=catalogue.products;
 const enabled=getEffectiveProductCatalogue({familyKey:'entry-door-furniture'}).products;
 const master=getMasterProducts();
-for(const p of products){const normalized=master.find(r=>r.productCode===p.product_code);assert(normalized,`${p.product_code} missing from master`);assert(enabled.some(r=>r.productCode===p.product_code));assert(productBelongsToRoomCategory(normalized,getProductLibraryRoomCategory('entry-doors')));assert(productBelongsToRoom(normalized,'exterior'));assert(!productBelongsToRoom(normalized,'internal-areas'));}
+for(const p of products){const normalized=master.find(r=>r.productCode===p.product_code);assert(normalized,`${p.product_code} missing from master`);assert(enabled.some(r=>r.productCode===p.product_code));assert(productBelongsToRoomCategory(normalized,getProductLibraryRoomCategory('external-door-furniture')));assert(productBelongsToRoom(normalized,'exterior'));assert(!productBelongsToRoom(normalized,'internal-areas'));}
 assert.equal(new Set(products.map(p=>p.manufacturer_identity)).size,products.length);
 for(const p of products){assert(p.model);assert(p.active&&p.client_selections_enabled);assert.equal(p.family_key,'entry-door-furniture');assert.equal(p.category,'External Door Furniture');assert.equal(p.top_level_area,'exterior');assert(p.primary_image_url.startsWith('/images/product-library/'));assert(fs.statSync('public'+p.primary_image_url).size>0);assert.equal(p.rate,null);assert.equal(p.rate_status,'Rate required');assert(/lockweb.com.au|gainsboroughhardware.com.au|lemaar.com.au|zanda.com.au/.test(new URL(p.source_url).hostname));}
 const doors=exteriorEntryDoors({workbook:{takeoffSchedule:{items:[{id:'D01',mark:'ED1',type:'Exterior entry door',level:'Ground',location:'Entry',quantity:1},{id:'D02',mark:'ED2',type:'Exterior entry door',level:'Upper',location:'Terrace',quantity:2},{id:'I01',type:'Internal door'},{id:'G01',type:'Garage door'}]}}});

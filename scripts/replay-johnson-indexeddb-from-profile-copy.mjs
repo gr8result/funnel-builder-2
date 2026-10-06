@@ -3,9 +3,9 @@ import path from "node:path";
 import crypto from "node:crypto";
 import puppeteer from "puppeteer";
 
-const RAW_EXPORT_ROOT = path.resolve("test-results/johnson-browser-storage/2026-08-28T05-36-30-389Z/raw-copy");
+const RAW_EXPORT_ROOT = path.resolve("artifacts/test-results/johnson-browser-storage/2026-08-28T05-36-30-389Z/raw-copy");
 const RAW_PROFILE = path.join(RAW_EXPORT_ROOT, "Profile 6");
-const outDir = path.resolve("test-results/johnson-indexeddb-replay", new Date().toISOString().replace(/[:.]/g, "-"));
+const outDir = path.resolve("artifacts/test-results/johnson-indexeddb-replay", new Date().toISOString().replace(/[:.]/g, "-"));
 const userDataDir = path.join(outDir, "user-data");
 const replayProfile = path.join(userDataDir, "Profile 6");
 await fs.mkdir(replayProfile, { recursive: true });

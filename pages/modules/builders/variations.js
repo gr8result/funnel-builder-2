@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useWorkspace } from "../../../hooks/useWorkspace";
 import { supabase } from "../../../utils/supabase-client";
+import FlooringProjectSchedule from "../../../components/client-selections/FlooringProjectSchedule";
 
 const GST_RATE = 10;
 
@@ -35,7 +36,7 @@ const emptyLineItem = {
   sourceQuoteRowId: "",
 };
 
-export default function BuilderVariationsPage() {
+export default function BuilderVariationsPage({ workbook = null } = {}) {
   const { workspaceId, activeWorkspace, loading: workspaceLoading } = useWorkspace();
   const [projects, setProjects] = useState([]);
   const [snapshots, setSnapshots] = useState([]);
@@ -394,6 +395,7 @@ export default function BuilderVariationsPage() {
         <title>Builder Variations</title>
       </Head>
       <main style={styles.page}>
+        <FlooringProjectSchedule workbook={workbook} variation />
         <header style={styles.hero}>
           <div>
             <div style={styles.eyebrow}>Project Commercials</div>

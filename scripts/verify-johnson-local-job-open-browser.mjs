@@ -17,7 +17,7 @@ const projectId = "896be24f-a7fb-4a8e-b652-495fdcaa7fe2";
 const projectSearchText = "Johnson 07-123";
 const johnsonPdfSha256 = "2a66a30ea0879629ac9d55b91a504705b9dae6c10ab3e7160d49a78b112b19d0";
 const jobFilePath = "C:\\Users\\grant\\Downloads\\Johnson 123.gr8job";
-const outDir = path.join(root, "test-results", "johnson-local-job-open");
+const outDir = path.join(root, "artifacts/test-results", "johnson-local-job-open");
 const downloadDir = path.join(outDir, "downloads");
 
 if (!fs.existsSync(jobFilePath)) throw new Error(`Missing recovered job file: ${jobFilePath}`);

@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import puppeteer from "puppeteer";
 
 const baseUrl = process.env.CLIENT_SELECTIONS_BASE_URL || "http://localhost:3000";
-const outDir = path.resolve("test-results", "beacon-outdoor-catalogue");
+const outDir = path.resolve("artifacts/test-results", "beacon-outdoor-catalogue");
 fs.mkdirSync(outDir, { recursive: true });
 
 const browser = await puppeteer.launch({

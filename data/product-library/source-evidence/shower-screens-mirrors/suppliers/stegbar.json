@@ -1,0 +1,265 @@
+{
+  "supplier": "Stegbar",
+  "legalName": "Stegbar",
+  "aliases": ["Stegbar Pty Ltd", "Stegbar Showerscreens"],
+  "codePrefix": "STEGBAR",
+  "website": "https://www.stegbar.com.au",
+  "capturedAt": "2026-10-01",
+  "feed": { "type": "shopify", "file": "stegbar-shopify-products.json", "productUrlBase": "https://www.stegbar.com.au/products/" },
+  "pricing": {
+    "status": "quote_required",
+    "note": "Custom-made Stegbar ranges are quoted and installed by Stegbar. Shop Online (DIY) products carry Stegbar's published online store price for each size / glass / finish variant.",
+    "feedPriceBasis": "Stegbar online store price inc GST, supply only (DIY)"
+  },
+  "notImported": [
+    { "handle": "mirror-collection", "reason": "A colour/finish collection page (Silver, Bronze and Grey mirror), not a selectable product. Its three mirror finishes are carried as options on each custom mirror range." }
+  ],
+  "feedProducts": {
+    "note": "Shop Online products: each feed product is imported with every published variant (SKU, price, size, glass, finish). Rules are tested in order against the product title / type.",
+    "rules": [
+      { "match": { "productType": "^Frameless Shower Screens$", "title": "Radius Corner" }, "requirement": "shower-screen", "range": "Frameless - Radius Corner (Shop Online)", "screenType": "Frameless", "supplierScreenType": "Frameless", "configuration": "Fixed Panel", "supplierConfiguration": "Radius Corner Fixed Panel", "doorType": "Fixed (no door)" },
+      { "match": { "productType": "^Frameless Shower Screens$" }, "requirement": "shower-screen", "range": "Frameless (Shop Online)", "screenType": "Frameless", "supplierScreenType": "Frameless", "configuration": "Fixed Panel", "supplierConfiguration": "Fixed Panel", "doorType": "Fixed (no door)" },
+      { "match": { "productType": "^Semi-Framed Shower Screens?$", "title": "Front and Return" }, "requirement": "shower-screen", "range": "Semi-Framed (Shop Online)", "screenType": "Semi-Frameless", "supplierScreenType": "Semi-Framed", "configuration": "Corner", "supplierConfiguration": "Front and Return", "doorType": "" },
+      { "match": { "productType": "^Semi-Framed Shower Screens?$" }, "requirement": "shower-screen", "range": "Semi-Framed (Shop Online)", "screenType": "Semi-Frameless", "supplierScreenType": "Semi-Framed", "configuration": "Front Only", "supplierConfiguration": "Front Only", "doorType": "" },
+      { "match": { "productType": "Mirror", "title": "Cabinet" }, "requirement": "shaving-cabinet", "range": "Mirror Cabinets (Shop Online)", "supplierCategory": "Shaped Mirror" },
+      { "match": { "productType": "Mirror", "title": "Frame$" }, "requirement": "mirror", "mirrorGroup": "Framed Mirrors", "range": "Framed Shaped Mirrors (Shop Online)", "frameStyle": "Framed" },
+      { "match": { "productType": "^Frameless Mirror$" }, "requirement": "mirror", "mirrorGroup": "Frameless Mirrors", "range": "Frameless Mirrors (Shop Online)", "frameStyle": "Frameless" },
+      { "match": { "productType": "^Shaped Mirror$" }, "requirement": "mirror", "mirrorGroup": "Shaped Mirrors", "range": "Shaped Mirrors (Shop Online)", "frameStyle": "Frameless" }
+    ],
+    "shapes": [
+      { "title": "^Round", "shape": "Round" },
+      { "title": "^Pill", "shape": "Pill" },
+      { "title": "^Gothic", "shape": "Gothic" },
+      { "title": "^D Shaped", "shape": "D Shaped" },
+      { "title": "^Oval", "shape": "Oval" },
+      { "title": "^Rectangle with Radius Corners", "shape": "Rectangle with Radius Corners" },
+      { "title": "^Rectangular", "shape": "Rectangle" }
+    ],
+    "frameFinishes": [
+      { "title": "Black Frame$", "finish": "Black" },
+      { "title": "Gold Frame$", "finish": "Gold" },
+      { "title": "White Frame$", "finish": "White" },
+      { "title": "White Cabinet$", "finish": "Flat White" }
+    ],
+    "facts": [
+      { "titleMatch": "Frame$", "quote": "Easy wall mounting with two secure brackets", "set": { "mounting": "Wall mounted - two brackets" } },
+      { "titleMatch": "Frame$", "quote": "aluminium frame", "set": { "frameMaterial": "Aluminium" } },
+      { "titleMatch": "^D Shaped$", "quote": "5mm silver mirror with a polished edge", "set": { "edgeType": "Polished", "glassThicknessMm": [5] } },
+      { "titleMatch": "^D Shaped$", "quote": "Apply directly to the wall using an appropriate adhesive", "set": { "mounting": "Adhesive fixed" } },
+      { "titleMatch": "Cabinet$", "quote": "470x530mm", "set": { "cabinetSize": "470 x 530mm" } },
+      { "titleMatch": "Cabinet$", "quote": "Cabinet depth: 129mm (109mm internal), plus a 21mm door thickness for a total of 150mm", "set": { "cabinetDepthMm": 150 } },
+      { "titleMatch": "Cabinet$", "quote": "Two adjustable timber shelves", "set": { "shelves": "Two adjustable timber shelves" } },
+      { "titleMatch": "Cabinet$", "quote": "Soft-close hinges", "set": { "hinges": "Soft-close" } },
+      { "titleMatch": "Cabinet$", "quote": "MDF", "set": { "cabinetMaterial": "MDF, flat white paint" } },
+      { "titleMatch": "^(Gothic|Pill) with White Cabinet$", "quote": "recess into the wall cavity up to 110mm", "set": { "mounting": "Recessed (up to 110mm) or surface mounted" } },
+      { "titleMatch": "^Round with White Cabinet$", "quote": "Mount the product directly onto the wall", "set": { "mounting": "Surface mounted" } }
+    ]
+  },
+  "ranges": [
+    {
+      "key": "frameless",
+      "requirement": "shower-screen",
+      "supplierCategory": "Custom-made / Frameless Shower Screens",
+      "range": "Frameless",
+      "name": "Frameless Shower Screen",
+      "feedHandle": "frameless-shower-screens",
+      "evidence": "pages/stegbar--frameless-shower-screens.txt",
+      "screenType": "Frameless",
+      "supplierScreenType": "Frameless",
+      "doorType": "",
+      "madeToMeasure": true,
+      "description": "A Stegbar frameless shower screen has a minimalistic style and clean lines. Frameless shower screens are custom made to perfectly fit your space.",
+      "configurations": [
+        { "supplierName": "Fixed Panel - Radius Corner", "internal": "Fixed Panel", "doorType": "Fixed (no door)" },
+        { "supplierName": "Fixed Panel", "internal": "Fixed Panel", "doorType": "Fixed (no door)" },
+        { "supplierName": "Front & Return", "internal": "Corner" },
+        { "supplierName": "Front Only", "internal": "Front Only" },
+        { "supplierName": "Front & Return on Hob", "internal": "Corner" },
+        { "supplierName": "Splay", "internal": "Splay" },
+        { "supplierName": "Wall to Wall", "internal": "Alcove" },
+        { "supplierName": "Partitioning Screen", "internal": "Partition", "doorType": "Fixed (no door)" }
+      ],
+      "options": [
+        { "key": "glass", "label": "Glass", "values": ["6mm Clear Toughened", "6mm Acid Etched Toughened", "8mm Clear Toughened", "10mm Clear Toughened", "10mm Low Iron Toughened", "10mm Low Iron Acid Etched Toughened"] },
+        { "key": "finish", "label": "Hardware finish", "values": ["Polished Silver", "Matt Silver", "Brushed Gold", "Brushed Nickel", "Gunmetal", "Matt White", "Matt Black"] }
+      ],
+      "glassThicknessMm": [6, 8, 10],
+      "limits": { "maxHeightMm": 2700, "maxDoorWidthMm": 813, "maxDepthMm": 1500 },
+      "limitsEvidence": ["2700mm", "813mm - Door only", "1500mm"],
+      "warranty": "7 Years - Terms and conditions apply"
+    },
+    {
+      "key": "aqua-inline",
+      "requirement": "shower-screen",
+      "supplierCategory": "Custom-made / Semi-Frameless Showerscreens",
+      "range": "Aqua Series",
+      "name": "Aqua Inline Shower Screen",
+      "feedHandle": "aqua-inline-shower-screen",
+      "evidence": "pages/stegbar--aqua-inline-shower-screen.txt",
+      "screenType": "Semi-Frameless",
+      "supplierScreenType": "Semi Frameless",
+      "doorType": "Pivot",
+      "doorTypeEvidence": "pivot door system",
+      "madeToMeasure": true,
+      "description": "Aqua Series Semi Frameless Shower Screen: a strong metal pivot, a slimline perimeter frame and a frameless door. Inline doors are made to measure to the exact size of the door opening.",
+      "configurations": [
+        { "supplierName": "Front & Return", "code": "Gl530", "internal": "Corner" },
+        { "supplierName": "Front Only", "code": "Gl330", "internal": "Front Only" },
+        { "supplierName": "Front & Return on Hob", "code": "Gl530 OH", "internal": "Corner" },
+        { "supplierName": "Splay", "code": "Gl710", "internal": "Splay" },
+        { "supplierName": "Wall to Wall", "code": "GI370", "internal": "Alcove" }
+      ],
+      "options": [
+        { "key": "glass", "label": "Glass", "values": ["Clear", "Grey", "Acid Etch", "Satinlite"] },
+        { "key": "finish", "label": "Frame finish", "values": ["Matt Black", "Pearl White", "Bright Silver", "Gunmetal", "Brushed Nickel", "Brushed Gold"] }
+      ],
+      "glassEvidence": "Toughened - Clear, Grey, Acid Etch, Satinlite",
+      "glassThicknessMm": [6],
+      "limits": { "maxHeightMm": 2100, "maxWidthMm": 2800, "maxDepthMm": 1300 },
+      "limitsEvidence": ["2100mm", "2800mm", "1300mm"],
+      "features": ["Step Free Entry Option", "Nanoclean protective coating"],
+      "warranty": "7 Years - Terms and conditions apply"
+    },
+    {
+      "key": "aqua-overlap",
+      "requirement": "shower-screen",
+      "supplierCategory": "Custom-made / Semi-Frameless Showerscreens",
+      "range": "Aqua Series",
+      "name": "Aqua Overlap Shower Screen",
+      "feedHandle": "aqua-overlap-shower-screen",
+      "evidence": "pages/stegbar--aqua-overlap-shower-screen.txt",
+      "screenType": "Semi-Frameless",
+      "supplierScreenType": "Semi Frameless",
+      "doorType": "Pivot",
+      "doorTypeEvidence": "pivot door system",
+      "madeToMeasure": true,
+      "description": "The overlapping door and skilful design minimises water leakage: the door overlaps the side lite.",
+      "configurations": [
+        { "supplierName": "Wall to Wall", "code": "GO370", "internal": "Alcove" },
+        { "supplierName": "Front Only", "code": "GO330", "internal": "Front Only" },
+        { "supplierName": "Front & Return", "code": "GO530", "internal": "Corner" },
+        { "supplierName": "Front & Return on Hob", "code": "GO530 OH", "internal": "Corner" }
+      ],
+      "options": [
+        { "key": "glass", "label": "Glass", "values": ["Clear", "Grey", "Acid Etch", "Satinlite"] },
+        { "key": "finish", "label": "Frame finish", "values": ["Matt Black", "Pearl White", "Bright Silver", "Gunmetal", "Brushed Nickel", "Brushed Gold"] }
+      ],
+      "glassEvidence": "Toughened - Clear, Grey, Acid Etch, Satinlite",
+      "glassThicknessMm": [6],
+      "limits": { "maxHeightMm": 2100, "maxWidthMm": 2800, "maxDepthMm": 1300 },
+      "limitsEvidence": ["2100mm", "2800mm", "1300mm"],
+      "features": ["Step Free Entry Option"],
+      "warranty": "7 Years - Terms and conditions apply"
+    },
+    {
+      "key": "grange-slider",
+      "requirement": "shower-screen",
+      "supplierCategory": "Custom-made / Semi-Frameless Showerscreens",
+      "range": "Grange",
+      "name": "Grange Slider Shower Screen",
+      "feedHandle": "grange-slider-showerscreens",
+      "evidence": "pages/stegbar--grange-slider-showerscreens.txt",
+      "screenType": "Semi-Frameless",
+      "supplierScreenType": "Semi-Frameless",
+      "doorType": "Sliding",
+      "doorTypeEvidence": "Slider",
+      "madeToMeasure": true,
+      "description": "Grange Slider semi-frameless sliding shower screen, custom made and installed to your specification.",
+      "configurations": [
+        { "supplierName": "Front & Return", "code": "GS530", "internal": "Corner" },
+        { "supplierName": "Front Only", "code": "GS330", "internal": "Front Only" },
+        { "supplierName": "Front & Return on Hob", "code": "GS530 OH", "internal": "Corner" }
+      ],
+      "options": [
+        { "key": "glass", "label": "Glass", "values": ["Toughened Clear", "Toughened Low Iron"] },
+        { "key": "finish", "label": "Frame finish", "values": ["Polished Silver"] }
+      ],
+      "glassEvidence": "Toughened Clear and Toughened Low Iron",
+      "glassThicknessMm": [6],
+      "limits": { "maxHeightMm": 2100, "maxWidthMm": 1600, "maxDepthMm": 1500 },
+      "limitsEvidence": ["2100mm", "1600mm", "1500mm"],
+      "limitsNote": "Max width front 1600mm; max width return 1500mm.",
+      "warranty": ""
+    },
+    {
+      "key": "frameless-mirror",
+      "requirement": "mirror",
+      "mirrorGroup": "Frameless Mirrors",
+      "supplierCategory": "Custom-made / Frameless Mirrors",
+      "range": "Frameless Mirrors",
+      "name": "Frameless Mirror",
+      "feedHandle": "frameless-mirrors",
+      "evidence": "pages/stegbar--frameless-mirrors.txt",
+      "frameStyle": "Frameless",
+      "madeToMeasure": true,
+      "description": "Frameless mirrors made to measure to your exact requirements, delivered and installed by Stegbar.",
+      "configurations": [
+        { "supplierName": "Polished Edge Style", "internal": "Polished Edge", "edgeType": "Polished" },
+        { "supplierName": "Bevelled Edge Style", "internal": "Bevelled Edge", "edgeType": "Bevelled", "extraOptions": [{ "key": "bevel", "label": "Bevel", "values": ["Small Bevel 15mm", "Large Bevel 25mm"] }], "evidenceText": "Small Bevel 15mm, Large Bevel 25mm" }
+      ],
+      "options": [
+        { "key": "finish", "label": "Mirror", "values": ["Silver Mirror", "Bronze Mirror", "Grey Mirror"] },
+        { "key": "thickness", "label": "Glass thickness", "values": ["4mm", "6mm"] }
+      ],
+      "thicknessEvidence": "4mm and 6mm",
+      "glassThicknessMm": [4, 6],
+      "limits": { "maxHeightMm": 2000, "maxWidthMm": 2700, "maxAreaM2": 3 },
+      "limitsEvidence": ["2000mm", "2700mm", "Max 3 sqm per panel"],
+      "availabilityNote": "Bevelled edge varies by state.",
+      "warranty": "3 Years - Terms and conditions apply"
+    },
+    {
+      "key": "framed-mirror",
+      "requirement": "mirror",
+      "mirrorGroup": "Framed Mirrors",
+      "supplierCategory": "Custom-made / Framed Mirrors",
+      "range": "Framed Mirrors",
+      "name": "Framed Mirror",
+      "feedHandle": "framed-mirrors",
+      "evidence": "pages/stegbar--framed-mirrors.txt",
+      "madeToMeasure": true,
+      "description": "Framed and microframed mirrors, custom made to your specifications.",
+      "configurations": [
+        { "supplierName": "Framed Edge Style", "internal": "Framed", "frameStyle": "Framed", "edgeType": "Framed" },
+        { "supplierName": "Microframed Edge Style", "internal": "Microframed", "frameStyle": "Microframed", "edgeType": "Microframed" }
+      ],
+      "options": [
+        { "key": "finish", "label": "Mirror", "values": ["Silver Mirror", "Bronze Mirror", "Grey Mirror"] }
+      ],
+      "glassThicknessMm": [4],
+      "limits": { "maxHeightMm": 2000, "maxWidthMm": 2700, "maxAreaM2": 3 },
+      "limitsEvidence": ["2000mm", "2700mm", "Max 3 sqm per panel"],
+      "availabilityNote": "Framed or Microframed (varies by state). Frame colours are not published.",
+      "warranty": "3 Years - Terms and conditions apply"
+    },
+    {
+      "key": "shaped-mirror",
+      "requirement": "mirror",
+      "mirrorGroup": "Shaped Mirrors",
+      "supplierCategory": "Custom-made / Shaped Mirrors",
+      "range": "Shaped Mirrors",
+      "name": "Shaped Mirror",
+      "feedHandle": "shaped-mirrors",
+      "evidence": "pages/stegbar--shaped-mirrors.txt",
+      "frameStyle": "Frameless",
+      "edgeType": "Polished",
+      "madeToMeasure": true,
+      "madeToMeasureNote": "Standard sizes listed; custom shapes and sizes available.",
+      "description": "The shaped mirror range is entirely frameless, in five shapes; custom shapes and sizes available.",
+      "configurations": [
+        { "supplierName": "Gothic", "internal": "Gothic", "shape": "Gothic", "sizes": ["800 x 700mm", "900 x 700mm", "1000 x 700mm"] },
+        { "supplierName": "Circle", "internal": "Round", "shape": "Round", "sizes": ["600mm diameter", "800mm diameter", "1000mm diameter"] },
+        { "supplierName": "Rectangle", "internal": "Rectangle", "shape": "Rectangle", "sizes": ["800 x 700mm", "900 x 700mm", "1000 x 700mm"] },
+        { "supplierName": "Elipse", "internal": "Ellipse", "shape": "Ellipse", "sizes": ["800 x 700mm", "900 x 700mm", "1000 x 700mm"] },
+        { "supplierName": "Oval", "internal": "Oval", "shape": "Oval", "sizes": ["800 x 700mm", "900 x 700mm", "1000 x 700mm"] }
+      ],
+      "sizesEvidence": ["800mm, 900mm, 1000mm - Oval, Gothic, Rectangular & Elliptical", "700mm - Oval, Gothic, Rectangular & Elliptical", "600mm, 800mm, 1000mm - Circle"],
+      "options": [
+        { "key": "finish", "label": "Mirror", "values": ["Silver Mirror", "Bronze Mirror", "Grey Mirror"] }
+      ],
+      "glassThicknessMm": [6],
+      "limits": {},
+      "warranty": "3 Years - Terms and conditions apply"
+    }
+  ]
+}

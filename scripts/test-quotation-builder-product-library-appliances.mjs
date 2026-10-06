@@ -38,11 +38,20 @@ const applianceSections = Object.entries(workbook.quotation).filter(([sectionNam
 const generatedBrandSections = applianceSections.filter(([sectionName]) => sectionName.includes(" - "));
 const rows = applianceSections.flatMap(([, section]) => section.rows || []);
 const packageRows = rows.filter((row) => row.applianceHeading);
-const componentRows = rows.filter((row) => !row.applianceHeading);
+const componentRows = rows.filter((row) => !row.applianceHeading && row.appliancePackage);
+const individualRows = rows.filter((row) => !row.applianceHeading && !row.appliancePackage);
+const packagedProductIds = new Set(catalogue.packs.flatMap((pack) => pack.componentProductIds || []));
+const individualProducts = catalogue.records.filter((record) => !packagedProductIds.has(record.productId));
 
 check("quotation appliance product-library brands", generatedBrandSections.map(([sectionName]) => sectionName.replace("APPLIANCES & WHITE GOODS - ", "")).sort(), catalogue.brands);
 check("quotation package heading rows", packageRows.length, catalogue.counts.packs);
 check("quotation package component rows", componentRows.length, catalogue.counts.relationships);
+check("unpackaged Product Library products are available as individual rows", individualRows.map((row) => row.canonicalProductId).sort(), individualProducts.map((record) => record.productId).sort());
+check("Bosch has 38 individual quotation choices", individualRows.filter((row) => row.brand === "Bosch").length, 38);
+check("retired Blanco is absent from new quotation rows", rows.some((row) => row.brand === "Blanco"), false);
+check("new Euromaid cooktops are individual quotation choices", ["EC64GB", "EC64GS", "EC95GLB", "EC95GLS"].every((model) => individualRows.some((row) => row.model === model)), true);
+check("individual quote rows have stable unique IDs", new Set(individualRows.map((row) => row.id)).size, individualRows.length);
+check("individual quote rows preserve current Product Library prices", individualRows.every((row) => row.excelRate === (individualProducts.find((record) => record.productId === row.canonicalProductId).price ?? "")), true);
 check("component rows use Product Library source", componentRows.every((row) => row.sourceOfRate === "Product Library"), true);
 check("component rows carry stable Product Library IDs", componentRows.every((row) => row.canonicalProductId && row.productCode), true);
 check("component rows carry Product Library metadata", componentRows.every((row) => row.productName && row.brand && row.sku && row.productLibrarySnapshot?.productId), true);

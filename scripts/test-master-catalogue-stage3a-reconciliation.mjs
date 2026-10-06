@@ -73,7 +73,7 @@ assert.equal(
   "safe fallback matching checks product code fields",
 );
 
-const activeMapping = fs.readFileSync(new URL("../MASTER_CATALOGUE_RECONCILED_MAPPING.csv", import.meta.url), "utf8");
+const activeMapping = fs.readFileSync(new URL("../data/catalogue/reconciliation/MASTER_CATALOGUE_RECONCILED_MAPPING.csv", import.meta.url), "utf8");
 assert.match(activeMapping, /quotation_row_id,quotation_code,stage_id/, "Stage 3A reconciled mapping exists");
 assert.doesNotMatch(activeMapping, /generic-paint.*kitchen/i, "generic Kitchen paint is not introduced by reconciliation");
 assert.doesNotMatch(activeMapping, /generic-lighting.*kitchen/i, "generic Kitchen lighting is not introduced by reconciliation");
@@ -82,7 +82,7 @@ const applianceRows = activeMapping.split(/\r?\n/).filter((line) => /category:ap
 assert.ok(applianceRows.length > 0, "appliance rows remain grouped by appliance family/category");
 assert.ok(normalizeKey("Family -> Brand -> Range/model -> Product details"), "appliance hierarchy is represented by stable normalized keys");
 
-const cabinetryReport = fs.readFileSync(new URL("../MASTER_CATALOGUE_RECONCILIATION_REPORT.md", import.meta.url), "utf8");
+const cabinetryReport = fs.readFileSync(new URL("../docs/catalogue/MASTER_CATALOGUE_RECONCILIATION_REPORT.md", import.meta.url), "utf8");
 for (const label of ["Laminex", "Polytec", "Neolith", "Caesarstone", "Smartstone", "Stone Ambassador", "Handle House", "Blum", "brushed aluminium kick panels", "Raw MDF bulkheads", "cabinet shelving", "cleated shelving"]) {
   assert.match(cabinetryReport, new RegExp(label, "i"), `Cabinetry mapping report covers ${label}`);
 }

@@ -571,7 +571,7 @@ async function main() {
     })),
   };
 
-  const outDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "test-results", "johnson-pdf-import");
+  const outDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "artifacts/test-results", "johnson-pdf-import");
   fs.mkdirSync(outDir, { recursive: true });
   fs.writeFileSync(path.join(outDir, "import-result.json"), `${JSON.stringify(result, null, 2)}\n`);
   console.log(JSON.stringify(result, null, 2));

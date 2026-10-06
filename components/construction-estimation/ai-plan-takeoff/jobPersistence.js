@@ -1,5 +1,6 @@
 import { AI_PLAN_TAKEOFF_FILE_TYPE } from "../../../lib/gr8FileTypes.js";
 import { materializeTakeoffPlanPages } from './planBlobStorage.js';
+import { createTakeoffObjectUrl, revokeTakeoffObjectUrl } from './takeoffLifecycle.js';
 
 const DEFAULT_FLOOR_COVERING_COLOURS = {
   Tiles: { fill: 'rgba(76, 175, 80, 0.35)', stroke: '#2e7d32', text: '#1b5e20' },
@@ -70,7 +71,12 @@ function checksumSource(job = {}) {
     completedAreas: job.completedAreas || [],
     completedFloorplans: job.completedFloorplans || [],
     completedMeasurements: job.completedMeasurements || [],
-    completedEaves: job.completedEaves || []
+    completedEaves: job.completedEaves || [],
+    completedPillars: job.completedPillars || [],
+    // Applied-run receipts prevent deleted AI objects from returning on replay.
+    // Omit the optional field for legacy jobs to keep their checksums unchanged.
+    ...(job.scheduleState?.aiAppliedRuns?.length ? { aiAppliedRuns: job.scheduleState.aiAppliedRuns } : {}),
+    ...(job.scheduleState?.aiAnalysis ? { aiAnalysis: job.scheduleState.aiAnalysis } : {})
   };
 }
 
@@ -87,7 +93,8 @@ export function getTakeoffCounts(job = {}) {
     walls: Array.isArray(job.completedWallRuns) ? job.completedWallRuns.length : 0,
     openings: Array.isArray(job.placedOpenings) ? job.placedOpenings.length : 0,
     eaves: Array.isArray(job.completedEaves) ? job.completedEaves.length : 0,
-    measurements: Array.isArray(job.completedMeasurements) ? job.completedMeasurements.length : 0
+    measurements: Array.isArray(job.completedMeasurements) ? job.completedMeasurements.length : 0,
+    pillars: Array.isArray(job.completedPillars) ? job.completedPillars.length : 0
   };
 }
 
@@ -163,6 +170,8 @@ export function createJobData({
   completedFloorplans,
   completedMeasurements,
   completedEaves,
+  completedPillars,
+  sheetLevels,
   projectInfo,
   planFilename,
   sourceFileName,
@@ -207,6 +216,11 @@ export function createJobData({
     completedFloorplans: completedFloorplans || [],
     completedMeasurements: completedMeasurements || [],
     completedEaves: completedEaves || [],
+    completedPillars: completedPillars || [],
+    // Which building level each plan sheet represents. A PDF sheet number does not identify a
+    // storey, and Job Setup's wall/area fields are per level, so without this the measurements on
+    // a sheet have no level to import into.
+    sheetLevels: sheetLevels || {},
     projectInfo: projectInfo || {},
     planFilename: planFilename || '',
     platformProject: platformProject || {},
@@ -360,7 +374,7 @@ function loadRecentTakeoffJobsRaw() {
 export function saveRecentTakeoffJobs(records = []) {
   if (typeof window === 'undefined') return [];
   const next = Array.isArray(records)
-    ? records.filter(isValidRecentTakeoffJob).sort((a, b) => String(b.lastSuccessfullySavedAt).localeCompare(String(a.lastSuccessfullySavedAt))).slice(0, 8)
+    ? records.filter(isValidRecentTakeoffJob).sort((a, b) => String(b.lastSuccessfullySavedAt).localeCompare(String(a.lastSuccessfullySavedAt))).slice(0, 3)
     : [];
   try {
     window.localStorage.setItem(RECENT_TAKEOFF_JOBS_KEY, JSON.stringify(next));
@@ -439,6 +453,75 @@ export async function listIndexedDbTakeoffRecords() {
     transaction.oncomplete = () => db.close();
     transaction.onabort = transaction.onerror = () => { db.close(); reject(transaction.error); };
   });
+}
+
+function takeoffOverlayCount(job = {}) {
+  const counts = getTakeoffCounts(job);
+  return counts.floorCoverings + counts.floorplans + counts.walls + counts.openings + counts.eaves + counts.measurements;
+}
+
+/**
+ * A job's live aiPlanTakeoffJob can end up empty - not corrupted, just not carried
+ * forward from a save that otherwise succeeded (traced live on a real job: a
+ * "pre-ai-plan-takeoff-overwrite" safety snapshot recorded a fully measured takeoff at
+ * one revision, and the very next revision's attached copy was empty, with no refused
+ * overwrite in between to explain why). Every revision in between is kept as a
+ * `${jobKey}:snapshot:...` record purely for this kind of recovery, but
+ * listIndexedDbTakeoffRecords() deliberately excludes snapshot keys - they are payload
+ * history, not separate takeoffs a user would pick from a list. So when the live
+ * takeoff is empty, this looks at exactly the one place the data can still be: this
+ * same job's own snapshot history, for the most recent one that still has it.
+ *
+ * Read-only: nothing here writes to storage or changes the live job. jobKey is the
+ * exact storage key (e.g. "job:recovered-03-09-123"), not a takeoff id.
+ */
+export async function findMostRecentTakeoffSnapshotWithData(jobKey) {
+  const key = String(jobKey || '').trim();
+  if (!key) return { ok: false, message: 'No job key to search snapshots for.' };
+  let db;
+  try {
+    db = await openEstimateBuilderJobDb();
+    // This runs when the workbook mounts, including Data Input. getAll() cloned
+    // every job and every full revision (including embedded documents) into the
+    // renderer before filtering. Stream only this job's snapshots and retain
+    // one takeoff, not the complete history or its surrounding workbooks.
+    const best = await new Promise((resolve, reject) => {
+      const prefix = `${key}:snapshot:`;
+      const transaction = db.transaction(ESTIMATE_BUILDER_JOB_STORE_NAME, 'readonly');
+      const request = transaction.objectStore(ESTIMATE_BUILDER_JOB_STORE_NAME)
+        .openCursor(IDBKeyRange.bound(prefix, `${prefix}\uffff`));
+      let latest = null;
+      request.onsuccess = () => {
+        const cursor = request.result;
+        if (!cursor) { resolve(latest); return; }
+        const record = cursor.value;
+        const revision = Number(record?.revision || 0);
+        if (record?.workbook && (!latest || revision > latest.revision)) {
+          const takeoffJob = resolveAiPlanTakeoffJobData(record.workbook);
+          if (takeoffOverlayCount(takeoffJob) > 0) {
+            latest = { takeoffJob, revision, savedAt: record.savedAt, snapshotKey: String(cursor.key) };
+          }
+        }
+        cursor.continue();
+      };
+      request.onerror = () => reject(request.error);
+      transaction.onabort = () => reject(transaction.error || new Error('Snapshot read was aborted.'));
+    });
+    if (!best) return { ok: false, message: 'No earlier snapshot of this job carries measured takeoff data.' };
+    const materialized = await materializeTakeoffPlanPages({ aiPlanTakeoffJob: best.takeoffJob }).catch(() => ({ aiPlanTakeoffJob: best.takeoffJob }));
+    return {
+      ok: true,
+      takeoffJob: materialized.aiPlanTakeoffJob || best.takeoffJob,
+      revision: best.revision,
+      savedAt: String(best.savedAt || best.takeoffJob?.updatedAt || ''),
+      snapshotKey: best.snapshotKey,
+      counts: getTakeoffCounts(best.takeoffJob),
+    };
+  } catch (error) {
+    return { ok: false, message: error?.message || 'Could not search this job\'s snapshot history.' };
+  } finally {
+    db?.close();
+  }
 }
 
 function matchingRecentTakeoffCandidates(recentRecord = {}, rows = []) {
@@ -547,6 +630,31 @@ export async function resolveRecentTakeoffIndexedDbRecord(recentRecord = {}) {
   };
 }
 
+export async function resolveLatestIndexedDbTakeoffRecord() {
+  const rows = await listIndexedDbTakeoffRecords();
+  const latest = rows
+    .slice()
+    .sort((a, b) => String(b.summary?.savedAt || '').localeCompare(String(a.summary?.savedAt || '')))[0];
+  if (!latest?.summary?.key) {
+    return { ok: false, message: 'No complete saved takeoff was found in browser storage.' };
+  }
+
+  const db = await openEstimateBuilderJobDb();
+  try {
+    const record = await new Promise((resolve, reject) => {
+      const request = db.transaction(ESTIMATE_BUILDER_JOB_STORE_NAME, 'readonly').objectStore(ESTIMATE_BUILDER_JOB_STORE_NAME).get(latest.summary.key);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    if (!record?.workbook) return { ok: false, message: 'The saved takeoff record could not be read.' };
+    const materializedWorkbook = await materializeTakeoffPlanPages(record.workbook);
+    const takeoffJob = resolveAiPlanTakeoffJobData(materializedWorkbook);
+    return { ok: Boolean(hasRecoverablePlanPages(takeoffJob)), record, summary: latest.summary, takeoffJob };
+  } finally {
+    db.close();
+  }
+}
+
 function takeoffBackupDownloadName(name = '') {
   const safe = String(name || '').trim().replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').replace(/\//g, '-').slice(0, 120);
   return safe || `takeoff-backup-${Date.now()}`;
@@ -554,12 +662,12 @@ function takeoffBackupDownloadName(name = '') {
 
 function downloadBlob(filename, content, type = 'application/json') {
   const blob = new Blob([content], { type });
-  const url = URL.createObjectURL(blob);
+  const url = createTakeoffObjectUrl(blob, 'saved-takeoff-backup');
   const link = document.createElement('a');
   link.href = url;
   link.download = filename;
   link.click();
-  window.setTimeout(() => URL.revokeObjectURL(url), 5000);
+  window.setTimeout(() => revokeTakeoffObjectUrl(url, 'saved-takeoff-backup'), 5000);
   return blob.size;
 }
 
@@ -655,11 +763,14 @@ function isArchivedRecoveryTakeoffRecord(record = {}) {
 }
 
 function isValidRecentTakeoffJob(record = {}) {
+  const name = String(record.displayName || record.takeoffName || record.sourceFileName || '').toLowerCase();
   return record?.moduleType === AI_PLAN_TAKEOFF_FILE_TYPE.moduleType
     && String(record.takeoffId || '').trim()
     && String(record.displayName || record.takeoffName || '').trim()
     && Number(record.planPageCount || 0) > 0
     && String(record.lastSuccessfullySavedAt || '').trim()
+    && !name.includes('sample plans')
+    && !name.includes('sample takeoff')
     && !isArchivedRecoveryTakeoffRecord(record);
 }
 
@@ -674,6 +785,7 @@ export function rememberRecentTakeoffJob(job = {}) {
   const savedAt = job.updatedAt || new Date().toISOString();
   const record = {
     moduleType: AI_PLAN_TAKEOFF_FILE_TYPE.moduleType,
+    masterJobId: job.masterJobId || job.jobId || '',
     takeoffId: job.takeoffId || job.id || `takeoff-${Date.now()}`,
     displayName: job.takeoffName || job.jobName || 'Untitled takeoff',
     associatedPlatformProjectId: job.associatedProjectId || job.projectId || job.platformProject?.projectId || '',
@@ -728,6 +840,7 @@ export function mergeAiPlanTakeoffJobForSave(previousJob = null, incomingJob = {
     completedFloorplans: Array.isArray(incoming.completedFloorplans) ? incoming.completedFloorplans : (previous.completedFloorplans || []),
     completedMeasurements: Array.isArray(incoming.completedMeasurements) ? incoming.completedMeasurements : (previous.completedMeasurements || []),
     completedEaves: Array.isArray(incoming.completedEaves) ? incoming.completedEaves : (previous.completedEaves || []),
+    completedPillars: Array.isArray(incoming.completedPillars) ? incoming.completedPillars : (previous.completedPillars || []),
     scheduleState: {
       ...(previous.scheduleState || {}),
       ...(incoming.scheduleState || {})
@@ -781,7 +894,11 @@ export function prepareAiPlanTakeoffJobForSave(previousJob = null, incomingJob =
 }
 
 export function verifyAiPlanTakeoffSavedJob(submittedJob = {}, savedJob = {}, options = {}) {
-  const expectedPlanPages = Number(options.expectedPlanPages ?? 5);
+  // Default to comparing what was submitted against what came back. A fixed expectation here is a
+  // claim about one particular job: the only caller passes no options, so a hardcoded count fails
+  // verification - and raises SAVE FAILED - for every takeoff that does not happen to have exactly
+  // that many sheets. A caller that genuinely knows the page count still passes it explicitly.
+  const expectedPlanPages = Number(options.expectedPlanPages ?? 0);
   const submittedChecksum = submittedJob.contentChecksum || createTakeoffContentChecksum(submittedJob);
   const savedChecksum = savedJob.contentChecksum || createTakeoffContentChecksum(savedJob);
   const revisionMatches = Number(submittedJob.revision || 0) === Number(savedJob.revision || 0);

@@ -1,8 +1,13 @@
-import fs from "fs/promises";
-import path from "path";
 import { withAuth } from "../../../lib/withWorkspace";
+import {
+  readWebsiteBuilderDefaults,
+  getTemplateOverride,
+  getBlockDefaults,
+  saveTemplatePage,
+  saveTemplateSite,
+  saveBlockDefault,
+} from "../../../data/website-builder-defaults/index.js";
 
-const DEFAULTS_FILE_PATH = path.join(process.cwd(), "data", "website-builder-defaults.json");
 const DEVELOPER_USER_IDS = new Set(["35ab846e-0764-498b-b1f8-7d2cf27d85a5"]);
 
 export const config = {
@@ -32,49 +37,6 @@ function pageNameFromValue(value) {
   return "";
 }
 
-async function ensureDefaultsFile() {
-  await fs.mkdir(path.dirname(DEFAULTS_FILE_PATH), { recursive: true });
-  try {
-    await fs.access(DEFAULTS_FILE_PATH);
-  } catch {
-    await fs.writeFile(
-      DEFAULTS_FILE_PATH,
-      JSON.stringify({ templateOverrides: {}, blockDefaults: {} }, null, 2),
-      "utf8"
-    );
-  }
-}
-
-async function readDefaultsFile() {
-  await ensureDefaultsFile();
-  try {
-    const raw = await fs.readFile(DEFAULTS_FILE_PATH, "utf8");
-    const parsed = JSON.parse(raw || "{}");
-    return {
-      templateOverrides: parsed?.templateOverrides && typeof parsed.templateOverrides === "object" && !Array.isArray(parsed.templateOverrides)
-        ? parsed.templateOverrides
-        : {},
-      blockDefaults: parsed?.blockDefaults && typeof parsed.blockDefaults === "object" && !Array.isArray(parsed.blockDefaults)
-        ? parsed.blockDefaults
-        : {},
-    };
-  } catch {
-    return { templateOverrides: {}, blockDefaults: {} };
-  }
-}
-
-async function writeDefaultsFile(next) {
-  await ensureDefaultsFile();
-  await fs.writeFile(
-    DEFAULTS_FILE_PATH,
-    JSON.stringify({
-      templateOverrides: sanitizeJson(next?.templateOverrides || {}, {}),
-      blockDefaults: sanitizeJson(next?.blockDefaults || {}, {}),
-    }, null, 2),
-    "utf8"
-  );
-}
-
 function badRequest(res, error) {
   return res.status(400).json({ ok: false, error });
 }
@@ -89,7 +51,7 @@ async function handler(req, res) {
   res.setHeader("Expires", "0");
 
   if (req.method === "GET") {
-    const defaults = await readDefaultsFile();
+    const defaults = await readWebsiteBuilderDefaults();
     return res.status(200).json({ ok: true, ...defaults });
   }
 
@@ -104,54 +66,41 @@ async function handler(req, res) {
   const action = String(req.body?.action || "").trim().toLowerCase();
   if (!action) return badRequest(res, "Missing defaults action");
 
-  const defaults = await readDefaultsFile();
-
   if (action === "save-template-page") {
     const templateSlug = String(req.body?.templateSlug || "").trim();
     const pageName = pageNameFromValue(req.body?.pageName || "");
     if (!templateSlug) return badRequest(res, "Missing template slug");
     if (!pageName) return badRequest(res, "Missing page name");
 
-    const current = defaults.templateOverrides[templateSlug] || { pageBlocks: {} };
-    const nextOverride = {
-      ...current,
-      updatedAt: new Date().toISOString(),
-      pageBlocks: {
-        ...(current.pageBlocks || {}),
-        [pageName]: sanitizeJson(req.body?.blocks || [], []),
-      },
-      globalNavBlock: sanitizeJson(req.body?.globalNavBlock || current.globalNavBlock || null, null),
-      globalFooterBlock: sanitizeJson(req.body?.globalFooterBlock || current.globalFooterBlock || null, null),
-    };
+    const current = (await getTemplateOverride(templateSlug)) || { pageBlocks: {} };
+    const blocks = sanitizeJson(req.body?.blocks || [], []);
+    const globalNavBlock = sanitizeJson(req.body?.globalNavBlock || current.globalNavBlock || null, null);
+    const globalFooterBlock = sanitizeJson(req.body?.globalFooterBlock || current.globalFooterBlock || null, null);
 
-    defaults.templateOverrides[templateSlug] = nextOverride;
-    await writeDefaultsFile(defaults);
-    return res.status(200).json({ ok: true, templateOverride: nextOverride, blockDefaults: defaults.blockDefaults });
+    const nextOverride = await saveTemplatePage(templateSlug, pageName, blocks, globalNavBlock, globalFooterBlock);
+    const blockDefaults = await getBlockDefaults();
+    return res.status(200).json({ ok: true, templateOverride: nextOverride, blockDefaults });
   }
 
   if (action === "save-template-site") {
     const templateSlug = String(req.body?.templateSlug || "").trim();
     if (!templateSlug) return badRequest(res, "Missing template slug");
 
-    const nextOverride = {
-      updatedAt: new Date().toISOString(),
-      pageBlocks: sanitizeJson(req.body?.pageBlocks || {}, {}),
-      globalNavBlock: sanitizeJson(req.body?.globalNavBlock || null, null),
-      globalFooterBlock: sanitizeJson(req.body?.globalFooterBlock || null, null),
-    };
+    const pageBlocks = sanitizeJson(req.body?.pageBlocks || {}, {});
+    const globalNavBlock = sanitizeJson(req.body?.globalNavBlock || null, null);
+    const globalFooterBlock = sanitizeJson(req.body?.globalFooterBlock || null, null);
 
-    defaults.templateOverrides[templateSlug] = nextOverride;
-    await writeDefaultsFile(defaults);
-    return res.status(200).json({ ok: true, templateOverride: nextOverride, blockDefaults: defaults.blockDefaults });
+    const nextOverride = await saveTemplateSite(templateSlug, pageBlocks, globalNavBlock, globalFooterBlock);
+    const blockDefaults = await getBlockDefaults();
+    return res.status(200).json({ ok: true, templateOverride: nextOverride, blockDefaults });
   }
 
   if (action === "save-block-default") {
     const blockType = String(req.body?.blockType || "").trim();
     if (!blockType) return badRequest(res, "Missing block type");
 
-    defaults.blockDefaults[blockType] = sanitizeJson(req.body?.props || {}, {});
-    await writeDefaultsFile(defaults);
-    return res.status(200).json({ ok: true, blockDefaults: defaults.blockDefaults });
+    const blockDefaults = await saveBlockDefault(blockType, sanitizeJson(req.body?.props || {}, {}));
+    return res.status(200).json({ ok: true, blockDefaults });
   }
 
   return badRequest(res, `Unsupported defaults action: ${action}`);

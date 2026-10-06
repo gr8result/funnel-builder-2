@@ -4,7 +4,7 @@ import fs from "node:fs/promises";
 import JSZip from "jszip";
 import { readJob } from "../lib/jobFile.ts";
 
-const source = "test-results/job-file-disk-save-roundtrip/Save Roundtrip Test.gr8job";
+const source = "artifacts/test-results/job-file-disk-save-roundtrip/Save Roundtrip Test.gr8job";
 const bytes = await fs.readFile(source);
 const zip = await JSZip.loadAsync(bytes);
 const estimate = JSON.parse(await zip.file("estimate.json").async("string"));

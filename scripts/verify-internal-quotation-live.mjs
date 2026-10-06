@@ -8,7 +8,7 @@ import {createEstimateBuilderWorkbookDefaults} from '../lib/construction-estimat
 import {getMasterProducts} from '../lib/product-library/catalogueService.js';
 import {rowsFromCsv} from '../lib/product-library/productLibraryExchange.js';
 dotenv.config({path:'.env.local',quiet:true});dotenv.config({path:'.env',quiet:true});
-const origin=process.env.INTERNAL_TEST_ORIGIN||'http://localhost:3016';const out=path.resolve('test-artifacts/internal-areas-live');fs.mkdirSync(out,{recursive:true});
+const origin=process.env.INTERNAL_TEST_ORIGIN||'http://localhost:3016';const out=path.resolve('artifacts/test-artifacts/internal-areas-live');fs.mkdirSync(out,{recursive:true});
 const projectId='internal-products-verification-20260906';const defaults=createEstimateBuilderWorkbookDefaults();delete defaults.aiPlanTakeoffJob;delete defaults.takeoffEngine;delete defaults.takeoffSchedule;delete defaults.clientSelectionsBook;
 const workbook={...defaults,templateType:'job',page:'clientSelections',projectId,commercialProjectId:projectId,registeredJobId:projectId,registeredJob:{jobId:projectId,jobName:'Internal Catalogue Verification',jobNumber:'INT-TEST',clientName:'Test client',siteAddress:'Test address'},jobFileMeta:{projectId,jobName:'Internal Catalogue Verification',jobNumber:'INT-TEST',clientName:'Test client',address:'Test address'}};
 const fixture=path.join(out,'internal-test-job.json');fs.writeFileSync(fixture,JSON.stringify({projectId,jobName:'Internal Catalogue Verification',workbook}));

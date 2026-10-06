@@ -1,0 +1,776 @@
+{
+  "data": {
+    "categories": {
+      "items": [
+        {
+          "id": 39,
+          "name": "Bathroom Mixers & Tapware",
+          "url_path": "products/bathroom/bathroom-taps-tapware",
+          "children": [
+            {
+              "id": 180,
+              "name": "Bathroom Wall Mixers ",
+              "url_path": "products/bathroom/bathroom-taps-tapware/bathroom-wall-mixers",
+              "children": []
+            },
+            {
+              "id": 181,
+              "name": "Wall Top Assemblies",
+              "url_path": "products/bathroom/bathroom-taps-tapware/wall-top-assemblies",
+              "children": []
+            },
+            {
+              "id": 182,
+              "name": "Basin Mixers ",
+              "url_path": "products/bathroom/bathroom-taps-tapware/basin-mixers",
+              "children": []
+            },
+            {
+              "id": 183,
+              "name": "Basin Tap Sets ",
+              "url_path": "products/bathroom/bathroom-taps-tapware/basin-tap-sets",
+              "children": []
+            },
+            {
+              "id": 184,
+              "name": "Bathroom Spouts ",
+              "url_path": "products/bathroom/bathroom-taps-tapware/bathroom-spouts",
+              "children": []
+            },
+            {
+              "id": 185,
+              "name": "Shower Tap Sets ",
+              "url_path": "products/bathroom/bathroom-taps-tapware/shower-tap-sets",
+              "children": []
+            },
+            {
+              "id": 186,
+              "name": "Bath Tap Sets ",
+              "url_path": "products/bathroom/bathroom-taps-tapware/bath-tap-sets",
+              "children": []
+            },
+            {
+              "id": 187,
+              "name": "Bath Fillers ",
+              "url_path": "products/bathroom/bathroom-taps-tapware/bath-fillers",
+              "children": []
+            },
+            {
+              "id": 188,
+              "name": "Toilet Tapware ",
+              "url_path": "products/bathroom/bathroom-taps-tapware/toilet-tapware",
+              "children": []
+            },
+            {
+              "id": 943,
+              "name": "Bath Basin Mixers",
+              "url_path": "products/bathroom/bathroom-taps-tapware/bath-basin-mixers",
+              "children": []
+            },
+            {
+              "id": 950,
+              "name": "Diverter Mixers",
+              "url_path": "products/bathroom/bathroom-taps-tapware/diverter-mixers",
+              "children": []
+            },
+            {
+              "id": 953,
+              "name": "Shower or Bath Mixers",
+              "url_path": "products/bathroom/bathroom-taps-tapware/shower-bath-mixers",
+              "children": []
+            },
+            {
+              "id": 958,
+              "name": "Vessel Mixers",
+              "url_path": "products/bathroom/bathroom-taps-tapware/vessel-mixers",
+              "children": []
+            },
+            {
+              "id": 967,
+              "name": "Combination Bath/Basin Mixers",
+              "url_path": "products/bathroom/bathroom-taps-tapware/combination-bath-basin-mixers",
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": 180,
+          "name": "Bathroom Wall Mixers ",
+          "url_path": "products/bathroom/bathroom-taps-tapware/bathroom-wall-mixers",
+          "children": []
+        },
+        {
+          "id": 40,
+          "name": "Bathroom Accessories",
+          "url_path": "products/bathroom/bathroom-accessories",
+          "children": [
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails",
+              "children": []
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks",
+              "children": []
+            },
+            {
+              "id": 192,
+              "name": "Shelves ",
+              "url_path": "products/bathroom/bathroom-accessories/shelves",
+              "children": []
+            },
+            {
+              "id": 193,
+              "name": "Soap Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/soap-holders",
+              "children": []
+            },
+            {
+              "id": 194,
+              "name": "Toilet Brush Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-brush-holders",
+              "children": []
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders",
+              "children": []
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails",
+              "children": []
+            },
+            {
+              "id": 197,
+              "name": "Towel Rings ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rings",
+              "children": []
+            },
+            {
+              "id": 198,
+              "name": "Liquid Soap Dispensers ",
+              "url_path": "products/bathroom/bathroom-accessories/liquid-soap-dispensers",
+              "children": []
+            },
+            {
+              "id": 199,
+              "name": "Toothbrush/Tumbler Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toothbrush-tumbler-holders",
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": 19,
+          "name": "Bathroom",
+          "url_path": "products/bathroom",
+          "children": [
+            {
+              "id": 39,
+              "name": "Bathroom Mixers & Tapware",
+              "url_path": "products/bathroom/bathroom-taps-tapware",
+              "children": [
+                {
+                  "id": 180,
+                  "name": "Bathroom Wall Mixers ",
+                  "url_path": "products/bathroom/bathroom-taps-tapware/bathroom-wall-mixers"
+                },
+                {
+                  "id": 181,
+                  "name": "Wall Top Assemblies",
+                  "url_path": "products/bathroom/bathroom-taps-tapware/wall-top-assemblies"
+                },
+                {
+                  "id": 182,
+                  "name": "Basin Mixers ",
+                  "url_path": "products/bathroom/bathroom-taps-tapware/basin-mixers"
+                },
+                {
+                  "id": 183,
+                  "name": "Basin Tap Sets ",
+                  "url_path": "products/bathroom/bathroom-taps-tapware/basin-tap-sets"
+                },
+                {
+                  "id": 184,
+                  "name": "Bathroom Spouts ",
+                  "url_path": "products/bathroom/bathroom-taps-tapware/bathroom-spouts"
+                },
+                {
+                  "id": 185,
+                  "name": "Shower Tap Sets ",
+                  "url_path": "products/bathroom/bathroom-taps-tapware/shower-tap-sets"
+                },
+                {
+                  "id": 186,
+                  "name": "Bath Tap Sets ",
+                  "url_path": "products/bathroom/bathroom-taps-tapware/bath-tap-sets"
+                },
+                {
+                  "id": 187,
+                  "name": "Bath Fillers ",
+                  "url_path": "products/bathroom/bathroom-taps-tapware/bath-fillers"
+                },
+                {
+                  "id": 188,
+                  "name": "Toilet Tapware ",
+                  "url_path": "products/bathroom/bathroom-taps-tapware/toilet-tapware"
+                },
+                {
+                  "id": 943,
+                  "name": "Bath Basin Mixers",
+                  "url_path": "products/bathroom/bathroom-taps-tapware/bath-basin-mixers"
+                },
+                {
+                  "id": 950,
+                  "name": "Diverter Mixers",
+                  "url_path": "products/bathroom/bathroom-taps-tapware/diverter-mixers"
+                },
+                {
+                  "id": 953,
+                  "name": "Shower or Bath Mixers",
+                  "url_path": "products/bathroom/bathroom-taps-tapware/shower-bath-mixers"
+                },
+                {
+                  "id": 958,
+                  "name": "Vessel Mixers",
+                  "url_path": "products/bathroom/bathroom-taps-tapware/vessel-mixers"
+                },
+                {
+                  "id": 967,
+                  "name": "Combination Bath/Basin Mixers",
+                  "url_path": "products/bathroom/bathroom-taps-tapware/combination-bath-basin-mixers"
+                }
+              ]
+            },
+            {
+              "id": 41,
+              "name": "Showers",
+              "url_path": "products/bathroom/showers",
+              "children": [
+                {
+                  "id": 201,
+                  "name": "Shower Arms ",
+                  "url_path": "products/bathroom/showers/shower-arms"
+                },
+                {
+                  "id": 960,
+                  "name": "Shower Roses",
+                  "url_path": "products/bathroom/showers/shower-roses"
+                },
+                {
+                  "id": 968,
+                  "name": "Single Shower & Rail",
+                  "url_path": "products/bathroom/showers/single-shower-rail"
+                },
+                {
+                  "id": 969,
+                  "name": "Twin Shower & Rail",
+                  "url_path": "products/bathroom/showers/twin-shower-rail"
+                },
+                {
+                  "id": 970,
+                  "name": "Shower Rose & Arm",
+                  "url_path": "products/bathroom/showers/shower-rose-arm"
+                },
+                {
+                  "id": 996,
+                  "name": "Hand Shower on Brackets",
+                  "url_path": "products/bathroom/showers/hand-shower-on-brackets"
+                }
+              ]
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories",
+              "children": [
+                {
+                  "id": 189,
+                  "name": "Heated Towel Rails ",
+                  "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+                },
+                {
+                  "id": 191,
+                  "name": "Robe Hooks ",
+                  "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+                },
+                {
+                  "id": 192,
+                  "name": "Shelves ",
+                  "url_path": "products/bathroom/bathroom-accessories/shelves"
+                },
+                {
+                  "id": 193,
+                  "name": "Soap Holders ",
+                  "url_path": "products/bathroom/bathroom-accessories/soap-holders"
+                },
+                {
+                  "id": 194,
+                  "name": "Toilet Brush Holders ",
+                  "url_path": "products/bathroom/bathroom-accessories/toilet-brush-holders"
+                },
+                {
+                  "id": 195,
+                  "name": "Toilet Roll Holders ",
+                  "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+                },
+                {
+                  "id": 196,
+                  "name": "Towel Rails ",
+                  "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+                },
+                {
+                  "id": 197,
+                  "name": "Towel Rings ",
+                  "url_path": "products/bathroom/bathroom-accessories/towel-rings"
+                },
+                {
+                  "id": 198,
+                  "name": "Liquid Soap Dispensers ",
+                  "url_path": "products/bathroom/bathroom-accessories/liquid-soap-dispensers"
+                },
+                {
+                  "id": 199,
+                  "name": "Toothbrush/Tumbler Holders ",
+                  "url_path": "products/bathroom/bathroom-accessories/toothbrush-tumbler-holders"
+                }
+              ]
+            },
+            {
+              "id": 42,
+              "name": "Toilets",
+              "url_path": "products/bathroom/toilets",
+              "children": [
+                {
+                  "id": 204,
+                  "name": "Back to Wall Toilet Suites ",
+                  "url_path": "products/bathroom/toilets/back-to-wall-toilet-suites"
+                },
+                {
+                  "id": 205,
+                  "name": "Close Coupled Toilet Suites ",
+                  "url_path": "products/bathroom/toilets/close-coupled-toilet-suites"
+                },
+                {
+                  "id": 206,
+                  "name": "Link Toilet Suites ",
+                  "url_path": "products/bathroom/toilets/link-toilet-suites"
+                },
+                {
+                  "id": 208,
+                  "name": "Wall Faced Toilet Pans",
+                  "url_path": "products/bathroom/toilets/wall-faced-toilet-pans"
+                },
+                {
+                  "id": 253,
+                  "name": "Concealed Cisterns Highline",
+                  "url_path": "products/bathroom/toilets/concealed-cisterns-highline"
+                },
+                {
+                  "id": 946,
+                  "name": "Concealed Cisterns Loline",
+                  "url_path": "products/bathroom/toilets/concealed-cisterns-lowline"
+                },
+                {
+                  "id": 947,
+                  "name": "Concealed Pushplates",
+                  "url_path": "products/bathroom/toilets/concealed-pushplates"
+                },
+                {
+                  "id": 959,
+                  "name": "Wall Hung Toilet Pans",
+                  "url_path": "products/bathroom/toilets/wall-hung-toilet-pans"
+                },
+                {
+                  "id": 1035,
+                  "name": "Bidets",
+                  "url_path": "products/bathroom/toilets/bidets"
+                }
+              ]
+            },
+            {
+              "id": 43,
+              "name": "Basins and Bottle Traps",
+              "url_path": "products/bathroom/basins-bottletraps",
+              "children": [
+                {
+                  "id": 211,
+                  "name": "Wall Hung Basins ",
+                  "url_path": "products/bathroom/basins-bottletraps/wall-hung-basins"
+                },
+                {
+                  "id": 212,
+                  "name": "Above Counter Basins ",
+                  "url_path": "products/bathroom/basins-bottletraps/above-counter-basins"
+                },
+                {
+                  "id": 213,
+                  "name": "Semi Recessed Basins ",
+                  "url_path": "products/bathroom/basins-bottletraps/semi-recessed-basins"
+                },
+                {
+                  "id": 214,
+                  "name": "Inset Basins ",
+                  "url_path": "products/bathroom/basins-bottletraps/inset-basins"
+                },
+                {
+                  "id": 215,
+                  "name": "Pedestals & Shrouds",
+                  "url_path": "products/bathroom/basins-bottletraps/pedestals-shrouds"
+                },
+                {
+                  "id": 216,
+                  "name": "Under Counter Basins ",
+                  "url_path": "products/bathroom/basins-bottletraps/under-counter-basins"
+                },
+                {
+                  "id": 222,
+                  "name": "Bottle Traps ",
+                  "url_path": "products/bathroom/basins-bottletraps/bottle-traps"
+                },
+                {
+                  "id": 986,
+                  "name": "Accessible Basin",
+                  "url_path": "products/bathroom/basins-bottletraps/accessible-basin"
+                }
+              ]
+            },
+            {
+              "id": 971,
+              "name": "Vanities & Cabinets",
+              "url_path": "products/bathroom/vanities-cabinets",
+              "children": [
+                {
+                  "id": 972,
+                  "name": "Wall Hung Vanities",
+                  "url_path": "products/bathroom/vanities-cabinets/wall-hung-vanities"
+                },
+                {
+                  "id": 973,
+                  "name": "Floor Standing Vanities",
+                  "url_path": "products/bathroom/vanities-cabinets/floor-standing-vanities"
+                },
+                {
+                  "id": 974,
+                  "name": "Shaving Cabinets",
+                  "url_path": "products/bathroom/vanities-cabinets/shaving-cabinets"
+                },
+                {
+                  "id": 1038,
+                  "name": "Norman",
+                  "url_path": "products/bathroom/vanities-cabinets/norman"
+                },
+                {
+                  "id": 1039,
+                  "name": "Norman Compact",
+                  "url_path": "products/bathroom/vanities-cabinets/norman-compact"
+                },
+                {
+                  "id": 1040,
+                  "name": "Shore",
+                  "url_path": "products/bathroom/vanities-cabinets/shore"
+                },
+                {
+                  "id": 1041,
+                  "name": "Lake",
+                  "url_path": "products/bathroom/vanities-cabinets/lake"
+                },
+                {
+                  "id": 1042,
+                  "name": "Avion",
+                  "url_path": "products/bathroom/vanities-cabinets/avion"
+                },
+                {
+                  "id": 1043,
+                  "name": "Chifley",
+                  "url_path": "products/bathroom/vanities-cabinets/chifley"
+                },
+                {
+                  "id": 1044,
+                  "name": "Cove",
+                  "url_path": "products/bathroom/vanities-cabinets/cove"
+                },
+                {
+                  "id": 1045,
+                  "name": "Pier",
+                  "url_path": "products/bathroom/vanities-cabinets/pier"
+                },
+                {
+                  "id": 1046,
+                  "name": "Palm",
+                  "url_path": "products/bathroom/vanities-cabinets/palm"
+                },
+                {
+                  "id": 1047,
+                  "name": "Arco",
+                  "url_path": "products/bathroom/vanities-cabinets/arco"
+                },
+                {
+                  "id": 1048,
+                  "name": "Port",
+                  "url_path": "products/bathroom/vanities-cabinets/port"
+                },
+                {
+                  "id": 1049,
+                  "name": "Hamilton",
+                  "url_path": "products/bathroom/vanities-cabinets/hamilton"
+                },
+                {
+                  "id": 1050,
+                  "name": "Nelson",
+                  "url_path": "products/bathroom/vanities-cabinets/nelson"
+                },
+                {
+                  "id": 1051,
+                  "name": "Provincial",
+                  "url_path": "products/bathroom/vanities-cabinets/provincial"
+                },
+                {
+                  "id": 1052,
+                  "name": "Blush",
+                  "url_path": "products/bathroom/vanities-cabinets/blush"
+                },
+                {
+                  "id": 1053,
+                  "name": "Denver",
+                  "url_path": "products/bathroom/vanities-cabinets/denver"
+                },
+                {
+                  "id": 1054,
+                  "name": "Alana",
+                  "url_path": "products/bathroom/vanities-cabinets/alana"
+                },
+                {
+                  "id": 1055,
+                  "name": "PVC",
+                  "url_path": "products/bathroom/vanities-cabinets/pvc"
+                },
+                {
+                  "id": 1056,
+                  "name": "Duraplex Shaving Cabinets",
+                  "url_path": "products/bathroom/vanities-cabinets/duraplex-shaving-cabinets"
+                },
+                {
+                  "id": 1057,
+                  "name": "Mont Albert",
+                  "url_path": "products/bathroom/vanities-cabinets/mont-albert"
+                },
+                {
+                  "id": 1058,
+                  "name": "Forme Hamilton",
+                  "url_path": "products/bathroom/vanities-cabinets/forme-hamilton"
+                },
+                {
+                  "id": 1059,
+                  "name": "Razor",
+                  "url_path": "products/bathroom/vanities-cabinets/razor"
+                },
+                {
+                  "id": 1060,
+                  "name": "Forme Shaving Cabinets",
+                  "url_path": "products/bathroom/vanities-cabinets/forme-shaving-cabinets"
+                },
+                {
+                  "id": 1061,
+                  "name": "Rocki",
+                  "url_path": "products/bathroom/vanities-cabinets/rocki"
+                },
+                {
+                  "id": 1062,
+                  "name": "Evo",
+                  "url_path": "products/bathroom/vanities-cabinets/evo"
+                },
+                {
+                  "id": 1063,
+                  "name": "Pure Bianco",
+                  "url_path": "products/bathroom/vanities-cabinets/pure-bianco"
+                },
+                {
+                  "id": 1064,
+                  "name": "Feel",
+                  "url_path": "products/bathroom/vanities-cabinets/feel"
+                },
+                {
+                  "id": 1065,
+                  "name": "Loom",
+                  "url_path": "products/bathroom/vanities-cabinets/loom"
+                },
+                {
+                  "id": 1066,
+                  "name": "Arrivo",
+                  "url_path": "products/bathroom/vanities-cabinets/arrivo"
+                },
+                {
+                  "id": 1067,
+                  "name": "Float",
+                  "url_path": "products/bathroom/vanities-cabinets/float"
+                },
+                {
+                  "id": 1068,
+                  "name": "Abbraccio",
+                  "url_path": "products/bathroom/vanities-cabinets/abbraccio"
+                },
+                {
+                  "id": 1069,
+                  "name": "Riga",
+                  "url_path": "products/bathroom/vanities-cabinets/riga"
+                },
+                {
+                  "id": 1070,
+                  "name": "Parisi Shaving Cabinets",
+                  "url_path": "products/bathroom/vanities-cabinets/parisi-shaving-cabinets"
+                }
+              ]
+            },
+            {
+              "id": 190,
+              "name": "Mirrors ",
+              "url_path": "products/bathroom/mirrors",
+              "children": []
+            },
+            {
+              "id": 44,
+              "name": "Baths & Spas",
+              "url_path": "products/bathroom/baths-spas",
+              "children": [
+                {
+                  "id": 223,
+                  "name": "Corner Baths ",
+                  "url_path": "products/bathroom/baths-spas/corner-baths"
+                },
+                {
+                  "id": 224,
+                  "name": "Freestanding Baths ",
+                  "url_path": "products/bathroom/baths-spas/freestanding-baths"
+                },
+                {
+                  "id": 225,
+                  "name": "Oval Baths ",
+                  "url_path": "products/bathroom/baths-spas/oval-baths"
+                },
+                {
+                  "id": 226,
+                  "name": "Rectangular Baths ",
+                  "url_path": "products/bathroom/baths-spas/rectangular-baths"
+                },
+                {
+                  "id": 227,
+                  "name": "Corner Spas ",
+                  "url_path": "products/bathroom/baths-spas/corner-spas"
+                },
+                {
+                  "id": 229,
+                  "name": "Rectangular Spas ",
+                  "url_path": "products/bathroom/baths-spas/rectangular-spas"
+                },
+                {
+                  "id": 434,
+                  "name": "Shower Bases",
+                  "url_path": "products/bathroom/baths-spas/shower-bases"
+                },
+                {
+                  "id": 1009,
+                  "name": "Freestanding Spas",
+                  "url_path": "products/bathroom/baths-spas/freestanding-spas"
+                }
+              ]
+            },
+            {
+              "id": 988,
+              "name": "Underfloor Heating",
+              "url_path": "products/bathroom/underfloor-heating",
+              "children": []
+            },
+            {
+              "id": 45,
+              "name": "Grates & Drains",
+              "url_path": "products/bathroom/grates-drains",
+              "children": []
+            },
+            {
+              "id": 46,
+              "name": "Plug & Wastes",
+              "url_path": "products/bathroom/plugs-wastes",
+              "children": []
+            },
+            {
+              "id": 237,
+              "name": "Commercial, Care & Accessible ",
+              "url_path": "products/bathroom/commercial-care-accessible",
+              "children": [
+                {
+                  "id": 261,
+                  "name": "Grab Rails",
+                  "url_path": "products/bathroom/commercial-care-accessible/grab-rails"
+                },
+                {
+                  "id": 254,
+                  "name": "Urinal",
+                  "url_path": "products/bathroom/commercial-care-accessible/urinal"
+                },
+                {
+                  "id": 962,
+                  "name": "Care & Accessibility Accessories",
+                  "url_path": "products/bathroom/commercial-care-accessible/care-accessibility-accessories"
+                },
+                {
+                  "id": 964,
+                  "name": "Accessible/Ambulant Pans",
+                  "url_path": "products/bathroom/commercial-care-accessible/accessible-ambulant-pans"
+                },
+                {
+                  "id": 963,
+                  "name": "Accessible/Ambulant Toilets",
+                  "url_path": "products/bathroom/commercial-care-accessible/accessible-ambulant-toilets"
+                },
+                {
+                  "id": 256,
+                  "name": "Sinks",
+                  "url_path": "products/bathroom/commercial-care-accessible/sinks"
+                },
+                {
+                  "id": 258,
+                  "name": "Washroom Accessories",
+                  "url_path": "products/bathroom/commercial-care-accessible/washroom-accessories"
+                },
+                {
+                  "id": 945,
+                  "name": "Commerical Tapware",
+                  "url_path": "products/bathroom/commercial-care-accessible/commercial-tapware"
+                },
+                {
+                  "id": 259,
+                  "name": "Accessible Tapware",
+                  "url_path": "products/bathroom/commercial-care-accessible/accessible-tapware"
+                },
+                {
+                  "id": 965,
+                  "name": "Cisterns",
+                  "url_path": "products/bathroom/commercial-care-accessible/commercial-cisterns"
+                }
+              ]
+            },
+            {
+              "id": 233,
+              "name": "Heater/Fan Light Combo",
+              "url_path": "products/bathroom/heater-fan-light-combo",
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": 184,
+          "name": "Bathroom Spouts ",
+          "url_path": "products/bathroom/bathroom-taps-tapware/bathroom-spouts",
+          "children": []
+        }
+      ]
+    }
+  }
+}

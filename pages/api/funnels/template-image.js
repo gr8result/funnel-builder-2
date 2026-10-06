@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
-import { getServiceFallbackImageUrlBySlug } from "../../../lib/funnelSections";
+import { getServiceFallbackImageUrlBySlug } from "../../../modules/funnels/services/images.js";
 import { withAuth } from "../../../lib/withWorkspace";
 
 function safeText(value, max = 160) {

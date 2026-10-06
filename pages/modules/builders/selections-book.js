@@ -1,11 +1,59 @@
+import { browserTenantKey } from '../../../lib/builders/browserTenantStorage.js';
+import GarageDoorChoiceGrid from "../../../components/product-library/GarageDoorChoiceGrid";
+import GarageDoorReviewPreview from "../../../components/product-library/GarageDoorReviewPreview";
 import ExteriorHardwareWizard from '../../../components/estimate-builder/ExteriorHardwareWizard';
-import BuilderProductLibraryPage from './product-library';
+import {matchesDoorGlassType} from '../../../lib/builders/exteriorHardwareWizard.js';
 import EntryDoorFurnitureSchedule from '../../../components/estimate-builder/EntryDoorFurnitureSchedule';
 import Router, { useRouter } from "next/router";
 import { exteriorEntryDoors, defaultManualEntryDoor, selectionsFromDoorDetails, patchEntryDoorDraft, entryDoorDetails, entryDoorBookCandidates, upsertEntryDoorSelection, entryDoorSelectionSchedules } from "../../../lib/builders/entryDoorFurnitureSelection.js";
 import InternalCataloguePicker from '../../../components/product-library/InternalCataloguePicker';
+import DoorProductImage from '../../../components/product-library/DoorProductImage';
+import { isDoorProduct } from '../../../lib/product-library/productPresentation.js';
+import StairSelectionWizard from '../../../components/product-library/StairSelectionWizard';
+import { stairFlightsFromJobSetup } from "../../../lib/construction-estimation/estimateBuilderWorkbookCalculations.js";
+import { cabinetryScheduleCatalogue, cabinetryRoomKey } from "../../../lib/construction-estimation/cabinetryRequirements.js";
 import {INTERNAL_SELECTION_KEYS,internalRequirementMatchesRow} from '../../../lib/product-library/internalSelection.js';
+import { rowOwnedByOtherRequirement } from "../../../lib/builders/selectionRowOwnership.js";
+import { INDICATIVE_RATE_BASIS } from "../../../lib/builders/allocatedSelectionQuotation.js";
+import InternalPaintColourSpecification from "../../../components/client-selections/InternalPaintColourSpecification.jsx";
+import ElectricalScheduleWorkflow from "../../../components/client-selections/ElectricalScheduleWorkflow.jsx";
+import BenchtopSelectionWorkflow from "../../../components/client-selections/BenchtopSelectionWorkflow.jsx";
+import BenchtopPriceGroupSettings from "../../../components/client-selections/BenchtopPriceGroupSettings.jsx";
+import ProjectRoomManager from "../../../components/client-selections/ProjectRoomManager.jsx";
+import { getBuilderBenchtopRangeMapping, saveBuilderBenchtopRangeMapping, supplierPriceGroups } from "../../../lib/builders/benchtopRangeMapping.js";
+import { ROOM_LOCATION_OPTIONS } from "../../../components/construction-estimation/ai-plan-takeoff/takeoffRunData.js";
+import { benchtopLocationPatch } from "../../../lib/builders/benchtopSelection.js";
+import { addProjectRoom, mergeProjectRooms, projectRoomModel, projectRoomUsage, removeProjectRoom, removeRoomRecords, removedProjectRooms, renameProjectRoom, renameRoomRecords, restoreProjectRoom, updateProjectRoom } from "../../../lib/builders/projectRoomModel.js";
+import { ELECTRICAL_SCHEDULE_REQUIREMENT_KEY, electricalEstimateCounts, electricalInclusionBaseline, electricalScheduleLines, electricalScheduleProgress, electricalSelectionPatch, normaliseElectricalSchedule } from "../../../lib/builders/electricalSchedule.js";
+import { choiceSwatch, colourLabel, internalPaintScheduleLines, internalPaintSchemeStatus, internalPaintSummary, normaliseInternalPaintScheme } from "../../../lib/builders/internalPaintColours.js";
+import { serviceProjectRequirement, serviceQuoteRequirements, RESIDENTIAL_SERVICE_KEYS } from '../../../lib/builders/residentialServices.js';
+import { plumbingSelectionPatch } from "../../../lib/builders/plumbingSelectionPatch.js";
+import TilingRoomsWorkflow from "../../../components/client-selections/TilingRoomsWorkflow";
+import FlooringSelectionWorkflow from "../../../components/client-selections/FlooringSelectionWorkflow";
+import { carpetEstimateRates } from "../../../lib/builders/carpetSelection.js";
+import { saveCarpetQuoteHistory } from "../../../lib/product-library/catalogueService.js";
+import { flooringAllowanceFromQuotation, flooringAllowanceResolver, flooringAreaStatus, flooringSelectionPatch, flooringTakeoffData } from "../../../lib/builders/flooringSelection.js";
+import { FLOORING_REQUIREMENT_KEY, flooringCountsByType, isFlooringProduct } from "../../../lib/product-library/flooringCatalogue.js";
+import { migrateLegacyTiling, suggestedTilingRooms, TILING_REQUIREMENT_KEY, tilingSelectionPatch } from "../../../lib/builders/tilingRooms.js";
+import { tilingTakeoffData } from "../../../lib/builders/tilingTakeoff.js";
+import { migrateBathShowerMixerRooms } from "../../../lib/builders/bathShowerMixerMigration.js";
+import BalustradeSelectionWorkflow from "../../../components/client-selections/BalustradeSelectionWorkflow";
+import SelectionPacksSection from "../../../components/client-selections/SelectionPacksSection";
+import {
+  BATHROOM_ACCESSORY_PACK_GROUP,
+  availableSelectionPacks,
+  getBuilderSelectionPackConfig,
+  selectedSelectionPack,
+  selectionPackChanges,
+  selectionPackComponentAlternatives,
+  selectionPackRooms,
+  substituteSelectionPackComponent,
+} from "../../../lib/builders/selectionPacks.js";
 import { safeSelectionNavigate } from "../../../lib/navigation/selectionNavigation.js";
+import { ENTRY_DOOR_STEPS, nextIncompleteEntryDoorStep, entryDoorDraftAfterChoice } from "../../../lib/builders/entryDoorProgression.js";
+import { createWindowAndDoorSchedules } from "../../../components/construction-estimation/ai-plan-takeoff/takeoffSchedule.js";
+import { canonicalWindowScheduleFromTakeoffJob, windowScheduleLevelSortIndex } from "../../../lib/builders/windowScheduleProjection.js";
+import { canonicalProjectUuid } from "../../../lib/builders/canonicalProjectIdentity.js";
 import Head from "next/head";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowUp, CheckCircle2, Upload } from "lucide-react";
@@ -30,11 +78,15 @@ import {
   applianceRecordsForRequirement,
   applianceProductTypesForBrand,
   applianceSelectionPatch,
+  applianceSequenceRequirements,
   safeAppliancePackagesForBrand,
   isApplianceRequirement,
 } from "../../../lib/builders/applianceClientSelectionFlow";
 import {
   ALL_GUIDED_REQUIREMENTS,
+  CATALOGUE_CATEGORY_REQUIREMENTS,
+  discoverBathroomAccessoryRequirements,
+  isAllocatedCatalogueRequirement,
   APPLIANCE_REQUIREMENTS,
   EXTERNAL_LIGHTING_CATEGORIES,
   EXTERNAL_LIGHTING_LOCATIONS,
@@ -50,6 +102,7 @@ import {
   KITCHEN_REQUIREMENTS,
   PLUMBING_FIXTURE_REQUIREMENTS,
   PRICE_STATES,
+  isPricedState,
   areaTotals as guidedAreaTotals,
   guidedRequirementByKey,
   kitchenRequirementByKey,
@@ -77,7 +130,10 @@ import {
   garageDoorEnabledSupplierOptions,
   garageDoorFinishFamiliesForProduct,
   garageDoorProductsForSupplier,
+  garageDoorProfileImage,
+  garageDoorProfileDescription,
   garageDoorProfileOptions,
+  garageDoorRangeImage,
   garageDoorRangeOptions,
   garageDoorSizeOptions,
   garageDoorWorkflowProduct,
@@ -91,17 +147,26 @@ import {
   CABINETRY_AREA_LABELS,
   CABINETRY_AREA_KEYS,
   CABINETRY_BENCHTOPS,
+  CABINETRY_BENCHTOP_THICKNESS_OPTIONS,
+  CABINETRY_LOCATIONS,
   CABINETRY_LOCATION_AREA_KEYS,
   CABINETRY_PRICING_TIERS,
-  CABINETRY_SCHEDULE_TYPE_OPTIONS,
   CABINETRY_WORKFLOW_STAGES,
   HANDLE_HOUSE_BASE_CATALOGUE,
   LAMINEX_CABINETRY_CATALOGUE,
   POLYTEC_CABINETRY_CATALOGUE,
   WET_AREA_CABINETRY_ROOM_NAMES,
   WET_AREA_CABINETRY_SCHEDULE_TYPES,
+  adjacentCabinetryRoom,
+  applicableColourTargetRooms,
   applyKitchenColoursToButlersPantry,
+  applyRoomColoursToTargets,
   buildCabinetrySelectionPayload,
+  cabinetryLocationMissingRequirements,
+  cabinetryRoomProgress,
+  cabinetryRoomSequence,
+  cabinetryScheduleScope,
+  clearInheritedColourMarker,
   cleanIncorrectButlersPantryCopiedScheduleRows,
   copyCabinetryLocation,
   defaultCabinetryDraft,
@@ -109,17 +174,10 @@ import {
   normaliseCabinetrySelection,
   overrideCabinetryArea,
 } from "../../../lib/builders/cabinetryWorkflow";
+import { roundMoney } from "../../../lib/builders/selectionBudget";
 import {
-  CUTOUT_OPTIONS,
-  STONE_BENCHTOP_APPLICATIONS,
   STONE_BENCHTOP_CATALOGUE,
-  STONE_BENCHTOP_DISCLAIMER,
-  STONE_BENCHTOP_EDGE_PROFILES,
-  STONE_BENCHTOP_MATERIAL_LABEL,
-  STONE_BENCHTOP_SUPPLIERS,
-  WATERFALL_END_OPTIONS,
   activeStoneBenchtopProducts,
-  configureStoneBenchtopSelection,
 } from "../../../lib/builders/stoneBenchtopWorkflow";
 import { DEFAULT_BUILDER_TEMPLATE_BRAND } from "../../../lib/builders/defaultTemplateBrand";
 import { supabase } from "../../../utils/supabase-client";
@@ -146,6 +204,57 @@ import {
   getMasterProducts,
   updateBuilderProductOverride,
 } from "../../../lib/product-library/catalogueService";
+import {
+  PLUMBING_FIXTURE_SUPPLIER,
+  filterPlumbingFixtureProducts,
+  plumbingFixtureCategoryDetails,
+  plumbingFixtureFilterOptions,
+  plumbingFixtureCategorySummaries,
+  plumbingFixtureProducts,
+  plumbingFixtureSupplierCode,
+  clientSelectionCategoryProducts,
+  clientSelectionCategorySummaries,
+} from "../../../lib/product-library/plumbingFixtureCatalogue";
+import {
+  QUOTE_REQUIRED_LABEL,
+  availableOptionValues,
+  configuredLineFromProduct,
+  configuredLinesFromProduct,
+  configuredSelectionLocations,
+  dimensionProblems,
+  draftFromConfiguredLine,
+  isConfiguredSelectionRequirement,
+  productConfigurator,
+  productGroupValue,
+  projectFixtureRequirement,
+  selectionGroupsForRequirement,
+  variantForOptions,
+} from "../../../lib/product-library/showerScreenMirrorCatalogue.js";
+import { SELECTIONS_BOOK_TEMPLATE_ROOMS, houseRoomNames, houseRooms, isSelectionCategoryName, projectLocations, takeoffRoomCounts } from "../../../lib/builders/projectLocations.js";
+import ProjectLocationMultiSelect from "../../../components/product-library/ProjectLocationMultiSelect";
+import {
+  UNALLOCATED_LOCATION_KEY,
+  formatPlumbingAllocations,
+  plumbingAllocationProgress,
+  plumbingAllocationRecord,
+  plumbingAllocationSummary,
+  plumbingLineFromProduct,
+  plumbingLineWithTotals,
+  plumbingLinesFromSelection,
+  plumbingLocationKey,
+  plumbingLocationsForRequirement,
+  plumbingProductLineId,
+  removePlumbingLine,
+  upsertPlumbingLine,
+} from "../../../lib/builders/plumbingFixtureAllocation.js";
+import {
+  CLIENT_SELECTION_CATEGORY_BY_KEY,
+  CLIENT_SELECTION_CATEGORY_GROUPS,
+  categoryGroupForSide,
+  clientSelectionCategoriesForSide,
+  clientSelectionCategoryForRequirement,
+  requirementsForSelectionCategory,
+} from "../../../lib/builders/clientSelectionCategories.js";
 
 const CABINETRY_SUPPLIER_CONFIG = {
   Laminex: { label: "Visit Laminex Website", url: "https://www.laminex.com.au/" },
@@ -155,6 +264,8 @@ const CABINETRY_COLOUR_PAGE_SIZE = 60;
 
 const STATUS_OPTIONS = ["pending", "selected", "approved", "ordered"];
 const EMBEDDED_SELECTIONS_BOOK_STORAGE_KEY = "gr8:embedded-selections-book";
+// Long enough to coalesce a run of clicks, short enough that a refresh loses nothing.
+const SELECTION_AUTOSAVE_DELAY_MS = 1200;
 
 const BRADNAMS_COLOUR_SOURCE_URL = "https://www.bradnams.com.au/selecting-window-and-door-colours/";
 const BRADNAMS_SEQ_COLOUR_SOURCE_URL = "https://www.bradnams.com.au/product/windows/sliding-windows/";
@@ -165,6 +276,26 @@ const ENTRY_DOORS_DASHBOARD_IMAGE_URL = "/images/product-library/entry-doors/ent
 const ENTRY_DOORS_DASHBOARD_IMAGE_ALT = "Contemporary timber entry door installed in a modern brick home";
 const ENTRY_DOORS_SUNBURST_LIFESTYLE_URL = "/images/product-library/entry-doors/entry-doors-sunburst-lifestyle.jpg";
 const ENTRY_DOORS_SUNBURST_LIFESTYLE_ALT = "Sunburst timber entry door installed on a farmhouse-style entrance";
+// Supplier cards used to inherit whichever product happened to sort first, which is how the
+// showroom ended up fronted by a flat primed blank. Each supplier gets a chosen entrance shot
+// from its own published imagery instead; anything unlisted still falls back to a product image.
+const ENTRY_DOOR_SUPPLIER_HERO_IMAGES = [
+  {
+    match: /hume/i,
+    image: ENTRY_DOORS_DASHBOARD_IMAGE_URL,
+    alt: ENTRY_DOORS_DASHBOARD_IMAGE_ALT,
+  },
+  {
+    match: /corinthian/i,
+    image: "https://cdn.corinthian.com.au/wp-content/uploads/2024/08/29010724/FACADE-EDIT-4-1200x1200.jpg",
+    alt: "Corinthian entrance door installed on a contemporary facade",
+  },
+];
+
+function entryDoorSupplierHero(label) {
+  return ENTRY_DOOR_SUPPLIER_HERO_IMAGES.find((entry) => entry.match.test(String(label || ""))) || null;
+}
+
 const ENTRY_DOOR_FURNITURE_FAMILY_KEY = "entry-door-furniture";
 const GARAGE_DOORS_DASHBOARD_IMAGE_URL = "/images/product-library/garage-doors/garage-doors-modern-flatline.webp";
 const GARAGE_DOORS_DASHBOARD_IMAGE_ALT = "Modern black flatline sectional garage door installed on a contemporary home";
@@ -472,10 +603,7 @@ const DEFAULT_WINDOW_CONFIGURATION = {
   selectedWindowIds: [],
 };
 
-const SHARED_GARAGE_DOOR_CATALOGUE_PRODUCTS = (windowsDoorsGarageCatalogue.products || [])
-  .filter((product) => product.family_key === "garage-doors" || product.familyKey === "garage-doors")
-  .map((product) => normalizeMasterProductRecord(product))
-  .filter((product) => product.active !== false && !product.discontinued && !/jamb/i.test(`${product.productName} ${product.category} ${product.subcategory}`));
+
 
 function supplierColourRecord({
   supplierId,
@@ -548,9 +676,9 @@ const WINDOW_SCOPE_OPTIONS = [
   { key: "by_room_or_window", label: "By room or window number", description: "Use for builder-approved room or individual-window exceptions." },
 ];
 
-const WINDOWS_WORKFLOW_STEPS = ["schedule", "supplier", "systems", "defaults", "windows", "review"];
+const WINDOWS_WORKFLOW_STEPS = ["schedule", "supplier", "defaults", "windows", "review"];
 const WET_AREA_PATTERN = /\b(bath|bathroom|ensuite|powder|wc|toilet)\b/i;
-const OPENING_WINDOW_PATTERN = /(sliding|awning|louvre|double hung|casement|bi-fold|bifold)/i;
+const OBSCURE_GLASS_TYPE_PATTERN = /obscure|privacy|translucent|satin|frosted|acid/i;
 
 const WINDOW_SUPPLIER_LIBRARY = [
   {
@@ -614,7 +742,10 @@ const WINDOW_SUPPLIER_LIBRARY = [
     website: "https://www.trendwindows.com.au/",
     logo: "Trend",
     status: "Upgrade supplier",
-    image: "https://www.trendwindows.com.au/cdn/shop/files/Trend-Windows-Doors-Residential-Windows.jpg",
+    // Verified live 2026-09-18 (HEAD 200, image/jpeg) - a genuine Trend product cutaway image from
+    // their own site, matching the Bradnam's/Dowell product-photo style. The previous URL
+    // ("Trend-Windows-Doors-Residential-Windows.jpg") 404s.
+    image: "https://www.trendwindows.com.au/cdn/shop/files/5.website.jpg?v=1765542983&width=1400",
     compatibleTypes: ["Sliding Window", "Awning Window", "Fixed Window", "Louvre Window", "Double Hung Window", "Casement Window"],
     source: TREND_WINDOWS_SOURCE_URL,
     systems: {
@@ -645,26 +776,8 @@ const WINDOW_SUPPLIER_LIBRARY = [
   },
 ];
 
-const DEFAULT_ROOMS = [
-  "External Walls",
-  "Roof",
-  "Windows",
-  "Garage",
-  "Kitchen",
-  "Laundry",
-  "Main Bathroom",
-  "Ensuite",
-  "Powder Room",
-  "Bedroom 1",
-  "Bedroom 2",
-  "Bedroom 3",
-  "Living",
-  "Electrical",
-  "Lighting",
-  "Flooring",
-  "Paint",
-  "External",
-];
+// The document's page layout. A template only - never the project's room list (projectLocations.js).
+const DEFAULT_ROOMS = SELECTIONS_BOOK_TEMPLATE_ROOMS;
 
 const ROOM_TEMPLATES = {
   "External Walls": ["Brickwork", "External Cladding", "Wall Wrap", "External Feature Cladding", "External Paint"],
@@ -820,12 +933,16 @@ const COVER_BRAND_FALLBACK = {
   footerText: "",
 };
 
+// URL parameters that describe where the client is in Client Selections.
+const SELECTION_NAVIGATION_PARAMS = ["selectionArea", "selectionCategory", "selectionRequirement", "guided", "room", "roomCategory", "roomProduct", "door", "doorStep", "mode", "returnPage", "applianceFamily", "applianceBrand", "applianceProduct", "applianceMode", "appliancePackage"];
+
 const GUIDED_AREA_CARDS = [
   {
     key: "exterior",
     label: "Exterior",
     description: "External envelope, street-facing finishes and outdoor selections.",
-    image: GENERIC_IMAGE_URLS.exterior,
+    // Supplied modern two-storey facade (stored locally, unaltered).
+    image: "/images/client-selections/exterior.png",
   },
   {
     key: "interior",
@@ -835,29 +952,80 @@ const GUIDED_AREA_CARDS = [
   },
 ];
 
-const EXTERIOR_CATEGORY_CARDS = EXTERIOR_REQUIREMENTS.map((requirement) => ({
-  key: requirement.requirementKey,
-  label: requirement.label,
-  image: requirement.requirementKey === "entry-door" ? ENTRY_DOORS_DASHBOARD_IMAGE_URL : requirement.requirementKey === "garage-door" ? GARAGE_DOORS_DASHBOARD_IMAGE_URL : requirement.requirementKey === "external-lighting" ? EXTERNAL_LIGHTING_DASHBOARD_IMAGE_URL : requirementImage(requirement),
-  imageAlt: requirement.requirementKey === "entry-door" ? ENTRY_DOORS_DASHBOARD_IMAGE_ALT : requirement.requirementKey === "garage-door" ? GARAGE_DOORS_DASHBOARD_IMAGE_ALT : requirement.requirementKey === "external-lighting" ? EXTERNAL_LIGHTING_DASHBOARD_IMAGE_ALT : requirement.label,
-  requirementKey: requirement.requirementKey,
-}));
+// Large-card photos for each product / trade category (the same photos the former Interior and
+// Exterior cards used where the category existed before). Local assets only: Tiles & Stone,
+// Flooring, Paint and HVAC are cropped so the subject sits below the card title
+// (Pexels licence photos 7214163, 3935327, 10827400 and 38788452 respectively).
+const CATEGORY_CARD_IMAGES = {
+  cabinetry: GENERIC_IMAGE_URLS.kitchen,
+  appliances: APPLIANCES_DASHBOARD_IMAGE_URL,
+  "plumbing-fixtures": "/images/catalogues/plumbing/mixers-tapware/520020c6af.jpg",
+  "bathroom-accessories": "/images/catalogues/product-library/rooms/bathroom-vanity-basin-mirror.jpg",
+  "shower-screens-mirrors": "/images/catalogues/product-library/rooms/ensuite-shower-vanity.jpg",
+  "tiles-stone": "/images/client-selections/client-selections-tiles-stone.webp",
+  flooring: "/images/client-selections/client-selections-flooring.webp",
+  "internal-doors": "/images/product-library/internal-areas/category-internal-door.jpg",
+  "fix-out": "/images/product-library/internal-areas/category-skirting-architraves.webp",
+  wardrobes: "/images/product-library/internal-areas/systems/b5acb973460998328e76d373.jpg",
+  "stairs-balustrades": "/images/product-library/internal-areas/systems/7cae4072182ca0228673fc26.jpg",
+  "paint-wall-finishes": "/images/client-selections/client-selections-paint-wall-finishes.webp",
+  "electrical-technology": "/images/catalogues/product-library/rooms/internal-hallway-interior.jpg",
+  "lighting-fans": GENERIC_IMAGE_URLS.lighting,
+  hvac: "/images/client-selections/client-selections-hvac.webp",
+  "hot-water": "/images/client-selections/hot-water-system.webp",
+  // Category photos must show the category (a genuine product/installation photo), never a
+  // borrowed photo of something else.
+  "solar-batteries": "/images/catalogues/services/solar/category-solar-battery-ev.jpg",
+  "external-doors": ENTRY_DOORS_DASHBOARD_IMAGE_URL,
+  "windows-glazing": "/images/product-library/windows/bradnams/awning-windows.webp",
+  "external-cladding": "/images/product-library/cladding-linea-weatherboard-180.jpeg",
+  roofing: GENERIC_IMAGE_URLS.roofing,
+  "external-paint": GENERIC_IMAGE_URLS.exteriorPaint,
+  "garage-doors": GARAGE_DOORS_DASHBOARD_IMAGE_URL,
+  "outdoor-living": "/images/catalogues/product-library/rooms/alfresco-outdoor-entertaining.jpg",
+  "external-lighting": EXTERNAL_LIGHTING_DASHBOARD_IMAGE_URL,
+  balustrades: "/images/catalogues/exterior/balustrades/frameless-glass-spigot-top-mount.jpg",
+  "external-accessories": "/images/catalogues/product-library/rooms/exterior-house-facade.jpg",
+  "landscaping-optional": GENERIC_IMAGE_URLS.drivewayFinishes,
+};
+const CATEGORY_CARD_REQUIREMENT_KEYS = { "external-doors": "entry-door", "garage-doors": "garage-door", "external-lighting": "external-lighting" };
 
-const INTERIOR_CATEGORY_CARDS = [
-  ["cabinetry", "Cabinetry", GENERIC_IMAGE_URLS.kitchen, "cabinetry", "Configure cabinetry separately for each applicable room."],
-  ["appliances", "Appliances", APPLIANCES_DASHBOARD_IMAGE_URL],
-  ["plumbing-fixtures", "Plumbing Fixtures", GENERIC_IMAGE_URLS.bathroom, null, "Select sinks, basins, tapware, toilets, baths and other plumbing fixtures by room."],
-  ["bathroom", "Bathroom", GENERIC_IMAGE_URLS.bathroom],
-  ["ensuite", "Ensuite", GENERIC_IMAGE_URLS.bathroom],
-  ["laundry", "Laundry", GENERIC_IMAGE_URLS.laundry],
-  ["bedrooms", "Bedrooms", GENERIC_IMAGE_URLS.bedrooms],
-  ["living", "Living", GENERIC_IMAGE_URLS.living],
-  ["garage-interior", "Garage Interior", GENERIC_IMAGE_URLS.garage],
-  ["internal-doors", "Internal Doors", GENERIC_IMAGE_URLS.internalDoors, "internal-doors"],
-  ["door-hardware", "Internal Door Furniture", "/images/product-library/internal-areas/category-internal-handle.webp", "door-hardware"],
-  ["skirting", "Skirting", "/images/product-library/internal-areas/category-skirting-architraves.webp", "skirting"],
-  ["architraves", "Architraves", "/images/product-library/internal-areas/category-skirting-architraves.webp", "architraves"],
-].map(([key, label, image, requirementKey, description]) => ({ key, label, image, requirementKey, description }));
+// Requirement cards inside a category hub, before anything is selected: a genuine photo of that
+// requirement's own product type (never another category's product).
+const REQUIREMENT_CARD_IMAGES = {
+  // Complete heat-pump installation, framed for the existing landscape feature card.
+  "hot-water-system": CATEGORY_CARD_IMAGES["hot-water"],
+  bricks: "/images/catalogues/product-library/categories/bricks-card-austral-everyday-life-escape.webp",
+  cladding: "/images/product-library/cladding-linea-weatherboard-180.jpeg",
+  // Product Library stair system photo (INT-SYS-STAIRMASTER-CFG-STRAIGHT, straight flight timber stair).
+  stairs: "/images/product-library/internal-areas/systems/d687852e34b46b7abb0e013c.jpg",
+  balustrades: "/images/catalogues/exterior/balustrades/frameless-glass-spigot-top-mount.jpg",
+  // A complete shower (rail, rose and hand shower: HNC Riviere Twin Shower), never a close-up fitting
+  // that could be mistaken for a mixer beside the Bath & Shower Mixers card.
+  "shower-fixtures": "/images/catalogues/plumbing/hnc-fixtures/shower-fixtures/520041c4a.jpg",
+  // A complete internal door, frame and room, composed for the wide feature card. The Product
+  // Library's own category image is a tall door cut-out, which a wide card crops to a blank panel.
+  "internal-doors": "/images/client-selections/internal-doors.webp",
+};
+// Cards that always show their category photo, even after a product is selected.
+const FIXED_CATEGORY_CARD_IMAGE_KEYS = new Set(["shower-fixtures"]);
+
+// A category hub with only a couple of categories (Stairs & Balustrades) shows them as large feature
+// cards instead of the many-category product grid. Wording for those feature cards: the card is the
+// entry to the whole section, so it describes the section, never one selected product.
+const FEATURE_CARD_MAX_CATEGORIES = 2;
+const FEATURE_CARD_COPY = {
+  stairs: { description: "Select stair configuration, material, finish, treads, risers and associated stair options.", view: "View Stairs", edit: "Edit Stair Selections" },
+  balustrades: { description: "Select glass, aluminium or timber balustrades for stairs, voids, balconies and external areas.", view: "View Balustrades", edit: "Edit Balustrade Selections" },
+};
+
+// Internal Door Furniture and Architraves keep their own requirementKey and persisted
+// selection - only their landing-page card is removed. The user reaches them from inside
+// the parent requirement's picker instead of a second competing top-level category.
+const INTERNAL_RELATED_REQUIREMENTS = {
+  "internal-doors": { key: "door-hardware", label: "Internal Door Furniture" },
+  skirting: { key: "architraves", label: "Architraves" },
+};
 
 const REQUIREMENT_OPTION_KEY = {
   cabinetry: "cabinet doors",
@@ -900,7 +1068,6 @@ const BATHROOM_SCHEDULE_GROUPS = WET_AREA_CABINETRY_CONFIG.scheduleGroups;
 const BATHROOM_AREA_RULES = WET_AREA_CABINETRY_CONFIG.areaRules;
 const BATHROOM_HANDLE_TARGETS = WET_AREA_CABINETRY_CONFIG.handleTargets;
 const BATHROOM_HANDLE_OPTIONS = WET_AREA_CABINETRY_CONFIG.handleOptions;
-const BATHROOM_BENCHTOP_OPTIONS = WET_AREA_CABINETRY_CONFIG.benchtopOptions;
 const CABINETRY_WORKFLOW_TYPE = "guided_cabinetry";
 const CABINETRY_SELECTION_TYPE = "cabinetry_specification";
 const CABINETRY_SCHEMA_VERSION = 2;
@@ -976,6 +1143,48 @@ function slug(value) {
 
 function normaliseKey(value) {
   return String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+
+// "recovered-03-09-123-mttbljky" and "recovered-03-09-123" are the same job opened twice.
+// The trailing base-36 timestamp is the only difference, so strip it to compare identities.
+// True when the book carries work a user would be upset to lose. Used to refuse replacing
+// a populated book with an empty template after a failed read.
+function bookHasRecordedSelections(candidate = {}) {
+  return (candidate?.rooms || []).some((room) => (room?.rows || []).some((row) => (
+    row?.selectedProduct || row?.selectedOptionId || row?.guidedSelection || row?.selectedCost
+  )));
+}
+
+// Every project-scoped table (builder_client_selections, builder_selection_books,
+// builder_procurement_items, builder_boq_items) declares `project_id uuid not null`.
+// A recovered or file-backed job carries an id like "recovered-03-09-123-mtuhwjss",
+// so Postgres rejects the write with 22P02 before any row is touched. Attempting it
+// anyway is what produced the generic SAVE ERROR banner on every save, in every area
+// of Client Selections, while the work itself was sitting safely in the job file.
+//
+// This is the single gate. A caller either gets a real uuid to write with, or is told
+// plainly that this job persists to its job file instead.
+function projectPersistenceTarget(projectId, workbook = null) {
+  const id = String(projectId || "").trim();
+  if (!id) return { uuid: null, local: false, reason: "no-project" };
+  const uuid = uuidOrNull(id);
+  if (uuid) return { uuid, local: false, reason: "" };
+  // A display id is never usable, but the job file may already carry a canonical uuid
+  // linked to it. That mapping is what lets a recovered job persist to the cloud
+  // normally instead of falling back to file-only storage.
+  const linked = workbook ? canonicalProjectUuid(workbook) : null;
+  if (linked) return { uuid: linked, local: false, reason: "canonical-link" };
+  return {
+    uuid: null,
+    local: true,
+    reason: id.startsWith("recovered-") ? "recovered-job" : id.startsWith("embedded:") ? "embedded-job" : "non-uuid-project",
+  };
+}
+
+function recoveredProjectRoot(value) {
+  const next = String(value || "").trim();
+  if (!next.startsWith("recovered-")) return "";
+  return next.replace(/-[0-9a-z]{6,}$/i, "") || next;
 }
 
 function uuidOrNull(value) {
@@ -1407,7 +1616,13 @@ function rowFromOption(option, itemName, sortOrder, options = []) {
   };
 }
 
-export default function BuilderSelectionsBookPage({
+export default function BuilderSelectionsBookPage(props) {
+  const { workspaceId, loading } = useWorkspace();
+  if (loading) return <div role="status">Loading builder workspace...</div>;
+  return <BuilderSelectionsBookPageContent key={workspaceId || 'anonymous-local'} {...props} />;
+}
+
+function BuilderSelectionsBookPageContent({
   workspaceId: providedWorkspaceId = "",
   organisationId: providedOrganisationId = "",
   projectId: providedProjectId = "",
@@ -1424,7 +1639,10 @@ export default function BuilderSelectionsBookPage({
   const selectionRouter = useRouter();
   const selectionRouterRef = useRef(selectionRouter);
   const bookLoadRequestRef = useRef(0);
+  const loadedBookKeyRef = useRef("");
   const bookEditVersionRef = useRef(0);
+  const autosaveTimerRef = useRef(null);
+  const autosavePendingBookRef = useRef(null);
   selectionRouterRef.current = selectionRouter;
   const selectionRoutePath = String(selectionRouter.asPath || '');
   const selectionRouterReady = Boolean(selectionRouter.isReady);
@@ -1459,8 +1677,15 @@ export default function BuilderSelectionsBookPage({
   const [activeRoomId, setActiveRoomId] = useState("");
   const [guidedScreen, setGuidedScreen] = useState("areas");
   const [guidedArea, setGuidedArea] = useState("");
+  // The main page (Interior / Exterior) the client is working through, so a category returns to it.
+  const [guidedSide, setGuidedSide] = useState("interior");
   const [guidedRequirementKey, setGuidedRequirementKey] = useState("");
   const [guidedProductDetails, setGuidedProductDetails] = useState(null);
+  // { requirement, product } while the Plumbing Fixtures "Add / Allocate Product" modal is open.
+  const [plumbingAllocationDraft, setPlumbingAllocationDraft] = useState(null);
+  // Shower Screens & Mirrors: the product (and, when editing, the saved line) being configured.
+  const [configuredSelectionDraft, setConfiguredSelectionDraft] = useState(null);
+  const selectionPackSaveChainRef = useRef(Promise.resolve());
   const [guidedApplianceStep, setGuidedApplianceStep] = useState("brands");
   const [guidedApplianceFamilyKey, setGuidedApplianceFamilyKey] = useState("");
   const [guidedApplianceBrand, setGuidedApplianceBrand] = useState("");
@@ -1516,6 +1741,10 @@ export default function BuilderSelectionsBookPage({
   const [newRoomTemplate, setNewRoomTemplate] = useState("Powder Room");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  // Confirmed persistence outcome, never inferred from local React state:
+  // "saved" (database row written), "saved-local" (job file only, no cloud project),
+  // "failed" (database rejected the write).
+  const [lastSaveState, setLastSaveState] = useState({ state: "idle", at: "", reason: "", message: "" });
   const [importing, setImporting] = useState(false);
   const [scheduleGenerating, setScheduleGenerating] = useState("");
   const [scheduleDocument, setScheduleDocument] = useState(null);
@@ -1584,21 +1813,226 @@ export default function BuilderSelectionsBookPage({
   const clientVisibleApplianceRecords = effectiveApplianceCatalogue.records;
   const clientVisibleAppliancePacks = effectiveApplianceCatalogue.packs;
   const visibleApplianceRequirements = useMemo(() => APPLIANCE_REQUIREMENTS.filter((item) => (
-    !["freestanding-cooker", "appliance-pack"].includes(item.requirementKey)
+    item.requirementKey !== "appliance-pack"
     || guidedSelectionMap.get(item.requirementKey)
     || applianceRecordsForRequirement(clientVisibleApplianceRecords, item).length
   )), [clientVisibleApplianceRecords, guidedSelectionMap]);
   const guidedApplianceTotals = useMemo(() => guidedAreaTotals(visibleApplianceRequirements, guidedSelectionMap), [guidedSelectionMap, visibleApplianceRequirements]);
   const guidedExteriorTotals = useMemo(() => guidedAreaTotals(applicableExteriorRequirements, guidedSelectionMap), [applicableExteriorRequirements, guidedSelectionMap]);
   const guidedInteriorTotals = useMemo(() => guidedAreaTotals(INTERIOR_REQUIREMENTS, guidedSelectionMap), [guidedSelectionMap]);
-  const guidedRunningTotals = useMemo(() => guidedProjectTotals([guidedKitchenTotals, guidedApplianceTotals, guidedExteriorTotals, guidedInteriorTotals]), [guidedKitchenTotals, guidedApplianceTotals, guidedExteriorTotals, guidedInteriorTotals]);
-  const guidedRequirement = useMemo(() => guidedRequirementByKey(guidedRequirementKey) || kitchenRequirementByKey("oven") || KITCHEN_REQUIREMENTS[0], [guidedRequirementKey]);
+  const guidedPlumbingTotals = useMemo(() => guidedAreaTotals(PLUMBING_FIXTURE_REQUIREMENTS, guidedSelectionMap), [guidedSelectionMap]);
+  const bathroomAccessoryRequirements = useMemo(() => discoverBathroomAccessoryRequirements(
+    getEffectiveProductCatalogue({ organisationId: workspaceId || "" }).products,
+    [...guidedSelectionMap.keys()],
+  ), [workspaceId, builderEnablements, masterCatalogueProducts, guidedSelectionMap]);
+  const effectiveGuidedRequirements = useMemo(() => [
+    ...ALL_GUIDED_REQUIREMENTS.filter((item) => item.areaKey !== "bathroom-accessories"),
+    ...bathroomAccessoryRequirements,
+  ], [bathroomAccessoryRequirements]);
+  const guidedCatalogueCategoryTotals = useMemo(() => guidedAreaTotals([
+    ...CATALOGUE_CATEGORY_REQUIREMENTS.filter((item) => item.areaKey !== "bathroom-accessories"),
+    ...bathroomAccessoryRequirements,
+  ], guidedSelectionMap), [guidedSelectionMap, bathroomAccessoryRequirements]);
+  const guidedRunningTotals = useMemo(() => guidedProjectTotals([guidedKitchenTotals, guidedApplianceTotals, guidedPlumbingTotals, guidedCatalogueCategoryTotals, guidedExteriorTotals, guidedInteriorTotals]), [guidedKitchenTotals, guidedApplianceTotals, guidedPlumbingTotals, guidedCatalogueCategoryTotals, guidedExteriorTotals, guidedInteriorTotals]);
+  const guidedRequirementsByKey = useMemo(() => new Map(effectiveGuidedRequirements.map((item) => [item.requirementKey, item])), [effectiveGuidedRequirements]);
+  // Real project locations for plumbing allocation: the Selections Book's own rooms (including any
+  // the builder added, e.g. "Ensuite 2") plus the project's Cabinetry locations.
+  // Physical locations only (projectLocations.js): the category containers the book keeps its
+  // guided rows in ("Bathroom Accessories", "Plumbing Fixtures", ...) are never project locations.
+  const projectLocationList = useMemo(() => projectLocations({
+    book,
+    cabinetryLocations: guidedSelectionMap.get("cabinetry")?.selected_details?.cabinetrySelection?.locations || [],
+    workbook: embeddedWorkbook,
+  }), [book.rooms, book.projectRoomModel, guidedSelectionMap, embeddedWorkbook]); // eslint-disable-line react-hooks/exhaustive-deps
+  const plumbingProjectLocationNames = useMemo(() => projectLocationList.map((location) => location.name), [projectLocationList]);
+  // Tiles & Stone room-by-room workflow: saved rooms, or (first time) the project's tiled rooms plus
+  // any saved Floor Wastes & Drains migrated into their rooms; earlier per-m² tile picks are kept.
+  const tilingProps = useMemo(() => {
+    const requirement = guidedRequirementByKey(TILING_REQUIREMENT_KEY);
+    const saved = guidedSelectionMap.get(TILING_REQUIREMENT_KEY)?.selected_details || null;
+    const products = getEffectiveProductCatalogue({ organisationId: workspaceId || "" }).products;
+    const byId = new Map(products.map((product) => [product.productId, product]));
+    const productById = (id) => byId.get(id) || null;
+    const migrated = saved?.tilingRooms?.length ? null : migrateLegacyTiling(suggestedTilingRooms(plumbingProjectLocationNames, tilingTakeoffData(embeddedWorkbook || {})), guidedSelectionMap);
+    const legacySelections = saved?.tilingLegacySelections || migrated?.legacySelections || [];
+    return {
+      requirement,
+      savedRooms: saved?.tilingRooms?.length ? saved.tilingRooms : migrated.rooms,
+      legacySelections,
+      takeoff: tilingTakeoffData(embeddedWorkbook || {}),
+      tileProducts: products.filter((product) => product.attributes?.clientSelectionRequirement === "tiles"),
+      floorWasteProducts: requirement ? clientSelectionCategoryProducts(guidedRequirementByKey("floor-waste"), { organisationId: workspaceId || "" }) : [],
+      productById,
+      onSave: (rooms) => {
+        if (!requirement) return;
+        const patch = tilingSelectionPatch(requirement, rooms, { productById, legacySelections, previous: saved, projectId: selectedProjectId || selectedProject?.id || "", organisationId: workspaceId || "" });
+        commitGuidedRequirementPatch(requirement, patch, { autoAdvance: false, persist: true, successMessage: `Tiling saved: ${rooms.length} room${rooms.length === 1 ? "" : "s"}.` });
+      },
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [guidedSelectionMap, workspaceId, embeddedWorkbook, selectedProjectId, plumbingProjectLocationNames]);
+  // Stair height per flight (Ground -> Second ...) from Job Setup; one shared calculation (stairGeometry.js).
+  const stairFlights = useMemo(() => stairFlightsFromJobSetup(embeddedWorkbook || {}), [embeddedWorkbook]);
+  // MANAGE ROOMS: add / rename / merge / remove on the project's one room list. The correction is
+  // stored with the Selections Book (projectRoomModel.js) and the records every module holds
+  // against the room are moved in the same change, so all modules see the same corrected house.
+  function changeProjectRooms(kind, location = null, payload = null) {
+    const outcome = { ok: false, error: "" };
+    let committedBook = null;
+    setBook((current) => {
+      const cabinetry = (current.rooms || []).flatMap((room) => room.rows || []).find((row) => row?.guidedSelection?.cabinetrySelection)?.guidedSelection.cabinetrySelection.locations || [];
+      const rooms = projectLocations({ book: current, cabinetryLocations: cabinetry, workbook: embeddedWorkbook });
+      const model = projectRoomModel(current, embeddedWorkbook);
+      let result = { error: "Unknown room change." };
+      let records = current;
+      if (kind === "add") result = addProjectRoom(model, rooms, payload || {});
+      if (kind === "update") result = updateProjectRoom(model, location, payload || {});
+      if (kind === "restore") result = restoreProjectRoom(model, payload?.id);
+      if (kind === "rename") {
+        result = renameProjectRoom(model, rooms, location, payload);
+        if (!result.error) records = renameRoomRecords(current, location, { id: location.id, name: String(payload || "").trim().replace(/\s+/g, " ") }, { rooms });
+      }
+      if (kind === "merge") {
+        result = mergeProjectRooms(model, location, payload);
+        if (!result.error) records = renameRoomRecords(current, location, payload, { rooms, merge: true });
+      }
+      if (kind === "remove") {
+        result = removeProjectRoom(model, location);
+        records = removeRoomRecords(current, location);
+      }
+      if (result.error) { outcome.error = result.error; return current; }
+      committedBook = { ...records, projectRoomModel: result.model, updatedAt: new Date().toISOString() };
+      saveEmbeddedBookDraft(committedBook);
+      return committedBook;
+    });
+    // The updater above runs before this resolves; saves run in the order they were made.
+    return new Promise((resolve) => window.setTimeout(async () => {
+      if (!committedBook) { resolve(outcome); return; }
+      const saved = await persistBookData(committedBook, "in_progress", { successMessage: "Project rooms updated." });
+      resolve(saved ? { ok: true } : { ok: false, error: "The room list is changed on screen but could not be saved to the job." });
+    }, 0));
+  }
+  const projectRoomManager = useMemo(() => {
+    const model = projectRoomModel(book, embeddedWorkbook);
+    const takeoff = takeoffRoomCounts(embeddedWorkbook || {});
+    return {
+      removed: removedProjectRooms(model),
+      levels: [...new Set(Object.values(embeddedWorkbook?.aiPlanTakeoffJob?.sheetLevels || embeddedWorkbook?.takeoffEngine?.aiPlanTakeoffJob?.sheetLevels || {}).map((level) => String(level || "").trim()).filter(Boolean))],
+      usageFor: (location) => projectRoomUsage(book, location, { rooms: projectLocationList, takeoff, sourceKeys: model.rooms.find((entry) => entry.id === location.id)?.sourceKeys || [] }),
+      onAdd: (room) => changeProjectRooms("add", null, room),
+      onRename: (location, name) => changeProjectRooms("rename", location, name),
+      onUpdate: (location, patch) => changeProjectRooms("update", location, patch),
+      onRemove: (location) => changeProjectRooms("remove", location),
+      onMerge: (from, into) => changeProjectRooms("merge", from, into),
+      onRestore: (entry) => changeProjectRooms("restore", null, entry),
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [book, embeddedWorkbook, projectLocationList]);
+  // Electrical: a room-by-room quantity schedule over the project's own rooms. No products; the
+  // Quotation Builder prices each point (electricalSchedule.js).
+  const electricalProps = useMemo(() => {
+    const requirement = guidedRequirementByKey(ELECTRICAL_SCHEDULE_REQUIREMENT_KEY);
+    const savedSchedule = guidedSelectionMap.get(ELECTRICAL_SCHEDULE_REQUIREMENT_KEY)?.selected_details?.electricalSchedule || null;
+    const rooms = houseRooms(projectLocationList);
+    const roomNames = rooms.map((room) => room.name);
+    const current = normaliseElectricalSchedule(savedSchedule, rooms, {
+      baseline: electricalInclusionBaseline(embeddedWorkbook?.standardInclusions || {}, roomNames),
+      estimate: electricalEstimateCounts(embeddedWorkbook || {}, roomNames),
+    });
+    return {
+      requirement,
+      savedSchedule,
+      rooms,
+      roomManager: projectRoomManager,
+      progress: { ...electricalScheduleProgress(current), saved: Boolean(savedSchedule) },
+      onSave: (schedule) => {
+        if (!requirement) return Promise.resolve(false);
+        const patch = electricalSelectionPatch(requirement, schedule, { projectId: selectedProjectId || selectedProject?.id || "", organisationId: workspaceId || "" });
+        return commitGuidedRequirementPatch(requirement, patch, { autoAdvance: false, persist: true, successMessage: "Electrical schedule saved." });
+      },
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [guidedSelectionMap, workspaceId, embeddedWorkbook, selectedProjectId, projectLocationList, projectRoomManager]);
+  // Flooring: Product Library non-tile flooring (variants = genuine colours) applied per floor area;
+  // allowance per m2 is the project estimate's own rate for each flooring type.
+  const flooringProps = useMemo(() => {
+    const requirement = guidedRequirementByKey(FLOORING_REQUIREMENT_KEY);
+    const saved = guidedSelectionMap.get(FLOORING_REQUIREMENT_KEY)?.selected_details || null;
+    const flooringProducts = getEffectiveProductCatalogue({ organisationId: workspaceId || "" }).products.filter(isFlooringProduct);
+    const byId = new Map(flooringProducts.map((product) => [product.productId, product]));
+    const productById = (id) => byId.get(id) || null;
+    const quotation = embeddedWorkbook?.quotation || {};
+    const allowanceFor = (typeKey) => flooringAllowanceFromQuotation(quotation, typeKey);
+    // Measured floor rooms are offered only for rooms on the project's room list: a Selections Book
+    // template page, or a room removed or merged away in Manage Rooms, is not a floor area.
+    const canonicalRoomKeys = new Set(projectLocationList.map((location) => location.key));
+    const correctedRoomKeys = new Set(projectRoomModel(book, embeddedWorkbook).rooms.flatMap((entry) => entry.sourceKeys || []));
+    const measured = flooringTakeoffData(embeddedWorkbook || {});
+    const flooringTakeoff = { ...measured, rooms: (measured.rooms || []).filter((room) => { const key = plumbingLocationKey(room.name); return canonicalRoomKeys.has(key) || (room.source !== "project" && !correctedRoomKeys.has(key)); }) };
+    return {
+      requirement,
+      savedAreas: saved?.flooringAreas || saved?.guidedSelection?.flooringAreas || [],
+      savedAllowanceOverrides: saved?.flooringAllowanceOverrides || saved?.guidedSelection?.flooringAllowanceOverrides || {},
+      savedCarpetOptions: saved?.carpetOptions || saved?.guidedSelection?.carpetOptions || {},
+      carpetRates: carpetEstimateRates(quotation),
+      takeoff: flooringTakeoff,
+      flooringProducts,
+      counts: flooringCountsByType(flooringProducts),
+      productById,
+      allowanceFor,
+      onSave: async (areas, allowanceOverrides = {}, carpetOptions = {}) => {
+        if (!requirement) return;
+        const patch = flooringSelectionPatch(requirement, areas, { productById, allowanceFor: flooringAllowanceResolver(quotation, allowanceOverrides), allowanceOverrides, carpetOptions, carpetRates: carpetEstimateRates(quotation), projectId: selectedProjectId || selectedProject?.id || "", organisationId: workspaceId || "" });
+        for (const product of flooringProducts) for (const variant of product.variants || []) {
+          const quotes = carpetOptions[variant.variantId]?.supplierQuoteHistory;
+          if (quotes?.length) saveCarpetQuoteHistory(workspaceId, product.productCode, variant.variantId, quotes);
+        }
+        const status = flooringAreaStatus(areas);
+        return commitGuidedRequirementPatch(requirement, patch, { autoAdvance: false, persist: true, successMessage: `Flooring saved: ${status.assigned} of ${status.total} area${status.total === 1 ? "" : "s"} assigned.` });
+      },
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [guidedSelectionMap, workspaceId, embeddedWorkbook, selectedProjectId, masterCatalogueProducts, projectLocationList]);
+  // Bathroom Accessory Packs (selectionPacks.js): the packs offered - builder-configured plus the
+  // coordinated brand / range / finish sets the Product Library can fill ...
+  const accessoryPacksOffered = useMemo(() => {
+    const organisationId = workspaceId || "";
+    const products = getEffectiveProductCatalogue({ organisationId }).products;
+    const config = getBuilderSelectionPackConfig(organisationId);
+    return { ...availableSelectionPacks({ packGroup: BATHROOM_ACCESSORY_PACK_GROUP, products, config }), products, settings: config.settings };
+  }, [workspaceId, builderEnablements, masterCatalogueProducts]);
+  // ... the packs this project's bathrooms and ensuites require (its own rooms: Tiling rooms,
+  // Selections Book rooms, Cabinetry locations, Takeoff opening rooms), and the selected pack
+  // rebuilt from the component allocation lines it expanded into.
+  const accessoryPackState = useMemo(() => {
+    const required = selectionPackRooms(BATHROOM_ACCESSORY_PACK_GROUP, [
+      ...(tilingProps.savedRooms || []).map((room) => room.name),
+      ...plumbingProjectLocationNames,
+      ...(tilingProps.takeoff?.openings || []).map((opening) => opening.roomLabel),
+    ], accessoryPacksOffered.settings, { notRooms: effectiveGuidedRequirements.map((item) => item.areaLabel) });
+    const linesByRequirement = Object.fromEntries(bathroomAccessoryRequirements.map((item) => [
+      item.requirementKey,
+      plumbingLinesFromSelection(guidedSelectionMap.get(item.requirementKey)?.selected_details || null),
+    ]));
+    return { ...accessoryPacksOffered, required, linesByRequirement, selected: selectedSelectionPack(linesByRequirement, BATHROOM_ACCESSORY_PACK_GROUP) };
+  }, [accessoryPacksOffered, tilingProps, plumbingProjectLocationNames, bathroomAccessoryRequirements, effectiveGuidedRequirements, guidedSelectionMap]);
+  const guidedRequirement = useMemo(() => guidedRequirementsByKey.get(guidedRequirementKey) || guidedRequirementByKey(guidedRequirementKey) || kitchenRequirementByKey("oven") || KITCHEN_REQUIREMENTS[0], [guidedRequirementKey, guidedRequirementsByKey]);
   const activeGuidedRequirements = useMemo(() => {
     if (guidedScreen === "appliances" || guidedScreen === "appliance-products") return visibleApplianceRequirements;
     if (guidedScreen === "plumbing-fixtures") return requirementsForGuidedArea("plumbing-fixtures", book);
+    if (guidedScreen === "category") {
+      const category = CLIENT_SELECTION_CATEGORY_BY_KEY[guidedArea];
+      const all = requirementsForSelectionCategory(category, effectiveGuidedRequirements);
+      // A hub with a fixed pair of categories (Stairs & Balustrades) always shows both.
+      if (category?.fixedRequirements) return all;
+      // Project-dependent scope (pool, decking, ...) only where the project includes it.
+      const applicable = all.filter((item) => !item.optionalWhenProjectMissing || requirementAppliesToBook(item, book));
+      return applicable.length ? applicable : all;
+    }
     if (guidedScreen === "kitchen") return requirementsForGuidedArea("kitchen", book);
+    if (guidedRequirement.areaKey === "bathroom-accessories") return bathroomAccessoryRequirements;
     return requirementsForGuidedArea(guidedRequirement.areaKey, book);
-  }, [book, guidedRequirement.areaKey, guidedScreen, visibleApplianceRequirements]);
+  }, [book, guidedArea, guidedRequirement.areaKey, guidedScreen, visibleApplianceRequirements, effectiveGuidedRequirements, bathroomAccessoryRequirements]);
   const guidedAreaTotalsForActive = useMemo(() => guidedAreaTotals(activeGuidedRequirements, guidedSelectionMap), [activeGuidedRequirements, guidedSelectionMap]);
   useEffect(() => {
     if (guidedRequirementKey !== "windows") return;
@@ -1730,9 +2164,42 @@ export default function BuilderSelectionsBookPage({
     return guidedProductsForRequirement(guidedRequirement, roofingMasterSelectionProducts);
   }, [guidedProducts, guidedRequirement, roofingMasterSelectionProducts]);
   const garageGuidedProducts = useMemo(() => {
-    if (guidedRequirement.requirementKey !== "garage-door" || guidedProducts.length) return guidedProducts;
-    return SHARED_GARAGE_DOOR_CATALOGUE_PRODUCTS.map((product, index) => guidedProductFromCatalogue(product, guidedRequirement, index));
-  }, [guidedProducts, guidedRequirement]);
+    if (guidedRequirement.requirementKey !== "garage-door") return guidedProducts;
+    const catalogue = getEffectiveProductCatalogue({ organisationId: workspaceId || "", familyKey: "garage-doors" });
+    return catalogue.products.map((product, index) => guidedProductFromCatalogue(product, guidedRequirement, index));
+  }, [guidedProducts, guidedRequirement, workspaceId, builderEnablements]);
+  // Plumbing Fixtures shows only the HNC range tagged for each category in the Product Library,
+  // not the loose family match used elsewhere (which mixed legacy sinks into Laundry Tubs etc.).
+  const plumbingGuidedProducts = useMemo(() => {
+    if (!isAllocatedCatalogueRequirement(guidedRequirement)) return [];
+    const organisationId = workspaceId || "";
+    return clientSelectionCategoryProducts(guidedRequirement, { organisationId })
+      .map((product, index) => guidedProductFromCatalogue(masterProductToClientSelectionProduct(product, { organisationId, requirement: guidedRequirement }), guidedRequirement, index));
+  }, [guidedRequirement, workspaceId, builderEnablements, masterCatalogueProducts]);
+  const plumbingFixtureSummaries = useMemo(() => plumbingFixtureCategorySummaries(
+    PLUMBING_FIXTURE_REQUIREMENTS.map((requirement) => requirement.requirementKey),
+    { organisationId: workspaceId || "" },
+  ), [workspaceId, builderEnablements, masterCatalogueProducts]);
+  // Per requirement: how many verified Product Library products each category offers, plus a real
+  // product photo for its card. Tiles have no m² selection workflow or verified range yet.
+  const guidedCategorySummaries = useMemo(() => {
+    const organisationId = workspaceId || "";
+    const allocatedRequirements = effectiveGuidedRequirements.filter((item) => isAllocatedCatalogueRequirement(item));
+    const summaries = clientSelectionCategorySummaries(allocatedRequirements, { organisationId });
+    CATALOGUE_CATEGORY_REQUIREMENTS.filter((item) => !isAllocatedCatalogueRequirement(item)).forEach((item) => { summaries[item.requirementKey] = { count: 0, noRange: true }; });
+    return summaries;
+  }, [workspaceId, builderEnablements, masterCatalogueProducts, effectiveGuidedRequirements]);
+  // Shower Screens & Mirrors: first-level groups from the Product Library range, and the quantity
+  // the project genuinely requires (showers counted by AI Plan Takeoff - never one per bathroom).
+  const configuredSelectionState = useMemo(() => {
+    const organisationId = workspaceId || "";
+    const configured = effectiveGuidedRequirements.filter(isConfiguredSelectionRequirement);
+    return {
+      groups: Object.fromEntries(configured.map((item) => [item.requirementKey, selectionGroupsForRequirement(item.requirementKey, clientSelectionCategoryProducts(item, { organisationId }))])),
+      required: Object.fromEntries([...configured.map((item) => [item.requirementKey, projectFixtureRequirement(item.requirementKey, embeddedWorkbook || {})]), ...RESIDENTIAL_SERVICE_KEYS.map(key => [key, serviceProjectRequirement(embeddedWorkbook || {}, key)])].filter(([, value]) => value)),
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workspaceId, builderEnablements, masterCatalogueProducts, effectiveGuidedRequirements, embeddedWorkbook]);
   const hasCoverDraftChanges = useMemo(() => JSON.stringify(coverDraft || {}) !== JSON.stringify(book.cover || {}), [book.cover, coverDraft]);
 
   const selectorProducts = useMemo(() => {
@@ -1818,8 +2285,13 @@ export default function BuilderSelectionsBookPage({
 
   useEffect(() => {
     if (!selectedProjectId || !selectedTemplateId) return;
-    loadBook();
-    return () => { bookLoadRequestRef.current += 1; };
+    // The book is initialised once for a job. Fast Refresh re-runs this effect with nothing
+    // changed, and reloading then would rebuild the book under the client's hands.
+    const loadKey = [workspaceId, selectedProjectId, selectedSnapshotId, selectedTemplateId, templateItems.length].join("|");
+    if (loadedBookKeyRef.current === loadKey) return;
+    let cancelled = false;
+    loadBook().then(() => { if (!cancelled) loadedBookKeyRef.current = loadKey; });
+    return () => { cancelled = true; bookLoadRequestRef.current += 1; };
   }, [workspaceId, selectedProjectId, selectedSnapshotId, selectedTemplateId, templateItems.length]);
 
   useEffect(() => {
@@ -1840,10 +2312,54 @@ export default function BuilderSelectionsBookPage({
     setCoverDraft(book.cover);
   }, [book.cover]);
 
+  // A debounced save must not be dropped by a reload, a tab close or leaving the module.
+  // The local draft is already written, so this only has to force the job write early.
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const flush = () => {
+      if (!autosavePendingBookRef.current) return;
+      saveEmbeddedBookDraft(autosavePendingBookRef.current);
+      flushSelectionAutosave();
+    };
+    window.addEventListener("pagehide", flush);
+    window.addEventListener("beforeunload", flush);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      window.removeEventListener("beforeunload", flush);
+      flush();
+    };
+  }, []);
+
+  const selectionRouteStateRef = useRef(null);
+  const lastAppliedSelectionRouteRef = useRef(null);
+  selectionRouteStateRef.current = {book, navigateToGuidedRequirement};
   useEffect(() => {
     if (typeof window === "undefined" || !selectionRouterReady) return;
     function applyApplianceUrlState() {
       const params = new URLSearchParams(window.location.search);
+      // A save (or any other route change) that leaves every selection-navigation parameter as it
+      // was must not reset the screen the client is working on.
+      const navigationKey = SELECTION_NAVIGATION_PARAMS.map((key) => `${key}=${params.get(key) || ""}`).join("&");
+      if (lastAppliedSelectionRouteRef.current === navigationKey) return;
+      lastAppliedSelectionRouteRef.current = navigationKey;
+      const categoryKey = params.get('selectionCategory');
+      const routeSide = params.get('selectionArea');
+      if (categoryKey && CLIENT_SELECTION_CATEGORY_BY_KEY[categoryKey] && ['interior', 'exterior'].includes(routeSide) && params.get('guided') !== 'appliances') {
+        const requirementKey = params.get('selectionRequirement') || '';
+        const next = requirementKey ? guidedRequirementByKey(requirementKey) : null;
+        setGuidedSide(routeSide);
+        resetGuidedApplianceFlow();
+        if (next && isAllocatedCatalogueRequirement(next)) {
+          setGuidedArea(next.areaKey);
+          setGuidedRequirementKey(next.requirementKey);
+          setGuidedScreen('product');
+        } else {
+          setGuidedArea(categoryKey);
+          setGuidedRequirementKey('');
+          setGuidedScreen('category');
+        }
+        return;
+      }
       if (params.get('selectionArea') === 'interior' && params.get('guided') !== 'appliances' && params.get('room') !== 'exterior') {
         const key = params.get('selectionRequirement');
         setGuidedArea('interior');
@@ -1852,7 +2368,12 @@ export default function BuilderSelectionsBookPage({
         resetGuidedApplianceFlow();
         return;
       }
-      if(params.get('selectionArea') === 'exterior' && !params.get('roomCategory')) { setGuidedArea('exterior');setGuidedScreen('exterior');return; }
+      if(params.get('selectionArea') === 'exterior' && !params.get('roomCategory')) {
+        const next = requirementsForGuidedArea('exterior', selectionRouteStateRef.current.book).find(item=>item.requirementKey===params.get('selectionRequirement'));
+        if (next) selectionRouteStateRef.current.navigateToGuidedRequirement(next);
+        else { setGuidedArea('exterior');setGuidedScreen('exterior'); }
+        return;
+      }
       if (params.get('room') === 'exterior' && ['entry-doors', 'door-furniture'].includes(params.get('roomCategory'))) {
         setGuidedArea('exterior');
         setGuidedScreen('product');
@@ -1882,7 +2403,7 @@ export default function BuilderSelectionsBookPage({
         setGuidedApplianceProductId(productId);
         setGuidedApplianceMode(mode);
         setGuidedAppliancePackageId(packageId);
-        setGuidedApplianceStep(productId ? "details" : brand ? (mode === "package" ? "packages" : mode === "build-your-own" ? "build-your-own" : "brand-summary") : "brands");
+        setGuidedApplianceStep(productId ? "details" : brand ? (mode === "package" ? "packages" : "models") : "brands");
       } else {
         setGuidedRequirementKey("");
         setGuidedScreen("appliances");
@@ -1921,9 +2442,11 @@ export default function BuilderSelectionsBookPage({
   }, [embedded, guidedApplianceBrand, guidedApplianceFamilyKey, guidedApplianceMode, guidedAppliancePackageId, guidedApplianceProductId, guidedRequirement.familyKey, guidedScreen]);
 
   async function loadApprovedClientSelectionCatalogue() {
+    if (!workspaceId) { setApprovedCatalogueProducts([]); return; }
     try {
-      const requestUrl = `/api/product-library/approved-client-selection-catalogue?workspaceId=${encodeURIComponent(workspaceId || "approved-template")}`;
-      const response = await fetch(requestUrl);
+      const requestUrl = `/api/product-library/approved-client-selection-catalogue?workspace_id=${encodeURIComponent(workspaceId)}`;
+      const { data: auth } = await supabase.auth.getSession();
+      const response = await fetch(requestUrl, { headers: { Authorization: `Bearer ${auth?.session?.access_token || ''}` } });
       if (!response.ok) {
         let body = "";
         try {
@@ -1968,22 +2491,31 @@ export default function BuilderSelectionsBookPage({
     return `${EMBEDDED_SELECTIONS_BOOK_STORAGE_KEY}:${workspaceId || "workspace"}:latest`;
   }
 
+  // Returns { book, savedAt } (not just the book) so callers with a real cloud project can compare
+  // this local cache's age against the database row before trusting it - see loadBook(), which
+  // used to trust this cache unconditionally and could show a room as reverting to an older state
+  // after a refresh even though the newer selections were already saved to builder_selection_books.
   function loadEmbeddedBookDraft() {
     if (typeof window === "undefined" || !workspaceId) return null;
     try {
       const projectPayload = selectedProjectId ? JSON.parse(window.localStorage.getItem(embeddedBookStorageKey()) || "null") : null;
-      if (projectPayload?.book && (!selectedProjectId || projectPayload.projectId === selectedProjectId)) return projectPayload.book;
+      if (projectPayload?.book && (!selectedProjectId || projectPayload.projectId === selectedProjectId)) return { book: projectPayload.book, savedAt: projectPayload.savedAt || "" };
       const latestPayload = JSON.parse(window.localStorage.getItem(latestEmbeddedBookStorageKey()) || "null");
-      if (latestPayload?.book && (!selectedProjectId || latestPayload.projectId === selectedProjectId)) return latestPayload.book;
+      if (latestPayload?.book && (!selectedProjectId || latestPayload.projectId === selectedProjectId)) return { book: latestPayload.book, savedAt: latestPayload.savedAt || "" };
       const prefix = `${EMBEDDED_SELECTIONS_BOOK_STORAGE_KEY}:${workspaceId}:`;
-      const fallbackKey = Object.keys(window.localStorage)
-        .filter((key) => key.startsWith(prefix))
-        .filter((key) => !key.endsWith(":latest"))
-        .sort()
-        .pop();
-      if (!fallbackKey) return null;
-      const fallbackPayload = JSON.parse(window.localStorage.getItem(fallbackKey) || "null");
-      return fallbackPayload?.projectId === selectedProjectId ? fallbackPayload.book || null : null;
+      const payloads = Object.keys(window.localStorage)
+        .filter((key) => key.startsWith(prefix) && !key.endsWith(":latest"))
+        .map((key) => { try { return JSON.parse(window.localStorage.getItem(key) || "null"); } catch { return null; } })
+        .filter((payload) => payload?.book);
+      const exact = payloads.find((payload) => payload.projectId === selectedProjectId);
+      if (exact) return { book: exact.book, savedAt: exact.savedAt || "" };
+      // A protected job used to be handed a new "recovered-<source>-<timestamp>" project id on
+      // every open, so a draft saved yesterday is keyed to an id that no longer matches. Those
+      // drafts are the same job and must be adopted, not discarded as somebody else's work.
+      const sibling = payloads
+        .filter((payload) => recoveredProjectRoot(payload.projectId) && recoveredProjectRoot(payload.projectId) === recoveredProjectRoot(selectedProjectId))
+        .sort((left, right) => String(right.savedAt || "").localeCompare(String(left.savedAt || "")))[0];
+      return sibling ? { book: sibling.book, savedAt: sibling.savedAt || "" } : null;
     } catch {
       return null;
     }
@@ -2019,16 +2551,17 @@ export default function BuilderSelectionsBookPage({
         supabase
           .from("builder_standard_specifications")
           .select("id, template_key, specification_name, description, price_band, is_platform_default")
-          .eq("is_platform_default", true)
+          .eq("workspace_id", workspaceId)
           .order("price_band", { ascending: true }),
         supabase
           .from("builder_products")
           .select("id, product_name, category_id, manufacturer_id, supplier_id, sku, model, description, price_band, standard_included, base_allowance, upgrade_cost, primary_image_url, datasheet_pdf_url, warranty_document_url, product_url, notes, active")
           .eq("workspace_id", workspaceId)
+          .eq("active", true)
           .order("product_name", { ascending: true }),
         supabase.from("builder_product_categories").select("*").or(`workspace_id.is.null,workspace_id.eq.${workspaceId}`).order("category_name"),
-        supabase.from("builder_product_manufacturers").select("*").or(`workspace_id.is.null,workspace_id.eq.${workspaceId}`).order("manufacturer_name"),
-        supabase.from("builder_product_suppliers").select("*").or(`workspace_id.is.null,workspace_id.eq.${workspaceId}`).order("supplier_name"),
+        supabase.from("builder_product_manufacturers").select("*").eq("workspace_id", workspaceId).order("manufacturer_name"),
+        supabase.from("builder_product_suppliers").select("*").eq("workspace_id", workspaceId).order("supplier_name"),
       ]);
 
       if (projectResult.error) console.error("[Client Selections] missing project context", projectResult.error);
@@ -2147,15 +2680,27 @@ export default function BuilderSelectionsBookPage({
     setError("");
     const items = templateItems.length ? templateItems : await loadTemplateItems(selectedTemplateId);
     if (stale()) return;
+    // selectedProjectId is sometimes a legacy/local display id (e.g. "builder-job-<timestamp>")
+    // for a job that is genuinely linked to a real cloud project - persistBookData() already
+    // resolves this via projectPersistenceTarget() before writing. This read path used to filter
+    // builder_selection_books by the raw, non-UUID selectedProjectId instead, which Postgres
+    // rejects outright (invalid input syntax for type uuid), so the read failed on every load for
+    // any such linked job and silently fell through to an empty book - the exact "completed it six
+    // times and it never persisted" symptom, since the save had actually succeeded under the
+    // resolved uuid the whole time. Resolving through the same helper here keeps reads and writes
+    // looking at the same row.
+    const cloudProjectTarget = projectPersistenceTarget(selectedProjectId, embeddedWorkbook);
+    const resolvedCloudProjectId = cloudProjectTarget.uuid;
+    const isRealCloudProject = Boolean(resolvedCloudProjectId);
     const recoverDoorView = async candidate => {
       let view=recoverMissingGuidedRowsFromBookHistory(candidate,entryDoorBookCandidates(embeddedWorkbook).map(book=>({book})));
       const hasDoor=()=>entryDoorDetails(view).some(d=>d.productCode||d.entryDoors?.some(s=>s.productCode));
-      if(hasDoor()||!uuidOrNull(selectedProjectId))return view;
+      if(hasDoor()||!resolvedCloudProjectId)return view;
       try {
-        const {data:history}=await supabase.from('builder_selection_books').select('id,updated_at').eq('workspace_id',workspaceId).eq('project_id',selectedProjectId).order('updated_at',{ascending:false}).limit(20);
+        const {data:history}=await supabase.from('builder_selection_books').select('id,updated_at').eq('workspace_id',workspaceId).eq('project_id',resolvedCloudProjectId).order('updated_at',{ascending:false}).limit(20);
         for(const item of history||[]){
           if(stale())return view;
-          const {data:record}=await supabase.from('builder_selection_books').select('book_data').eq('workspace_id',workspaceId).eq('project_id',selectedProjectId).eq('id',item.id).single();
+          const {data:record}=await supabase.from('builder_selection_books').select('book_data').eq('workspace_id',workspaceId).eq('project_id',resolvedCloudProjectId).eq('id',item.id).single();
           if(record?.book_data)view=recoverMissingGuidedRowsFromBookHistory(view,[{book:record.book_data,id:item.id,updated_at:item.updated_at}]);
           if(hasDoor())break;
         }
@@ -2163,9 +2708,17 @@ export default function BuilderSelectionsBookPage({
       return view;
     };
     const embeddedDraft = loadEmbeddedBookDraft();
-    if (embeddedDraft) {
-      const next = normaliseDocumentBook(embeddedDraft, { project: selectedProject, snapshot: selectedSnapshot, template: selectedTemplate, templateItems: items, products, manufacturerById, supplierById, categoryById });
-      setBookId(embeddedDraft.id || "");
+    // A locally-cached draft used to be trusted unconditionally, ahead of the database, whenever
+    // one existed. For a real cloud project that meant a browser tab that still had an older cache
+    // (a different tab, a previous session, a race with the autosave timer) could make a refresh
+    // show selections reverting even though the newer values were already saved successfully to
+    // builder_selection_books - exactly the "completed it six times and it didn't persist" failure
+    // mode. For a real cloud project the two are now compared by timestamp and the newer one wins;
+    // the cache is still trusted immediately for embedded/local-file jobs, which have no database
+    // row to compare against.
+    if (embeddedDraft && !isRealCloudProject) {
+      const next = normaliseDocumentBook(embeddedDraft.book, { project: selectedProject, snapshot: selectedSnapshot, template: selectedTemplate, templateItems: items, products, manufacturerById, supplierById, categoryById });
+      setBookId(embeddedDraft.book.id || "");
       const recoveredDoorView=await recoverDoorView(next);
       if(stale())return;
       setBook(recoveredDoorView);
@@ -2173,19 +2726,20 @@ export default function BuilderSelectionsBookPage({
       setLoading(false);
       return;
     }
-    if (selectedProjectId && !String(selectedProjectId).startsWith("embedded:")) {
+    if (isRealCloudProject) {
       try {
         let savedBookQuery = supabase
           .from("builder_selection_books")
           .select("id, book_name, status, book_data, inclusion_template_id, updated_at")
           .eq("workspace_id", workspaceId)
-          .eq("project_id", selectedProjectId)
+          .eq("project_id", resolvedCloudProjectId)
           .is("inclusion_template_id", null)
           .order("updated_at", { ascending: false })
           .limit(10);
         const { data: savedBooks, error: savedBookError } = await savedBookQuery;
         if (stale()) return;
-        if (!savedBookError && savedBooks?.[0]?.book_data) {
+        const dbIsNewer = !embeddedDraft || !embeddedDraft.savedAt || (savedBooks?.[0]?.updated_at && savedBooks[0].updated_at > embeddedDraft.savedAt);
+        if (!savedBookError && savedBooks?.[0]?.book_data && dbIsNewer) {
           const next = normaliseDocumentBook(savedBooks[0].book_data, { project: selectedProject, snapshot: selectedSnapshot, template: selectedTemplate, templateItems: items, products, manufacturerById, supplierById, categoryById });
           const recovered = recoverMissingGuidedRowsFromBookHistory(next, savedBooks.slice(1).map((row) => ({
             id: row.id,
@@ -2198,9 +2752,29 @@ export default function BuilderSelectionsBookPage({
           setLoading(false);
           return;
         }
+        if (embeddedDraft) {
+          const next = normaliseDocumentBook(embeddedDraft.book, { project: selectedProject, snapshot: selectedSnapshot, template: selectedTemplate, templateItems: items, products, manufacturerById, supplierById, categoryById });
+          setBookId(embeddedDraft.book.id || "");
+          const recoveredDoorView = await recoverDoorView(next);
+          if (stale()) return;
+          setBook(recoveredDoorView);
+          setActiveRoomId((current) => next.rooms.find((room) => room.id === current)?.id || next.rooms[0]?.id || "");
+          setLoading(false);
+          return;
+        }
       } catch (savedBookLoadError) {
         if (stale()) return;
         console.warn("[Client Selections] saved project selection book load failed", savedBookLoadError?.message || savedBookLoadError);
+        if (embeddedDraft) {
+          const next = normaliseDocumentBook(embeddedDraft.book, { project: selectedProject, snapshot: selectedSnapshot, template: selectedTemplate, templateItems: items, products, manufacturerById, supplierById, categoryById });
+          setBookId(embeddedDraft.book.id || "");
+          const recoveredDoorView = await recoverDoorView(next);
+          if (stale()) return;
+          setBook(recoveredDoorView);
+          setActiveRoomId((current) => next.rooms.find((room) => room.id === current)?.id || next.rooms[0]?.id || "");
+          setLoading(false);
+          return;
+        }
       }
     }
     const embeddedBook = selectionBookFromEmbeddedWorkbook(embeddedWorkbook);
@@ -2228,6 +2802,13 @@ export default function BuilderSelectionsBookPage({
 
       if (loadError) {
         console.error("[Client Selections] file-state error", loadError);
+        // A failed read is not proof the job is empty. Blanking the book here is what made a
+        // transient error look like deleted work, so keep whatever is already on screen.
+        if (bookHasRecordedSelections(book)) {
+          setError("Saved selections could not be re-read just now. Your current selections are still on screen and were not changed.");
+          setLoading(false);
+          return;
+        }
         setBookId("");
         const next = createDocumentBook({ project: selectedProject, snapshot: selectedSnapshot, template: selectedTemplate, templateItems: items, products, manufacturerById, supplierById, categoryById });
         setBook(next);
@@ -2249,6 +2830,11 @@ export default function BuilderSelectionsBookPage({
     } catch (loadError) {
       if (stale()) return;
       console.error("[Client Selections] parser or book load error", loadError);
+      if (bookHasRecordedSelections(book)) {
+        setError("Saved selections could not be re-read just now. Your current selections are still on screen and were not changed.");
+        setLoading(false);
+        return;
+      }
       const next = createDocumentBook({ project: selectedProject, snapshot: selectedSnapshot, template: selectedTemplate, templateItems: items, products, manufacturerById, supplierById, categoryById });
       setBookId("");
       setBook(next);
@@ -2259,11 +2845,13 @@ export default function BuilderSelectionsBookPage({
 
   async function loadPersistedProjectSelections() {
     if (!workspaceId || !selectedProjectId) return [];
+    const target = projectPersistenceTarget(selectedProjectId, embeddedWorkbook);
+    if (target.local) return [];
     const { data, error: selectionLoadError } = await supabase
       .from("builder_client_selections")
       .select("id, project_id, snapshot_id, category, subcategory, room, title, selected_product_name, selected_supplier_name, supplier, brand, model_number, image_url, selected_details, status, selection_status, included_allowance, allowance_amount, client_selection_price, calculated_client_selection_price, variation_amount, is_active, metadata, updated_at")
       .eq("workspace_id", workspaceId)
-      .eq("project_id", selectedProjectId)
+      .eq("project_id", target.uuid)
       .eq("is_active", true)
       .order("updated_at", { ascending: false });
     if (selectionLoadError) {
@@ -2425,17 +3013,39 @@ export default function BuilderSelectionsBookPage({
     setSelectorRow(null);
   }
 
+  // Opens a product / trade category: its own workflow, its single requirement, or its hub.
+  function openGuidedCategory(categoryKey = "", side = "") {
+    const category = CLIENT_SELECTION_CATEGORY_BY_KEY[categoryKey];
+    if (side) setGuidedSide(side);
+    if (!category) {
+      setGuidedArea("");
+      setGuidedScreen("areas");
+      setGuidedRequirementKey("");
+      resetGuidedApplianceFlow();
+      return;
+    }
+    if (category.route === "area") { openGuidedArea(category.areaKey); return; }
+    if (category.route === "requirement") { openGuidedRequirementKey(category.requirementKeys[0]); return; }
+    openGuidedArea(category.key);
+  }
+
   function openGuidedArea(areaKey) {
+    if (areaKey === "interior" || areaKey === "exterior") setGuidedSide(areaKey);
     setGuidedArea(areaKey);
-    setGuidedScreen(areaKey === "interior" ? "interior" : areaKey === "appliances" ? "appliance-products" : areaKey === "plumbing-fixtures" ? "plumbing-fixtures" : "exterior");
+    setGuidedScreen(CLIENT_SELECTION_CATEGORY_BY_KEY[areaKey]?.route === "hub" ? "category" : areaKey === "interior" ? "interior" : areaKey === "appliances" ? "appliance-products" : "exterior");
     setGuidedRequirementKey("");
     resetGuidedApplianceFlow();
     resetGuidedBrickFlow();
     resetGuidedEntryDoorFlow();
     resetGuidedWindowFlow();
     resetGuidedRoofingFlow();
-    if(['exterior', 'interior'].includes(areaKey) && typeof window !== 'undefined'){
-      const url=new URL(window.location.href);url.searchParams.set('selectionArea',areaKey);url.searchParams.delete('selectionRequirement');
+    const hubCategory = CLIENT_SELECTION_CATEGORY_BY_KEY[areaKey];
+    if((['exterior', 'interior'].includes(areaKey) || hubCategory?.route === 'hub') && typeof window !== 'undefined'){
+      const url=new URL(window.location.href);
+      url.searchParams.set('selectionArea', hubCategory?.route === 'hub' ? sideForCategory(hubCategory, guidedSide) : areaKey);
+      url.searchParams.delete('selectionRequirement');
+      if (hubCategory?.route === 'hub') url.searchParams.set('selectionCategory', areaKey);
+      else url.searchParams.delete('selectionCategory');
       for(const key of ['room','roomCategory','roomProduct','mode','returnPage','doorStep','guided'])url.searchParams.delete(key);
       safeSelectionNavigate(selectionRouterRef.current,url.href,{shallow:true,scroll:false});
     }
@@ -2453,10 +3063,16 @@ export default function BuilderSelectionsBookPage({
   }
 
   function syncInternalRequirementRoute(key) {
-    if (!INTERNAL_SELECTION_KEYS.includes(key) || typeof window === 'undefined') return;
+    if (typeof window === 'undefined') return;
+    const requirement = guidedRequirementByKey(key);
+    const category = clientSelectionCategoryForRequirement(key, guidedSide);
+    const allocatedHub = isAllocatedCatalogueRequirement(requirement) && category?.route === 'hub';
+    if (!INTERNAL_SELECTION_KEYS.includes(key) && !allocatedHub) return;
     const url = new URL(window.location.href);
-    url.searchParams.set('selectionArea', 'interior');
+    url.searchParams.set('selectionArea', allocatedHub ? sideForCategory(category, guidedSide) : 'interior');
     url.searchParams.set('selectionRequirement', key);
+    if (allocatedHub) url.searchParams.set('selectionCategory', category.key);
+    else url.searchParams.delete('selectionCategory');
     for (const param of ['room', 'roomCategory', 'roomProduct', 'guided', 'mode', 'returnPage']) url.searchParams.delete(param);
     safeSelectionNavigate(selectionRouterRef.current, url.href, {shallow:true, scroll:false});
   }
@@ -2489,6 +3105,10 @@ export default function BuilderSelectionsBookPage({
   function openGuidedRequirementKey(requirementKey) {
     const next = guidedRequirementByKey(resolveCabinetryRequirementKey(requirementKey));
     if (!next) return;
+    if (next.requirementKey === 'entry-door') {
+      openGuidedRequirement(next.requirementKey);
+      return;
+    }
     syncInternalRequirementRoute(next.requirementKey);
     setGuidedArea(next.areaKey);
     setGuidedRequirementKey(next.requirementKey);
@@ -2540,6 +3160,12 @@ export default function BuilderSelectionsBookPage({
   }
 
   function returnToGuidedDashboard(committedRequirement) {
+    const hub = clientSelectionCategoryForRequirement(committedRequirement.requirementKey, guidedSide);
+    if (hub?.route === "hub") {
+      openGuidedArea(hub.key);
+      window.setTimeout(() => highlightGuidedRequirementCard(committedRequirement.requirementKey), 80);
+      return;
+    }
     const areaKey = committedRequirement.areaKey;
     setGuidedArea(areaKey === "exterior" ? "exterior" : "interior");
     setGuidedRequirementKey("");
@@ -2572,7 +3198,7 @@ export default function BuilderSelectionsBookPage({
     const roomExists = current.rooms.some((room) => room.id === nextRoom.id);
     const nextRows = rowsWithGuidedRequirement(nextRoom.rows, requirement).map((item) => (
       shouldPatchGuidedRow(item, requirement)
-        ? { ...item, guidedRequirementKey: requirement.requirementKey, ...patch }
+        ? { ...item, item: guidedRowLabelFor(item, requirement), guidedRequirementKey: requirement.requirementKey, ...patch }
         : item
     ));
     const updatedRoom = { ...nextRoom, rows: nextRows };
@@ -2585,18 +3211,54 @@ export default function BuilderSelectionsBookPage({
     };
   }
 
+  // Every guided choice is written to the job, not just the ones that opted in. The local
+  // draft is written synchronously so a reload can never outrun it; the job write is
+  // debounced so a burst of clicks costs one round trip instead of one per click.
+  function queueSelectionAutosave(nextBook) {
+    if (!nextBook) return;
+    autosavePendingBookRef.current = nextBook;
+    if (typeof window === "undefined") return;
+    if (autosaveTimerRef.current) window.clearTimeout(autosaveTimerRef.current);
+    autosaveTimerRef.current = window.setTimeout(() => {
+      autosaveTimerRef.current = null;
+      const pending = autosavePendingBookRef.current;
+      autosavePendingBookRef.current = null;
+      if (pending) persistBookData(pending, "in_progress", { autosave: true });
+    }, SELECTION_AUTOSAVE_DELAY_MS);
+  }
+
+  function flushSelectionAutosave() {
+    if (typeof window !== "undefined" && autosaveTimerRef.current) {
+      window.clearTimeout(autosaveTimerRef.current);
+      autosaveTimerRef.current = null;
+    }
+    const pending = autosavePendingBookRef.current;
+    autosavePendingBookRef.current = null;
+    if (pending) return persistBookData(pending, "in_progress", { autosave: true });
+    return Promise.resolve(null);
+  }
+
   function commitGuidedRequirementPatch(requirement, patch, options = {}) {
-    const { autoAdvance = true, persist = false, successMessage = "" } = options;
+    const { autoAdvance = true, persist = false, successMessage = "", onSaved } = options;
     let committedBook = null;
     setBook((current) => {
       committedBook = guidedBookWithRequirementPatch(current, requirement, patch);
       saveEmbeddedBookDraft(committedBook);
       return committedBook;
     });
-    window.setTimeout(() => {
-      if (committedBook && persist) persistBookData(committedBook, "in_progress", { successMessage });
+    // Resolves once the change is stored on the job (false if that failed), for callers that
+    // show their own save state. The updater above runs before this timeout fires.
+    return new Promise((resolve) => window.setTimeout(async () => {
+      if (committedBook && persist) {
+        const saved = await persistBookData(committedBook, "in_progress", { successMessage });
+        if (!saved) { resolve(false); return; }
+        onSaved?.(committedBook);
+      } else if (committedBook) {
+        queueSelectionAutosave(committedBook);
+      }
       if (committedBook && autoAdvance) autoAdvanceAfterGuidedCommit(requirement);
-    }, 0);
+      resolve(Boolean(committedBook));
+    }, 0));
   }
 
   function selectGuidedAppliancePackage(packageOption) {
@@ -2622,7 +3284,7 @@ export default function BuilderSelectionsBookPage({
     setGuidedApplianceBrand(brandName);
     setGuidedApplianceMode("package");
     setGuidedAppliancePackageId(packageOption.packId || packageOption.productId || "");
-    setGuidedApplianceStep("brand-summary");
+    setGuidedApplianceStep("review");
     setGuidedApplianceFamilyKey("");
     setGuidedApplianceProductId("");
     setSuccess(`${packageName} selected for ${brandName}.`);
@@ -2683,14 +3345,11 @@ export default function BuilderSelectionsBookPage({
       successMessage: options.successMessage || "Cabinetry specification saved to the active job.",
     });
     if (!savedId) return { ok: false, message: "Cabinetry save verification failed." };
-    setGuidedArea("interior");
-    setGuidedRequirementKey("");
-    setGuidedScreen("interior");
-    resetGuidedBrickFlow();
-    resetGuidedEntryDoorFlow();
-    resetGuidedWindowFlow();
-    resetGuidedRoofingFlow();
-    window.setTimeout(() => highlightGuidedRequirementCard("cabinetry"), 80);
+    if (options.returnToDashboard === false) {
+      return { ok: true, message: options.successMessage || "Cabinetry specification saved to the active job." };
+    }
+    // After the last room: the Cabinetry summary (its category screen), not the room list above it.
+    returnToGuidedDashboard(cabinetryRequirement);
     return { ok: true, message: "Cabinetry specification saved to the active job." };
   }
 
@@ -2716,6 +3375,7 @@ export default function BuilderSelectionsBookPage({
     const imageUrl = officialProductImageUrl(selectedSupplier.image || requirementImage(requirement));
     const procurementSchedule = effectiveWindows.map((windowRow) => ({
       windowId: windowRow.id,
+      windowCode: windowRow.windowCode,
       type: windowRow.type,
       size: windowRow.size,
       width: windowRow.width,
@@ -2724,6 +3384,7 @@ export default function BuilderSelectionsBookPage({
       room: windowRow.location,
       floor: windowRow.floor,
       elevation: windowRow.elevation,
+      wallSystem: windowRow.wallSystem,
       supplier: selectedSupplier.label,
       supplierSystem: windowRow.system?.name || "",
       frameColour: windowRow.frameColourName,
@@ -3028,8 +3689,51 @@ export default function BuilderSelectionsBookPage({
     refreshBuilderState();
   }
 
-  function selectGuidedProduct(requirement, option) {
+  // commitOptions.stayOnScreen: save to the job without leaving the screen the user is working on.
+  function selectGuidedProduct(requirement, option, commitOptions = {}) {
     if (!option) return;
+    if (option.paintScheme) {
+      // Internal Paint Colours. A colour is a specification: the row carries no allowance, price
+      // or variation, and it is complete once the three house colours are confirmed.
+      const scheme = normaliseInternalPaintScheme(option.paintScheme);
+      const complete = internalPaintSchemeStatus(scheme).complete;
+      const walls = scheme.defaults.walls;
+      let committedBook = null;
+      setBook((current) => {
+        const previous = guidedSelectionsFromBook(current).find((item) => item?.selected_details?.requirementKey === requirement.requirementKey)?.selected_details || {};
+        committedBook = guidedBookWithRequirementPatch(current, requirement, {
+          selectedOptionId: 'internal-paint-colours', selectedProduct: 'Internal paint colours',
+          description: internalPaintSummary(scheme),
+          brand: walls?.manufacturer || '', finishColour: walls ? colourLabel(walls) : '',
+          status: complete ? 'selected' : 'pending', included: true, allowanceAmount: 0, selectedCost: 0, upgradeCost: 0,
+          guidedSelection: { ...previous, requirementKey: requirement.requirementKey, requirementLabel: requirement.label,
+            familyKey: requirement.familyKey, productId: 'internal-paint-colours', productName: 'Internal paint colours',
+            paintScheme: option.paintScheme, configurationComplete: complete, clientDecisionRequired: true,
+            allowance: 0, selectedPrice: 0, variationAmount: 0, variation: 0, priceState: PRICE_STATES.current,
+            selectedAt: previous.selectedAt || new Date().toISOString(), updatedAt: new Date().toISOString() },
+        });
+        saveEmbeddedBookDraft(committedBook);
+        return committedBook;
+      });
+      // The updater above runs before this resolves; saves run in the order they were made.
+      return new Promise((resolve) => window.setTimeout(() => {
+        resolve(committedBook ? persistBookData(committedBook, 'in_progress', { successMessage: complete ? 'Internal colour scheme confirmed.' : 'Internal paint colours saved.' }) : null);
+      }, 0));
+    }
+    // Balustrade systems: configured system lines x LM per location, at indicative $/LM.
+    if (Array.isArray(option.balustradeAllocationLines)) {
+      commitPlumbingAllocation(requirement, option.balustradeAllocationLines);
+      return;
+    }
+    if (isAllocatedCatalogueRequirement(requirement)) {
+      // Selecting a plumbing product never completes the category by itself: it opens the
+      // Add / Allocate Product modal, and only the allocation it saves is committed.
+      if (Array.isArray(option.plumbingAllocationLines)) commitPlumbingAllocation(requirement, option.plumbingAllocationLines);
+      // A shower screen / mirror is configured for ONE room at a time, so each room can differ.
+      else if (isConfiguredSelectionRequirement(requirement)) setConfiguredSelectionDraft({ requirement, product: option, line: option.configuredLine || null });
+      else setPlumbingAllocationDraft({ requirement, product: option });
+      return;
+    }
     if (requirement.requirementKey === 'entry-door' && option.entryDoorDraftPatch) {
       const { doorId, patch: draftPatch } = option.entryDoorDraftPatch;
       setBook(current => {
@@ -3050,12 +3754,21 @@ export default function BuilderSelectionsBookPage({
         selectedBrandId: record.brandId || "",
         selectionMode: "build-your-own",
       });
-      commitGuidedRequirementPatch(requirement, patch, { autoAdvance: false, persist: true, successMessage: `${requirement.label} selection saved.` });
-      setGuidedScreen("appliance-products");
-      setGuidedApplianceMode("build-your-own");
-      setGuidedApplianceStep("build-your-own");
-      setGuidedApplianceProductId("");
-      setSuccess(`${requirement.label} selected. Continue your ${guidedApplianceBrand || record.brand || "selected brand"} appliance selection.`);
+      const sequence = applianceSequenceRequirements(visibleApplianceRequirements);
+      const nextRequirement = sequence[sequence.findIndex((item) => item.requirementKey === requirement.requirementKey) + 1];
+      commitGuidedRequirementPatch(requirement, patch, {
+        autoAdvance: false, persist: true, successMessage: `${requirement.label} selection saved.`,
+        onSaved: () => {
+          setGuidedScreen("appliance-products");
+          setGuidedApplianceMode("build-your-own");
+          setGuidedApplianceProductId("");
+          if (nextRequirement) {
+            setGuidedRequirementKey(nextRequirement.requirementKey);
+            setGuidedApplianceFamilyKey(nextRequirement.familyKey);
+            setGuidedApplianceStep("models");
+          } else setGuidedApplianceStep("review");
+        },
+      });
       return;
     }
     if (requirement?.requirementKey === "cabinetry" || option.cabinetrySelection) {
@@ -3089,13 +3802,13 @@ export default function BuilderSelectionsBookPage({
           workflowType: CABINETRY_WORKFLOW_TYPE,
           schemaVersion: CABINETRY_SCHEMA_VERSION,
         },
-      }, { persist: true, successMessage: "Cabinetry specification draft saved." });
+      }, { persist: true, autoAdvance: !commitOptions.stayOnScreen, successMessage: commitOptions.stayOnScreen ? "" : "Cabinetry specification draft saved." });
       return;
     }
     const entity = option.metadata?.productEntity || option;
     const allowance = numberValue(option.allowance ?? entity.allowance ?? requirement.defaultAllowance);
     const priceState = priceStateForGuidedOption(option);
-    const selectedCost = priceState === PRICE_STATES.current ? numberValue(option.selectedCost) : null;
+    const selectedCost = option.stairConfiguration ? option.selectedCost : priceState === PRICE_STATES.current ? numberValue(option.selectedCost) : null;
     const quantity = numberValue(option.quantity ?? requirement.defaultQuantity) || 1;
     const upgradeCost = priceState === PRICE_STATES.current
       ? variationFor({ selectedPrice: selectedCost, allowance, quantity })
@@ -3138,6 +3851,10 @@ export default function BuilderSelectionsBookPage({
         unit: option.unit || entity.priceUnit || requirement.unit || "EACH",
         priceIncludesGst: option.priceIncludesGst === true,
         function: option.function || "",
+        variantId: option.variantId || "",
+        variantCode: option.variantCode || "",
+        stairConfiguration: option.stairConfiguration || null,
+        stairUpgradeCosts: option.stairUpgradeCosts || [],
         length: option.length || "",
         colour: option.colour || "",
         finish: option.finish || "",
@@ -3164,13 +3881,119 @@ export default function BuilderSelectionsBookPage({
     if (requirement.requirementKey === 'entry-door' && option.door && option.entryDoorFurniture) {
       const existing = guidedSelectionMap.get('entry-door');
       const details = existing?.selected_details || existing?.guidedSelection || {};
-      const selection = { ...patch.guidedSelection, door: option.door, quantity: option.door.quantity, entryDoorFurniture: option.entryDoorFurniture, furnitureFinish: option.furnitureFinish, furnitureImageUrl: option.furnitureImageUrl, furnitureCompatibility: option.furnitureCompatibility, glassSelection: option.glassSelection, hardwareOptions: option.hardwareOptions };
+      const selection = { ...patch.guidedSelection, configurationComplete: true, status:'complete', door: option.door, quantity: option.door.quantity, entryDoorFurniture: option.entryDoorFurniture, furnitureFinish: option.furnitureFinish, furnitureImageUrl: option.furnitureImageUrl, furnitureCompatibility: option.furnitureCompatibility, glassSelection: option.glassSelection, hardwareOptions: {...option.hardwareOptions,selectedAt:now} };
       const entryDoors = upsertEntryDoorSelection(selectionsFromDoorDetails(details), selection);
-      patch.guidedSelection = { ...details, ...selection, entryDoors, ...entryDoorSelectionSchedules(entryDoors) };
-      commitGuidedRequirementPatch(requirement, patch, { autoAdvance: false, persist: true, successMessage: `Door ${option.door.doorReference} furniture saved.` });
+      patch.guidedSelection = { ...details, ...selection, entryDoors, entryDoorDrafts:{...details.entryDoorDrafts,[option.door.id]:{...details.entryDoorDrafts?.[option.door.id],Complete:true,HardwareConfirmed:true,Step:'review'}}, ...entryDoorSelectionSchedules(entryDoors) };
+      commitGuidedRequirementPatch(requirement, patch, { autoAdvance: false, persist: true, successMessage: `Door ${option.door.doorReference} saved.`, onSaved: committed => {
+        const remainingDoor = exteriorEntryDoors({workbook:embeddedWorkbook,details:patch.guidedSelection}).find(door=>!entryDoors.some(s=>s.door.id===door.id&&s.entryDoorFurniture&&s.configurationComplete));
+        if(remainingDoor) {
+          const url = new URL(window.location.href);
+          url.searchParams.set('room','exterior');url.searchParams.set('roomCategory','entry-doors');
+          url.searchParams.set('door',remainingDoor.id);url.searchParams.set('doorStep','application');
+          safeSelectionNavigate(selectionRouterRef.current,url.href,{shallow:true,scroll:false});
+          return;
+        }
+        const selections = guidedSelectedByRequirement(guidedSelectionsFromBook(committed));
+        const currentIndex = applicableExteriorRequirements.findIndex(r=>r.requirementKey==='entry-door');
+        const ordered = [...applicableExteriorRequirements.slice(currentIndex+1),...applicableExteriorRequirements.slice(0,currentIndex)];
+        const next = ordered.find(r=>statusForRequirement(r,selections.get(r.requirementKey))!=='complete');
+        const url = new URL(window.location.href);
+        for (const key of ['room','roomCategory','door','doorStep','mode','returnPage']) url.searchParams.delete(key);
+        url.searchParams.set('selectionArea','exterior');
+        if(next) url.searchParams.set('selectionRequirement',next.requirementKey);
+        else url.searchParams.delete('selectionRequirement');
+        safeSelectionNavigate(selectionRouterRef.current,url.href,{shallow:true,scroll:false});
+        if(next) navigateToGuidedRequirement(next); else returnToGuidedDashboard(requirement);
+      }});
       return;
     }
     commitGuidedRequirementPatch(requirement, patch, option.internalCatalogueSelection ? {autoAdvance:false,persist:true,successMessage:`${requirement.label} selection saved.`} : {});
+  }
+
+  // Writes the whole Plumbing Fixtures category (every product line + its location allocations)
+  // into the requirement's single selection-book row. Quantities, totals and the per-location
+  // schedule all derive from the allocations; with no lines left the selection is cleared.
+  function plumbingAllocationPatch(requirement, lines = []) {
+    const savedDetails = guidedSelectionMap.get(requirement.requirementKey)?.selected_details || null;
+    // The required quantity is only ever a real project count (showers from AI Plan Takeoff).
+    const projectRequired = configuredSelectionState.required[requirement.requirementKey] || null;
+    const previousDetails = projectRequired
+      ? { ...(savedDetails || {}), plumbingAllocation: { ...(savedDetails?.plumbingAllocation || {}), requiredQuantity: projectRequired.quantity, requiredQuantitySource: projectRequired.source } }
+      : savedDetails;
+    const record = plumbingAllocationRecord(requirement, lines, previousDetails?.plumbingAllocation || null);
+    if (!record.lines.length) {
+      return {
+        quantity: 0,
+        patch: {
+          selectedOptionId: "",
+          selectedProduct: "",
+          productModel: "",
+          brand: "",
+          description: "",
+          supplier: "",
+          finishColour: "",
+          imageUrl: requirementImage(requirement),
+          allowanceAmount: requirement.defaultAllowance,
+          selectedCost: 0,
+          upgradeCost: 0,
+          included: false,
+          status: "pending",
+          guidedSelection: null,
+        },
+      };
+    }
+    const built = plumbingSelectionPatch(requirement, record.lines, previousDetails, { projectId: selectedProjectId || selectedProject?.id || "", organisationId: workspaceId || "", now: new Date().toISOString() });
+    return { quantity: built.summary.quantity, patch: built.patch };
+  }
+
+  function commitPlumbingAllocation(requirement, lines = []) {
+    const { patch, quantity } = plumbingAllocationPatch(requirement, lines);
+    commitGuidedRequirementPatch(requirement, patch, { autoAdvance: false, persist: true, successMessage: quantity ? `${requirement.label}: ${quantity} allocated.` : `${requirement.label} selection removed.` });
+  }
+
+  // A Selection Pack changes several requirements at once (Towel Rails, Robe Hooks, ...): every
+  // component's allocation lines are written in one book update and one save. Pack saves run one
+  // after another: selecting a pack and changing an item straight away would otherwise start two
+  // job writes at once, and the older one could finish last.
+  function commitSelectionPackChanges(changes = [], successMessage = "") {
+    const patches = changes.map(({ requirementKey, lines }) => {
+      const requirement = guidedRequirementsByKey.get(requirementKey) || guidedRequirementByKey(requirementKey);
+      return requirement ? { requirement, patch: plumbingAllocationPatch(requirement, lines).patch } : null;
+    }).filter(Boolean);
+    if (!patches.length) return;
+    let committedBook = null;
+    setBook((current) => {
+      committedBook = patches.reduce((nextBook, item) => guidedBookWithRequirementPatch(nextBook, item.requirement, item.patch), current);
+      saveEmbeddedBookDraft(committedBook);
+      return committedBook;
+    });
+    window.setTimeout(() => {
+      if (!committedBook) return;
+      selectionPackSaveChainRef.current = selectionPackSaveChainRef.current
+        .catch(() => null)
+        .then(() => persistBookData(committedBook, "in_progress", { successMessage }));
+    }, 0);
+  }
+
+  // pack = null removes the selected pack. Individually allocated accessories are left alone.
+  function selectAccessoryPack(pack) {
+    const { required, linesByRequirement, allowancePerPack } = accessoryPackState;
+    if (pack && !required.quantity) {
+      setError("This project has no Bathroom or Ensuite to apply an accessory pack to.");
+      return;
+    }
+    commitSelectionPackChanges(
+      selectionPackChanges(linesByRequirement, BATHROOM_ACCESSORY_PACK_GROUP, pack, required.rooms, { allowancePerPack }),
+      pack ? `${required.quantity} x ${pack.packName} selected.` : "Accessory pack removed.",
+    );
+  }
+
+  function substituteAccessoryPackComponent(component, product) {
+    const lines = accessoryPackState.linesByRequirement[component.requirementKey] || [];
+    commitSelectionPackChanges([{
+      requirementKey: component.requirementKey,
+      lines: lines.map((line) => (line.lineId === component.line.lineId ? substituteSelectionPackComponent(line, product) : line)),
+    }], `${component.label} changed to ${product.productName}.`);
   }
 
   function selectGuidedDrivewayConfiguration(requirement, option, configuration = {}) {
@@ -3826,11 +4649,18 @@ export default function BuilderSelectionsBookPage({
       projectInfo: { ...(book.projectInfo || {}), ...projectInfoDisplay },
       updatedAt: new Date().toISOString(),
     };
-    return persistBookData(bookForSave, status);
+    return persistBookData(bookForSave, status, { savedFrom: book });
   }
 
   async function persistBookData(bookForSave, status = "in_progress", options = {}) {
     saveEmbeddedBookDraft(bookForSave);
+    // A save takes seconds and the client keeps working through it. When it finishes it may only
+    // write back the book it was started from; anything edited since is newer and stays as it is.
+    const savedFrom = options.savedFrom || bookForSave;
+    const applySavedBook = (savedBook) => {
+      setBook((current) => (current === savedFrom || current === bookForSave ? savedBook : current));
+      setCoverDraft((current) => (current === savedFrom.cover || current === bookForSave.cover ? savedBook.cover : current));
+    };
     let embeddedSaveResult = null;
     if (embedded && typeof onClientSelectionsSave === "function") {
       embeddedSaveResult = await onClientSelectionsSave(bookForSave, {
@@ -3838,27 +4668,43 @@ export default function BuilderSelectionsBookPage({
         successMessage: options.successMessage,
       });
       if (embeddedSaveResult?.ok === false) {
-        setBook(bookForSave);
-        setCoverDraft(bookForSave.cover);
+        applySavedBook(bookForSave);
         setError(embeddedSaveResult.message || "Open or create a job before saving client selections.");
         setSaving(false);
         return null;
       }
     }
     if (!workspaceId || !selectedProjectId) {
-      setBook(bookForSave);
-      setCoverDraft(bookForSave.cover);
+      applySavedBook(bookForSave);
+      // The local draft above is already written, so an autosave has still preserved the work.
+      // Only an explicit save should interrupt with a banner.
+      if (options.autosave) return null;
       setError("Open or create a job before saving client selections.");
       return null;
     }
     setSaving(true);
     setError("");
     setSuccess("");
+
+    // Gate before the write, not after it fails. A job that has no uuid project row
+    // is persisted by its job file; reporting that as a save failure was wrong and is
+    // what made every area of Client Selections look broken.
+    const target = projectPersistenceTarget(selectedProjectId, embeddedWorkbook);
+    if (target.local) {
+      applySavedBook(bookForSave);
+      setSaving(false);
+      setLastSaveState({ state: "saved-local", at: new Date().toISOString(), reason: target.reason });
+      if (!options.autosave) {
+        setSuccess(embeddedSaveResult?.message || "Selections saved to the open job file. This job is not linked to a cloud project, so it is not stored in the project database.");
+      }
+      return embeddedSaveResult?.selectionRevision || "local-job-file";
+    }
+
     const { data: authData } = await supabase.auth.getUser();
     const userId = authData?.user?.id || null;
     const payload = {
       workspace_id: workspaceId,
-      project_id: selectedProjectId,
+      project_id: target.uuid,
       estimate_snapshot_id: uuidOrNull(selectedSnapshotId),
       inclusion_template_id: null,
       book_name: `${bookForSave.cover.projectName || selectedProject?.project_name || "Project"} Selections Book`,
@@ -3873,41 +4719,64 @@ export default function BuilderSelectionsBookPage({
     const { data, error: saveError } = await query.select("id, book_data").single();
     if (saveError) {
       if (embeddedSaveResult?.ok || String(selectedProjectId).startsWith("embedded:")) {
-        setBook(bookForSave);
-        setCoverDraft(bookForSave.cover);
+        applySavedBook(bookForSave);
         setSuccess(embeddedSaveResult?.message || "Selections Book saved to the active job.");
         setSaving(false);
         return embeddedSaveResult?.selectionRevision || "embedded-local";
       }
-      setError(saveError.message || "Could not save the Selections Book.");
+      if (options.autosave) {
+        // A recovered or file-backed job has no database project row to write to. The draft
+        // and the open job file already hold the selections, so this is not a data loss and
+        // must not be reported as one on every click.
+        console.warn("[Client Selections] autosave to the project record was skipped.", saveError.message || saveError);
+        setSaving(false);
+        return null;
+      }
+      // A real database failure. Say what actually happened and keep the prior saved
+      // record; the caller must not mark anything complete or advance on this path.
+      console.error("[Client Selections] project save failed", { code: saveError.code, message: saveError.message, projectId: target.uuid, workspaceId });
+      setLastSaveState({ state: "failed", at: new Date().toISOString(), message: saveError.message || "" });
+      setError(`Could not save to the project: ${saveError.message || "unknown database error"}${saveError.code ? ` (${saveError.code})` : ""}`);
       setSaving(false);
       return null;
     }
+    setLastSaveState({ state: "saved", at: new Date().toISOString(), reason: "", message: "" });
     setBookId(data.id);
-    setBook(data.book_data || bookForSave);
-    setCoverDraft((data.book_data || bookForSave).cover);
+    applySavedBook(data.book_data || bookForSave);
+    // The book itself (the source of truth every guided workflow reads back from - including the
+    // Cabinetry "Next Room" progression) has already been saved successfully above. Syncing rows
+    // into builder_client_selections is a secondary projection for BOQ/procurement/reporting; one
+    // bad legacy row anywhere else in the same project's book (e.g. a non-UUID id left over from a
+    // pre-migration record) can fail that batch without the actual save having failed at all. That
+    // must not be reported as "save failed" - doing so previously blocked Next Room from ever
+    // advancing whenever unrelated data elsewhere in the project had this kind of issue.
     const syncResult = await syncBookToProjectSelections({ bookForSync: data.book_data || bookForSave, savedBookId: data.id, userId });
     if (syncResult.error) {
-      setError(syncResult.error);
-      setSaving(false);
-      return null;
+      console.error("[Client Selections] builder_client_selections sync failed after a successful book save", syncResult.error);
+      setError(`Saved, but some selections could not sync to BOQ/procurement yet: ${syncResult.error}`);
     }
     const refreshedSelections = await loadPersistedProjectSelections();
     setPersistedProjectSelections(refreshedSelections);
     const projectLabel = projectInfoDisplay.jobNumber || selectedProject?.job_number || selectedProject?.project_name || "the active project";
-    setSuccess(embeddedSaveResult?.message || options.successMessage || `Selections Book saved to ${projectLabel}.${syncResult.message ? ` ${syncResult.message}` : ""}`);
+    setSuccess(options.autosave
+      ? `Selections saved automatically at ${new Date().toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })}.`
+      : embeddedSaveResult?.message || options.successMessage || `Selections Book saved to ${projectLabel}.${syncResult.message ? ` ${syncResult.message}` : ""}`);
     setSaving(false);
     return data.id;
   }
 
   async function syncBookToProjectSelections({ bookForSync, savedBookId, userId }) {
+    // Same uuid gate as the book write. Reached only for a real cloud project, but
+    // guarded here too so no future caller can route a file-backed job into it.
+    const syncTarget = projectPersistenceTarget(selectedProjectId, embeddedWorkbook);
+    if (syncTarget.local) return { error: "", message: "", skipped: true };
     const rows = (bookForSync.rooms || []).flatMap((room) => (room.rows || []).map((row) => ({ room, row })));
     const syncRows = rows.filter(({ row }) => isProjectSelectionSyncCandidate(row));
     const { data: existingRows } = await supabase
       .from("builder_client_selections")
       .select("id, metadata")
       .eq("workspace_id", workspaceId)
-      .eq("project_id", selectedProjectId);
+      .eq("project_id", syncTarget.uuid);
     const existingByRow = new Map((existingRows || [])
       .filter((item) => item.metadata?.selection_book_id === savedBookId && item.metadata?.selection_book_row_id)
       .map((item) => [item.metadata.selection_book_row_id, item.id]));
@@ -3917,7 +4786,7 @@ export default function BuilderSelectionsBookPage({
     syncRows.forEach(({ room, row }) => {
       const payload = selectionRecordPayload({
         workspaceId,
-        projectId: selectedProjectId,
+        projectId: syncTarget.uuid,
         snapshotId: selectedSnapshotId,
         bookId: savedBookId,
         templateId: selectedTemplateId,
@@ -3954,7 +4823,7 @@ export default function BuilderSelectionsBookPage({
       const { error: insertError } = await supabase.from("builder_client_selections").insert(inserts);
       if (insertError) return { inserted: 0, updated: 0, message: "", error: insertError.message || "Could not import selection records." };
     }
-    const syncResult = await syncImportedWindowSelectionToProcurement({ projectId: selectedProjectId, snapshotId: selectedSnapshotId, userId });
+    const syncResult = await syncImportedWindowSelectionToProcurement({ projectId: syncTarget.uuid, snapshotId: selectedSnapshotId, userId });
     if (syncResult.error) return { inserted: inserts.length, updated: updates.length, message: "", error: syncResult.error };
     const staleMessage = staleIds.length ? `${staleIds.length} stale selection records deactivated.` : "";
     return { inserted: inserts.length, updated: updates.length, message: [syncResult.message, staleMessage].filter(Boolean).join(" "), error: "" };
@@ -4140,7 +5009,7 @@ export default function BuilderSelectionsBookPage({
         projectInfo: { ...(book.projectInfo || {}), ...projectInfoDisplay },
         updatedAt: new Date().toISOString(),
       };
-      const savedBookId = await persistBookData(bookForGeneration, "in_progress");
+      const savedBookId = await persistBookData(bookForGeneration, "in_progress", { savedFrom: book });
       if (!savedBookId || savedBookId === "embedded-local") {
         throw new Error("Save the Client Selections book to the active job before generating the schedule PDF.");
       }
@@ -4388,6 +5257,7 @@ export default function BuilderSelectionsBookPage({
             <button type="button" className="standardBack" onClick={() => handleGuidedBack({
               guidedScreen,
               guidedArea,
+              guidedSide,
               guidedRequirement,
               guidedBrickStep,
               guidedEntryDoorStep,
@@ -4596,6 +5466,13 @@ export default function BuilderSelectionsBookPage({
             </>
           ) : (
             <GuidedSelectionsWorkflow
+              tiling={tilingProps}
+              flooring={flooringProps}
+              electrical={electricalProps}
+              stairFlights={stairFlights}
+              projectRoomNames={plumbingProjectLocationNames}
+              saving={saving}
+              organisationId={workspaceId || ""}
               screen={guidedScreen}
               area={guidedArea}
               requirement={guidedRequirement}
@@ -4606,7 +5483,14 @@ export default function BuilderSelectionsBookPage({
               persistedSelections={persistedProjectSelections}
               areaTotals={guidedAreaTotalsForActive}
               runningTotals={guidedRunningTotals}
-              products={guidedRequirement.requirementKey === "bricks" ? brickGuidedProducts : guidedRequirement.requirementKey === "roofing" ? roofingGuidedProducts : guidedRequirement.requirementKey === "garage-door" ? garageGuidedProducts : guidedProducts}
+              products={guidedRequirement.requirementKey === "bricks" ? brickGuidedProducts : guidedRequirement.requirementKey === "roofing" ? roofingGuidedProducts : guidedRequirement.requirementKey === "garage-door" ? garageGuidedProducts : isAllocatedCatalogueRequirement(guidedRequirement) ? plumbingGuidedProducts : guidedProducts}
+              plumbingFixtureSummaries={plumbingFixtureSummaries}
+              categorySummaries={guidedCategorySummaries}
+              configuredSelection={configuredSelectionState}
+              selectionPacks={{ ...accessoryPackState, onSelect: selectAccessoryPack, onRemove: () => selectAccessoryPack(null), onSubstitute: substituteAccessoryPackComponent }}
+              side={guidedSide}
+              requirementsByKey={guidedRequirementsByKey}
+              onOpenCategory={openGuidedCategory}
               applianceRecords={clientVisibleApplianceRecords}
               appliancePacks={clientVisibleAppliancePacks}
               applianceStep={guidedApplianceStep}
@@ -4647,6 +5531,8 @@ export default function BuilderSelectionsBookPage({
               onOpenRequirementKey={openGuidedRequirementKey}
               onOpenRequirement={openGuidedRequirement}
               onFinishCabinetry={saveGuidedCabinetryAndReturnToInterior}
+              onCabinetrySummary={() => returnToGuidedDashboard(guidedRequirementByKey("cabinetry"))}
+              cabinetryJobWorkbook={embeddedWorkbook}
               onBrickStepChange={setGuidedBrickStep}
               onBrickSupplierChange={setGuidedBrickSupplier}
               onBrickRangeChange={setGuidedBrickRange}
@@ -4728,6 +5614,38 @@ export default function BuilderSelectionsBookPage({
             }}
           />
         )}
+        {plumbingAllocationDraft ? (
+          <PlumbingAllocationModal
+            requirement={plumbingAllocationDraft.requirement}
+            product={plumbingAllocationDraft.product}
+            lines={plumbingLinesFromSelection(guidedSelectionMap.get(plumbingAllocationDraft.requirement.requirementKey)?.selected_details)}
+            projectLocationNames={RESIDENTIAL_SERVICE_KEYS.includes(plumbingAllocationDraft.requirement.requirementKey) ? houseRoomNames(plumbingProjectLocationNames) : plumbingProjectLocationNames}
+            workbook={embeddedWorkbook || {}}
+            onCancel={() => setPlumbingAllocationDraft(null)}
+            onSave={(nextLines) => {
+              commitPlumbingAllocation(plumbingAllocationDraft.requirement, nextLines);
+              setPlumbingAllocationDraft(null);
+            }}
+          />
+        ) : null}
+        {configuredSelectionDraft ? (() => {
+          const draftLines = plumbingLinesFromSelection(guidedSelectionMap.get(configuredSelectionDraft.requirement.requirementKey)?.selected_details);
+          return (
+            <ConfiguredSelectionModal
+              key={configuredSelectionDraft.line?.lineId || configuredSelectionDraft.product.id}
+              requirement={configuredSelectionDraft.requirement}
+              product={configuredSelectionDraft.product}
+              line={configuredSelectionDraft.line}
+              lines={draftLines}
+              locations={configuredSelectionLocations(configuredSelectionDraft.requirement.requirementKey, projectLocationList, configuredSelectionState.required[configuredSelectionDraft.requirement.requirementKey] || null, configuredSelectionDraft.line ? [configuredSelectionDraft.line] : [])}
+              onCancel={() => setConfiguredSelectionDraft(null)}
+              onSave={(nextLines) => {
+                commitPlumbingAllocation(configuredSelectionDraft.requirement, nextLines);
+                setConfiguredSelectionDraft(null);
+              }}
+            />
+          );
+        })() : null}
         {brickImportModalOpen && (
           <BrickCatalogueImportModal
             requirement={guidedRequirementByKey("bricks")}
@@ -4753,7 +5671,23 @@ export default function BuilderSelectionsBookPage({
   );
 }
 
+// Flooring card: area progress once areas are saved, otherwise the live Product Library range.
+function flooringCardLabel(details = null, counts = {}) {
+  const status = details?.flooringStatus;
+  if (status?.assigned) return `${status.assigned} of ${status.total} floor areas assigned`;
+  const available = Object.values(counts).reduce((total, entry) => ({ products: total.products + (entry?.products || 0), colours: total.colours + (entry?.colours || 0) }), { products: 0, colours: 0 });
+  return available.products ? `${available.products} ranges · ${available.colours} colours available` : "Range not yet imported";
+}
+
 function GuidedSelectionsWorkflow({
+  configuredSelection = { groups: {}, required: {} },
+  tiling = null,
+  flooring = null,
+  electrical = null,
+  projectRoomNames = [],
+  stairFlights = [],
+  saving = false,
+  organisationId = "",
   screen,
   area,
   requirement,
@@ -4765,6 +5699,12 @@ function GuidedSelectionsWorkflow({
   areaTotals,
   runningTotals,
   products,
+  plumbingFixtureSummaries = {},
+  categorySummaries = {},
+  selectionPacks = null,
+  side = "interior",
+  requirementsByKey = new Map(),
+  onOpenCategory = () => {},
   applianceRecords = [],
   appliancePacks = [],
   applianceStep = "brands",
@@ -4805,6 +5745,8 @@ function GuidedSelectionsWorkflow({
   onOpenRequirementKey,
   onOpenRequirement,
   onFinishCabinetry,
+  onCabinetrySummary = null,
+  cabinetryJobWorkbook = null,
   onBrickStepChange,
   onBrickSupplierChange,
   onBrickRangeChange,
@@ -4844,6 +5786,18 @@ function GuidedSelectionsWorkflow({
   onSaveProgress,
   onReviewSchedule,
 }) {
+  // The group a configured category was opened from (Framed / Semi-Frameless / Frameless ...).
+  const [configuredGroupFilter, setConfiguredGroupFilter] = useState(null);
+  // MANAGE ROOMS is project-wide: the one room manager, opened from the main Client Selections
+  // screens (Electrical keeps a shortcut to the same manager).
+  const [managingProjectRooms, setManagingProjectRooms] = useState(false);
+  const projectRoomsBar = electrical?.roomManager ? (
+    <div className="guidedProjectRooms" data-testid="project-rooms-bar">
+      <div><strong>Project rooms</strong><span>{electrical.rooms.length ? `${electrical.rooms.length} rooms: ${electrical.rooms.slice(0, 8).map((room) => room.name).join(", ")}${electrical.rooms.length > 8 ? ", ..." : ""}` : "No rooms recorded yet"}</span></div>
+      <button type="button" onClick={() => setManagingProjectRooms(true)} data-testid="manage-project-rooms">Manage rooms</button>
+      {managingProjectRooms ? <ProjectRoomManager rooms={electrical.rooms} roomTypes={ROOM_LOCATION_OPTIONS.filter((type) => type.key !== "exterior")} {...electrical.roomManager} onClose={() => setManagingProjectRooms(false)} /> : null}
+    </div>
+  ) : null;
   const persistedWindowsSelection = persistedSelectionForRequirement(persistedSelections, "windows");
   // KITCHEN COMPLETE. Opening Interior.
 
@@ -4876,6 +5830,7 @@ function GuidedSelectionsWorkflow({
     return (
       <section className="guidedShell" data-testid="guided-client-selections-home">
         <GuidedBudgetDock totals={runningTotals} />
+        {projectRoomsBar}
         <div className="guidedIntro">
           <span>Choose an Area</span>
           <strong>Start with the part of the home the client is selecting.</strong>
@@ -4887,84 +5842,162 @@ function GuidedSelectionsWorkflow({
     );
   }
 
-  if (screen === "exterior") {
-    const applicableKeys = new Set(requirementsForGuidedArea("exterior", book).map((item) => item.requirementKey));
-    const exteriorCards = EXTERIOR_CATEGORY_CARDS.filter((card) => !card.requirementKey || applicableKeys.has(card.requirementKey)).map((card) => {
-      const selection = card.requirementKey ? selections.get(card.requirementKey) : null;
-      const brickNotApplicable = card.requirementKey === "bricks" && exteriorWallConstruction?.brickApplicable === false;
+  // Interior / Exterior: large cards for each PRODUCT / TRADE category (never rooms), grouped so
+  // the page reads in a sensible order.
+  if (screen === "interior" || screen === "exterior") {
+    const pageSide = screen;
+    const categories = clientSelectionCategoriesForSide(pageSide);
+    const sideGroups = CLIENT_SELECTION_CATEGORY_GROUPS.filter((group) => group.side === pageSide);
+    const cardFor = (item) => {
+      const itemRequirements = requirementsForSelectionCategory(item, [...requirementsByKey.values()]);
+      const counted = itemRequirements.filter((requirement) => !requirement.optionalSelection || selections.get(requirement.requirementKey));
+      const done = counted.filter((requirement) => statusForRequirement(requirement, selections.get(requirement.requirementKey)) === "complete").length;
+      const selectedCount = itemRequirements.filter((requirement) => selections.get(requirement.requirementKey)).length;
+      const available = selectedCount > 0 || itemRequirements.some((requirement) => !categorySummaries[requirement.requirementKey]?.noRange && (!isAllocatedCatalogueRequirement(requirement) || (categorySummaries[requirement.requirementKey]?.count || 0) > 0));
+      // Electrical completion follows the project's current rooms, not the rooms it had when saved.
+      const electricalProgress = item.key === "electrical-technology" ? electrical?.progress : null;
+      const status = electricalProgress ? (!electricalProgress.saved ? "not_started" : electricalProgress.allComplete ? "complete" : "in_progress")
+        : !selectedCount ? "not_started" : counted.length && done === counted.length ? "complete" : "in_progress";
       return {
-        ...card,
-        selectedLabel: brickNotApplicable ? "Not applicable - rendered finish" : selection?.selected_product_name || selection?.selectedProduct || selection?.selected_product || "",
-        disabled: brickNotApplicable,
-        actionLabel: brickNotApplicable ? "Resolved" : card.actionLabel,
+        key: item.key,
+        label: item.label,
+        description: item.description,
+        image: (item.key === 'lighting-fans' ? itemRequirements.map(r => categorySummaries[r.requirementKey]?.imageUrl).find(Boolean) : '') || CATEGORY_CARD_IMAGES[item.key] || item.image || (itemRequirements[0] ? requirementImage(itemRequirements[0]) : GENERIC_IMAGE_URLS[pageSide]),
+        cardRequirementKey: CATEGORY_CARD_REQUIREMENT_KEYS[item.key] || "",
+        status,
+        selectedLabel: electricalProgress ? (electricalProgress.total ? `${electricalProgress.saved ? electricalProgress.complete : 0} of ${electricalProgress.total} rooms complete` : "No rooms recorded yet")
+          : item.key === "flooring" && flooring ? flooringCardLabel(selections.get(FLOORING_REQUIREMENT_KEY)?.selected_details, flooring.counts)
+          : item.key === "tiles-stone" && Array.isArray(selections.get(TILING_REQUIREMENT_KEY)?.selected_details?.tilingRoomStatuses)
+          ? `${selections.get(TILING_REQUIREMENT_KEY).selected_details.tilingCompleteRooms || 0} of ${selections.get(TILING_REQUIREMENT_KEY).selected_details.tilingRoomStatuses.length} rooms & areas complete`
+          : !available ? "Range not yet imported" : selectedCount ? (status === "complete" ? "Complete" : `${selectedCount} of ${itemRequirements.length} selected`) : "Not started",
       };
-    });
+    };
     return (
-      <section className="guidedShell" data-testid="guided-exterior-categories">
+      <section className="guidedShell" data-testid={`guided-${pageSide}-categories`}>
         <GuidedBudgetDock totals={runningTotals} />
-        <ExteriorWallConstructionSelector
-          value={exteriorWallConstruction?.key}
-          onChange={onExteriorWallConstructionChange}
-        />
-        <GuidedCardGrid title="Exterior" cards={exteriorCards} selections={selections} onOpen={(key) => {
-          const card = exteriorCards.find((item) => item.key === key);
-          if (card?.disabled) return;
-          if (card?.requirementKey) onOpenRequirementKey(card.requirementKey);
-        }} />
+        {projectRoomsBar}
+        {pageSide === "exterior" ? <ExteriorWallConstructionSelector value={exteriorWallConstruction?.key} onChange={onExteriorWallConstructionChange} /> : null}
+        {sideGroups.map((group) => ({
+          ...group,
+          // A category borrowed from the other page (Solar on Exterior) follows this page's own cards.
+          items: categories
+            .filter((item) => categoryGroupForSide(item, pageSide) === group.key)
+            .sort((left, right) => Number(left.group !== group.key) - Number(right.group !== group.key)),
+        }))
+          .filter((group) => group.items.length)
+          .map((group, index) => (
+            <section key={group.key} className="guidedCategoryGroup" data-testid={`category-group-${group.key}`}>
+              <GuidedCardGrid
+                title={index === 0 ? `${pageSide === "exterior" ? "Exterior" : "Interior"} — ${group.label}` : group.label}
+                subtitle={index === 0 ? "Choose what the house uses, then where and how many." : ""}
+                cards={group.items.map(cardFor)}
+                selections={selections}
+                onOpen={(key) => onOpenCategory(key, pageSide)}
+              />
+            </section>
+          ))}
       </section>
     );
   }
 
-  if (screen === "interior") {
-    const kitchenTotals = guidedAreaTotals(KITCHEN_REQUIREMENTS, selections);
-    const applianceTotals = guidedAreaTotals(APPLIANCE_REQUIREMENTS, selections);
-    const plumbingTotals = guidedAreaTotals(PLUMBING_FIXTURE_REQUIREMENTS, selections);
-    const interiorCards = INTERIOR_CATEGORY_CARDS.map((card) => {
-      if (card.key === "cabinetry") {
-        const cabinetrySelection = selections.get("cabinetry")?.selected_details?.cabinetrySelection || null;
-        const summary = cabinetrySelection ? normaliseCabinetrySelection(cabinetrySelection).summary : null;
-        return {
-          ...card,
-          selectedLabel: summary ? `${summary.completeRoomCount || 0} of ${summary.includedRoomCount || 0} rooms complete` : "No cabinetry rooms added",
-          status: summary?.status || (kitchenTotals.completed === kitchenTotals.total && kitchenTotals.total ? "complete" : kitchenTotals.completed ? "in_progress" : "not_started"),
-        };
-      }
-      if (card.key === "appliances") {
-        return {
-          ...card,
-          selectedLabel: `${applianceTotals.completed} / ${applianceTotals.total} complete`,
-          status: applianceTotals.completed === applianceTotals.total ? "complete" : applianceTotals.completed ? "in_progress" : "not_started",
-        };
-      }
-      if (card.key === "plumbing-fixtures") {
-        return {
-          ...card,
-          selectedLabel: `${plumbingTotals.completed} / ${plumbingTotals.total} complete`,
-          status: plumbingTotals.completed === plumbingTotals.total && plumbingTotals.total ? "complete" : plumbingTotals.completed ? "in_progress" : "not_started",
-        };
-      }
-      return card;
-    });
+  if (screen === "category" || screen === "plumbing-fixtures") {
+    const category = CLIENT_SELECTION_CATEGORY_BY_KEY[screen === "category" ? area : "plumbing-fixtures"] || CLIENT_SELECTION_CATEGORY_BY_KEY["plumbing-fixtures"];
+    // Flooring is chosen per floor area from the Product Library flooring range.
+    if (category.key === "flooring" && flooring) {
+      return (
+        <FlooringSelectionWorkflow
+          key="flooring-areas"
+          savedAreas={flooring.savedAreas}
+          savedAllowanceOverrides={flooring.savedAllowanceOverrides}
+          savedCarpetOptions={flooring.savedCarpetOptions}
+          carpetRates={flooring.carpetRates}
+          projectRoomNames={projectRoomNames}
+          takeoff={flooring.takeoff}
+          flooringProducts={flooring.flooringProducts}
+          productById={flooring.productById}
+          allowanceFor={flooring.allowanceFor}
+          saving={saving}
+          onSave={flooring.onSave}
+          onBack={() => onOpenArea(sideForCategory(category, side))}
+          backLabel="← Interior"
+          budgetDock={<GuidedBudgetDock totals={runningTotals} />}
+        />
+      );
+    }
+    // Electrical is a room-by-room quantity schedule: no product cards, no Product Library.
+    if (category.key === "electrical-technology" && electrical) {
+      return (
+        <ElectricalScheduleWorkflow
+          key={`electrical-${projectId || "job"}`}
+          savedSchedule={electrical.savedSchedule}
+          projectRooms={electrical.rooms}
+          roomManager={electrical.roomManager}
+          inclusions={workbook?.standardInclusions}
+          workbook={workbook}
+          onSave={electrical.onSave}
+          onBack={() => onOpenArea(sideForCategory(category, side))}
+        />
+      );
+    }
+    // Tiles & Stone is specified room by room, not as product category cards.
+    if (category.key === "tiles-stone" && tiling) {
+      return (
+        <TilingRoomsWorkflow
+          key="tiling-rooms"
+          savedRooms={tiling.savedRooms}
+          legacySelections={tiling.legacySelections}
+          takeoff={tiling.takeoff}
+          tileProducts={tiling.tileProducts}
+          floorWasteProducts={tiling.floorWasteProducts}
+          productById={tiling.productById}
+          saving={saving}
+          onSave={tiling.onSave}
+          onBack={() => onOpenArea(sideForCategory(category, side))}
+          backLabel="← Interior"
+          budgetDock={<GuidedBudgetDock totals={runningTotals} />}
+        />
+      );
+    }
     return (
-      <section className="guidedShell" data-testid="guided-interior-categories">
-        <GuidedBudgetDock totals={runningTotals} />
-        <GuidedCardGrid title="Interior" cards={interiorCards} selections={selections} onOpen={(key) => {
-          if (key === "cabinetry") {
-            onOpenRequirementKey("cabinetry");
-            return;
-          }
-          if (key === "appliances") {
-            onOpenArea("appliances");
-            return;
-          }
-          if (key === "plumbing-fixtures") {
-            onOpenArea("plumbing-fixtures");
-            return;
-          }
-          const card = interiorCards.find((item) => item.key === key);
-          if (card?.requirementKey) onOpenRequirementKey(card.requirementKey);
-        }} />
-      </section>
+      <GuidedPlumbingFixtureCategories
+        category={category}
+        requirements={requirements}
+        selections={selections}
+        areaTotals={areaTotals}
+        runningTotals={runningTotals}
+        summaries={categorySummaries}
+        onOpenRequirement={onOpenRequirementKey}
+        configured={requirements.length && requirements.every(isConfiguredSelectionRequirement) ? {
+          ...configuredSelection,
+          onOpenGroup: (requirementKey, group) => {
+            setConfiguredGroupFilter(group?.facet ? { requirementKey, value: group.value, label: group.label } : null);
+            onOpenRequirementKey(requirementKey);
+          },
+          onEditLine: (item, line) => {
+            const live = clientSelectionCategoryProducts(item, { organisationId }).find((product) => plumbingLineMatchesProduct(line, product));
+            const option = live ? guidedProductFromCatalogue(masterProductToClientSelectionProduct(live, { organisationId, requirement: item }), item) : plumbingProductFromLine(line);
+            onSelectProduct(item, { ...option, configuredLine: line });
+          },
+        } : null}
+        onBack={() => onOpenArea(sideForCategory(category, side))}
+        backLabel={sideForCategory(category, side) === "exterior" ? "← Exterior" : "← Interior"}
+        headerExtra={category.key === "external-cladding" ? (
+          <ExteriorWallConstructionSelector value={exteriorWallConstruction?.key} onChange={onExteriorWallConstructionChange} />
+        ) : category.key === "bathroom-accessories" && selectionPacks ? (
+          <SelectionPacksSection
+            group={selectionPacks.group}
+            packs={selectionPacks.packs}
+            required={selectionPacks.required}
+            selected={selectionPacks.selected}
+            allowancePerPack={selectionPacks.allowancePerPack}
+            allowanceSource={selectionPacks.allowanceSource}
+            alternativesFor={(component) => selectionPackComponentAlternatives(selectionPacks.products, component)}
+            onSelect={selectionPacks.onSelect}
+            onRemove={selectionPacks.onRemove}
+            onSubstitute={selectionPacks.onSubstitute}
+          />
+        ) : null}
+      />
     );
   }
 
@@ -4993,24 +6026,57 @@ function GuidedSelectionsWorkflow({
         onOpenRequirement={onOpenRequirement}
         onSelectProduct={onSelectProduct}
         onSelectAppliancePackage={onSelectAppliancePackage}
+        onFinish={async () => {
+          const saved = await onSaveProgress?.();
+          if (saved) onOpenArea("interior");
+          return saved;
+        }}
       />
     );
   }
 
   if (screen === "product") {
+    if (requirement.requirementKey === 'interior-paint') {
+      return <InternalPaintColourSpecification key={projectId || 'paint'}
+        selection={selections.get('interior-paint')} projectRoomNames={projectRoomNames} inclusions={workbook?.standardInclusions}
+        onSave={(paintScheme) => onSelectProduct(requirement, { paintScheme })} onBack={() => onOpenArea('interior')} />;
+    }
+    if (isAllocatedCatalogueRequirement(requirement)) {
+      const productCategory = clientSelectionCategoryForRequirement(requirement.requirementKey, side);
+      const siblingRequirements = requirementsForSelectionCategory(productCategory || {}, [...requirementsByKey.values()]).filter(isAllocatedCatalogueRequirement);
+      return (
+        <GuidedPlumbingFixtureProducts
+          requirement={requirement}
+          requirements={siblingRequirements.length ? siblingRequirements : requirements}
+          categoryLabel={productCategory?.label || requirement.areaLabel}
+          groupFilter={configuredGroupFilter?.requirementKey === requirement.requirementKey ? configuredGroupFilter : null}
+          onClearGroupFilter={() => setConfiguredGroupFilter(null)}
+          projectRequired={configuredSelection.required[requirement.requirementKey] || null}
+          products={products}
+          selections={selections}
+          runningTotals={runningTotals}
+          onOpenRequirement={onOpenRequirement}
+          onReturn={() => onOpenCategory(productCategory?.key || "")}
+          onSelectProduct={onSelectProduct}
+          onViewDetails={onViewDetails}
+        />
+      );
+    }
     if (requirement.requirementKey === "cabinetry") {
       return (
         <GuidedCabinetryWorkflow
           requirement={requirement}
           projectId={projectId}
+          organisationId={organisationId}
           requirements={requirements}
           selections={selections}
           runningTotals={runningTotals}
           onOpenRequirement={onOpenRequirement}
           onSelectProduct={onSelectProduct}
           onFinishCabinetry={onFinishCabinetry}
+          jobWorkbook={cabinetryJobWorkbook}
           onSaveProgress={onSaveProgress}
-          onReturnToDashboard={() => onOpenArea("interior")}
+          onReturnToDashboard={() => (onCabinetrySummary ? onCabinetrySummary() : onOpenArea("interior"))}
         />
       );
     }
@@ -5152,6 +6218,20 @@ function GuidedSelectionsWorkflow({
         />
       );
     }
+    if (requirement.requirementKey === "balustrades") {
+      return (
+        <BalustradeSelectionWorkflow
+          requirement={requirement}
+          organisationId={organisationId}
+          selection={selections.get("balustrades")}
+          workbook={workbook}
+          budgetDock={<GuidedBudgetDock totals={runningTotals} />}
+          backLabel={side === "interior" ? "← Stairs & Balustrades" : "← Exterior"}
+          onBack={() => (side === "interior" ? onOpenCategory("stairs-balustrades", "interior") : onOpenArea("exterior"))}
+          onSave={(lines) => onSelectProduct(requirement, { balustradeAllocationLines: lines })}
+        />
+      );
+    }
     if (requirement.requirementKey === "exterior-paint") {
       return (
         <GuidedExteriorColourWorkflow
@@ -5195,7 +6275,7 @@ function GuidedSelectionsWorkflow({
               <span>{requirement.areaLabel} / {requirement.label}</span>
               <strong>{products.length ? `${products.length} ${requirement.label} product option${products.length === 1 ? "" : "s"}` : `No products have been added for ${requirement.label}.`}</strong>
             </div>
-            {INTERNAL_SELECTION_KEYS.includes(requirement.requirementKey) ? <InternalCataloguePicker key={requirement.requirementKey} products={products} requirement={requirement} selection={selections.get(requirement.requirementKey)} onSelect={onSelectProduct} onBack={()=>onOpenArea('interior')} onSave={onSaveProgress}/> : products.length ? (
+            {requirement.requirementKey === 'stairs' ? <StairSelectionWizard key={`stairs:${projectId}`} stairFlights={stairFlights} storageKey={`product-library:stairs:${projectId||book?.id||'local-job'}`} products={products} requirement={requirement} selection={selections.get(requirement.requirementKey)} onSelect={onSelectProduct} backLabel="← Stairs & Balustrades" onBack={()=>onOpenCategory('stairs-balustrades','interior')} onSave={onSaveProgress}/> : INTERNAL_SELECTION_KEYS.includes(requirement.requirementKey) ? <InternalCataloguePicker key={requirement.requirementKey} products={products} requirement={requirement} selection={selections.get(requirement.requirementKey)} onSelect={onSelectProduct} onBack={()=>onOpenArea('interior')} onSave={onSaveProgress} relatedRequirement={INTERNAL_RELATED_REQUIREMENTS[requirement.requirementKey]} onOpenRelated={INTERNAL_RELATED_REQUIREMENTS[requirement.requirementKey] ? () => onOpenRequirementKey(INTERNAL_RELATED_REQUIREMENTS[requirement.requirementKey].key) : undefined}/> : products.length ? (
               <div className="guidedProductGrid">
                 {products.map((product) => (
                   <GuidedProductCard key={product.id} requirement={requirement} product={product} onSelect={() => onSelectProduct(requirement, product)} onViewDetails={() => onViewDetails(product)} onSaveProgress={onSaveProgress} />
@@ -5209,6 +6289,10 @@ function GuidedSelectionsWorkflow({
   }
 
   const checklistTitle = screen === "appliances" ? "Appliances" : screen === "plumbing-fixtures" ? "Plumbing Fixtures" : "Cabinetry";
+  // Cabinetry is ONE requirement in the overall Client Selections count, made of several rooms.
+  // Its own summary reports the rooms: "0 of 1 complete" said nothing about six locations.
+  const cabinetrySummaryLocations = checklistTitle === "Cabinetry" ? selections.get("cabinetry")?.selected_details?.cabinetrySelection?.locations : null;
+  const checklistProgress = cabinetrySummaryLocations?.length ? cabinetryRoomProgress(cabinetrySummaryLocations).label : `${areaTotals.completed} of ${areaTotals.total} complete`;
   const visibleRequirements = screen === "appliances"
     ? requirements.filter((item) => !["freestanding-cooker", "appliance-pack"].includes(item.requirementKey) || selections.get(item.requirementKey) || applianceRecordsForRequirement(applianceRecords, item).length)
     : requirements;
@@ -5218,7 +6302,7 @@ function GuidedSelectionsWorkflow({
       <div className="guidedChecklistHeader">
         <div>
           <span>{checklistTitle}</span>
-          <strong>{areaTotals.completed} of {areaTotals.total} complete</strong>
+          <strong data-testid="checklist-progress">{checklistProgress}</strong>
         </div>
         <div className="guidedTotals">
           <GuidedMiniTotal label="Allowance Total" value={money(areaTotals.allowance)} />
@@ -5263,7 +6347,10 @@ function GuidedApplianceWorkflow({
   onOpenRequirement,
   onSelectProduct,
   onSelectAppliancePackage,
+  onFinish,
 }) {
+  const [finishing, setFinishing] = useState(false);
+  const [finishError, setFinishError] = useState("");
   const safePackages = safeAppliancePackagesForBrand({ packs, records, requirements });
   const brandSummaries = applianceBrandSummaries(records, safePackages);
   const productTypeRows = applianceProductTypesForBrand(records, requirements, brand);
@@ -5276,15 +6363,20 @@ function GuidedApplianceWorkflow({
   const selectedSelection = selections.get(familyRequirement.requirementKey);
   const hasSelections = requirements.some((item) => selections.get(item.requirementKey));
   const selectedPackage = safeBrandPackages.find((item) => [item.packId, item.productId].includes(packageId)) || null;
-  const brandTotals = guidedAreaTotals(requirements, selections);
+  const brandTotals = guidedAreaTotals(applianceSequenceRequirements(requirements), selections);
+  const currentTypeIndex = productTypeRows.findIndex((row) => row.requirement.familyKey === familyRequirement.familyKey);
+  const nextType = productTypeRows[currentTypeIndex + 1];
+  const previousType = productTypeRows[currentTypeIndex - 1];
 
   function chooseBrand(nextBrand) {
+    const firstRequirement = applianceSequenceRequirements(requirements)[0];
+    if (firstRequirement) onOpenRequirement?.(firstRequirement.requirementKey);
     onBrandChange?.(nextBrand);
-    onModeChange?.("");
+    onModeChange?.("build-your-own");
     onPackageChange?.("");
-    onFamilyChange?.("");
+    onFamilyChange?.(firstRequirement?.familyKey || "ovens");
     onProductChange?.("");
-    onStepChange?.("brand-summary");
+    onStepChange?.("models");
   }
 
   function changeBrand() {
@@ -5297,41 +6389,49 @@ function GuidedApplianceWorkflow({
     onStepChange?.("brands");
   }
 
-  function chooseMode(nextMode) {
-    if (mode && mode !== nextMode && hasSelections && typeof window !== "undefined" && !window.confirm("Switching appliance selection mode may replace existing appliance selections when you choose new products. Continue?")) return;
-    onModeChange?.(nextMode);
-    onProductChange?.("");
-    onFamilyChange?.("");
-    onStepChange?.(nextMode === "package" ? "packages" : "build-your-own");
-  }
-
   function openType(row) {
-    if (!row.available) return;
+    if (!row) return;
     onFamilyChange?.(row.requirement.familyKey);
     onProductChange?.("");
     onStepChange?.("models");
     onOpenRequirement?.(row.requirement.requirementKey);
   }
 
+  function advanceType() {
+    if (nextType) openType(nextType);
+    else onStepChange?.("review");
+  }
+
+  async function finishAppliances() {
+    if (finishing) return;
+    setFinishing(true);
+    setFinishError("");
+    try {
+      if (!await onFinish?.()) setFinishError("Appliance selections could not be saved. Please retry.");
+    } catch (error) {
+      setFinishError(error.message || "Appliance selections could not be saved. Please retry.");
+    } finally { setFinishing(false); }
+  }
+
   return (
-    <section className="guidedShell" data-testid="guided-appliance-catalogue-flow" data-family-key={familyRequirement.familyKey} data-brand={brand || ""} data-mode={mode || ""}>
+    <section className="guidedShell" data-testid="guided-appliance-catalogue-flow" data-step={step} data-family-key={familyRequirement.familyKey} data-brand={brand || ""} data-mode={mode || ""}>
       <GuidedBudgetDock totals={runningTotals} />
       <div className="guidedProductLayout">
         <aside className="guidedProgressMenu" data-testid="guided-appliance-family-menu">
           <h2>Appliances</h2>
           <button type="button" className={`guidedProgressItem ${step === "brands" ? "active" : ""}`} onClick={changeBrand}><GuidedStatusDot status={brand ? "complete" : "not_started"} /><span>Choose Brand</span></button>
-          <button type="button" className={`guidedProgressItem ${["brand-summary", "packages", "build-your-own"].includes(step) ? "active" : ""}`} disabled={!brand} onClick={() => onStepChange?.("brand-summary")}><GuidedStatusDot status={mode ? "in_progress" : "not_started"} /><span>{brand || "Brand"} Options</span></button>
           {productTypeRows.map((row) => (
-            <button key={row.requirement.requirementKey} type="button" className={`guidedProgressItem ${row.requirement.familyKey === familyRequirement.familyKey && ["models", "details"].includes(step) ? "active" : ""}`} disabled={!brand || !row.available} onClick={() => openType(row)} data-family-key={row.requirement.familyKey}>
+            <button key={row.requirement.requirementKey} type="button" className={`guidedProgressItem ${row.requirement.familyKey === familyRequirement.familyKey && ["models", "details"].includes(step) ? "active" : ""}`} disabled={!brand || finishing} onClick={() => openType(row)} data-family-key={row.requirement.familyKey}>
               <GuidedStatusDot status={statusForRequirement(row.requirement, selections.get(row.requirement.requirementKey))} />
               <span>{row.requirement.label}</span>
             </button>
           ))}
+          <button type="button" className={`guidedProgressItem ${step === "review" ? "active" : ""}`} disabled={!brand || finishing} onClick={() => onStepChange?.("review")} data-testid="appliance-review-link"><span>Review / Finish Appliances</span></button>
         </aside>
         <main className="guidedProductPanel">
           <div className="guidedSectionHeader">
             <span>Interior / Appliances</span>
-            <strong>{step === "brands" ? "Which appliance brand would you like to view?" : `${brand} Appliance Selection`}</strong>
+            <strong>{step === "brands" ? "Which appliance brand would you like to view?" : step === "review" ? "Review Appliance Selections" : step === "packages" ? `${brand} Appliance Packages` : `${brand} ${familyRequirement.label}`}</strong>
             <em>{brand ? `${brandTotals.completed} of ${brandTotals.total} appliance selections complete` : `${brandSummaries.length} appliance brand${brandSummaries.length === 1 ? "" : "s"} available`}</em>
           </div>
 
@@ -5355,17 +6455,16 @@ function GuidedApplianceWorkflow({
             </>
           ) : null}
 
-          {brand && step === "brand-summary" ? (
-            <div className="applianceBrandSummary" data-testid="appliance-brand-summary" data-brand={brand}>
-              <div className="applianceNavActions">
-                <button type="button" onClick={changeBrand}>Change Brand</button>
-                <button type="button" onClick={onReturnToAppliances}>Back to Appliances</button>
-              </div>
-              <div className="applianceModeGrid">
-                <button type="button" className={mode === "package" ? "selected" : ""} onClick={() => chooseMode("package")} data-testid="appliance-package-mode"><strong>Select an Appliance Package</strong><span>{safeBrandPackages.length} safe package{safeBrandPackages.length === 1 ? "" : "s"} available</span></button>
-                <button type="button" className={mode === "build-your-own" ? "selected" : ""} onClick={() => chooseMode("build-your-own")} data-testid="appliance-build-mode"><strong>Build Your Own Appliance Package</strong><span>{productTypeRows.filter((row) => row.available).length} product categor{productTypeRows.filter((row) => row.available).length === 1 ? "y" : "ies"} available</span></button>
-              </div>
+          {brand && step === "review" ? (
+            <div data-testid="appliance-review">
               <ApplianceSelectionSummary brand={brand} requirements={requirements} selections={selections} selectedPackage={selectedPackage} />
+              <p>Review your selected appliances. Unselected categories remain available to complete later.</p>
+              <div className="applianceNavActions">
+                <button type="button" disabled={finishing} onClick={changeBrand}>Change Brand</button>
+                {safeBrandPackages.length ? <button type="button" disabled={finishing} onClick={() => onStepChange?.("packages")} data-testid="appliance-package-mode">View Appliance Packages</button> : null}
+                <button type="button" className="primary" data-testid="appliance-finish" disabled={finishing} onClick={finishAppliances}>{finishing ? "Saving appliances?" : "Finish Appliances"}</button>
+              </div>
+              {finishError ? <p role="alert">{finishError}</p> : null}
             </div>
           ) : null}
 
@@ -5404,31 +6503,6 @@ function GuidedApplianceWorkflow({
                 </article>
               ))}
               {!safeBrandPackages.length ? <GuidedApplianceEmpty message={`No ${brand} appliance packages are currently safe to select. Build your own from enabled ${brand} products instead.`} /> : null}
-            </div>
-          ) : null}
-
-          {brand && step === "build-your-own" ? (
-            <div className="applianceBuildFlow" data-testid="appliance-build-your-own" data-brand={brand}>
-              <div className="applianceNavActions">
-                <button type="button" onClick={() => onStepChange?.("brand-summary")}>Back to {brand}</button>
-                <button type="button" onClick={changeBrand}>Change Brand</button>
-              </div>
-              <ApplianceSelectionSummary brand={brand} requirements={requirements} selections={selections} />
-              <div className="applianceTypeGrid">
-                {productTypeRows.map((row) => row.available ? (
-                  <button key={row.requirement.requirementKey} type="button" className="applianceTypeCard" onClick={() => openType(row)} data-family-key={row.requirement.familyKey}>
-                    <span className="applianceTypeIcon">{row.requirement.label.slice(0, 1)}</span>
-                    <strong>{row.requirement.label}</strong>
-                    <em>{row.productCount} {brand} model{row.productCount === 1 ? "" : "s"}</em>
-                  </button>
-                ) : (
-                  <div key={row.requirement.requirementKey} className="applianceTypeCard disabled" data-family-key={row.requirement.familyKey}>
-                    <span className="applianceTypeIcon">{row.requirement.label.slice(0, 1)}</span>
-                    <strong>{row.requirement.label}</strong>
-                    <em>No {brand} products are currently enabled for this category.</em>
-                  </div>
-                ))}
-              </div>
             </div>
           ) : null}
 
@@ -5611,9 +6685,29 @@ function GuidedApplianceDetails({ requirement, product, onBackToAppliances, onBa
   );
 }
 
-function GuidedCabinetryWorkflow({ requirement, projectId = "", selections, runningTotals, onSelectProduct, onFinishCabinetry, onReturnToDashboard }) {
+function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId = "", selections, runningTotals, onSelectProduct, onFinishCabinetry, onReturnToDashboard, jobWorkbook = null }) {
   const saved = selections.get("cabinetry")?.selected_details?.cabinetrySelection || null;
   const [draft, setDraft] = useState(() => defaultCabinetryDraft(saved || {}));
+  // This component has no data-loading state of its own - it mounts as soon as its parent renders
+  // it, which can happen before the parent's own async project/book fetch (loadBook()) resolves.
+  // When that race is lost, `saved` is still null/undefined at the useState() line above, so the
+  // lazy initializer starts the draft blank - and since that initializer only ever runs once, real
+  // data arriving moments later on the very next render was silently discarded, with no visible
+  // error, making a genuinely saved room look like it had reverted to "nothing selected". This
+  // performs exactly one catch-up sync the first time real saved data becomes available after a
+  // blank mount; once `saved` genuinely had locations at mount (the normal case once loadBook()
+  // has settled), this never fires and cannot clobber the user's own later edits.
+  // NB: `saved` is never actually null in practice - cabinetryGuidedSelectionFromBook() always
+  // returns a normaliseCabinetrySelection()-shaped object with locations: [] as its empty default,
+  // even before the real book has loaded - so a plain Boolean(saved)/`!saved` check here always
+  // reads true and this effect would never fire. What must be checked is whether it has any actual
+  // saved rooms yet.
+  const cabinetryHasSyncedFromSavedRef = useRef(Boolean(saved?.locations?.length));
+  useEffect(() => {
+    if (cabinetryHasSyncedFromSavedRef.current || !saved?.locations?.length) return;
+    cabinetryHasSyncedFromSavedRef.current = true;
+    setDraft(defaultCabinetryDraft(saved));
+  }, [saved]);
   const [editingLocationName, setEditingLocationName] = useState("");
   const [stageIndex, setStageIndex] = useState(0);
   const [customLocationName, setCustomLocationName] = useState("");
@@ -5621,6 +6715,11 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", selections, runn
   const [kitchenPantryCopyOpen, setKitchenPantryCopyOpen] = useState(false);
   const [kitchenPantryColourAreaKeys, setKitchenPantryColourAreaKeys] = useState([]);
   const [kitchenPantryOverwriteColours, setKitchenPantryOverwriteColours] = useState(false);
+  const [applyColoursModalOpen, setApplyColoursModalOpen] = useState(false);
+  const [applyColoursSource, setApplyColoursSource] = useState("");
+  const [applyColoursTargetKeys, setApplyColoursTargetKeys] = useState([]);
+  const [applyColoursOnContinue, setApplyColoursOnContinue] = useState(null);
+  const [cabinetryMissingRequirements, setCabinetryMissingRequirements] = useState([]);
   const [cabinetryColourSearch, setCabinetryColourSearch] = useState("");
   const [cabinetryFamilyFilter, setCabinetryFamilyFilter] = useState("All");
   const [cabinetryRangeFilter, setCabinetryRangeFilter] = useState("All");
@@ -5638,22 +6737,6 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", selections, runn
   const [showCabinetryBackToTop, setShowCabinetryBackToTop] = useState(false);
   const cabinetryPanelRef = useRef(null);
   const cabinetryTopRef = useRef(null);
-  const [benchtopMaterialChoice, setBenchtopMaterialChoice] = useState("stone");
-  const [stoneSupplierFilter, setStoneSupplierFilter] = useState("Neolith");
-  const [stoneSearch, setStoneSearch] = useState("");
-  const [stoneCollectionFilter, setStoneCollectionFilter] = useState("All");
-  const [stoneMaterialFilter, setStoneMaterialFilter] = useState("All");
-  const [stoneColourFilter, setStoneColourFilter] = useState("All");
-  const [stonePatternFilter, setStonePatternFilter] = useState("All");
-  const [stoneFinishFilter, setStoneFinishFilter] = useState("All");
-  const [stoneThicknessFilter, setStoneThicknessFilter] = useState("All");
-  const [stonePriceGroupFilter, setStonePriceGroupFilter] = useState("All");
-  const [stonePricingFilter, setStonePricingFilter] = useState("All");
-  const [stoneInspectProduct, setStoneInspectProduct] = useState(null);
-  const [stonePendingProductId, setStonePendingProductId] = useState("");
-  const [stoneCompareIds, setStoneCompareIds] = useState([]);
-  const [stoneConfig, setStoneConfig] = useState({ application: "Main benchtop", finish: "", slabThickness: "", finishedEdgeThickness: "", edgeProfile: "Square arris", waterfallEnds: "None", upstand: "", dimensions: "", approximateAreaSqm: "", cutouts: [], notes: "", templateRequired: true, supplierQuoteRequired: true, physicalSampleConfirmed: false, fullSlabViewed: false });
-  const [bathroomStoneTargetKey, setBathroomStoneTargetKey] = useState("floorMountedVanity");
   const normalisedDraft = normaliseCabinetrySelection(draft);
   const summary = normalisedDraft.summary;
   const activeLocation = normalisedDraft.locations.find((location) => location.location === editingLocationName);
@@ -5665,6 +6748,8 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", selections, runn
   const activeSchedule = activeLocation ? normalisedDraft.schedule.filter((line) => line.location === activeLocation.location && (!activeIsBathroomCabinetry || wetAreaScheduleType(line))) : [];
   const activeCabinetryAreaKeys = cabinetryAreaKeysForLocation(safeActiveLocation, activeSchedule);
   const activeCabinetryAreaKeySet = new Set(activeCabinetryAreaKeys);
+  // What the open room contains, read from its Cabinet Schedule (there is no Scope step).
+  const activeScheduleScope = cabinetryScheduleScope(safeActiveLocation, normalisedDraft.schedule);
   const colourCatalogue = safeSupplier === "Laminex" ? LAMINEX_CABINETRY_CATALOGUE : POLYTEC_CABINETRY_CATALOGUE;
   const activeColourRecords = useMemo(() => colourCatalogue.filter((record) => record.availabilityStatus !== "inactive" && record.status !== "inactive"), [colourCatalogue]);
   const activeSupplierAreaRecords = useMemo(() => Object.values(safeAreaSelections).filter((record) => record?.id && (!safeSupplier || record.supplier === safeSupplier)), [safeAreaSelections, safeSupplier]);
@@ -5701,31 +6786,11 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", selections, runn
     return Array.from(byId.values()).slice(0, 6);
   }, [safeSupplier, normalisedDraft.locations]);
   const activeStoneProducts = useMemo(() => activeStoneBenchtopProducts(STONE_BENCHTOP_CATALOGUE), []);
-  const selectedStoneSupplierProducts = useMemo(() => activeStoneProducts.filter((product) => product.supplier === stoneSupplierFilter), [activeStoneProducts, stoneSupplierFilter]);
-  const stoneCollections = useMemo(() => cabinetryUniqueValues(selectedStoneSupplierProducts.map((product) => product.collection)), [selectedStoneSupplierProducts]);
-  const stoneMaterialTypes = useMemo(() => cabinetryUniqueValues(selectedStoneSupplierProducts.map((product) => product.materialType)), [selectedStoneSupplierProducts]);
-  const stoneColourFamilies = useMemo(() => cabinetryUniqueValues(selectedStoneSupplierProducts.map((product) => product.colourFamily)), [selectedStoneSupplierProducts]);
-  const stonePatternTypes = useMemo(() => cabinetryUniqueValues(selectedStoneSupplierProducts.map((product) => product.patternType)), [selectedStoneSupplierProducts]);
-  const stoneFinishes = useMemo(() => cabinetryUniqueValues(selectedStoneSupplierProducts.flatMap((product) => product.finishOptions || [])), [selectedStoneSupplierProducts]);
-  const stoneThicknesses = useMemo(() => cabinetryUniqueValues(selectedStoneSupplierProducts.flatMap((product) => product.thicknessOptions || [])), [selectedStoneSupplierProducts]);
-  const stonePriceGroups = useMemo(() => cabinetryUniqueValues(selectedStoneSupplierProducts.map((product) => product.priceGroup)), [selectedStoneSupplierProducts]);
-  const stonePricingStatuses = useMemo(() => cabinetryUniqueValues(selectedStoneSupplierProducts.map((product) => cabinetryPriceStatusLabel(product.priceStatus))), [selectedStoneSupplierProducts]);
-  const filteredStoneProducts = useMemo(() => selectedStoneSupplierProducts.filter((product) => {
-    const search = stoneSearch.trim().toLowerCase();
-    if (search && !stoneProductSearchText(product).includes(search)) return false;
-    if (stoneCollectionFilter !== "All" && product.collection !== stoneCollectionFilter) return false;
-    if (stoneMaterialFilter !== "All" && product.materialType !== stoneMaterialFilter) return false;
-    if (stoneColourFilter !== "All" && product.colourFamily !== stoneColourFilter) return false;
-    if (stonePatternFilter !== "All" && product.patternType !== stonePatternFilter) return false;
-    if (stoneFinishFilter !== "All" && !(product.finishOptions || []).includes(stoneFinishFilter)) return false;
-    if (stoneThicknessFilter !== "All" && !(product.thicknessOptions || []).includes(stoneThicknessFilter)) return false;
-    if (stonePriceGroupFilter !== "All" && product.priceGroup !== stonePriceGroupFilter) return false;
-    if (stonePricingFilter !== "All" && cabinetryPriceStatusLabel(product.priceStatus) !== stonePricingFilter) return false;
-    return true;
-  }), [selectedStoneSupplierProducts, stoneCollectionFilter, stoneColourFilter, stoneFinishFilter, stoneMaterialFilter, stonePatternFilter, stonePriceGroupFilter, stonePricingFilter, stoneSearch, stoneThicknessFilter]);
-  const pendingStoneProduct = activeStoneProducts.find((product) => product.id === stonePendingProductId) || null;
-  const comparedStoneProducts = stoneCompareIds.map((id) => activeStoneProducts.find((product) => product.id === id)).filter(Boolean);
-
+  // What the project already shows about the benchtops, so the client is not asked again.
+  const benchtopProjectFacts = useMemo(() => ({ hasSink: Boolean(selections?.get?.("sink")), hasCooktop: Boolean(selections?.get?.("cooktop") || selections?.get?.("freestanding-cooker")), hasBasin: Boolean(selections?.get?.("bathroom-basin")) }), [selections]);
+  const [benchtopRangeMapping, setBenchtopRangeMapping] = useState(() => getBuilderBenchtopRangeMapping(organisationId));
+  const [benchtopRangeSettingsOpen, setBenchtopRangeSettingsOpen] = useState(false);
+  useEffect(() => { setBenchtopRangeMapping(getBuilderBenchtopRangeMapping(organisationId)); }, [organisationId]);
   useEffect(() => {
     setCabinetryColourSearch("");
     setCabinetryFamilyFilter("All");
@@ -5779,33 +6844,20 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", selections, runn
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, [cabinetryInspectRecord]);
 
-  useEffect(() => {
-    setStoneSearch("");
-    setStoneCollectionFilter("All");
-    setStoneMaterialFilter("All");
-    setStoneColourFilter("All");
-    setStonePatternFilter("All");
-    setStoneFinishFilter("All");
-    setStoneThicknessFilter("All");
-    setStonePriceGroupFilter("All");
-    setStonePricingFilter("All");
-  }, [stoneSupplierFilter]);
-
-  useEffect(() => {
-    if (!stoneInspectProduct) return;
-    function closeOnEscape(event) {
-      if (event.key === "Escape") setStoneInspectProduct(null);
-    }
-    window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [stoneInspectProduct]);
-
   function persistCabinetry(next, options = {}) {
-    const { commitRequirement = true } = options;
+    // A save is never navigation. A commit sent without stayOnScreen used to "return to the
+    // dashboard" when its job save finished, seconds later - wherever the user had got to by then.
+    const { commitRequirement = true, stayOnScreen = true } = options;
     const normalised = normaliseCabinetrySelection(next);
+    // Any real local edit means the mount-time "first data arrived late" race the catch-up
+    // sync effect exists for can no longer apply - the draft now holds the user's own genuine,
+    // current progress (e.g. a room just confirmed complete). Marking the ref here stops that
+    // effect from firing on a later render and clobbering that progress with an older snapshot
+    // of `saved`, which is exactly what made a just-completed room look "in progress" again.
+    cabinetryHasSyncedFromSavedRef.current = true;
     setDraft(normalised);
     saveLatestCabinetryDraftToStorage(normalised, projectId);
-    if (commitRequirement) onSelectProduct(requirement, normalised);
+    if (commitRequirement) onSelectProduct(requirement, normalised, { stayOnScreen });
     return normalised;
   }
 
@@ -5814,16 +6866,28 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", selections, runn
       const next = normaliseCabinetrySelection({ ...current, ...patch, confirmed: false });
       if (persist) {
         saveLatestCabinetryDraftToStorage(next, projectId);
-        onSelectProduct(requirement, next);
+        onSelectProduct(requirement, next, { stayOnScreen: true });
       }
       return next;
     });
   }
 
-  function updateLocation(locationName, patch) {
+  function updateLocation(locationName, patch, persist = false) {
     updateDraft({
       locations: normalisedDraft.locations.map((location) => location.location === locationName ? { ...location, ...patch, status: patch.status || "in_progress" } : location),
-    });
+    }, persist);
+  }
+
+  // The builder's supplier price group -> quotation range mapping. Saving it re-reads the range of
+  // every benchtop already selected on this job, so they follow without being re-selected.
+  function saveBenchtopRangeMapping(groups) {
+    const mapping = saveBuilderBenchtopRangeMapping(organisationId, groups, { catalogue: activeStoneProducts });
+    setBenchtopRangeMapping(mapping);
+    updateDraft({
+      locations: normalisedDraft.locations.map((location) => (Array.isArray(location.benchtopAreas) && location.benchtopSetup
+        ? { ...location, ...benchtopLocationPatch({ location, setup: location.benchtopSetup, areas: location.benchtopAreas, ranges: { mapping, classifications: normalisedDraft.benchtopClassifications } }) }
+        : location)),
+    }, true);
   }
 
   function addLocation(locationName) {
@@ -5939,7 +7003,14 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", selections, runn
     if (record.finishMode === "brushed_aluminium") return "Brushed aluminium.";
     if (record.finishMode === "stainless_steel_look") return "Stainless-steel look.";
     if (record.finishMode === "black_aluminium") return "Black aluminium.";
-  if (record.finishMode === "match_cabinet_doors") return "Match cabinet doors.";
+  if (record.finishMode === "match_cabinet_doors") {
+    const linked = areaKey === "lowerDoorsDrawers" ? null : cabinetryAreaAssignmentText("lowerDoorsDrawers");
+    return linked && linked !== "Colour not selected." ? `Match cabinet doors - ${linked.replace(/\.$/, "")}.` : "Match cabinet doors - Awaiting cabinet door colour selection.";
+  }
+  if (record.finishMode === "match_overheads") {
+    const linked = areaKey === "overheadDoors" ? null : cabinetryAreaAssignmentText("overheadDoors");
+    return linked && linked !== "Colour not selected." ? `Match overhead cabinetry - ${linked.replace(/\.$/, "")}.` : "Match overhead cabinetry - Awaiting overhead cabinetry colour selection.";
+  }
   if (record.finishMode === "match_floor_vanity") return "Match floor-mounted vanity.";
   if (record.finishMode === "match_wall_vanity") return "Match wall-mounted vanity.";
   if (record.finishMode === "match_tall_linen") return "Match tall linen cupboard.";
@@ -6068,7 +7139,7 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", selections, runn
   function cabinetryWorkflowStageStatus(index) {
     if (index === stageIndex) return "incomplete";
     if (index > stageIndex) return "not_started";
-    if (index === 3 && !coloursAndFinishesComplete) return "incomplete";
+    if (CABINETRY_WORKFLOW_STAGES[index] === "Colours & Finishes" && !coloursAndFinishesComplete) return "incomplete";
     return "complete";
   }
 
@@ -6197,7 +7268,7 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", selections, runn
           defaultColour: record,
           areaSelections,
           coloursAndFinishes: {
-            ...(location.coloursAndFinishes || {}),
+            ...clearInheritedColourMarker(location, finalAreaKeys),
             supplier: record.supplier || location.supplier,
             productRange: record.productRange || record.productFamily || location.productRange,
             finish: record.finish || location.finish,
@@ -6230,56 +7301,108 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", selections, runn
     setCabinetryVisibleColourCount(CABINETRY_COLOUR_PAGE_SIZE);
   }
 
-  function newScheduleLine(unitType = CABINETRY_SCHEDULE_TYPE_OPTIONS[0]) {
+  function newScheduleLine(unitType = "") {
     return {
       componentId: `CAB-${slug(activeLocation?.location || "room")}-${Date.now()}`,
       location: activeLocation?.location || "",
       unitType,
       quantity: 1,
-      clientSelectableSurfaces: ["lowerDoorsDrawers"],
+      // Overhead cabinets take their colour from the Overheads area, not the base-unit doors.
+      clientSelectableSurfaces: [/overhead/i.test(unitType) ? "overheadDoors" : "lowerDoorsDrawers"],
       handleQuantity: 1,
       notes: "",
     };
   }
 
-  function updateScheduleLine(componentId, patch) {
-    updateDraft({
-      schedule: normalisedDraft.schedule.map((line) => line.componentId === componentId ? { ...line, ...patch, location: activeLocation.location } : line),
-    });
+  // The Cabinet Schedule and the Quotation Builder are two views of the same quantities: a
+  // schedule edit is saved to the job shortly after it is made (no Save Progress needed), and the
+  // job's cabinetry engine then updates the linked quote rows. The save is the normal Client
+  // Selections save, so typing a quantity waits for a pause rather than saving on every key.
+  const latestDraftRef = useRef(draft);
+  latestDraftRef.current = draft;
+  const scheduleSyncPendingRef = useRef(false);
+  const scheduleSyncTimerRef = useRef(null);
+  const flushScheduleSyncRef = useRef(() => {});
+  // Always saves the newest draft, so another edit made during the pause is never rolled back.
+  flushScheduleSyncRef.current = () => {
+    clearTimeout(scheduleSyncTimerRef.current);
+    if (!scheduleSyncPendingRef.current) return;
+    scheduleSyncPendingRef.current = false;
+    // An automatic sync must never move the user off the step they are editing.
+    persistCabinetry(latestDraftRef.current, { stayOnScreen: true });
+  };
+  // Leaving the screen inside the pause still saves the edit.
+  useEffect(() => () => flushScheduleSyncRef.current(), []);
+  // Queues the save that carries a quantity or finish change through to the Quotation Builder.
+  function queueCabinetryQuoteSync() {
+    scheduleSyncPendingRef.current = true;
+    clearTimeout(scheduleSyncTimerRef.current);
+    scheduleSyncTimerRef.current = setTimeout(() => flushScheduleSyncRef.current(), 900);
+  }
+  function updateSchedule(schedule) {
+    updateDraft({ schedule });
+    queueCabinetryQuoteSync();
   }
 
-  function addScheduleLine(unitType) {
-    updateDraft({ schedule: [...normalisedDraft.schedule, newScheduleLine(unitType)] });
+  function updateScheduleLine(componentId, patch) {
+    updateSchedule(normalisedDraft.schedule.map((line) => line.componentId === componentId ? { ...line, ...patch, location: activeLocation.location } : line));
+  }
+
+  function addScheduleLine(unitType, patch = {}) {
+    updateSchedule([...normalisedDraft.schedule, { ...newScheduleLine(unitType), ...patch }]);
   }
 
   function removeScheduleLine(componentId) {
-    updateDraft({ schedule: normalisedDraft.schedule.filter((line) => line.componentId !== componentId) });
+    updateSchedule(normalisedDraft.schedule.filter((line) => line.componentId !== componentId));
   }
 
-  function toggleBathroomScope(scopeKey) {
-    if (!activeLocation) return;
-    const current = new Set(bathroomScopeKeysForLocation(activeLocation));
-    if (current.has(scopeKey)) current.delete(scopeKey);
-    else current.add(scopeKey);
-    if (!current.has("tallLinenCupboard")) current.delete("linenBulkhead");
-    const nextScope = Array.from(current);
-    const nextAreaKeys = bathroomColourAreaKeysForLocation({ ...activeLocation, bathroomScopeKeys: nextScope }, activeSchedule);
-    const nextSchedule = normalisedDraft.schedule.filter((line) => (
-      line.location !== activeLocation.location ||
-      !wetAreaScheduleType(line) ||
-      wetAreaScheduleTypeAllowedForScope(line.type || line.unitType, nextScope)
+  function roomTakeoffCabinetQuantities() {
+    const roomKey = cabinetryRoomKey(activeLocation.location);
+    const takeoff = {};
+    (jobWorkbook?.cabinetryReconciliation?.entries || []).filter((entry) => entry.requirementSource !== "CLIENT_SELECTION" && cabinetryRoomKey(entry.room) === roomKey)
+      .forEach((entry) => { takeoff[entry.type] = (takeoff[entry.type] || 0) + (Number(entry.quantity) || 0); });
+    return takeoff;
+  }
+
+  // One row per cabinet item of the shared taxonomy. The line is found by its stable id, never by
+  // its label. Until the room schedules a unit, the takeoff / Job Setup quantity is what the quote
+  // carries, so that figure is shown as the starting value.
+  function cabinetCatalogueScheduleRow(type, takeoffQuantity) {
+    const item = activeSchedule.find((line) => line.cabinetTypeId === type.id);
+    const overhead = /^(overhead_|rangehood_cabinet)/.test(type.id);
+    const base = { cabinetTypeId: type.id, clientSelectableSurfaces: [overhead ? "overheadDoors" : "lowerDoorsDrawers"] };
+    const setQuantity = (value) => {
+      const quantity = Math.max(0, Number(value) || 0);
+      if (item) updateScheduleLine(item.componentId, { quantity, handleQuantity: quantity });
+      else addScheduleLine(type.label, { ...base, quantity, handleQuantity: quantity });
+    };
+    return {
+      id: type.id,
+      name: type.label,
+      description: item
+        ? `Scheduled for this room${takeoffQuantity ? ` - takeoff / Job Setup baseline ${takeoffQuantity}` : ""}`
+        : takeoffQuantity ? `From takeoff / Job Setup: ${takeoffQuantity}. Change the quantity to override.` : "Not included",
+      selected: item ? item.quantity > 0 : takeoffQuantity > 0,
+      // Unticking a takeoff item records an explicit 0; unticking a scheduled item with no takeoff removes it.
+      onToggle: () => (item ? (item.quantity > 0 && takeoffQuantity ? setQuantity(0) : item.quantity > 0 ? removeScheduleLine(item.componentId) : setQuantity(takeoffQuantity || 1)) : takeoffQuantity ? setQuantity(0) : setQuantity(1)),
+      quantity: item ? item.quantity : takeoffQuantity || 0,
+      onQuantityChange: (event) => setQuantity(event.target.value),
+      notesValue: item?.notes || "",
+      onNotesChange: (event) => item ? updateScheduleLine(item.componentId, { notes: event.target.value }) : addScheduleLine(type.label, { ...base, quantity: takeoffQuantity || 1, handleQuantity: takeoffQuantity || 1, notes: event.target.value }),
+      actions: item ? <button type="button" className="cabinetrySelectionReset" onClick={(event) => { event.preventDefault(); removeScheduleLine(item.componentId); }}>Reset</button> : null,
+    };
+  }
+
+  // The Cabinet Schedule lists only the current cabinet items priced in the quotation.
+  function renderRoomCabinetSchedule() {
+    // End panels are set in Doors & Panels, with the other panel decisions.
+    const takeoff = roomTakeoffCabinetQuantities();
+    return cabinetryScheduleCatalogue(activeLocation.location).filter((group) => group.key !== "panels").map((group) => (
+      <section key={group.key} className="cabinetryScheduleGroup" data-testid={`cabinet-schedule-${group.key}`}>
+        <h3>{group.title}</h3>
+        <CabinetrySelectionList items={group.items.map((type) => cabinetCatalogueScheduleRow(type, takeoff[type.id] || 0))} />
+      </section>
     ));
-    updateDraft({
-      locations: normalisedDraft.locations.map((location) => location.location === activeLocation.location ? {
-        ...location,
-        status: "in_progress",
-        bathroomScopeKeys: nextScope,
-        bathroomScope: nextScope,
-        enabledAreaKeys: (location.enabledAreaKeys || []).filter((key) => nextAreaKeys.includes(key)),
-        scope: (location.enabledAreaKeys || []).filter((key) => nextAreaKeys.includes(key)),
-      } : location),
-      schedule: nextSchedule,
-    });
   }
 
   function newBathroomScheduleLine(type, unitType) {
@@ -6335,28 +7458,6 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", selections, runn
     });
   }
 
-  function createBathroomLinenBulkheadRecord(mode, prior = {}) {
-    if (mode === "no_bulkhead") return null;
-    if (mode === "match_tall_linen") return {
-      id: "linen-bulkhead-match-tall-linen",
-      areaKey: "linenBulkhead",
-      material: "Match tall linen cupboard",
-      finalFinish: "Match tall linen cupboard",
-      colourName: "Match tall linen cupboard",
-      finish: "Match tall linen cupboard",
-      supplier: "",
-      productRange: "Bathroom cabinetry finish",
-      priceStatus: "included",
-      finishMode: mode,
-      linkedAreaKey: "tallLinenDoors",
-      scheduleDescription: "Supply and install bulkhead over tall linen cupboard to match tall linen cupboard.",
-      procurementDescription: "Supply and install bulkhead over tall linen cupboard to match tall linen cupboard.",
-    };
-    const baseMode = mode === "raw_mdf_wall_paint" || mode === "raw_mdf_ceiling_paint" ? mode : "other_custom";
-    const baseRecord = createBulkheadFinishRecord(baseMode, prior);
-    return { ...baseRecord, id: `linen-${baseRecord.id}`, areaKey: "linenBulkhead" };
-  }
-
   function updateBathroomLinenBulkheadMode(mode) {
     if (!activeLocation) return;
     const prior = activeLocation.areaSelections?.linenBulkhead || {};
@@ -6373,22 +7474,6 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", selections, runn
       return;
     }
     updateAreaFinishRecord("linenBulkhead", record, { bathroomLinenBulkheadMode: mode });
-  }
-
-  function updateBathroomBenchtop(targetKey, patch) {
-    if (!activeLocation) return;
-    const current = cabinetryPlainObject(activeLocation.bathroomBenchtops) ? activeLocation.bathroomBenchtops : {};
-    const nextRecord = {
-      ...(current[targetKey] || {}),
-      targetKey,
-      targetLabel: targetKey === "floorMountedVanity" ? "Floor-mounted vanity benchtop" : "Wall-mounted vanity benchtop",
-      priceStatus: "supplier_quote_required",
-      ...patch,
-    };
-    updateLocation(activeLocation.location, {
-      bathroomBenchtops: { ...current, [targetKey]: nextRecord },
-      benchtops: { ...(activeLocation.benchtops && typeof activeLocation.benchtops === "object" ? activeLocation.benchtops : {}), bathroom: { ...current, [targetKey]: nextRecord } },
-    });
   }
 
   function updateBathroomHandle(targetKey, patch) {
@@ -6435,193 +7520,124 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", selections, runn
     setDraft(copied);
   }
 
-  async function saveCabinetryDraft(confirmRoom = false) {
+  // Rooms are worked through in one fixed sequence: the project's configured cabinetry locations
+  // (cabinetryRoomSequence). Next from a room's last step opens the following room's first step and
+  // Previous from a room's first step opens the preceding room's last step, whether or not those
+  // rooms are complete. The summary is only reached before the first room and after the last.
+  function goToCabinetryRoom(locationName, nextStageIndex) {
+    pushCabinetryBackState();
+    if (locationName === "Butler's Pantry") setDraft((current) => cleanIncorrectButlersPantryCopiedScheduleRows(current));
+    setEditingLocationName(locationName);
+    setStageIndex(nextStageIndex);
+    setPendingCabinetryColourKey("");
+    setPendingCabinetryRecordId("");
+  }
+
+  function goToPreviousCabinetryStep() {
+    if (stageIndex > 0) { navigateCabinetryStage(stageIndex - 1); return; }
+    const previousRoom = activeLocation ? adjacentCabinetryRoom(normalisedDraft.locations, activeLocation.location, -1) : null;
+    // Edits made in this room stay in the draft (and its stored copy); nothing is confirmed here.
+    persistCabinetry(normalisedDraft, { commitRequirement: false });
+    if (previousRoom) {
+      setCabinetrySelectionMessage("");
+      goToCabinetryRoom(previousRoom.location, CABINETRY_WORKFLOW_STAGES.length - 1);
+      return;
+    }
+    onReturnToDashboard?.();
+  }
+
+  // The single canonical source for what is missing: cabinetryLocationMissingRequirements
+  // is the exact same function the validator (buildCabinetrySummary's unresolvedLocations)
+  // uses to decide the room isn't done, so this can never disagree with why Save/Next
+  // actually blocked - and understands which fields are genuinely required for the room's
+  // own configured scope, not every field that happens to read "Not selected".
+  function cabinetryMissingFieldsMessage(preConfirm, locationName) {
+    const confirmedLocation = preConfirm.locations.find((location) => location.location === locationName);
+    const missing = confirmedLocation ? cabinetryLocationMissingRequirements(confirmedLocation) : [];
+    setCabinetryMissingRequirements(missing);
+    return missing.length
+      ? `${locationName} cannot be completed yet.`
+      : `Complete the required ${locationName} cabinetry selections before continuing.`;
+  }
+
+  function goToMissingCabinetryRequirement(stageLabel) {
+    const stageIndex = CABINETRY_WORKFLOW_STAGES.indexOf(stageLabel);
+    if (stageIndex === -1) return;
+    navigateCabinetryStage(stageIndex);
+  }
+
+  async function saveCabinetryDraft(confirmRoom = false, { skipColourPrompt = false, workingDraft: workingDraftOverride } = {}) {
     if (!activeLocation) return persistCabinetry(normalisedDraft);
+    const startingDraft = workingDraftOverride || normalisedDraft;
     if (confirmRoom) {
-      const preConfirmLocations = normalisedDraft.locations.map((location) => location.location === activeLocation.location
+      const preConfirmLocations = startingDraft.locations.map((location) => location.location === activeLocation.location
         ? { ...location, status: location.status || "in_progress", confirmedAt: "" }
         : location);
-      const preConfirm = normaliseCabinetrySelection({ ...normalisedDraft, locations: preConfirmLocations, activeLocation: activeLocation.location });
+      const preConfirm = normaliseCabinetrySelection({ ...startingDraft, locations: preConfirmLocations, activeLocation: activeLocation.location });
       if (preConfirm.summary?.unresolvedLocations?.includes(activeLocation.location)) {
-        setCabinetrySelectionMessage(`Complete required cabinetry fields for ${activeLocation.location} before finishing.`);
+        setCabinetrySelectionMessage(cabinetryMissingFieldsMessage(preConfirm, activeLocation.location));
         persistCabinetry(preConfirm, { commitRequirement: false });
         return null;
       }
+      setCabinetryMissingRequirements([]);
     }
+    // Completing a room is the one moment the "apply these colours elsewhere" decision has to
+    // be made before moving on - asking afterwards (once the target room is already open) would
+    // force the user to redo the exact copy they could have done here, defeating the point. The
+    // modal pauses this function (via onContinue) rather than blocking with window.confirm, since
+    // it now offers every applicable room, not just one fixed target.
+    if (confirmRoom && !skipColourPrompt && locationHasColourSelections(activeLocation.location) && offerableColourTargetRooms(activeLocation.location).length) {
+      const existingTargets = offerableColourTargetRooms(activeLocation.location);
+      const anyUnlinkedOrIncomplete = existingTargets.some((target) => !target.alreadyLinked);
+      if (anyUnlinkedOrIncomplete) {
+        openApplyColoursModal(activeLocation.location, {
+          onContinue: (appliedDraft) => saveCabinetryDraft(true, { skipColourPrompt: true, workingDraft: appliedDraft || startingDraft }),
+        });
+        return null;
+      }
+    }
+    const workingDraft = startingDraft;
     const modifiedAt = new Date().toISOString();
-    const nextLocations = normalisedDraft.locations.map((location) => location.location === activeLocation.location
+    const nextLocations = workingDraft.locations.map((location) => location.location === activeLocation.location
       ? { ...location, status: confirmRoom ? "complete" : location.status || "in_progress", confirmedAt: confirmRoom ? modifiedAt : location.confirmedAt, lastModifiedAt: modifiedAt, updatedAt: modifiedAt }
       : location);
-    const next = persistCabinetry({ ...normalisedDraft, locations: nextLocations, activeLocation: activeLocation.location, confirmed: false, scheduleApproved: confirmRoom ? true : normalisedDraft.scheduleApproved, lastModifiedAt: modifiedAt, updatedAt: modifiedAt }, { commitRequirement: !confirmRoom });
+    const next = persistCabinetry({ ...workingDraft, locations: nextLocations, activeLocation: activeLocation.location, confirmed: false, scheduleApproved: confirmRoom ? true : workingDraft.scheduleApproved, lastModifiedAt: modifiedAt, updatedAt: modifiedAt }, { commitRequirement: !confirmRoom });
     if (!confirmRoom) return next;
     if (typeof onFinishCabinetry !== "function") return next;
+    const confirmedRoomName = activeLocation.location;
+    const nextRoom = adjacentCabinetryRoom(next.locations, confirmedRoomName, 1);
+    if (nextRoom) {
+      const result = await onFinishCabinetry(next, { successMessage: `${confirmedRoomName} cabinetry saved.`, returnToDashboard: false });
+      if (result?.ok === false) {
+        setCabinetrySelectionMessage(result.message || "Cabinetry save verification failed.");
+        return result;
+      }
+      goToCabinetryRoom(nextRoom.location, 0);
+      setCabinetrySelectionMessage(`${confirmedRoomName} cabinetry saved. Continuing to ${nextRoom.location}.`);
+      return result;
+    }
     const result = await onFinishCabinetry(next, { successMessage: "Cabinetry specification saved to the active job." });
     if (result?.ok === false) setCabinetrySelectionMessage(result.message || "Cabinetry save verification failed.");
     else setCabinetrySelectionMessage(result?.message || "");
     return result;
   }
 
-  function clearStoneFilters() {
-    setStoneSearch("");
-    setStoneCollectionFilter("All");
-    setStoneMaterialFilter("All");
-    setStoneColourFilter("All");
-    setStonePatternFilter("All");
-    setStoneFinishFilter("All");
-    setStoneThicknessFilter("All");
-    setStonePriceGroupFilter("All");
-    setStonePricingFilter("All");
-  }
-
-  function selectStoneProduct(product) {
-    setStonePendingProductId(product.id);
-    setStoneConfig((current) => ({
-      ...current,
-      application: activeIsBathroomCabinetry ? "Vanity benchtop" : current.application || defaultStoneApplicationForLocation(activeLocation?.location),
-      finish: product.finishOptions?.[0] || "",
-      slabThickness: product.thicknessOptions?.[0] || "",
-      finishedEdgeThickness: current.finishedEdgeThickness || product.thicknessOptions?.[0] || "",
-    }));
-  }
-
-  function toggleStoneCompare(productId) {
-    setStoneCompareIds((current) => {
-      if (current.includes(productId)) return current.filter((id) => id !== productId);
-      if (current.length >= 3) return current;
-      return [...current, productId];
-    });
-  }
-
-  function updateStoneConfig(patch) {
-    setStoneConfig((current) => ({ ...current, ...patch }));
-  }
-
-  function toggleStoneCutout(cutout) {
-    setStoneConfig((current) => {
-      const currentCutouts = Array.isArray(current.cutouts) ? current.cutouts : [];
-      return { ...current, cutouts: currentCutouts.includes(cutout) ? currentCutouts.filter((item) => item !== cutout) : [...currentCutouts, cutout] };
-    });
-  }
-
-  function applyStoneBenchtopSelection() {
-    if (!activeLocation || !pendingStoneProduct) return;
-    const configured = {
-      ...configureStoneBenchtopSelection(pendingStoneProduct, {
-        ...stoneConfig,
-        room: activeLocation.location,
-        applications: [activeIsBathroomCabinetry ? "Vanity benchtop" : stoneConfig.application || defaultStoneApplicationForLocation(activeLocation.location)],
-        pricingStatus: pendingStoneProduct.priceStatus,
-      }),
-      materialChoice: "stone",
-      category: "Stone, Porcelain & Sintered Benchtops",
-      range: pendingStoneProduct.collection,
-      colour: pendingStoneProduct.colourName,
-      thickness: stoneConfig.slabThickness || pendingStoneProduct.thicknessOptions?.[0] || "",
-      finish: stoneConfig.finish || pendingStoneProduct.finishOptions?.[0] || "",
-    };
-    if (activeIsBathroomCabinetry) {
-      updateBathroomBenchtop(bathroomStoneTargetKey, configured);
-      setStonePendingProductId("");
-      return;
-    }
-    updateLocation(activeLocation.location, { benchtop: configured, benchtops: configured });
-  }
-
   function cabinetryNavigationActions(position = "bottom") {
+    const nextRoom = activeLocation ? adjacentCabinetryRoom(normalisedDraft.locations, activeLocation.location, 1) : null;
+    const previousRoom = activeLocation ? adjacentCabinetryRoom(normalisedDraft.locations, activeLocation.location, -1) : null;
     return (
       <CabinetryWorkflowActions
         position={position}
         stageIndex={stageIndex}
         finalStageIndex={CABINETRY_WORKFLOW_STAGES.length - 1}
-        onPrevious={() => navigateCabinetryStage(stageIndex - 1)}
+        finalStageLabel={nextRoom ? `Next: ${nextRoom.location} →` : "Finish Cabinetry"}
+        firstStageLabel={previousRoom ? `← Previous: ${previousRoom.location}` : "← Cabinetry Summary"}
+        nextRoomName={nextRoom?.location || ""}
+        previousRoomName={previousRoom?.location || ""}
+        onPrevious={goToPreviousCabinetryStep}
         onSave={() => saveCabinetryDraft(false)}
         onNext={() => stageIndex === CABINETRY_WORKFLOW_STAGES.length - 1 ? saveCabinetryDraft(true) : navigateCabinetryStage(stageIndex + 1)}
       />
-    );
-  }
-
-  function renderBathroomBenchtops() {
-    const floorEnabled = bathroomScopeHasCabinetry(activeLocation, "floorMountedVanity");
-    const wallEnabled = bathroomScopeHasCabinetry(activeLocation, "wallMountedVanity");
-    const renderTarget = (targetKey, title) => {
-      const current = activeLocation.bathroomBenchtops?.[targetKey] || {};
-      const options = BATHROOM_BENCHTOP_OPTIONS[targetKey] || [];
-      const selectedStoneTarget = bathroomStoneTargetKey === targetKey;
-      return (
-        <section key={targetKey} className="cabinetryScheduleGroup" data-testid={`bathroom-${targetKey}-benchtop`}>
-          <h3>{title}</h3>
-          <CabinetrySelectionList items={options.map((option) => ({
-            id: `${targetKey}-${option}`,
-            name: option,
-            description: option.includes("mitred") ? "Retain mitred drop-front details for this vanity." : "Configure this vanity top only.",
-            selected: current.materialChoice === option || (current.materialChoice === "stone" && /stone/i.test(option)),
-            onToggle: () => {
-              setBathroomStoneTargetKey(targetKey);
-              setStoneConfig((existing) => ({ ...existing, application: "Vanity benchtop" }));
-              updateBathroomBenchtop(targetKey, { materialChoice: option, dropFrontDetail: option.includes("mitred") ? "Mitred drop front required" : current.dropFrontDetail || "" });
-            },
-          }))} />
-          {/laminated/i.test(current.materialChoice || "") ? <CabinetrySelectionList items={CABINETRY_BENCHTOPS.filter((bench) => bench.category === "Laminated").map((bench) => ({
-            id: `${targetKey}-${bench.id}`,
-            name: `${bench.supplier} ${bench.category}`,
-            description: `${bench.range} / ${bench.colour} / ${bench.finish || "Finish to confirm"} / ${bench.thickness}`,
-            selected: current.id === bench.id,
-            onToggle: () => updateBathroomBenchtop(targetKey, {
-              ...bench,
-              targetKey,
-              targetLabel: title,
-              materialChoice: current.materialChoice,
-              productRange: bench.range,
-              colourName: bench.colour,
-              priceStatus: bench.priceStatus || "included",
-            }),
-          }))} /> : null}
-          {/stone/i.test(current.materialChoice || "") ? (
-            <>
-              <div className="cabinetryColourActions">
-                <button type="button" className={selectedStoneTarget ? "primary" : ""} onClick={() => setBathroomStoneTargetKey(targetKey)}>
-                  {selectedStoneTarget ? "Selecting for this vanity" : "Select stone for this vanity"}
-                </button>
-              </div>
-              {selectedStoneTarget ? renderBathroomStoneBenchtopCatalogue(targetKey, title, current) : null}
-            </>
-          ) : null}
-          {/other|custom/i.test(current.materialChoice || "") ? <div className="cabinetryCustomFields">
-            <label><span>Custom specification</span><input value={current.notes || ""} onChange={(event) => updateBathroomBenchtop(targetKey, { notes: event.target.value, targetLabel: title })} /></label>
-          </div> : null}
-          {current.supplier || current.colourName || current.colour ? <section className="stoneAppliedSummary"><h3>Selected vanity benchtop</h3><dl><div><dt>Supplier</dt><dd>{current.supplier || "Not selected"}</dd></div><div><dt>Product</dt><dd>{[current.productCode, current.colourName || current.colour].filter(Boolean).join(" ") || current.range || current.productRange || "Not selected"}</dd></div><div><dt>Finish</dt><dd>{current.finish || "Not selected"}</dd></div><div><dt>Thickness</dt><dd>{current.slabThickness || current.thickness || "Not selected"}</dd></div><div><dt>Edge</dt><dd>{current.finishedEdgeThickness || current.edgeProfile || "Not selected"}</dd></div></dl></section> : null}
-        </section>
-      );
-    };
-    return (
-      <>
-        {floorEnabled ? renderTarget("floorMountedVanity", "Floor-mounted vanity benchtop") : null}
-        {wallEnabled ? renderTarget("wallMountedVanity", "Wall-mounted vanity benchtop") : null}
-        {!floorEnabled && !wallEnabled ? <p className="clientNotice">No {activeLocation.location} vanity benchtop is required until a floor-mounted or wall-mounted vanity is enabled.</p> : null}
-      </>
-    );
-  }
-
-  function renderBathroomStoneBenchtopCatalogue(targetKey, title, current = {}) {
-    return (
-      <div className="stoneBenchtopSelector" data-testid={`bathroom-${targetKey}-stone-benchtop-selector`}>
-        <div className="cabinetrySupplierButtons stoneSupplierButtons" data-testid="stone-supplier-buttons">{STONE_BENCHTOP_SUPPLIERS.map((supplier) => <button key={supplier} type="button" aria-pressed={stoneSupplierFilter === supplier} className={stoneSupplierFilter === supplier ? "selected" : ""} onClick={() => setStoneSupplierFilter(supplier)}><strong>{supplier}</strong><span>{activeStoneProducts.filter((product) => product.supplier === supplier).length} active</span></button>)}</div>
-        <div className="cabinetryCatalogueToolbar stoneFilters" data-testid="stone-benchtop-filters">
-          <label><span>Search</span><input value={stoneSearch} onChange={(event) => setStoneSearch(event.target.value)} placeholder="Colour, product code or collection" /></label>
-          <label><span>Collection/range</span><select value={stoneCollectionFilter} onChange={(event) => setStoneCollectionFilter(event.target.value)}><option>All</option>{stoneCollections.map((value) => <option key={value}>{value}</option>)}</select></label>
-          <label><span>Material type</span><select value={stoneMaterialFilter} onChange={(event) => setStoneMaterialFilter(event.target.value)}><option>All</option>{stoneMaterialTypes.map((value) => <option key={value}>{value}</option>)}</select></label>
-          <label><span>Colour family</span><select value={stoneColourFilter} onChange={(event) => setStoneColourFilter(event.target.value)}><option>All</option>{stoneColourFamilies.map((value) => <option key={value}>{value}</option>)}</select></label>
-          <label><span>Finish</span><select value={stoneFinishFilter} onChange={(event) => setStoneFinishFilter(event.target.value)}><option>All</option>{stoneFinishes.map((value) => <option key={value}>{value}</option>)}</select></label>
-          <label><span>Thickness</span><select value={stoneThicknessFilter} onChange={(event) => setStoneThicknessFilter(event.target.value)}><option>All</option>{stoneThicknesses.map((value) => <option key={value}>{value}</option>)}</select></label>
-          <button type="button" onClick={clearStoneFilters}>Clear Filters</button><strong>{filteredStoneProducts.length} results</strong>
-        </div>
-        <div className="stoneProductGrid" data-testid="stone-product-grid">{filteredStoneProducts.map((product) => {
-          const selected = current.productId === product.id || stonePendingProductId === product.id;
-          return <article key={product.id} className={`stoneProductCard ${selected ? "selected" : ""}`} data-supplier={product.supplier} data-product-code={product.productCode} data-product-name={product.colourName}>{product.primarySwatchImage ? <button type="button" className="stoneProductImageButton" onClick={() => setStoneInspectProduct(product)}><img src={product.primarySwatchImage} alt={`${product.supplier} ${product.colourName} slab swatch`} /></button> : <button type="button" className="stoneSwatchUnavailable" onClick={() => setStoneInspectProduct(product)}>Official slab image unavailable locally</button>}<div className="stoneProductBody"><span>{product.supplier} / {product.productCode}</span><strong>{product.colourName}</strong><small>{product.collection} / {product.materialType}</small><em>{(product.finishOptions || []).join(", ")} / {(product.thicknessOptions || []).join(", ")}</em><i>{product.priceGroup || cabinetryPriceStatusLabel(product.priceStatus)} / {product.availabilityRegion}</i><div className="cabinetryColourActions"><button type="button" onClick={() => setStoneInspectProduct(product)}>View Details</button><button type="button" className="primary" onClick={() => selectStoneProduct(product)}>Select Surface</button></div>{selected ? <b>Selected</b> : null}</div></article>;
-        })}</div>
-        {pendingStoneProduct ? <section className="stoneSelectionComposer" data-testid="stone-benchtop-configurator"><h3>{pendingStoneProduct.supplier} {pendingStoneProduct.colourName}</h3><p>Applying to {title}.</p><div className="cabinetryCustomFields"><label><span>Selected finish</span><select value={stoneConfig.finish} onChange={(event) => updateStoneConfig({ finish: event.target.value })}>{pendingStoneProduct.finishOptions.map((value) => <option key={value}>{value}</option>)}</select></label><label><span>Actual slab thickness</span><select value={stoneConfig.slabThickness} onChange={(event) => updateStoneConfig({ slabThickness: event.target.value })}>{pendingStoneProduct.thicknessOptions.map((value) => <option key={value}>{value}</option>)}</select></label><label><span>Finished edge thickness</span><input value={stoneConfig.finishedEdgeThickness} onChange={(event) => updateStoneConfig({ finishedEdgeThickness: event.target.value })} placeholder="e.g. 40 mm mitred edge" /></label><label><span>Edge profile</span><select value={stoneConfig.edgeProfile} onChange={(event) => updateStoneConfig({ edgeProfile: event.target.value })}>{STONE_BENCHTOP_EDGE_PROFILES.map((value) => <option key={value}>{value}</option>)}</select></label><label><span>Approx. sqm</span><input type="number" min="0" step="0.1" value={stoneConfig.approximateAreaSqm} onChange={(event) => updateStoneConfig({ approximateAreaSqm: event.target.value })} /></label><label><span>Notes</span><input value={stoneConfig.notes} onChange={(event) => updateStoneConfig({ notes: event.target.value })} /></label></div><div className="stoneChecklist">{CUTOUT_OPTIONS.map((value) => <label key={value}><input type="checkbox" checked={(stoneConfig.cutouts || []).includes(value)} onChange={() => toggleStoneCutout(value)} /><span>{value} cut-out</span></label>)}{["templateRequired", "supplierQuoteRequired", "physicalSampleConfirmed", "fullSlabViewed"].map((key) => <label key={key}><input type="checkbox" checked={Boolean(stoneConfig[key])} onChange={(event) => updateStoneConfig({ [key]: event.target.checked })} /><span>{stoneConfigLabel(key)}</span></label>)}</div><p>{STONE_BENCHTOP_DISCLAIMER}</p><div className="cabinetryColourActions"><button type="button" className="primary" onClick={applyStoneBenchtopSelection}>Apply to {title}</button>{pendingStoneProduct.officialProductUrl ? <a href={pendingStoneProduct.officialProductUrl} target="_blank" rel="noopener noreferrer">Visit Official Website</a> : null}</div></section> : null}
-        {stoneInspectProduct ? <div className="cabinetryInspectOverlay" role="dialog" aria-modal="true" data-testid="stone-benchtop-inspection-modal" onMouseDown={(event) => { if (event.target === event.currentTarget) setStoneInspectProduct(null); }}><section className="cabinetryInspectModal stoneInspectModal"><button type="button" className="cabinetryInspectClose" aria-label="Close inspection" onClick={() => setStoneInspectProduct(null)}>Close</button>{stoneInspectProduct.slabImage || stoneInspectProduct.primarySwatchImage ? <img src={stoneInspectProduct.slabImage || stoneInspectProduct.primarySwatchImage} alt={`${stoneInspectProduct.supplier} ${stoneInspectProduct.colourName} large slab`} /> : <div className="stoneSwatchUnavailable">Official slab image unavailable locally</div>}<div><span>{stoneInspectProduct.supplier}</span><h3>{stoneInspectProduct.productCode} {stoneInspectProduct.colourName}</h3><dl><div><dt>Collection</dt><dd>{stoneInspectProduct.collection}</dd></div><div><dt>Material type</dt><dd>{stoneInspectProduct.materialType}</dd></div><div><dt>Colour/pattern</dt><dd>{stoneInspectProduct.colourFamily} / {stoneInspectProduct.patternType}</dd></div><div><dt>Finish options</dt><dd>{stoneInspectProduct.finishOptions.join(", ")}</dd></div><div><dt>Thickness options</dt><dd>{stoneInspectProduct.thicknessOptions.join(", ")}</dd></div><div><dt>Slab dimensions</dt><dd>{stoneInspectProduct.slabSizes.join(", ")}</dd></div><div><dt>Pricing</dt><dd>{stoneInspectProduct.priceGroup || cabinetryPriceStatusLabel(stoneInspectProduct.priceStatus)}</dd></div></dl><p>{STONE_BENCHTOP_DISCLAIMER}</p><div className="cabinetryColourActions"><button type="button" className="primary" onClick={() => { selectStoneProduct(stoneInspectProduct); setStoneInspectProduct(null); }}>Select This Surface</button>{stoneInspectProduct.officialProductUrl ? <a href={stoneInspectProduct.officialProductUrl} target="_blank" rel="noopener noreferrer">Visit Official Website</a> : null}</div></div></section></div> : null}
-      </div>
     );
   }
 
@@ -6725,13 +7741,15 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", selections, runn
     return CABINETRY_LOCATION_AREA_KEYS.map((areaKey) => {
       const sourceRecord = kitchen.areaSelections?.[areaKey];
       const pantryRecord = pantry.areaSelections?.[areaKey];
+      // An area the Pantry has not enabled yet is still a valid target: applying the colour
+      // brings it into the Pantry's scope. Only a missing Kitchen colour blocks the copy.
       return {
         areaKey,
         label: CABINETRY_AREA_LABELS[areaKey],
         available: pantryEnabled.has(areaKey),
         sourceRecord,
         pantryRecord,
-        canApply: pantryEnabled.has(areaKey) && cabinetryAreaRecordComplete(sourceRecord),
+        canApply: cabinetryAreaRecordComplete(sourceRecord),
       };
     });
   }
@@ -6740,24 +7758,163 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", selections, runn
     setKitchenPantryColourAreaKeys((current) => current.includes(areaKey) ? current.filter((key) => key !== areaKey) : [...current, areaKey]);
   }
 
+  function locationHasColourSelections(locationName) {
+    const location = normalisedDraft.locations.find((item) => item.location === locationName);
+    if (!location) return false;
+    return Object.values(location.areaSelections || {}).some((record) => cabinetryAreaRecordComplete(record));
+  }
+
+  // Offerable targets are not limited to rooms already added: Kitchen offering Butler's Pantry
+  // or Laundry before either exists is the normal case, matching the room this was generalised
+  // from. isWetAreaCabinetryLocationName splits the fixed CABINETRY_LOCATIONS catalogue into the
+  // same two room categories the rest of the cabinetry data model already uses, so a bathroom-
+  // style source only ever offers other bathroom-style rooms, and vice versa - nothing hardcoded
+  // to a specific pair of room names.
+  function offerableColourTargetRooms(sourceLocationName) {
+    const sourceIsWetArea = isBathroomCabinetryLocation(sourceLocationName);
+    const linked = new Map(applicableColourTargetRooms(normalisedDraft.locations, sourceLocationName).map((item) => [item.location, item.alreadyLinked]));
+    return CABINETRY_LOCATIONS.filter((name) => name !== sourceLocationName && name !== "Other" && isBathroomCabinetryLocation(name) === sourceIsWetArea).map((name) => ({
+      location: name,
+      exists: normalisedDraft.locations.some((item) => item.location === name),
+      alreadyLinked: linked.get(name) || false,
+    }));
+  }
+
+  function openApplyColoursModal(sourceLocationName, { onContinue } = {}) {
+    const targets = offerableColourTargetRooms(sourceLocationName);
+    setApplyColoursSource(sourceLocationName);
+    setApplyColoursTargetKeys(targets.filter((item) => item.alreadyLinked).map((item) => item.location));
+    setApplyColoursOnContinue(() => onContinue || null);
+    setApplyColoursModalOpen(true);
+  }
+
+  function toggleApplyColoursTarget(locationName) {
+    setApplyColoursTargetKeys((current) => current.includes(locationName) ? current.filter((item) => item !== locationName) : [...current, locationName]);
+  }
+
+  function bareCabinetryLocation(locationName) {
+    return {
+      id: `cabinetry-${slug(locationName)}`,
+      name: locationName,
+      location: locationName,
+      locationType: locationName,
+      included: true,
+      status: "in_progress",
+      scope: [],
+      enabledAreaKeys: [],
+      cabinetSchedule: [],
+      doorMaterialGroup: "Standard colourboard",
+      supplier: "Polytec",
+      productRange: "",
+      defaultColour: null,
+      areaSelections: {},
+      benchtop: null,
+      bathroomScopeKeys: [],
+      bathroomBenchtops: {},
+      bathroomHandles: {},
+      handles: {},
+      featureOptions: [],
+      notes: "",
+    };
+  }
+
+  function applySelectedColoursToTargets() {
+    if (!applyColoursTargetKeys.length) {
+      setCabinetrySelectionMessage("No colours were applied. Tick at least one room to copy colours to.");
+      return;
+    }
+    let workingDraft = normalisedDraft;
+    const missingLocations = applyColoursTargetKeys.filter((name) => !workingDraft.locations.some((item) => item.location === name));
+    if (missingLocations.length) {
+      workingDraft = normaliseCabinetrySelection({
+        ...workingDraft,
+        locations: [...workingDraft.locations, ...missingLocations.map((name) => bareCabinetryLocation(name))],
+      });
+    }
+    const { selection: next, appliedSummary } = applyRoomColoursToTargets(workingDraft, {
+      sourceLocationName: applyColoursSource,
+      targetLocationNames: applyColoursTargetKeys,
+      overwrite: false,
+    });
+    setDraft(next);
+    const appliedRooms = Object.entries(appliedSummary).filter(([, keys]) => keys.length).map(([room]) => room);
+    setCabinetrySelectionMessage(appliedRooms.length
+      ? `${applyColoursSource} colours applied to ${appliedRooms.join(", ")}.`
+      : "No colours were changed - the selected rooms already have their own colours for every matching area.");
+    return next;
+  }
+
+  function closeApplyColoursModal(applyFirst) {
+    const result = applyFirst ? applySelectedColoursToTargets() : null;
+    setApplyColoursModalOpen(false);
+    const onContinue = applyColoursOnContinue;
+    setApplyColoursOnContinue(null);
+    if (onContinue) onContinue(result);
+  }
+
+  function renderApplyColoursModal() {
+    if (!applyColoursModalOpen) return null;
+    const targets = offerableColourTargetRooms(applyColoursSource);
+    return (
+      <div className="cabinetryInspectOverlay" role="dialog" aria-modal="true" data-testid="cabinetry-apply-colours-modal">
+        <section className="cabinetrySelectionComposer cabinetrySelectionModal">
+          <button type="button" className="cabinetryInspectClose" aria-label="Close" onClick={() => closeApplyColoursModal(false)}>Cancel</button>
+          <div>
+            <h3>{applyColoursSource} Complete</h3>
+            <p>Would you like to use these cabinetry colours in other rooms?</p>
+            <strong>Apply {applyColoursSource} Colours To</strong>
+            {targets.length ? (
+              <CabinetrySelectionList items={targets.map((target) => ({
+                id: target.location,
+                name: target.location,
+                description: target.alreadyLinked ? `Currently using ${applyColoursSource} colours` : target.exists ? "Not currently linked/copied" : "Not yet added to this project",
+                selected: applyColoursTargetKeys.includes(target.location),
+                onToggle: () => toggleApplyColoursTarget(target.location),
+              }))} />
+            ) : <p className="cabinetrySelectionMessage" role="status">No other applicable rooms for {applyColoursSource}.</p>}
+            <div className="cabinetryColourActions">
+              <button type="button" onClick={() => closeApplyColoursModal(false)}>{applyColoursOnContinue ? "Skip" : "Close"}</button>
+              <button type="button" className="primary" onClick={() => closeApplyColoursModal(true)} disabled={!targets.length}>Apply Selected Colours{applyColoursOnContinue ? " and Continue" : ""}</button>
+            </div>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   function openKitchenPantryCopyModal() {
     const rows = kitchenPantryColourRows();
     setKitchenPantryOverwriteColours(false);
-    setKitchenPantryColourAreaKeys(rows.filter((row) => row.canApply && !cabinetryAreaRecordComplete(row.pantryRecord)).map((row) => row.areaKey));
+    setKitchenPantryColourAreaKeys(rows.filter((row) => row.canApply).map((row) => row.areaKey));
     setKitchenPantryCopyOpen(true);
   }
 
   function applyKitchenColoursToPantry() {
+    // An empty tick list means "apply nothing", not "apply everything" - the helper's
+    // no-selection fallback copies every Kitchen colour, so stop before reaching it.
+    if (!kitchenPantryColourAreaKeys.length) {
+      setKitchenPantryCopyOpen(false);
+      const rows = kitchenPantryColourRows();
+      setCabinetrySelectionMessage(rows.some((row) => row.canApply)
+        ? "No Butler's Pantry colours were changed. Tick at least one area to copy its Kitchen colour."
+        : "Select the Kitchen cabinetry colours before copying them to Butler's Pantry.");
+      return;
+    }
     const cleaned = cleanIncorrectButlersPantryCopiedScheduleRows(normalisedDraft);
     const copied = applyKitchenColoursToButlersPantry(cleaned, {
       areaKeys: kitchenPantryColourAreaKeys,
       overwrite: kitchenPantryOverwriteColours,
     });
+    const appliedAreaKeys = copied.locations
+      .find((location) => location.location === "Butler's Pantry")?.coloursAndFinishes?.kitchenColourAppliedAreaKeys || [];
     setDraft(copied);
     setKitchenPantryCopyOpen(false);
     setEditingLocationName("Butler's Pantry");
-    setStageIndex(3);
-    setCabinetrySelectionMessage("Kitchen colours applied to compatible Butler's Pantry areas only.");
+    setStageIndex(CABINETRY_WORKFLOW_STAGES.indexOf("Colours & Finishes"));
+    // Report what actually happened. This used to claim success even when nothing was copied.
+    setCabinetrySelectionMessage(appliedAreaKeys.length
+      ? `Kitchen colours applied to ${appliedAreaKeys.length} Butler's Pantry area${appliedAreaKeys.length === 1 ? "" : "s"}: ${appliedAreaKeys.map((areaKey) => CABINETRY_AREA_LABELS[areaKey] || areaKey).join(", ")}.`
+      : "No Butler's Pantry colours were changed. Tick at least one area that has a Kitchen colour, or allow existing Pantry colours to be overwritten.");
   }
 
   function renderKitchenPantryColourModal() {
@@ -6775,11 +7932,11 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", selections, runn
             return {
               id: row.areaKey,
               name: `${row.label} - ${sourceText}`,
-              description: row.available ? `Apply to Butler's Pantry ${row.label}. Current Pantry: ${pantryText}.` : "Not available in Pantry",
+              description: row.available ? `Apply to Butler's Pantry ${row.label}. Current Pantry: ${pantryText}.` : `Add ${row.label} to the Butler's Pantry and apply this colour.`,
               selected: kitchenPantryColourAreaKeys.includes(row.areaKey),
               disabled: !row.canApply,
               onToggle: () => toggleKitchenPantryColourArea(row.areaKey),
-              actions: row.available ? <span>{`-> ${row.label}`}</span> : <span>{"-> Not available in Pantry"}</span>,
+              actions: row.available ? <span>{`-> ${row.label}`}</span> : <span>{`-> Add ${row.label} to Pantry`}</span>,
             };
           })} />
           <div className="cabinetryCopyMode">
@@ -6803,7 +7960,8 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", selections, runn
 
   if (!activeLocation) {
     const includedByName = new Map(normalisedDraft.locations.map((location) => [location.location, location]));
-    const roomNames = [...CABINETRY_VISIBLE_LOCATION_OPTIONS, ...normalisedDraft.locations.map((location) => location.location)].filter((value, index, array) => value && array.indexOf(value) === index);
+    const roomNames = [...CABINETRY_VISIBLE_LOCATION_OPTIONS, ...cabinetryRoomSequence(normalisedDraft.locations).map((location) => location.location)].filter((value, index, array) => value && array.indexOf(value) === index);
+    const roomProgress = cabinetryRoomProgress(normalisedDraft.locations);
     return (
       <section className="guidedShell cabinetryWorkflow" data-testid="guided-cabinetry-workflow" data-workflow-type={CABINETRY_WORKFLOW_TYPE}>
         <GuidedBudgetDock totals={runningTotals} />
@@ -6814,7 +7972,7 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", selections, runn
             <p>Create a separate cabinetry specification for every applicable room.</p>
           </div>
           <div className="guidedTotals">
-            <GuidedMiniTotal label="Rooms complete" value={`${summary.completeRoomCount || 0} / ${summary.includedRoomCount || 0}`} />
+            <GuidedMiniTotal label="Locations complete" value={`${roomProgress.complete} / ${roomProgress.total}`} />
             <GuidedMiniTotal label="Allowance" value={money(summary.allowance)} />
           </div>
         </div>
@@ -6837,6 +7995,7 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", selections, runn
           <button type="button" onClick={() => addLocation(customLocationName)}>Add Custom Location</button>
         </div>
         {kitchenPantryCopyOpen ? renderKitchenPantryColourModal() : null}
+        {renderApplyColoursModal()}
       </section>
     );
   }
@@ -6848,7 +8007,7 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", selections, runn
         <div>
           <span>CABINETRY / {activeLocation.location.toUpperCase()}</span>
           <strong>{activeLocation.location} Cabinetry Specification</strong>
-          <p>{activeSchedule.length} schedule row{activeSchedule.length === 1 ? "" : "s"} for this room only.</p>
+          <p data-testid="cabinetry-room-progress">Location {cabinetryRoomSequence(normalisedDraft.locations).findIndex((location) => location.location === activeLocation.location) + 1} of {normalisedDraft.locations.length} · {cabinetryRoomProgress(normalisedDraft.locations).label} · {activeSchedule.length} schedule row{activeSchedule.length === 1 ? "" : "s"} for this room only.</p>
         </div>
         <button type="button" onClick={handleCabinetryBack}>Back</button>
       </div>
@@ -6865,33 +8024,15 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", selections, runn
         </aside>
         <main className="guidedProductPanel cabinetryPanel" ref={cabinetryPanelRef}>
           {stageIndex === 0 ? (
-            <div className="cabinetryStage" data-testid="cabinetry-location-stage">
-              <div className="cabinetryStageContext"><strong>{activeIsBathroomCabinetry ? "SCOPE" : "Scope"}</strong><span>{activeIsBathroomCabinetry ? `Select the vanity cabinetry required in the ${activeLocation.location}.` : `Enable only the cabinetry areas that exist in ${activeLocation.location}.`}</span></div>
-              {activeIsBathroomCabinetry ? (
-                <CabinetrySelectionList items={BATHROOM_SCOPE_OPTIONS.filter(([key]) => key !== "linenBulkhead" || bathroomScopeHasCabinetry(activeLocation, "tallLinenCupboard")).map(([key, name, description]) => ({
-                  id: key,
-                  name,
-                  description: bathroomScopeHasCabinetry(activeLocation, key) ? "Included in this room" : description,
-                  selected: bathroomScopeHasCabinetry(activeLocation, key),
-                  onToggle: () => toggleBathroomScope(key),
-                }))} />
-              ) : (
-              <CabinetrySelectionList items={CABINETRY_LOCATION_AREA_KEYS.map((areaKey) => {
-                const enabled = activeLocation.enabledAreaKeys?.includes(areaKey);
-                return { id: areaKey, name: CABINETRY_AREA_LABELS[areaKey], description: enabled ? "Included in this room" : "Not required", selected: enabled, onToggle: () => toggleActiveLocationArea(areaKey) };
-              })} />)}
-              <div className="cabinetryInlineEditor"><button type="button" onClick={() => removeLocation(activeLocation.location)}>Remove this room from Cabinetry</button></div>
-            </div>
-          ) : null}
-          {stageIndex === 1 ? (
             <div className="cabinetryStage" data-testid="cabinetry-builder-schedule">
               <div className="clientNotice">This schedule defines {activeLocation.location} cabinetry only. Appliance cabinets are openings or panels, not appliance product selections.</div>
               {activeIsBathroomCabinetry ? (
-                bathroomScheduleGroupsForLocation(activeLocation).length ? bathroomScheduleGroupsForLocation(activeLocation).map((group) => (
+                BATHROOM_SCHEDULE_GROUPS.map((group) => (
                   <section key={group.title} className="cabinetryScheduleGroup">
                     <h3>{group.title}</h3>
                     <CabinetrySelectionList items={group.items.map(([type, label, scopeKey]) => {
-                      if (scopeKey && !bathroomScopeHasCabinetry(activeLocation, scopeKey)) return null;
+                      // The bulkhead sits over a tall linen cupboard, so it is offered once one is scheduled.
+                      if (scopeKey === "linenBulkhead" && !activeSchedule.some((line) => (line.type || line.unitType) === "bath-tall-linen")) return null;
                       const item = activeSchedule.find((line) => (line.type || line.unitType) === type);
                       return {
                         id: type,
@@ -6908,48 +8049,56 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", selections, runn
                       };
                     }).filter(Boolean)} />
                   </section>
-                )) : <p className="clientNotice">Select {activeLocation.location} cabinetry in Scope before building the schedule.</p>
-              ) : (
-              <CabinetrySelectionList items={CABINETRY_SCHEDULE_TYPE_OPTIONS.map((type) => {
-                const item = activeSchedule.find((line) => line.unitType === type);
-                return {
-                  id: type,
-                  name: type,
-                  description: item ? "Included in this room schedule" : "Not included",
-                  selected: Boolean(item),
-                  onToggle: () => item ? removeScheduleLine(item.componentId) : addScheduleLine(type),
-                  quantity: item?.quantity ?? 0,
-                  onQuantityChange: (event) => item ? updateScheduleLine(item.componentId, { quantity: Number(event.target.value), handleQuantity: Number(event.target.value) }) : addScheduleLine(type),
-                  notesValue: item?.notes || "",
-                  onNotesChange: (event) => item ? updateScheduleLine(item.componentId, { notes: event.target.value }) : addScheduleLine(type),
-                  actions: item ? <button type="button" className="cabinetrySelectionReset" onClick={(event) => { event.preventDefault(); removeScheduleLine(item.componentId); }}>Reset</button> : null,
-                };
-              })} />)}
+                ))
+              ) : renderRoomCabinetSchedule()}
+              <div className="cabinetryInlineEditor"><button type="button" onClick={() => removeLocation(activeLocation.location)}>Remove this room from Cabinetry</button></div>
             </div>
           ) : null}
-          {stageIndex === 2 ? (
+          {stageIndex === 1 ? (
             <div className="cabinetryStage" data-testid="cabinetry-material-stage">
               <CabinetrySelectionList items={CABINETRY_MATERIAL_OPTIONS.map((item) => ({
                 id: item,
                 name: item,
                 description: item === "Standard colourboard" ? "Laminex or Polytec cabinetry-compatible colourboard" : "Supplier quote fields available",
                 selected: activeLocation.doorMaterialGroup === item,
-                onToggle: () => updateLocation(activeLocation.location, { doorMaterialGroup: item, doorAndPanelSelections: { material: item } }),
+                // The room finish decides which finish block of the quotation carries the quantities.
+                onToggle: () => { updateLocation(activeLocation.location, { doorMaterialGroup: item, doorAndPanelSelections: { material: item } }); queueCabinetryQuoteSync(); },
               }))} />
               {cabinetrySelectionMessage ? <p className="cabinetrySelectionMessage" role="alert">{cabinetrySelectionMessage}</p> : null}
-              <CabinetrySelectionList items={activeCabinetryAreaKeys.map((areaKey) => ({
-                id: areaKey,
-                name: CABINETRY_AREA_LABELS[areaKey],
-                description: activeLocation.areaSelections?.[areaKey] ? `Current colour: ${cabinetryAreaAssignmentText(areaKey)}` : "Colour not selected.",
-                selected: Boolean(activeLocation.enabledAreaKeys?.includes(areaKey)),
-                onToggle: () => toggleActiveLocationArea(areaKey),
-              }))} />
+              {(() => {
+                const panels = cabinetryScheduleCatalogue(activeLocation.location).find((group) => group.key === "panels");
+                if (!panels) return null;
+                const takeoff = roomTakeoffCabinetQuantities();
+                return (
+                  <section className="cabinetryScheduleGroup" data-testid="cabinet-schedule-panels">
+                    <h3>{panels.title}</h3>
+                    <CabinetrySelectionList items={panels.items.map((type) => cabinetCatalogueScheduleRow(type, takeoff[type.id] || 0))} />
+                  </section>
+                );
+              })()}
+              <section className="cabinetryScheduleGroup" data-testid="cabinetry-finish-areas">
+                <h3>Areas to be finished</h3>
+                <CabinetrySelectionList items={activeCabinetryAreaKeys.map((areaKey) => {
+                  // Base-unit doors, overheads and priced end panels follow the Cabinet Schedule.
+                  const fromSchedule = activeScheduleScope.derived && !activeIsBathroomCabinetry && ["lowerDoorsDrawers", "overheadDoors"].concat(activeScheduleScope.hasEndPanels ? ["endPanels"] : []).includes(areaKey);
+                  const enabled = Boolean(activeLocation.enabledAreaKeys?.includes(areaKey));
+                  const colour = activeLocation.areaSelections?.[areaKey] ? `Current colour: ${cabinetryAreaAssignmentText(areaKey)}` : "Colour not selected.";
+                  return {
+                    id: areaKey,
+                    name: CABINETRY_AREA_LABELS[areaKey],
+                    description: fromSchedule ? (enabled ? `In the Cabinet Schedule. ${colour}` : "None in the Cabinet Schedule.") : colour,
+                    selected: enabled,
+                    disabled: fromSchedule,
+                    onToggle: () => { if (!fromSchedule) toggleActiveLocationArea(areaKey); },
+                  };
+                })} />
+              </section>
             </div>
           ) : null}
-          {stageIndex === 3 ? (
+          {stageIndex === 2 ? (
             <div className="cabinetryStage" data-testid="cabinetry-colour-selector">
               <div className="cabinetryStageContext"><strong>{activeLocation.doorMaterialGroup}</strong><span>Supplier, product range, colour, finish, swatch and price status.</span></div>
-              {activeLocation.location === "Kitchen" && kitchenHasSelections() ? <button type="button" className="cabinetryCopyPantryButton" onClick={openKitchenPantryCopyModal}>Apply Kitchen Colours to Butler's Pantry</button> : null}
+              {locationHasColourSelections(activeLocation.location) && offerableColourTargetRooms(activeLocation.location).length ? <button type="button" className="cabinetryCopyPantryButton" onClick={() => openApplyColoursModal(activeLocation.location)}>Apply {activeLocation.location} Colours to Other Rooms</button> : null}
               <section className="cabinetryApplyPanel" data-testid="cabinetry-apply-colour-to">
                 <div className="cabinetryStageContext"><strong>Apply colour to</strong><span>Choose one or more enabled cabinetry areas before selecting a catalogue colour.</span></div>
                 <CabinetrySelectionList items={(activeLocation.enabledAreaKeys?.length ? activeLocation.enabledAreaKeys.filter((areaKey) => activeCabinetryAreaKeys.includes(areaKey)) : activeCabinetryAreaKeys).map((areaKey) => ({
@@ -6959,7 +8108,7 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", selections, runn
                   selected: activeColourTargetKeys.includes(areaKey),
                   onToggle: () => toggleCabinetryApplyArea(areaKey),
                 }))} />
-                {activeLocation.enabledAreaKeys?.includes("bulkheads") ? (
+                {!activeIsBathroomCabinetry ? (
                   <div className="bulkheadFinishPanel" data-testid="cabinetry-bulkhead-finish-options">
                     <strong>Bulkhead finish</strong>
                     <CabinetrySelectionList items={[
@@ -6977,8 +8126,7 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", selections, runn
                       selected: (activeLocation.bulkheadFinishMode || activeLocation.coloursAndFinishes?.bulkheadFinishMode || activeLocation.areaSelections?.bulkheads?.finishMode || "") === id,
                       onToggle: () => updateBulkheadFinishMode(id),
                     }))} />
-                    {activeLocation.areaSelections?.bulkheads?.finishMode === "raw_mdf_wall_paint" ? <p className="cabinetrySelectionMessage" role="status">{cabinetryAreaColourFinishText(activeLocation.areaSelections.bulkheads, cabinetryLinkedPaintSelection("wall"))}</p> : null}
-                    {activeLocation.areaSelections?.bulkheads?.finishMode === "raw_mdf_ceiling_paint" ? <p className="cabinetrySelectionMessage" role="status">{cabinetryAreaColourFinishText(activeLocation.areaSelections.bulkheads, cabinetryLinkedPaintSelection("ceiling"))}</p> : null}
+                    <p className="cabinetrySelectionMessage" role="status">Current bulkhead finish: {cabinetryAreaAssignmentText("bulkheads")}</p>
                     {activeLocation.areaSelections?.bulkheads?.finishMode === "raw_mdf_custom_paint" ? (
                       <div className="cabinetryCustomFields" data-testid="cabinetry-bulkhead-custom-paint-fields">
                         <label><span>Paint brand</span><input value={activeLocation.areaSelections.bulkheads.paintBrand || ""} onChange={(event) => updateBulkheadCustomPaint("paintBrand", event.target.value)} /></label>
@@ -7010,7 +8158,7 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", selections, runn
                     {activeLocation.areaSelections?.linenBulkhead?.finishMode === "raw_mdf_ceiling_paint" ? <p className="cabinetrySelectionMessage" role="status">{cabinetryAreaColourFinishText(activeLocation.areaSelections.linenBulkhead, cabinetryLinkedPaintSelection("ceiling"))}</p> : null}
                   </div>
                 ) : null}
-                {activeLocation.enabledAreaKeys?.includes("kickPanels") ? (
+                {!activeIsBathroomCabinetry ? (
                   <div className="bulkheadFinishPanel" data-testid="cabinetry-kick-panel-finish-options">
                     <strong>Kick-panel finish</strong>
                     <CabinetrySelectionList items={[
@@ -7028,6 +8176,7 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", selections, runn
                       selected: (activeLocation.kickPanelFinishMode || activeLocation.coloursAndFinishes?.kickPanelFinishMode || activeLocation.areaSelections?.kickPanels?.finishMode || "") === id,
                       onToggle: () => updateKickPanelFinishMode(id),
                     }))} />
+                    <p className="cabinetrySelectionMessage" role="status">Current kick-panel finish: {cabinetryAreaAssignmentText("kickPanels")}</p>
                     {["brushed_aluminium", "stainless_steel_look", "black_aluminium"].includes(activeLocation.areaSelections?.kickPanels?.finishMode) ? (
                       <div className="cabinetryCustomFields" data-testid="cabinetry-kick-panel-metal-fields">
                         <label><span>Price status</span><select value={activeLocation.areaSelections.kickPanels.priceStatus || "included"} onChange={(event) => updateKickPanelField("priceStatus", event.target.value)}><option value="included">Included</option><option value="upgrade">Upgrade</option><option value="supplier_quote_required">Supplier quote required</option></select></label>
@@ -7110,55 +8259,25 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", selections, runn
               ) : activeLocation.doorMaterialGroup === "Standard colourboard" ? <p className="cabinetrySelectionMessage" role="status">Select an area that requires a Laminex or Polytec colour to open the catalogue.</p> : <div className="cabinetryCustomFields"><label><span>Supplier</span><input value={activeLocation.customSupplier || ""} onChange={(event) => updateLocation(activeLocation.location, { customSupplier: event.target.value })} /></label><label><span>Product range</span><input value={activeLocation.customRange || ""} onChange={(event) => updateLocation(activeLocation.location, { customRange: event.target.value })} /></label><label><span>Colour</span><input value={activeLocation.customColour || ""} onChange={(event) => updateLocation(activeLocation.location, { customColour: event.target.value })} /></label><label><span>Finish</span><input value={activeLocation.customFinish || ""} onChange={(event) => updateLocation(activeLocation.location, { customFinish: event.target.value })} /></label></div>}
             </div>
           ) : null}
-          {stageIndex === 4 ? (
+          {stageIndex === 3 ? (
             <div className="cabinetryStage" data-testid="cabinetry-benchtop-stage">
-              {activeIsBathroomCabinetry ? renderBathroomBenchtops() : (
-              <>
-              <div data-testid="stone-material-choice">
-                <CabinetrySelectionList items={["Laminated benchtop", STONE_BENCHTOP_MATERIAL_LABEL, "Other/custom"].map((choice) => {
-                  const value = choice === STONE_BENCHTOP_MATERIAL_LABEL ? "stone" : choice === "Other/custom" ? "custom" : "laminate";
-                  return { id: value, name: choice, description: value === "stone" ? "Open the multi-supplier stone, porcelain and sintered catalogue" : "Configure this room's benchtop type", selected: benchtopMaterialChoice === value, onToggle: () => setBenchtopMaterialChoice(value) };
-                })} />
-              </div>
-              {benchtopMaterialChoice === "laminate" ? <CabinetrySelectionList items={CABINETRY_BENCHTOPS.filter((bench) => bench.category === "Laminated").map((bench) => ({
-                id: bench.id,
-                name: `${bench.supplier} ${bench.category}`,
-                description: `${bench.range} / ${bench.colour} / ${bench.finish || "Finish to confirm"} / ${bench.thickness}`,
-                selected: activeLocation.benchtop?.id === bench.id,
-                onToggle: () => updateLocation(activeLocation.location, { benchtop: bench, benchtops: bench }),
-              }))} /> : null}
-              {benchtopMaterialChoice === "custom" ? <div className="cabinetryCustomFields"><label><span>Supplier</span><input value={activeLocation.benchtop?.supplier || ""} onChange={(event) => updateLocation(activeLocation.location, { benchtop: { ...(activeLocation.benchtop || {}), supplier: event.target.value, materialChoice: "custom" } })} /></label><label><span>Product/range</span><input value={activeLocation.benchtop?.range || ""} onChange={(event) => updateLocation(activeLocation.location, { benchtop: { ...(activeLocation.benchtop || {}), range: event.target.value, materialChoice: "custom" } })} /></label><label><span>Notes</span><input value={activeLocation.notes || ""} onChange={(event) => updateLocation(activeLocation.location, { notes: event.target.value })} /></label></div> : null}
-              {benchtopMaterialChoice === "stone" ? (
-                <div className="stoneBenchtopSelector" data-testid="stone-benchtop-selector">
-                  <div className="cabinetrySupplierButtons stoneSupplierButtons" data-testid="stone-supplier-buttons">{STONE_BENCHTOP_SUPPLIERS.map((supplier) => <button key={supplier} type="button" aria-pressed={stoneSupplierFilter === supplier} className={stoneSupplierFilter === supplier ? "selected" : ""} onClick={() => setStoneSupplierFilter(supplier)}><strong>{supplier}</strong><span>{activeStoneProducts.filter((product) => product.supplier === supplier).length} active</span></button>)}</div>
-                  <div className="cabinetryCatalogueToolbar stoneFilters" data-testid="stone-benchtop-filters">
-                    <label><span>Search</span><input value={stoneSearch} onChange={(event) => setStoneSearch(event.target.value)} placeholder="Colour, product code or collection" /></label>
-                    <label><span>Collection/range</span><select value={stoneCollectionFilter} onChange={(event) => setStoneCollectionFilter(event.target.value)}><option>All</option>{stoneCollections.map((value) => <option key={value}>{value}</option>)}</select></label>
-                    <label><span>Material type</span><select value={stoneMaterialFilter} onChange={(event) => setStoneMaterialFilter(event.target.value)}><option>All</option>{stoneMaterialTypes.map((value) => <option key={value}>{value}</option>)}</select></label>
-                    <label><span>Colour family</span><select value={stoneColourFilter} onChange={(event) => setStoneColourFilter(event.target.value)}><option>All</option>{stoneColourFamilies.map((value) => <option key={value}>{value}</option>)}</select></label>
-                    <label><span>Veins</span><select value={stonePatternFilter} onChange={(event) => setStonePatternFilter(event.target.value)}><option>All</option>{stonePatternTypes.map((value) => <option key={value}>{value}</option>)}</select></label>
-                    <label><span>Finish</span><select value={stoneFinishFilter} onChange={(event) => setStoneFinishFilter(event.target.value)}><option>All</option>{stoneFinishes.map((value) => <option key={value}>{value}</option>)}</select></label>
-                    <label><span>Actual slab thickness</span><select value={stoneThicknessFilter} onChange={(event) => setStoneThicknessFilter(event.target.value)}><option>All</option>{stoneThicknesses.map((value) => <option key={value}>{value}</option>)}</select></label>
-                    <label><span>Price group/category</span><select value={stonePriceGroupFilter} onChange={(event) => setStonePriceGroupFilter(event.target.value)}><option>All</option>{stonePriceGroups.map((value) => <option key={value}>{value}</option>)}</select></label>
-                    <label><span>Pricing</span><select value={stonePricingFilter} onChange={(event) => setStonePricingFilter(event.target.value)}><option>All</option>{stonePricingStatuses.map((value) => <option key={value}>{value}</option>)}</select></label>
-                    <button type="button" onClick={clearStoneFilters}>Clear Filters</button><strong>{filteredStoneProducts.length} results</strong>
-                  </div>
-                  <div className="stoneProductGrid" data-testid="stone-product-grid">{filteredStoneProducts.map((product) => {
-                    const selected = activeLocation.benchtop?.productId === product.id || stonePendingProductId === product.id;
-                    const compared = stoneCompareIds.includes(product.id);
-                    return <article key={product.id} className={`stoneProductCard ${selected ? "selected" : ""}`} data-supplier={product.supplier} data-product-code={product.productCode} data-product-name={product.colourName}>{product.primarySwatchImage ? <button type="button" className="stoneProductImageButton" onClick={() => setStoneInspectProduct(product)}><img src={product.primarySwatchImage} alt={`${product.supplier} ${product.colourName} slab swatch`} /></button> : <button type="button" className="stoneSwatchUnavailable" onClick={() => setStoneInspectProduct(product)}>Official slab image unavailable locally</button>}<div className="stoneProductBody"><span>{product.supplier} / {product.productCode}</span><strong>{product.colourName}</strong><small>{product.collection} / {product.materialType}</small><em>{(product.finishOptions || []).join(", ")} / {(product.thicknessOptions || []).join(", ")}</em><i>{product.priceGroup || cabinetryPriceStatusLabel(product.priceStatus)} / {product.availabilityRegion}</i><div className="cabinetryColourActions"><button type="button" onClick={() => setStoneInspectProduct(product)}>View Details</button><button type="button" onClick={() => toggleStoneCompare(product.id)} disabled={!compared && stoneCompareIds.length >= 3}>{compared ? "Remove Compare" : "Compare"}</button><button type="button" className="primary" onClick={() => selectStoneProduct(product)}>Select Surface</button></div>{selected ? <b>Selected</b> : null}</div></article>;
-                  })}</div>
-                  {comparedStoneProducts.length ? <section className="stoneComparison" data-testid="stone-benchtop-comparison"><h3>Compare surfaces</h3><div>{comparedStoneProducts.map((product) => <article key={product.id}>{product.primarySwatchImage ? <img src={product.primarySwatchImage} alt={`${product.colourName} comparison swatch`} /> : <div className="stoneSwatchUnavailable">Official slab image unavailable locally</div>}<strong>{product.supplier} {product.colourName}</strong><dl><div><dt>Code</dt><dd>{product.productCode}</dd></div><div><dt>Collection</dt><dd>{product.collection}</dd></div><div><dt>Material</dt><dd>{product.materialType}</dd></div><div><dt>Finish</dt><dd>{product.finishOptions.join(", ")}</dd></div><div><dt>Thickness</dt><dd>{product.thicknessOptions.join(", ")}</dd></div><div><dt>Slab</dt><dd>{product.slabSizes.join(", ")}</dd></div><div><dt>Pattern</dt><dd>{product.patternType}</dd></div><div><dt>Indoor/outdoor</dt><dd>{String(product.indoorSuitable)} / {String(product.outdoorSuitable)}</dd></div><div><dt>Price</dt><dd>{product.priceGroup || cabinetryPriceStatusLabel(product.priceStatus)}</dd></div></dl></article>)}</div></section> : null}
-                  {pendingStoneProduct ? <section className="stoneSelectionComposer" data-testid="stone-benchtop-configurator"><h3>{pendingStoneProduct.supplier} {pendingStoneProduct.colourName}</h3><div className="cabinetryCustomFields"><label><span>Application</span><select value={stoneConfig.application} onChange={(event) => updateStoneConfig({ application: event.target.value })}>{STONE_BENCHTOP_APPLICATIONS.map((value) => <option key={value}>{value}</option>)}</select></label><label><span>Selected finish</span><select value={stoneConfig.finish} onChange={(event) => updateStoneConfig({ finish: event.target.value })}>{pendingStoneProduct.finishOptions.map((value) => <option key={value}>{value}</option>)}</select></label><label><span>Actual slab thickness</span><select value={stoneConfig.slabThickness} onChange={(event) => updateStoneConfig({ slabThickness: event.target.value })}>{pendingStoneProduct.thicknessOptions.map((value) => <option key={value}>{value}</option>)}</select></label><label><span>Finished edge thickness</span><input value={stoneConfig.finishedEdgeThickness} onChange={(event) => updateStoneConfig({ finishedEdgeThickness: event.target.value })} placeholder="e.g. 40 mm mitred edge" /></label><label><span>Edge profile</span><select value={stoneConfig.edgeProfile} onChange={(event) => updateStoneConfig({ edgeProfile: event.target.value })}>{STONE_BENCHTOP_EDGE_PROFILES.map((value) => <option key={value}>{value}</option>)}</select></label><label><span>Waterfall ends</span><select value={stoneConfig.waterfallEnds} onChange={(event) => updateStoneConfig({ waterfallEnds: event.target.value })}>{WATERFALL_END_OPTIONS.map((value) => <option key={value}>{value}</option>)}</select></label><label><span>Upstand height</span><input value={stoneConfig.upstand} onChange={(event) => updateStoneConfig({ upstand: event.target.value })} placeholder="e.g. none, 100 mm" /></label><label><span>Approx. area / dimensions</span><input value={stoneConfig.dimensions} onChange={(event) => updateStoneConfig({ dimensions: event.target.value })} placeholder="e.g. 3.2m x 0.9m island" /></label><label><span>Approx. sqm</span><input type="number" min="0" step="0.1" value={stoneConfig.approximateAreaSqm} onChange={(event) => updateStoneConfig({ approximateAreaSqm: event.target.value })} /></label><label><span>Notes</span><input value={stoneConfig.notes} onChange={(event) => updateStoneConfig({ notes: event.target.value })} /></label></div><div className="stoneChecklist">{CUTOUT_OPTIONS.map((value) => <label key={value}><input type="checkbox" checked={(stoneConfig.cutouts || []).includes(value)} onChange={() => toggleStoneCutout(value)} /><span>{value} cut-out</span></label>)}{["templateRequired", "supplierQuoteRequired", "physicalSampleConfirmed", "fullSlabViewed"].map((key) => <label key={key}><input type="checkbox" checked={Boolean(stoneConfig[key])} onChange={(event) => updateStoneConfig({ [key]: event.target.checked })} /><span>{stoneConfigLabel(key)}</span></label>)}</div><p>{STONE_BENCHTOP_DISCLAIMER}</p><div className="cabinetryColourActions"><button type="button" className="primary" onClick={applyStoneBenchtopSelection}>Apply to {activeLocation.location}</button>{pendingStoneProduct.officialProductUrl ? <a href={pendingStoneProduct.officialProductUrl} target="_blank" rel="noopener noreferrer">Visit Official Website</a> : null}</div></section> : null}
-                  {activeLocation.benchtop?.materialChoice === "stone" ? <section className="stoneAppliedSummary" data-testid="stone-benchtop-applied-summary"><h3>Completed benchtop specification</h3><dl><div><dt>Supplier</dt><dd>{activeLocation.benchtop.supplier}</dd></div><div><dt>Product</dt><dd>{activeLocation.benchtop.productCode} {activeLocation.benchtop.colourName}</dd></div><div><dt>Collection</dt><dd>{activeLocation.benchtop.collection}</dd></div><div><dt>Material</dt><dd>{activeLocation.benchtop.materialType}</dd></div><div><dt>Finish</dt><dd>{activeLocation.benchtop.finish}</dd></div><div><dt>Actual thickness</dt><dd>{activeLocation.benchtop.slabThickness}</dd></div><div><dt>Finished edge</dt><dd>{activeLocation.benchtop.finishedEdgeThickness}</dd></div><div><dt>Edge profile</dt><dd>{activeLocation.benchtop.edgeProfile}</dd></div><div><dt>Room/application</dt><dd>{activeLocation.location} / {(activeLocation.benchtop.applications || []).join(", ")}</dd></div><div><dt>Waterfall ends</dt><dd>{activeLocation.benchtop.waterfallEnds}</dd></div><div><dt>Cut-outs</dt><dd>{(activeLocation.benchtop.cutouts || []).join(", ") || "None selected"}</dd></div><div><dt>Status</dt><dd>{cabinetryPriceStatusLabel(activeLocation.benchtop.pricingStatus)}</dd></div></dl></section> : null}
-                  {stoneInspectProduct ? <div className="cabinetryInspectOverlay" role="dialog" aria-modal="true" data-testid="stone-benchtop-inspection-modal" onMouseDown={(event) => { if (event.target === event.currentTarget) setStoneInspectProduct(null); }}><section className="cabinetryInspectModal stoneInspectModal"><button type="button" className="cabinetryInspectClose" aria-label="Close inspection" onClick={() => setStoneInspectProduct(null)}>Close</button>{stoneInspectProduct.slabImage || stoneInspectProduct.primarySwatchImage ? <img src={stoneInspectProduct.slabImage || stoneInspectProduct.primarySwatchImage} alt={`${stoneInspectProduct.supplier} ${stoneInspectProduct.colourName} large slab`} /> : <div className="stoneSwatchUnavailable">Official slab image unavailable locally</div>}<div><span>{stoneInspectProduct.supplier}</span><h3>{stoneInspectProduct.productCode} {stoneInspectProduct.colourName}</h3><dl><div><dt>Collection</dt><dd>{stoneInspectProduct.collection}</dd></div><div><dt>Material type</dt><dd>{stoneInspectProduct.materialType}</dd></div><div><dt>Colour/pattern</dt><dd>{stoneInspectProduct.colourFamily} / {stoneInspectProduct.patternType}</dd></div><div><dt>Finish options</dt><dd>{stoneInspectProduct.finishOptions.join(", ")}</dd></div><div><dt>Thickness options</dt><dd>{stoneInspectProduct.thicknessOptions.join(", ")}</dd></div><div><dt>Slab dimensions</dt><dd>{stoneInspectProduct.slabSizes.join(", ")}</dd></div><div><dt>Indoor/outdoor</dt><dd>{String(stoneInspectProduct.indoorSuitable)} / {String(stoneInspectProduct.outdoorSuitable)}</dd></div><div><dt>Bookmatch</dt><dd>{String(stoneInspectProduct.bookmatchAvailable)}</dd></div><div><dt>Through-body veining</dt><dd>{String(stoneInspectProduct.throughBodyVeining)}</dd></div><div><dt>Warranty</dt><dd>{stoneInspectProduct.warrantySummary}</dd></div><div><dt>Availability</dt><dd>{stoneInspectProduct.availabilityRegion}</dd></div><div><dt>Pricing</dt><dd>{stoneInspectProduct.priceGroup || cabinetryPriceStatusLabel(stoneInspectProduct.priceStatus)}</dd></div></dl><p>{STONE_BENCHTOP_DISCLAIMER}</p><div className="cabinetryColourActions"><button type="button" className="primary" onClick={() => { selectStoneProduct(stoneInspectProduct); setStoneInspectProduct(null); }}>Select This Surface</button>{stoneInspectProduct.sampleOrderUrl ? <a href={stoneInspectProduct.sampleOrderUrl} target="_blank" rel="noopener noreferrer">Order Sample</a> : null}{stoneInspectProduct.officialProductUrl ? <a href={stoneInspectProduct.officialProductUrl} target="_blank" rel="noopener noreferrer">Visit Official Website</a> : null}</div></div></section></div> : null}
-                </div>
-              ) : null}
-              </>
-              )}
+              <BenchtopSelectionWorkflow
+                key={activeLocation.location}
+                location={activeLocation}
+                scheduleLines={normalisedDraft.schedule.filter((line) => line.location === activeLocation.location)}
+                project={benchtopProjectFacts}
+                workbook={jobWorkbook}
+                mapping={benchtopRangeMapping}
+                classifications={normalisedDraft.benchtopClassifications}
+                stoneProducts={activeStoneProducts}
+                laminateOptions={CABINETRY_BENCHTOPS.filter((bench) => bench.category === "Laminated")}
+                onChange={(patch, persist) => updateLocation(activeLocation.location, patch, persist)}
+                onOpenRangeSettings={organisationId ? () => setBenchtopRangeSettingsOpen(true) : null}
+              />
+              {benchtopRangeSettingsOpen ? <BenchtopPriceGroupSettings groups={supplierPriceGroups(activeStoneProducts)} mapping={benchtopRangeMapping} onSave={saveBenchtopRangeMapping} onClose={() => setBenchtopRangeSettingsOpen(false)} /> : null}
             </div>
           ) : null}
-          {stageIndex === 5 ? (
+          {stageIndex === 4 ? (
             activeIsBathroomCabinetry ? renderBathroomHandles() : (
             <div className="cabinetryStage" data-testid="cabinetry-handle-house-catalogue">
               <CabinetrySelectionList items={[...CABINETRY_BASE_HANDLE_OPTIONS.map((option) => ({
@@ -7178,7 +8297,7 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", selections, runn
             </div>
             )
           ) : null}
-          {stageIndex === 6 ? (
+          {stageIndex === 5 ? (
             <div className="cabinetryStage" data-testid="cabinetry-feature-stage"><CabinetrySelectionList items={(activeIsBathroomCabinetry ? WET_AREA_CABINETRY_CONFIG.featureOptions : CABINETRY_FEATURE_OPTIONS).map((item) => { const feature = (activeLocation.featureOptions || []).find((entry) => featureOptionName(entry) === item); return {
               id: item,
               name: item,
@@ -7191,12 +8310,73 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", selections, runn
               onNotesChange: (event) => updateFeatureOption(item, { notes: event.target.value }),
             }; })} /></div>
           ) : null}
-          {stageIndex === 7 ? (
+          {stageIndex === 6 ? (
             <div className="cabinetryStage cabinetryReview" data-testid="cabinetry-review-confirm">
-              {activeLocation.location === "Kitchen" && kitchenHasSelections() ? <button type="button" className="cabinetryCopyPantryButton" onClick={openKitchenPantryCopyModal}>Apply Kitchen Colours to Butler's Pantry</button> : null}
-              <div className="cabinetryInlineEditor"><label><span>Copy selections from another room</span><select value={copyFromLocation} onChange={(event) => setCopyFromLocation(event.target.value)}><option value="">Select room</option>{normalisedDraft.locations.filter((location) => location.location !== activeLocation.location).map((location) => <option key={location.location} value={location.location}>{location.location}</option>)}</select></label><button type="button" disabled={!copyFromLocation} onClick={copySelectionsIntoActiveRoom}>Copy selections</button></div>
+              {cabinetryMissingRequirements.length ? (
+                <section className="cabinetryMissingRequirements" data-testid="cabinetry-missing-requirements" role="alert">
+                  <strong>{activeLocation.location} cannot be completed yet.</strong>
+                  <span>Still required:</span>
+                  <ul>
+                    {cabinetryMissingRequirements.map((item) => (
+                      <li key={item.key}>
+                        <button type="button" onClick={() => goToMissingCabinetryRequirement(item.stage)}>{item.label} &rarr; Go to {item.stage}</button>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ) : null}
+              {locationHasColourSelections(activeLocation.location) && offerableColourTargetRooms(activeLocation.location).length ? <button type="button" className="cabinetryCopyPantryButton primary" onClick={() => openApplyColoursModal(activeLocation.location)}>Apply {activeLocation.location} Colours to Other Rooms</button> : null}
+              <div className="cabinetryInlineEditor"><label><span>Copy complete specification from another room</span><select value={copyFromLocation} onChange={(event) => setCopyFromLocation(event.target.value)}><option value="">Select room</option>{normalisedDraft.locations.filter((location) => location.location !== activeLocation.location).map((location) => <option key={location.location} value={location.location}>{location.location}</option>)}</select></label><button type="button" disabled={!copyFromLocation} onClick={copySelectionsIntoActiveRoom}>Copy complete specification</button></div>
+              <p className="clientNotice">This replaces the whole {activeLocation.location} specification - scope, schedule, colours, bulkhead/kick-panel finish, benchtop, handles, features and notes - with the selected room's. To copy only cabinetry colours from Kitchen to Butler's Pantry, use &quot;Apply Kitchen Colours to Butler's Pantry&quot; instead.</p>
               {activeLocation.copiedSelectionsEditable ? <p className="clientNotice">Copied from {activeLocation.copiedFromLocation || "another room"}. These are editable {activeLocation.location} selections.</p> : null}
-              {activeIsBathroomCabinetry ? renderBathroomReviewSummary() : <section className="cabinetryReviewLocation"><h3>{activeLocation.location}</h3><dl><dt>Cabinet areas</dt><dd>{(activeLocation.enabledAreaKeys || []).map((key) => CABINETRY_AREA_LABELS[key]).join(", ") || "Not selected"}</dd><dt>Cabinet schedule and quantities</dt><dd>{activeSchedule.map((line) => `${line.unitType} x ${line.quantity}`).join(", ") || "No rows added"}</dd><dt>Door and panel material</dt><dd>{activeLocation.doorMaterialGroup}</dd><dt>Supplier</dt><dd>{activeLocation.supplier}</dd><dt>Product range</dt><dd>{activeLocation.defaultColour?.productFamily || activeLocation.productRange || activeLocation.customRange || "Not selected"}</dd><dt>Colour</dt><dd>{activeLocation.defaultColour?.colourName || activeLocation.customColour || "Not selected"}</dd><dt>Finish</dt><dd>{activeLocation.defaultColour?.finish || activeLocation.customFinish || "Not selected"}</dd><dt>Benchtop</dt><dd>{activeLocation.benchtop ? `${activeLocation.benchtop.category} / ${activeLocation.benchtop.thickness}` : "Not selected"}</dd><dt>Handles</dt><dd>{activeLocation.handles?.base?.productName || "Not selected"} / {activeLocation.handles?.overhead?.openingMethod || "Not selected"}</dd><dt>Features</dt><dd>{(activeLocation.featureOptions || []).map(featureOptionName).join(", ") || "Not required"}</dd><dt>Status</dt><dd>{activeLocation.status === "complete" || activeLocation.confirmedAt ? "Complete" : "In progress"}</dd></dl></section>}
+              {activeIsBathroomCabinetry ? renderBathroomReviewSummary() : (
+                <section className="cabinetryReviewLocation" data-testid="cabinetry-review-location-summary">
+                  <h3>{activeLocation.location}</h3>
+                  <section className="cabinetryReviewGroup" data-testid="cabinetry-review-configuration">
+                    <h4>Cabinet configuration</h4>
+                    <dl>
+                      <div><dt>Cabinet areas</dt><dd>{(activeLocation.enabledAreaKeys || []).filter((key) => key !== "kickPanels" && key !== "bulkheads").map((key) => CABINETRY_AREA_LABELS[key]).join(", ") || "Not selected"}</dd></div>
+                      <div><dt>Cabinet schedule and quantities</dt><dd>{activeSchedule.map((line) => `${line.unitType} x ${line.quantity}`).join(", ") || "No rows added"}</dd></div>
+                      <div><dt>Door and panel material</dt><dd>{activeLocation.doorMaterialGroup}</dd></div>
+                      <div><dt>Supplier</dt><dd>{activeLocation.supplier}</dd></div>
+                    </dl>
+                  </section>
+                  <section className="cabinetryReviewGroup" data-testid="cabinetry-review-colours">
+                    <h4>Cabinet colours & finishes</h4>
+                    <dl>{activeCabinetryAreaKeys.length ? activeCabinetryAreaKeys.map((areaKey) => <div key={areaKey}><dt>{CABINETRY_AREA_LABELS[areaKey]}</dt><dd>{cabinetryAreaAssignmentText(areaKey)}</dd></div>) : <div><dt>Colour</dt><dd>Not selected</dd></div>}</dl>
+                  </section>
+                  <section className="cabinetryReviewGroup" data-testid="cabinetry-review-bulkhead">
+                    <h4>Bulkhead</h4>
+                    <dl><div><dt>Finish</dt><dd>{cabinetryAreaAssignmentText("bulkheads")}</dd></div></dl>
+                  </section>
+                  <section className="cabinetryReviewGroup" data-testid="cabinetry-review-kick-panels">
+                    <h4>Kick panels</h4>
+                    <dl><div><dt>Finish</dt><dd>{cabinetryAreaAssignmentText("kickPanels")}</dd></div></dl>
+                  </section>
+                  <section className="cabinetryReviewGroup" data-testid="cabinetry-review-benchtop">
+                    <h4>Benchtop</h4>
+                    {activeLocation.benchtop ? (
+                      <dl>
+                        <div><dt>Material type</dt><dd>{activeLocation.benchtop.category || activeLocation.benchtop.materialType || activeLocation.benchtop.materialChoice || "Not specified"}</dd></div>
+                        <div><dt>Brand/supplier</dt><dd>{activeLocation.benchtop.supplier || "Not specified"}</dd></div>
+                        <div><dt>Product/colour</dt><dd>{[activeLocation.benchtop.productCode, activeLocation.benchtop.colourName || activeLocation.benchtop.colour, activeLocation.benchtop.range].filter(Boolean).join(" / ") || "Not specified"}</dd></div>
+                        <div><dt>Thickness</dt><dd>{activeLocation.benchtop.slabThickness || activeLocation.benchtop.thickness || "Not specified"}</dd></div>
+                        {activeLocation.benchtop.edgeProfile ? <div><dt>Edge/profile</dt><dd>{activeLocation.benchtop.edgeProfile}{activeLocation.benchtop.finishedEdgeThickness ? ` (${activeLocation.benchtop.finishedEdgeThickness})` : ""}</dd></div> : null}
+                        <div><dt>Price status</dt><dd>{cabinetryPriceStatusLabel(activeLocation.benchtop.priceStatus || activeLocation.benchtop.pricingStatus)}</dd></div>
+                      </dl>
+                    ) : <p className="clientNotice">Not selected.</p>}
+                  </section>
+                  <section className="cabinetryReviewGroup" data-testid="cabinetry-review-handles">
+                    <h4>Handles</h4>
+                    <dl><div><dt>Base units</dt><dd>{activeLocation.handles?.base?.productName || activeLocation.handles?.base?.openingMethod || "Not selected"}</dd></div><div><dt>Overheads</dt><dd>{activeLocation.handles?.overhead?.openingMethod || "Not selected"}</dd></div></dl>
+                  </section>
+                  <section className="cabinetryReviewGroup" data-testid="cabinetry-review-features">
+                    <h4>Features</h4>
+                    <dl><div><dt>Selected</dt><dd>{(activeLocation.featureOptions || []).map(featureOptionName).join(", ") || "Not required"}</dd></div></dl>
+                  </section>
+                  <dl><div><dt>Status</dt><dd>{activeLocation.status === "complete" || activeLocation.confirmedAt ? "Complete" : "In progress"}</dd></div></dl>
+                </section>
+              )}
               {cabinetrySelectionMessage ? <p className="cabinetrySelectionMessage" role="status">{cabinetrySelectionMessage}</p> : null}
             </div>
           ) : null}
@@ -7205,16 +8385,17 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", selections, runn
       </div>
       {showCabinetryBackToTop ? <button type="button" className="cabinetryBackToTop" aria-label="Back to top of cabinetry workflow" onClick={scrollCabinetryToTop}><ArrowUp size={16} aria-hidden="true" />Back to top</button> : null}
       {kitchenPantryCopyOpen ? renderKitchenPantryColourModal() : null}
+        {renderApplyColoursModal()}
     </section>
   );
 }
 
-function GuidedCardGrid({ title, cards, selections = new Map(), onOpen }) {
+function GuidedCardGrid({ title, subtitle = "Choose a selection category.", cards, selections = new Map(), onOpen }) {
   return (
     <>
       <div className="guidedIntro">
         <span>{title}</span>
-        <strong>Choose a selection category.</strong>
+        {subtitle ? <strong>{subtitle}</strong> : null}
       </div>
       <div className="guidedCategoryGrid">
         {cards.map((card) => {
@@ -7257,13 +8438,14 @@ function CabinetrySelectionList({ items = [] }) {
   );
 }
 
-function CabinetryWorkflowActions({ position = "bottom", stageIndex, finalStageIndex, onPrevious, onSave, onNext }) {
+function CabinetryWorkflowActions({ position = "bottom", stageIndex, finalStageIndex, finalStageLabel = "Finish Cabinetry", firstStageLabel = "← Cabinetry Summary", nextRoomName = "", previousRoomName = "", onPrevious, onSave, onNext }) {
   const isFinal = stageIndex === finalStageIndex;
+  const isFirst = stageIndex <= 0;
   return (
     <div className={`guidedCompletionActions cabinetryWorkflowActions ${position}`} data-testid={`cabinetry-${position}-workflow-actions`}>
-      <button type="button" onClick={onPrevious} disabled={stageIndex <= 0}>Previous</button>
-      <button type="button" onClick={onSave}>Save Draft</button>
-      <button type="button" className={isFinal ? "primary" : ""} onClick={onNext}>{isFinal ? "Finish Cabinetry" : "Next"}</button>
+      <button type="button" className="secondary" onClick={onPrevious} data-testid={`cabinetry-${position}-previous`} data-destination={isFirst ? previousRoomName || "summary" : "step"}>{isFirst ? firstStageLabel : "← Previous"}</button>
+      <button type="button" className="secondary" onClick={onSave}>Save Draft</button>
+      <button type="button" className="primary progressAction" onClick={onNext} data-testid={`cabinetry-${position}-next`} data-destination={isFinal ? nextRoomName || "summary" : "step"}>{isFinal ? finalStageLabel : "Next →"}</button>
     </div>
   );
 }
@@ -7351,11 +8533,6 @@ function bathroomScopeKeysForLocation(location = {}) {
   if (Array.isArray(location.bathroomScopeKeys)) return location.bathroomScopeKeys.filter(Boolean);
   if (Array.isArray(location.bathroomScope)) return location.bathroomScope.filter(Boolean);
   return [];
-}
-
-function bathroomScheduleGroupsForLocation(location = {}) {
-  const scopeKeys = bathroomScopeKeysForLocation(location);
-  return BATHROOM_SCHEDULE_GROUPS.filter((group) => (group.scopeKeys || [group.scopeKey]).some((scopeKey) => scopeKeys.includes(scopeKey)));
 }
 
 function bathroomScheduleSelectedTypes(schedule = []) {
@@ -7617,6 +8794,28 @@ function createKickPanelFinishRecord(mode, prior = {}) {
   };
 }
 
+function createBathroomLinenBulkheadRecord(mode, prior = {}) {
+  if (mode === "no_bulkhead") return null;
+  if (mode === "match_tall_linen") return {
+    id: "linen-bulkhead-match-tall-linen",
+    areaKey: "linenBulkhead",
+    material: "Match tall linen cupboard",
+    finalFinish: "Match tall linen cupboard",
+    colourName: "Match tall linen cupboard",
+    finish: "Match tall linen cupboard",
+    supplier: "",
+    productRange: "Bathroom cabinetry finish",
+    priceStatus: "included",
+    finishMode: mode,
+    linkedAreaKey: "tallLinenDoors",
+    scheduleDescription: "Supply and install bulkhead over tall linen cupboard to match tall linen cupboard.",
+    procurementDescription: "Supply and install bulkhead over tall linen cupboard to match tall linen cupboard.",
+  };
+  const baseMode = mode === "raw_mdf_wall_paint" || mode === "raw_mdf_ceiling_paint" ? mode : "other_custom";
+  const baseRecord = createBulkheadFinishRecord(baseMode, prior);
+  return { ...baseRecord, id: `linen-${baseRecord.id}`, areaKey: "linenBulkhead" };
+}
+
 function cabinetryAreaRequiresDecorativeBoard(areaKey, record) {
   if (!["bulkheads", "kickPanels", "linenBulkhead"].includes(areaKey)) return true;
   if (!cabinetryPlainObject(record)) return true;
@@ -7708,25 +8907,6 @@ function cabinetryRecordSearchText(record = {}) {
   return [record.supplier, record.colourName, record.colourFamily, record.productRange, record.productFamily, record.finish, record.priceStatus, record.pricingTier].filter(Boolean).join(" ").toLowerCase();
 }
 
-function stoneProductSearchText(product = {}) {
-  return [product.supplier, product.productCode, product.colourName, product.collection, product.priceGroup, product.materialType, product.colourFamily, product.patternType, ...(product.finishOptions || []), ...(product.thicknessOptions || [])].filter(Boolean).join(" ").toLowerCase();
-}
-
-function defaultStoneApplicationForLocation(locationName = "") {
-  if (/laundry/i.test(locationName)) return "Laundry benchtop";
-  if (/bath|ensuite|powder/i.test(locationName)) return "Vanity benchtop";
-  if (/pantry/i.test(locationName)) return "Butler's Pantry benchtop";
-  return "Main benchtop";
-}
-
-function stoneConfigLabel(key = "") {
-  if (key === "templateRequired") return "Template required";
-  if (key === "supplierQuoteRequired") return "Supplier quote required";
-  if (key === "physicalSampleConfirmed") return "Physical sample confirmed";
-  if (key === "fullSlabViewed") return "Full slab viewed";
-  return key;
-}
-
 function groupCabinetryColourRecords(records = [], selectedRecord = null) {
   const grouped = new Map();
   records.filter((record) => record.availabilityStatus !== "inactive" && record.status !== "inactive").forEach((record) => {
@@ -7780,13 +8960,15 @@ function ExteriorWallConstructionSelector({ value = "", onChange }) {
   );
 }
 
-function GuidedImageCard({ category, status, disabled = false, onOpen }) {
+function GuidedImageCard({ category, status, selectedLabel = "", disabled = false, onOpen }) {
   const displayStatus = guidedCategoryStatus(status);
+  const caption = [category.description, selectedLabel].filter(Boolean);
   return (
     <button
       type="button"
-      className={`guidedImageCard ${displayStatus.className} ${disabled ? "disabled" : ""} ${category.requirementKey === "entry-door" ? "entryDoorCategoryCard" : ""} ${category.requirementKey === "garage-door" ? "garageDoorCategoryCard" : ""} ${category.requirementKey === "external-lighting" ? "externalLightingCategoryCard" : ""}`}
+      className={`guidedImageCard ${displayStatus.className} ${disabled ? "disabled" : ""} ${category.cardRequirementKey === "entry-door" ? "entryDoorCategoryCard" : ""} ${category.cardRequirementKey === "garage-door" ? "garageDoorCategoryCard" : ""} ${category.cardRequirementKey === "external-lighting" ? "externalLightingCategoryCard" : ""}`}
       data-requirement-key={category.requirementKey || category.key}
+      data-category-key={category.key}
       aria-label={`Open ${category.label} selections`}
       disabled={disabled}
       onClick={onOpen}
@@ -7794,6 +8976,12 @@ function GuidedImageCard({ category, status, disabled = false, onOpen }) {
       <img src={category.image} alt={category.imageAlt || category.label} />
       <span className="guidedImageCardInfo">
         <span className="guidedImageCardTitle">{category.label}</span>
+        {caption.length ? (
+          <span className="guidedImageCardMeta">
+            {category.description ? <span>{category.description}</span> : null}
+            {selectedLabel ? <b>{selectedLabel}</b> : null}
+          </span>
+        ) : null}
       </span>
     </button>
   );
@@ -7827,6 +9015,13 @@ function GuidedExteriorColourWorkflow({
     garageDoor: selections.get("garage-door")?.selected_details || selections.get("garage-door")?.guidedSelection || {},
     windows: selections.get("windows")?.selected_details || selections.get("windows")?.guidedSelection || {},
     cladding: selections.get("external-cladding")?.selected_details || selections.get("external-cladding")?.guidedSelection || {},
+    // "entry-door" (singular) is the canonical requirementKey - confirmed via the requirement()
+    // factory call in EXTERIOR_REQUIREMENTS (its first argument) and via guidedRequirementKey/
+    // guidedSelection.requirementKey set throughout lib/builders/entryDoorFurnitureSelection.js.
+    // "entry-doors" (plural) is that same requirement's unrelated familyKey, not a selections Map
+    // key - kept as a defensive fallback only, in case a legacy row was ever saved under it.
+    entryDoors: selections.get("entry-door")?.selected_details || selections.get("entry-door")?.guidedSelection
+      || selections.get("entry-doors")?.selected_details || selections.get("entry-doors")?.guidedSelection || {},
   }), [selections]);
   const [areas, setAreas] = useState(() => buildExteriorColourAreas(savedAreas, project, projectInfo, linkedExteriorSelections));
   const [activeAreaId, setActiveAreaId] = useState("");
@@ -7863,9 +9058,11 @@ function GuidedExteriorColourWorkflow({
   const selectedBulkCount = selectedApplyAreas.length;
   const selectedBulkAreas = areas.filter((area) => selectedApplyAreas.includes(area.areaId));
   const selectedBulkLabel = selectedBulkCount === 1 ? "1 area selected" : `${selectedBulkCount} areas selected`;
+  const entryDoorStainedActive = Boolean(activeArea?.areaId?.startsWith("entry-door:") && activeArea.finishType === "stained");
   const visibleColours = EXTERIOR_COLOUR_PALETTE.filter((colour) => {
     const q = search.trim().toLowerCase();
     const haystack = exteriorColourSearchText(colour);
+    if (entryDoorStainedActive && !exteriorColourMatchesFamily(colour, "Timber tones")) return false;
     return (!q || haystack.includes(q)) && exteriorColourMatchesFamily(colour, family);
   });
 
@@ -7909,7 +9106,11 @@ function GuidedExteriorColourWorkflow({
       return;
     }
     if (!compatibleAreas.length) {
-      setBulkApplyMessage(`${colour.colourName} was not applied because no selected areas are compatible.`);
+      // Say which areas blocked it and why, so this is not a dead end.
+      const detail = targetAreas.length
+        ? targetAreas.map((area) => `${area.areaName} (${exteriorAreaColourIncompatibilityReason(area, colour)})`).join(", ")
+        : "no matching areas were found for the current selection";
+      setBulkApplyMessage(`${colour.colourName} was not applied: ${detail}.`);
       return;
     }
     setPendingColourApply({ mode, colour, compatibleAreas, incompatibleAreas });
@@ -8039,6 +9240,22 @@ function GuidedExteriorColourWorkflow({
                     <button type="button" onClick={() => updateArea(activeArea.areaId, { applicable: false })}>Remove Area</button>
                   </div>
                   <ExteriorColourLinkControls activeArea={activeArea} areas={areas} onLink={(patch) => updateArea(activeArea.areaId, patch)} />
+                  {activeArea.areaId.startsWith("entry-door:") ? (
+                    <div className="exteriorColourLinkControls" data-testid="entry-door-finish-type">
+                      <span>Finish type</span>
+                      {[["painted", "Painted"], ["stained", "Stained / clear timber finish"], ["factory_finished", "Manufacturer/pre-finished"], ["other_custom", "Other/custom"]].map(([value, label]) => (
+                        <button
+                          key={value}
+                          type="button"
+                          aria-pressed={activeArea.finishType === value}
+                          className={activeArea.finishType === value ? "selected" : ""}
+                          onClick={() => updateArea(activeArea.areaId, value === "factory_finished"
+                            ? { finishType: value, colourSelection: null, colourSource: "builder-default", linkedComponentId: "", isOverride: false, confirmationStatus: "factory_finished" }
+                            : { finishType: value, colourSelection: activeArea.finishType === value ? activeArea.colourSelection : null, confirmationStatus: "" })}
+                        >{label}</button>
+                      ))}
+                    </div>
+                  ) : null}
                   <div className="lightingFilters exteriorColourFilters">
                     <label><span>Search colour</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Dieskau, SW1E1, Monument..." /></label>
                     <label><span>Colour family</span><select value={family} onChange={(event) => setFamily(event.target.value)}><option value="">All families</option>{EXTERIOR_COLOUR_FAMILIES.map((item) => <option key={item}>{item}</option>)}</select></label>
@@ -8572,7 +9789,11 @@ function guidedLightingLinesKey(lines = []) {
 function buildExteriorColourAreas(savedAreas = [], project = {}, projectInfo = {}, linkedSelections = {}) {
   const projectId = project?.id || projectInfo?.projectId || "";
   const linkedAreas = buildLinkedExteriorColourAreas(linkedSelections, projectId);
-  if (savedAreas.length) return mergeExteriorColourAreas(savedAreas.map((area, index) => normaliseExteriorColourArea(area, { index, projectId })), linkedAreas, projectId);
+  const entryDoorAreas = buildEntryDoorColourAreas(linkedSelections.entryDoors, projectId);
+  if (savedAreas.length) {
+    const merged = mergeExteriorColourAreas(savedAreas.map((area, index) => normaliseExteriorColourArea(area, { index, projectId })), linkedAreas, projectId);
+    return resolveAreaToAreaLinks(mergeEntryDoorColourAreas(merged, entryDoorAreas, projectId), projectId);
+  }
   const metadata = project?.metadata || project?.project_metadata || {};
   const haystack = [
     project?.project_name,
@@ -8584,7 +9805,77 @@ function buildExteriorColourAreas(savedAreas = [], project = {}, projectInfo = {
   const baseAreas = EXTERIOR_COLOUR_AREAS
     .filter((area) => area.defaultApplicable || exteriorAreaAppearsInProject(area, haystack))
     .map((area, index) => normaliseExteriorColourArea({ ...area, applicable: true }, { index, projectId }));
-  return mergeExteriorColourAreas(baseAreas, linkedAreas, projectId);
+  const merged = mergeExteriorColourAreas(baseAreas, linkedAreas, projectId);
+  return resolveAreaToAreaLinks(mergeEntryDoorColourAreas(merged, entryDoorAreas, projectId), projectId);
+}
+
+// Areas linked to another exterior colour area (fascia/gutters/downpipes -> roof, downpipes/entry
+// doors -> a wall or trim area, etc. via exteriorColourLinkOptions) are re-resolved from that
+// area's current colour every time the schedule is (re)built, e.g. on load/reload after a save -
+// so a later change to the source area's colour is picked up rather than staying a one-off copy
+// frozen at the moment the link was chosen. This mirrors the live resolution buildLinkedExterior-
+// ColourAreas already gives roof/garage-door links from their own separate guided requirements;
+// this extends the same guarantee to area-to-area links. Only areas the client has not manually
+// overridden (isOverride !== true) are re-resolved, and only one hop is followed per pass (the
+// target's own already-resolved colour), which is sufficient for the current link chains (none of
+// which currently link through a second link).
+function resolveAreaToAreaLinks(areas = [], projectId = "") {
+  const byId = new Map(areas.map((area) => [area.areaId, area]));
+  return areas.map((area) => {
+    if (area.isOverride || !area.linkedComponentId) return area;
+    const target = byId.get(area.linkedComponentId);
+    if (!target || !target.colourSelection?.colourName) return area;
+    if (target.colourSelection.colourId === area.colourSelection?.colourId && target.colourSelection.colourName === area.colourSelection?.colourName) return area;
+    return normaliseExteriorColourArea({
+      ...area,
+      colourSelection: target.colourSelection,
+      confirmationStatus: area.finishType === "factory_finished" ? "factory_finished" : "selected",
+    }, { projectId });
+  });
+}
+
+// One exterior colour area is generated per physical entry door already selected in the separate
+// Exterior Entry Door product workflow (lib/builders/entryDoorFurnitureSelection.js). This is a
+// finish (painted/stained/pre-finished/other) applied to that already-chosen door, never a second
+// door-selection system - doors without a product chosen yet are left out rather than fabricated.
+function buildEntryDoorColourAreas(entryDoorsDetails = {}, projectId = "") {
+  const doors = Array.isArray(entryDoorsDetails?.entryDoors) ? entryDoorsDetails.entryDoors : [];
+  return doors
+    .filter((entry) => entry?.door?.id && (entry.productCode || entry.productName || entry.entryDoorFurniture))
+    .map((entry) => {
+      const door = entry.door;
+      const doorLabel = door.location || door.doorReference || "Entry";
+      const productLabel = [entry.brand || entry.supplier, entry.range, entry.productName || entry.productCode].filter(Boolean).join(" ") || "Entry door";
+      return normaliseExteriorColourArea({
+        areaId: `entry-door:${door.id}`,
+        areaName: `${doorLabel} entry door`,
+        areaGroup: "Openings and surrounds",
+        material: productLabel,
+        finishType: "painted",
+        source: "Entry door selection",
+        applicable: true,
+        notes: [door.doorReference, door.level].filter(Boolean).join(" / "),
+      }, { projectId });
+    });
+}
+
+// Preserves any saved finish/colour for a door area (isOverride or an explicit finishType the
+// client already chose) while keeping the door/location/product identity current if the physical
+// door selection changes; brand new doors are simply appended.
+function mergeEntryDoorColourAreas(areas = [], entryDoorAreas = [], projectId = "") {
+  const byId = new Map(areas.map((area) => [area.areaId, area]));
+  entryDoorAreas.forEach((doorArea) => {
+    const current = byId.get(doorArea.areaId);
+    byId.set(doorArea.areaId, normaliseExteriorColourArea({
+      ...doorArea,
+      ...(current || {}),
+      areaName: doorArea.areaName,
+      material: doorArea.material,
+      notes: doorArea.notes,
+      finishType: current?.finishType || doorArea.finishType,
+    }, { projectId }));
+  });
+  return Array.from(byId.values());
 }
 
 function mergeExteriorColourAreas(baseAreas = [], linkedAreas = [], projectId = "") {
@@ -8652,6 +9943,10 @@ function exteriorColourRecordFromName(colourValue, supplier = "COLORBOND") {
 
 function exteriorColourLinkOptions(activeArea = {}, areas = []) {
   const findArea = (areaId) => areas.find((area) => area.areaId === areaId && area.colourSelection?.colourName);
+  // "source" is set to the chosen link target (not left at the area's original static category)
+  // so the row's "Linked to X" label reflects what it is actually linked to right now - found via
+  // live testing: a downpipe linked to "Rendered walls" was still displaying "Linked to Roofing
+  // selections" because the row label reads area.source, which toPatch previously left untouched.
   const toPatch = (sourceArea, sourceLabel) => sourceArea ? {
     colourSelection: sourceArea.colourSelection,
     confirmationStatus: activeArea.finishType === "factory_finished" ? "factory_finished" : "selected",
@@ -8659,6 +9954,7 @@ function exteriorColourLinkOptions(activeArea = {}, areas = []) {
     linkedComponentId: sourceArea.areaId,
     isOverride: false,
     defaultStatus: `Linked to ${sourceLabel}`,
+    source: sourceLabel,
   } : null;
   const options = [];
   if (["fascia", "gutters", "downpipes"].includes(activeArea.areaId)) {
@@ -8666,10 +9962,20 @@ function exteriorColourLinkOptions(activeArea = {}, areas = []) {
   }
   if (activeArea.areaId === "downpipes") {
     options.push({ id: "match-gutters", label: "Keep linked to Gutters", patch: toPatch(findArea("gutters"), "Gutters") });
+    const claddingArea = findArea("painted-wall-cladding") || findArea("feature-wall-cladding");
+    const renderArea = findArea("main-rendered-walls") || findArea("secondary-rendered-walls");
+    if (claddingArea) options.push({ id: "match-cladding", label: "Match wall colour/s - Cladding", patch: toPatch(claddingArea, "Cladding") });
+    if (renderArea) options.push({ id: "match-render", label: "Match wall colour/s - Rendered walls", patch: toPatch(renderArea, "Rendered walls") });
   }
   if (activeArea.areaId === "garage-door-surround") {
     options.push({ id: "match-garage", label: "Keep linked to Garage Door", patch: toPatch(findArea("garage-door"), "Garage Door") });
     options.push({ id: "match-roof", label: "Keep linked to Roofing", patch: toPatch(findArea("roof"), "Roofing") });
+  }
+  if (String(activeArea.areaId || "").startsWith("entry-door:") && activeArea.finishType === "painted") {
+    const wallArea = findArea("main-rendered-walls") || findArea("secondary-rendered-walls") || findArea("painted-wall-cladding");
+    const trimArea = findArea("door-surrounds") || findArea("window-surrounds");
+    options.push({ id: "match-wall", label: "Match exterior wall colour", patch: toPatch(wallArea, "Exterior wall colour") });
+    options.push({ id: "match-trim", label: "Match trim colour", patch: toPatch(trimArea, "Trim colour") });
   }
   options.push({ id: "choose-separately", label: "Choose separately", patch: { colourSource: "client-override", linkedComponentId: "", isOverride: true, defaultStatus: "override" } });
   return options;
@@ -8689,8 +9995,34 @@ function exteriorAreaColourCompatible(area = {}, colour = {}) {
   const currentSupplier = String(area.colourSelection?.supplier || "").toLowerCase();
   const areaText = `${area.areaId || ""} ${area.areaName || ""} ${area.source || ""} ${area.colourSource || ""}`.toLowerCase();
   if (areaText.includes("garage") && areaText.includes("selection") && currentSupplier && colourSupplier && currentSupplier !== colourSupplier) return false;
-  if (/timber|stain/i.test(`${area.finishType || ""} ${area.material || ""}`) && !/timber|stain|painter|custom/i.test(`${colour.supplier || ""} ${colour.range || ""} ${colour.colourFamily || ""} ${colour.colourName || ""}`)) return false;
+  // Only a genuinely stained finish restricts the palette to timber/stain colours.
+  // A painted area whose material label merely mentions timber ("Painted metal/timber",
+  // "Painted timber door") takes ordinary paint and powder-coat colours, so test the
+  // finish rather than searching the material name for the word "timber".
+  const finishType = String(area.finishType || "").toLowerCase();
+  const material = String(area.material || "");
+  // A material label that says "painted" is painted, whatever else it mentions. Fascia is
+  // "Painted metal/timber" and the entry door is "Painted timber door"; without this guard a
+  // saved area that arrived without a finishType was read as stained timber and rejected every
+  // paint/COLORBOND colour, so those rows could never be given a colour at all.
+  const paintedMaterial = /painted|paint\b|render|colorbond|powder/i.test(material);
+  const stainedFinish = /stain|timber/.test(finishType)
+    || (!finishType && !paintedMaterial && /timber|stain/i.test(material));
+  if (stainedFinish && !/timber|stain|painter|custom/i.test(`${colour.supplier || ""} ${colour.range || ""} ${colour.colourFamily || ""} ${colour.colourName || ""}`)) return false;
   return true;
+}
+
+/** Plain-language reason a colour cannot go on an area, for the bulk-apply message. */
+function exteriorAreaColourIncompatibilityReason(area = {}, colour = {}) {
+  if (area.finishType === "not_painted" || area.confirmationStatus === "not_painted") return "marked as not painted";
+  const colourSupplier = String(colour.supplier || "").toLowerCase();
+  const currentSupplier = String(area.colourSelection?.supplier || "").toLowerCase();
+  const areaText = `${area.areaId || ""} ${area.areaName || ""} ${area.source || ""} ${area.colourSource || ""}`.toLowerCase();
+  if (areaText.includes("garage") && areaText.includes("selection") && currentSupplier && colourSupplier && currentSupplier !== colourSupplier) {
+    return `linked to a ${area.colourSelection?.supplier} garage door colour`;
+  }
+  if (/stain|timber/.test(String(area.finishType || "").toLowerCase())) return "a stained timber finish, which needs a timber or stain colour";
+  return "not compatible with this colour";
 }
 
 function exteriorAreaAppearsInProject(area, haystack = "") {
@@ -9154,8 +10486,8 @@ function GuidedGarageDoorWorkflow({ requirement, requirements, products, selecti
   const ranges = useMemo(() => garageDoorRangeOptions(products, supplierId), [products, supplierId]);
   const [range, setRange] = useState(savedGarage.range || ranges[0] || "");
   const rangeProducts = useMemo(() => supplierProducts.filter((product) => !range || product.range === range || product.model === range), [supplierProducts, range]);
-  const [productId, setProductId] = useState(savedDetails.productId || rangeProducts[0]?.id || rangeProducts[0]?.productId || "");
-  const selectedProduct = useMemo(() => rangeProducts.find((product) => [product.id, product.productId, product.productCode].includes(productId)) || rangeProducts[0] || supplierProducts[0] || products[0] || null, [rangeProducts, supplierProducts, products, productId]);
+  const [productId, setProductId] = useState(savedDetails.productId || rangeProducts[0]?.id || rangeProducts[0]?.productId || rangeProducts[0]?.productCode || "");
+  const selectedProduct = useMemo(() => rangeProducts.find((product) => [product.id, product.productId, product.productCode].includes(productId)) || rangeProducts[0] || supplierProducts[0] || null, [rangeProducts, supplierProducts, productId]);
   const profiles = useMemo(() => selectedProduct ? garageDoorProfileOptions(selectedProduct) : [], [selectedProduct]);
   const [profile, setProfile] = useState(savedGarage.profile || profiles[0] || "");
   const sizes = useMemo(() => selectedProduct ? garageDoorSizeOptions(selectedProduct) : [], [selectedProduct]);
@@ -9166,6 +10498,7 @@ function GuidedGarageDoorWorkflow({ requirement, requirements, products, selecti
   const [colourSearch, setColourSearch] = useState("");
   const [finishFamily, setFinishFamily] = useState("");
   const colourOptions = useMemo(() => selectedProduct ? garageDoorColourOptionsForProduct(selectedProduct, { profile, search: colourSearch, family: finishFamily }) : [], [selectedProduct, profile, colourSearch, finishFamily]);
+  const compatibleColours = useMemo(() => selectedProduct ? garageDoorColourOptionsForProduct(selectedProduct, { profile }) : [], [selectedProduct, profile]);
   const finishFamilies = useMemo(() => selectedProduct ? garageDoorFinishFamiliesForProduct(selectedProduct, profile) : [], [selectedProduct, profile]);
   const [colourId, setColourId] = useState(savedGarage.colourId || "");
   const selectedColour = garageDoorColourById(colourId);
@@ -9174,7 +10507,7 @@ function GuidedGarageDoorWorkflow({ requirement, requirements, products, selecti
   const [automation, setAutomation] = useState(savedGarage.operation || automationOptions[0] || "");
   const [accessories, setAccessories] = useState(Array.isArray(savedGarage.accessories) ? savedGarage.accessories : ["Two remote controls"]);
   const [compatibilityNotice, setCompatibilityNotice] = useState("");
-  const canConfirm = Boolean(selectedProduct && profile && size && automation && selectedColour && colourOptions.some((colour) => colour.colourId === selectedColour.colourId));
+  const canConfirm = Boolean(selectedProduct && profiles.includes(profile) && sizes.includes(size) && automationOptions.includes(automation) && selectedColour && compatibleColours.some((colour) => colour.colourId === selectedColour.colourId));
   const previewProduct = useMemo(() => selectedProduct ? garageDoorWorkflowProduct(selectedProduct, requirement, { colourId, profile, size, location, openingWidth, openingHeight, automation, accessories }) : null, [selectedProduct, requirement, colourId, profile, size, location, openingWidth, openingHeight, automation, accessories]);
 
   useEffect(() => {
@@ -9199,12 +10532,23 @@ function GuidedGarageDoorWorkflow({ requirement, requirements, products, selecti
   }, [size, sizes]);
 
   useEffect(() => {
+    if (!automationOptions.includes(automation)) setAutomation(automationOptions[0] || "");
+  }, [automation, automationOptions]);
+
+  useEffect(() => {
+    setAccessories((current) => {
+      const compatible = current.filter((item) => accessoryOptions.includes(item));
+      return compatible.length === current.length ? current : compatible;
+    });
+  }, [accessoryOptions]);
+
+  useEffect(() => {
     if (!selectedColour || !selectedProduct) return;
-    if (!colourOptions.some((colour) => colour.colourId === selectedColour.colourId)) {
+    if (!compatibleColours.some((colour) => colour.colourId === selectedColour.colourId)) {
       setColourId("");
       setCompatibilityNotice(`${selectedColour.officialName} was removed because it is not compatible with ${selectedProduct.range || selectedProduct.productName} ${profile}. Select a compatible colour.`);
     }
-  }, [selectedColour, selectedProduct, profile, colourOptions]);
+  }, [selectedColour, selectedProduct, profile, compatibleColours]);
 
   return (
     <section className="guidedShell garageDoorWorkflow" data-testid="guided-garage-door-workflow">
@@ -9223,13 +10567,13 @@ function GuidedGarageDoorWorkflow({ requirement, requirements, products, selecti
           <div className="guidedSectionHeader">
             <span>Exterior / Garage Doors</span>
             <strong>Supplier-specific garage-door selection</strong>
-            <em>{enabledProductCount || masterProductCount || products.length} enabled product option{(enabledProductCount || masterProductCount || products.length) === 1 ? "" : "s"}. Colour must be selected before confirmation.</em>
+            <em>{products.length} enabled product option{products.length === 1 ? "" : "s"}. Colour must be selected before confirmation.</em>
           </div>
-          <div className="garageSteps">{GARAGE_DOOR_WORKFLOW_STEPS.map((item) => <button key={item.key} type="button" className={step === item.key ? "active" : ""} onClick={() => setStep(item.key)}>{item.label}</button>)}</div>
+          <div className="garageSteps">{GARAGE_DOOR_WORKFLOW_STEPS.map((item) => <button key={item.key} type="button" className={step === item.key ? "active" : ""} aria-current={step === item.key ? "step" : undefined} onClick={() => setStep(item.key)}>{item.label}</button>)}</div>
           {compatibilityNotice ? <div className="windowApplyNotice">{compatibilityNotice}</div> : null}
-          {step === "supplier" ? <GuidedGarageChoiceGrid title="Supplier" items={suppliers.map((supplier) => ({ key: supplier.supplierId, title: supplier.label, meta: `${supplier.count} enabled product${supplier.count === 1 ? "" : "s"}` }))} selected={supplierId} onSelect={(key) => { setSupplierId(key); setColourId(""); setStep("range"); }} /> : null}
-          {step === "range" ? <GuidedGarageChoiceGrid title="Door Type / Range" items={ranges.map((item) => ({ key: item, title: item, meta: supplierProducts.find((product) => product.range === item)?.configuration || "Garage door range" }))} selected={range} onSelect={(key) => { setRange(key); setColourId(""); setStep("profile"); }} /> : null}
-          {step === "profile" ? <GuidedGarageChoiceGrid title="Profile / Design" items={profiles.map((item) => ({ key: item, title: item, meta: selectedProduct?.range || "" }))} selected={profile} onSelect={(key) => { setProfile(key); setStep("size"); }} /> : null}
+          {step === "supplier" ? <GarageDoorChoiceGrid variant="supplier" title="Supplier" items={suppliers.map((supplier) => ({ key: supplier.supplierId, title: supplier.label, image: supplier.logoUrl, meta: `${supplier.count} enabled product${supplier.count === 1 ? "" : "s"}` }))} selected={supplierId} onSelect={(key) => { setSupplierId(key); setColourSearch(""); setFinishFamily(""); setCompatibilityNotice(""); setColourId(""); setStep("range"); }} /> : null}
+          {step === "range" ? <GarageDoorChoiceGrid title="Door Type / Range" items={ranges.map((item) => { const p = supplierProducts.find((product) => product.range === item); return { key: item, title: item, meta: p?.configuration || "Garage door range", image: p ? garageDoorRangeImage(p) : "" }; })} selected={range} onSelect={(key) => { setRange(key); setColourSearch(""); setFinishFamily(""); setCompatibilityNotice(""); setColourId(""); setStep("profile"); }} /> : null}
+          {step === "profile" ? <GarageDoorChoiceGrid variant="profile" title="Profile / Design" items={profiles.map((item) => ({ key: item, title: item, meta: selectedProduct?.range || "", image: garageDoorProfileImage(item, selectedProduct), detail: garageDoorProfileDescription(item, selectedProduct) }))} selected={profile} onSelect={(key) => { setProfile(key); setStep("size"); }} /> : null}
           {step === "size" ? (
             <div className="garageFormPanel">
               <label><span>Garage door ID / location</span><input value={location} onChange={(event) => setLocation(event.target.value)} /></label>
@@ -9239,17 +10583,41 @@ function GuidedGarageDoorWorkflow({ requirement, requirements, products, selecti
               <button type="button" className="primary" onClick={() => setStep("colour")}>Open Colour / Finish</button>
             </div>
           ) : null}
-          {step === "colour" ? <GuidedGarageColourSelector product={selectedProduct} profile={profile} colourOptions={colourOptions} finishFamilies={finishFamilies} finishFamily={finishFamily} search={colourSearch} selectedColour={selectedColour} onFamilyChange={setFinishFamily} onSearchChange={setColourSearch} onSelect={(colour) => setColourId(colour.colourId)} onClear={() => setColourId("")} onConfirm={() => setStep("automation")} /> : null}
-          {step === "automation" ? <GuidedGarageChoiceGrid title="Automation" items={automationOptions.map((item) => ({ key: item, title: item, meta: /quote/i.test(item) ? "Quote required" : "Included/manual" }))} selected={automation} onSelect={(key) => { setAutomation(key); setStep("accessories"); }} /> : null}
-          {step === "accessories" ? (
-            <div className="garageAccessoryGrid">{accessoryOptions.map((item) => {
-              const selected = accessories.includes(item);
-              return <button key={item} type="button" className={selected ? "selected" : ""} onClick={() => setAccessories((current) => selected ? current.filter((value) => value !== item) : [...current, item])}><strong>{item}</strong><span>{selected ? "Selected" : /quote/i.test(item) ? "Quote required" : "Select"}</span></button>;
-            })}<button type="button" className="primary" onClick={() => setStep("review")}>Review and Confirm</button></div>
+          {step === "colour" ? <GuidedGarageColourSelector product={selectedProduct} profile={profile} colourOptions={colourOptions} finishFamilies={finishFamilies} finishFamily={finishFamily} search={colourSearch} selectedColour={selectedColour} onFamilyChange={setFinishFamily} onSearchChange={setColourSearch} onSelect={(colour) => { setColourId(colour.colourId); setCompatibilityNotice(""); }} onClear={() => setColourId("")} onConfirm={() => setStep("automation")} /> : null}
+          {step === "automation" ? (
+            <section className="garageOptionsPanel" data-testid="garage-automation-accessories">
+              {/* The step's own action sits at the top of the panel. At the foot of a long
+                  accessory grid it was below the fold and people could not find the way on. */}
+              <div className="guidedStepAction">
+                <div>
+                  <strong>Automation &amp; accessories</strong>
+                  <span>Pick how the door opens, then add any accessories. Both can be changed later.</span>
+                </div>
+                <button type="button" className="primary" onClick={() => setStep("review")}>Review and Confirm</button>
+              </div>
+              <GarageDoorChoiceGrid title="Automation" items={automationOptions.map((item) => ({ key: item, title: item, meta: /quote/i.test(item) ? "Quote required" : /manual/i.test(item) ? "Manual operation" : "Included as standard" }))} selected={automation} onSelect={setAutomation} />
+              <h3>Accessories</h3>
+              <div className="garageAccessoryGrid">{accessoryOptions.map((item) => {
+                const selected = accessories.includes(item);
+                return <button key={item} type="button" aria-pressed={selected} className={selected ? "selected" : ""} onClick={() => setAccessories((current) => current.includes(item) ? current.filter((value) => value !== item) : [...current, item])}><strong>{item}</strong><span>{selected ? "Selected" : /quote/i.test(item) ? "Quote required" : "Select"}</span></button>;
+              })}</div>
+            </section>
           ) : null}
           {step === "review" ? (
             <div className="garageReview" data-testid="garage-door-review">
-              <img src={GARAGE_DOORS_DASHBOARD_IMAGE_URL} alt={previewProduct?.productName || "Garage door selection"} />
+              {/* Saving is the point of this screen, so the actions lead rather than trail a
+                  long summary, and finishing a section is acknowledged. */}
+              <div className="guidedStepAction guidedSectionComplete">
+                <div>
+                  <strong>{canConfirm ? "Nice work - your garage door is ready to save." : "Almost there - finish the outstanding items below."}</strong>
+                  <span>{canConfirm ? "Save it to the job and carry on with the next exterior selection." : "A colour and configuration are needed before this section can be confirmed."}</span>
+                </div>
+                <div className="guidedProductActions">
+                  <button type="button" onClick={onSaveProgress}>Save Progress</button>
+                  <button type="button" className="primary" disabled={!canConfirm} onClick={() => onSelectProduct(requirement, previewProduct)}>Save and Return to Dashboard</button>
+                </div>
+              </div>
+              <GarageDoorReviewPreview product={selectedProduct} profile={profile} colour={selectedColour} openingWidth={openingWidth} openingHeight={openingHeight} />
               <dl>
                 <div><dt>Supplier</dt><dd>{previewProduct?.garageDoorSelection.supplier || "Select supplier"}</dd></div>
                 <div><dt>Range</dt><dd>{previewProduct?.garageDoorSelection.range || "Select range"}</dd></div>
@@ -9260,17 +10628,12 @@ function GuidedGarageDoorWorkflow({ requirement, requirements, products, selecti
                 <div><dt>Accessories</dt><dd>{accessories.join(", ") || "None selected"}</dd></div>
                 <div><dt>Pricing</dt><dd>{previewProduct?.priceStatus === PRICE_STATES.quoteRequired ? "Supplier quote required" : "Included / no variation"}</dd></div>
               </dl>
-              <div className="guidedProductActions"><button type="button" onClick={onSaveProgress}>Save Progress</button><button type="button" className="primary" disabled={!canConfirm} onClick={() => onSelectProduct(requirement, previewProduct)}>Save and Return to Dashboard</button></div>
             </div>
           ) : null}
         </main>
       </div>
     </section>
   );
-}
-
-function GuidedGarageChoiceGrid({ title, items, selected, onSelect }) {
-  return <div className="garageChoiceBlock"><h3>{title}</h3><div className="garageChoiceGrid">{items.map((item) => <button key={item.key} type="button" className={selected === item.key ? "selected" : ""} onClick={() => onSelect(item.key)}><strong>{item.title}</strong><span>{item.meta}</span>{selected === item.key ? <b>Selected</b> : null}</button>)}</div></div>;
 }
 
 function GuidedGarageColourSelector({ product, profile, colourOptions, finishFamilies, finishFamily, search, selectedColour, onFamilyChange, onSearchChange, onSelect, onClear, onConfirm }) {
@@ -9347,7 +10710,7 @@ function GuidedWindowsWorkflow({
   const patchConfig = (patch) => onWindowConfigurationChange((current) => ({ ...(current || DEFAULT_WINDOW_CONFIGURATION), ...patch }));
   const go = (step) => {
     if (!schedule.isAvailable && step !== "schedule") return;
-    onWindowStepChange(step);
+    onWindowStepChange(step === "systems" ? "defaults" : step);
   };
   const applyWetAreaPrivacy = () => {
     const privacyGlass = glassOptions.find((glass) => /obscure|privacy/i.test(`${glass.name} ${glass.type}`));
@@ -9359,7 +10722,10 @@ function GuidedWindowsWorkflow({
       },
     });
   };
-  const currentWindowStep = schedule.isAvailable ? windowStep : "schedule";
+  // The Window Systems step ("systems") has been removed from the workflow. windowStep is plain
+  // React state that always starts at "schedule" on mount (never itself persisted), but map any
+  // stale/legacy value defensively so a removed step can never become the active or restored step.
+  const currentWindowStep = schedule.isAvailable ? (windowStep === "systems" ? "defaults" : windowStep) : "schedule";
   const steps = WINDOWS_WORKFLOW_STEPS.map((step) => [step, windowHeaderForStep(step), windowStepStatus(step, { schedule, selectedSupplier, selectedColour, configuration, effectiveWindows, incomplete, canConfirm })]);
   return (
     <section className="guidedShell" data-testid="guided-windows-workflow">
@@ -9385,7 +10751,7 @@ function GuidedWindowsWorkflow({
           ) : currentWindowStep === "supplier" ? (
             <div className="windowSupplierGrid" data-testid="windows-supplier-selection">
               {suppliers.map((supplier) => (
-                <button key={supplier.key} type="button" className={selectedSupplier.label === supplier.label ? "selected" : ""} onClick={() => {
+                <button key={supplier.key} type="button" data-supplier-key={supplier.key} className={selectedSupplier.label === supplier.label ? "selected" : ""} onClick={() => {
                   const nextSupplier = windowSupplierDefinition(supplier.label);
                   const previousColour = configuration.frameColourName || configuration.frameColourCode
                     ? {
@@ -9413,7 +10779,7 @@ function GuidedWindowsWorkflow({
                     overrides: {},
                     selectedWindowIds: [],
                   });
-                  go("systems");
+                  go("defaults");
                 }}>
                   <div className="windowSupplierLogo">{supplier.logo}</div>
                   {supplier.image ? <img src={officialProductImageUrl(supplier.image)} alt={`${supplier.label} representative window`} /> : null}
@@ -9424,8 +10790,6 @@ function GuidedWindowsWorkflow({
                 </button>
               ))}
             </div>
-          ) : currentWindowStep === "systems" ? (
-            <WindowSystemMappingStep schedule={schedule} supplier={selectedSupplier} systemsByType={systemsByType} onChange={(type, system) => patchConfig({ systemsByType: { ...(configuration.systemsByType || {}), [type]: system } })} onNext={() => go("defaults")} />
           ) : currentWindowStep === "defaults" ? (
             <WindowDefaultsStep supplier={selectedSupplier} region={region} configuration={configuration} selectedColour={selectedColour} colours={colours} glassOptions={glassOptions} screenOptions={screenOptions} hardwareOptions={hardwareOptions} schedule={schedule} effectiveWindows={effectiveWindows} applyResult={defaultsApplyResult} onChange={(patch) => { onWindowDefaultsApplyResult(""); patchConfig(patch); }} onApply={(message) => onWindowDefaultsApplyResult(message)} onNext={() => go("windows")} />
           ) : currentWindowStep === "windows" ? (
@@ -9449,6 +10813,23 @@ function GuidedWindowsWorkflow({
   );
 }
 
+// Display-only grouping for the Project Schedule table: Level stays part of every underlying
+// item (item.floor - the canonical opening's own level), it is just presented once as a section
+// heading instead of repeated on every row. Groups are ordered using the same canonical level
+// order the schedule itself is already sorted by, so this never reorders or renames a level.
+function windowScheduleLevelGroups(items = []) {
+  const groups = new Map();
+  items.forEach((item) => {
+    const level = item.floor || "Unspecified";
+    if (!groups.has(level)) groups.set(level, { level, items: [], quantity: 0, areaM2: 0 });
+    const group = groups.get(level);
+    group.items.push(item);
+    group.quantity += Number(item.quantity) || 0;
+    group.areaM2 += Number(item.areaM2) || 0;
+  });
+  return Array.from(groups.values()).sort((left, right) => windowScheduleLevelSortIndex(left.level) - windowScheduleLevelSortIndex(right.level));
+}
+
 function WindowScheduleSummary({ schedule, onNext }) {
   if (!schedule?.isAvailable) {
     return (
@@ -9458,40 +10839,38 @@ function WindowScheduleSummary({ schedule, onNext }) {
       </div>
     );
   }
+  const levelGroups = windowScheduleLevelGroups(schedule.items);
+  // A dedicated, single-column class - not the legacy 3-column .windowScheduleSummary grid used by
+  // the "no schedule" state above. That grid's auto-placement is what stranded the schedule in a
+  // narrow third column; a plain vertical stack has no such ambiguity.
   return (
-    <div className="windowScheduleSummary" data-testid="windows-schedule-summary">
-      <div className="windowSourceChain">AI Plan Takeoff -&gt; saved job master file -&gt; Client Selections window schedule -&gt; Quotation Builder</div>
-      <strong>{schedule.label}</strong>
-      <div><span>Total quantity</span><b>{schedule.count}</b></div>
-      <div><span>Grouped rows</span><b>{schedule.scheduledRowCount}</b></div>
-      <div><span>Schedule source</span><b>{schedule.sourceLabel}</b></div>
+    <div className="projectScheduleView" data-testid="windows-schedule-summary">
+      <div className="projectScheduleTotal">{schedule.count} Window{schedule.count === 1 ? "" : "s"}</div>
       <WindowStateLegend />
-      <div className="windowScheduleTableWrap">
-        <table className="windowScheduleTable">
-          <thead><tr><th>Window ID</th><th>Room/location</th><th>Floor</th><th>Elevation</th><th>Type</th><th>Width</th><th>Height</th><th>Qty</th><th>Glass Type</th><th>Obscure/translucent</th><th>Takeoff notes</th><th>Plan ref</th><th>Schedule version</th></tr></thead>
-          <tbody>{schedule.items.map((item) => <tr key={item.id}><td>{item.id}</td><td>{item.location}</td><td>{item.floor}</td><td>{item.elevation}</td><td>{item.type}</td><td>{item.width}</td><td>{item.height}</td><td>{item.quantity}</td><td>{item.glassType || item.glazing || item.glass || ""}</td><td>{item.obscureRequirement || "Not specified"}</td><td>{item.takeoffNotes || item.notes || ""}</td><td>{item.planReference}</td><td>{schedule.displayVersion}</td></tr>)}</tbody>
-        </table>
-      </div>
+      {levelGroups.map((group) => (
+        <section className="windowLevelSchedule" key={group.level} data-testid="windows-level-schedule">
+          <div className="windowLevelHeading">
+            <span className="windowLevelName">{group.level}</span>
+            <span className="windowLevelMeta">{group.quantity} window{group.quantity === 1 ? "" : "s"} · {group.areaM2.toFixed(2)} m²</span>
+          </div>
+          <div className="windowScheduleTableWrap">
+            <table className="windowScheduleTable projectScheduleTable">
+              <colgroup>
+                <col style={{ width: "12%" }} />
+                <col style={{ width: "16%" }} />
+                <col style={{ width: "12%" }} />
+                <col style={{ width: "12%" }} />
+                <col style={{ width: "8%" }} />
+                <col style={{ width: "12%" }} />
+                <col style={{ width: "28%" }} />
+              </colgroup>
+              <thead><tr><th>Type</th><th>Window Code</th><th>Height</th><th>Width</th><th>Qty</th><th>Area m²</th><th>Wall System</th></tr></thead>
+              <tbody>{group.items.map((item) => <tr key={item.id}><td>{item.type}</td><td>{item.windowCode || ""}</td><td>{item.height}</td><td>{item.width}</td><td>{item.quantity}</td><td>{item.areaM2 ? item.areaM2.toFixed(2) : "0.00"}</td><td>{item.wallSystem || ""}</td></tr>)}</tbody>
+            </table>
+          </div>
+        </section>
+      ))}
       <button type="button" onClick={onNext}>Choose Supplier</button>
-    </div>
-  );
-}
-
-function WindowSystemMappingStep({ schedule, supplier, systemsByType, onChange, onNext }) {
-  const counts = windowTypeCounts(schedule);
-  return (
-    <div className="windowStagePanel" data-testid="windows-system-mapping">
-      <WindowStateLegend />
-      <div className="windowScheduleTableWrap">
-        <table className="windowScheduleTable systemMap">
-          <thead><tr><th>Scheduled type</th><th>Quantity</th><th>Selected supplier system</th><th>Status</th><th>Official page</th></tr></thead>
-          <tbody>{Object.entries(counts).map(([type, quantity]) => {
-            const system = systemsByType[type] || supplier.systems?.[type] || { name: "Requires selection", status: "Selection required", url: supplier.website };
-            return <tr key={type}><td>{type}</td><td>{quantity}</td><td><select value={system.name} onChange={(event) => onChange(type, { ...system, name: event.target.value })}><option>{system.name}</option></select></td><td><WindowBadge tone={/quote/i.test(system.status) ? "amber" : "green"}>{system.status}</WindowBadge></td><td><a href={system.url} target="_blank" rel="noreferrer">Official product page</a></td></tr>;
-          })}</tbody>
-        </table>
-      </div>
-      <button type="button" onClick={onNext}>Continue to Project Defaults</button>
     </div>
   );
 }
@@ -9501,14 +10880,8 @@ function WindowDefaultsStep({ supplier, region, configuration, selectedColour, c
   const [colourSearch, setColourSearch] = useState("");
   const [finishFilter, setFinishFilter] = useState("all");
   const [systemFilter, setSystemFilter] = useState("all");
-  const [applyLevel, setApplyLevel] = useState("all");
-  const [applyRoom, setApplyRoom] = useState("all");
-  const [applyType, setApplyType] = useState("all");
   const selectedSystemNames = Array.from(new Set(effectiveWindows.map((row) => row.type).filter(Boolean)));
   const finishOptions = Array.from(new Set(colours.map((colour) => colour.finish || "Finish not specified"))).filter(Boolean);
-  const levelOptions = Array.from(new Set(effectiveWindows.map((row) => row.floor || "Ground").filter(Boolean)));
-  const roomOptions = Array.from(new Set(effectiveWindows.map((row) => row.location || row.room).filter(Boolean)));
-  const typeOptions = Array.from(new Set(effectiveWindows.map((row) => row.type).filter(Boolean)));
   const recentlyUsed = (configuration.frameColourAudit || []).slice(-3).reverse();
   const filteredColours = colours.filter((colour) => {
     const text = `${colour.officialName} ${colour.name} ${colour.code} ${colour.finish} ${colour.availabilityStatus}`.toLowerCase();
@@ -9523,35 +10896,22 @@ function WindowDefaultsStep({ supplier, region, configuration, selectedColour, c
     !configuration.screens ? "screen" : "",
     !configuration.hardware ? "hardware" : "",
   ].filter(Boolean);
-  const applyDefaults = () => {
+  // Project Defaults apply automatically the instant they're chosen (effectiveWindowRows reads
+  // configuration.glassName/screens/hardware/frameColourName directly, no separate "apply" step
+  // required) - Continue only validates nothing's missing and advances, it doesn't itself apply
+  // anything. The removed bulk-apply-by-level/room/type controls below used to write those choices
+  // as INDIVIDUAL OVERRIDES onto a filtered subset of windows, a separate and more advanced feature
+  // than "these are the project defaults"; per-window overrides remain available in Individual
+  // Windows.
+  const continueToWindows = () => {
     if (missing.length) {
-      onApply(`Select ${missing.join(", ")} before applying project defaults.`);
+      onApply(`Select ${missing.join(", ")} before continuing.`);
       return;
     }
-    const retainedOverrides = sumWindowScheduleQuantity(effectiveWindows.filter((row) => row.hasOverride));
-    const compatible = sumWindowScheduleQuantity(effectiveWindows.filter((row) => row.system?.name));
-    const updated = Math.max(0, compatible - retainedOverrides);
-    const skipped = schedule.count - compatible;
-    const retainedText = retainedOverrides ? ` ${retainedOverrides} individual override${retainedOverrides === 1 ? "" : "s"} retained.` : " No individual overrides were present.";
-    const skippedText = skipped ? ` ${skipped} incompatible window${skipped === 1 ? "" : "s"} skipped.` : "";
-    onApply(`Defaults applied to ${updated} compatible window${updated === 1 ? "" : "s"}.${retainedText}${skippedText}`);
+    onApply("");
     onNext();
   };
   const chooseColour = (colour) => onChange(windowColourPatch(colour));
-  const applyColourToWindows = (predicate, label) => {
-    if (!selectedColour) {
-      onApply("Select a frame colour before applying it to windows.");
-      return;
-    }
-    const colourPatch = { ...windowColourPatch(selectedColour), colourOrigin: "manual_override" };
-    const nextOverrides = { ...(configuration.overrides || {}) };
-    const targets = effectiveWindows.filter((row) => predicate(row) && windowColourMatchesSystem(selectedColour, row.system?.name, row.type));
-    targets.forEach((row) => {
-      nextOverrides[row.id] = { ...(nextOverrides[row.id] || {}), ...colourPatch };
-    });
-    onChange({ overrides: nextOverrides });
-    onApply(`${selectedColour.officialName || selectedColour.name} applied to ${targets.length} ${label}.`);
-  };
   return (
     <div className="windowStagePanel" data-testid="windows-project-defaults">
       <div className="windowsColourNotice"><strong>Project Window Defaults</strong><span>On-screen colours are indicative. Confirm the final colour using an official physical sample before ordering.</span><a href={supplier.source || supplier.website} target="_blank" rel="noreferrer">Official supplier information</a></div>
@@ -9603,21 +10963,20 @@ function WindowDefaultsStep({ supplier, region, configuration, selectedColour, c
         </div>
       ) : null}
       <div className="windowDefaultGrid">
-        <WindowOptionGroup title="Default glass" options={glassOptions} selected={configuration.glassName} onSelect={(glass) => onChange({ glassName: glass.name, glassClass: glass.type })} />
-        <WindowTextOptionGroup title="Default screen" options={screenOptions} selected={configuration.screens} onSelect={(screens) => onChange({ screens })} />
-        <WindowTextOptionGroup title="Default hardware" options={hardwareOptions} selected={configuration.hardware} onSelect={(hardware) => onChange({ hardware })} />
+        <section className="windowDefaultSection windowDefaultSection--glass">
+          <WindowOptionGroup title="Default glass" options={glassOptions} selected={configuration.glassName} onSelect={(glass) => onChange({ glassName: glass.name, glassClass: glass.type })} />
+        </section>
+        <section className="windowDefaultSection windowDefaultSection--screen">
+          <WindowTextOptionGroup title="Default screen" options={screenOptions} selected={configuration.screens} onSelect={(screens) => onChange({ screens })} />
+        </section>
+        <section className="windowDefaultSection windowDefaultSection--hardware">
+          <WindowTextOptionGroup title="Default hardware" options={hardwareOptions} selected={configuration.hardware} onSelect={(hardware) => onChange({ hardware })} />
+        </section>
       </div>
-      <div className="windowApplyNotice"><strong>Apply Project Defaults to All Compatible Windows</strong><span>{missing.length ? `Missing: ${missing.join(", ")}.` : `This will apply these choices to ${sumWindowScheduleQuantity(effectiveWindows)} compatible windows. Existing individual overrides will be preserved.`}</span></div>
       {applyResult ? <div className={missing.length ? "windowApplyResult warning" : "windowApplyResult success"}>{applyResult}</div> : null}
-      <div className="windowApplyControls">
-        <button type="button" aria-label="Apply project defaults to all compatible windows" onClick={applyDefaults}>Apply Project Defaults to All Compatible Windows</button>
-        <button type="button" disabled={!configuration.selectedWindowIds?.length} onClick={() => applyColourToWindows((row) => configuration.selectedWindowIds.includes(row.id), "selected windows")}>Apply to Selected Windows</button>
-        <label><span>Apply by level</span><select value={applyLevel} onChange={(event) => setApplyLevel(event.target.value)}><option value="all">Choose level</option>{levelOptions.map((level) => <option key={level} value={level}>{level}</option>)}</select></label>
-        <button type="button" disabled={applyLevel === "all"} onClick={() => applyColourToWindows((row) => (row.floor || "Ground") === applyLevel, `${applyLevel} windows`)}>Apply Level</button>
-        <label><span>Apply by room/group</span><select value={applyRoom} onChange={(event) => setApplyRoom(event.target.value)}><option value="all">Choose room</option>{roomOptions.map((room) => <option key={room} value={room}>{room}</option>)}</select></label>
-        <button type="button" disabled={applyRoom === "all"} onClick={() => applyColourToWindows((row) => (row.location || row.room) === applyRoom, `${applyRoom} windows`)}>Apply Room</button>
-        <label><span>Apply by window type</span><select value={applyType} onChange={(event) => setApplyType(event.target.value)}><option value="all">Choose type</option>{typeOptions.map((type) => <option key={type} value={type}>{type}</option>)}</select></label>
-        <button type="button" disabled={applyType === "all"} onClick={() => applyColourToWindows((row) => row.type === applyType, `${applyType} windows`)}>Apply Type</button>
+      <div className="windowDefaultsContinue">
+        <span>{missing.length ? `Missing: ${missing.join(", ")}.` : "These choices apply automatically to every compatible window. Fixed windows never take a screen or opening hardware. Existing individual overrides are preserved."}</span>
+        <button type="button" className="primary" onClick={continueToWindows}>Continue to Individual Windows</button>
       </div>
     </div>
   );
@@ -9638,7 +10997,17 @@ function IndividualWindowsStep({ configuration, effectiveWindows, selectedWindow
       <WindowStateLegend />
       <div className={`privacyCheck ${clearWetAreaRows.length ? "needsReview" : "complete"}`} data-testid="windows-privacy-check"><strong>Bathroom privacy check</strong><span>{clearWetAreaRows.length ? `We found ${clearWetAreaRows.length} private wet-area windows still using clear glass.` : "Wet-area privacy glass exceptions are recorded."}</span><button type="button" onClick={onApplyWetAreaPrivacy}>Yes - apply selected obscure glass to all identified wet-area windows</button></div>
       <div className="windowBulkBar"><button type="button" onClick={() => onChange({ selectedWindowIds: effectiveWindows.map((row) => row.id) })}>Select all</button><button type="button" onClick={() => onChange({ selectedWindowIds: effectiveWindows.filter((row) => row.isWetArea).map((row) => row.id) })}>Select all in wet areas</button><button type="button" disabled={!selectedWindowIds.length} onClick={() => applyToSelected({ glassName: glassOptions.find((glass) => /obscure|privacy/i.test(`${glass.name} ${glass.type}`))?.name || configuration.glassName, glassClass: "Obscure", glassOrigin: "manual_override" })}>Apply privacy glass</button><button type="button" disabled={!selectedWindowIds.length} onClick={() => onChange({ selectedWindowIds: [] })}>Clear selection</button></div>
-      <div className="windowScheduleTableWrap"><table className="windowScheduleTable individual"><thead><tr><th></th><th>ID</th><th>Room</th><th>Type</th><th>Size</th><th>Qty</th><th>Supplier system</th><th>Frame colour</th><th>Glass Type</th><th>Screen</th><th>Hardware</th><th>Status</th><th>Edit Window</th></tr></thead><tbody>{effectiveWindows.map((row) => <tr key={row.id} className={row.hasOverride ? "overrideRow" : row.isWetArea ? "wetAreaRow" : "defaultRow"}><td><input type="checkbox" checked={selectedSet.has(row.id)} onChange={() => toggle(row.id)} /></td><td>{row.id}</td><td>{row.location}</td><td>{row.type}</td><td>{row.size}</td><td>{row.quantity}</td><td>{row.system?.name}</td><td><span className="roofingSummarySwatch" style={{ background: row.frameColourHex }} /> {row.frameColourName} {row.frameColourCode ? `(${row.frameColourCode})` : ""} {row.frameColourFinish || ""}</td><td>{row.glass}</td><td>{row.screen}</td><td>{row.hardware}</td><td><WindowBadge tone={row.hasOverride ? "purple" : "teal"}>{row.hasOverride ? "Override" : "Default"}</WindowBadge></td><td><div className="windowEditControls"><select value={configuration.overrides?.[row.id]?.frameColourId || ""} onChange={(event) => {
+      {/* Window Code is the primary human-readable identifier (matches Job Setup's own Window Code
+          column) - the stable internal opening id is never shown here, only kept as the row key and
+          a title tooltip for diagnostics. Room/Location and Glass Type (documentedGlassType - the
+          override-then-canonical-then-default effective value from effectiveWindowRows) read
+          straight through from the canonical Job Setup Window Schedule
+          (lib/builders/windowScheduleProjection.js); both render "-" rather than a fabricated value
+          for any opening AI Plan Takeoff hasn't documented, and the wet-area warning only ever
+          appears once real room + glass type data exists. Type/Style prefers the real opening style
+          (Fixed/Awning/Double Hung/...) AI Plan Takeoff assigned, falling back to the generic Window
+          classification only when no style has been recorded. */}
+      <div className="windowScheduleTableWrap"><table className="windowScheduleTable individual"><thead><tr><th></th><th>Window Code</th><th>Room / Location</th><th>Glass Type</th><th>Type / Style</th><th>Size</th><th>Qty</th><th>Supplier system</th><th>Frame colour</th><th>Selected Glass</th><th>Screen</th><th>Hardware</th><th>Status</th><th>Edit Window</th></tr></thead><tbody>{effectiveWindows.map((row) => <tr key={row.id} title={row.id} className={row.hasOverride ? "overrideRow" : row.isWetArea ? "wetAreaRow" : "defaultRow"}><td><input type="checkbox" checked={selectedSet.has(row.id)} onChange={() => toggle(row.id)} /></td><td className="windowCodeCell">{row.windowCode || row.id}</td><td>{row.location || row.room || "—"}</td><td>{row.documentedGlassType ? <span className="windowDocumentedGlass">{row.documentedGlassType}{row.wetAreaGlassTypeWarning ? <WindowBadge tone="red">Check privacy glass</WindowBadge> : null}</span> : "—"}</td><td>{row.openingStyle || row.type}</td><td>{row.size}</td><td>{row.quantity}</td><td>{row.system?.name}</td><td><span className="roofingSummarySwatch" style={{ background: row.frameColourHex }} /> {row.frameColourName} {row.frameColourCode ? `(${row.frameColourCode})` : ""} {row.frameColourFinish || ""}</td><td>{row.glass}</td><td>{row.screen}</td><td>{row.hardware}</td><td><WindowBadge tone={row.hasOverride ? "purple" : "teal"}>{row.hasOverride ? "Override" : "Default"}</WindowBadge></td><td><div className="windowEditControls"><select value={configuration.overrides?.[row.id]?.frameColourId || ""} onChange={(event) => {
         const colour = colours.find((item) => (item.colourId || item.id) === event.target.value);
         if (colour) updateOverride(row.id, { ...windowColourPatch(colour), colourOrigin: "manual_override" });
         else updateOverride(row.id, { frameColourId: undefined, frameColourName: undefined, frameColourOfficialName: undefined, frameColourCode: undefined, frameColourClass: undefined, frameColourFinish: undefined, frameColourHex: undefined, frameColourSourceUrl: undefined, colourOrigin: undefined });
@@ -9655,10 +11024,13 @@ function WindowReviewSummary({ schedule, supplier, systemsByType, configuration,
       <h3>Window Selection Summary</h3>
       <div className="windowCountTiles"><span><b>{schedule.count}</b>Total windows</span><span><b>{defaultCount}</b>Using project defaults</span><span><b>{overrideCount}</b>Individual overrides</span><span><b>{incomplete.length}</b>Incomplete</span><span><b>{quoteRequired.length}</b>Quote required</span></div>
       <dl><div><dt>Schedule version</dt><dd>{schedule.displayVersion}</dd></div><div><dt>Supplier</dt><dd>{supplier.label}</dd></div><div><dt>Systems selected</dt><dd>{Object.entries(systemsByType).map(([type, system]) => `${type}: ${system.name}`).join("; ")}</dd></div><div><dt>Default frame colour</dt><dd>{configuration.frameColourName} {configuration.frameColourCode ? `(${configuration.frameColourCode})` : ""}</dd></div><div><dt>Default glass</dt><dd>{configuration.glassName}</dd></div><div><dt>Default screen</dt><dd>{configuration.screens}</dd></div><div><dt>Default hardware</dt><dd>{configuration.hardware}</dd></div><div><dt>Wet-area privacy exceptions</dt><dd>{effectiveWindows.filter((row) => row.isWetArea && row.hasOverride).map((row) => `${row.id} ${row.location}: ${row.glass}`).join(", ") || "None"}</dd></div><div><dt>Missing selections</dt><dd>{incomplete.length}</dd></div><div><dt>Clear glass in wet areas</dt><dd>{clearWetAreaRows.length}</dd></div></dl>
+      {/* Window Code (not the raw internal id) is the primary identifier here too - see
+          IndividualWindowsStep above for the same rule. Room/Location and Glass Type are the
+          canonical/effective values (documentedGlassType), same precedence as Individual Windows. */}
       <div className="windowScheduleTableWrap">
         <table className="windowScheduleTable review">
-          <thead><tr><th>Window ID</th><th>Room</th><th>Floor</th><th>Elevation</th><th>Type</th><th>Size</th><th>Qty</th><th>Glass Type</th><th>Obscure/translucent</th></tr></thead>
-          <tbody>{effectiveWindows.map((row) => <tr key={row.id}><td>{row.id}</td><td>{row.location}</td><td>{row.floor}</td><td>{row.elevation}</td><td>{row.type}</td><td>{row.size}</td><td>{row.quantity}</td><td>{row.glass}</td><td>{row.obscureRequirement || "Not specified"}</td></tr>)}</tbody>
+          <thead><tr><th>Window Code</th><th>Room / Location</th><th>Floor</th><th>Elevation</th><th>Type / Style</th><th>Size</th><th>Qty</th><th>Glass Type</th><th>Obscure/translucent</th></tr></thead>
+          <tbody>{effectiveWindows.map((row) => <tr key={row.id} title={row.id}><td className="windowCodeCell">{row.windowCode || row.id}</td><td>{row.location || row.room || "—"}</td><td>{row.floor}</td><td>{row.elevation}</td><td>{row.openingStyle || row.type}</td><td>{row.size}</td><td>{row.quantity}</td><td>{row.documentedGlassType || "—"}</td><td>{row.documentedGlassType ? (OBSCURE_GLASS_TYPE_PATTERN.test(row.documentedGlassType) ? "Private/obscure" : row.wetAreaGlassTypeWarning ? "Check privacy glass" : "Not private") : "Not specified"}</td></tr>)}</tbody>
         </table>
       </div>
     </div>
@@ -9751,8 +11123,26 @@ function ScheduledEntryDoorWorkflow({ project, projectInfo, workbook, snapshot, 
   const saved = selectionsFromDoorDetails(details).find(s => s.door.id === door.id);
   const draft = details.entryDoorDrafts?.[door.id] || {};
   const values = { Supplier: draft.Supplier ?? saved?.supplier ?? '', Range: draft.Range ?? saved?.range ?? '', ProductCode: draft.ProductCode ?? saved?.productCode ?? '', Size: draft.Size ?? saved?.size ?? '', Configuration: draft.Configuration ?? saved?.configuration ?? '', Finish: draft.Finish ?? saved?.finish ?? '', Glazing: draft.Glazing ?? saved?.glazing ?? '', Hardware: draft.Hardware ?? saved?.entryDoorFurniture?.productCode ?? '', FurnitureFinish: draft.FurnitureFinish ?? saved?.furnitureFinish ?? '' };
+  const pending = useRef(null);
+  pending.current = {...draft, ...values, GlazingConfirmed: draft.GlazingConfirmed ?? Boolean(saved?.glazing), HardwareConfirmed: draft.HardwareConfirmed ?? Boolean(saved?.entryDoorFurniture), HardwareOptions: draft.HardwareOptions || saved?.hardwareOptions || {quantity:door.quantity}};
+  const firstIncomplete = state => {
+    const product = (props.products || []).find(p => entryDoorProductCodeFor(p) === state.ProductCode);
+    if (state.Supplier && state.Range && !product) return 'design';
+    const furniture = entryDoorFurnitureByCode(entryDoorFurnitureOptions(props.furnitureProducts || []), state.Hardware);
+    return nextIncompleteEntryDoorStep(state, {
+      size: entryDoorSizeOptions(product).length > 0,
+      configuration: entryDoorAttributeOptions(product, 'configurations', product?.configuration).length > 0,
+      finish: entryDoorAttributeOptions(product, 'finishOptions', product?.finish || product?.colour).length > 0,
+      glazing: entryDoorGlassOptions(product).length > 0 || entryDoorGlassMetadataMissing(product),
+      hardwareFinish: Boolean(furniture?.finishOptions?.length),
+    });
+  };
   const update = patch => {
+    // Picking the glass is the confirmation now that the separate gate screen is gone.
+    if (patch.Glazing) patch = { ...patch, GlazingConfirmed: true };
     if(patch.ProductCode){const selected = (props.products||[]).find(p=>(p.productCode||p.metadata?.productEntity?.productCode)===patch.ProductCode);if(selected) patch={...patch,ProductName:selected.productName||selected.product_name,ImageReference:selected.imageUrl||selected.primary_image_url||selected.metadata?.productEntity?.primaryImage||''};}
+    pending.current = entryDoorDraftAfterChoice(pending.current, patch);
+    patch = pending.current;
     props.onSelectProduct(props.requirement, { entryDoorDraftPatch: { doorId: door.id, patch: { Door: door, ...patch } } });
   };
   const navigate = (id, step) => {
@@ -9766,8 +11156,16 @@ function ScheduledEntryDoorWorkflow({ project, projectInfo, workbook, snapshot, 
   const controlled = {};
   for (const [key, value] of Object.entries(values)) { controlled[`entryDoor${key}`] = value; controlled[`onEntryDoor${key}Change`] = value => update({ [key]: value }); }
   const requestedStep = params.get('roomCategory') === 'door-furniture' ? 'hardware' : params.get('doorStep');
-  const restoredStep = ['hardware','review'].includes(draft.Step) ? 'design' : draft.Step;
-  const step = values.ProductCode ? (requestedStep || restoredStep || (saved ? 'design' : 'supplier')) : (restoredStep || 'supplier');
+  const incomplete = firstIncomplete(pending.current);
+  const requested = requestedStep || draft.Step || 'application';
+  const step = ENTRY_DOOR_STEPS.indexOf(requested) > ENTRY_DOOR_STEPS.indexOf(incomplete) ? incomplete : requested;
+  const advance = () => { const next=firstIncomplete(pending.current); update({Step:next}); navigate(door.id,next); };
+  const navigateRef = useRef(navigate);
+  navigateRef.current = navigate;
+  // Correct stale/deep-linked URLs using primitive dependencies only.
+  useEffect(() => {
+    if (requested !== step) navigateRef.current(door.id, step);
+  }, [requested, step, door.id]);
   const addDoor = () => { const next={...defaultManualEntryDoor(),id:`manual-entry-door:${globalThis.crypto.randomUUID()}`,doorReference:`Entry Door ${doors.length+1}`,location:`Entry ${doors.length+1}`};props.onSelectProduct(props.requirement,{entryDoorDraftPatch:{doorId:next.id,patch:{Door:next,Step:'application'}}});navigate(next.id,'application'); };
   return <section data-testid="scheduled-entry-doors" data-wizard-source="9fe8fbc">
     <div style={{display:'flex',gap:12,alignItems:'center',flexWrap:'wrap',marginBottom:12}}>
@@ -9787,12 +11185,17 @@ function ScheduledEntryDoorWorkflow({ project, projectInfo, workbook, snapshot, 
       onHardwareUiChange={HardwareUi=>update({HardwareUi})}
       onHardwareOptionsChange={HardwareOptions=>update({HardwareOptions})}
       onDoorLocationChange={location=>update({Door:{...door,location}})}
-      onEntryDoorStepChange={next=>{update({Step:next});navigate(door.id,next);}}
-      onSelectProduct={(requirement,option)=>props.onSelectProduct(requirement,{...option,door,hardwareOptions:draft.HardwareOptions||saved?.hardwareOptions||{quantity:door.quantity}})}/>
+      onEntryDoorStepChange={advance}
+      onEntryDoorNavigateStep={next=>navigate(door.id,next)}
+      onGlazingConfirm={()=>{update({GlazingConfirmed:true});advance();}}
+      onHardwareConfirm={()=>{update({HardwareConfirmed:true});advance();}}
+      onSelectProduct={(requirement,option)=>props.onSelectProduct(requirement,{...option,door,hardwareOptions:draft.HardwareOptions||saved?.hardwareOptions||{quantity:door.quantity}})}/>}
   </section>;
 }
 
 function GuidedEntryDoorWorkflow({
+  onEntryDoorNavigateStep, onGlazingConfirm, onHardwareConfirm,
+  door, hardwareOptions, hardwareUi, onHardwareUiChange, onHardwareOptionsChange, onDoorLocationChange,
   requirement,
   products,
   masterProductCount = 0,
@@ -9847,7 +11250,7 @@ function GuidedEntryDoorWorkflow({
     const identity = [entryDoorProductCodeFor(product), product.model, entity.model, product.sku, entity.sku, product.id].filter(Boolean).map((value) => String(value).toLowerCase());
     return identity.includes(String(entryDoorProductCode || "").toLowerCase());
   }) || null;
-  const sizes = entryDoorAttributeOptions(selectedProduct, "sizes", selectedProduct?.size);
+  const sizes = entryDoorSizeOptions(selectedProduct);
   const configurations = entryDoorAttributeOptions(selectedProduct, "configurations", selectedProduct?.configuration);
   const finishes = entryDoorAttributeOptions(selectedProduct, "finishOptions", selectedProduct?.finish || selectedProduct?.colour);
   const glazings = entryDoorGlassOptions(selectedProduct);
@@ -9864,7 +11267,7 @@ function GuidedEntryDoorWorkflow({
     ["size", "Size", entryDoorSize],
     ["configuration", "Configuration", entryDoorConfiguration],
     ["finish", "Colour / Finish", entryDoorFinish],
-    ...(glazings.length ? [["glazing", "Glazing", entryDoorGlazing], ["glass-type", "Glass type", entryDoorGlazing]] : []),
+    ...(glazings.length ? [["glass-type", "Glass type", entryDoorGlazing]] : []),
     ["hardware", "Door Furniture & Locking", entryDoorHardware],
     ["review", "Review & Confirm", entryDoorHardware],
   ];
@@ -9888,14 +11291,14 @@ function GuidedEntryDoorWorkflow({
     onEntryDoorFurnitureFinishChange("");
   };
   const nextAfterDesign = (product) => {
-    const nextSizes = entryDoorAttributeOptions(product, "sizes", product?.size);
+    const nextSizes = entryDoorSizeOptions(product);
     const nextConfigurations = entryDoorAttributeOptions(product, "configurations", product?.configuration);
     const nextFinishes = entryDoorAttributeOptions(product, "finishOptions", product?.finish || product?.colour);
     const nextGlazings = entryDoorGlassOptions(product);
     if (nextSizes.length) return "size";
     if (nextConfigurations.length) return "configuration";
     if (nextFinishes.length) return "finish";
-    if (nextGlazings.length) return "glazing";
+    if (nextGlazings.length) return "glass-type";
     return "hardware";
   };
   const saveSelection = (patch = {}) => {
@@ -9910,7 +11313,7 @@ function GuidedEntryDoorWorkflow({
     const nextFurniture = patch.furniture || entryDoorFurnitureByCode(furnitureOptions, nextHardware);
     const nextFurnitureFinish = patch.furnitureFinish ?? entryDoorFurnitureFinish ?? entryDoorFurnitureFinishOptions(nextFurniture)[0] ?? "";
     const nextFurnitureImage = entryDoorFurnitureImageForFinish(nextFurniture, nextFurnitureFinish);
-    const requiredSizes = entryDoorAttributeOptions(product, "sizes", product?.size);
+    const requiredSizes = entryDoorSizeOptions(product);
     const requiredConfigurations = entryDoorAttributeOptions(product, "configurations", product?.configuration);
     const requiredFinishes = entryDoorAttributeOptions(product, "finishOptions", product?.finish || product?.colour);
     const requiredGlazings = entryDoorGlassOptions(product);
@@ -10016,8 +11419,8 @@ function GuidedEntryDoorWorkflow({
               key={step}
               type="button"
               className={`guidedProgressItem ${currentStep === step ? "active" : ""} ${value ? "complete" : ""}`}
-              disabled={(step === "range" && !entryDoorSupplier) || (step === "design" && !entryDoorRange) || (["size", "configuration", "finish", "glazing", "hardware", "review"].includes(step) && !selectedProduct) || (step === "review" && !entryDoorHardware)}
-              onClick={() => onEntryDoorStepChange(step)}
+              disabled={(step === "range" && !entryDoorSupplier) || (step === "design" && !entryDoorRange) || (["size", "configuration", "finish", "glass-type", "hardware", "review"].includes(step) && !selectedProduct) || (step === "review" && !entryDoorHardware)}
+              onClick={() => onEntryDoorNavigateStep(step)}
             >
               <GuidedStatusDot status={value ? "complete" : "not_started"} />
               <span>{label}</span>
@@ -10040,7 +11443,7 @@ function GuidedEntryDoorWorkflow({
                   resetAfterSupplier();
                   onEntryDoorStepChange("range");
                 }}>
-                  <img src={supplier.image} alt="" />
+                  <img src={supplier.image} alt={supplier.imageAlt || ""} />
                   <span>{supplier.label}</span>
                   <strong>{supplier.count} design{supplier.count === 1 ? "" : "s"}</strong>
                 </button>
@@ -10071,7 +11474,7 @@ function GuidedEntryDoorWorkflow({
                   onEntryDoorGlazingChange("");
                   onEntryDoorStepChange(nextAfterDesign(product));
                 }}>
-                  <img src={product.imageUrl || requirementImage(requirement)} alt={product.productName} />
+                  <DoorProductImage src={product.imageUrl || requirementImage(requirement)} name={product.productName} size="card" />
                   <div>
                     <span>{product.range || product.supplier}</span>
                     <strong>{product.productName}</strong>
@@ -10083,18 +11486,24 @@ function GuidedEntryDoorWorkflow({
             </div>
           ) : currentStep === "size" ? (
             <EntryDoorOptionStep
+              onNavigateStep={onEntryDoorStepChange}
               testId="entry-door-size-step"
               product={selectedProduct}
               options={sizes}
               selectedValue={entryDoorSize}
               labelFor={(value) => value}
               onSelect={(value) => {
-                onEntryDoorSizeChange(value);
-                onEntryDoorStepChange(configurations.length ? "configuration" : finishes.length ? "finish" : glazings.length ? "glazing" : "hardware");
+                const selectedSize = value === "Custom size"
+                  ? window.prompt("Enter the custom door size in mm (for example, 2340 x 920 x 40):", "")?.trim()
+                  : value;
+                if (!selectedSize) return;
+                onEntryDoorSizeChange(value === "Custom size" ? `Custom: ${selectedSize}` : selectedSize);
+                onEntryDoorStepChange(configurations.length ? "configuration" : finishes.length ? "finish" : glazings.length ? "glass-type" : "hardware");
               }}
             />
           ) : currentStep === "configuration" ? (
             <EntryDoorOptionStep
+              onNavigateStep={onEntryDoorStepChange}
               testId="entry-door-configuration-step"
               product={selectedProduct}
               options={configurations}
@@ -10102,11 +11511,12 @@ function GuidedEntryDoorWorkflow({
               labelFor={(value) => value}
               onSelect={(value) => {
                 onEntryDoorConfigurationChange(value);
-                onEntryDoorStepChange(finishes.length ? "finish" : glazings.length ? "glazing" : "hardware");
+                onEntryDoorStepChange(finishes.length ? "finish" : glazings.length ? "glass-type" : "hardware");
               }}
             />
           ) : currentStep === "finish" ? (
             <EntryDoorOptionStep
+              onNavigateStep={onEntryDoorStepChange}
               testId="entry-door-finish-step"
               product={selectedProduct}
               options={finishes}
@@ -10115,14 +11525,13 @@ function GuidedEntryDoorWorkflow({
               onSelect={(value) => {
                 if (entryDoorHardware && value !== entryDoorFinish) setFinishReviewPrompt(true);
                 onEntryDoorFinishChange(value);
-                if (glazings.length) onEntryDoorStepChange("glazing");
+                if (glazings.length) onEntryDoorStepChange("glass-type");
                 else onEntryDoorStepChange("hardware");
               }}
             />
-          ) : currentStep === "glazing" ? (
-            <div className="entryDoorOptionPanel" data-testid="entry-door-glazing-choice"><h2>Glazing</h2><p>Choose the glass for this exterior door design.</p><button type="button" className="primary" onClick={()=>onEntryDoorStepChange("glass-type")}>Choose glass type</button></div>
           ) : currentStep === "glass-type" ? (
             <EntryDoorGlassStep
+              onNavigateStep={onEntryDoorStepChange}
               testId="entry-door-glazing-step"
               product={selectedProduct}
               options={glazings}
@@ -10136,16 +11545,16 @@ function GuidedEntryDoorWorkflow({
           ) : currentStep === "hardware" ? (
             <ExteriorHardwareWizard options={furnitureOptions} selectedCode={entryDoorHardware} finish={selectedFurnitureFinish} door={door} values={hardwareOptions} ui={hardwareUi} onUiChange={onHardwareUiChange} onOptionsChange={onHardwareOptionsChange} onLocationChange={onDoorLocationChange}
               onSelect={item=>{onEntryDoorHardwareChange(item.productCode);onEntryDoorFurnitureFinishChange(item.finishOptions?.[0]||'');}}
-              onFinishChange={onEntryDoorFurnitureFinishChange} onDetails={item=>onViewDetails?.(item)} onContinue={()=>onEntryDoorStepChange('review')}/>
+              onFinishChange={onEntryDoorFurnitureFinishChange} onDetails={item=>onViewDetails?.(item)} onContinue={onHardwareConfirm}/>
           ) : (
             <div className="entryDoorOptionPanel" data-testid="entry-door-review-step">
-              <EntryDoorSelectionSummary product={{...selectedProduct,size:entryDoorSize,configuration:entryDoorConfiguration,finish:entryDoorFinish}} glass={selectedGlass} furniture={selectedFurniture} furnitureFinish={selectedFurnitureFinish} /><p>{door?.doorReference} ? {door?.location} ? {door?.level} ? Hardware quantity {hardwareOptions?.quantity || door?.quantity}</p><p>{hardwareOptions?.lockType || selectedFurniture?.lockingType}</p>
+              <EntryDoorSelectionSummary product={{...selectedProduct,size:entryDoorSize,configuration:entryDoorConfiguration,finish:entryDoorFinish}} glass={selectedGlass} furniture={selectedFurniture} furnitureFinish={selectedFurnitureFinish} onNavigateStep={onEntryDoorStepChange} /><p>{door?.doorReference} ? {door?.location} ? {door?.level} ? Hardware quantity {hardwareOptions?.quantity || door?.quantity}</p><p>{hardwareOptions?.lockType || selectedFurniture?.lockingType}</p>
               <div className="entryDoorCompatibility warning" data-testid="entry-door-review-compatibility">
                 <strong>Review & Confirm</strong>
                 <span>Confirm the selected door, glass, furniture finish and locking compatibility before saving this job selection.</span>
               </div>
               <button type="button" className="primary" disabled={!selectedFurniture || (selectedFurniture.finishOptions.length > 0 && !selectedFurnitureFinish)} onClick={() => saveSelection({ hardware: selectedFurniture?.productCode, furniture: selectedFurniture, furnitureFinish: selectedFurnitureFinish })}>
-                Save door furniture
+                Confirm complete door selection
               </button>
             </div>
           )}
@@ -10155,13 +11564,15 @@ function GuidedEntryDoorWorkflow({
   );
 }
 
-function EntryDoorGlassStep({ testId, product, options = [], selectedValue = "", selectedGlass = null, onSelect }) {
+function EntryDoorGlassStep({ testId, product, options = [], selectedValue = "", selectedGlass = null, onSelect, onNavigateStep = null }) {
   const [galleryItem, setGalleryItem] = useState(null);
+  const [glassType, setGlassType] = useState('All glass');
+  const visibleOptions = options.filter(option=>matchesDoorGlassType(option,glassType));
   const glassLoadFailed = entryDoorGlassMetadataMissing(product);
   if (!options.length) {
     return (
       <div className="entryDoorOptionPanel" data-testid={testId}>
-        <EntryDoorSelectionSummary product={product} glass={selectedGlass} />
+        <EntryDoorSelectionSummary product={product} glass={selectedGlass} onNavigateStep={onNavigateStep} />
         {glassLoadFailed ? (
           <div className="entryDoorGlassEmpty warning">
             <span>Unable to load the compatible Hume glass range</span>
@@ -10175,10 +11586,12 @@ function EntryDoorGlassStep({ testId, product, options = [], selectedValue = "",
   }
   return (
     <div className="entryDoorOptionPanel" data-testid={testId}>
-      <EntryDoorSelectionSummary product={product} glass={selectedGlass} />
+      <EntryDoorSelectionSummary product={product} glass={selectedGlass} onNavigateStep={onNavigateStep} />
       <div className="entryDoorGlassNotice" role="note">{ENTRY_DOOR_GLASS_SAMPLE_NOTICE}</div>
+      <div className="roofingChoiceGrid" aria-label="Glass types">{['All glass','Clear','Translucent','Frosted','Obscure/privacy','Grey tinted'].map(type=><button type="button" key={type} className={glassType===type?'selected':''} onClick={()=>setGlassType(type)}>{type}</button>)}</div>
+      {!visibleOptions.length?<div className="entryDoorGlassEmpty"><p>{glassType} is not listed for this model. A requested glass type requires supplier confirmation.</p><button type="button" className="primary" onClick={()=>onSelect(requestedEntryDoorGlass(glassType))}>Request {glassType}</button></div>:null}
       <div className="entryDoorGlassGrid" data-testid="entry-door-glass-options">
-        {options.map((option) => {
+        {visibleOptions.map((option) => {
           const selected = selectedValue === option.name;
           return (
             <article key={option.name} className={`entryDoorGlassCard ${selected ? "selected" : ""}`}>
@@ -10212,9 +11625,20 @@ function EntryDoorGlassStep({ testId, product, options = [], selectedValue = "",
   );
 }
 
-function EntryDoorSelectionSummary({ product, glass = null, furniture = null, furnitureFinish = "" }) {
+// The tiles read as calls to action ("Select glass", "Select door furniture") so they have to
+// behave like them. A tile with a step jumps to that step, and an outstanding one is accented
+// so an unfinished door never looks finished.
+function EntryDoorSelectionSummary({ product, glass = null, furniture = null, furnitureFinish = "", onNavigateStep = null }) {
   const entity = product?.metadata?.productEntity || product || {};
   const attrs = entity.attributes || {};
+  const tiles = [
+    { term: "Door", step: "design", value: [product?.supplier, product?.range, product?.model].filter(Boolean).join(" / "), placeholder: "Choose a door design" },
+    { term: "Size", step: "size", value: displayCatalogueValue(product?.size) || displayCatalogueValue(attrs.selectedSize), placeholder: "Choose a size" },
+    { term: "Configuration", step: "configuration", value: displayCatalogueValue(product?.configuration) || displayCatalogueValue(attrs.selectedConfiguration), placeholder: "Choose a configuration" },
+    { term: "Glass", step: "glass-type", value: glass?.name || attrs.selectedGlazing || product?.glazing, placeholder: "Choose the glass" },
+    { term: "Furniture", step: "hardware", value: furniture ? [furniture.supplier, furniture.productName, furnitureFinish].filter(Boolean).join(" / ") : "", placeholder: "Choose door furniture" },
+    { term: "BAL", step: "", value: displayCatalogueValue(attrs.balRating), placeholder: "Not specified by supplier" },
+  ];
   return (
     <div className="roofingSelectionSummary entryDoorSelectionSummary">
       {product?.imageUrl ? (
@@ -10225,12 +11649,25 @@ function EntryDoorSelectionSummary({ product, glass = null, furniture = null, fu
       <div className="roofingSummaryDetails">
         <strong>{product?.productName || "Entry door"}</strong>
         <dl>
-          <div><dt>Door</dt><dd>{[product?.supplier, product?.range, product?.model].filter(Boolean).join(" / ") || "Selected entry door"}</dd></div>
-          <div><dt>Size</dt><dd>{displayCatalogueValue(product?.size) || displayCatalogueValue(attrs.selectedSize) || "Project selected size"}</dd></div>
-          <div><dt>Configuration</dt><dd>{displayCatalogueValue(product?.configuration) || displayCatalogueValue(attrs.selectedConfiguration) || "Project selected configuration"}</dd></div>
-          <div><dt>Glass</dt><dd>{glass?.name || attrs.selectedGlazing || product?.glazing || "Select glass"}</dd></div>
-          <div><dt>Furniture</dt><dd>{furniture ? [furniture.supplier, furniture.productName, furnitureFinish].filter(Boolean).join(" / ") : "Select door furniture"}</dd></div>
-          <div><dt>BAL</dt><dd>{displayCatalogueValue(attrs.balRating) || "Not specified by supplier"}</dd></div>
+          {tiles.map((tile) => {
+            const outstanding = !tile.value && Boolean(tile.step);
+            const actionable = Boolean(tile.step && onNavigateStep);
+            const className = `entryDoorSummaryTile${outstanding ? " outstanding" : ""}${actionable ? " actionable" : ""}`;
+            const body = (
+              <>
+                <dt>{tile.term}</dt>
+                <dd>{tile.value || tile.placeholder}</dd>
+              </>
+            );
+            return actionable ? (
+              <button type="button" key={tile.term} className={className} data-entry-door-summary-step={tile.step} onClick={() => onNavigateStep(tile.step)}>
+                {body}
+                <span className="entryDoorSummaryTileHint">{outstanding ? "Choose" : "Change"}</span>
+              </button>
+            ) : (
+              <div key={tile.term} className={className}>{body}</div>
+            );
+          })}
         </dl>
         {glass?.sampleImage ? <img className="entryDoorSummaryThumb" src={glass.sampleImage} alt={`${glass.name} glass sample`} /> : null}
         {furniture?.imageUrl ? <img className="entryDoorSummaryThumb" src={entryDoorFurnitureImageForFinish(furniture, furnitureFinish)} alt={furniture.productName} /> : null}
@@ -10266,10 +11703,10 @@ function EntryDoorGlassGallery({ option, product, onClose }) {
   );
 }
 
-function EntryDoorOptionStep({ testId, product, options = [], selectedValue = "", labelFor, onSelect }) {
+function EntryDoorOptionStep({ testId, product, options = [], selectedValue = "", labelFor, onSelect, onNavigateStep = null }) {
   return (
     <div className="entryDoorOptionPanel" data-testid={testId}>
-      {product ? <EntryDoorSelectionSummary product={product} /> : null}
+      {product ? <EntryDoorSelectionSummary product={product} onNavigateStep={onNavigateStep} /> : null}
       <div className="roofingChoiceGrid">
         {options.map((option) => (
           <button key={option} type="button" className={selectedValue === option ? "selected" : ""} onClick={() => onSelect(option)}>
@@ -11171,6 +12608,722 @@ function RoofingProgressThumb({ step, config, profile, colour, finish, products,
   return <span className="roofingProgressThumb empty" />;
 }
 
+// Category landing for any hub category (Plumbing & Tapware, Bathroom Accessories, Hot Water,
+// Roof & External Finishes, ...). A requirement that uses product -> room allocation shows its
+// allocated products; a requirement with its own workflow (Stairs, Bricks, ...) opens it; a
+// requirement with no verified range yet says so rather than showing invented products.
+function GuidedPlumbingFixtureCategories({ category = CLIENT_SELECTION_CATEGORY_BY_KEY["plumbing-fixtures"], requirements = [], selections, areaTotals, runningTotals, summaries = {}, onOpenRequirement, onBack, backLabel = "← Back", headerExtra = null, configured = null }) {
+  const isPlumbing = category?.key === "plumbing-fixtures";
+  const feature = !configured && !isPlumbing && requirements.length > 0 && requirements.length <= FEATURE_CARD_MAX_CATEGORIES;
+  return (
+    <section className="guidedShell" data-testid={isPlumbing ? "guided-plumbing-fixtures-checklist" : `guided-category-${category?.key}`} data-category-key={category?.key}>
+      <GuidedBudgetDock totals={runningTotals} />
+      <div className="guidedChecklistHeader">
+        <div>
+          {onBack ? <button type="button" className="categoryHubBack" onClick={onBack}>{backLabel}</button> : null}
+          <span>{category?.label || "Selections"}</span>
+          <strong>{areaTotals.completed} of {areaTotals.total} complete</strong>
+        </div>
+        <div className="guidedTotals">
+          <GuidedMiniTotal label="Allowance Total" value={money(areaTotals.allowance)} />
+          <GuidedMiniTotal label="Selected Total" value={money(areaTotals.selected)} />
+          <GuidedMiniTotal label={areaTotals.variation < 0 ? "Current Credit" : "Current Variation"} value={signedMoney(areaTotals.variation)} tone={areaTotals.variation > 0 ? "bad" : areaTotals.variation < 0 ? "good" : ""} />
+        </div>
+      </div>
+      {headerExtra}
+      {isPlumbing ? <p className="plumbingSupplierNote">Products supplied by <strong>{PLUMBING_FIXTURE_SUPPLIER}</strong>. Prices are HNC SRP including GST where published. The Laundry uses a Sink Mixer allocated to the Laundry.</p> : category?.description ? <p className="plumbingSupplierNote">{category.description}</p> : null}
+      {configured ? (
+        <ConfiguredCategorySections requirements={requirements} selections={selections} groupsByRequirement={configured.groups} requiredByRequirement={configured.required} onOpen={configured.onOpenGroup} onEditLine={configured.onEditLine} />
+      ) : feature ? (
+        <div className="featureCategoryGrid" data-testid="feature-category-grid">
+          {requirements.map((item) => {
+            const selection = selections.get(item.requirementKey);
+            const summary = summaries[item.requirementKey] || {};
+            const details = plumbingFixtureCategoryDetails(item);
+            const copy = FEATURE_CARD_COPY[item.requirementKey] || { description: details.description, view: details.viewLabel, edit: "Edit Selections" };
+            const status = statusForRequirement(item, selection);
+            const open = () => onOpenRequirement(item.requirementKey);
+            return (
+              <article key={item.requirementKey} className={`featureCategoryCard ${selection ? "selected" : ""}`} data-testid={`guided-requirement-${item.requirementKey}`} data-requirement-key={item.requirementKey}>
+                <button type="button" className="featureCategoryImage" onClick={open} aria-label={selection ? copy.edit : copy.view}>
+                  <img src={REQUIREMENT_CARD_IMAGES[item.requirementKey] || summary.imageUrl || requirementImage(item)} alt={details.title || item.label} />
+                </button>
+                <div className="featureCategoryBody">
+                  <div className="featureCategoryTitle"><GuidedStatusDot status={status} /><h3>{details.title || item.label}</h3></div>
+                  <p>{copy.description}</p>
+                  {selection ? <FeatureCategorySelection selection={selection} /> : null}
+                  <button type="button" className="primary" onClick={open}>{selection ? copy.edit : copy.view}</button>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      ) : (
+      <div className="plumbingCategoryGrid">
+        {requirements.map((item) => {
+          const selection = selections.get(item.requirementKey);
+          const details = plumbingFixtureCategoryDetails(item);
+          const status = statusForRequirement(item, selection);
+          const selected = selection?.selected_details || {};
+          const summary = summaries[item.requirementKey] || {};
+          const count = summary.count || 0;
+          const allocatedModel = isAllocatedCatalogueRequirement(item);
+          const catalogueEmpty = allocatedModel ? !count : Boolean(summary.noRange);
+          const open = () => { if (!catalogueEmpty || selection) onOpenRequirement(item.requirementKey); };
+          const lines = allocatedModel ? plumbingLinesFromSelection(selection ? selected : null) : [];
+          const allocation = plumbingAllocationSummary(lines);
+          const progress = plumbingAllocationProgress(selection ? selected : null);
+          const allowanceTotal = lines.length ? allocation.allowanceTotal : numberValue(item.defaultAllowance);
+          const allowanceLabel = item.allowanceStatus === "not_set" && !lines.length ? "Allowance not set" : `Allowance ${money(allowanceTotal)}${lines.length ? "" : " each"}`;
+          return (
+            <article key={item.requirementKey} className={`plumbingCategoryCard ${selection ? "selected" : ""} ${catalogueEmpty && !selection ? "empty" : ""}`} data-testid={`guided-requirement-${item.requirementKey}`} data-requirement-key={item.requirementKey}>
+              <button type="button" className="plumbingCategoryImage" onClick={open} aria-label={`${details.viewLabel}`} disabled={catalogueEmpty && !selection}>
+                <img src={FIXED_CATEGORY_CARD_IMAGE_KEYS.has(item.requirementKey) ? REQUIREMENT_CARD_IMAGES[item.requirementKey] : (selection?.image_url || summary.imageUrl || REQUIREMENT_CARD_IMAGES[item.requirementKey] || requirementImage(item))} alt={FIXED_CATEGORY_CARD_IMAGE_KEYS.has(item.requirementKey) ? details.title : selection ? selection.selected_product_name : summary.imageAlt || item.label} />
+              </button>
+              <div className="plumbingCategoryBody">
+                <div className="plumbingCategoryTitle">
+                  <GuidedStatusDot status={status} />
+                  <h3>{details.title}</h3>
+                  {lines.length ? <span className="plumbingSelectedBadge">{progress.required ? `${progress.allocated} of ${progress.required}` : `Qty ${allocation.quantity}`}</span> : null}
+                </div>
+                {lines.length ? (
+                  <div className="plumbingCategorySelection" data-testid={`plumbing-category-selection-${item.requirementKey}`}>
+                    {lines.map((line) => (
+                      <span key={line.lineId}><strong>{line.productName} ×{line.quantity}</strong> {formatPlumbingAllocations(line.allocations)}</span>
+                    ))}
+                    <span>{allocation.selectedTotal === null ? "Price pending" : `Selected total ${money(allocation.selectedTotal)}`}</span>
+                  </div>
+                ) : !allocatedModel && selection ? (
+                  <div className="plumbingCategorySelection"><span><strong>{selection.selected_product_name || "Selected"}</strong></span></div>
+                ) : <p>{details.description}</p>}
+                {allocatedModel ? <small>{count ? `${count} product${count === 1 ? "" : "s"} available` : "No verified products in the Product Library yet"}</small> : catalogueEmpty ? <small>Catalogue not yet imported</small> : null}
+                {allocatedModel ? (
+                  <div className="plumbingCategoryMoney">
+                    <span>{allowanceLabel}</span>
+                    <b className={allocation.variation > 0 ? "bad" : allocation.variation < 0 ? "good" : ""}>{lines.length ? (allocation.variation === null ? "Price pending" : `${allocation.variation < 0 ? "Credit" : "Variation"} ${signedMoney(allocation.variation)}`) : "Not selected"}</b>
+                  </div>
+                ) : null}
+                <button type="button" className="primary" onClick={open} disabled={catalogueEmpty && !selection}>{lines.length || selection ? "Edit Selections" : catalogueEmpty ? "Not available yet" : `${details.viewLabel} →`}</button>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+      )}
+    </section>
+  );
+}
+
+// Concise, readable summary of what is already selected on a feature card: allocated systems
+// (Balustrades: one line per system with its mounting and LM) or a single configured product (Stairs).
+function FeatureCategorySelection({ selection }) {
+  const selected = selection?.selected_details || {};
+  const lines = plumbingLinesFromSelection(selected);
+  const entries = lines.length
+    ? lines.map((line) => ({
+      key: line.lineId,
+      name: line.productName,
+      detail: [line.configuration?.mounting, line.quantity ? `${line.quantity} ${line.unit || ""}`.trim() : ""].filter(Boolean).join(" — "),
+    }))
+    : [{ key: "selected", name: selection?.selected_product_name || selected.productName || "Selected", detail: [selected.configuration, selected.finish].filter(Boolean).join(" — ") }];
+  return (
+    <div className="featureCategorySelection" data-testid="feature-category-selection">
+      <span>Selected</span>
+      {entries.map((entry) => (
+        <div key={entry.key}>
+          <strong>{entry.name}</strong>
+          {entry.detail ? <em>{entry.detail}</em> : null}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Which main page (Interior / Exterior) a category hub returns to.
+function sideForCategory(category, remembered = "") {
+  const sides = category?.sides || [];
+  if (sides.includes(remembered)) return remembered;
+  return sides[0] || "interior";
+}
+
+function GuidedPlumbingFixtureProducts({ requirement, requirements = [], categoryLabel = "Plumbing & Tapware", products: allProducts = [], selections, runningTotals, onOpenRequirement, onReturn, onSelectProduct, onViewDetails, groupFilter = null, onClearGroupFilter, projectRequired = null }) {
+  // Configured categories (Shower Screens & Mirrors): one line per room, opened from a group card.
+  const configured = isConfiguredSelectionRequirement(requirement);
+  const products = groupFilter ? allProducts.filter((product) => productGroupValue(requirement.requirementKey, product) === groupFilter.value) : allProducts;
+  const emptyFilters = { brand: "", colour: "", type: "", search: "", sort: "", facets: {} };
+  const [filters, setFilters] = useState(emptyFilters);
+  useEffect(() => { setFilters(emptyFilters); }, [requirement.requirementKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  const details = plumbingFixtureCategoryDetails(requirement);
+  const options = plumbingFixtureFilterOptions(products);
+  const visible = filterPlumbingFixtureProducts(products, filters);
+  const selection = selections.get(requirement.requirementKey);
+  const lines = plumbingLinesFromSelection(selection?.selected_details);
+  const summary = plumbingAllocationSummary(lines);
+  const progress = plumbingAllocationProgress(selection?.selected_details);
+  const setFilter = (key) => (event) => setFilters((current) => ({ ...current, [key]: event.target.value }));
+  const setFacet = (key) => (event) => setFilters((current) => ({ ...current, facets: { ...current.facets, [key]: event.target.value } }));
+  const filtered = Object.entries(filters).some(([key, value]) => key === "facets" ? Object.values(value || {}).some(Boolean) : Boolean(value));
+  // Edit Allocation from the summary: prefer the live catalogue product (current price), else the
+  // saved line itself so an older/withdrawn product can still be re-allocated or removed.
+  const productForLine = (line) => ({ ...(allProducts.find((product) => plumbingLineMatchesProduct(line, product)) || plumbingProductFromLine(line)), ...(configured ? { configuredLine: line } : {}) });
+  const removeLine = (line) => {
+    if (typeof window !== "undefined" && !window.confirm(`Remove ${line.productName} (qty ${line.quantity}) from ${details.title}?`)) return;
+    onSelectProduct(requirement, { plumbingAllocationLines: removePlumbingLine(lines, line.lineId) });
+  };
+  return (
+    <section className="guidedShell" data-testid="guided-plumbing-fixture-products">
+      <GuidedBudgetDock totals={runningTotals} />
+      <div className="guidedProductLayout">
+        <aside className="guidedProgressMenu" data-testid="guided-left-progress-menu">
+          <h2>{categoryLabel}</h2>
+          {requirements.map((item) => (
+            <button
+              key={item.requirementKey}
+              type="button"
+              className={`guidedProgressItem ${item.requirementKey === requirement.requirementKey ? "active" : ""}`}
+              onClick={() => onOpenRequirement(item.requirementKey)}
+            >
+              <GuidedStatusDot status={statusForRequirement(item, selections.get(item.requirementKey))} />
+              <span>{plumbingFixtureCategoryDetails(item).title}</span>
+            </button>
+          ))}
+        </aside>
+        <main className="guidedProductPanel">
+          <div className="plumbingProductsHeader">
+            <button type="button" onClick={onReturn}>← All {categoryLabel}</button>
+            <div>
+              <span>{categoryLabel} / {details.title}</span>
+              <strong>{products.length ? `${products.length} ${groupFilter?.label || details.title}${products.every((product) => product.supplier === PLUMBING_FIXTURE_SUPPLIER) ? ` from ${PLUMBING_FIXTURE_SUPPLIER}` : ""}` : `No verified ${details.title.toLowerCase()} are in the Product Library yet.`}</strong>
+            </div>
+            {groupFilter ? <span className="configuredGroupChip" data-testid="configured-group-chip">{groupFilter.label}<button type="button" onClick={onClearGroupFilter}>Show all {details.title.toLowerCase()}</button></span> : null}
+          </div>
+          <section className="plumbingAllocationSummary" data-testid={`plumbing-allocation-summary-${requirement.requirementKey}`}>
+            <div className="plumbingAllocationProgress">
+              <strong data-testid="plumbing-allocated-quantity">
+                {progress.required ? `${progress.allocated} of ${progress.required} allocated` : `${progress.allocated} allocated`}
+              </strong>
+              <span>
+                {progress.required
+                  ? progress.remaining ? `Required ${progress.required} · Remaining ${progress.remaining}` : `Required ${progress.required} · Complete`
+                  : projectRequired ? `Required ${projectRequired.quantity} (${projectRequired.label}) · from ${projectRequired.source}`
+                    : configured ? "Required quantity not supplied by AI Plan Takeoff - add one selection for each room that needs it."
+                      : "Required quantity not yet supplied by the Estimate/Takeoff - allocate every location this project needs."}
+              </span>
+            </div>
+            {lines.length ? (
+              <>
+                <table className="plumbingAllocationTable">
+                  <thead><tr><th>Product</th><th>Locations</th><th>Qty</th><th>Product total</th><th>Allowance total</th><th>Variation</th><th /></tr></thead>
+                  <tbody>
+                    {lines.map((line) => (
+                      <tr key={line.lineId} data-testid={`plumbing-line-${slug(line.supplierCode || line.lineId)}`}>
+                        <td><strong>{line.productName}</strong><small>{[line.brand, line.supplierCode].filter(Boolean).join(" · ")}</small>{line.specification ? <small className="configuredSpec">{line.specification}</small> : null}</td>
+                        <td>{formatPlumbingAllocations(line.allocations)}</td>
+                        <td data-testid="plumbing-line-quantity">{line.quantity}</td>
+                        <td>{line.selectedTotal === null ? (line.configuredSelection ? QUOTE_REQUIRED_LABEL : "Price pending") : money(line.selectedTotal)}</td>
+                        <td>{money(line.allowanceTotal)}</td>
+                        <td className={line.variation > 0 ? "bad" : line.variation < 0 ? "good" : ""}>{line.variation === null ? "—" : signedMoney(line.variation)}</td>
+                        <td className="plumbingAllocationActions">
+                          <button type="button" onClick={() => onSelectProduct(requirement, productForLine(line))}>{configured ? "Edit" : "Edit Allocation"}</button>
+                          <button type="button" onClick={() => removeLine(line)}>Remove</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td>Total {details.title}</td>
+                      <td />
+                      <td data-testid="plumbing-category-quantity">{summary.quantity}</td>
+                      <td>{summary.selectedTotal === null ? "Price pending" : money(summary.selectedTotal)}</td>
+                      <td>{money(summary.allowanceTotal)}</td>
+                      <td className={summary.variation > 0 ? "bad" : summary.variation < 0 ? "good" : ""}>{summary.variation === null ? "—" : signedMoney(summary.variation)}</td>
+                      <td />
+                    </tr>
+                  </tfoot>
+                </table>
+              </>
+            ) : <p>No {details.title.toLowerCase()} allocated yet. Select a product, then choose the rooms it goes in and how many.</p>}
+          </section>
+          {products.length ? (
+            <div className="plumbingFilters" data-testid="plumbing-product-filters">
+              <label><span>Search</span><input value={filters.search} onChange={setFilter("search")} placeholder="Name, brand or code" /></label>
+              {options.brands.length > 1 && !options.facets?.Supplier ? <label><span>Brand</span><select value={filters.brand} onChange={setFilter("brand")}><option value="">All brands</option>{options.brands.map((value) => <option key={value} value={value}>{value}</option>)}</select></label> : null}
+              {Object.entries(options.facets || {}).map(([key, values]) => (
+                <label key={key} data-testid={`plumbing-facet-${slug(key)}`}><span>{key}</span><select value={filters.facets?.[key] || ""} onChange={setFacet(key)}><option value="">All</option>{values.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
+              ))}
+              {options.colours.length > 1 ? <label><span>Colour / Finish</span><select value={filters.colour} onChange={setFilter("colour")}><option value="">All finishes</option>{options.colours.map((value) => <option key={value} value={value}>{value}</option>)}</select></label> : null}
+              {options.types.length > 1 ? <label><span>Type</span><select value={filters.type} onChange={setFilter("type")}><option value="">All types</option>{options.types.map((value) => <option key={value} value={value}>{value}</option>)}</select></label> : null}
+              {options.hasPrices ? <label><span>Price</span><select value={filters.sort} onChange={setFilter("sort")}><option value="">Default order</option><option value="price-asc">Lowest price first</option><option value="price-desc">Highest price first</option></select></label> : null}
+              {filtered ? <button type="button" onClick={() => setFilters(emptyFilters)}>Clear filters</button> : null}
+            </div>
+          ) : null}
+          {products.length ? (
+            visible.length ? (
+              <div className="guidedProductGrid plumbingProductGrid">
+                {visible.map((product) => (
+                  <PlumbingFixtureProductCard
+                    key={product.id}
+                    requirement={requirement}
+                    product={product}
+                    line={configured ? null : lines.find((line) => plumbingLineMatchesProduct(line, product)) || null}
+                    configuredLines={configured ? lines.filter((line) => plumbingLineMatchesProduct(line, product)) : null}
+                    onSelect={() => onSelectProduct(requirement, product)}
+                    onViewDetails={() => onViewDetails(product)}
+                  />
+                ))}
+              </div>
+            ) : <p className="plumbingNoResults">No {details.title.toLowerCase()} match these filters.</p>
+          ) : (
+            <div className="guidedEmptyCatalogue" data-testid={`guided-empty-catalogue-${requirement.requirementKey}`}>
+              <strong>No verified {PLUMBING_FIXTURE_SUPPLIER} {details.title.toLowerCase()} are available.</strong>
+              <span>The allowance of {money(requirement.defaultAllowance)} still applies. Products appear here only once they have been verified against {PLUMBING_FIXTURE_SUPPLIER}.</span>
+            </div>
+          )}
+        </main>
+      </div>
+    </section>
+  );
+}
+
+function plumbingLineMatchesProduct(line, product = {}) {
+  if (!line) return false;
+  const ids = [product.productId, product.id, plumbingProductLineId(product)].filter(Boolean);
+  if (ids.includes(line.lineId) || (line.productId && ids.includes(line.productId))) return true;
+  return Boolean(line.productCode && line.productCode === product.productCode);
+}
+
+// A catalogue-shaped product rebuilt from a saved line (used when the product is no longer in the
+// live catalogue, so its allocation can still be edited or removed).
+function plumbingProductFromLine(line = {}) {
+  return {
+    id: line.lineId,
+    productId: line.productId || line.lineId,
+    productCode: line.productCode,
+    productName: line.productName,
+    brand: line.brand,
+    supplier: line.supplier,
+    model: line.supplierCode || line.model,
+    colour: line.colour,
+    finish: line.finish,
+    imageUrl: line.imageUrl,
+    selectedCost: line.unitPrice,
+    allowance: line.unitAllowance,
+    priceStatus: line.unitPrice === null ? PRICE_STATES.pending : PRICE_STATES.current,
+    plumbingSavedLine: line,
+  };
+}
+
+// Unit price + unit allowance for a plumbing product exactly as the card shows them.
+function plumbingProductRates(requirement = {}, product = {}) {
+  const priceState = product.plumbingSavedLine
+    ? (product.plumbingSavedLine.unitPrice === null ? PRICE_STATES.pending : PRICE_STATES.current)
+    : priceStateForGuidedOption(product);
+  const hasPrice = priceState === PRICE_STATES.current;
+  return {
+    priceState,
+    hasPrice,
+    unitPrice: hasPrice ? numberValue(product.selectedCost) : null,
+    unitAllowance: numberValue(product.allowance ?? requirement.defaultAllowance),
+  };
+}
+
+function PlumbingFixtureProductCard({ requirement, product, line = null, configuredLines = null, onSelect, onViewDetails }) {
+  const configured = Array.isArray(configuredLines);
+  const priceFrom = Boolean(product.attributes?.priceFrom);
+  const { hasPrice, unitPrice, unitAllowance } = plumbingProductRates(requirement, product);
+  const selected = Boolean(line);
+  const quantity = line?.quantity || 1;
+  const priceValue = hasPrice ? unitPrice * quantity : 0;
+  const allowanceValue = unitAllowance * quantity;
+  const variation = hasPrice ? roundMoney(priceValue - allowanceValue) : 0;
+  const code = plumbingFixtureSupplierCode(product);
+  const keySpec = displayCatalogueValue(product.attributes?.keySpec || product.metadata?.productEntity?.attributes?.keySpec)
+    || [product.dimensions, product.colour].map(displayCatalogueValue).filter(Boolean).join(" · ");
+  return (
+    <article className={`guidedProductCard plumbingProductCard ${selected ? "selected" : ""}`} data-testid={`plumbing-product-${slug(code || product.productName)}`} data-product-code={product.productCode || product.metadata?.productEntity?.productCode || ""} data-selected={selected ? "true" : "false"} data-selected-quantity={selected ? line.quantity : 0}>
+      {selected ? <span className="plumbingSelectedFlag">✓ SELECTED — QTY {line.quantity}</span> : null}
+      {configured && configuredLines.length ? <span className="plumbingSelectedFlag">✓ SELECTED — {configuredLines.map((item) => formatPlumbingAllocations(item.allocations)).join(", ")}</span> : null}
+      <img src={product.imageUrl} alt={product.imageAltText || product.productName} loading="lazy" />
+      <div>
+        <span>{product.brand}</span>
+        <strong>{product.productName}</strong>
+        <em>Code: {code || "Not recorded"}</em>
+        {keySpec ? <p>{keySpec}</p> : null}
+        <small className="plumbingSupplier">Supplier: {product.supplier || PLUMBING_FIXTURE_SUPPLIER}</small>
+        {selected ? <small className="plumbingCardLocations" data-testid="plumbing-card-locations">{formatPlumbingAllocations(line.allocations)}</small> : null}
+      </div>
+      <div className="guidedProductMoney">
+        <GuidedMiniTotal label={selected ? `Price ×${quantity}` : priceFrom ? "Price from" : "Price each"} value={hasPrice ? money(priceValue) : configured ? QUOTE_REQUIRED_LABEL : "Price not published"} tone={hasPrice ? "" : "warn"} />
+        <GuidedMiniTotal label={selected ? `Allowance ×${quantity}` : "Allowance each"} value={money(allowanceValue)} />
+        <GuidedMiniTotal label={variation < 0 ? "Credit" : "Upgrade"} value={hasPrice ? signedMoney(variation) : "—"} tone={variation > 0 ? "bad" : variation < 0 ? "good" : ""} />
+      </div>
+      <div className="guidedProductActions">
+        <button type="button" onClick={onViewDetails}>View Details</button>
+        <button type="button" className="primary" onClick={onSelect}>{selected ? "Edit Allocation" : configured ? (configuredLines.length ? "Add to Another Room" : "Configure & Select") : "Select"}</button>
+      </div>
+    </article>
+  );
+}
+
+// ADD PRODUCT / ALLOCATE PRODUCT. The room quantities ARE the product quantity - there is no
+// separate quantity box to keep in step with them.
+function PlumbingAllocationModal({ requirement, product, lines = [], projectLocationNames = [], workbook = {}, onCancel, onSave }) {
+  const details = plumbingFixtureCategoryDetails(requirement);
+  const existingLine = lines.find((line) => plumbingLineMatchesProduct(line, product)) || null;
+  const [replaceLineId, setReplaceLineId] = useState('');
+  const { priceState, hasPrice, unitPrice, unitAllowance } = plumbingProductRates(requirement, product);
+  const serviceRows = serviceQuoteRequirements(workbook, requirement.requirementKey);
+  const isService = RESIDENTIAL_SERVICE_KEYS.includes(requirement.requirementKey);
+  const [quoteTarget, setQuoteTarget] = useState(() => existingLine?.quotationRowId ? `${existingLine.quotationSection}::${existingLine.quotationRowId}` : serviceRows.length === 1 ? `${serviceRows[0].section}::${serviceRows[0].rowId}` : '');
+  const target = serviceRows.find(r => `${r.section}::${r.rowId}` === quoteTarget);
+  const [materialAllowance, setMaterialAllowance] = useState(existingLine?.originalMaterialAllowance ?? target?.materialAllowance ?? '');
+  const [quantities, setQuantities] = useState(() => existingLine ? Object.fromEntries(existingLine.allocations.map(a => [a.locationKey, a.quantity])) : target ? { [UNALLOCATED_LOCATION_KEY]: Math.max(0, target.quantity - lines.filter(l => l.quotationRowId === target.rowId).reduce((n,l) => n + l.quantity, 0)) } : {});
+  const [customLocations, setCustomLocations] = useState([]);
+  const [customName, setCustomName] = useState("");
+  const [showAll, setShowAll] = useState(false);
+  const locations = [
+    ...plumbingLocationsForRequirement(requirement.requirementKey, projectLocationNames, lines),
+    ...customLocations,
+  ].filter((location, index, all) => all.findIndex((item) => item.key === location.key) === index);
+  // An older single selection with no rooms yet: keep its quantity visible until it is moved.
+  const unallocated = existingLine?.allocations?.find((allocation) => allocation.locationKey === UNALLOCATED_LOCATION_KEY) || (isService && Object.hasOwn(quantities, UNALLOCATED_LOCATION_KEY));
+  const rows = [
+    ...(unallocated ? [{ key: UNALLOCATED_LOCATION_KEY, label: isService ? 'Project quantity — assign locations below' : "Unallocated (earlier selection)", suggested: true }] : []),
+    ...locations,
+  ];
+  const suggestedRows = rows.filter((row) => row.suggested || numberValue(quantities[row.key]) > 0);
+  const otherRows = rows.filter((row) => !suggestedRows.includes(row));
+  const otherLines = lines.filter((line) => line !== existingLine);
+  const alsoIn = (key) => otherLines
+    .map((line) => ({ line, quantity: line.allocations.find((allocation) => allocation.locationKey === key)?.quantity || 0 }))
+    .filter((entry) => entry.quantity)
+    .map((entry) => `${entry.line.productName} ×${entry.quantity}`)
+    .join(", ");
+  const setQuantity = (key, value) => setQuantities((current) => ({ ...current, [key]: Math.max(0, Math.min(99, Math.round(numberValue(value)))) }));
+  const allocations = rows
+    .map((row) => ({ locationKey: row.key, location: row.key === UNALLOCATED_LOCATION_KEY ? "Unallocated" : row.label, quantity: numberValue(quantities[row.key]) }))
+    .filter((allocation) => allocation.quantity > 0);
+  const draftLine = plumbingLineWithTotals({
+    ...(existingLine || plumbingLineFromProduct(product)),
+    ...(product.plumbingSavedLine ? {} : plumbingLineFromProduct(product)),
+    lineId: replaceLineId || existingLine?.lineId || plumbingProductLineId(product),
+    unitPrice,
+    unitAllowance,
+    priceState,
+    allocations,
+    legacySingleSelection: false,
+    ...(isService ? { quotationRowId: target?.rowId || '', quotationSection: target?.section || '', originalMaterialAllowance: materialAllowance === '' ? null : Number(materialAllowance),
+      unitAllowance: materialAllowance === '' ? unitAllowance : Number(materialAllowance) * 1.1 } : {}),
+  });
+  const addCustomLocation = () => {
+    const label = customName.trim();
+    const key = plumbingLocationKey(label);
+    if (!label || !key || isSelectionCategoryName(label)) return;
+    if (!rows.some((row) => row.key === key)) setCustomLocations((current) => [...current, { key, label, suggested: true, source: "custom" }]);
+    setQuantity(key, Math.max(1, numberValue(quantities[key])));
+    setCustomName("");
+  };
+  const save = () => {
+    if (!draftLine.quantity) {
+      if (!existingLine) return;
+      if (typeof window !== "undefined" && !window.confirm(`Every location for ${existingLine.productName} is now 0. Remove this product from ${details.title}?`)) return;
+      onSave(removePlumbingLine(lines, existingLine.lineId));
+      return;
+    }
+    onSave(upsertPlumbingLine(lines, draftLine));
+  };
+  const renderRow = (row) => {
+    const quantity = numberValue(quantities[row.key]);
+    const other = alsoIn(row.key);
+    return (
+      <div key={row.key} className={`plumbingAllocationRow ${quantity ? "active" : ""}`} data-testid={`plumbing-allocation-row-${row.key}`}>
+        <label>
+          <input type="checkbox" checked={quantity > 0} onChange={(event) => setQuantity(row.key, event.target.checked ? Math.max(1, quantity) : 0)} />
+          <span>{row.label}{other ? <small>Also in this room: {other}</small> : null}</span>
+        </label>
+        <div className="plumbingQtyStepper">
+          <button type="button" aria-label={`Decrease ${row.label}`} onClick={() => setQuantity(row.key, quantity - 1)} disabled={!quantity}>−</button>
+          <input type="number" min="0" max="99" value={quantity} aria-label={`${row.label} quantity`} onChange={(event) => setQuantity(row.key, event.target.value)} />
+          <button type="button" aria-label={`Increase ${row.label}`} onClick={() => setQuantity(row.key, quantity + 1)}>+</button>
+        </div>
+      </div>
+    );
+  };
+  return (
+    <div className="plumbingAllocationOverlay" role="dialog" aria-modal="true" aria-label="Allocate product" data-testid="plumbing-allocation-modal" onClick={onCancel}>
+      <div className="plumbingAllocationModal" onClick={(event) => event.stopPropagation()}>
+        <header>
+          <span>{existingLine ? "Edit Allocation" : "Add Product"} · {details.title}</span>
+          <button type="button" aria-label="Close" onClick={onCancel}>×</button>
+        </header>
+        <div className="plumbingAllocationProduct">
+          {product.imageUrl ? <img src={product.imageUrl} alt={product.productName} /> : null}
+          <div>
+            <span>{product.brand}</span>
+            <strong>{product.productName}</strong>
+            <em>Code: {plumbingFixtureSupplierCode(product) || product.model || "Not recorded"}</em>
+            {product.colour || product.finish ? <small>Finish: {product.finish || product.colour}</small> : null}
+            <b>{hasPrice ? `${money(unitPrice)} each` : "Price not published"}</b>
+          </div>
+        </div>
+        {isService && <div style={{ padding: 16, display: 'grid', gap: 10 }}>
+          {!existingLine && lines.length > 0 && <label>Selection action<select value={replaceLineId} onChange={e => {
+            setReplaceLineId(e.target.value); const previous = lines.find(l => l.lineId === e.target.value);
+            if (previous) { setQuantities(Object.fromEntries(previous.allocations.map(a => [a.locationKey,a.quantity]))); setQuoteTarget(`${previous.quotationSection}::${previous.quotationRowId}`); setMaterialAllowance(previous.originalMaterialAllowance ?? ''); }
+          }}><option value="">Add another product</option>{lines.map(l => <option key={l.lineId} value={l.lineId}>Replace {l.productName} ({l.quantity})</option>)}</select></label>}
+          <label>Project requirement<select value={quoteTarget} onChange={e => { setQuoteTarget(e.target.value); const row = serviceRows.find(r => `${r.section}::${r.rowId}` === e.target.value); setMaterialAllowance(row?.materialAllowance ?? ''); if (row && !existingLine) setQuantities({ [UNALLOCATED_LOCATION_KEY]: Math.max(0, row.quantity - lines.filter(l => l.quotationRowId === row.rowId).reduce((n,l) => n + l.quantity, 0)) }); }}><option value="">Choose existing quotation line</option>{serviceRows.map(r => <option key={`${r.section}::${r.rowId}`} value={`${r.section}::${r.rowId}`}>{r.label} — {r.quantity} {r.unit}</option>)}</select></label>
+          <label>Original product allowance per unit (ex GST)<input type="number" min="0" value={materialAllowance} onChange={e => setMaterialAllowance(e.target.value)} /></label>
+          <small>Installation labour remains on the existing quotation line. Allocate the required quantity and identify its original material allowance to calculate the upgrade.</small>
+        </div>}
+        <h4>Use this product in:</h4>
+        <div className="plumbingAllocationRows">
+          {suggestedRows.map(renderRow)}
+          {otherRows.length ? (
+            <button type="button" className="plumbingShowAll" onClick={() => setShowAll((value) => !value)}>
+              {showAll ? "Hide other locations" : `Other locations (${otherRows.length})`}
+            </button>
+          ) : null}
+          {showAll ? otherRows.map(renderRow) : null}
+          <div className="plumbingAddLocation">
+            <input value={customName} placeholder="Add a location, e.g. Ensuite 2" onChange={(event) => setCustomName(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); addCustomLocation(); } }} />
+            <button type="button" onClick={addCustomLocation}>Add location</button>
+          </div>
+        </div>
+        <dl className="plumbingAllocationTotals" data-testid="plumbing-allocation-totals">
+          <div><dt>Total quantity</dt><dd data-testid="plumbing-allocation-total-quantity">{draftLine.quantity}</dd></div>
+          <div><dt>Price each</dt><dd>{hasPrice ? money(unitPrice) : "Price pending"}</dd></div>
+          <div><dt>Product total</dt><dd data-testid="plumbing-allocation-product-total">{draftLine.selectedTotal === null ? "Price pending" : money(draftLine.selectedTotal)}</dd></div>
+          <div><dt>Unit allowance</dt><dd>{money(unitAllowance)}</dd></div>
+          <div><dt>Allowance total</dt><dd data-testid="plumbing-allocation-allowance-total">{money(draftLine.allowanceTotal)}</dd></div>
+          <div className={draftLine.variation > 0 ? "bad" : draftLine.variation < 0 ? "good" : ""}><dt>{draftLine.variation < 0 ? "Credit" : "Variation"}</dt><dd data-testid="plumbing-allocation-variation">{draftLine.variation === null ? "—" : signedMoney(draftLine.variation)}</dd></div>
+        </dl>
+        <footer>
+          <button type="button" onClick={onCancel}>Cancel</button>
+          <button type="button" className="primary" data-testid="plumbing-allocation-save" disabled={!draftLine.quantity && !existingLine} onClick={save}>
+            {existingLine ? (draftLine.quantity ? "Update Allocation" : "Remove Product") : "Add Selection"}
+          </button>
+        </footer>
+      </div>
+    </div>
+  );
+}
+
+
+// Shower Screens & Mirrors landing: SHOWER SCREENS (Framed / Semi-Frameless / Full Frameless),
+// MIRRORS and SHAVING CABINETS. Every group, count, supplier list and photo is read from the
+// Product Library range (showerScreenMirrorCatalogue.js) - nothing is listed here.
+function ConfiguredCategorySections({ requirements = [], selections, groupsByRequirement = {}, requiredByRequirement = {}, onOpen, onEditLine }) {
+  return (
+    <div className="configuredSections" data-testid="configured-category-sections">
+      {requirements.map((item) => {
+        const { heading, groups } = groupsByRequirement[item.requirementKey] || { heading: item.label, groups: [] };
+        const selection = selections.get(item.requirementKey);
+        const lines = plumbingLinesFromSelection(selection ? selection.selected_details : null);
+        const summary = plumbingAllocationSummary(lines);
+        const required = requiredByRequirement[item.requirementKey] || null;
+        return (
+          <section key={item.requirementKey} className="configuredSection" data-testid={"configured-section-" + item.requirementKey} data-requirement-key={item.requirementKey}>
+            <header>
+              <div>
+                <GuidedStatusDot status={statusForRequirement(item, selection)} />
+                <h2>{heading || item.label}</h2>
+              </div>
+              {required ? (
+                <p className="configuredRequired" data-testid={"configured-required-" + item.requirementKey}>
+                  <strong>{(heading || item.label).toUpperCase()} REQUIRED: {required.quantity}</strong>
+                  <span>{required.label} · from {required.source} · {summary.quantity} selected</span>
+                </p>
+              ) : (
+                <p className="configuredRequired"><span>{lines.length ? summary.quantity + " selected" : item.requirementKey === "shower-screen" ? "Shower count not yet supplied by AI Plan Takeoff - add a screen for each shower." : "Optional - add one for each room that needs it."}</span></p>
+              )}
+            </header>
+            {lines.length ? (
+              <div className="configuredLines" data-testid={"configured-lines-" + item.requirementKey}>
+                {lines.map((line) => (
+                  <article key={line.lineId} className="configuredLine" data-testid="configured-line">
+                    {line.imageUrl ? <img src={line.imageUrl} alt={line.productName} /> : null}
+                    <div>
+                      <span>{formatPlumbingAllocations(line.allocations)}</span>
+                      <strong>{line.supplier || line.brand} — {line.productName}</strong>
+                      {line.specification ? <em>{line.specification}</em> : null}
+                    </div>
+                    <div className="configuredLineMoney">
+                      <b>{line.selectedTotal === null ? QUOTE_REQUIRED_LABEL : money(line.selectedTotal)}</b>
+                      <small>Allowance {money(line.allowanceTotal)}{line.variation === null ? "" : " · " + (line.variation < 0 ? "Credit " : "Variation ") + signedMoney(line.variation)}</small>
+                    </div>
+                    <button type="button" onClick={() => onEditLine(item, line)}>Edit</button>
+                  </article>
+                ))}
+                <p className="configuredLinesTotal">
+                  Allowance {money(summary.allowanceTotal)} · Selected {summary.selectedTotal === null ? "awaiting supplier quote" : money(summary.selectedTotal)} · {summary.variation === null ? "Variation pending" : (summary.variation < 0 ? "Credit " : "Variation ") + signedMoney(summary.variation)}
+                </p>
+              </div>
+            ) : null}
+            {groups.length ? (
+              <div className="configuredGroupGrid">
+                {groups.map((group) => (
+                  <article key={group.key} className="plumbingCategoryCard configuredGroupCard" data-testid={"configured-group-" + slug(group.label)} data-group-value={group.value}>
+                    <button type="button" className="plumbingCategoryImage" onClick={() => onOpen(item.requirementKey, group)} aria-label={"View " + group.label}>
+                      <img src={group.imageUrl || requirementImage(item)} alt={group.imageAlt || group.label} />
+                    </button>
+                    <div className="plumbingCategoryBody">
+                      <div className="plumbingCategoryTitle"><h3>{group.label}</h3></div>
+                      <p>{group.suppliers.join(" · ")}</p>
+                      <small>{group.count} product{group.count === 1 ? "" : "s"} / configurations</small>
+                      <button type="button" className="primary" onClick={() => onOpen(item.requirementKey, group)}>View {group.label} →</button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : <p className="plumbingSupplierNote">No verified {item.label.toLowerCase()} are in the Product Library yet.</p>}
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
+// ADD / EDIT A CONFIGURED SELECTION. Adding: tick every project location the product applies to -
+// the common choices (glass, finish, ...) apply to all of them, each room has its own dimensions,
+// and ONE LINE PER ROOM is created so each room stays independently editable. Editing: one room's
+// line only. Options, SKUs, prices and size limits are the supplier's own
+// (product.attributes.configurator); a product without a published price stays "Supplier Quote
+// Required" until a quoted price is entered.
+function ConfiguredSelectionModal({ requirement, product, line = null, lines = [], locations = { primary: [], other: [] }, onCancel, onSave }) {
+  const configurator = productConfigurator(product);
+  const details = plumbingFixtureCategoryDetails(requirement);
+  const otherLines = lines.filter((item) => item.lineId !== line?.lineId);
+  const [draft, setDraft] = useState(() => {
+    if (line) return draftFromConfiguredLine(line);
+    const lastAllowance = otherLines.length ? otherLines[otherLines.length - 1].unitAllowance : numberValue(product.allowance ?? requirement.defaultAllowance);
+    return {
+      locations: [],
+      quantity: 1,
+      options: Object.fromEntries(configurator.options.filter((option) => option.values.length === 1).map((option) => [option.key, option.values[0]])),
+      unitAllowance: lastAllowance,
+      quotedPrice: "", quoteReference: "", notes: "",
+    };
+  });
+  const set = (key) => (event) => setDraft((current) => ({ ...current, [key]: event.target.value }));
+  const setOption = (key) => (event) => setDraft((current) => ({ ...current, options: { ...current.options, [key]: event.target.value } }));
+  const setLocations = (keys, chosen) => setDraft((current) => ({
+    ...current,
+    locations: chosen.map((location) => current.locations.find((item) => item.key === location.key) || { id: location.id, key: location.key, label: location.label, widthMm: "", heightMm: "", depthMm: "" }),
+  }));
+  const setDimension = (key, field) => (event) => setDraft((current) => ({ ...current, locations: current.locations.map((item) => (item.key === key ? { ...item, [field]: event.target.value } : item)) }));
+  const variant = variantForOptions(product, draft.options);
+  const cataloguePrice = configurator.variants.length ? null : numberValue(product.selectedCost) || null;
+  const draftLines = line
+    ? draft.locations.slice(0, 1).map((location) => configuredLineFromProduct(product, { ...draft, room: location.label, locationId: location.id, widthMm: location.widthMm, heightMm: location.heightMm, depthMm: location.depthMm }, { existingLine: line, lines: otherLines, cataloguePrice }))
+    : configuredLinesFromProduct(product, draft, { lines: otherLines, cataloguePrice });
+  const totals = plumbingAllocationSummary(draftLines);
+  const problems = draft.locations.flatMap((location) => dimensionProblems(product, location).map((problem) => location.label + ": " + problem));
+  const blocking = problems.filter((problem) => /exceeds/.test(problem));
+  const missingOptions = configurator.variants.length ? configurator.options.filter((option) => !draft.options[option.key]) : [];
+  const canSave = draft.locations.length > 0 && !blocking.length && !missingOptions.length;
+  const dimensions = configurator.dimensions || {};
+  const alsoIn = (location) => otherLines.filter((item) => item.allocations.some((allocation) => allocation.locationKey === location.key)).map((item) => item.productName).join(", ");
+  const describe = (location) => [location.requiredQuantity ? location.requiredQuantity + " in AI Plan Takeoff" : "", alsoIn(location) ? "Already selected here: " + alsoIn(location) : ""].filter(Boolean).join(" · ");
+  const dimensionRow = configurator.madeToMeasure ? (location) => {
+    const entry = draft.locations.find((item) => item.key === location.key) || {};
+    return (
+      <div className="configuredDimensionRow" data-testid={"configured-dimensions-" + location.key}>
+        <label><span>Width (mm)</span><input type="number" min="0" value={entry.widthMm ?? ""} onChange={setDimension(location.key, "widthMm")} data-testid={"configured-width-" + location.key} />{dimensions.width?.maxMm ? <small>max {dimensions.width.maxMm}</small> : null}</label>
+        <label><span>Height (mm)</span><input type="number" min="0" value={entry.heightMm ?? ""} onChange={setDimension(location.key, "heightMm")} data-testid={"configured-height-" + location.key} />{dimensions.height?.maxMm ? <small>max {dimensions.height.maxMm}</small> : null}</label>
+        {dimensions.depth ? <label><span>Depth / return (mm)</span><input type="number" min="0" value={entry.depthMm ?? ""} onChange={setDimension(location.key, "depthMm")} data-testid={"configured-depth-" + location.key} />{dimensions.depth.maxMm ? <small>max {dimensions.depth.maxMm}</small> : null}</label> : null}
+      </div>
+    );
+  } : null;
+  const save = () => onSave(draftLines.reduce((next, item) => upsertPlumbingLine(next, item), lines));
+  return (
+    <div className="plumbingAllocationOverlay" role="dialog" aria-modal="true" aria-label="Configure selection" data-testid="configured-selection-modal" onClick={onCancel}>
+      <div className="plumbingAllocationModal configuredSelectionModal" onClick={(event) => event.stopPropagation()}>
+        <header>
+          <span>{line ? "Edit Selection · " + (line.allocations[0]?.location || "") : "Add Selection"} · {details.title}</span>
+          <button type="button" aria-label="Close" onClick={onCancel}>×</button>
+        </header>
+        <div className="plumbingAllocationProduct">
+          {product.imageUrl ? <img src={product.imageUrl} alt={product.productName} /> : null}
+          <div>
+            <span>Supplier: {product.supplier || product.brand}</span>
+            <strong>{product.productName}</strong>
+            <em>{[product.range ? "Range: " + product.range : "", displayCatalogueValue(product.attributes?.keySpec)].filter(Boolean).join(" · ")}</em>
+            <b>{variant ? money(variant.price) + " each · SKU " + variant.sku : totals.unitPrice !== null && draftLines.length ? money(draftLines[0].unitPrice) + " each" : cataloguePrice ? money(cataloguePrice) + " each" : QUOTE_REQUIRED_LABEL}</b>
+          </div>
+        </div>
+        <ProjectLocationMultiSelect
+          label={line ? "Room / location (this selection only)" : "Room / location"}
+          locations={locations.primary}
+          otherLocations={locations.other}
+          value={draft.locations.map((location) => location.key)}
+          onChange={setLocations}
+          multiple={!line}
+          describe={describe}
+          renderRow={dimensionRow}
+          isInvalidName={isSelectionCategoryName}
+          testId="configured-locations"
+        />
+        {configurator.madeToMeasure ? <p className="configuredNote">{dimensions.rule ? "Made to measure — supplier size rule: " + dimensions.rule + "." : "Made to measure — the supplier publishes no standard sizes; size is confirmed by site measure and quote."} Dimensions are kept separately for each room.</p> : null}
+        <div className="configuredFields">
+          <label>
+            <span>Quantity per location</span>
+            <input type="number" min="1" max="20" value={draft.quantity} onChange={set("quantity")} data-testid="configured-quantity" />
+          </label>
+          {configurator.options.map((option) => {
+            const values = availableOptionValues(product, option.key, draft.options);
+            return (
+              <label key={option.key}>
+                <span>{option.label}</span>
+                <select value={draft.options[option.key] || ""} onChange={setOption(option.key)} data-testid={"configured-option-" + option.key}>
+                  <option value="">{configurator.variants.length ? "Select…" : "To be confirmed"}</option>
+                  {option.values.map((value) => <option key={value} value={value} disabled={!values.includes(value)}>{value}{values.includes(value) ? "" : " (not available with other choices)"}</option>)}
+                </select>
+                {option.note ? <small>{option.note}</small> : null}
+              </label>
+            );
+          })}
+          <label>
+            <span>Base allowance (each)</span>
+            <input type="number" min="0" step="1" value={draft.unitAllowance} onChange={set("unitAllowance")} data-testid="configured-allowance" />
+          </label>
+          {!variant && !configurator.variants.length ? (
+            <>
+              <label>
+                <span>{cataloguePrice ? "Quoted price override (each, inc GST)" : "Quoted price (each, inc GST)"}</span>
+                <input type="number" min="0" step="1" value={draft.quotedPrice} placeholder={cataloguePrice ? String(cataloguePrice) : QUOTE_REQUIRED_LABEL} onChange={set("quotedPrice")} data-testid="configured-quoted-price" />
+              </label>
+              <label>
+                <span>Supplier quote reference</span>
+                <input value={draft.quoteReference} onChange={set("quoteReference")} data-testid="configured-quote-reference" />
+              </label>
+            </>
+          ) : null}
+          <label className="wide">
+            <span>Notes</span>
+            <input value={draft.notes} onChange={set("notes")} placeholder="Door hand, hob, niche, anything the supplier needs" />
+          </label>
+        </div>
+        {!line && draft.locations.length > 1 ? <p className="configuredNote" data-testid="configured-bulk-note">Creates {draft.locations.length} separate selections ({draft.locations.map((location) => location.label + " ×" + (Math.max(1, Math.round(numberValue(draft.quantity) || 1)))).join(", ")}). Each room can be edited on its own afterwards.</p> : null}
+        {problems.length ? <ul className="configuredProblems" data-testid="configured-problems">{problems.map((problem) => <li key={problem} className={/exceeds/.test(problem) ? "bad" : ""}>{problem}</li>)}</ul> : null}
+        {missingOptions.length ? <p className="configuredNote">Choose {missingOptions.map((option) => option.label.toLowerCase()).join(", ")} to confirm the supplier SKU and price.</p> : null}
+        <dl className="plumbingAllocationTotals" data-testid="configured-totals">
+          <div><dt>Total quantity</dt><dd data-testid="configured-total-quantity">{totals.quantity}</dd></div>
+          <div><dt>Price each</dt><dd data-testid="configured-price-each">{!draftLines.length ? (variant ? money(variant.price) : cataloguePrice ? money(cataloguePrice) : QUOTE_REQUIRED_LABEL) : draftLines[0].unitPrice === null ? QUOTE_REQUIRED_LABEL : money(draftLines[0].unitPrice)}</dd></div>
+          <div><dt>Allowance total</dt><dd>{money(totals.allowanceTotal)}</dd></div>
+          <div><dt>Selected total</dt><dd>{totals.selectedTotal === null ? (draftLines.length ? QUOTE_REQUIRED_LABEL : "—") : money(totals.selectedTotal)}</dd></div>
+          <div className={totals.variation > 0 ? "bad" : totals.variation < 0 ? "good" : ""}><dt>{totals.variation < 0 ? "Credit" : "Variation"}</dt><dd data-testid="configured-variation">{totals.variation === null ? (draftLines.length ? "Pending quote" : "—") : signedMoney(totals.variation)}</dd></div>
+        </dl>
+        <footer>
+          {line ? <button type="button" onClick={() => { if (typeof window === "undefined" || window.confirm("Remove " + line.productName + " from " + formatPlumbingAllocations(line.allocations) + "?")) onSave(removePlumbingLine(lines, line.lineId)); }}>Remove</button> : null}
+          <button type="button" onClick={onCancel}>Cancel</button>
+          <button type="button" className="primary" data-testid="configured-save" disabled={!canSave} onClick={save}>{line ? "Update Selection" : draft.locations.length > 1 ? "Add " + draft.locations.length + " Selections" : "Add Selection"}</button>
+        </footer>
+      </div>
+    </div>
+  );
+}
+
 function GuidedEmptyCatalogue({ requirement }) {
   return (
     <div className="guidedEmptyCatalogue" data-testid={`guided-empty-catalogue-${requirement.requirementKey}`}>
@@ -11224,7 +13377,7 @@ function GuidedProductCard({ requirement, product, onSelect, onViewDetails, onSa
   const brickFinishLabel = [product.colour, product.texture, product.finish].map(displayCatalogueValue).filter(Boolean).join(" / ") || "Brick colour and texture to be confirmed";
   return (
     <article className={`guidedProductCard ${isBrick ? "brickCard" : ""}`} data-testid={`guided-product-${slug(product.productName)}`} data-family-key={requirement.familyKey}>
-      <img src={product.imageUrl || requirementImage(requirement)} alt={product.imageAltText || product.productName} />
+      {isDoorProduct(product, requirement) ? <DoorProductImage src={product.imageUrl || requirementImage(requirement)} name={product.imageAltText || product.productName} size="card" /> : <img src={product.imageUrl || requirementImage(requirement)} alt={product.imageAltText || product.productName} />}
       <div>
         <span>{product.brand || product.supplier}</span>
         <strong>{product.productName}</strong>
@@ -11236,7 +13389,7 @@ function GuidedProductCard({ requirement, product, onSelect, onViewDetails, onSa
       <div className="guidedProductMoney">
         <GuidedMiniTotal label="Price" value={priceState === PRICE_STATES.current ? money(selectedPrice) : priceState} tone={priceState === PRICE_STATES.current ? "" : "warn"} />
         <GuidedMiniTotal label="Allowance" value={money(allowance)} />
-        <GuidedMiniTotal label={variation < 0 ? "Credit" : "Upgrade"} value={signedMoney(variation)} tone={variation > 0 ? "bad" : variation < 0 ? "good" : ""} />
+        {priceState === PRICE_STATES.current || priceState === PRICE_STATES.allowanceOnly ? <GuidedMiniTotal label={variation < 0 ? "Credit" : "Upgrade"} value={signedMoney(variation)} tone={variation > 0 ? "bad" : variation < 0 ? "good" : ""} /> : <GuidedMiniTotal label="Upgrade" value="PRICE REQUIRED" tone="warn" />}
       </div>
       <div className="guidedProductActions">
         <button type="button" onClick={onViewDetails}>View Details</button>
@@ -11275,7 +13428,10 @@ function GuidedProductDetailsModal({ requirement, product, onClose, onSelect }) 
         <h2>{product.productName}</h2>
         <p>{product.description}</p>
         <dl>
-          <div><dt>Product Code</dt><dd>{product.productCode || entryDoorProductCodeFor(product) || "To be confirmed"}</dd></div>
+          <div><dt>Product Code</dt><dd>{attrs.hncProductCode || product.productCode || entryDoorProductCodeFor(product) || "To be confirmed"}</dd></div>
+          {attrs.hncProductCode ? <div><dt>Colour</dt><dd>{displayCatalogueValue(product.colour) || "Not stated by supplier"}</dd></div> : null}
+          {attrs.hncProductCode && attrs.warranty ? <div><dt>Warranty</dt><dd>{attrs.warranty}</dd></div> : null}
+          {attrs.hncProductCode && Array.isArray(attrs.features) && attrs.features.length ? <div className="plumbingDetailFeatures"><dt>Features</dt><dd><ul>{attrs.features.map((feature) => <li key={feature}>{feature}</li>)}</ul></dd></div> : null}
           <div><dt>Model</dt><dd>{product.model || "To be confirmed"}</dd></div>
           <div><dt>Range</dt><dd>{product.range || "To be confirmed"}</dd></div>
           <div><dt>Dimensions</dt><dd>{dimensionsLabel}</dd></div>
@@ -12159,10 +14315,40 @@ function scheduleItemsForRow(row = {}, room = {}, index = 0) {
   if (requirementKey === "windows" && guided.windowWorkflow?.effectiveWindows?.length) return windowScheduleItems(row, room, guided);
   if (requirementKey === "external-lighting" && guided.externalLightingSelection) return externalLightingScheduleItems(row, room, guided);
   if (requirementKey === "exterior-paint" && guided.exteriorColourSelection) return exteriorColourScheduleItems(row, room, guided);
+  if (requirementKey === "interior-paint" && guided.paintScheme) return internalPaintScheduleItems(row, room, guided);
+  if (requirementKey === ELECTRICAL_SCHEDULE_REQUIREMENT_KEY && guided.electricalSchedule) return electricalScheduleItems(row, room, guided);
   if (requirementKey === "cabinetry" && guided.cabinetrySelection) return cabinetryScheduleItems(row, room, guided);
   if (requirementKey === "roofing" && guided.roofPackage) return roofingScheduleItems(row, room, guided);
   if (requirementKey === "entry-door" && guided.entryDoorFurniture) return entryDoorScheduleItems(row, room, guided, index);
+  if (guided.plumbingAllocation?.lines?.length) return plumbingScheduleItems(row, room, guided);
   return [baseScheduleItem(row, room, guided, index)];
+}
+
+// One schedule item per plumbing product: its quantity and exactly where each unit goes.
+function plumbingScheduleItems(row, room, guided) {
+  return plumbingLinesFromSelection(guided).map((line, index) => {
+    const locations = formatPlumbingAllocations(line.allocations);
+    const item = baseScheduleItem(row, room, guided, index, {
+      id: `${row.id || "row"}-plumbing-${slug(line.lineId)}`,
+      title: `${line.productName} — Qty ${line.quantity}`,
+      imageUrl: line.imageUrl,
+      brand: line.brand,
+      supplier: line.supplier,
+      productCode: line.supplierCode || line.productCode,
+      productId: line.productId,
+      finish: line.finish || line.colour,
+      quantity: line.quantity,
+      unit: line.unit || "EACH",
+      allowance: line.allowanceTotal,
+      selectedPrice: line.selectedTotal,
+      variation: line.variation,
+      priceStatus: line.unitPrice === null ? PRICE_STATES.pending : PRICE_STATES.current,
+      area: locations,
+      sourceUrl: line.officialProductURL,
+      notes: `Qty ${line.quantity}: ${locations}`,
+    });
+    return { ...item, plumbingLine: line, fields: [{ label: "Locations", value: locations }, ...item.fields] };
+  });
 }
 
 function isSelectionsScheduleBookRow(row = {}) {
@@ -12178,6 +14364,7 @@ function isSelectionsScheduleBookRow(row = {}) {
 }
 
 function scheduleSectionKeyForItem(item = {}) {
+  if (item.scheduleSection) return item.scheduleSection;
   const text = `${item.category || ""} ${item.area || ""} ${item.title || ""}`.toLowerCase();
   if (/roof|fascia|gutter|downpipe|eaves|soffit/.test(text)) return "roofing";
   if (/brick|render|cladding|mortar|facade/.test(text)) return "bricks-render-cladding";
@@ -12326,13 +14513,13 @@ function windowScheduleItems(row, room, guided) {
   return guided.windowWorkflow.effectiveWindows.map((windowRow, index) => baseScheduleItem(row, room, guided, index, {
     id: `${row.id}-window-${windowRow.id || index}`,
     category: "Windows",
-    area: windowRow.location,
-    title: `${windowRow.id || `Window ${index + 1}`} - ${windowRow.type || "Window"}`,
+    area: windowRow.location || windowRow.floor,
+    title: `${windowRow.windowCode || `Window ${index + 1}`} - ${windowRow.type || "Window"}`,
     imageUrl: guided.imageReference || row.imageUrl,
     supplier: windowRow.supplier || guided.supplier,
     brand: guided.brand,
     range: windowRow.system?.name || guided.range,
-    productCode: windowRow.id,
+    productCode: windowRow.windowCode || windowRow.id,
     productId: windowRow.windowId || windowRow.id,
     finish: [windowRow.frameColourName, windowRow.frameColourCode, windowRow.glass, windowRow.screen, windowRow.hardware].filter(Boolean).join(" / "),
     colourSwatch: windowRow.frameColourHex || defaults.frameColourHex,
@@ -12390,6 +14577,57 @@ function exteriorColourScheduleItems(row, room, guided) {
       notes: area?.notes || area?.source || "",
       compact: true,
     });
+  });
+}
+
+// Electrical: one line per room and point type - a quantity, never a product or a price.
+function electricalScheduleItems(row, room, guided) {
+  const statuses = new Map((guided.electricalSchedule.rooms || []).map((item) => [item.roomKey, item.status]));
+  return electricalScheduleLines(guided.electricalSchedule).filter((line) => line.selectedQty > 0).map((line, index) => {
+    const confirmed = ["confirmed", "standard"].includes(statuses.get(line.roomKey));
+    return baseScheduleItem(row, room, guided, index, {
+      id: `${row.id}-${line.id}`,
+      category: "Electrical",
+      area: line.room,
+      title: line.label,
+      status: confirmed ? "selected" : "pending",
+      confirmationStatus: confirmed ? "Confirmed" : "Awaiting confirmation",
+      allowance: 0, selectedPrice: 0, variation: 0, quantity: line.selectedQty, unit: "EACH",
+      notes: [line.includedQty ? `Included ${line.includedQty}` : "", line.notes].filter(Boolean).join(" · "),
+      compact: true,
+    });
+  });
+}
+
+// Internal Paint Colours: the house colours, then any room that differs, then feature walls. Each
+// line names the surface, the Dulux colour and code and the finish - what a painter works from.
+function internalPaintScheduleItems(row, room, guided) {
+  const scheme = normaliseInternalPaintScheme(guided.paintScheme);
+  return internalPaintScheduleLines(scheme).map((line, index) => {
+    const choice = line.choice;
+    return {
+      ...baseScheduleItem(row, room, guided, index, {
+        id: `${row.id}-paint-${line.id}`,
+        category: "Internal Paint Colours",
+        area: line.label,
+        title: choice ? `${choice.manufacturer} ${choice.colourName}` : "Selection outstanding",
+        imageUrl: choiceSwatch(choice) ? colourSwatchImage({ name: choice.colourName, supplier: `${choice.manufacturer} ${choice.colourCode}`.trim(), swatch: choiceSwatch(choice) }) : "",
+        supplier: choice?.manufacturer || "",
+        brand: choice?.manufacturer || "",
+        productCode: choice?.colourCode || "",
+        productId: choice?.colourId || "",
+        finish: choice?.finish || "",
+        colourSwatch: choiceSwatch(choice),
+        colourName: choice?.colourName || "",
+        sourceUrl: choice?.sourceUrl || "",
+        status: choice ? (scheme.confirmed ? "selected" : "pending") : "pending",
+        confirmationStatus: choice ? (scheme.confirmed ? "Confirmed" : "Awaiting confirmation") : "Selection outstanding",
+        allowance: 0, selectedPrice: 0, variation: 0, quantity: "", unit: "",
+        notes: line.notes || (line.kind === "house" ? "Applies throughout unless a room is listed separately." : ""),
+        compact: true,
+      }),
+      scheduleSection: "Internal Paint Colours",
+    };
   });
 }
 
@@ -12643,6 +14881,11 @@ function createDocumentBook({ project = null, snapshot = null, template = null, 
 }
 
 function normaliseDocumentBook(value, context) {
+  // Bath Mixers + Shower Mixers are one category now; merge any saved Shower Mixer selection into it.
+  if (Array.isArray(value?.rooms)) {
+    const rooms = migrateBathShowerMixerRooms(value.rooms);
+    if (rooms !== value.rooms) value = { ...value, rooms };
+  }
   if (value?.documentType === "luxury_selections_book" && Array.isArray(value.rooms)) {
     const resolved = resolveProjectFields(context?.project, context?.snapshot);
     const quality = context?.template?.quality_level || context?.template?.price_band || context?.template?.template_key || "mid_range";
@@ -12652,10 +14895,17 @@ function normaliseDocumentBook(value, context) {
       const existing = value.rooms.find((room) => room.name === roomName) || value.rooms.find((room) => slug(room.name) === slug(roomName));
       const templateRows = rowsForRoomTemplate(roomName, quality, context || {});
       const existingRows = Array.isArray(existing?.rows) ? existing.rows : [];
+      const consumedExistingRows = new Set();
       const rows = templateRows.map((templateRow) => {
         const match = existingRows.find((row) => slug(row.item) === slug(templateRow.item));
         if (!match) return templateRow;
-        const shouldUseTemplate = !match.selectedProduct && !match.imageUrl && (!match.options || !match.options.length);
+        consumedExistingRows.add(match);
+        // A guided workflow's saved state (Cabinetry, Exterior Colours, etc.) lives entirely in
+        // guidedSelection/guidedRequirementKey, never in the old flat selectedProduct/imageUrl/
+        // options fields this check was written for - so a guided row that happened to share an
+        // item/label with a template line item (e.g. both called "Cabinetry") was judged "empty"
+        // and silently replaced with the bare template row, discarding its real saved data.
+        const shouldUseTemplate = !match.guidedRequirementKey && !match.guidedSelection && !match.selectedProduct && !match.imageUrl && (!match.options || !match.options.length);
         return shouldUseTemplate ? templateRow : {
           ...templateRow,
           ...match,
@@ -12664,6 +14914,16 @@ function normaliseDocumentBook(value, context) {
           selectedOptionId: match.selectedOptionId || templateRow.selectedOptionId,
         };
       });
+      // Guided interactive workflows (Cabinetry, Exterior Colours, Entry Doors, etc.) save their
+      // state in rows tagged with guidedRequirementKey. Those rows very often have no matching
+      // document/PDF template line item by name for this room, so the mapping above - which only
+      // ever walks the fixed template item list - silently dropped them on every load whenever
+      // that happened. That is why a fully completed and saved guided workflow could appear to
+      // have "lost" every selection after a refresh even though the database still held them
+      // correctly: this normalisation step discarded them client-side before they ever reached
+      // the screen. Any such row not already carried through above must be preserved as-is.
+      const preservedGuidedRows = existingRows.filter((row) => row.guidedRequirementKey && !consumedExistingRows.has(row));
+      const finalRows = preservedGuidedRows.length ? [...rows, ...preservedGuidedRows] : rows;
       return {
         id: existing?.id || uid("room"),
         name: existing?.name || roomName,
@@ -12673,7 +14933,7 @@ function normaliseDocumentBook(value, context) {
         clientNotes: existing?.clientNotes || "",
         about: existing?.about || "",
         imageUrl: existing?.imageUrl || "",
-        rows,
+        rows: finalRows,
       };
     });
     const extraRooms = value.rooms
@@ -12766,11 +15026,11 @@ function recoverMissingGuidedRowsFromBookHistory(currentBook, historicalBooks = 
       }))
       .find((entry) => rowHasRecoverableGuidedSelection(entry.sourceRow, requirement));
     if (!historicalMatch) return;
-    const recoveredRow = deepClone({
+    const recoveredRow = JSON.parse(JSON.stringify({
       ...historicalMatch.sourceRow,
       recoveredFromSelectionBookId: historicalMatch.sourceBookId,
       recoveredFromSelectionBookUpdatedAt: historicalMatch.sourceUpdatedAt,
-    });
+    }));
     const targetExists = recoveredBook.rooms.some((room) => room.id === currentRoom.id);
     const updatedRoom = {
       ...currentRoom,
@@ -13196,7 +15456,7 @@ function joinHumanList(items = []) {
 }
 
 function guidedSelectionsFromBook(book) {
-  return ALL_GUIDED_REQUIREMENTS.map((requirement) => {
+  return guidedRequirementsIncludingSaved(book).map((requirement) => {
     const room = ensureGuidedRoom(book, requirement);
     if (requirement.requirementKey === "cabinetry") return cabinetryGuidedSelectionFromBook(book, room, requirement);
     const row = rowForRequirement(room, requirement);
@@ -13204,7 +15464,7 @@ function guidedSelectionsFromBook(book) {
     const guided = row.guidedSelection || {};
     const allowance = numberValue(guided.allowance ?? row.allowanceAmount ?? requirement.defaultAllowance);
     const priceState = guided.priceState || guided.priceStatus || (numberValue(guided.selectedPrice ?? row.selectedCost) > 0 ? PRICE_STATES.current : PRICE_STATES.pending);
-    const hasCurrentPrice = priceState === PRICE_STATES.current;
+    const hasCurrentPrice = isPricedState(priceState);
     const selectedPrice = hasCurrentPrice ? numberValue(guided.selectedPrice ?? row.selectedCost) : null;
     const variation = hasCurrentPrice ? numberValue(guided.variation ?? row.upgradeCost) : null;
     const complete = Boolean(row.selectedProduct || guided.productName || guided.selectedProduct || guided.configurationComplete);
@@ -13351,13 +15611,13 @@ function cabinetryProgressLabel(cabinetrySelection, legacyRows = []) {
   if ((cabinetrySelection.summary?.quoteRequiredItems || []).some((item) => /bench/i.test(item))) pending.push("benchtops pending");
   if ((cabinetrySelection.summary?.quoteRequiredItems || []).some((item) => /handle|opening/i.test(item))) pending.push("handles pending");
   const status = pending.length ? pending.join(" and ") : cabinetrySelection.summary?.complete ? "confirmed" : "ready to confirm";
-  return `${locations.length || 0} locations configured - ${suppliers.join("/") || "finishes"} selected - ${status}`;
+  return `${locations.length || 0} locations configured - ${cabinetryRoomProgress(locations).complete} of ${locations.length || 0} complete - ${suppliers.join("/") || "finishes"} selected - ${status}`;
 }
 
 function latestCabinetryDraftFromStorage(projectId = "") {
   if (typeof window === "undefined") return null;
   try {
-    const payload = JSON.parse(window.localStorage.getItem(CABINETRY_DRAFT_STORAGE_KEY) || "null");
+    const payload = JSON.parse(window.localStorage.getItem(browserTenantKey(CABINETRY_DRAFT_STORAGE_KEY)) || "null");
     if (payload?.selectionType !== CABINETRY_SELECTION_TYPE || payload?.workflowType !== CABINETRY_WORKFLOW_TYPE) return null;
     if (!projectId || payload.projectId !== projectId) return null;
     return payload;
@@ -13369,7 +15629,7 @@ function latestCabinetryDraftFromStorage(projectId = "") {
 function saveLatestCabinetryDraftToStorage(selection, projectId = "") {
   if (typeof window === "undefined" || !selection || !projectId) return;
   try {
-    window.localStorage.setItem(CABINETRY_DRAFT_STORAGE_KEY, JSON.stringify({
+    window.localStorage.setItem(browserTenantKey(CABINETRY_DRAFT_STORAGE_KEY), JSON.stringify({
       ...selection,
       projectId,
       selectionType: CABINETRY_SELECTION_TYPE,
@@ -13419,8 +15679,9 @@ function persistedSelectionForRequirement(selections = [], requirementKey = "") 
 }
 
 function pendingPriceSelections(selectionMap = new Map()) {
-  return ALL_GUIDED_REQUIREMENTS
-    .map((requirement) => ({ requirement, selection: selectionMap.get(requirement.requirementKey) }))
+  return [...selectionMap.entries()]
+    .map(([key, selection]) => ({ requirement: guidedRequirementByKey(key), selection }))
+    .filter(({ requirement }) => requirement)
     .filter(({ selection }) => selection?.selected_details?.variationPending);
 }
 
@@ -13560,13 +15821,15 @@ function entryDoorFurnitureCatalogueProducts(products = []) {
         ? attrs.finishOptions
         : String(product.finish || "").split(/[;,]/).map((item) => item.trim()).filter(Boolean);
       return {
-        id: product.product_code || product.productCode,
+        id: product.productId || product.product_id || product.product_code || product.productCode,
         productCode: product.product_code || product.productCode || "",
         supplier: product.supplier || product.manufacturer || "",
         brand: product.brand || product.supplier || "",
         productName: product.product_name || product.productName || "",
         model: product.model || "",
-        manufacturerSku: product.manufacturer_sku || "",
+        manufacturerSku: product.manufacturerSku || product.manufacturer_sku || product.sku || "",
+        sizeOptions: attrs.sizeOptions || (attrs.dimensions ? [attrs.dimensions] : []),
+        lockOptions: attrs.lockingOptions || (attrs.lockingType ? [attrs.lockingType] : []),
         range: product.range || "",
         dimensions: attrs.dimensions || "",
         fireRating: attrs.fireRating || "",
@@ -13741,7 +16004,7 @@ function entryDoorGlassOptions(product = null) {
   const model = entity.model || product?.model || attrs.design || "";
   const range = entity.range || product?.range || "";
   if (/hume/i.test(supplier) && /savoy 1200/i.test(range) && /^XS26-1200$/i.test(model)) {
-    return getEffectiveProductCatalogue({ familyKey: "entry-doors" })
+    const options = getEffectiveProductCatalogue({ familyKey: "entry-doors" })
       .products
       .filter((row) => row.attributes?.optionType === "entry-door-glass"
         && /hume/i.test(`${row.supplier} ${row.brand}`)
@@ -13759,10 +16022,11 @@ function entryDoorGlassOptions(product = null) {
         sourceUrl: row.officialProductUrl || row.sourceUrl || "",
       }))
       .filter((option) => option.name && !/^none$/i.test(option.name));
+    return ensureTranslucentEntryDoorGlass(options);
   }
   const detailed = attrs.glazingOptionDetails || attrs.glassOptionsDetailed || [];
   if (Array.isArray(detailed) && detailed.length) {
-    return detailed.map((option) => entryDoorGlassOption({
+    const options = detailed.map((option) => entryDoorGlassOption({
       name: option.name || option.title || "",
       code: option.code || option.supplierCode || option.name || "",
       classification: option.classification || option.type || "Supplier glass",
@@ -13774,8 +16038,9 @@ function entryDoorGlassOptions(product = null) {
       limitations: option.limitations || "Confirm safety glazing, BAL and regional availability before ordering.",
       sourceUrl: option.sourceUrl || entity.sourceUrl || entity.officialProductUrl || "",
     })).filter((option) => option.name && !/^none$/i.test(option.name));
+    return ensureTranslucentEntryDoorGlass(options);
   }
-  return entryDoorAttributeOptions(product, "glazingOptions", "")
+  const options = entryDoorAttributeOptions(product, "glazingOptions", "")
     .filter((option) => !/^none$/i.test(option) && !/glass options/i.test(option))
     .map((option) => entryDoorGlassOption({
       name: option,
@@ -13789,10 +16054,28 @@ function entryDoorGlassOptions(product = null) {
       limitations: "Unable to load the compatible supplier glass range - Retry",
       sourceUrl: entity.sourceUrl || entity.officialProductUrl || "",
     }));
+  return ensureTranslucentEntryDoorGlass(options);
+}
+
+function ensureTranslucentEntryDoorGlass(options = []) {
+  if (options.some((option) => /^translucent$/i.test(String(option?.name || "").trim()))) return options;
+  return [...options, entryDoorGlassOption({
+    name: "Translucent",
+    code: "Translucent",
+    classification: "Translucent glass",
+    privacy: "Higher privacy",
+    lightTransmission: "Diffuse natural light",
+    priceStatus: "Quote required",
+    limitations: "Confirm safety glazing, BAL and regional availability before ordering.",
+  })];
 }
 
 function entryDoorGlassByName(product = null, name = "") {
-  return entryDoorGlassOptions(product).find((option) => option.name === name) || null;
+  return entryDoorGlassOptions(product).find((option) => option.name === name) || (['Clear','Translucent','Frosted','Obscure/privacy','Grey tinted'].includes(name)?requestedEntryDoorGlass(name):null);
+}
+
+function requestedEntryDoorGlass(name) {
+  return {name,code:'',classification:'Requested glass type — supplier confirmation required',privacy:'Supplier confirmation required',priceStatus:'Quote required',verificationStatus:'customer_request',sampleImage:'',previewImage:''};
 }
 
 function entryDoorGlassMetadataMissing(product = null) {
@@ -13920,7 +16203,14 @@ function entryDoorSupplierOptions(products = []) {
   const map = new Map();
   products.forEach((product) => {
     const label = entryDoorSupplierLabel(product);
-    const existing = map.get(label) || { key: slug(label), label, count: 0, image: product.imageUrl || "" };
+    const hero = entryDoorSupplierHero(label);
+    const existing = map.get(label) || {
+      key: slug(label),
+      label,
+      count: 0,
+      image: hero?.image || product.imageUrl || "",
+      imageAlt: hero?.alt || "",
+    };
     existing.count += 1;
     if (!existing.image) existing.image = product.imageUrl || "";
     map.set(label, existing);
@@ -14030,7 +16320,6 @@ function windowHeaderForStep(step) {
   return {
     schedule: "Project Schedule",
     supplier: "Supplier",
-    systems: "Window Systems",
     defaults: "Project Defaults",
     windows: "Individual Windows",
     review: "Review & Confirm",
@@ -14040,7 +16329,6 @@ function windowHeaderForStep(step) {
 function windowStepStatus(step, { schedule, selectedSupplier, selectedColour, configuration, effectiveWindows, incomplete, canConfirm } = {}) {
   if (step === "schedule") return schedule?.isAvailable && schedule.count ? `${schedule.count} windows` : "";
   if (step === "supplier") return selectedSupplier?.label || "";
-  if (step === "systems") return effectiveWindows?.every((row) => row.system?.name) ? "Mapped" : "";
   if (step === "defaults") return selectedColour && configuration?.glassName && configuration?.screens && configuration?.hardware ? "Defaults set" : "";
   if (step === "windows") return effectiveWindows?.length ? `${effectiveWindows.filter((row) => row.hasOverride).length} overrides` : "";
   if (step === "review") return canConfirm && !incomplete?.length ? "Ready" : "";
@@ -14159,9 +16447,16 @@ function windowTypesLabel(product = {}) {
   return types.length ? types.join(", ") : product.configuration || "Window schedule driven";
 }
 
+// The canonical Job Setup Window Schedule only tracks a coarse opening type ("Window"), not the
+// finer style (Sliding/Awning/etc) WINDOW_SUPPLIER_LIBRARY's systems map is keyed by, so
+// supplier.systems[type] can no longer match once there is no per-style Window Systems step asking
+// the user to resolve that mismatch. Rather than leave every window stuck on a "Requires selection"
+// dead end, fall back to the supplier's own verified range - real, sourced data (their real name,
+// real inclusion status, real website), not an invented product match.
 function defaultSystemsByType(schedule = {}, supplierLabel = "") {
   const supplier = windowSupplierDefinition(supplierLabel);
-  return Object.fromEntries((schedule.types || []).map((type) => [type, supplier.systems?.[type] || { name: "Requires selection", status: "Selection required", url: supplier.website }]));
+  const fallback = { name: `${supplier.label} window & door range`, status: supplier.status || "Confirm with supplier", url: supplier.website };
+  return Object.fromEntries((schedule.types || []).map((type) => [type, supplier.systems?.[type] || fallback]));
 }
 
 function windowSystemsForSchedule(supplierLabel = "", schedule = {}, existing = {}) {
@@ -14169,21 +16464,32 @@ function windowSystemsForSchedule(supplierLabel = "", schedule = {}, existing = 
   return Object.fromEntries(Object.entries(defaults).map(([type, system]) => [type, { ...system, ...(existing?.[type] || {}) }]));
 }
 
-function windowTypeCounts(schedule = {}) {
-  return (schedule.items || []).reduce((counts, item) => ({ ...counts, [item.type]: (counts[item.type] || 0) + Number(item.quantity || 1) }), {});
-}
-
 function sumWindowScheduleQuantity(items = []) {
   return (items || []).reduce((sum, item) => sum + Math.max(0, Number(item.quantity || 0)), 0);
 }
 
+const FIXED_WINDOW_NOT_APPLICABLE = "Not applicable - fixed window";
+
 function effectiveWindowRows(schedule = {}, supplier = {}, configuration = {}, systemsByType = {}) {
   return (schedule.items || []).map((item) => {
     const override = configuration.overrides?.[item.id] || {};
-    const screenApplicable = OPENING_WINDOW_PATTERN.test(item.type || "");
-    const screen = override.screens || (screenApplicable ? configuration.screens : "Not applicable - fixed window");
+    // item.isFixed comes straight from AI Plan Takeoff's own "Window Type" style (opening.subType
+    // 'FG' - see lib/builders/windowScheduleProjection.js / takeoffSchedule.js). A fixed pane has
+    // no opening sash, so this compatibility rule takes precedence over any override or project
+    // default - a physical fact, not a selection a project default or an override can undo.
+    const screenApplicable = !item.isFixed;
+    const screen = item.isFixed ? FIXED_WINDOW_NOT_APPLICABLE : (override.screens || configuration.screens || "");
+    const hardware = item.isFixed ? FIXED_WINDOW_NOT_APPLICABLE : (override.hardware || configuration.hardware || "");
     const glass = override.glassName || configuration.glassName || "";
     const glassOption = windowGlassOptionsForSupplier(supplier.label).find((option) => option.name === glass) || {};
+    const selectedGlassClass = override.glassClass || glassOption.type || configuration.glassClass || "";
+    // Effective/documented Glass Type shown to the user and used for the wet-area check, per the
+    // required precedence: an individual override always wins; otherwise AI Plan Takeoff's own
+    // documented Glass Type is a physical fact and takes priority over an unselected/generic
+    // project default, which is only a placeholder until a real selection or documented value
+    // exists. Distinct from `glass` (the client's chosen supplier product), never overwrites it.
+    const documentedGlassType = override.glassName ? selectedGlassClass : (item.glassType || selectedGlassClass || "");
+    const isWetArea = WET_AREA_PATTERN.test(`${item.location} ${item.room || ""}`);
     const system = override.system || systemsByType[item.type] || supplier.systems?.[item.type] || {};
     return {
       ...item,
@@ -14198,15 +16504,21 @@ function effectiveWindowRows(schedule = {}, supplier = {}, configuration = {}, s
       frameColourHex: override.frameColourHex || configuration.frameColourHex || "#cbd5e1",
       frameColourSourceUrl: override.frameColourSourceUrl || configuration.frameColourSourceUrl || "",
       glass,
-      glassClass: override.glassClass || glassOption.type || configuration.glassClass || "",
+      glassClass: selectedGlassClass,
       glassStatus: glassOption.status || "",
+      documentedGlassType,
       screen,
       screenApplicable,
       screenStatus: /quote/i.test(screen) ? "Quote required" : "Included where applicable",
-      hardware: override.hardware || configuration.hardware || "",
+      hardware,
       notes: [item.takeoffNotes || item.notes, override.notes].filter(Boolean).join("; "),
       hasOverride: Boolean(Object.keys(override).filter((key) => override[key] !== undefined && override[key] !== "").length),
-      isWetArea: WET_AREA_PATTERN.test(`${item.location} ${item.room || ""}`),
+      isWetArea,
+      // Uses the canonical Job Setup Window Schedule's own Room/Location + the effective/documented
+      // Glass Type above (override > canonical Takeoff > project default). Never assumes a room is
+      // a wet area, and never fabricates a glass value - both inputs stay honestly blank until real
+      // data exists, so this simply never fires for an opening AI Plan Takeoff hasn't documented.
+      wetAreaGlassTypeWarning: Boolean(isWetArea && documentedGlassType && !OBSCURE_GLASS_TYPE_PATTERN.test(documentedGlassType)),
       origin: Object.keys(override).length ? "individual_override" : "project_default",
       priceStatus: /quote/i.test(system.status || "") ? "Quote required" : "Current Price",
       confirmationStatus: "confirmed",
@@ -14249,10 +16561,13 @@ function projectWindowScheduleSummary(input = {}, maybeProjectInfo = {}) {
       locations: [],
     };
   }
-  const normalisedItems = selected.rows
-    .map((item, index) => normaliseWindowScheduleItem(item, index))
-    .filter((item) => item.quantity > 0);
-  const items = groupWindowScheduleItems(normalisedItems);
+  // The canonical source (selected.items, from canonicalWindowScheduleFromTakeoffJob) is already
+  // one row per physical opening with a stable itemId, in canonical level order - grouping it like
+  // the reconstructed fallback sources would silently merge distinct openings that happen to share
+  // a type/size across different levels, which is exactly the bug this source exists to fix.
+  const items = selected.preNormalised
+    ? selected.items
+    : groupWindowScheduleItems(selected.rows.map((item, index) => normaliseWindowScheduleItem(item, index)).filter((item) => item.quantity > 0));
   const totalQuantity = sumWindowScheduleQuantity(items);
   const version = selected.version || "active-job-ai-plan-takeoff-window-schedule";
   return {
@@ -14268,7 +16583,9 @@ function projectWindowScheduleSummary(input = {}, maybeProjectInfo = {}) {
     items,
     windowIds: items.map((item) => item.id),
     types: Array.from(new Set(items.map((item) => item.type))).filter(Boolean),
-    locations: Array.from(new Set(items.map((item) => item.location))).filter(Boolean),
+    // The canonical Job Setup schedule doesn't track a room/location per opening - fall back to
+    // its level so this stays a real, non-fabricated value rather than reading blank.
+    locations: Array.from(new Set(items.map((item) => item.location || item.floor))).filter(Boolean),
   };
 }
 
@@ -14305,19 +16622,99 @@ function normaliseWindowScheduleItem(item = {}, index = 0) {
     takeoffNotes: notes,
     notes,
     planReference: item.planReference || item.plan_ref || item.reference || item.mark || item.itemId || "AI Plan Takeoff",
+    windowCode: item.windowCode || item.mark || item.code || "",
+    wallSystem: item.wallSystem || item.wallType || item.exteriorClassification || "",
+    areaM2: item.openingAreaM2 != null ? Number(item.openingAreaM2)
+      : item.totalOpeningAreaM2 != null ? Number(item.totalOpeningAreaM2)
+      : widthMm && heightMm ? Math.round((widthMm * heightMm / 1000000) * Number(item.quantity || item.qty || 1) * 100) / 100 : 0,
   };
 }
+
+// canonicalJobSetupWindowItem / sortWindowScheduleItemsByLevel / canonicalWindowScheduleFromTakeoffJob
+// live in lib/builders/windowScheduleProjection.js - shared with anything else that needs the same
+// Job Setup Window Schedule projected into Client Selections' item shape, and importable standalone
+// (no JSX) for unit testing.
 
 function windowScheduleSourceCandidates({ project = {}, projectInfo = {}, workbook = {}, snapshot = {} } = {}) {
   const metadata = project?.source_metadata || project?.metadata || project?.project_metadata || {};
   const candidates = [];
-  const add = (source, label, schedule, version) => {
-    const rows = windowScheduleRowsFromSource(schedule).filter(isTakeoffWindowScheduleRow);
+  const add = (source, label, schedule, version, rowFilter = null) => {
+    let rows = windowScheduleRowsFromSource(schedule).filter(isTakeoffWindowScheduleRow);
+    if (rowFilter) rows = rows.filter(rowFilter);
     if (rows.length) candidates.push({ source, label, rows, version: version || schedule?.version || schedule?.generatedAt || metadata.windowScheduleVersion || projectInfo?.windowScheduleVersion || "" });
   };
+  // The canonical source: the exact same Job Setup Window Schedule table (createJobSetupWindowSchedule)
+  // that Job Setup renders, rebuilt from the same saved AI Plan Takeoff job inputs. This is a stable,
+  // one-row-per-physical-opening schedule (itemId is the opening's own measurement id), unlike the
+  // bucketed/reconstructed candidates below - Client Selections must show the SAME physical windows
+  // Job Setup shows, not an independently re-aggregated set. Checked first so it wins whenever a
+  // takeoff job is attached; the older candidates remain as a fallback for jobs without one.
+  const jobSetupRows = workbook?.data?.inputDataSheet?.rows || {};
+  [
+    workbook?.aiPlanTakeoffJob,
+    workbook?.takeoffEngine?.aiPlanTakeoffJob,
+    workbook,
+    snapshot?.aiPlanTakeoffJob,
+  ].forEach((takeoffJob, index) => {
+    let projection = null;
+    try {
+      projection = canonicalWindowScheduleFromTakeoffJob({
+        completedWallRuns: takeoffJob?.completedWallRuns || [],
+        placedOpenings: takeoffJob?.placedOpenings || [],
+        pixelsPerMm: takeoffJob?.pixelsPerMm,
+        sheetLevels: takeoffJob?.sheetLevels || {},
+        jobSetupRows,
+      });
+    } catch (scheduleError) {
+      console.warn("[Client Selections] canonical Job Setup window schedule could not be rebuilt.", scheduleError?.message || scheduleError);
+      return;
+    }
+    if (!projection) return;
+    candidates.push({
+      source: `job_setup_canonical_${index + 1}`,
+      label: "Job Setup Window Schedule",
+      rows: projection.rows,
+      items: projection.items,
+      version: "job-setup-canonical",
+      preNormalised: true,
+    });
+  });
   add("project_metadata", "Project metadata window schedule", metadata.windowSchedule || metadata.windowsSchedule);
   add("project_info", "Project info window schedule", projectInfo?.windowSchedule || projectInfo?.windowsSchedule);
   add("project_info_measurements", "AI Plan Takeoff exported project measurements", projectInfo?.basicProjectMeasurements);
+  // AI Plan Takeoff never saves its window schedule - the schedule object is derived state
+  // recomputed on every render. What IS saved is placedOpenings, so rebuild the schedule from
+  // those with the takeoff's own grouping. This is the source that actually holds the job's
+  // windows; the workbook Windows & Doors sheet only has them if an estimator keyed them in.
+  // Carry each job's sheet-to-level assignments alongside its openings: the window schedule groups
+  // by building level, and a sheet number cannot stand in for one.
+  [
+    [workbook?.aiPlanTakeoffJob?.placedOpenings, workbook?.aiPlanTakeoffJob?.sheetLevels],
+    [workbook?.takeoffEngine?.aiPlanTakeoffJob?.placedOpenings, workbook?.takeoffEngine?.aiPlanTakeoffJob?.sheetLevels],
+    [workbook?.placedOpenings, workbook?.sheetLevels],
+    [snapshot?.aiPlanTakeoffJob?.placedOpenings, snapshot?.aiPlanTakeoffJob?.sheetLevels],
+  ].forEach(([openings, sheetLevels], index) => {
+    if (!Array.isArray(openings) || !openings.length) return;
+    let windows = [];
+    try {
+      windows = createWindowAndDoorSchedules(openings, sheetLevels || {}).windows || [];
+    } catch (scheduleError) {
+      console.warn("[Client Selections] placed openings could not be rebuilt into a window schedule.", scheduleError?.message || scheduleError);
+      return;
+    }
+    add(`takeoff_openings_${index + 1}`, "Window schedule rebuilt from AI Plan Takeoff openings", { windows });
+  });
+  // The Windows & Doors Schedule the takeoff writes lives on the workbook as windowsDoors.
+  // That sheet ships as a ~681-row price book of every stock size with a blank quantity, and
+  // only the rows the estimator actually filled in belong to this job. This is the same rule
+  // the estimate calculations use to decide a window/door line is real.
+  [
+    ["workbook_windows_doors", workbook?.windowsDoors],
+    ["workbook_worksheet_windows_doors", workbook?.worksheet?.windowsDoors],
+    ["workbook_estimate_worksheet_windows_doors", workbook?.estimateWorksheet?.windowsDoors],
+    ["snapshot_windows_doors", snapshot?.windowsDoors],
+    ["snapshot_workbook_windows_doors", snapshot?.workbook?.windowsDoors],
+  ].forEach(([source, schedule]) => add(source, "Windows & Doors Schedule from AI Plan Takeoff", schedule, "", scheduledWindowDoorRow));
   [
     workbook?.aiPlanTakeoffJob,
     workbook?.takeoffEngine?.aiPlanTakeoffJob,
@@ -14347,6 +16744,12 @@ function windowScheduleRowsFromSource(source = {}) {
   if (Array.isArray(source.projectTotals?.windows)) return source.projectTotals.windows;
   if (Array.isArray(source.currentSheet?.windows)) return source.currentSheet.windows;
   return [];
+}
+
+// A workbook Windows & Doors row counts only when the estimator entered a quantity against
+// it. Blank-quantity rows are unused price-book lines, not openings in this house.
+function scheduledWindowDoorRow(item = {}) {
+  return numberValue(item.quantity ?? item.qty) > 0;
 }
 
 function isTakeoffWindowScheduleRow(item = {}) {
@@ -14437,10 +16840,19 @@ function entryDoorAttributeOptions(product, key, fallback = "") {
   return Array.from(new Set(withFallback.map((item) => String(item || "").trim()).filter(Boolean)));
 }
 
+function entryDoorSizeOptions(product) {
+  const model = String(product?.model || product?.metadata?.productEntity?.model || "").trim().toUpperCase();
+  if (model === "SUN GL") {
+    return ["2040 x 820 x 40", "2040 x 1200 x 40", "2400 x 1200 x 40", "Custom size"];
+  }
+  return entryDoorAttributeOptions(product, "sizes", product?.size);
+}
+
 function entryDoorHeaderForStep(step) {
+  if (step === "glass-type") return "Choose glass type";
+  if (step === "configuration") return "Choose door configuration";
   if (step === "review") return "Review & Confirm";
   if (step === "hardware") return "Choose door furniture & locking";
-  if (step === "glazing") return "Choose glass option";
   if (step === "finish") return "Choose colour / finish";
   if (step === "size") return "Choose size / variant";
   if (step === "design") return "Choose actual door design";
@@ -14780,13 +17192,24 @@ function applicableGuidedRequirementsForBook(book = null) {
   ];
 }
 
+function guidedRequirementsIncludingSaved(book = {}) {
+  const requirements = new Map(ALL_GUIDED_REQUIREMENTS.map((item) => [item.requirementKey, item]));
+  (book?.rooms || []).flatMap((room) => room.rows || []).forEach((row) => {
+    const key = row.guidedRequirementKey || row.guidedSelection?.requirementKey;
+    if (!key || requirements.has(key)) return;
+    const requirement = guidedRequirementByKey(key);
+    if (requirement) requirements.set(key, { ...requirement, label: row.guidedSelection?.requirementLabel || requirement.label });
+  });
+  return [...requirements.values()];
+}
+
 function requirementsForGuidedArea(areaKey, book = null) {
   if (areaKey === "exterior") return EXTERIOR_REQUIREMENTS.filter((requirement) => requirementAppliesToBook(requirement, book));
   if (areaKey === "interior") return INTERIOR_REQUIREMENTS;
   if (areaKey === "kitchen") return KITCHEN_REQUIREMENTS;
   if (areaKey === "appliances") return APPLIANCE_REQUIREMENTS;
   if (areaKey === "plumbing-fixtures") return PLUMBING_FIXTURE_REQUIREMENTS;
-  return ALL_GUIDED_REQUIREMENTS.filter((requirement) => requirement.areaKey === areaKey);
+  return guidedRequirementsIncludingSaved(book).filter((requirement) => requirement.areaKey === areaKey);
 }
 
 function requirementAppliesToBook(requirement, book = null) {
@@ -14952,6 +17375,25 @@ function legacyCabinetryRowsForRoom(room = {}) {
 
 function rowMatchesRequirement(row, requirement) {
   if (INTERNAL_SELECTION_KEYS.includes(requirement.requirementKey)) return internalRequirementMatchesRow(row, requirement.requirementKey);
+  // A row a different requirement has saved into is never this requirement's row, whatever its
+  // label says (an entry door written into the "Bricks" row is not a brick).
+  if (rowOwnedByOtherRequirement(row, requirement.requirementKey, ROW_OWNER_ALIASES[requirement.requirementKey] || [])) return false;
+  return rowLabelMatchesRequirement(row, requirement);
+}
+
+// Legacy owner keys that denote the same requirement.
+const ROW_OWNER_ALIASES = { "entry-door": ["entry-doors"], "garage-door": ["garage-doors"], cladding: ["external-cladding"] };
+
+// When a requirement saves into a row whose label names another requirement (a row left mislabelled
+// by the old Entry Door defect), the saved row takes this requirement's label.
+function guidedRowLabelFor(row, requirement) {
+  if (!row?.item || INTERNAL_SELECTION_KEYS.includes(requirement.requirementKey) || rowLabelMatchesRequirement(row, requirement)) return row?.item;
+  const labelOwner = ALL_GUIDED_REQUIREMENTS.find((candidate) => candidate.requirementKey !== requirement.requirementKey && rowLabelMatchesRequirement(row, candidate));
+  return labelOwner ? requirement.label : row.item;
+}
+
+function rowLabelMatchesRequirement(row, requirement) {
+  if (INTERNAL_SELECTION_KEYS.includes(requirement.requirementKey)) return false;
   const key = slug(row?.item || "");
   const dynamicAliases = [requirement.requirementKey, requirement.familyKey, ...(requirement.projectAliases || [])].map(slug).filter(Boolean);
   const aliases = {
@@ -14997,6 +17439,8 @@ function sizeFromOption(option) {
 function handleGuidedBack({
   guidedScreen,
   guidedArea,
+  guidedSide = "interior",
+  onCategoryRoute = null,
   guidedRequirement,
   guidedBrickStep,
   guidedEntryDoorStep,
@@ -15070,10 +17514,10 @@ function handleGuidedBack({
     }
     if (guidedRequirement?.requirementKey === "entry-door") {
       if (guidedEntryDoorStep === "hardware") {
-        setGuidedEntryDoorStep("glazing");
+        setGuidedEntryDoorStep("glass-type");
         return;
       }
-      if (guidedEntryDoorStep === "glazing") {
+      if (guidedEntryDoorStep === "glass-type") {
         setGuidedEntryDoorStep("finish");
         return;
       }
@@ -15243,7 +17687,12 @@ function handleGuidedBack({
       window.dispatchEvent(event);
       if (event.detail.handled) return;
     }
-    if (guidedRequirement?.areaKey === "exterior" || guidedArea === "exterior") {
+    const hubCategory = clientSelectionCategoryForRequirement(guidedRequirement?.requirementKey, guidedSide);
+    if (hubCategory?.route === "hub") {
+      setGuidedArea(hubCategory.key);
+      setGuidedScreen("category");
+      onCategoryRoute?.(hubCategory.key, "", guidedSide);
+    } else if (guidedRequirement?.areaKey === "exterior" || guidedArea === "exterior") {
       setGuidedScreen("exterior");
     } else if (guidedRequirement?.areaKey === "appliances" || guidedArea === "appliances") {
       setGuidedScreen("appliances");
@@ -15264,6 +17713,14 @@ function handleGuidedBack({
     setGuidedArea("interior");
     return;
   }
+  if (guidedScreen === "category" || guidedScreen === "plumbing-fixtures") {
+    const category = CLIENT_SELECTION_CATEGORY_BY_KEY[guidedScreen === "category" ? guidedArea : "plumbing-fixtures"];
+    const side = sideForCategory(category, guidedSide);
+    setGuidedScreen(side);
+    setGuidedArea(side);
+    onCategoryRoute?.("", "", side);
+    return;
+  }
   if (guidedScreen === "interior" || guidedScreen === "exterior" || guidedScreen === "review") {
     setGuidedScreen("areas");
     setGuidedArea("");
@@ -15281,7 +17738,7 @@ const styles = `
   .sidebar { background: #071827; color: #e8edf3; padding: 16px; overflow: auto; max-height: 100vh; position: sticky; top: 0; }
   .brandStrip { display: grid; grid-template-columns: 54px 1fr; gap: 10px; align-items: center; margin-bottom: 18px; }
   .brandStrip img { width: 54px; height: 44px; object-fit: contain; background: white; border-radius: 6px; }
-  .brandStrip span, .sidebar label { color: #9fb2c7; font-size: 12px; }
+  .brandStrip span, .sidebar label { color: #9fb2c7; font-size: 16px; }
   .sidebar label { display: grid; gap: 6px; margin-bottom: 12px; font-weight: 700; }
   select, input, textarea { width: 100%; border: 1px solid #cbd5e1; border-radius: 4px; background: white; color: #0f172a; padding: 8px 9px; font: inherit; }
   .sidebar select, .sidebar input { background: #102235; color: white; border-color: #284258; }
@@ -15300,25 +17757,39 @@ const styles = `
   .bannerActions button:first-child { background: #071827; color: #ffffff; }
   .guidedShell { display: grid; gap: 14px; width: 100%; box-sizing: border-box; }
   .guidedBudgetDock { position: sticky; top: 0; z-index: 18; display: grid; grid-template-columns: minmax(170px, .9fr) repeat(3, minmax(160px, 1fr)); gap: 10px; align-items: stretch; border: 1px solid #d7deea; background: rgba(255,255,255,.96); border-radius: 8px; padding: 12px; box-shadow: 0 8px 24px rgba(15,23,42,.06); }
-  .guidedBudgetDock > div:first-child { display: grid; gap: 4px; align-content: center; color: #475569; font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; }
+  .guidedBudgetDock > div:first-child { display: grid; gap: 4px; align-content: center; color: #475569; font-size: 16px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; }
   .guidedBudgetDock > div:first-child strong { color: #071827; font-size: 18px; letter-spacing: 0; text-transform: none; }
   .guidedMiniTotal { display: grid; gap: 4px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 11px; background: #f8fafc; min-width: 0; }
-  .guidedMiniTotal span { color: #64748b; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; }
+  .guidedMiniTotal span { color: #64748b; font-size: 16px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; }
   .guidedMiniTotal strong { color: #071827; font-size: 17px; font-weight: 950; }
   .guidedMiniTotal.bad { border-color: #fed7aa; background: #fff7ed; }
   .guidedMiniTotal.good { border-color: #bbf7d0; background: #f0fdf4; }
   .guidedMiniTotal.warn { border-color: #fde68a; background: #fffbeb; }
   .guidedIntro { display: grid; gap: 5px; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 18px; }
-  .guidedIntro span, .guidedSectionHeader span, .guidedChecklistHeader span { color: #0f766e; font-size: 12px; font-weight: 950; text-transform: uppercase; letter-spacing: .08em; }
+  .guidedIntro span, .guidedSectionHeader span, .guidedChecklistHeader span { color: #0f766e; font-size: 16px; font-weight: 950; text-transform: uppercase; letter-spacing: .08em; }
   .guidedIntro strong, .guidedSectionHeader strong, .guidedChecklistHeader strong { color: #071827; font-size: 26px; line-height: 1.1; font-weight: 950; }
-  .guidedIntro em { color: #64748b; font-style: normal; font-size: 12px; font-weight: 750; }
+  .guidedIntro em { color: #64748b; font-style: normal; font-size: 16px; font-weight: 750; }
   .guidedCompletionPanel { display: grid; gap: 14px; border: 1px solid #bbf7d0; border-radius: 8px; background: #f0fdf4; padding: 20px; }
-  .guidedCompletionPanel > span { color: #15803d; font-size: 12px; font-weight: 950; text-transform: uppercase; letter-spacing: .08em; }
+  .guidedCompletionPanel > span { color: #15803d; font-size: 16px; font-weight: 950; text-transform: uppercase; letter-spacing: .08em; }
   .guidedCompletionPanel > strong { color: #071827; font-size: 28px; line-height: 1.1; font-weight: 950; }
   .guidedCompletionPanel p { margin: 0; color: #475569; font-weight: 800; }
-  .guidedCompletionActions { display: flex; flex-wrap: wrap; gap: 8px; }
-  .guidedCompletionActions button { border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: #071827; font-weight: 900; }
-  .guidedCompletionActions button.primary { border-color: #0f766e; background: #0f766e; color: #ffffff; }
+  .guidedCompletionActions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .guidedCompletionActions button { border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: #071827; font-weight: 900; min-height: 42px; padding: 8px 16px; }
+  .guidedCompletionActions button.secondary { border-color: #cbd5e1; background: #f8fafc; color: #334155; font-weight: 850; }
+  .guidedCompletionActions button.primary { border: none; background: #0f766e; color: #ffffff; box-shadow: 0 6px 16px rgba(15,118,110,.35); }
+  .guidedCompletionActions button.primary:hover { background: #0d5c56; }
+  /* The progression action (Next / Next Room / Finish Cabinetry) is the primary path through
+     the workflow on every stage, not only the last one - it needs to read as unmistakably the
+     main action next to the visually secondary Previous/Save Draft controls beside it. */
+  .guidedCompletionActions button.progressAction { font-size: 16px; padding: 10px 22px; margin-left: auto; }
+  .cabinetryCopyPantryButton { min-height: 46px; padding: 10px 20px; font-weight: 950; }
+  .cabinetryCopyPantryButton.primary { border: none; background: #7c3aed; color: #ffffff; box-shadow: 0 6px 18px rgba(124,58,237,.35); }
+  .cabinetryCopyPantryButton.primary:hover { background: #6d28d9; }
+  .cabinetryMissingRequirements { display: grid; gap: 8px; border: 2px solid #f59e0b; border-radius: 8px; background: #fffbeb; color: #92400e; padding: 14px 16px; }
+  .cabinetryMissingRequirements strong { font-size: 16px; }
+  .cabinetryMissingRequirements ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+  .cabinetryMissingRequirements li button { min-height: 38px; border: 1px solid #d97706; border-radius: 8px; background: #ffffff; color: #92400e; padding: 8px 12px; font-weight: 900; text-align: left; width: 100%; }
+  .cabinetryMissingRequirements li button:hover { background: #fef3c7; }
   .guidedAreaGrid, .guidedCategoryGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; }
   .guidedImageCard { min-height: clamp(300px, 22vw, 360px); position: relative; overflow: hidden; display: grid; align-content: start; gap: 8px; border: 1px solid #d7deea; border-radius: 8px; padding: 16px; background: #f8fafc; color: #ffffff; text-align: left; box-shadow: 0 14px 30px rgba(15,23,42,.10); cursor: pointer; }
   .guidedImageCard img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 1; filter: brightness(1.08) saturate(1.08); transition: transform .22s ease; pointer-events: none; }
@@ -15338,6 +17809,9 @@ const styles = `
   .guidedImageCard.disabled { cursor: default; }
   .guidedImageCard.recentlyCompleted { outline: 3px solid #14b8a6; box-shadow: 0 0 0 6px rgba(20,184,166,.2), 0 22px 42px rgba(15,23,42,.18); }
   .guidedImageCardInfo { position: relative; z-index: 1; display: grid; justify-items: start; width: 100%; pointer-events: none; }
+  .guidedImageCardMeta { display: grid; gap: 4px; justify-items: start; margin-top: 8px; max-width: min(92%, 360px); border-radius: 8px; background: rgba(15,23,42,.62); color: #ffffff; padding: 7px 10px; font-size: 16px; line-height: 1.3; font-weight: 700; }
+  .guidedImageCardMeta b { font-size: 16px; font-weight: 950; letter-spacing: .03em; text-transform: uppercase; color: #a7f3d0; }
+  .guidedCategoryGroup + .guidedCategoryGroup { margin-top: 22px; }
   .guidedImageCardTitle { justify-self: start; width: fit-content; max-width: min(92%, 360px); border-radius: 8px; background: rgba(15,118,110,.76); color: #ffffff; padding: 8px 11px; font-size: 28px; line-height: 1.05; font-weight: 950; box-shadow: 0 8px 20px rgba(15,23,42,.18); }
   .guidedChecklistHeader { display: flex; justify-content: space-between; gap: 14px; align-items: flex-start; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 16px; }
   .guidedTotals { display: grid; grid-template-columns: repeat(3, minmax(140px, 1fr)); gap: 8px; min-width: 460px; }
@@ -15350,9 +17824,9 @@ const styles = `
   .guidedRequirementRow div:nth-child(3) { display: grid; gap: 4px; min-width: 0; }
   .guidedRequirementRow div:nth-child(3) strong { font-size: 17px; font-weight: 950; }
   .guidedRequirementRow div:nth-child(3) span { color: #475569; font-weight: 750; }
-  .guidedRequirementRow div:nth-child(3) em { color: #92400e; font-style: normal; font-size: 12px; font-weight: 850; }
-  .guidedRowMoney { display: grid; gap: 4px; color: #475569; font-size: 13px; font-weight: 800; }
-  .guidedRowMoney b { color: #071827; font-size: 15px; }
+  .guidedRequirementRow div:nth-child(3) em { color: #92400e; font-style: normal; font-size: 16px; font-weight: 850; }
+  .guidedRowMoney { display: grid; gap: 4px; color: #475569; font-size: 16px; font-weight: 800; }
+  .guidedRowMoney b { color: #071827; font-size: 16px; }
   .guidedRequirementRow button { border-radius: 8px; background: #0f766e; color: #ffffff; }
   .guidedStatusDot { width: 24px; height: 24px; border: 2px solid #cbd5e1; border-radius: 999px; display: inline-grid; place-items: center; font-size: 13px; font-weight: 950; background: #f1f5f9; color: #64748b; }
   .guidedStatusDot.green { border-color: #22c55e; background: #dcfce7; color: #15803d; }
@@ -15372,7 +17846,7 @@ const styles = `
   .entryDoorShowroom .guidedSupplierCard img,
   .entryDoorShowroom .guidedSupplierCard > .entryDoorImageUnavailable { height: 320px; min-height: 320px; aspect-ratio: auto; object-fit: contain; object-position: center; background: #f8fafc; padding: 12px; box-sizing: border-box; }
   .guidedSupplierCard span { padding: 0 14px; color: #071827; font-size: 20px; font-weight: 950; }
-  .guidedSupplierCard strong { padding: 0 14px; color: #64748b; font-size: 13px; font-weight: 850; }
+  .guidedSupplierCard strong { padding: 0 14px; color: #64748b; font-size: 16px; font-weight: 850; }
   .guidedEmptyCatalogue { display: grid; gap: 10px; align-content: center; justify-items: start; min-height: 260px; border: 1px dashed #cbd5e1; background: #f8fafc; border-radius: 8px; padding: 26px; }
   .guidedEmptyCatalogue strong { color: #071827; font-size: 24px; font-weight: 950; }
   .guidedEmptyCatalogue span { color: #475569; font-weight: 750; }
@@ -15383,17 +17857,17 @@ const styles = `
   .applianceNavActions button { width: auto; background: #ffffff; color: #0f172a; border: 1px solid #cbd5e1; }
   .applianceBrandGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
   .applianceBrandCard { display: grid; gap: 8px; align-content: start; min-height: 220px; padding: 0 0 12px; overflow: hidden; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; color: #0f172a; text-align: left; }
-  .applianceBrandCard img, .applianceBrandCard > span { width: 100%; aspect-ratio: 16 / 9; object-fit: contain; background: #f1f5f9; color: #475569; display: grid; place-items: center; padding: 14px; box-sizing: border-box; font-size: 12px; font-weight: 900; text-align: center; }
+  .applianceBrandCard img, .applianceBrandCard > span { width: 100%; aspect-ratio: 16 / 9; object-fit: contain; background: #f1f5f9; color: #475569; display: grid; place-items: center; padding: 14px; box-sizing: border-box; font-size: 16px; font-weight: 900; text-align: center; }
   .applianceBrandCard strong, .applianceBrandCard em, .applianceBrandCard small { padding: 0 12px; }
   .applianceBrandCard strong { font-size: 18px; font-weight: 950; }
-  .applianceBrandCard em, .applianceBrandCard small { color: #64748b; font-style: normal; font-size: 13px; font-weight: 850; }
+  .applianceBrandCard em, .applianceBrandCard small { color: #64748b; font-style: normal; font-size: 16px; font-weight: 850; }
   .applianceBrandCard button { margin: 2px 12px 0; width: auto; }
   .applianceBrandLogoText { min-height: 112px; font-size: 28px !important; letter-spacing: 0; }
   .applianceModeGrid, .applianceTypeGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin: 12px 0; }
   .applianceModeGrid button, .applianceTypeCard { display: grid; gap: 6px; min-height: 104px; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; color: #0f172a; padding: 12px; text-align: left; }
   .applianceModeGrid button.selected, .applianceTypeCard:hover { border-color: #0f766e; box-shadow: 0 0 0 3px rgba(15,118,110,.12); }
   .applianceModeGrid strong, .applianceTypeCard strong { font-size: 16px; font-weight: 950; line-height: 1.2; }
-  .applianceModeGrid span, .applianceTypeCard em { color: #64748b; font-style: normal; font-size: 13px; font-weight: 850; line-height: 1.35; }
+  .applianceModeGrid span, .applianceTypeCard em { color: #64748b; font-style: normal; font-size: 16px; font-weight: 850; line-height: 1.35; }
   .applianceTypeCard.disabled { opacity: .68; cursor: not-allowed; background: #f8fafc; }
   .applianceTypeIcon { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 8px; background: #e0f2fe; color: #075985; font-weight: 950; }
   .applianceBrandSummary, .applianceBuildFlow, .appliancePackageList, .applianceSelectionSummary { display: grid; gap: 12px; }
@@ -15402,25 +17876,25 @@ const styles = `
   .applianceSummaryRows { display: grid; gap: 8px; }
   .applianceSummaryRows > div { display: grid; grid-template-columns: minmax(120px, .5fr) minmax(180px, 1.1fr) minmax(96px, .35fr); gap: 10px; align-items: center; border: 1px solid #e2e8f0; border-radius: 8px; background: #ffffff; padding: 9px; }
   .applianceSummaryRows > div.selected { border-color: #99f6e4; background: #f0fdfa; }
-  .applianceSummaryRows strong { color: #0f172a; font-size: 14px; }
-  .applianceSummaryRows span, .applianceSummaryRows em { color: #475569; font-size: 13px; font-style: normal; font-weight: 800; line-height: 1.35; }
+  .applianceSummaryRows strong { color: #0f172a; font-size: 16px; }
+  .applianceSummaryRows span, .applianceSummaryRows em { color: #475569; font-size: 16px; font-style: normal; font-weight: 800; line-height: 1.35; }
   .appliancePackageCard { display: grid; gap: 10px; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 14px; color: #0f172a; }
   .appliancePackageHeader { display: grid; grid-template-columns: 126px minmax(0, 1fr); gap: 12px; align-items: center; }
-  .appliancePackageHeader img, .appliancePackageHeader > span, .applianceModelLogo img, .applianceModelLogo span { display: grid; place-items: center; width: 100%; aspect-ratio: 16 / 7; object-fit: contain; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; box-sizing: border-box; color: #334155; font-size: 13px; font-weight: 950; }
+  .appliancePackageHeader img, .appliancePackageHeader > span, .applianceModelLogo img, .applianceModelLogo span { display: grid; place-items: center; width: 100%; aspect-ratio: 16 / 7; object-fit: contain; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; box-sizing: border-box; color: #334155; font-size: 16px; font-weight: 950; }
   .appliancePackageHeader strong { display: block; font-size: 18px; font-weight: 950; line-height: 1.2; }
-  .appliancePackageHeader em { display: block; margin-top: 4px; color: #64748b; font-style: normal; font-size: 13px; font-weight: 850; }
+  .appliancePackageHeader em { display: block; margin-top: 4px; color: #64748b; font-style: normal; font-size: 16px; font-weight: 850; }
   .appliancePackageComponents { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; }
   .appliancePackageComponents div { display: grid; gap: 4px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 9px; background: #f8fafc; }
   .appliancePackageComponents img { width: 100%; aspect-ratio: 4 / 3; object-fit: contain; background: #ffffff; border-radius: 6px; }
   .appliancePackageComponents small { display: grid; place-items: center; min-height: 96px; background: #ffffff; color: #64748b; font-weight: 850; text-align: center; }
-  .appliancePackageComponents span, .appliancePackageComponents em { color: #475569; font-size: 12px; font-style: normal; font-weight: 850; line-height: 1.3; }
+  .appliancePackageComponents span, .appliancePackageComponents em { color: #475569; font-size: 16px; font-style: normal; font-weight: 850; line-height: 1.3; }
   .appliancePackageDetails { display: grid; gap: 10px; border: 1px solid #99f6e4; border-radius: 8px; background: #f0fdfa; padding: 14px; }
-  .appliancePackageDetails > div:first-child span { color: #0f766e; font-size: 11px; font-weight: 950; text-transform: uppercase; }
+  .appliancePackageDetails > div:first-child span { color: #0f766e; font-size: 16px; font-weight: 950; text-transform: uppercase; }
   .appliancePackageDetails > div:first-child strong { display: block; color: #0f172a; font-size: 20px; line-height: 1.2; }
   .appliancePackageDetails > div:first-child em { color: #475569; font-style: normal; font-weight: 850; }
   .applianceModelCard.selected { border-color: #0f766e; box-shadow: 0 0 0 3px rgba(15,118,110,.14); }
   .applianceModelLogo { min-height: 58px; display: flex; align-items: center; }
-  .applianceImageFallback { display: grid; place-items: center; width: 100%; min-height: 180px; aspect-ratio: 16 / 10; padding: 16px; box-sizing: border-box; background: #f1f5f9; color: #475569; font-size: 12px; font-weight: 900; text-align: center; }
+  .applianceImageFallback { display: grid; place-items: center; width: 100%; min-height: 180px; aspect-ratio: 16 / 10; padding: 16px; box-sizing: border-box; background: #f1f5f9; color: #475569; font-size: 16px; font-weight: 900; text-align: center; }
   .applianceImageFallback.large { min-height: 320px; aspect-ratio: auto; }
   .applianceDetailsPanel { display: grid; gap: 12px; }
   .applianceDetailsHero { display: grid; grid-template-columns: minmax(260px, .9fr) minmax(320px, 1.1fr); gap: 18px; align-items: start; }
@@ -15429,20 +17903,20 @@ const styles = `
   .applianceDetailsHero p { color: #334155; font-weight: 700; line-height: 1.45; }
   .applianceDetailsHero dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; margin: 14px 0; }
   .applianceDetailsHero dl div { border: 1px solid #e2e8f0; border-radius: 8px; padding: 9px; background: #f8fafc; }
-  .applianceDetailsHero dt { color: #64748b; font-size: 11px; font-weight: 900; text-transform: uppercase; }
+  .applianceDetailsHero dt { color: #64748b; font-size: 16px; font-weight: 900; text-transform: uppercase; }
   .applianceDetailsHero dd { margin: 4px 0 0; color: #0f172a; font-weight: 850; }
   .applianceEmptyCatalogue { min-height: 160px; }
   .brickContextBar { border: 1px solid #d7deea; background: #f8fafc; border-radius: 8px; padding: 10px 12px; color: #334155; font-weight: 900; }
   .guidedProductGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 14px; }
   .externalLightingScheduleSummary, .lightingSchedulePanel, .lightingAssignment { display: grid; gap: 12px; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 14px; }
   .externalLightingScheduleSummary > div:first-child { display: grid; gap: 4px; }
-  .externalLightingScheduleSummary span, .lightingFilters span, .lightingLocationRow span, .lightingScheduleHeader span { color: #0f766e; font-size: 11px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
+  .externalLightingScheduleSummary span, .lightingFilters span, .lightingLocationRow span, .lightingScheduleHeader span { color: #0f766e; font-size: 16px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
   .externalLightingScheduleSummary strong, .lightingScheduleHeader h3 { color: #071827; font-size: 22px; line-height: 1.15; font-weight: 950; }
   .lightingCategoryGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
   .lightingCategoryGrid button { display: grid; gap: 4px; min-height: 72px; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; color: #071827; padding: 11px; text-align: left; }
   .lightingCategoryGrid button.selected { border-color: #0f766e; background: #f0fdfa; box-shadow: inset 0 0 0 1px #0f766e; }
-  .lightingCategoryGrid strong { color: #071827; font-size: 15px; line-height: 1.15; }
-  .lightingCategoryGrid span { color: #64748b; font-size: 12px; font-weight: 850; }
+  .lightingCategoryGrid strong { color: #071827; font-size: 16px; line-height: 1.15; }
+  .lightingCategoryGrid span { color: #64748b; font-size: 16px; font-weight: 850; }
   .lightingFilters { display: grid; grid-template-columns: minmax(220px, 1.1fr) repeat(3, minmax(150px, .7fr)); gap: 10px; align-items: end; border: 1px solid #d7deea; border-radius: 8px; background: #f8fafc; padding: 12px; }
   .lightingFilters label, .lightingLocationRow label { display: grid; gap: 5px; min-width: 0; }
   .lightingFilters input, .lightingFilters select, .lightingLocationRow input, .lightingLocationRow select { width: 100%; min-width: 0; border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: #071827; padding: 10px; font-weight: 800; }
@@ -15451,19 +17925,19 @@ const styles = `
   .lightingImageButton { width: 100%; min-height: 0; border: 0; background: #eef2f6; padding: 0; overflow: hidden; }
   .lightingImageButton img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: contain; background: #eef2f6; }
   .lightingProductCard strong { display: block; color: #071827; line-height: 1.2; }
-  .lightingProductCard span { display: block; margin-top: 3px; color: #64748b; font-size: 12px; font-weight: 850; }
-  .lightingProductCard a { color: #0f766e; font-size: 13px; font-weight: 900; }
+  .lightingProductCard span { display: block; margin-top: 3px; color: #64748b; font-size: 16px; font-weight: 850; }
+  .lightingProductCard a { color: #0f766e; font-size: 16px; font-weight: 900; }
   .lightingBadges { display: flex; gap: 6px; flex-wrap: wrap; align-content: start; }
-  .lightingBadges span { margin: 0; border: 1px solid #cbd5e1; border-radius: 999px; background: #ffffff; color: #334155; padding: 4px 8px; font-size: 11px; line-height: 1; }
+  .lightingBadges span { margin: 0; border: 1px solid #cbd5e1; border-radius: 999px; background: #ffffff; color: #334155; padding: 4px 8px; font-size: 16px; line-height: 1; }
   .lightingSelectedProduct { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 14px; align-items: start; }
   .lightingSelectedProduct img { width: 100%; aspect-ratio: 4 / 3; object-fit: contain; border-radius: 8px; background: #eef2f6; }
   .lightingSelectedProduct dl { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 0; }
   .lightingSelectedProduct dl div { border: 1px solid #e2e8f0; border-radius: 8px; padding: 9px; min-width: 0; }
-  .lightingSelectedProduct dt { color: #64748b; font-size: 11px; font-weight: 950; text-transform: uppercase; }
+  .lightingSelectedProduct dt { color: #64748b; font-size: 16px; font-weight: 950; text-transform: uppercase; }
   .lightingSelectedProduct dd { margin: 3px 0 0; color: #071827; font-weight: 900; overflow-wrap: anywhere; }
   .lightingQuantityPanel { display: grid; grid-template-columns: auto 38px 90px 38px minmax(110px, auto); gap: 8px; align-items: center; justify-content: start; }
   .lightingQuantityPanel.compact { grid-template-columns: 34px 70px 34px; }
-  .lightingQuantityPanel span { color: #0f766e; font-size: 11px; font-weight: 950; text-transform: uppercase; }
+  .lightingQuantityPanel span { color: #0f766e; font-size: 16px; font-weight: 950; text-transform: uppercase; }
   .lightingQuantityPanel button { width: 38px; height: 38px; border: 1px solid #cbd5e1; background: #ffffff; color: #071827; padding: 0; }
   .lightingQuantityPanel.compact button { width: 34px; height: 34px; }
   .lightingQuantityPanel input { width: 90px; border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: #071827; padding: 9px; text-align: center; font-weight: 900; }
@@ -15477,46 +17951,49 @@ const styles = `
   .lightingScheduleLine { display: grid; grid-template-columns: 82px minmax(0, 1fr) auto minmax(120px, .25fr) auto; gap: 10px; align-items: center; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; padding: 10px; }
   .lightingScheduleLine > img { width: 82px; aspect-ratio: 4 / 3; object-fit: contain; border-radius: 8px; background: #eef2f6; }
   .lightingScheduleLine strong { display: block; color: #071827; line-height: 1.2; }
-  .lightingScheduleLine span, .lightingScheduleLine small { display: block; margin-top: 3px; color: #64748b; font-size: 12px; font-weight: 820; overflow-wrap: anywhere; }
+  .lightingScheduleLine span, .lightingScheduleLine small { display: block; margin-top: 3px; color: #64748b; font-size: 16px; font-weight: 820; overflow-wrap: anywhere; }
   .lightingLineTotals { display: grid; gap: 3px; justify-items: end; text-align: right; }
   .lightingLineTotals strong { color: #0f766e; }
   .lightingLineActions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
-  .lightingLineActions button { border: 1px solid #cbd5e1; background: #ffffff; color: #071827; padding: 7px 9px; font-size: 12px; }
+  .lightingLineActions button { border: 1px solid #cbd5e1; background: #ffffff; color: #071827; padding: 7px 9px; font-size: 16px; }
   .exteriorColourSummary { display: grid; gap: 12px; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 14px; }
   .exteriorColourSummary > div:first-child { display: grid; gap: 4px; }
-  .exteriorColourSummary span, .exteriorColourSelectorHeader span, .exteriorColourFilters span, .exteriorRecentlyUsed span, .exteriorPopularColours span, .exteriorColourLinkControls span, .exteriorColourNotes span, .exteriorBulkInstructions span, .exteriorBulkActionBar span, .exteriorBulkTip span, .exteriorStagedColour span { color: #0f766e; font-size: 11px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
+  .exteriorColourSummary span, .exteriorColourSelectorHeader span, .exteriorColourFilters span, .exteriorRecentlyUsed span, .exteriorPopularColours span, .exteriorColourLinkControls span, .exteriorColourNotes span, .exteriorBulkInstructions span, .exteriorBulkActionBar span, .exteriorBulkTip span, .exteriorStagedColour span { color: #0f766e; font-size: 16px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
   .exteriorColourSummary strong { color: #071827; font-size: 22px; line-height: 1.15; font-weight: 950; }
-  .exteriorColourSummary p, .exteriorColourDisclaimer { margin: 0; color: #64748b; font-size: 12px; font-weight: 750; }
+  .exteriorColourSummary p, .exteriorColourDisclaimer { margin: 0; color: #64748b; font-size: 16px; font-weight: 750; }
   .exteriorColourSummary select { border: 1px solid #cbd5e1; border-radius: 7px; background: #ffffff; color: #071827; padding: 9px 10px; font-weight: 850; }
   .exteriorColourLayout { display: grid; grid-template-columns: minmax(380px, .9fr) minmax(440px, 1.1fr); gap: 14px; align-items: start; }
   .exteriorColourAreaPanel, .exteriorColourSelector { border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 14px; display: grid; gap: 12px; }
   .exteriorBulkTip, .exteriorBulkInstructions, .exteriorBulkActionBar, .exteriorBulkAreaNames, .exteriorBulkApplyMessage { border: 1px solid #d7deea; border-radius: 8px; background: #f8fafc; padding: 10px; }
   .exteriorBulkTip { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; border-color: #bfdbfe; background: #eff6ff; }
-  .exteriorBulkTip p { margin: 0; color: #475569; font-size: 12px; font-weight: 780; line-height: 1.35; }
+  .exteriorBulkTip p { margin: 0; color: #475569; font-size: 16px; font-weight: 780; line-height: 1.35; }
   .exteriorBulkTip button, .exteriorBulkActionBar button, .exteriorApplyDialogActions button { border: 1px solid #cbd5e1; border-radius: 7px; background: #ffffff; color: #071827; padding: 8px 11px; font-weight: 850; cursor: pointer; }
   .exteriorBulkInstructions { display: grid; gap: 7px; background: #ffffff; }
-  .exteriorBulkInstructions ol { display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 0; margin: 0; list-style-position: inside; color: #334155; font-size: 12px; font-weight: 850; }
+  .exteriorBulkInstructions ol { display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 0; margin: 0; list-style-position: inside; color: #334155; font-size: 16px; font-weight: 850; }
   .mobileInstruction { display: none; }
   .exteriorBulkActionBar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; background: #ffffff; }
   .exteriorBulkActionBar div { min-height: 38px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid #e2e8f0; border-radius: 7px; background: #f8fafc; padding: 7px 9px; }
-  .exteriorBulkActionBar strong { color: #071827; font-size: 14px; font-weight: 950; }
+  .exteriorBulkActionBar strong { color: #071827; font-size: 16px; font-weight: 950; }
   .exteriorBulkActionBar .primary:not(:disabled), .exteriorApplyDialogActions .primary { border-color: #0f766e; background: #0f766e; color: #ffffff; }
   .exteriorBulkAreaNames { display: grid; gap: 6px; background: #ffffff; }
-  .exteriorBulkAreaNames strong { color: #071827; font-size: 13px; font-weight: 950; }
+  .exteriorBulkAreaNames strong { color: #071827; font-size: 16px; font-weight: 950; }
   .exteriorBulkAreaNames ul { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
-  .exteriorBulkAreaNames li { border: 1px solid #d7deea; border-radius: 7px; background: #f8fafc; color: #334155; padding: 5px 8px; font-size: 12px; font-weight: 850; }
-  .exteriorBulkApplyMessage { border-color: #99f6e4; background: #f0fdfa; color: #0f766e; font-size: 13px; font-weight: 900; }
-  .exteriorAreaColumnHeader { display: grid; grid-template-columns: 38px minmax(0, 1fr) minmax(120px, auto); gap: 8px; align-items: center; color: #64748b; font-size: 10px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
+  .exteriorBulkAreaNames li { border: 1px solid #d7deea; border-radius: 7px; background: #f8fafc; color: #334155; padding: 5px 8px; font-size: 16px; font-weight: 850; }
+  .exteriorBulkApplyMessage { border-color: #99f6e4; background: #f0fdfa; color: #0f766e; font-size: 16px; font-weight: 900; }
+  /* Column 1 sizes to its label: a fixed 38px track is narrower than the word "Select" at this
+     weight/letter-spacing, so the text overflowed and collided with the next heading. */
+  .exteriorAreaColumnHeader { display: grid; grid-template-columns: max-content minmax(0, 1fr) minmax(120px, auto); gap: 8px; padding: 0 8px; align-items: center; color: #64748b; font-size: 16px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
+  .exteriorAreaColumnHeader > span { min-width: 0; overflow-wrap: anywhere; }
   .exteriorColourLegend { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-  .exteriorStatusPill { display: inline-flex; align-items: center; justify-content: center; gap: 5px; width: fit-content; border: 1px solid #cbd5e1; border-radius: 999px; background: #f8fafc; color: #475569; padding: 4px 7px; font-size: 10px; font-weight: 950; line-height: 1; text-transform: uppercase; white-space: nowrap; }
-  .exteriorStatusPill i { display: inline-grid; place-items: center; min-width: 14px; height: 14px; border-radius: 999px; background: rgba(15,23,42,.08); font-size: 8px; font-style: normal; }
+  .exteriorStatusPill { display: inline-flex; align-items: center; justify-content: center; gap: 5px; width: fit-content; border: 1px solid #cbd5e1; border-radius: 999px; background: #f8fafc; color: #475569; padding: 4px 7px; font-size: 16px; font-weight: 950; line-height: 1; text-transform: uppercase; white-space: nowrap; }
+  .exteriorStatusPill i { display: inline-grid; place-items: center; min-width: 14px; height: 14px; border-radius: 999px; background: rgba(15,23,42,.08); font-size: 16px; font-style: normal; }
   .exteriorStatusPill.blue { border-color: #bfdbfe; background: #eff6ff; color: #1d4ed8; }
   .exteriorStatusPill.teal { border-color: #99f6e4; background: #f0fdfa; color: #0f766e; }
   .exteriorStatusPill.amber { border-color: #fde68a; background: #fffbeb; color: #b45309; }
   .exteriorStatusPill.green { border-color: #bbf7d0; background: #f0fdf4; color: #047857; }
   .exteriorStatusPill.red { border-color: #fecaca; background: #fef2f2; color: #b91c1c; }
   .exteriorColourGroup { display: grid; gap: 8px; }
-  .exteriorColourGroup h3 { margin: 0; color: #071827; font-size: 15px; font-weight: 950; }
+  .exteriorColourGroup h3 { margin: 0; color: #071827; font-size: 18px; font-weight: 950; }
   .exteriorColourAreaRow { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 8px; align-items: center; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; padding: 8px; }
   .exteriorColourAreaRow > input { width: 24px; height: 24px; margin: 0; cursor: pointer; }
   .exteriorColourAreaRow.active { border-color: #0f766e; box-shadow: 0 0 0 2px rgba(15,118,110,.12); }
@@ -15525,9 +18002,9 @@ const styles = `
   .exteriorColourAreaRow i, .exteriorColourSwatch i, .exteriorRecentlyUsed i { display: block; border: 1px solid #cbd5e1; border-radius: 6px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.45); }
   .exteriorColourAreaRow i { width: 34px; height: 34px; }
   .exteriorColourAreaRow strong, .exteriorColourAreaRow small, .exteriorColourAreaRow span { min-width: 0; overflow-wrap: anywhere; }
-  .exteriorColourAreaRow strong { display: block; color: #071827; font-size: 13px; }
-  .exteriorColourAreaRow b { display: inline-block; width: fit-content; margin-top: 4px; border: 1px solid #c4b5fd; border-radius: 999px; background: #ede9fe; color: #6d28d9; padding: 3px 6px; font-size: 9px; font-weight: 950; text-transform: uppercase; }
-  .exteriorColourAreaRow small, .exteriorColourAreaRow span { color: #64748b; font-size: 12px; font-weight: 780; }
+  .exteriorColourAreaRow strong { display: block; color: #071827; font-size: 16px; }
+  .exteriorColourAreaRow b { display: inline-block; width: fit-content; margin-top: 4px; border: 1px solid #c4b5fd; border-radius: 999px; background: #ede9fe; color: #6d28d9; padding: 3px 6px; font-size: 16px; font-weight: 950; text-transform: uppercase; }
+  .exteriorColourAreaRow small, .exteriorColourAreaRow span { color: #64748b; font-size: 16px; font-weight: 780; }
   .exteriorColourAreaRow em { font-style: normal; }
   .exteriorColourAreaRow > button:not(:first-of-type) { border: 1px solid #cbd5e1; border-radius: 7px; background: #ffffff; padding: 7px 8px; font-weight: 850; cursor: pointer; }
   .exteriorColourAreaRow button:hover, .exteriorBulkActionBar button:hover, .exteriorColourApplyActions button:hover:not(:disabled), .exteriorApplyDialogActions button:hover { border-color: #0f766e; }
@@ -15544,7 +18021,7 @@ const styles = `
   .exteriorColourPalette { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
   .exteriorPopularColours { display: grid; gap: 10px; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; padding: 10px; }
   .exteriorPopularColours section { display: grid; gap: 6px; }
-  .exteriorPopularColours small { color: #64748b; font-size: 11px; font-weight: 780; }
+  .exteriorPopularColours small { color: #64748b; font-size: 16px; font-weight: 780; }
   .exteriorPopularColours section > div { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 8px; }
   .exteriorColourSwatch { position: relative; display: grid; grid-template-rows: 64px auto auto auto; gap: 6px; min-height: 170px; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 9px; text-align: left; cursor: pointer; }
   .exteriorColourSwatch.compact { grid-template-rows: 38px auto auto auto; min-height: 126px; }
@@ -15552,19 +18029,19 @@ const styles = `
   .exteriorColourSwatch i { width: 100%; height: 64px; }
   .exteriorColourSwatch.compact i { height: 38px; }
   .exteriorColourSwatch strong { color: #071827; line-height: 1.15; }
-  .exteriorColourSwatch span, .exteriorColourSwatch small { color: #64748b; font-size: 12px; font-weight: 780; overflow-wrap: anywhere; }
-  .exteriorColourSwatch b { position: absolute; top: 8px; right: 8px; border-radius: 999px; background: #dcfce7; color: #047857; padding: 4px 7px; font-size: 10px; font-weight: 950; text-transform: uppercase; }
+  .exteriorColourSwatch span, .exteriorColourSwatch small { color: #64748b; font-size: 16px; font-weight: 780; overflow-wrap: anywhere; }
+  .exteriorColourSwatch b { position: absolute; top: 8px; right: 8px; border-radius: 999px; background: #dcfce7; color: #047857; padding: 4px 7px; font-size: 16px; font-weight: 950; text-transform: uppercase; }
   .exteriorStagedColour { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 8px; align-items: center; border: 1px solid #99f6e4; border-radius: 8px; background: #f0fdfa; padding: 10px; }
   .exteriorStagedColour i { grid-row: 1 / span 2; display: block; width: 42px; height: 42px; border: 1px solid #cbd5e1; border-radius: 7px; }
-  .exteriorStagedColour span { color: #0f766e; font-size: 13px; font-weight: 950; text-transform: none; letter-spacing: 0; }
-  .exteriorStagedColour small { color: #475569; font-size: 12px; font-weight: 780; }
-  .exteriorStagedColour.muted { display: block; border-color: #e2e8f0; background: #f8fafc; color: #64748b; font-size: 12px; font-weight: 820; }
+  .exteriorStagedColour span { color: #0f766e; font-size: 16px; font-weight: 950; text-transform: none; letter-spacing: 0; }
+  .exteriorStagedColour small { color: #475569; font-size: 16px; font-weight: 780; }
+  .exteriorStagedColour.muted { display: block; border-color: #e2e8f0; background: #f8fafc; color: #64748b; font-size: 16px; font-weight: 820; }
   .exteriorTechnicalSpec { display: grid; gap: 8px; border: 1px solid #bae6fd; border-radius: 8px; background: #f0f9ff; padding: 10px; }
-  .exteriorTechnicalSpec summary { color: #0369a1; font-size: 11px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; cursor: pointer; }
+  .exteriorTechnicalSpec summary { color: #0369a1; font-size: 16px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; cursor: pointer; }
   .exteriorTechnicalSpec dl { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
   .exteriorTechnicalSpec div { border: 1px solid #dbeafe; border-radius: 7px; background: #ffffff; padding: 8px; min-width: 0; }
-  .exteriorTechnicalSpec dt { color: #64748b; font-size: 10px; font-weight: 950; text-transform: uppercase; }
-  .exteriorTechnicalSpec dd { margin: 3px 0 0; color: #071827; font-size: 12px; font-weight: 850; overflow-wrap: anywhere; }
+  .exteriorTechnicalSpec dt { color: #64748b; font-size: 16px; font-weight: 950; text-transform: uppercase; }
+  .exteriorTechnicalSpec dd { margin: 3px 0 0; color: #071827; font-size: 16px; font-weight: 850; overflow-wrap: anywhere; }
   .exteriorColourNotes { display: grid; gap: 6px; }
   .exteriorColourNotes textarea { min-height: 76px; resize: vertical; border: 1px solid #cbd5e1; border-radius: 7px; padding: 9px 10px; font: inherit; }
   .exteriorApplyDialog { width: min(520px, 92vw); display: grid; gap: 12px; border-radius: 10px; background: #ffffff; color: #071827; padding: 18px; box-shadow: 0 24px 70px rgba(15,23,42,.25); }
@@ -15579,15 +18056,35 @@ const styles = `
   .garageSteps button.active { border-color: #0f766e; background: #ccfbf1; color: #115e59; }
   .garageChoiceBlock, .garageFormPanel, .garageColourPanel, .garageReview { display: grid; gap: 12px; }
   .garageChoiceBlock h3, .garageColourGroups h3 { margin: 0; color: #071827; font-size: 20px; font-weight: 950; }
-  .garageChoiceGrid, .garageAccessoryGrid, .garageColourGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
+  .garageChoiceGrid, .garageAccessoryGrid, .garageColourGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
   .garageChoiceGrid button, .garageAccessoryGrid button, .garageColourGrid button { position: relative; display: grid; gap: 7px; min-height: 120px; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; color: #071827; text-align: left; padding: 12px; }
-  .garageChoiceGrid button.selected, .garageAccessoryGrid button.selected, .garageColourGrid button.selected { border-color: #0f766e; background: #f0fdfa; box-shadow: 0 0 0 3px rgba(15,118,110,.18), inset 0 0 0 1px #0f766e; }
+  .garageChoiceGrid button.selected, .garageAccessoryGrid button.selected, .garageColourGrid button.selected { border-color: #0f766e; background: #ecfdf5; box-shadow: 0 0 0 3px rgba(15,118,110,.45), inset 0 0 0 1px #0f766e; }
+  /* Make a chosen accessory obvious: a filled badge plus a tick, not just a tinted card. */
+  .garageAccessoryGrid button.selected span { justify-self: start; display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: #0f766e; color: #ffffff; font-size: 16px; }
+  .garageAccessoryGrid button.selected span::before { content: "✓"; font-weight: 900; }
   .garageChoiceGrid strong, .garageAccessoryGrid strong, .garageColourGrid strong { color: #071827; font-size: 18px; line-height: 1.15; font-weight: 950; }
-  .garageChoiceGrid span, .garageAccessoryGrid span, .garageColourGrid em, .garageColourGrid small, .garageSelectedColour small { color: #64748b; font-style: normal; font-size: 13px; font-weight: 800; }
-  .garageChoiceGrid b, .garageColourGrid b { justify-self: start; border: 1px solid #5eead4; border-radius: 999px; background: #ccfbf1; color: #115e59; padding: 3px 8px; font-size: 11px; line-height: 1; font-weight: 950; }
+  .garageChoiceGrid span, .garageAccessoryGrid span, .garageColourGrid em, .garageColourGrid small, .garageSelectedColour small { color: #64748b; font-style: normal; font-size: 16px; font-weight: 800; }
+  .garageChoiceGrid b, .garageColourGrid b { justify-self: start; border: 1px solid #5eead4; border-radius: 999px; background: #ccfbf1; color: #115e59; padding: 3px 8px; font-size: 16px; line-height: 1; font-weight: 950; }
   .garageFormPanel { grid-template-columns: repeat(4, minmax(160px, 1fr)); align-items: end; }
+  /* The step's forward action has to look like a button, not another dark field sitting in
+     the form row. It gets its own row, brand colour and a direction cue. */
+  .garageFormPanel > .primary { grid-column: 1 / -1; justify-self: start; display: inline-flex; align-items: center; gap: 9px; min-height: 46px; border: 1px solid #0f766e; border-radius: 8px; background: #0f766e; color: #ffffff; padding: 0 22px; font-size: 16px; font-weight: 950; box-shadow: 0 1px 2px rgba(15,23,42,.18); cursor: pointer; }
+  .garageFormPanel > .primary::after { content: "92"; font-size: 17px; font-weight: 900; }
+  .garageFormPanel > .primary:hover { background: #0b5f59; border-color: #0b5f59; }
+  .garageFormPanel > .primary:focus-visible { outline: 3px solid #0f766e; outline-offset: 2px; }
+  /* Shared action bar: what this step is for on the left, the way onward on the right. */
+  .guidedStepAction { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: space-between; border: 1px solid #d7deea; border-radius: 8px; background: #f8fafc; padding: 14px 16px; }
+  .guidedStepAction > div:first-child { display: grid; gap: 3px; min-width: 0; }
+  .guidedStepAction strong { color: #071827; font-size: 17px; font-weight: 950; }
+  .guidedStepAction span { color: #475569; font-size: 16px; font-weight: 800; }
+  .guidedStepAction .primary { display: inline-flex; align-items: center; gap: 9px; min-height: 44px; border: 1px solid #0f766e; border-radius: 8px; background: #0f766e; color: #ffffff; padding: 0 20px; font-size: 16px; font-weight: 950; cursor: pointer; }
+  .guidedStepAction .primary::after { content: "92"; font-size: 17px; font-weight: 900; }
+  .guidedStepAction .primary:disabled { border-color: #cbd5e1; background: #e2e8f0; color: #94a3b8; cursor: not-allowed; }
+  .guidedStepAction .primary:not(:disabled):hover { background: #0b5f59; border-color: #0b5f59; }
+  .guidedSectionComplete { border-color: #0f766e; background: #f0fdfa; }
+  .guidedSectionComplete strong { color: #0b5f59; }
   .garageFormPanel label, .garageColourToolbar label { display: grid; gap: 5px; }
-  .garageFormPanel label span, .garageColourToolbar span { color: #64748b; font-size: 11px; font-weight: 950; text-transform: uppercase; }
+  .garageFormPanel label span, .garageColourToolbar span { color: #64748b; font-size: 16px; font-weight: 950; text-transform: uppercase; }
   .garageFormPanel input, .garageFormPanel select, .garageColourToolbar input, .garageColourToolbar select { width: 100%; border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: #071827; padding: 10px; font-weight: 800; }
   .garageColourToolbar { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(180px, .7fr) auto auto; gap: 10px; align-items: end; border: 1px solid #d7deea; border-radius: 8px; background: #f8fafc; padding: 12px; }
   .garageColourToolbar a { color: #0f766e; font-weight: 900; }
@@ -15596,35 +18093,46 @@ const styles = `
   .garageSwatch { display: grid; place-items: center; width: 100%; height: 82px; border: 1px solid rgba(15,23,42,.18); border-radius: 8px; color: #ffffff; text-shadow: 0 1px 3px rgba(15,23,42,.55); font-size: 22px; font-weight: 950; }
   .garageSelectedColour { display: grid; grid-template-columns: 130px minmax(0, 1fr) auto; gap: 12px; align-items: center; border: 1px solid #0f766e; border-radius: 8px; background: #f0fdfa; padding: 12px; }
   .garageSelectedColour .garageSwatch { height: 70px; }
-  .garageReview { grid-template-columns: minmax(220px, .7fr) minmax(0, 1fr); border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 14px; }
-  .garageReview img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border-radius: 8px; background: #e2e8f0; }
+  .garageOptionsPanel { display: grid; gap: 18px; }
+  .garageOptionsPanel h3 { margin: 0; }
+  .garageOptionsPanel > .primary { justify-self: end; }
+  .garageReview { grid-template-columns: 1fr; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 14px; }
+  .garageReview > img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border-radius: 8px; background: #e2e8f0; }
   .garageReview dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; }
-  .garageReview dt { color: #64748b; font-size: 11px; font-weight: 950; text-transform: uppercase; }
+  .garageReview dt { color: #64748b; font-size: 16px; font-weight: 950; text-transform: uppercase; }
   .garageReview dd { margin: 3px 0 0; color: #071827; font-weight: 900; }
   .garageReview .guidedProductActions { grid-column: 1 / -1; }
   .brickProductGrid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
   .entryDoorFilters { display: grid; grid-template-columns: minmax(220px, 1.4fr) repeat(6, minmax(140px, 1fr)); gap: 10px; margin-bottom: 14px; }
   .entryDoorFilters label { display: grid; gap: 5px; min-width: 0; }
-  .entryDoorFilters span { color: #64748b; font-size: 11px; font-weight: 950; text-transform: uppercase; }
+  .entryDoorFilters span { color: #64748b; font-size: 16px; font-weight: 950; text-transform: uppercase; }
   .entryDoorFilters input, .entryDoorFilters select { width: 100%; min-width: 0; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px 11px; color: #071827; background: #ffffff; font-weight: 800; }
-  .entryDoorResultSummary { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: flex-start; margin: 0 0 14px; color: #475569; font-size: 13px; font-weight: 850; }
+  .entryDoorResultSummary { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: flex-start; margin: 0 0 14px; color: #475569; font-size: 16px; font-weight: 850; }
   .entryDoorResultSummary strong { color: #071827; font-size: 22px; line-height: 1; }
   .entryDoorResultSummary button { border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: #0f766e; padding: 7px 10px; font-weight: 900; }
-  .entryDoorDesignCard { display: grid; grid-template-rows: auto 1fr auto; text-align: left; }
-  .guidedProductCard.entryDoorDesignCard > img { height: clamp(320px, 42vw, 440px); aspect-ratio: auto; object-fit: contain; object-position: center; background: #f8fafc; padding: 12px; box-sizing: border-box; }
+  .entryDoorDesignCard { display: grid; grid-template-rows: auto 1fr auto; text-align: left; --door-frame-height: clamp(420px, 54vw, 640px); }
+  /* Door renders are tall and narrow, so a wide card shrinks them to fit its height and the
+     design is unreadable. Door-shaped columns plus a taller frame let the leaf fill the card. */
+  .entryDoorShowroom .guidedProductGrid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 18px; }
+  .guidedProductCard.entryDoorDesignCard > img { height: clamp(420px, 54vw, 640px); aspect-ratio: auto; object-fit: contain; object-position: center; background: #f8fafc; padding: 12px; box-sizing: border-box; }
   .entryDoorImageUnavailable { display: grid; place-items: center; min-height: 260px; padding: 18px; border: 1px dashed #cbd5e1; border-radius: 8px; background: #f8fafc; color: #64748b; text-align: center; font-weight: 900; }
   .entryDoorDesignCard small { color: #64748b; font-weight: 850; }
-  .windowsWorkflowPanel .guidedSectionHeader em { color: #64748b; font-style: normal; font-size: 13px; font-weight: 800; }
+  .windowsWorkflowPanel .guidedSectionHeader em { color: #64748b; font-style: normal; font-size: 16px; font-weight: 800; }
   .windowScheduleSummary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
   .windowScheduleSummary > strong,
   .windowScheduleSummary > button,
   .windowScheduleList { grid-column: 1 / -1; }
   .windowScheduleSummary > strong { color: #071827; font-size: 22px; font-weight: 950; }
+  /* A single vertical stack, deliberately not the .windowScheduleSummary grid above (that grid's
+     multi-pass auto-placement is what stranded this schedule in a narrow column) - total windows
+     line, legend, then each level's heading + table, full width, top to bottom. */
+  .projectScheduleView { display: flex; flex-direction: column; align-items: stretch; gap: 14px; width: 100%; }
+  .projectScheduleTotal { color: #071827; font-size: 18px; font-weight: 950; }
   .windowScheduleSummary > div:not(.windowScheduleList),
   .yourWindowSelection dl div { border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; padding: 10px; }
   .windowScheduleSummary span,
   .yourWindowSelection dt,
-  .windowsExceptions span { color: #64748b; font-size: 11px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
+  .windowsExceptions span { color: #64748b; font-size: 16px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
   .windowScheduleSummary b,
   .yourWindowSelection dd { display: block; margin-top: 5px; color: #071827; font-weight: 900; }
   .windowScheduleList { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; max-height: 220px; overflow: auto; padding: 10px; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; }
@@ -15650,7 +18158,7 @@ const styles = `
   .windowsGlassGrid em,
   .windowsGlassGrid small,
   .windowsScopeGrid span,
-  .windowsScopeGrid em { color: #475569; font-size: 13px; font-style: normal; font-weight: 800; }
+  .windowsScopeGrid em { color: #475569; font-size: 16px; font-style: normal; font-weight: 800; }
   .windowsImageUnavailable { display: grid; place-items: center; width: 100%; height: 210px; border: 1px dashed #cbd5e1; border-radius: 8px; background: #f8fafc; color: #64748b; text-align: center; font-weight: 900; }
   .windowsColourPanel { display: grid; gap: 14px; }
   .windowsColourNotice { display: grid; grid-template-columns: minmax(180px, .7fr) minmax(0, 1fr) auto; gap: 10px; align-items: center; border: 1px solid #d7deea; border-radius: 8px; background: #f8fafc; padding: 12px; }
@@ -15677,10 +18185,191 @@ const styles = `
   .guidedProductCard.applianceModelCard > img { height: 210px; aspect-ratio: auto; object-fit: contain; background: #f8fafc; padding: 10px; box-sizing: border-box; }
   .guidedProductCard.brickCard > img { aspect-ratio: 4 / 3; }
   .guidedProductCard > div { padding: 0 13px; }
-  .guidedProductCard span { color: #64748b; font-size: 13px; font-weight: 850; }
+  .guidedProductCard span { color: #64748b; font-size: 16px; font-weight: 850; }
   .guidedProductCard strong { display: block; color: #071827; font-size: 18px; font-weight: 950; margin-top: 3px; }
-  .guidedProductCard em { display: block; color: #475569; font-style: normal; font-size: 13px; font-weight: 800; margin-top: 3px; }
-  .guidedProductCard p { margin: 8px 0 0; color: #334155; font-size: 14px; font-weight: 700; }
+  .guidedProductCard em { display: block; color: #475569; font-style: normal; font-size: 16px; font-weight: 800; margin-top: 3px; }
+  .guidedProductCard p { margin: 8px 0 0; color: #334155; font-size: 16px; font-weight: 700; }
+  .plumbingSupplierNote { margin: 0; color: #475569; font-size: 16px; font-weight: 700; }
+  .configuredSections { display: grid; gap: 28px; }
+  .configuredSection { display: grid; gap: 14px; }
+  .configuredSection > header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; }
+  .configuredSection > header > div { display: flex; align-items: center; gap: 10px; }
+  .configuredSection h2 { margin: 0; font-size: 24px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; color: #0f172a; }
+  .configuredRequired { margin: 0; display: grid; gap: 2px; text-align: right; font-size: 16px; color: #475569; }
+  .configuredRequired strong { font-size: 18px; color: #0f172a; letter-spacing: .03em; }
+  .configuredGroupGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; }
+  .configuredGroupCard p { margin: 0; color: #475569; font-size: 16px; font-weight: 700; }
+  .configuredLines { display: grid; gap: 8px; }
+  .configuredLine { display: grid; grid-template-columns: 72px minmax(0, 1fr) auto auto; gap: 12px; align-items: center; border: 1px solid #bbf7d0; border-radius: 10px; background: #f0fdf4; padding: 10px 12px; }
+  .configuredLine img { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; background: #ffffff; }
+  .configuredLine > div { display: grid; gap: 2px; min-width: 0; }
+  .configuredLine span { font-size: 16px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; color: #166534; }
+  .configuredLine strong { font-size: 18px; color: #0f172a; }
+  .configuredLine em { font-style: normal; font-size: 16px; color: #475569; }
+  .configuredLineMoney { text-align: right; }
+  .configuredLineMoney b { font-size: 18px; }
+  .configuredLineMoney small { font-size: 16px; color: #475569; }
+  .configuredLine button { min-height: 38px; border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: #0f172a; padding: 0 14px; font-size: 16px; font-weight: 900; cursor: pointer; }
+  .configuredLinesTotal { margin: 0; font-size: 16px; font-weight: 900; color: #0f172a; text-align: right; }
+  .configuredSelectionModal { width: min(720px, 100%); }
+  .configuredFields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 14px; }
+  .configuredFields .wide { grid-column: 1 / -1; }
+  .configuredFields label { display: grid; gap: 4px; }
+  .configuredFields label span { font-size: 16px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; color: #475569; }
+  .configuredFields label small { font-size: 16px; color: #64748b; }
+  .configuredFields input, .configuredFields select { height: 40px; min-width: 0; border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: #0f172a; padding: 0 10px; font-size: 16px; }
+  .configuredNote { margin: 0; font-size: 16px; color: #475569; }
+  .configuredDimensionRow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .configuredDimensionRow label { display: grid; gap: 2px; font-size: 16px; font-weight: 800; color: #475569; }
+  .configuredDimensionRow input { height: 38px; min-width: 0; border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: #0f172a; padding: 0 10px; font-size: 16px; }
+  .configuredDimensionRow small { font-size: 16px; font-weight: 600; color: #64748b; }
+  .configuredProblems { margin: 0; padding-left: 20px; font-size: 16px; color: #b45309; }
+  .configuredProblems .bad { color: #b91c1c; font-weight: 900; }
+  .configuredGroupChip { display: inline-flex; align-items: center; gap: 8px; border: 1px solid #1764d9; border-radius: 999px; background: #eff6ff; color: #1e3a8a; padding: 6px 14px; font-size: 16px; font-weight: 900; }
+  .configuredGroupChip button { border: 0; background: transparent; color: #1764d9; font-size: 16px; font-weight: 900; cursor: pointer; text-decoration: underline; }
+  .configuredSpec { display: block; color: #475569; font-size: 16px; }
+  @media (max-width: 719px) { .configuredFields { grid-template-columns: 1fr; } .configuredLine { grid-template-columns: 56px minmax(0, 1fr); } .configuredRequired { text-align: left; } }
+  /* The nine fixture categories are an overview: keep all six visible across a desktop row,
+     then step down without making the image, title or selection state cramped. */
+  .plumbingCategoryGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+  .featureCategoryGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; width: 100%; max-width: 1440px; }
+  .featureCategoryCard { display: grid; grid-template-rows: auto 1fr; border: 2px solid #d7deea; border-radius: 14px; overflow: hidden; background: #ffffff; box-shadow: 0 14px 30px rgba(15,23,42,.08); transition: box-shadow .18s ease, border-color .18s ease; }
+  .featureCategoryCard:hover { border-color: #0f766e; box-shadow: 0 20px 40px rgba(15,118,110,.18); }
+  .featureCategoryCard.selected { border-color: #22c55e; }
+  .featureCategoryImage { display: block; width: 100%; height: clamp(280px, 20vw, 340px); padding: 0; border: 0; border-radius: 0; background: #f1f5f9; cursor: pointer; }
+  .featureCategoryImage img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center; }
+  .featureCategoryBody { display: grid; align-content: start; gap: 16px; padding: 28px; }
+  .featureCategoryTitle { display: flex; align-items: center; gap: 12px; }
+  .featureCategoryTitle h3 { margin: 0; color: #071827; font-size: 24px; font-weight: 950; letter-spacing: .02em; text-transform: uppercase; }
+  .featureCategoryBody p { margin: 0; color: #334155; font-size: 18px; font-weight: 600; line-height: 1.5; }
+  .featureCategoryBody > button { justify-self: start; min-height: 54px; padding: 14px 28px; border-radius: 10px; border: 0; background: #0f766e; color: #ffffff; font-size: 18px; font-weight: 900; cursor: pointer; }
+  .featureCategoryBody > button:hover { background: #115e59; }
+  .featureCategorySelection { display: grid; gap: 10px; border-radius: 10px; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 16px 18px; }
+  .featureCategorySelection > span { color: #15803d; font-size: 16px; font-weight: 950; letter-spacing: .06em; text-transform: uppercase; }
+  .featureCategorySelection strong { display: block; color: #071827; font-size: 20px; font-weight: 900; }
+  .featureCategorySelection em { display: block; margin-top: 2px; color: #334155; font-size: 17px; font-style: normal; font-weight: 700; }
+  @media (max-width: 1023px) { .featureCategoryGrid { grid-template-columns: 1fr; } }
+  /* Phones and narrow tablets: the page column may shrink and the budget/total strips wrap, so 16px text never pushes the page wider than the screen. */
+  .guidedShell { grid-template-columns: minmax(0, 1fr); }
+  .guidedChecklistHeader > div > span { display: block; }
+  @media (max-width: 760px) { .guidedBudgetDock { grid-template-columns: repeat(2, minmax(0, 1fr)); } .guidedTotals { min-width: 0; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); } .guidedChecklistHeader { flex-direction: column; } }
+  .plumbingCategoryCard { display: grid; grid-template-rows: auto 1fr; border: 2px solid #d7deea; border-radius: 8px; overflow: hidden; background: #ffffff; box-shadow: 0 12px 24px rgba(15,23,42,.08); transition: box-shadow .18s ease, border-color .18s ease; }
+  .plumbingCategoryCard:hover { border-color: #0f766e; box-shadow: 0 18px 38px rgba(15,118,110,.18); }
+  .plumbingCategoryCard.selected { border-color: #22c55e; box-shadow: 0 12px 24px rgba(34,197,94,.16); }
+  .plumbingCategoryCard.recentlyCompleted { outline: 3px solid #14b8a6; }
+  .plumbingCategoryImage { display: block; width: 100%; padding: 0; border: 0; background: #f1f5f9; cursor: pointer; }
+  .plumbingCategoryImage img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: contain; background: #ffffff; }
+  .plumbingCategoryBody { display: grid; align-content: start; gap: 8px; padding: 12px; }
+  .plumbingCategoryTitle { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; min-width: 0; }
+  .plumbingCategoryTitle h3 { flex: 1 1 0; min-width: 0; margin: 0; color: #071827; font-size: 18px; font-weight: 950; text-transform: uppercase; letter-spacing: .01em; overflow-wrap: break-word; }
+  .plumbingCategoryTitle .plumbingSelectedBadge { white-space: nowrap; }
+  .plumbingSelectedBadge, .plumbingSelectedFlag { border-radius: 999px; background: #16a34a; color: #ffffff; padding: 3px 7px; font-size: 16px; font-weight: 950; letter-spacing: .04em; text-transform: uppercase; }
+  .plumbingSelectedBadge { margin-left: auto; }
+  .plumbingCategoryBody p { margin: 0; color: #475569; font-size: 16px; font-weight: 700; line-height: 1.35; }
+  .plumbingCategoryBody small { color: #0f766e; font-size: 16px; font-weight: 900; }
+  .plumbingCategorySelection { display: grid; gap: 3px; border-radius: 8px; background: #f0fdf4; padding: 8px; }
+  .plumbingCategorySelection strong { color: #0f172a; font-size: 16px; font-weight: 950; overflow-wrap: anywhere; }
+  .plumbingCategorySelection span { color: #334155; font-size: 16px; font-weight: 800; }
+  .plumbingCategoryMoney { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; color: #475569; font-size: 16px; font-weight: 800; }
+  .plumbingCategoryMoney b.bad { color: #b91c1c; }
+  .plumbingCategoryMoney b.good { color: #15803d; }
+  .plumbingCategoryBody > button { justify-self: stretch; min-height: 40px; border-radius: 8px; border: 0; background: #0f766e; color: #ffffff; font-size: 16px; font-weight: 950; cursor: pointer; }
+  .plumbingCategoryBody > button:hover { background: #115e59; }
+  .plumbingProductsHeader { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+  .plumbingProductsHeader > button { border: 1px solid #0f766e; border-radius: 8px; background: #ffffff; color: #0f766e; padding: 9px 12px; font-size: 16px; font-weight: 900; cursor: pointer; }
+  .plumbingProductsHeader > div { display: grid; gap: 2px; min-width: 0; }
+  .plumbingProductsHeader span { color: #64748b; font-size: 16px; font-weight: 850; }
+  .plumbingProductsHeader strong { color: #071827; font-size: 20px; font-weight: 950; }
+  .plumbingFilters { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; padding: 12px; }
+  .plumbingFilters label { display: grid; gap: 4px; min-width: 160px; flex: 1 1 160px; }
+  .plumbingFilters label span { color: #475569; font-size: 16px; font-weight: 900; text-transform: uppercase; }
+  .plumbingFilters input, .plumbingFilters select { min-height: 38px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 10px; background: #ffffff; font-weight: 700; }
+  .plumbingFilters > button { min-height: 38px; border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; padding: 0 12px; font-weight: 900; cursor: pointer; }
+  .plumbingProductGrid { grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
+  .plumbingProductCard { position: relative; border-width: 2px; }
+  .plumbingProductCard > img { aspect-ratio: 1 / 1; object-fit: contain; background: #ffffff; padding: 8px; box-sizing: border-box; }
+  .plumbingProductCard.selected { border-color: #16a34a; box-shadow: 0 0 0 3px rgba(22,163,74,.25), 0 14px 28px rgba(15,23,42,.12); background: #f0fdf4; }
+  .plumbingSelectedFlag { position: absolute; top: 10px; left: 10px; z-index: 1; }
+  .guidedProductCard.plumbingProductCard .plumbingSelectedFlag { color: #ffffff; font-size: 16px; }
+  .plumbingProductCard .plumbingSupplier { display: block; margin-top: 6px; color: #475569; font-size: 16px; font-weight: 800; }
+  .plumbingProductCard .guidedProductActions button.primary:disabled { background: #16a34a; opacity: 1; cursor: default; }
+  .plumbingNoResults { color: #475569; font-weight: 800; }
+  .plumbingDetailFeatures ul { margin: 0; padding-left: 18px; }
+  .categoryHomeGroup { display: grid; gap: 8px; margin-top: 14px; }
+  .categoryHomeGroup h3 { margin: 0; color: #475569; font-size: 18px; font-weight: 950; letter-spacing: .06em; text-transform: uppercase; }
+  .categoryHomeGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
+  .categoryHomeCard { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 72px; border: 1px solid #dbe3ee; border-radius: 10px; background: #ffffff; color: #0f172a; padding: 8px 10px; text-align: left; cursor: pointer; box-shadow: 0 1px 2px rgba(15,23,42,.04); }
+  .categoryHomeCard:hover { border-color: #1764d9; box-shadow: 0 6px 16px rgba(15,23,42,.10); }
+  .categoryHomeCard img, .categoryHomeImagePlaceholder { width: 56px; height: 56px; border-radius: 8px; object-fit: cover; background: #f1f5f9; }
+  .categoryHomeText { display: grid; gap: 2px; min-width: 0; }
+  .categoryHomeText strong { font-size: 16px; font-weight: 900; line-height: 1.2; }
+  .categoryHomeText small { color: #64748b; font-size: 16px; font-weight: 700; }
+  .categoryHomeCard.complete { border-color: #16a34a; background: #f0fdf4; }
+  .categoryHomeCard.inProgress { border-color: #f59e0b; }
+  .categoryHomeCard.unavailable { opacity: .72; }
+  .categoryHomeCard.unavailable small { color: #b45309; }
+  .categoryHubBack { display: block; margin-bottom: 4px; border: 0; background: transparent; color: #1d4ed8; font-weight: 900; padding: 0; cursor: pointer; }
+  .plumbingCategoryCard.empty { opacity: .7; }
+  .plumbingCategoryCard button:disabled { cursor: not-allowed; }
+  .plumbingProductCard .plumbingCardLocations { display: block; margin-top: 6px; color: #166534; font-size: 16px; font-weight: 900; }
+  .plumbingAllocationSummary { display: grid; gap: 10px; border: 1px solid #e2e8f0; border-radius: 10px; background: #ffffff; padding: 12px 14px; }
+  .plumbingAllocationSummary > p { margin: 0; color: #475569; font-weight: 700; }
+  .plumbingAllocationProgress { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; }
+  .plumbingAllocationProgress strong { font-size: 18px; font-weight: 950; color: #0f172a; }
+  .plumbingAllocationProgress span { color: #475569; font-size: 16px; font-weight: 700; }
+  .plumbingAllocationTable { width: 100%; border-collapse: collapse; font-size: 16px; }
+  .plumbingAllocationTable th { text-align: left; color: #64748b; font-size: 16px; text-transform: uppercase; letter-spacing: .04em; padding: 6px 8px; border-bottom: 1px solid #e2e8f0; }
+  .plumbingAllocationTable td { padding: 8px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+  .plumbingAllocationTable td small { display: block; color: #64748b; }
+  .plumbingAllocationTable tfoot td { font-weight: 950; border-bottom: 0; }
+  .plumbingAllocationTable .good { color: #15803d; font-weight: 900; }
+  .plumbingAllocationTable .bad { color: #b91c1c; font-weight: 900; }
+  .plumbingAllocationActions { display: flex; gap: 6px; justify-content: flex-end; }
+  .plumbingAllocationActions button { border: 1px solid #cbd5e1; border-radius: 6px; background: #ffffff; color: #0f172a; padding: 5px 9px; font-weight: 800; cursor: pointer; white-space: nowrap; }
+  .plumbingAllocationOverlay { position: fixed; inset: 0; z-index: 1200; display: flex; align-items: center; justify-content: center; background: rgba(15,23,42,.55); padding: 16px; }
+  .plumbingAllocationModal { width: min(560px, 100%); max-height: calc(100vh - 32px); overflow: auto; display: grid; gap: 12px; border-radius: 12px; background: #ffffff; padding: 18px; box-shadow: 0 24px 60px rgba(15,23,42,.35); }
+  .plumbingAllocationModal header { display: flex; justify-content: space-between; align-items: center; font-weight: 950; text-transform: uppercase; font-size: 16px; letter-spacing: .05em; color: #475569; }
+  .plumbingAllocationModal header button { border: 0; background: transparent; color: #0f172a; font-size: 24px; line-height: 1; cursor: pointer; }
+  .plumbingAllocationModal h4 { margin: 0; font-size: 16px; text-transform: uppercase; letter-spacing: .04em; }
+  .plumbingAllocationProduct { display: grid; grid-template-columns: 96px 1fr; gap: 12px; align-items: center; }
+  .plumbingAllocationProduct img { width: 96px; height: 96px; object-fit: contain; border: 1px solid #e2e8f0; border-radius: 8px; background: #ffffff; }
+  .plumbingAllocationProduct div { display: grid; gap: 2px; }
+  .plumbingAllocationProduct span { color: #64748b; font-size: 16px; font-weight: 800; text-transform: uppercase; }
+  .plumbingAllocationProduct em, .plumbingAllocationProduct small { color: #475569; font-size: 16px; font-style: normal; }
+  .plumbingAllocationRows { display: grid; gap: 6px; }
+  .plumbingAllocationRow { display: flex; justify-content: space-between; align-items: center; gap: 10px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; }
+  .plumbingAllocationRow.active { border-color: #16a34a; background: #f0fdf4; }
+  .plumbingAllocationRow label { display: flex; align-items: center; gap: 8px; font-weight: 850; cursor: pointer; }
+  .plumbingAllocationRow label small { display: block; color: #b45309; font-size: 16px; font-weight: 700; }
+  .plumbingQtyStepper { display: flex; align-items: center; gap: 4px; }
+  .plumbingQtyStepper button { width: 36px; height: 36px; border: 1px solid #cbd5e1; border-radius: 6px; background: #ffffff; color: #0f172a; font-size: 16px; font-weight: 900; line-height: 1; padding: 0; cursor: pointer; }
+  .plumbingQtyStepper button:disabled { color: #94a3b8; cursor: not-allowed; }
+  .plumbingQtyStepper input { width: 64px; height: 36px; padding: 0 6px; box-sizing: border-box; text-align: center; border: 1px solid #cbd5e1; border-radius: 6px; background: #ffffff; color: #0f172a; font-size: 18px; font-weight: 900; -moz-appearance: textfield; appearance: textfield; }
+  .plumbingQtyStepper input::-webkit-outer-spin-button, .plumbingQtyStepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .plumbingShowAll { justify-self: start; border: 0; background: transparent; color: #1d4ed8; font-weight: 900; cursor: pointer; padding: 4px 0; }
+  .plumbingAddLocation { display: flex; gap: 6px; }
+  .plumbingAddLocation input { flex: 1; min-width: 0; height: 34px; border: 1px solid #cbd5e1; border-radius: 6px; background: #ffffff; color: #0f172a; padding: 0 10px; }
+  .plumbingAddLocation input::placeholder { color: #94a3b8; }
+  .plumbingAddLocation button { border: 1px solid #cbd5e1; border-radius: 6px; background: #ffffff; color: #0f172a; padding: 0 12px; font-weight: 800; cursor: pointer; }
+  .plumbingAllocationTotals { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 16px; margin: 0; border-radius: 8px; background: #f8fafc; padding: 12px; }
+  .plumbingAllocationTotals div { display: flex; justify-content: space-between; gap: 8px; }
+  .plumbingAllocationTotals dt { color: #475569; font-size: 16px; font-weight: 800; text-transform: uppercase; }
+  .plumbingAllocationTotals dd { margin: 0; font-weight: 950; }
+  .plumbingAllocationTotals .good dd { color: #15803d; }
+  .plumbingAllocationTotals .bad dd { color: #b91c1c; }
+  .plumbingAllocationModal footer { display: flex; justify-content: flex-end; gap: 8px; }
+  .plumbingAllocationModal footer button { min-height: 38px; border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: #0f172a; padding: 0 16px; font-weight: 900; cursor: pointer; }
+  .plumbingAllocationModal footer button.primary { border-color: #1764d9; background: #1764d9; color: #ffffff; }
+  .plumbingAllocationModal footer button:disabled { opacity: .5; cursor: not-allowed; }
+  @media (max-width: 640px) { .plumbingAllocationTotals { grid-template-columns: 1fr; } .plumbingAllocationTable thead { display: none; } .plumbingAllocationTable td { display: block; } }
+  @media (max-width: 1279px) { .plumbingCategoryGrid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+  @media (max-width: 1023px) { .plumbingCategoryGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  @media (max-width: 719px) { .plumbingCategoryGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 640px) { .plumbingProductGrid { grid-template-columns: 1fr; } }
+  @media (max-width: 480px) { .plumbingCategoryGrid { grid-template-columns: 1fr; } }
+  .plumbingProductCard .guidedProductMoney { grid-template-columns: 1fr; gap: 6px; padding: 0 13px; }
+  .plumbingProductCard .guidedMiniTotal { grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 10px; padding: 7px 10px; }
+  .plumbingProductCard .guidedMiniTotal strong { justify-self: end; text-align: right; font-size: 16px; }
   .guidedShell[data-testid="guided-driveway-workflow"] { width: 100%; max-width: none; min-width: 0; }
   .drivewayWorkflow { display: block; width: 100%; max-width: none; min-width: 0; }
   .drivewayWorkflow .guidedProductPanel { width: 100%; max-width: none; min-width: 0; gap: 18px; box-sizing: border-box; }
@@ -15689,16 +18378,17 @@ const styles = `
   .cabinetryBanner > div { display: grid; gap: 6px; min-width: 0; }
   .cabinetryBanner p { margin: 0; color: #64748b; font-weight: 700; }
   .cabinetryRoomGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; min-width: 0; }
-  .cabinetryRoomCard { min-height: 148px; display: grid; align-content: space-between; gap: 12px; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; color: #172033; padding: 18px; text-align: left; box-shadow: 0 12px 24px rgba(15,23,42,.08); }
+  .cabinetryRoomCard { min-height: 148px; display: grid; align-content: space-between; gap: 12px; border: 2px solid #d7deea; border-radius: 8px; background: #ffffff; color: #172033; padding: 18px; text-align: left; box-shadow: 0 12px 24px rgba(15,23,42,.08); transition: border-color .15s ease, box-shadow .15s ease; }
+  .cabinetryRoomCard:hover { box-shadow: 0 16px 32px rgba(15,23,42,.14); }
   .cabinetryRoomCard strong { font-size: 20px; font-weight: 950; }
   .cabinetryRoomCard span { color: #64748b; font-weight: 850; }
   .cabinetryRoomCard em { justify-self: start; border-radius: 8px; padding: 8px 10px; background: #f1f5f9; color: #0f172a; font-style: normal; font-weight: 950; }
-  .cabinetryRoomCard.complete { border-color: #22c55e; }
+  .cabinetryRoomCard.complete { border-color: #22c55e; background: #f0fdf4; box-shadow: 0 12px 24px rgba(34,197,94,.14); }
   .cabinetryRoomCard.complete em { background: #dcfce7; color: #166534; }
-  .cabinetryRoomCard.in_progress { border-color: #14b8a6; }
+  .cabinetryRoomCard.in_progress { border-color: #14b8a6; box-shadow: 0 12px 24px rgba(20,184,166,.14); }
   .cabinetryRoomCard.in_progress em { background: #ccfbf1; color: #115e59; }
-  .cabinetrySummaryDock { display: grid; gap: 4px; margin-top: 8px; padding-top: 10px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #475569; }
-  .cabinetrySummaryDock strong { color: #0f172a; font-size: 13px; }
+  .cabinetrySummaryDock { display: grid; gap: 4px; margin-top: 8px; padding-top: 10px; border-top: 1px solid #e2e8f0; font-size: 16px; color: #475569; }
+  .cabinetrySummaryDock strong { color: #0f172a; font-size: 16px; }
   .cabinetryLocationGrid,
   .cabinetryOptionGrid,
   .cabinetrySwatchGrid,
@@ -15727,7 +18417,7 @@ const styles = `
   .cabinetryFilters button.selected { background: #0f766e; color: #fff; border-color: #0f766e; }
   .cabinetrySupplierButtons { display: flex; flex-wrap: wrap; gap: 10px; }
   .cabinetrySupplierButtons button { display: grid; gap: 2px; min-width: 136px; border: 2px solid #334155; border-radius: 8px; background: #ffffff; color: #0f172a; padding: 10px 14px; text-align: left; font-weight: 950; }
-  .cabinetrySupplierButtons button span { color: #475569; font-size: 11px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
+  .cabinetrySupplierButtons button span { color: #475569; font-size: 16px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
   .cabinetrySupplierButtons button strong { color: inherit; font-size: 18px; }
   .cabinetrySupplierButtons button:hover { border-color: #0f766e; background: #f0fdfa; }
   .cabinetrySupplierButtons button:focus-visible,
@@ -15741,33 +18431,43 @@ const styles = `
   .cabinetrySupplierWebsite a,
   .cabinetryLoadMore { display: inline-flex; align-items: center; justify-content: center; justify-self: start; min-height: 42px; border: 1px solid #334155; border-radius: 8px; background: #ffffff; color: #0f172a; padding: 10px 14px; font-weight: 950; text-decoration: none; }
   .cabinetrySelectionList { display: grid; gap: 12px; min-width: 0; }
-  .cabinetrySelectionRow { display: grid; grid-template-columns: 28px minmax(0, 1fr) minmax(100px, 130px) minmax(180px, 1.1fr) auto; gap: 12px; align-items: center; min-height: 74px; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; color: #0f172a; padding: 12px; cursor: pointer; box-shadow: 0 8px 20px rgba(15,23,42,.05); }
+  .cabinetrySelectionRow { display: grid; grid-template-columns: 28px minmax(0, 1fr) minmax(100px, 130px) minmax(180px, 1.1fr) auto; gap: 12px; align-items: center; min-height: 74px; border: 2px solid #d7deea; border-radius: 8px; background: #ffffff; color: #0f172a; padding: 12px; cursor: pointer; box-shadow: 0 8px 20px rgba(15,23,42,.05); transition: border-color .15s ease, background .15s ease, box-shadow .15s ease; }
+  .cabinetrySelectionRow:not(.disabled):hover { border-color: #14b8a6; box-shadow: 0 10px 24px rgba(15,118,110,.12); }
   .cabinetrySelectionRow > input[type="checkbox"] { appearance: none; display: grid; place-items: center; width: 28px; height: 28px; min-width: 28px; min-height: 28px; margin: 0; border: 2px solid #64748b; border-radius: 6px; background: #ffffff; cursor: pointer; }
   .cabinetrySelectionRow > input[type="checkbox"]:checked { border-color: #0f766e; background: #0f766e; box-shadow: inset 0 0 0 5px #ffffff; }
   .cabinetrySelectionCheck { display: none; }
-  .cabinetrySelectionRow.selected { border-color: #0f766e; background: #ecfdf5; box-shadow: inset 0 0 0 1px #0f766e, 0 10px 24px rgba(15,118,110,.10); }
+  /* Selected rows need to read as obviously chosen at a glance, not via a subtle 1px border -
+     a thick border, a strong tinted background and an explicit "Selected" tag together, rather
+     than relying on any one subtle cue alone. */
+  .cabinetrySelectionRow.selected { border-color: #0f766e; background: #d1fae5; box-shadow: inset 0 0 0 2px #0f766e, 0 10px 24px rgba(15,118,110,.16); }
+  .cabinetrySelectionRow.selected .cabinetrySelectionMain strong::after { content: "\\2713 Selected"; display: inline-block; margin-left: 10px; padding: 2px 8px; border-radius: 999px; background: #0f766e; color: #ffffff; font-size: 16px; font-weight: 950; letter-spacing: .04em; vertical-align: middle; }
   .cabinetrySelectionRow.disabled { opacity: .7; cursor: not-allowed; }
   .cabinetrySelectionRow:focus-within { outline: 3px solid #f59e0b; outline-offset: 2px; }
   .cabinetrySelectionMain { display: grid; gap: 4px; min-width: 0; }
   .cabinetrySelectionMain strong { color: #071827; font-size: 17px; font-weight: 950; overflow-wrap: anywhere; }
   .cabinetrySelectionMain small { color: #475569; font-weight: 800; line-height: 1.35; }
+  /* The Apply Colours modal's room rows only ever have a checkbox and name/status - the base
+     .cabinetrySelectionRow grid also reserves quantity/width columns for schedule-style rows,
+     which this list never populates. Those reserved tracks were stealing width from the name
+     column, forcing room names like "Powder Room" to wrap letter-by-letter. Two columns only. */
+  [data-testid="cabinetry-apply-colours-modal"] .cabinetrySelectionRow { grid-template-columns: 28px 1fr; }
   .cabinetrySelectionQuantity,
   .cabinetrySelectionWidth,
-  .cabinetrySelectionNotes { display: grid; gap: 4px; min-width: 0; color: #475569; font-size: 12px; font-weight: 950; }
+  .cabinetrySelectionNotes { display: grid; gap: 4px; min-width: 0; color: #475569; font-size: 16px; font-weight: 950; }
   .cabinetrySelectionQuantity input,
   .cabinetrySelectionWidth input,
   .cabinetrySelectionNotes input { min-height: 42px; border: 1px solid #94a3b8; border-radius: 8px; background: #ffffff; color: #071827; padding: 9px 10px; font-weight: 850; min-width: 0; }
   .cabinetryScheduleGroup { display: grid; gap: 10px; border: 1px solid #d7deea; border-radius: 8px; background: #f8fafc; padding: 12px; }
-  .cabinetryScheduleGroup h3 { margin: 0; color: #071827; font-size: 15px; font-weight: 950; letter-spacing: .04em; }
+  .cabinetryScheduleGroup h3 { margin: 0; color: #071827; font-size: 18px; font-weight: 950; letter-spacing: .04em; }
   .cabinetrySelectionReset { min-height: 38px; border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: #0f172a; padding: 8px 10px; font-weight: 900; }
   .cabinetrySelectionMessage { margin: 0; border: 1px solid #f59e0b; border-radius: 8px; background: #fffbeb; color: #92400e; padding: 10px 12px; font-weight: 900; }
   .cabinetryCatalogueToolbar { display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); gap: 10px; align-items: end; border: 1px solid #d7deea; border-radius: 8px; background: #f8fafc; padding: 12px; }
   .cabinetryCatalogueToolbar label { display: grid; gap: 5px; min-width: 0; }
-  .cabinetryCatalogueToolbar label span { color: #475569; font-size: 12px; font-weight: 950; }
+  .cabinetryCatalogueToolbar label span { color: #475569; font-size: 16px; font-weight: 950; }
   .cabinetryCatalogueToolbar input,
   .cabinetryCatalogueToolbar select { min-height: 40px; border: 1px solid #94a3b8; border-radius: 8px; background: #fff; color: #071827; padding: 9px 10px; font-weight: 800; min-width: 0; }
   .cabinetryCatalogueToolbar button { min-height: 40px; border: 1px solid #334155; border-radius: 8px; background: #ffffff; color: #0f172a; padding: 9px 10px; font-weight: 950; }
-  .cabinetryCatalogueToolbar > strong { color: #0f172a; font-size: 14px; font-weight: 950; }
+  .cabinetryCatalogueToolbar > strong { color: #0f172a; font-size: 16px; font-weight: 950; }
   .cabinetryApplyPanel,
   .bulkheadFinishPanel,
   .cabinetryAreaSummary { display: grid; gap: 12px; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 14px; }
@@ -15790,35 +18490,35 @@ const styles = `
   .cabinetryAreaSummaryTable [role="row"] { display: grid; grid-template-columns: minmax(170px, 1.15fr) minmax(110px, .75fr) minmax(150px, 1fr) minmax(120px, .85fr) auto; gap: 0; align-items: stretch; background: #ffffff; border-top: 1px solid #e2e8f0; }
   .cabinetryAreaSummaryTable [role="row"]:first-child { border-top: 0; background: #f8fafc; }
   .cabinetryAreaSummaryTable span,
-  .cabinetryAreaSummaryTable strong { display: flex; align-items: center; min-width: 0; padding: 10px 11px; color: #0f172a; font-size: 13px; font-weight: 850; border-left: 1px solid #e2e8f0; overflow-wrap: anywhere; }
+  .cabinetryAreaSummaryTable strong { display: flex; align-items: center; min-width: 0; padding: 10px 11px; color: #0f172a; font-size: 16px; font-weight: 850; border-left: 1px solid #e2e8f0; overflow-wrap: anywhere; }
   .cabinetryAreaSummaryTable span:first-child,
   .cabinetryAreaSummaryTable strong:first-child { border-left: 0; }
-  .cabinetryAreaSummaryTable strong { color: #475569; font-size: 11px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
+  .cabinetryAreaSummaryTable strong { color: #475569; font-size: 16px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
   .cabinetryAreaSummaryTable button { min-height: 38px; margin: 6px; border: 1px solid #0f766e; border-radius: 8px; background: #ffffff; color: #0f766e; padding: 7px 10px; font-weight: 950; }
   .cabinetrySummaryActions { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
-  .cabinetrySummaryActions button { margin: 0; font-size: 12px; }
+  .cabinetrySummaryActions button { margin: 0; font-size: 16px; }
   .cabinetryModalAreaList { display: grid; gap: 10px; }
-  .cabinetryModalAreaList > strong { color: #071827; font-size: 15px; font-weight: 950; }
+  .cabinetryModalAreaList > strong { color: #071827; font-size: 16px; font-weight: 950; }
   .cabinetryColourCardGrid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: 14px; }
   .cabinetryColourCard { position: relative; display: grid; grid-template-rows: 170px 1fr; min-height: 390px; border: 1px solid #d7deea; border-radius: 8px; overflow: hidden; background: #ffffff; box-shadow: 0 14px 28px rgba(15,23,42,.08); }
   .cabinetryColourCard.selected { border-color: #0f766e; box-shadow: 0 0 0 3px rgba(20,184,166,.18), 0 16px 30px rgba(15,23,42,.10); }
-  .cabinetryColourCard > b { position: absolute; top: 10px; right: 10px; border-radius: 999px; background: #0f766e; color: #ffffff; padding: 5px 8px; font-size: 11px; font-weight: 950; }
+  .cabinetryColourCard > b { position: absolute; top: 10px; right: 10px; border-radius: 999px; background: #0f766e; color: #ffffff; padding: 5px 8px; font-size: 16px; font-weight: 950; }
   .cabinetryColourCard .cabinetrySwatchButton { display: grid; place-items: center; width: 100%; height: 170px; border: 0; border-radius: 0; background: #e2e8f0; color: #334155; padding: 0; overflow: hidden; text-align: center; font-weight: 900; }
   .cabinetrySwatchButton img { display: block; width: 100%; height: 100%; object-fit: cover; }
   .cabinetrySwatchFallback { display: grid; place-items: center; width: 100%; height: 100%; min-height: 100px; background: #e2e8f0; color: #334155; text-align: center; font-weight: 950; }
-  .cabinetrySwatchFallback.compact { min-height: 42px; height: 42px; border-radius: 6px; font-size: 11px; }
+  .cabinetrySwatchFallback.compact { min-height: 42px; height: 42px; border-radius: 6px; font-size: 16px; }
   .cabinetryColourCardBody { display: grid; align-content: start; gap: 7px; padding: 13px; min-width: 0; }
-  .cabinetryColourCardBody span { color: #0f766e; font-size: 12px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
+  .cabinetryColourCardBody span { color: #0f766e; font-size: 16px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
   .cabinetryColourCardBody strong { color: #071827; font-size: 20px; line-height: 1.15; font-weight: 950; overflow-wrap: anywhere; }
   .cabinetryColourCardBody small,
   .cabinetryColourCardBody em { color: #475569; font-style: normal; font-weight: 800; line-height: 1.35; overflow-wrap: anywhere; }
-  .cabinetryColourCardBody i { justify-self: start; border: 1px solid #fde68a; border-radius: 999px; background: #fffbeb; color: #92400e; padding: 5px 8px; font-size: 12px; font-style: normal; font-weight: 950; }
+  .cabinetryColourCardBody i { justify-self: start; border: 1px solid #fde68a; border-radius: 999px; background: #fffbeb; color: #92400e; padding: 5px 8px; font-size: 16px; font-style: normal; font-weight: 950; }
   .cabinetryColourActions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   .cabinetryColourActions button,
-  .cabinetryColourActions a { display: inline-flex; align-items: center; justify-content: center; min-height: 38px; border: 1px solid #334155; border-radius: 8px; background: #fff; color: #0f172a; padding: 8px 10px; font-size: 13px; font-weight: 950; text-decoration: none; }
+  .cabinetryColourActions a { display: inline-flex; align-items: center; justify-content: center; min-height: 38px; border: 1px solid #334155; border-radius: 8px; background: #fff; color: #0f172a; padding: 8px 10px; font-size: 16px; font-weight: 950; text-decoration: none; }
   .cabinetryColourActions button.primary { border-color: #0f766e; background: #0f766e; color: #fff; }
   .cabinetryRecentStrip { display: flex; flex-wrap: wrap; gap: 9px; align-items: stretch; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 10px; }
-  .cabinetryRecentStrip > strong { flex-basis: 100%; color: #0f172a; font-size: 14px; }
+  .cabinetryRecentStrip > strong { flex-basis: 100%; color: #0f172a; font-size: 16px; }
   .cabinetryRecentStrip button { display: grid; grid-template-columns: 42px minmax(120px, 1fr); gap: 4px 8px; align-items: center; border: 1px solid #cbd5e1; border-radius: 8px; background: #f8fafc; color: #0f172a; padding: 7px; text-align: left; font-weight: 850; }
   .cabinetryRecentStrip img { grid-row: span 2; width: 42px; height: 42px; border-radius: 6px; object-fit: cover; }
   .cabinetryRecentStrip .cabinetrySwatchFallback { grid-row: span 2; width: 42px; }
@@ -15831,7 +18531,7 @@ const styles = `
   .cabinetrySelectionModal > .cabinetrySwatchUnavailable { width: 100%; aspect-ratio: 1 / 1; border: 1px solid #d7deea; border-radius: 8px; object-fit: cover; }
   .cabinetrySelectionModal > div { display: grid; gap: 12px; min-width: 0; }
   .cabinetrySelectionModal dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin: 0; }
-  .cabinetrySelectionModal dt { color: #64748b; font-size: 12px; font-weight: 950; }
+  .cabinetrySelectionModal dt { color: #64748b; font-size: 16px; font-weight: 950; }
   .cabinetrySelectionModal dd { margin: 2px 0 0; color: #071827; font-weight: 850; overflow-wrap: anywhere; }
   .cabinetrySelectionComposer h3,
   .cabinetryAppliedSummary h3 { margin: 0; color: #071827; font-size: 21px; font-weight: 950; }
@@ -15842,7 +18542,7 @@ const styles = `
   .cabinetryAppliedSummary dl,
   .cabinetryInspectModal dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 9px; margin: 0; }
   .cabinetryAppliedSummary dt,
-  .cabinetryInspectModal dt { color: #64748b; font-size: 12px; font-weight: 950; }
+  .cabinetryInspectModal dt { color: #64748b; font-size: 16px; font-weight: 950; }
   .cabinetryAppliedSummary dd,
   .cabinetryInspectModal dd { margin: 2px 0 0; color: #071827; font-weight: 850; overflow-wrap: anywhere; }
   .cabinetryInspectOverlay { position: fixed; inset: 0; z-index: 10000; display: grid; place-items: center; padding: 20px; background: rgba(15,23,42,.62); }
@@ -15857,22 +18557,27 @@ const styles = `
   .stoneMaterialChoice button { min-height: 66px; border: 2px solid #334155; border-radius: 8px; background: #fff; color: #0f172a; padding: 12px; text-align: left; }
   .stoneMaterialChoice button.selected { border-color: #0f766e; background: #ecfdf5; box-shadow: inset 0 0 0 1px #0f766e; }
   .stoneBenchtopSelector { display: grid; gap: 14px; min-width: 0; }
+  .guidedProjectRooms { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; border: 1px solid #d7deea; border-radius: 12px; background: #fff; padding: 14px 20px; font-size: 16px; color: #0f172a; }
+  .guidedProjectRooms > div { display: grid; gap: 2px; min-width: 0; }
+  .guidedProjectRooms strong { font-size: 18px; font-weight: 900; }
+  .guidedProjectRooms span { color: #475569; font-size: 16px; }
+  .guidedProjectRooms > button { min-height: 48px; padding: 10px 24px; border-radius: 10px; border: 0; background: #0f172a; color: #fff; font-size: 17px; font-weight: 800; cursor: pointer; }
   .stoneSupplierButtons button { min-width: 170px; }
   .stoneFilters { grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); }
   .stoneProductGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 285px), 1fr)); gap: 14px; }
   .stoneProductCard { position: relative; display: grid; grid-template-rows: 190px 1fr; min-height: 455px; border: 1px solid #d7deea; border-radius: 8px; overflow: hidden; background: #fff; box-shadow: 0 14px 28px rgba(15,23,42,.08); }
   .stoneProductCard.selected { border-color: #0f766e; box-shadow: 0 0 0 3px rgba(20,184,166,.18), 0 16px 30px rgba(15,23,42,.10); }
-  .stoneProductCard > b { position: absolute; top: 10px; right: 10px; border-radius: 999px; background: #0f766e; color: #fff; padding: 5px 8px; font-size: 11px; font-weight: 950; }
+  .stoneProductCard > b { position: absolute; top: 10px; right: 10px; border-radius: 999px; background: #0f766e; color: #fff; padding: 5px 8px; font-size: 16px; font-weight: 950; }
   .stoneProductImageButton,
   .stoneSwatchUnavailable { display: grid; place-items: center; width: 100%; height: 190px; border: 0; border-radius: 0; background: #e2e8f0; color: #334155; padding: 0; text-align: center; font-weight: 950; overflow: hidden; }
   .stoneProductImageButton img,
   .stoneComparison img { width: 100%; height: 100%; object-fit: cover; }
   .stoneProductBody { display: grid; align-content: start; gap: 8px; padding: 13px; min-width: 0; }
-  .stoneProductBody span { color: #0f766e; font-size: 12px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
+  .stoneProductBody span { color: #0f766e; font-size: 16px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
   .stoneProductBody strong { color: #071827; font-size: 21px; line-height: 1.15; font-weight: 950; overflow-wrap: anywhere; }
   .stoneProductBody small,
   .stoneProductBody em { color: #475569; font-style: normal; font-weight: 800; line-height: 1.35; overflow-wrap: anywhere; }
-  .stoneProductBody i { justify-self: start; border: 1px solid #c7d2fe; border-radius: 999px; background: #eef2ff; color: #3730a3; padding: 5px 8px; font-size: 12px; font-style: normal; font-weight: 950; }
+  .stoneProductBody i { justify-self: start; border: 1px solid #c7d2fe; border-radius: 999px; background: #eef2ff; color: #3730a3; padding: 5px 8px; font-size: 16px; font-style: normal; font-weight: 950; }
   .stoneComparison,
   .stoneSelectionComposer,
   .stoneAppliedSummary { display: grid; gap: 12px; border: 1px solid #d7deea; border-radius: 8px; background: #fff; padding: 14px; }
@@ -15886,7 +18591,7 @@ const styles = `
   .stoneComparison dl,
   .stoneAppliedSummary dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 9px; margin: 0; }
   .stoneComparison dt,
-  .stoneAppliedSummary dt { color: #64748b; font-size: 12px; font-weight: 950; }
+  .stoneAppliedSummary dt { color: #64748b; font-size: 16px; font-weight: 950; }
   .stoneComparison dd,
   .stoneAppliedSummary dd { margin: 2px 0 0; color: #071827; font-weight: 850; overflow-wrap: anywhere; }
   .stoneChecklist { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 9px; }
@@ -15911,37 +18616,37 @@ const styles = `
   .cabinetryScheduleTable { display: grid; gap: 10px; overflow-x: auto; }
   .cabinetryScheduleTable table { width: 100%; border-collapse: collapse; min-width: 760px; }
   .cabinetryScheduleTable th,
-  .cabinetryScheduleTable td { border-bottom: 1px solid #e2e8f0; padding: 8px; text-align: left; vertical-align: top; font-size: 12px; }
+  .cabinetryScheduleTable td { border-bottom: 1px solid #e2e8f0; padding: 8px; text-align: left; vertical-align: top; font-size: 16px; }
   .cabinetryReview { display: grid; gap: 12px; min-width: 0; }
   .drivewayFinishGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 440px)); gap: 18px; align-items: stretch; justify-content: start; width: 100%; }
   .drivewayFinishCard { position: relative; display: grid; grid-template-rows: 280px 1fr; text-align: left; border: 1px solid #d7deea; border-radius: 8px; overflow: hidden; background: #fff; box-shadow: 0 14px 30px rgba(15,23,42,.10); }
   .drivewayFinishCard.selected { border-color: #0f766e; box-shadow: 0 0 0 3px rgba(20, 184, 166, .18), 0 18px 38px rgba(15,23,42,.12); }
   .drivewayFinishCard img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center 58%; background: #e2e8f0; }
   .drivewayFinishBody { display: grid; gap: 8px; padding: 14px; align-content: start; min-width: 0; }
-  .drivewayFinishCard span { color: #64748b; font-size: 12px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
+  .drivewayFinishCard span { color: #64748b; font-size: 16px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
   .drivewayFinishCard strong { color: #071827; font-size: 22px; line-height: 1.15; font-weight: 950; }
   .drivewayFinishCard em { color: #475569; font-style: normal; font-weight: 800; line-height: 1.35; }
-  .drivewayFinishCard small { justify-self: start; border: 1px solid #fde68a; background: #fffbeb; color: #92400e; border-radius: 999px; padding: 5px 8px; font-size: 12px; font-weight: 950; }
-  .drivewayFinishCard b, .drivewayOptionCard b { position: absolute; top: 10px; right: 10px; background: #0f766e; color: #fff; border-radius: 999px; padding: 5px 8px; font-size: 11px; font-weight: 950; }
+  .drivewayFinishCard small { justify-self: start; border: 1px solid #fde68a; background: #fffbeb; color: #92400e; border-radius: 999px; padding: 5px 8px; font-size: 16px; font-weight: 950; }
+  .drivewayFinishCard b, .drivewayOptionCard b { position: absolute; top: 10px; right: 10px; background: #0f766e; color: #fff; border-radius: 999px; padding: 5px 8px; font-size: 16px; font-weight: 950; }
   .drivewayFinishActions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 3px; }
   .drivewayFinishActions button { border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; color: #071827; padding: 9px 11px; font-weight: 900; }
   .drivewayFinishActions button.primary { border-color: #0f766e; background: #0f766e; color: #fff; }
   .drivewayAreaInput { display: grid; gap: 6px; min-width: min(100%, 280px); color: #334155; font-weight: 900; }
-  .drivewayAreaInput span, .drivewayAreaInput small { color: #64748b; font-size: 12px; font-weight: 900; }
+  .drivewayAreaInput span, .drivewayAreaInput small { color: #64748b; font-size: 16px; font-weight: 900; }
   .drivewayAreaInput input, .drivewayFilters input, .drivewayFilters select { border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px 12px; font-weight: 800; color: #071827; background: #fff; }
   .drivewayConfigBlock { display: grid; gap: 14px; width: 100%; max-width: none; min-width: 0; margin-top: 4px; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 18px; box-sizing: border-box; }
   .drivewayConfigHeader { display: flex; align-items: start; justify-content: space-between; gap: 18px; flex-wrap: wrap; border-bottom: 1px solid #e2e8f0; padding-bottom: 14px; }
   .drivewayConfigHeader > div { display: grid; gap: 4px; min-width: min(100%, 320px); }
-  .drivewayConfigHeader span { color: #0f766e; font-size: 12px; font-weight: 950; text-transform: uppercase; letter-spacing: .06em; }
+  .drivewayConfigHeader span { color: #0f766e; font-size: 16px; font-weight: 950; text-transform: uppercase; letter-spacing: .06em; }
   .drivewayConfigBlock h3, .drivewayConfigBlock h4, .drivewaySelectionSummary h3 { margin: 0; font-size: 22px; color: #071827; font-weight: 950; }
   .drivewaySegment, .drivewaySupplierRow, .drivewayFilters { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
   .drivewaySegment button, .drivewaySupplierRow button { border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; padding: 11px 13px; text-align: left; font-weight: 950; color: #071827; }
-  .drivewaySegment button span, .drivewaySupplierRow button span { display: block; margin-top: 4px; color: #64748b; font-size: 12px; font-weight: 800; }
+  .drivewaySegment button span, .drivewaySupplierRow button span { display: block; margin-top: 4px; color: #64748b; font-size: 16px; font-weight: 800; }
   .drivewaySegment button.selected, .drivewaySupplierRow button.selected { border-color: #0f766e; background: #ecfdf5; color: #0f766e; box-shadow: inset 0 0 0 1px #0f766e; }
   .drivewayNaturalPanel, .drivewaySupplierRangeHeader { display: grid; gap: 6px; border: 1px solid #d7deea; border-radius: 8px; background: #f8fafc; padding: 12px; color: #334155; }
   .drivewayNaturalPanel strong { color: #071827; font-size: 18px; font-weight: 950; }
   .drivewayNaturalPanel span, .drivewaySupplierRangeHeader span { color: #475569; font-weight: 800; }
-  .drivewayNaturalPanel em { justify-self: start; color: #92400e; background: #fffbeb; border: 1px solid #fde68a; border-radius: 999px; padding: 5px 8px; font-style: normal; font-size: 12px; font-weight: 950; }
+  .drivewayNaturalPanel em { justify-self: start; color: #92400e; background: #fffbeb; border: 1px solid #fde68a; border-radius: 999px; padding: 5px 8px; font-style: normal; font-size: 16px; font-weight: 950; }
   .drivewayFilterToggle { display: inline-flex; align-items: center; gap: 8px; border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; padding: 9px 11px; color: #071827; font-weight: 900; }
   .drivewayFilterToggle input { width: 16px; height: 16px; margin: 0; }
   .drivewayCompareStrip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; border: 1px solid #d7deea; border-radius: 8px; background: #f8fafc; padding: 12px; }
@@ -15950,19 +18655,19 @@ const styles = `
   .drivewayOptionCard { position: relative; display: grid; align-content: start; gap: 7px; min-height: 230px; border: 1px solid #d7deea; border-radius: 8px; background: #fff; padding: 10px; text-align: left; cursor: pointer; }
   .drivewayOptionCard.compact { min-height: 0; }
   .drivewayOptionCard.selected { border-color: #0f766e; box-shadow: 0 0 0 3px rgba(20, 184, 166, .18); }
-  .drivewayColourSample, .drivewayAggregateSample { display: grid; place-items: center; width: 100%; min-height: 150px; aspect-ratio: 5 / 3; border-radius: 6px; color: #fff; text-shadow: 0 1px 2px rgba(15, 23, 42, .55); font-size: 12px; font-weight: 950; }
+  .drivewayColourSample, .drivewayAggregateSample { display: grid; place-items: center; width: 100%; min-height: 150px; aspect-ratio: 5 / 3; border-radius: 6px; color: #fff; text-shadow: 0 1px 2px rgba(15, 23, 42, .55); font-size: 16px; font-weight: 950; }
   .drivewayAggregateSample { position: relative; min-height: 190px; aspect-ratio: 4 / 3; overflow: hidden; background: #f8fafc; color: #475569; text-shadow: none; }
   .drivewayAggregateSample img { width: 100%; height: 100%; object-fit: cover; }
-  .drivewayAggregateSample i { position: absolute; top: 8px; right: 8px; border: 1px solid #5eead4; border-radius: 999px; background: #ccfbf1; color: #115e59; padding: 4px 8px; font-size: 11px; font-style: normal; font-weight: 950; line-height: 1; }
-  .drivewayOptionCard strong { color: #071827; font-size: 15px; font-weight: 950; }
-  .drivewayOptionCard em, .drivewayOptionCard small { color: #475569; font-style: normal; font-size: 12px; font-weight: 800; }
-  .drivewayOptionCard a { justify-self: start; border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: #0f766e; padding: 7px 9px; font-size: 12px; font-weight: 950; text-decoration: none; }
+  .drivewayAggregateSample i { position: absolute; top: 8px; right: 8px; border: 1px solid #5eead4; border-radius: 999px; background: #ccfbf1; color: #115e59; padding: 4px 8px; font-size: 16px; font-style: normal; font-weight: 950; line-height: 1; }
+  .drivewayOptionCard strong { color: #071827; font-size: 16px; font-weight: 950; }
+  .drivewayOptionCard em, .drivewayOptionCard small { color: #475569; font-style: normal; font-size: 16px; font-weight: 800; }
+  .drivewayOptionCard a { justify-self: start; border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: #0f766e; padding: 7px 9px; font-size: 16px; font-weight: 950; text-decoration: none; }
   .drivewaySelectionSummary { display: grid; gap: 12px; border: 1px solid #bbf7d0; border-radius: 8px; background: #f0fdf4; padding: 16px; }
   .drivewaySelectionSummary dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 0; }
   .drivewaySelectionSummary dl div { border: 1px solid #d1fae5; border-radius: 8px; background: #ffffff; padding: 10px; min-width: 0; }
-  .drivewaySelectionSummary dt { color: #64748b; font-size: 11px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
+  .drivewaySelectionSummary dt { color: #64748b; font-size: 16px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
   .drivewaySelectionSummary dd { margin: 4px 0 0; color: #071827; font-weight: 900; overflow-wrap: anywhere; }
-  .drivewaySampleNotice { margin: 14px 0 0; color: #475569; font-size: 13px; font-weight: 750; line-height: 1.45; }
+  .drivewaySampleNotice { margin: 14px 0 0; color: #475569; font-size: 16px; font-weight: 750; line-height: 1.45; }
   .guidedProductMoney { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; }
   .guidedProductActions { display: flex; gap: 8px; flex-wrap: wrap; padding: 0 13px 13px; }
   .guidedProductActions button { border-radius: 8px; background: #ffffff; color: #071827; border: 1px solid #cbd5e1; }
@@ -15970,17 +18675,17 @@ const styles = `
   .guidedProductActions button:disabled { opacity: 0.55; cursor: not-allowed; }
   .exteriorWallConstruction { display: grid; gap: 12px; border: 1px solid #cbd5e1; background: #ffffff; border-radius: 8px; padding: 14px; }
   .exteriorWallConstruction > div:first-child { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; align-items: baseline; }
-  .exteriorWallConstruction span { color: #0f766e; font-size: 12px; font-weight: 950; text-transform: uppercase; letter-spacing: .08em; }
+  .exteriorWallConstruction span { color: #0f766e; font-size: 16px; font-weight: 950; text-transform: uppercase; letter-spacing: .08em; }
   .exteriorWallConstruction strong { color: #071827; font-size: 18px; font-weight: 950; }
   .exteriorWallConstruction p { margin: 0; color: #475569; font-weight: 800; }
   .exteriorWallConstructionOptions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
   .exteriorWallConstructionOptions button { display: grid; gap: 5px; min-height: 94px; border: 1px solid #d7deea; border-radius: 8px; background: #f8fafc; color: #071827; padding: 10px; text-align: left; cursor: pointer; }
   .exteriorWallConstructionOptions button.selected { border-color: #0f766e; background: #ecfdf5; box-shadow: inset 0 0 0 2px rgba(15,118,110,.16); }
-  .exteriorWallConstructionOptions small { color: #475569; font-size: 12px; line-height: 1.3; font-weight: 750; }
+  .exteriorWallConstructionOptions small { color: #475569; font-size: 16px; line-height: 1.3; font-weight: 750; }
   .entryDoorFurniturePanel { display: grid; gap: 16px; }
-  .entryDoorLayout { grid-template-columns: minmax(0, 1fr); }
-  .entryDoorLayout > .guidedProgressMenu { position: static; display: flex; flex-wrap: wrap; gap: 6px; }
-  .entryDoorLayout > .guidedProgressMenu > button { width: auto; flex: 1 1 150px; }
+  .entryDoorLayout { grid-template-columns: 260px minmax(0, 1fr); }
+  .entryDoorLayout > .guidedProgressMenu { position: sticky; top: 92px; display: grid; gap: 6px; }
+  .entryDoorLayout > .guidedProgressMenu > button { width: 100%; }
   .entryDoorSelectionSummary { grid-template-columns: 110px minmax(0, 1fr); }
   .entryDoorSelectionSummary > img { width: 110px; max-height: 180px; object-fit: contain; }
   .entryDoorSelectionSummary .roofingSummaryDetails { min-width: 0; }
@@ -16001,14 +18706,14 @@ const styles = `
   .entryDoorFurnitureBody { display: grid; gap: 8px; }
   .entryDoorFurnitureClientSpecs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin: 4px 0 0; }
   .entryDoorFurnitureClientSpecs div { border: 1px solid #e2e8f0; border-radius: 6px; padding: 7px; background: #f8fafc; }
-  .entryDoorFurnitureClientSpecs dt { color: #64748b; font-size: 10px; font-weight: 950; text-transform: uppercase; }
-  .entryDoorFurnitureClientSpecs dd { margin: 2px 0 0; color: #071827; font-size: 12px; font-weight: 850; }
+  .entryDoorFurnitureClientSpecs dt { color: #64748b; font-size: 16px; font-weight: 950; text-transform: uppercase; }
+  .entryDoorFurnitureClientSpecs dd { margin: 2px 0 0; color: #071827; font-size: 16px; font-weight: 850; }
   .entryDoorFurnitureSpecs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin: 10px 0 0; }
   .entryDoorFurnitureSpecs div { border: 1px solid #e2e8f0; border-radius: 6px; padding: 7px; }
-  .entryDoorFurnitureSpecs dt { color: #64748b; font-size: 10px; font-weight: 950; text-transform: uppercase; }
-  .entryDoorFurnitureSpecs dd { margin: 2px 0 0; color: #071827; font-size: 12px; font-weight: 800; }
+  .entryDoorFurnitureSpecs dt { color: #64748b; font-size: 16px; font-weight: 950; text-transform: uppercase; }
+  .entryDoorFurnitureSpecs dd { margin: 2px 0 0; color: #071827; font-size: 16px; font-weight: 800; }
   .entryDoorFurnitureFinishes { display: grid; gap: 10px; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 14px; }
-  .entryDoorGlassNotice { border: 1px solid #bfdbfe; border-radius: 8px; background: #eff6ff; color: #1e3a8a; padding: 10px 12px; font-size: 13px; font-weight: 850; }
+  .entryDoorGlassNotice { border: 1px solid #bfdbfe; border-radius: 8px; background: #eff6ff; color: #1e3a8a; padding: 10px 12px; font-size: 16px; font-weight: 850; }
   .entryDoorGlassEmpty { border: 1px solid #d7deea; border-radius: 8px; background: #f8fafc; color: #334155; padding: 18px; font-size: 16px; font-weight: 900; }
   .entryDoorGlassGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(245px, 1fr)); gap: 14px; }
   .entryDoorGlassCard { position: relative; display: grid; grid-template-rows: 280px minmax(0, auto) auto; gap: 0; border: 1px solid #d7deea; border-radius: 8px; overflow: hidden; background: #ffffff; }
@@ -16016,27 +18721,27 @@ const styles = `
   .entryDoorGlassPreview { width: 100%; height: 280px; border: 0; border-bottom: 1px solid #e2e8f0; background: #f8fafc; padding: 12px; cursor: zoom-in; }
   .entryDoorGlassPreview img { width: 100%; height: 100%; object-fit: contain; display: block; }
   .entryDoorGlassBody { display: grid; gap: 8px; padding: 12px; }
-  .entryDoorGlassBody span { color: #0f766e; font-size: 11px; font-weight: 950; text-transform: uppercase; }
+  .entryDoorGlassBody span { color: #0f766e; font-size: 16px; font-weight: 950; text-transform: uppercase; }
   .entryDoorGlassBody strong { color: #071827; font-size: 19px; font-weight: 950; }
-  .entryDoorGlassBody em { color: #475569; font-style: normal; font-size: 12px; font-weight: 850; }
+  .entryDoorGlassBody em { color: #475569; font-style: normal; font-size: 16px; font-weight: 850; }
   .entryDoorGlassBody dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin: 0; }
-  .entryDoorGlassBody dt { color: #64748b; font-size: 10px; font-weight: 950; text-transform: uppercase; }
-  .entryDoorGlassBody dd { margin: 2px 0 0; color: #071827; font-size: 12px; font-weight: 820; }
+  .entryDoorGlassBody dt { color: #64748b; font-size: 16px; font-weight: 950; text-transform: uppercase; }
+  .entryDoorGlassBody dd { margin: 2px 0 0; color: #071827; font-size: 16px; font-weight: 820; }
   .entryDoorGlassActions { display: flex; gap: 8px; flex-wrap: wrap; padding: 0 12px 12px; }
   .entryDoorGlassActions button, .entryDoorGalleryHeader button, .entryDoorDetailsModal > button { border: 1px solid #cbd5e1; border-radius: 7px; background: #ffffff; color: #071827; padding: 8px 10px; font-weight: 850; cursor: pointer; }
   .entryDoorGlassActions .primary { border-color: #0f766e; background: #0f766e; color: #ffffff; }
-  .entryDoorSelectedBadge { position: absolute; top: 10px; right: 10px; border-radius: 999px; background: #0f766e; color: #ffffff; padding: 5px 9px; font-size: 12px; font-weight: 950; }
+  .entryDoorSelectedBadge { position: absolute; top: 10px; right: 10px; border-radius: 999px; background: #0f766e; color: #ffffff; padding: 5px 9px; font-size: 16px; font-weight: 950; }
   .entryDoorSummaryThumb { width: 74px; height: 74px; object-fit: contain; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 5px; margin-right: 8px; }
   .entryDoorGalleryModal, .entryDoorDetailsModal { width: min(920px, calc(100vw - 32px)); max-height: calc(100vh - 48px); overflow: auto; background: #ffffff; border-radius: 10px; padding: 16px; box-shadow: 0 18px 60px rgba(15,23,42,.28); display: grid; gap: 14px; }
   .entryDoorGalleryHeader { display: flex; justify-content: space-between; align-items: start; gap: 12px; }
-  .entryDoorGalleryHeader span { color: #0f766e; font-size: 11px; font-weight: 950; text-transform: uppercase; }
+  .entryDoorGalleryHeader span { color: #0f766e; font-size: 16px; font-weight: 950; text-transform: uppercase; }
   .entryDoorGalleryHeader strong { display: block; color: #071827; font-size: 22px; font-weight: 950; }
   .entryDoorGalleryGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
   .entryDoorGalleryGrid figure { margin: 0; border: 1px solid #d7deea; border-radius: 8px; background: #f8fafc; padding: 10px; display: grid; gap: 8px; }
   .entryDoorGalleryGrid figure.technical { border-color: #fde68a; background: #fffbeb; }
   .entryDoorGalleryGrid img { width: 100%; height: 320px; object-fit: contain; background: #ffffff; border-radius: 6px; }
-  .entryDoorGalleryGrid figcaption, .entryDoorGalleryModal p { color: #334155; font-size: 13px; font-weight: 850; margin: 0; }
-  .roofingLayout .guidedSectionHeader em { color: #64748b; font-style: normal; font-size: 12px; font-weight: 750; }
+  .entryDoorGalleryGrid figcaption, .entryDoorGalleryModal p { color: #334155; font-size: 16px; font-weight: 850; margin: 0; }
+  .roofingLayout .guidedSectionHeader em { color: #64748b; font-style: normal; font-size: 16px; font-weight: 750; }
   .roofingLayout .guidedProgressItem.complete { border-color: #bbf7d0; background: #f0fdf4; color: #166534; }
   .roofingLayout .guidedProgressItem.active { border-color: #67e8f9; background: #ecfeff; color: #0e7490; }
   .roofingProgressThumb { flex: 0 0 34px; width: 34px; height: 28px; border: 1px solid #cbd5e1; border-radius: 6px; background: #f1f5f9; background-size: cover; background-position: center; box-shadow: inset 0 0 0 1px rgba(255,255,255,.35); }
@@ -16056,23 +18761,23 @@ const styles = `
   .roofingSwatchGrid button strong { font-size: 20px; line-height: 1.15; font-weight: 950; }
   .roofingChoiceGrid button span,
   .roofingProfileGrid button em,
-  .roofingSwatchGrid button em { color: #475569; font-size: 13px; font-style: normal; font-weight: 750; }
+  .roofingSwatchGrid button em { color: #475569; font-size: 16px; font-style: normal; font-weight: 750; }
   .roofingVisualCard { padding: 0 !important; gap: 0 !important; min-height: 0 !important; }
   .roofingVisualImage { display: block; width: 100%; aspect-ratio: 16 / 9; background: #e2e8f0; background-size: cover; background-position: center; }
   .roofingCardBody { display: grid; gap: 8px; padding: 14px; }
   .roofingCardBody span,
   .roofingProfileBody em,
   .roofingSummaryDetails dd { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
-  .roofingCardBody small { color: #64748b; font-size: 12px; font-weight: 900; text-transform: uppercase; }
-  .roofingCardBody em { justify-self: start; border: 1px solid #fde68a; border-radius: 999px; background: #fffbeb; color: #92400e; padding: 5px 9px; font-style: normal; font-size: 12px; font-weight: 900; }
+  .roofingCardBody small { color: #64748b; font-size: 16px; font-weight: 900; text-transform: uppercase; }
+  .roofingCardBody em { justify-self: start; border: 1px solid #fde68a; border-radius: 999px; background: #fffbeb; color: #92400e; padding: 5px 9px; font-style: normal; font-size: 16px; font-weight: 900; }
   .roofingCardBody b,
-  .roofingProfileBody i { justify-self: start; border: 1px solid #0f766e; border-radius: 8px; background: #0f766e; color: #ffffff; padding: 8px 12px; font-style: normal; font-size: 13px; font-weight: 950; }
+  .roofingProfileBody i { justify-self: start; border: 1px solid #0f766e; border-radius: 8px; background: #0f766e; color: #ffffff; padding: 8px 12px; font-style: normal; font-size: 16px; font-weight: 950; }
   .roofingProfileGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
   .roofingProfileGrid button { padding: 0; min-height: 0; }
   .roofingProfileGrid img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; background: #f1f5f9; }
   .roofingProfileBody { display: grid; gap: 7px; padding: 14px; }
-  .roofingProfileBody small { color: #64748b; font-size: 12px; font-weight: 900; text-transform: uppercase; }
-  .roofingProfileBody b { color: #334155; font-size: 12px; font-weight: 850; }
+  .roofingProfileBody small { color: #64748b; font-size: 16px; font-weight: 900; text-transform: uppercase; }
+  .roofingProfileBody b { color: #334155; font-size: 16px; font-weight: 850; }
   .roofingSwatchGrid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
   .roofingSwatchGrid button { min-height: 142px; padding: 10px; }
   .roofingSwatch { display: grid; place-items: center; width: 100%; height: 82px; border: 1px solid rgba(15,23,42,.18); border-radius: 8px; color: #ffffff; font-size: 24px; font-weight: 950; text-shadow: 0 1px 3px rgba(15,23,42,.55); box-shadow: inset 0 0 0 1px rgba(255,255,255,.38); }
@@ -16089,19 +18794,41 @@ const styles = `
   .roofingSummaryDetails > strong { color: #071827; font-size: 22px; font-weight: 950; }
   .roofingSummaryDetails dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; }
   .roofingSummaryDetails dl div { border: 1px solid #e2e8f0; border-radius: 8px; background: #ffffff; padding: 9px; }
-  .roofingSummaryDetails dt { color: #64748b; font-size: 11px; font-weight: 950; text-transform: uppercase; }
+  .roofingSummaryDetails dt { color: #64748b; font-size: 16px; font-weight: 950; text-transform: uppercase; }
   .roofingSummaryDetails dd { display: flex; gap: 8px; align-items: center; min-height: 24px; margin: 4px 0 0; color: #071827; font-weight: 900; }
   .roofingSummarySwatch { flex: 0 0 36px; width: 36px; height: 24px; border: 1px solid rgba(15,23,42,.18); border-radius: 6px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.35); }
-  .windowSupplierGrid { display: grid; grid-template-columns: repeat(3, minmax(220px, 1fr)); gap: 14px; }
-  .windowSupplierGrid button { display: grid; gap: 9px; align-content: start; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; color: #071827; padding: 12px; text-align: left; }
-  .windowSupplierGrid button.selected { border-color: #0f766e; box-shadow: 0 0 0 3px rgba(15,118,110,.16); }
+  /* Summary tiles are navigation. An outstanding one is accented so an unfinished door
+     never reads as complete, and a hover/focus affordance shows the rest are clickable. */
+  .roofingSummaryDetails dl .entryDoorSummaryTile { position: relative; display: block; width: 100%; border: 1px solid #e2e8f0; border-radius: 8px; background: #ffffff; padding: 9px; text-align: left; font: inherit; color: inherit; }
+  .roofingSummaryDetails dl .entryDoorSummaryTile.actionable { cursor: pointer; transition: border-color .12s ease, box-shadow .12s ease, background-color .12s ease; }
+  .roofingSummaryDetails dl .entryDoorSummaryTile.actionable:hover,
+  .roofingSummaryDetails dl .entryDoorSummaryTile.actionable:focus-visible { border-color: #0f766e; box-shadow: 0 0 0 3px rgba(15,118,110,.16); outline: none; }
+  .roofingSummaryDetails dl .entryDoorSummaryTile.outstanding { border-color: #c2410c; background: #fff7ed; }
+  .roofingSummaryDetails dl .entryDoorSummaryTile.outstanding dd { color: #c2410c; }
+  .roofingSummaryDetails dl .entryDoorSummaryTile.outstanding:hover,
+  .roofingSummaryDetails dl .entryDoorSummaryTile.outstanding:focus-visible { border-color: #9a3412; box-shadow: 0 0 0 3px rgba(194,65,12,.18); }
+  .entryDoorSummaryTileHint { display: inline-block; margin-top: 6px; border-radius: 999px; padding: 2px 9px; background: #e2e8f0; color: #334155; font-size: 16px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
+  .entryDoorSummaryTile.outstanding .entryDoorSummaryTileHint { background: #c2410c; color: #ffffff; }
+  .windowSupplierGrid { display: grid; grid-template-columns: repeat(3, minmax(220px, 1fr)); gap: 16px; }
+  .windowSupplierGrid button { display: grid; gap: 10px; align-content: start; border: 1px solid #d7deea; border-radius: 10px; background: #ffffff; color: #071827; padding: 16px; text-align: left; transition: box-shadow .12s ease, border-color .12s ease; }
+  /* Subtle per-supplier tint so three otherwise-identical cards read as distinct choices at a
+     glance (task: "clearly identifiable as an individual selectable option"), not a redesign of
+     card content - name/image/summary/status/link stay the same fields. */
+  .windowSupplierGrid button[data-supplier-key="bradnams"] { background: #eff6ff; border-color: #bfdbfe; }
+  .windowSupplierGrid button[data-supplier-key="dowell"] { background: #f0fdf4; border-color: #bbf7d0; }
+  .windowSupplierGrid button[data-supplier-key="trend"] { background: #faf5ff; border-color: #e9d5ff; }
+  .windowSupplierGrid button.selected { border-color: #0f766e; border-width: 2px; box-shadow: 0 0 0 4px rgba(15,118,110,.2); background: #ffffff; }
   .windowSupplierGrid img { width: 100%; aspect-ratio: 16 / 9; object-fit: contain; background: #f1f5f9; border-radius: 7px; }
   .windowSupplierLogo { display: inline-grid; justify-self: start; min-height: 34px; align-items: center; border: 1px solid #d7deea; border-radius: 7px; background: #f8fafc; color: #071827; padding: 6px 10px; font-weight: 950; }
+  .windowSupplierGrid button strong { font-size: 21px; font-weight: 950; letter-spacing: -.01em; color: #071827; }
+  .windowSupplierGrid button span { color: #475569; font-size: 16px; font-weight: 700; }
+  .windowSupplierGrid button em { font-style: normal; color: #0f766e; font-size: 16px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; }
+  .windowSupplierGrid button small { color: #64748b; font-size: 16px; font-weight: 700; word-break: break-word; }
   .windowStagePanel, .windowScheduleSummary { display: grid; gap: 14px; }
   .windowDemoBanner { border: 1px solid #bfdbfe; background: #eff6ff; color: #1e3a8a; border-radius: 8px; padding: 12px; font-weight: 900; }
-  .windowSourceChain { border: 1px solid #e2e8f0; background: #f8fafc; color: #475569; border-radius: 8px; padding: 10px 12px; font-size: 13px; font-weight: 850; }
+  .windowSourceChain { border: 1px solid #e2e8f0; background: #f8fafc; color: #475569; border-radius: 8px; padding: 10px 12px; font-size: 16px; font-weight: 850; }
   .windowLegend, .windowBulkBar, .windowCountTiles { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-  .windowBadge { display: inline-flex; align-items: center; min-height: 24px; border-radius: 999px; border: 1px solid #cbd5e1; padding: 3px 9px; font-size: 11px; font-weight: 950; white-space: nowrap; }
+  .windowBadge { display: inline-flex; align-items: center; min-height: 24px; border-radius: 999px; border: 1px solid #cbd5e1; padding: 3px 9px; font-size: 16px; font-weight: 950; white-space: nowrap; }
   .windowBadge.blue { background: #eff6ff; border-color: #bfdbfe; color: #1e40af; }
   .windowBadge.teal { background: #ccfbf1; border-color: #5eead4; color: #115e59; }
   .windowBadge.purple { background: #f3e8ff; border-color: #d8b4fe; color: #6b21a8; }
@@ -16110,30 +18837,40 @@ const styles = `
   .windowBadge.red { background: #fee2e2; border-color: #fecaca; color: #991b1b; }
   .windowBadge.grey { background: #f1f5f9; border-color: #cbd5e1; color: #475569; }
   .windowScheduleTableWrap { max-width: 100%; overflow: auto; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; }
-  .windowScheduleTable { width: 100%; border-collapse: collapse; min-width: 980px; font-size: 12px; }
-  .windowScheduleTable th { position: sticky; top: 0; background: #eaf3ff; color: #102033; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+  .windowScheduleTable { width: 100%; border-collapse: collapse; min-width: 980px; font-size: 16px; }
+  .windowLevelSchedule { display: grid; gap: 8px; }
+  .windowLevelHeading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 2px 4px; }
+  .windowLevelHeading .windowLevelName { color: #071827; font-size: 16px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
+  .windowLevelHeading .windowLevelMeta { color: #475569; font-size: 16px; font-weight: 850; white-space: nowrap; }
+  .windowScheduleTable.projectScheduleTable { width: 100%; min-width: 640px; table-layout: fixed; }
+  .windowScheduleTable.projectScheduleTable th,
+  .windowScheduleTable.projectScheduleTable td { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .windowScheduleTable.projectScheduleTable th:last-child,
+  .windowScheduleTable.projectScheduleTable td:last-child { white-space: normal; overflow: visible; text-overflow: clip; }
+  .windowScheduleTable th { position: sticky; top: 0; background: #eaf3ff; color: #102033; text-align: left; font-size: 16px; text-transform: uppercase; letter-spacing: .04em; }
   .windowScheduleTable th, .windowScheduleTable td { border-bottom: 1px solid #e2e8f0; padding: 9px 10px; vertical-align: middle; }
   .windowScheduleTable tbody tr:nth-child(even) { background: #f8fafc; }
   .windowScheduleTable tr.defaultRow { background: #f0fdfa; }
   .windowScheduleTable tr.overrideRow { background: #faf5ff; }
   .windowScheduleTable tr.wetAreaRow { background: #fff7ed; }
+  .windowCodeCell { font-weight: 950; color: #071827; }
+  .windowDocumentedGlass { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   .windowsColourPanel, .windowsReviewGrid, .windowReviewSummary, .yourWindowSelection { display: grid; gap: 14px; }
-  .windowsColourNotice, .windowApplyNotice, .privacyCheck { display: grid; gap: 5px; border: 1px solid #d7deea; background: #f8fafc; border-radius: 8px; padding: 12px; color: #475569; font-weight: 800; }
+  .windowsColourNotice, .privacyCheck { display: grid; gap: 5px; border: 1px solid #d7deea; background: #f8fafc; border-radius: 8px; padding: 12px; color: #475569; font-weight: 800; }
   .privacyCheck.needsReview { border-color: #fde68a; background: #fffbeb; color: #92400e; }
   .privacyCheck.complete { border-color: #86efac; background: #f0fdf4; color: #166534; }
   .windowCurrentSelectionPanel { display: grid; grid-template-columns: minmax(0, 1fr) minmax(150px, 220px) auto; gap: 12px; align-items: center; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 14px; }
-  .windowCurrentSelectionPanel span, .windowRecentColours span, .windowApplyControls span, .windowColourFilters span { color: #64748b; font-size: 11px; font-weight: 950; text-transform: uppercase; }
+  .windowCurrentSelectionPanel span, .windowRecentColours span, .windowColourFilters span { color: #64748b; font-size: 16px; font-weight: 950; text-transform: uppercase; }
   .windowCurrentSelectionPanel strong { display: block; margin-top: 4px; color: #071827; font-size: 22px; font-weight: 950; }
   .windowCurrentSelectionPanel small { display: block; margin-top: 3px; color: #475569; font-weight: 800; }
   .windowCurrentColourCard { display: grid; gap: 6px; border: 1px solid #d7deea; border-radius: 8px; background: #f8fafc; padding: 8px; text-align: left; }
   .windowCurrentColourCard.selected { border-color: #0f766e; background: #f0fdfa; box-shadow: 0 0 0 3px rgba(15,118,110,.14); }
-  .windowRecentColours, .windowApplyControls { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
+  .windowRecentColours { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
   .windowRecentColours button { border: 1px solid #d7deea; border-radius: 999px; background: #f8fafc; color: #475569; padding: 6px 10px; font-weight: 850; }
-  .windowApplyControls label { display: grid; gap: 5px; min-width: 170px; }
-  .windowApplyControls select, .windowColourFilters input, .windowColourFilters select, .windowEditControls select { width: 100%; border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: #071827; padding: 8px 10px; font-weight: 800; }
+  .windowColourFilters input, .windowColourFilters select, .windowEditControls select { width: 100%; border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: #071827; padding: 8px 10px; font-weight: 800; }
   .windowColourModal { width: min(1120px, 94vw); max-height: 90vh; overflow: auto; display: grid; gap: 14px; border-radius: 10px; background: #ffffff; padding: 18px; color: #071827; box-shadow: 0 24px 80px rgba(15,23,42,.24); }
   .windowColourModalHeader, .windowColourModalFooter { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
-  .windowColourModalHeader span { color: #0f766e; font-size: 11px; font-weight: 950; text-transform: uppercase; }
+  .windowColourModalHeader span { color: #0f766e; font-size: 16px; font-weight: 950; text-transform: uppercase; }
   .windowColourModalHeader strong { display: block; color: #071827; font-size: 28px; font-weight: 950; }
   .windowColourModalHeader small, .windowColourModalFooter span { color: #92400e; font-weight: 900; }
   .windowColourFilters { display: grid; grid-template-columns: minmax(220px, 1.3fr) minmax(170px, .7fr) minmax(220px, 1fr) auto; gap: 10px; align-items: end; border: 1px solid #d7deea; border-radius: 8px; background: #f8fafc; padding: 12px; }
@@ -16142,18 +18879,28 @@ const styles = `
   .supplierColourGrid { max-height: 54vh; overflow: auto; padding: 2px; }
   .windowEditControls { display: grid; gap: 6px; min-width: 230px; }
   .windowsSwatchGrid, .windowDefaultGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+  /* Project Defaults: Glass/Screen/Hardware are three separate decisions, not one blended block -
+     a distinct subtle tint + stronger border + larger heading per section, gap widened so each
+     section clearly reads as its own card. */
+  .windowDefaultGrid { gap: 18px; align-items: start; }
+  .windowDefaultSection { border-radius: 12px; border: 2px solid; padding: 18px; }
+  .windowDefaultSection h3 { margin: 0 0 12px; font-size: 19px; font-weight: 950; text-transform: uppercase; letter-spacing: .03em; color: #071827; }
+  .windowDefaultSection--glass { background: #eff6ff; border-color: #bfdbfe; }
+  .windowDefaultSection--screen { background: #f0fdf4; border-color: #bbf7d0; }
+  .windowDefaultSection--hardware { background: #fff7ed; border-color: #fed7aa; }
+  .windowDefaultsContinue { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; border: 1px solid #d7deea; background: #f8fafc; border-radius: 8px; padding: 12px 14px; color: #475569; font-weight: 800; }
   .windowsSwatchGrid button, .windowsGlassGrid button, .windowTextOptions button, .windowOptionCard { position: relative; display: grid; gap: 7px; border: 1px solid #d7deea; background: #ffffff; color: #071827; border-radius: 8px; padding: 10px; text-align: left; touch-action: manipulation; pointer-events: auto; }
   .windowsSwatchGrid button.selected, .windowsGlassGrid button.selected, .windowTextOptions button.selected, .windowOptionCard.selected { border-color: #0f766e; background: #f0fdfa; box-shadow: 0 0 0 3px rgba(15,118,110,.18), inset 0 0 0 1px #0f766e; }
   .windowOptionCard:focus-visible { outline: 3px solid rgba(20,184,166,.45); outline-offset: 2px; }
   .windowsSwatch { display: grid; place-items: center; width: 100%; height: 74px; border: 1px solid rgba(15,23,42,.2); border-radius: 8px; color: #ffffff; font-size: 18px; font-weight: 950; text-shadow: 0 1px 3px rgba(15,23,42,.55); }
   .windowsGlassSample { display: grid !important; place-items: center; color: #0f766e; font-weight: 950; }
-  .windowSelectedBadge { justify-self: start; border: 1px solid #5eead4; border-radius: 999px; background: #ccfbf1; color: #115e59; padding: 3px 8px; font-size: 11px; line-height: 1; font-weight: 950; }
+  .windowSelectedBadge { justify-self: start; border: 1px solid #5eead4; border-radius: 999px; background: #ccfbf1; color: #115e59; padding: 3px 8px; font-size: 16px; line-height: 1; font-weight: 950; }
   .windowApplyResult { border-radius: 8px; padding: 10px 12px; font-weight: 900; }
   .windowApplyResult.success { border: 1px solid #86efac; background: #f0fdf4; color: #166534; }
   .windowApplyResult.warning { border: 1px solid #fde68a; background: #fffbeb; color: #92400e; }
   .windowsGlassGrid, .windowTextOptions { display: grid; gap: 8px; align-content: start; }
   .windowsGlassSample { display: block; width: 100%; height: 46px; border: 1px solid #cbd5e1; border-radius: 7px; }
-  .windowCountTiles span { display: grid; min-width: 130px; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 10px; color: #475569; font-size: 12px; font-weight: 850; }
+  .windowCountTiles span { display: grid; min-width: 130px; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 10px; color: #475569; font-size: 16px; font-weight: 850; }
   .windowCountTiles b { color: #071827; font-size: 22px; line-height: 1; }
   .guidedDetailsModal { width: min(760px, 94vw); max-height: 90vh; overflow: auto; background: #ffffff; border-radius: 10px; padding: 18px; display: grid; gap: 12px; color: #071827; }
   .guidedDetailsModal:has(.entryDoorDetailHero) { width: min(1120px, 96vw); grid-template-columns: minmax(320px, .9fr) minmax(340px, 1fr); align-items: start; }
@@ -16168,15 +18915,15 @@ const styles = `
   .guidedDetailsModal p { margin: 0; color: #475569; font-weight: 700; }
   .guidedDetailsModal dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; }
   .guidedDetailsModal dl div { border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; }
-  .guidedDetailsModal dt { color: #64748b; font-size: 12px; font-weight: 900; text-transform: uppercase; }
+  .guidedDetailsModal dt { color: #64748b; font-size: 16px; font-weight: 900; text-transform: uppercase; }
   .guidedDetailsModal dd { margin: 4px 0 0; font-weight: 850; }
   .scheduleControls { position: sticky; top: 0; z-index: 20; width: 100%; box-sizing: border-box; margin: 0 0 12px; display: grid; grid-template-columns: minmax(160px, .9fr) minmax(140px, .7fr) minmax(170px, .8fr) minmax(190px, 1fr) minmax(170px, .8fr) minmax(130px, .6fr) minmax(130px, .6fr) auto; gap: 10px; align-items: end; border: 1px solid #d7deea; background: #ffffff; border-radius: 8px; padding: 12px; }
-  .scheduleControls label { display: grid; gap: 5px; color: #475569; font-size: 11px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
+  .scheduleControls label { display: grid; gap: 5px; color: #475569; font-size: 16px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
   .scheduleControls select { width: 100%; min-width: 0; border: 1px solid #cbd5e1; border-radius: 7px; padding: 9px 10px; background: #ffffff; color: #071827; font-weight: 800; }
   .sectionButtons { display: flex; gap: 8px; }
   .sectionButtons button { min-height: 38px; border: 1px solid #cbd5e1; border-radius: 7px; background: #ffffff; color: #071827; font-weight: 850; padding: 8px 10px; cursor: pointer; }
   .topbar { display: flex; justify-content: space-between; gap: 18px; align-items: center; margin: 0 auto 14px; max-width: 1500px; }
-  .topbar p { margin: 0; color: #64748b; font-size: 12px; font-weight: 800; text-transform: uppercase; }
+  .topbar p { margin: 0; color: #64748b; font-size: 16px; font-weight: 800; text-transform: uppercase; }
   .topbar h1 { margin: 4px 0 0; font-size: 24px; }
   .actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .actions a { color: #0a2a43; font-weight: 800; }
@@ -16188,39 +18935,39 @@ const styles = `
   .documentWrap { display: grid; justify-content: stretch; justify-items: stretch; gap: 16px; width: 100%; }
   .contractSchedulePanel { display: grid; grid-template-columns: minmax(220px, 1.2fr) minmax(280px, 1fr) auto; gap: 14px; align-items: center; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 16px; }
   .contractSchedulePanel h2 { margin: 2px 0 4px; font-size: 20px; color: #102033; }
-  .contractSchedulePanel p { margin: 0; color: #64748b; font-size: 13px; line-height: 1.45; }
-  .panelKicker { color: #0f766e; font-size: 11px; font-weight: 950; text-transform: uppercase; }
+  .contractSchedulePanel p { margin: 0; color: #64748b; font-size: 16px; line-height: 1.45; }
+  .panelKicker { color: #0f766e; font-size: 16px; font-weight: 950; text-transform: uppercase; }
   .scheduleReviewStats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
-  .currentSavedSelectionsIndicator { display: inline-flex; width: fit-content; margin-top: 8px; border: 1px solid #99f6e4; border-radius: 999px; background: #f0fdfa; color: #0f766e; padding: 6px 10px; font-size: 12px; font-weight: 950; }
-  .scheduleReviewStats span { border: 1px solid #d7deea; border-radius: 8px; background: #f8fafc; padding: 8px; color: #64748b; font-size: 11px; font-weight: 800; text-align: center; }
+  .currentSavedSelectionsIndicator { display: inline-flex; width: fit-content; margin-top: 8px; border: 1px solid #99f6e4; border-radius: 999px; background: #f0fdfa; color: #0f766e; padding: 6px 10px; font-size: 16px; font-weight: 950; }
+  .scheduleReviewStats span { border: 1px solid #d7deea; border-radius: 8px; background: #f8fafc; padding: 8px; color: #64748b; font-size: 16px; font-weight: 800; text-align: center; }
   .scheduleReviewStats strong { display: block; color: #102033; font-size: 18px; }
   .scheduleIssueActions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
   .scheduleReviewList { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; }
-  .scheduleReviewList span { border: 1px solid #fde68a; border-radius: 8px; background: #fffbeb; color: #92400e; padding: 7px 9px; font-size: 12px; font-weight: 800; }
+  .scheduleReviewList span { border: 1px solid #fde68a; border-radius: 8px; background: #fffbeb; color: #92400e; padding: 7px 9px; font-size: 16px; font-weight: 800; }
   .scheduleDocumentLink { grid-column: 1 / -1; color: #0f766e; font-weight: 900; text-decoration: none; }
   .builderPreflight { border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 14px; display: grid; gap: 12px; }
   .builderPreflight.blocked { border-color: #f59e0b; background: #fffbeb; }
   .builderPreflight header { display: flex; justify-content: space-between; gap: 16px; align-items: start; }
-  .builderPreflight header span { color: #64748b; font-size: 11px; font-weight: 950; text-transform: uppercase; letter-spacing: .06em; }
+  .builderPreflight header span { color: #64748b; font-size: 16px; font-weight: 950; text-transform: uppercase; letter-spacing: .06em; }
   .builderPreflight header strong { display: block; color: #071827; font-size: 18px; line-height: 1.1; margin-top: 3px; }
-  .builderPreflight header p { margin: 0; max-width: 520px; color: #92400e; font-size: 13px; font-weight: 850; line-height: 1.35; }
+  .builderPreflight header p { margin: 0; max-width: 520px; color: #92400e; font-size: 16px; font-weight: 850; line-height: 1.35; }
   .builderPreflightGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
   .builderPreflightGrid div { border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; padding: 10px; display: flex; flex-wrap: wrap; gap: 7px; }
-  .builderPreflightGrid h3 { flex-basis: 100%; margin: 0; color: #071827; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
-  .builderPreflightGrid span { border: 1px solid #cbd5e1; border-radius: 999px; background: #ffffff; padding: 5px 8px; color: #334155; font-size: 12px; font-weight: 850; }
+  .builderPreflightGrid h3 { flex-basis: 100%; margin: 0; color: #071827; font-size: 18px; text-transform: uppercase; letter-spacing: .04em; }
+  .builderPreflightGrid span { border: 1px solid #cbd5e1; border-radius: 999px; background: #ffffff; padding: 5px 8px; color: #334155; font-size: 16px; font-weight: 850; }
   .builderPreflightGrid span.ok { border-color: #99f6e4; color: #0f766e; }
   .builderPreflightGrid span.bad { border-color: #fed7aa; color: #9a3412; }
   .builderPreflightActions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
   .builderPreflightActions button { border: 1px solid #cbd5e1; background: #ffffff; color: #071827; }
   .builderPreflightActions button.primary { border-color: #0f766e; background: #0f766e; color: #ffffff; }
   .currentSectionBadge { display: grid; gap: 3px; border: 1px solid #d7deea; border-radius: 8px; background: #f8fafc; padding: 8px 10px; }
-  .currentSectionBadge span { color: #64748b; font-size: 11px; font-weight: 950; text-transform: uppercase; }
-  .currentSectionBadge strong { color: #071827; font-size: 14px; font-weight: 950; }
+  .currentSectionBadge span { color: #64748b; font-size: 16px; font-weight: 950; text-transform: uppercase; }
+  .currentSectionBadge strong { color: #071827; font-size: 16px; font-weight: 950; }
   .selectionCardGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; }
   .scheduleSelectionCard { break-inside: avoid; page-break-inside: avoid; display: grid; grid-template-columns: 168px minmax(0, 1fr); gap: 12px; min-height: 190px; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 12px; box-shadow: 0 8px 22px rgba(15,23,42,.05); }
   .scheduleSelectionCard.compact { grid-template-columns: 130px minmax(0, 1fr); min-height: 154px; }
   .scheduleSelectionCard.missingImage { border-color: #fbbf24; background: #fffbeb; }
-  .scheduleSelectionImage { width: 100%; min-height: 150px; border: 1px solid #cbd5e1; border-radius: 8px; background: #f8fafc; padding: 6px; overflow: hidden; display: grid; place-items: center; color: #92400e; font-size: 13px; font-weight: 950; text-align: center; }
+  .scheduleSelectionImage { width: 100%; min-height: 150px; border: 1px solid #cbd5e1; border-radius: 8px; background: #f8fafc; padding: 6px; overflow: hidden; display: grid; place-items: center; color: #92400e; font-size: 16px; font-weight: 950; text-align: center; }
   .scheduleSelectionCard.compact .scheduleSelectionImage { min-height: 118px; }
   .scheduleSelectionImage img { width: 100%; height: 100%; object-fit: contain; display: block; }
   .scheduleSelectionDetails { display: grid; gap: 8px; min-width: 0; align-content: start; }
@@ -16237,23 +18984,23 @@ const styles = `
   .scheduleSelectionDetails p, .scheduleSelectionDetails em { margin: 0; color: #475569; font-size: 9pt; line-height: 1.35; font-style: normal; font-weight: 760; }
   .scheduleSelectionDetails em { color: #92400e; font-weight: 950; }
   .scheduleSectionPage .selectionCardGrid { min-height: 420px; }
-  .scheduleSectionHero p { margin: 6px 0 0; color: #475569; font-size: 12px; line-height: 1.35; font-weight: 760; }
+  .scheduleSectionHero p { margin: 6px 0 0; color: #475569; font-size: 16px; line-height: 1.35; font-weight: 760; }
   .scheduleEmptySection { grid-column: 1 / -1; display: grid; place-items: center; align-content: center; gap: 8px; min-height: 260px; border: 1px dashed #cbd5e1; border-radius: 8px; background: #f8fafc; color: #475569; text-align: center; padding: 24px; }
   .scheduleEmptySection strong { color: #071827; font-size: 16px; font-weight: 950; }
-  .scheduleEmptySection span { max-width: 520px; font-size: 12px; line-height: 1.4; font-weight: 760; }
+  .scheduleEmptySection span { max-width: 520px; font-size: 16px; line-height: 1.4; font-weight: 760; }
   .scheduleTableHeader { display: grid; grid-template-columns: minmax(0, 1fr) 132px; gap: 18px; align-items: stretch; background: #071827; color: #ffffff; border-left: 8px solid #c99735; padding: 14px 16px; margin-bottom: 14px; }
-  .scheduleTableHeader span { color: #f8d58a; font-size: 10px; font-weight: 950; text-transform: uppercase; letter-spacing: .08em; }
+  .scheduleTableHeader span { color: #f8d58a; font-size: 16px; font-weight: 950; text-transform: uppercase; letter-spacing: .08em; }
   .scheduleTableHeader h2 { margin: 2px 0 0; color: #ffffff; font-size: 25px; line-height: 1.02; text-transform: uppercase; }
-  .scheduleTableHeader p { margin: 5px 0 0; color: #dbe5f0; font-size: 11px; line-height: 1.35; font-weight: 760; }
-  .scheduleRowTable { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 9.5px; }
-  .scheduleRowTable th { background: #071827; color: #ffffff; border-right: 1px solid rgba(255,255,255,.18); padding: 7px 6px; text-align: left; text-transform: uppercase; letter-spacing: .04em; font-size: 8px; }
+  .scheduleTableHeader p { margin: 5px 0 0; color: #dbe5f0; font-size: 16px; line-height: 1.35; font-weight: 760; }
+  .scheduleRowTable { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 16px; }
+  .scheduleRowTable th { background: #071827; color: #ffffff; border-right: 1px solid rgba(255,255,255,.18); padding: 7px 6px; text-align: left; text-transform: uppercase; letter-spacing: .04em; font-size: 16px; }
   .scheduleRowTable td { border: 1px solid #d9e0e8; padding: 6px; vertical-align: middle; color: #102033; line-height: 1.22; overflow-wrap: anywhere; }
   .scheduleRowTable tr { break-inside: avoid; page-break-inside: avoid; height: 98px; }
   .scheduleRowTable td strong { display: block; color: #071827; font-weight: 950; line-height: 1.15; }
   .scheduleRowTable td span { display: block; color: #475569; font-weight: 760; margin-top: 2px; }
   .scheduleImageColumn { width: 108px; }
   .scheduleProductColumn { width: 250px; }
-  .scheduleProductCell strong { font-size: 11px; }
+  .scheduleProductCell strong { font-size: 16px; }
   .scheduleRowImage { width: 96px; height: 68px; border: 1px solid #d9e0e8; border-radius: 4px; background: #f8fafc; display: grid; place-items: center; padding: 3px; cursor: pointer; }
   .scheduleRowImage.empty { cursor: default; background: #ffffff; }
   .scheduleRowImage img { width: 100%; height: 100%; object-fit: contain; display: block; }
@@ -16292,7 +19039,7 @@ const styles = `
   .coverBrand span { display: block; margin-top: 3px; color: var(--accent); letter-spacing: 1px; text-transform: none; font-size: clamp(11px, 1.5vw, 15px); font-weight: 850; }
   .coverLogoBox, .coverLogoFallback { width: clamp(104px, 15vw, 140px); height: clamp(62px, 9vw, 82px); box-sizing: border-box; display: grid; place-items: center; background: rgba(255,255,255,.96); border: 1px solid rgba(255,255,255,.78); border-radius: 8px; padding: 9px; color: #071827; overflow: hidden; flex: 0 0 auto; }
   .coverLogoBox img { width: 100%; height: 100%; object-fit: contain; display: block; }
-  .coverLogoFallback { text-align: center; font-size: 14px; line-height: 1.2; font-weight: 950; text-transform: uppercase; letter-spacing: .05em; }
+  .coverLogoFallback { text-align: center; font-size: 16px; line-height: 1.2; font-weight: 950; text-transform: uppercase; letter-spacing: .05em; }
   .logoUploadTarget { display: block; cursor: pointer; }
   .logoUploadTarget input { display: none; }
   .coverTitle { align-self: start; max-width: 820px; display: grid; gap: 7px; padding: clamp(18px, 4vw, 46px) 0 0; }
@@ -16304,53 +19051,53 @@ const styles = `
   .coverTitle h1 { margin: 0; color: var(--cover-text); font-size: clamp(34px, 4.25vw, 52px); line-height: 1; font-weight: 950; text-transform: uppercase; white-space: normal; letter-spacing: 0; max-width: 820px; overflow-wrap: anywhere; }
   .coverMeta { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 16px; align-items: start; border-top: 1px solid rgba(248,213,138,.62); border-bottom: 1px solid rgba(248,213,138,.62); padding: 10px 0; }
   .coverMetaItem { min-width: 0; }
-  .coverMetaItem span { display: block; color: rgba(255,255,255,.68); font-size: 10px; font-weight: 950; text-transform: uppercase; letter-spacing: .12em; margin-bottom: 5px; }
+  .coverMetaItem span { display: block; color: rgba(255,255,255,.68); font-size: 16px; font-weight: 950; text-transform: uppercase; letter-spacing: .12em; margin-bottom: 5px; }
   .coverMetaItem strong { color: var(--cover-text); font-size: clamp(12px, 1.55vw, 15px); line-height: 1.2; font-weight: 900; overflow-wrap: anywhere; }
   .coverPage footer { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 18px; justify-content: space-between; align-items: center; border-top: 2px solid var(--accent); padding-top: 8px; margin-top: 0; min-width: 0; }
   .coverPage footer span:first-child { color: #f8d58a; font-style: normal; font-weight: 850; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
   .coverPage footer span:last-child { color: var(--cover-text); font-weight: 900; white-space: nowrap; }
-  .coverDebugPanel { width: min(1123px, 100%); box-sizing: border-box; background: #0f172a; color: #e2e8f0; border: 1px solid #334155; border-radius: 8px; padding: 10px 12px; display: grid; gap: 8px; font-size: 11px; }
-  .coverDebugPanel button { justify-self: start; background: #f8d58a; color: #071827; border: 0; border-radius: 5px; padding: 5px 8px; font-size: 11px; font-weight: 900; cursor: pointer; }
+  .coverDebugPanel { width: min(1123px, 100%); box-sizing: border-box; background: #0f172a; color: #e2e8f0; border: 1px solid #334155; border-radius: 8px; padding: 10px 12px; display: grid; gap: 8px; font-size: 16px; }
+  .coverDebugPanel button { justify-self: start; background: #f8d58a; color: #071827; border: 0; border-radius: 5px; padding: 5px 8px; font-size: 16px; font-weight: 900; cursor: pointer; }
   .coverDebugPanel div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px 14px; }
-  .coverDebugPanel strong { grid-column: 1 / -1; color: #f8d58a; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
+  .coverDebugPanel strong { grid-column: 1 / -1; color: #f8d58a; font-size: 16px; text-transform: uppercase; letter-spacing: .08em; }
   .coverSettingsPanel { width: min(1500px, 100%); box-sizing: border-box; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px; box-shadow: 0 14px 34px rgba(15, 23, 42, .12); padding: 16px; display: grid; gap: 12px; }
   .coverSettingsPanel header { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
   .coverSettingsPanel header div { display: grid; gap: 3px; }
-  .coverSettingsPanel header span { color: #64748b; font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; }
+  .coverSettingsPanel header span { color: #64748b; font-size: 16px; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; }
   .coverSettingsPanel header strong { color: #071827; font-size: 20px; }
   .coverSettingsPanel header button { background: #e8edf3; color: #071827; }
   .coverSettingsActions { display: flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap; }
-  .coverSettingsPanel label { display: grid; gap: 6px; color: #334155; font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; }
+  .coverSettingsPanel label { display: grid; gap: 6px; color: #334155; font-size: 16px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; }
   .coverSettingsPanel textarea { min-height: 96px; resize: vertical; text-transform: none; letter-spacing: 0; }
   .coverSettingsPanel small { color: #64748b; font-weight: 800; }
-  .coverSettingsPanel p { margin: 0; color: #64748b; font-size: 13px; font-weight: 750; }
+  .coverSettingsPanel p { margin: 0; color: #64748b; font-size: 16px; font-weight: 750; }
   .coverSettingsGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
   .infoPage { max-width: none; width: 100%; aspect-ratio: 297 / 210; min-height: 0; padding: 34px; display: grid; gap: 14px; }
   .docHeader { display: grid; grid-template-columns: 150px 1fr auto; gap: 18px; align-items: center; margin-bottom: 28px; }
   .docHeader img { width: 140px; height: 84px; object-fit: contain; }
-  .docHeaderLogoFallback { width: 140px; height: 84px; display: grid; place-items: center; border: 1px solid #d8dee8; color: #071827; font-size: 11px; font-weight: 950; text-align: center; padding: 6px; box-sizing: border-box; }
+  .docHeaderLogoFallback { width: 140px; height: 84px; display: grid; place-items: center; border: 1px solid #d8dee8; color: #071827; font-size: 16px; font-weight: 950; text-align: center; padding: 6px; box-sizing: border-box; }
   .docHeader h2 { margin: 0; font-size: 28px; text-transform: uppercase; color: #071827; }
-  .docHeader span { color: #475569; font-size: 12px; }
+  .docHeader span { color: #475569; font-size: 16px; }
   .projectInfoHero { display: grid; gap: 6px; background: #071827; color: #fff; padding: 18px 20px; border-left: 6px solid #c99735; }
-  .projectInfoHero span { color: #f8d58a; font-size: 12px; font-weight: 950; text-transform: uppercase; letter-spacing: .08em; }
+  .projectInfoHero span { color: #f8d58a; font-size: 16px; font-weight: 950; text-transform: uppercase; letter-spacing: .08em; }
   .projectInfoHero strong { font-size: 24px; line-height: 1.15; overflow-wrap: anywhere; }
   .infoGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border: 1px solid #d9e0e8; margin-bottom: 8px; }
   .infoField { min-width: 0; display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: 12px; align-items: start; padding: 13px; border-bottom: 1px solid #d9e0e8; }
   .infoField:nth-child(odd) { border-right: 1px solid #d9e0e8; }
-  .infoField span { color: #071827; font-size: 11px; font-weight: 900; text-transform: uppercase; }
+  .infoField span { color: #071827; font-size: 16px; font-weight: 900; text-transform: uppercase; }
   .infoField input, .infoField textarea { width: 100%; box-sizing: border-box; border: 0 !important; background: #fff !important; font-weight: 800; line-height: 1.35; overflow-wrap: anywhere; resize: vertical; }
   .infoField textarea { min-height: 74px; }
   .readonlyInfoGrid { margin: 0; }
   .readonlyInfoField { grid-template-columns: 142px minmax(0, 1fr); }
-  .readonlyInfoField dt { color: #071827; font-size: 10px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
-  .readonlyInfoField dd { margin: 0; color: #102033; font-size: 13px; line-height: 1.3; font-weight: 850; overflow-wrap: anywhere; }
+  .readonlyInfoField dt { color: #071827; font-size: 16px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
+  .readonlyInfoField dd { margin: 0; color: #102033; font-size: 16px; line-height: 1.3; font-weight: 850; overflow-wrap: anywhere; }
   .aboutBox { background: #f8efe5; border-radius: 8px; padding: 16px; margin-bottom: 22px; }
   .aboutBox textarea { min-height: 116px; border: 0; background: transparent; resize: vertical; }
   .readonlyAboutBox { margin-bottom: 0; }
-  .readonlyAboutBox p { margin: 8px 0 0; color: #334155; font-size: 12px; line-height: 1.45; font-weight: 760; }
+  .readonlyAboutBox p { margin: 8px 0 0; color: #334155; font-size: 16px; line-height: 1.45; font-weight: 760; }
   .revisionTable { width: 100%; border-collapse: collapse; }
   .revisionTable th, .revisionTable td { border: 1px solid #dce3ea; padding: 8px; vertical-align: top; }
-  .revisionTable th { background: #071827; color: white; font-size: 11px; text-transform: uppercase; }
+  .revisionTable th { background: #071827; color: white; font-size: 16px; text-transform: uppercase; }
   .signatureGrid { display: grid; grid-template-columns: 1fr 160px; gap: 18px; margin-top: 14px; }
   .signatureGrid span { border-bottom: 1px solid #94a3b8; padding: 12px 0; }
   .contractPage { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: 1fr 38px; aspect-ratio: 297 / 210; min-height: 0; background: #fff; }
@@ -16358,19 +19105,19 @@ const styles = `
   .spineBrand { display: grid; gap: 4px; }
   .spineBrand img { width: 150px; height: 88px; object-fit: contain; background: rgba(255,255,255,.96); padding: 4px; }
   .spineBrand strong { font-size: 18px; letter-spacing: .04em; text-transform: uppercase; }
-  .spineBrand span { color: #d7a640; font-size: 11px; letter-spacing: .16em; text-transform: uppercase; }
+  .spineBrand span { color: #d7a640; font-size: 16px; letter-spacing: .16em; text-transform: uppercase; }
   .spineTitle small { color: #d7a640; font-size: 20px; font-weight: 900; text-transform: uppercase; }
   .spineTitle h2 { margin: 4px 0 12px; font-size: 25px; line-height: 1.05; text-transform: uppercase; white-space: pre-line; }
   .spineTitle i { display: block; width: 70px; height: 2px; background: #d7a640; margin-bottom: 12px; }
-  .spineTitle b { font-size: 13px; text-transform: uppercase; }
+  .spineTitle b { font-size: 16px; text-transform: uppercase; }
   .spineMeta { display: grid; gap: 5px; border-top: 1px solid rgba(215,166,64,.5); border-bottom: 1px solid rgba(215,166,64,.5); padding: 13px 0; }
-  .spineMeta span { color: #d7a640; font-size: 10px; text-transform: uppercase; }
-  .spineMeta strong { font-size: 12px; line-height: 1.35; margin-bottom: 5px; }
+  .spineMeta span { color: #d7a640; font-size: 16px; text-transform: uppercase; }
+  .spineMeta strong { font-size: 16px; line-height: 1.35; margin-bottom: 5px; }
   .spineRooms { display: grid; gap: 2px; overflow: auto; min-height: 0; padding-right: 2px; }
-  .spineRooms button { display: grid; grid-template-columns: 32px 1fr; align-items: center; gap: 4px; text-align: left; background: transparent; color: #f8fafc; padding: 6px 0; font-size: 12px; font-weight: 700; }
-  .spineRooms button span { color: #d7a640; font-size: 15px; font-weight: 950; }
+  .spineRooms button { display: grid; grid-template-columns: 32px 1fr; align-items: center; gap: 4px; text-align: left; background: transparent; color: #f8fafc; padding: 6px 0; font-size: 16px; font-weight: 700; }
+  .spineRooms button span { color: #d7a640; font-size: 16px; font-weight: 950; }
   .spineRooms button.active { background: linear-gradient(90deg, rgba(215,166,64,.95), rgba(215,166,64,.16)); color: white; padding-left: 6px; }
-  .documentSpine em { color: #d7a640; font-family: Georgia, serif; margin-top: auto; font-size: 15px; }
+  .documentSpine em { color: #d7a640; font-family: Georgia, serif; margin-top: auto; font-size: 16px; }
   .roomSheet { min-width: 0; padding: 18px 20px 14px; overflow: hidden; }
   .roomHero { display: grid; grid-template-columns: minmax(420px, 1fr) 280px 112px; gap: 18px; align-items: start; border-bottom: 1px solid #dce3ea; padding-bottom: 14px; margin-bottom: 12px; }
   .roomName { border: 0; font-size: 33px; font-weight: 950; letter-spacing: .01em; text-transform: uppercase; padding: 0; line-height: 1; }
@@ -16387,7 +19134,7 @@ const styles = `
   .roomTabs button.ghost { border-style: dashed; color: #64748b; }
   .roomTabs button.danger { border-color: #ef4444; color: #dc2626; }
   .selectionTableWrap { overflow: auto; border: 1px solid #dce3ea; width: 100%; }
-  .selectionTable { width: 100%; min-width: 1460px; table-layout: fixed; border-collapse: collapse; font-size: 13px; }
+  .selectionTable { width: 100%; min-width: 1460px; table-layout: fixed; border-collapse: collapse; font-size: 16px; }
   .colItem { width: 12%; }
   .colDescription { width: 18%; }
   .colBrand { width: 10%; }
@@ -16397,24 +19144,24 @@ const styles = `
   .colImage { width: 8%; }
   .colIncluded { width: 6%; }
   .colUpgrade { width: 12%; }
-  .selectionTable th { background: #071827; color: white; font-size: 11px; letter-spacing: .04em; text-transform: uppercase; padding: 11px 9px; border-right: 1px solid rgba(255,255,255,.16); }
+  .selectionTable th { background: #071827; color: white; font-size: 16px; letter-spacing: .04em; text-transform: uppercase; padding: 11px 9px; border-right: 1px solid rgba(255,255,255,.16); }
   .selectionTable td { border: 1px solid #e2e8f0; padding: 9px; vertical-align: middle; background: #fff; }
   .selectionTable tr:nth-child(even) td { background: #fbfcfe; }
-  .selectionTable input, .selectionTable textarea { border: 0 !important; background: transparent !important; border-radius: 0; padding: 2px; font-size: 13px; color: #071827 !important; }
+  .selectionTable input, .selectionTable textarea { border: 0 !important; background: transparent !important; border-radius: 0; padding: 2px; font-size: 16px; color: #071827 !important; }
   .selectionTable textarea { min-height: 58px; resize: vertical; line-height: 1.45; }
   .itemCell { display: grid; grid-template-columns: 30px 1fr; gap: 7px; align-items: center; min-width: 0; font-weight: 900; }
   .itemIcon { width: 26px; height: 26px; display: grid; place-items: center; border: 1px solid #cbd5e1; color: #64748b; font-size: 16px; }
   .productChoice { display: grid; gap: 5px; min-width: 0; }
-  .productChoice select { width: 100%; min-width: 0; border: 1px solid #e5c48b !important; background: #fffaf0 !important; font-size: 12px; font-weight: 800; padding: 7px 8px; color: #071827 !important; }
-  .productChoice strong { font-size: 12px; color: #475569; font-weight: 800; line-height: 1.35; }
-  .libraryButton { background: transparent; color: #071827; border: 1px dashed #cbd5e1; font-size: 11px; padding: 5px 7px; text-align: left; }
+  .productChoice select { width: 100%; min-width: 0; border: 1px solid #e5c48b !important; background: #fffaf0 !important; font-size: 16px; font-weight: 800; padding: 7px 8px; color: #071827 !important; }
+  .productChoice strong { font-size: 16px; color: #475569; font-weight: 800; line-height: 1.35; }
+  .libraryButton { background: transparent; color: #071827; border: 1px dashed #cbd5e1; font-size: 16px; padding: 5px 7px; text-align: left; }
   .libraryButton:hover { border-color: #d7a640; background: #fffaf0; }
   .thumbButton { width: 84px; height: 70px; padding: 0; overflow: hidden; background: #f8fafc; color: #64748b; border: 1px solid #cbd5e1; }
   .thumbButton img { width: 100%; height: 100%; object-fit: contain; }
   .includedTick { width: 34px; height: 30px; display: grid; place-items: center; margin: 0 auto; border-radius: 50%; background: white; color: #16a34a; font-size: 19px; }
   .includedTick.no { color: #dc2626; }
   .upgradeCell { display: grid; gap: 5px; min-width: 92px; }
-  .upgradeCell select { font-size: 10px; padding: 4px; background: #fff !important; color: #071827 !important; }
+  .upgradeCell select { font-size: 16px; padding: 4px; background: #fff !important; color: #071827 !important; }
   .upgradeCell span { font-weight: 900; color: #0f5132; }
   .notesRow { display: grid; grid-template-columns: 1fr 1fr 170px; gap: 8px; margin-top: 12px; }
   .notesRow div { background: #fbf4ea; border-radius: 4px; padding: 10px; display: grid; gap: 6px; }
@@ -16423,39 +19170,39 @@ const styles = `
   .roomSidePanel { padding: 118px 14px 54px 0; display: grid; align-content: start; gap: 0; }
   .roomSidePanel section { border: 1px solid #e5c48b; border-bottom: 0; padding: 12px; background: #fff; }
   .roomSidePanel section:last-child { border-bottom: 1px solid #e5c48b; }
-  .roomSidePanel h3 { margin: 0 0 9px; color: #071827; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
-  .roomSidePanel textarea { min-height: 92px; border: 0 !important; background: transparent !important; padding: 0; resize: vertical; font-size: 11px; line-height: 1.6; color: #071827 !important; }
-  .roomSidePanel ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 7px; font-size: 11px; }
+  .roomSidePanel h3 { margin: 0 0 9px; color: #071827; font-size: 18px; text-transform: uppercase; letter-spacing: .04em; }
+  .roomSidePanel textarea { min-height: 92px; border: 0 !important; background: transparent !important; padding: 0; resize: vertical; font-size: 16px; line-height: 1.6; color: #071827 !important; }
+  .roomSidePanel ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 7px; font-size: 16px; }
   .roomSidePanel li:before { content: "\\2713"; color: #16a34a; margin-right: 8px; }
-  .roomSidePanel dl { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; margin: 0; font-size: 11px; }
+  .roomSidePanel dl { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; margin: 0; font-size: 16px; }
   .roomSidePanel dt { color: #475569; }
   .roomSidePanel dd { margin: 0; font-weight: 700; }
   .roomImageButton { width: 100%; height: 184px; padding: 0; background: #f1f5f9; overflow: hidden; margin-bottom: 8px; }
   .roomImageButton img { width: 100%; height: 100%; object-fit: cover; }
-  .contractFooter { grid-column: 1; background: #071827; color: white; display: grid; grid-template-columns: auto 1fr auto; gap: 18px; align-items: center; padding: 0 24px; font-size: 11px; }
+  .contractFooter { grid-column: 1; background: #071827; color: white; display: grid; grid-template-columns: auto 1fr auto; gap: 18px; align-items: center; padding: 0 24px; font-size: 16px; }
   .contractFooter span:nth-child(2) { color: #cbd5e1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .pageFooter { position: absolute; left: 34px; right: 34px; bottom: 18px; display: flex; justify-content: space-between; align-items: center; border-top: 2px solid #071827; padding-top: 8px; color: #334155; font-size: 12px; }
+  .pageFooter { position: absolute; left: 34px; right: 34px; bottom: 18px; display: flex; justify-content: space-between; align-items: center; border-top: 2px solid #071827; padding-top: 8px; color: #334155; font-size: 16px; }
   .modalBackdrop { position: fixed; inset: 0; z-index: 1000; background: rgba(2, 6, 23, .72); display: grid; place-items: center; padding: 24px; }
   .brickImportModal { width: min(1120px, 96vw); max-height: 92vh; overflow: auto; background: #ffffff; border-radius: 10px; padding: 18px; display: grid; gap: 14px; color: #071827; }
   .brickImportModal header { display: flex; justify-content: space-between; align-items: start; gap: 12px; }
-  .brickImportModal header span { color: #64748b; font-size: 12px; font-weight: 950; letter-spacing: .08em; }
+  .brickImportModal header span { color: #64748b; font-size: 16px; font-weight: 950; letter-spacing: .08em; }
   .brickImportModal h2, .brickImportModal h3 { margin: 0; letter-spacing: 0; }
   .brickImportModal header button { border: 1px solid #cbd5e1; background: #ffffff; color: #071827; border-radius: 8px; }
   .brickImportContext, .brickPreviewStats, .brickEnablementActions { display: flex; flex-wrap: wrap; gap: 8px; }
-  .brickImportContext span, .brickImportContext strong, .brickPreviewStats span { border: 1px solid #d7deea; border-radius: 8px; background: #f8fafc; padding: 8px 10px; color: #475569; font-size: 12px; font-weight: 900; }
+  .brickImportContext span, .brickImportContext strong, .brickPreviewStats span { border: 1px solid #d7deea; border-radius: 8px; background: #f8fafc; padding: 8px 10px; color: #475569; font-size: 16px; font-weight: 900; }
   .brickFileDrop { position: relative; display: grid; place-items: center; gap: 8px; min-height: 220px; border: 1px dashed #94a3b8; border-radius: 8px; background: #f8fafc; cursor: pointer; }
   .brickFileDrop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
   .brickPreviewTable { display: grid; gap: 6px; overflow-x: auto; }
   .brickPreviewHead, .brickPreviewRow { display: grid; grid-template-columns: 130px 140px 120px 120px minmax(180px, 1fr) 100px 100px 110px 90px 150px; gap: 8px; min-width: 1260px; align-items: center; }
-  .brickPreviewHead { color: #475569; font-size: 12px; font-weight: 950; text-transform: uppercase; }
-  .brickPreviewRow { border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 8px; font-size: 12px; }
+  .brickPreviewHead { color: #475569; font-size: 16px; font-weight: 950; text-transform: uppercase; }
+  .brickPreviewRow { border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 8px; font-size: 16px; }
   .brickPreviewRow.invalid { border-color: #fecaca; background: #fff1f2; }
   .brickEnablementPanel { display: grid; gap: 12px; border: 1px solid #d7deea; border-radius: 8px; background: #f8fafc; padding: 14px; }
   .brickEnablementActions button, .brickImportModal .primary { border: 1px solid #0f766e; background: #0f766e; color: #ffffff; border-radius: 8px; }
   .brickEnablementList { display: grid; gap: 8px; }
   .brickEnablementList label { display: grid; grid-template-columns: auto 120px minmax(180px, 1fr) minmax(180px, 1fr); gap: 8px; align-items: center; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 9px; }
   .brickEnablementList input { width: auto; }
-  .brickEnablementList em { color: #64748b; font-style: normal; font-size: 12px; }
+  .brickEnablementList em { color: #64748b; font-style: normal; font-size: 16px; }
   .productModal { width: min(1100px, 94vw); max-height: 90vh; overflow: auto; background: white; border-radius: 10px; padding: 18px; color: #071827; }
   .productModal header { display: flex; justify-content: space-between; gap: 18px; align-items: start; margin-bottom: 14px; }
   .productModal h2 { margin: 0; }

@@ -1,0 +1,266 @@
+{
+  "data": {
+    "products": {
+      "total_count": 2,
+      "page_info": {
+        "total_pages": 1
+      },
+      "items": [
+        {
+          "id": 10727,
+          "sku": "TRTR0604",
+          "vendorcode": "TR-TR0604",
+          "name": "6-Bar Round Towel Ladder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/r/trtr0604_forme_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/r/trtr0604_forme_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/t/r/trtr0604_forme_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/t/r/trtr0604_forme_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/r/trtr0604_forme_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/r/trtr0604_forme_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Non-heated<br />&bull; High grade stainless steel<br />&bull; Hand-polished mirror finish<br />&bull; Fixing kit includes diamond drill bit<br />&bull; Timeless in design with a mirror finish</p>"
+          },
+          "short_description": {
+            "html": "<p>6-Bar Round Towel Ladder</p>"
+          },
+          "product_dimensions": "W600 x D120 x H780mm",
+          "price_store": 361,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W600 x D120 x H780mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL DOUBLE"
+              },
+              {
+                "code": "range",
+                "value": "6"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Forme",
+                    "value": "70"
+                  }
+                ]
+              },
+              {
+                "code": "size_mm",
+                "selected_options": [
+                  {
+                    "label": "600",
+                    "value": "746"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Stainless Steel",
+                    "value": "943"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "TR-TR0604"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Polished Stainless Steel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 10606,
+          "sku": "TRTR0304",
+          "vendorcode": "TR-TR0304",
+          "name": "3-Bar Round Towel Ladder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/r/trtr0304_forme_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/r/trtr0304_forme_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/t/r/trtr0304_forme_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/t/r/trtr0304_forme_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/r/trtr0304_forme_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/r/trtr0304_forme_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Non-heated<br />&bull; High grade stainless steel<br />&bull; Hand-polished mirror finish<br />&bull; Fixing kit includes diamond drill bit<br />&bull; Timeless in design with a mirror finish</p>"
+          },
+          "short_description": {
+            "html": "<p>3-Bar Round Towel Ladder</p>"
+          },
+          "product_dimensions": "W550 x D120 x H440mm",
+          "price_store": 240,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W550 x D120 x H440mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL DOUBLE"
+              },
+              {
+                "code": "range",
+                "value": "3"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Forme",
+                    "value": "70"
+                  }
+                ]
+              },
+              {
+                "code": "size_mm",
+                "selected_options": [
+                  {
+                    "label": "550",
+                    "value": "769"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Stainless Steel",
+                    "value": "943"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "TR-TR0304"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Polished Stainless Steel"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

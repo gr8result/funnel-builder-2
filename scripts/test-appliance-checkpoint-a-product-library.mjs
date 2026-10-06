@@ -24,23 +24,30 @@ const summary = workbookQuoteImportSummary(quoteRows);
 const rebuilt = buildCanonicalApplianceCatalogue(workbookQuoteImportRowsToLegacyCsv(quoteRows), { sourceFile: workbookPath });
 
 assert.equal(summary.sheetRows, 251, "workbook row count after header must remain stable");
-assert.equal(summary.transformedLegacyRows, 194, "accepted Checkpoint A workbook rows must remain 194");
+// Ariston was deliberately removed from the registered brand list (see
+// test-appliance-brand-removal.mjs). The workbook importer only accepts rows
+// for registered brands, so re-running it against the same frozen workbook
+// now yields fewer accepted rows/products/packs than before the removal.
+assert.equal(summary.transformedLegacyRows, 161, "accepted Checkpoint A workbook rows must remain 161 now that Ariston is an unsupported brand");
 assert.equal(summary.excludedRows.length, 4, "workbook-only review exclusions must stay explicit");
-assert.equal(rebuilt.catalogue.products.length, 83, "workbook rebuild must produce 83 canonical products");
-assert.equal(rebuilt.packCatalogue.packs.length, 35, "workbook rebuild must produce 35 canonical packages");
-assert.equal(rebuilt.packCatalogue.relationships.length, 159, "workbook rebuild must produce 159 package relationships");
+assert.equal(rebuilt.catalogue.products.length, 69, "workbook rebuild must produce 69 canonical products with Ariston excluded");
+assert.equal(rebuilt.packCatalogue.packs.length, 29, "workbook rebuild must produce 29 canonical packages with Ariston excluded");
+assert.equal(rebuilt.packCatalogue.relationships.length, 132, "workbook rebuild must produce 132 package relationships with Ariston excluded");
 
 assert.equal(productCatalogue.sourceFile, workbookPath, "committed Product Library product catalogue must point to the workbook source");
 assert.equal(productCatalogue.sourceSheet, "Quote Import", "committed Product Library product catalogue must name the source sheet");
-assert.equal(productCatalogue.products.length, 83, "Product Library product JSON must contain 83 products");
-assert.equal(packCatalogue.packs.length, 35, "Product Library pack JSON must contain 35 packages");
-assert.equal(packCatalogue.relationships.length, 159, "Product Library pack JSON must contain 159 relationships");
+// The live catalogue has legitimately grown beyond the one-time workbook import
+// (Bosch and additional Euromaid cooktops sourced live from Harvey Norman
+// Commercial), so it no longer equals the frozen workbook-rebuild count above.
+assert.equal(productCatalogue.products.length, 130, "Product Library product JSON must contain 130 products");
+assert.equal(packCatalogue.packs.length, 29, "Product Library pack JSON must contain 29 packages");
+assert.equal(packCatalogue.relationships.length, 132, "Product Library pack JSON must contain 132 relationships");
 
 const selectors = createApplianceCatalogueSelectors({ productCatalogue, packCatalogue, brandCatalogue });
 const products = selectors.getPlatformMasterApplianceRecords();
 const packs = selectors.getAppliancePacks();
 const brandNames = brandCatalogue.brands.map((brand) => brand.brandName).sort();
-assert.deepEqual(brandNames, ["Ariston", "Blanco", "Euromaid", "Omega", "Smeg", "Westinghouse"], "all six required brands must be owned by Product Library metadata");
+assert.deepEqual(brandNames, ["Blanco", "Bosch", "Euromaid", "Omega", "Smeg", "Westinghouse"], "all six required brands must be owned by Product Library metadata");
 assert.ok(brandCatalogue.brands.every((brand) => brand.logoUrl && brand.logoStatus === "official-source-referenced"), "every brand must have an official-source logo reference");
 assert.ok(products.every((product) => product.stableProductId && product.categoryId && product.familyId), "every product exposes stable Product Library identifiers");
 assert.ok(products.every((product) => product.supplier && product.brand && product.name && product.description), "every product exposes supplier, brand, model/name and description");
@@ -52,7 +59,7 @@ assert.ok(packs.every((pack) => pack.componentProductIds.every((productId) => pr
 
 const omegaGasReview = summary.excludedRows.find((row) => /OCG95FFX/.test(row.item));
 assert.ok(omegaGasReview, "workbook-only Omega OCG95FFX row remains in explicit review instead of being silently created");
-assert.equal(selectors.getClientSelectableApplianceRecords().length, 83, "shared Product Library appliance selector exposes all active master appliances to consumers");
+assert.equal(selectors.getClientSelectableApplianceRecords().length, 116, "shared Product Library appliance selector exposes all active master appliances to consumers");
 
 assert.equal(fs.readFileSync("pages/modules/builders/selections-book.js", "utf8"), selectionsBookBefore, "Checkpoint A test must not mutate selections-book.js");
 

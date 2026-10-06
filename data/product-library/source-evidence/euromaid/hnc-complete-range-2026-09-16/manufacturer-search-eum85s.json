@@ -1,0 +1,7 @@
+{
+  "url": "https://www.euromaid.com/en-au/live-search?keywords=EUM85S",
+  "retrievedAt": "2026-09-16T06:18:19.580Z",
+  "status": 200,
+  "sha256": "973a397960cd1f484f79846b40de3947703e04f68fad4756c1d23b6a973a53ac",
+  "text": "[{\"command\":\"liveSearchResults\",\"content\":\"\\u003Cdiv class=\\u0022gd-search-suggestions\\u0022\\u003E\\n  \\u003Cdiv class=\\u0022prod-results\\u0022\\u003E\\n          \\u003Cdiv class=\\u0022gd-search-results__title\\u0022\\u003EProducts\\u003C\\/div\\u003E\\n              \\u003Ca href=\\u0022\\/en-au\\/85cm-undermount-rangehood\\u0022 title=\\u002285cm Undermount Rangehood\\u0022\\u003E85cm Undermount Rangehood\\u003C\\/a\\u003E\\n    \\n          \\u003Cdiv id=\\u0022gd-search-see-all\\u0022 class=\\u0022search-see-all\\u0022\\u003E\\n                \\u003Ca class=\\u0022gd-search__view-all-link\\u0022 href=\\u0022\\/en-au\\/search-results?keywords=EUM85S\\u0022 title=\\u0022See All Results for \\u0027EUM85S\\u0027\\u0022\\u003ESee All Results for \\u0027EUM85S\\u0027\\u003C\\/a\\u003E\\n      \\u003C\\/div\\u003E\\n          \\u003C\\/div\\u003E\\n\\n  \\u003Cdiv class=\\u0022content-results\\u0022\\u003E\\n          \\u003C\\/div\\u003E\\n\\u003C\\/div\\u003E\\n\"},{\"command\":\"gtagEvent\",\"event_name\":\"search\",\"data\":{\"search_term\":\"eum85s\"}}]"
+}

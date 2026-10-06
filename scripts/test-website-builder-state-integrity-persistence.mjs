@@ -12,7 +12,7 @@ const OWNER_EMAIL = "support@gr8result.com";
 const PAGE_NAME = "Pricing";
 const SWITCH_PAGE_NAME = "Home";
 const BASE_URL = (process.env.WB_BROWSER_BASE_URL || "http://localhost:3000").replace(/\/+$/, "");
-const OUT_DIR = path.join(process.cwd(), "test-results", "website-builder-state-integrity-persistence");
+const OUT_DIR = path.join(process.cwd(), "artifacts/test-results", "website-builder-state-integrity-persistence");
 const TEXT_MARKER = `WB-STATE-TEXT-${Date.now()}`;
 
 fs.mkdirSync(OUT_DIR, { recursive: true });

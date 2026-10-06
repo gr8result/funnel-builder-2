@@ -18,13 +18,17 @@ import {
 } from "../components/construction-estimation/ai-plan-takeoff/takeoffSchedule.js";
 
 const workbookSource = readFileSync("components/estimate-builder/EstimateBuilderWorkbook.js", "utf8");
+const workbookHookSource = readFileSync("hooks/estimate-builder/useEstimateBuilderWorkbook.js", "utf8");
 assert.match(workbookSource, /page:\s*"aiPlanTakeoff"/, "Project Dashboard card must target aiPlanTakeoff");
 assert.match(workbookSource, /<WorkspaceNavGroup pages=\{DASHBOARD_PROJECT_WORKFLOW_CARDS\}/, "Workspace left nav must render workflow cards");
 assert.match(workbookSource, /<AIPlanTakeoffPage \{\.\.\.takeoffEngineContext\} \/>/, "aiPlanTakeoff page must mount integrated page entry");
 assert.match(workbookSource, /platformContext:\s*\{[\s\S]*projectId:/, "Takeoff page must receive current project identity");
 assert.match(workbookSource, /saveAiPlanTakeoffJob/, "Save Job must persist to the platform workbook");
-assert.match(workbookSource, /initialJob:\s*null/, "AI Plan Takeoff must open empty instead of auto-loading the platform workbook takeoff");
+assert.equal(workbookHookSource.includes("materializeTakeoffPlanPages(savedRecord.workbook)"), true, "Takeoff save verification must materialize externalized plan pages before checking them");
+assert.doesNotMatch(workbookHookSource, /workbookRef\.current = previousWorkbook;[\s\S]{0,120}setWorkbook\(previousWorkbook\)/, "A failed takeoff verification must not roll the active takeoff back");
+assert.match(workbookSource, /initialJob:\s*selectAiPlanTakeoffJob\(sheet\.workbook\)/, "AI Plan Takeoff must restore a saved takeoff after an editor remount");
 assert.match(workbookSource, /hasRecoverablePlanPages/, "Platform selector must prefer a takeoff job with recoverable embedded plan pages");
+assert.match(workbookSource, /openJobDetails\.noJobOpen \|\| hasOpenTakeoff/, "A live takeoff must not be overwritten by an automatic restore after saving");
 assert.match(workbookSource, /prepareAiPlanTakeoffJobForSave/, "Platform Save Job must create a revisioned atomic takeoff snapshot");
 assert.match(workbookSource, /RECENT TAKEOFF JOBS/, "AI Plan Takeoff File menu must show takeoff-only recent records");
 
@@ -36,6 +40,7 @@ assert.match(takeoffStandaloneSource, /The local PDF engine could not start\. Yo
 assert.match(takeoffStandaloneSource, /SAVE FAILED – DO NOT CLOSE THIS TAKEOFF/, "Failed save verification must show the required warning.");
 assert.match(takeoffStandaloneSource, /gr8:ai-plan-takeoff:recovery:/, "Failed save verification must create a recovery snapshot.");
 assert.match(takeoffStandaloneSource, /requireVerifiedSave/, "Standalone save UI must gate Saved status on read-back verification.");
+assert.match(takeoffStandaloneSource, /loadedInitialJobRef\.current \|\| !initialJob/, "Saved takeoff hydration must run only once per editor mount.");
 
 const schedule = createTakeoffSchedule({
   projectInfo: { projectName: "Johnson", clientName: "Grant", siteAddress: "1 Build St" },
@@ -54,6 +59,18 @@ const schedule = createTakeoffSchedule({
   completedAreas: [{ id: "tiles-1", page: 1, category: "Tiles", nodes: [{ x: 0, y: 0 }, { x: 1000, y: 0 }, { x: 1000, y: 1000 }] }],
   completedEaves: [{ id: "eave-1", page: 1, level: "Ground Floor", widthOption: "600", widthMm: 600, lengthMm: 10000 }],
 });
+
+const roofAreaSchedule = createTakeoffSchedule({
+  totalPages: 3,
+  currentPage: 2,
+  pixelsPerMm: 1,
+  completedAreas: [
+    { id: "roof-ground", page: 1, category: "Roof Area", level: "Ground Floor", nodes: [{ x: 0, y: 0 }, { x: 1000, y: 0 }, { x: 1000, y: 1000 }, { x: 0, y: 1000 }] },
+    { id: "roof-second", page: 2, category: "Roof Area", level: "Second Level", nodes: [{ x: 0, y: 0 }, { x: 2000, y: 0 }, { x: 2000, y: 1000 }, { x: 0, y: 1000 }] },
+  ],
+});
+assert.equal(roofAreaSchedule.currentSheet.roofAreas[0].quantity, 2, "Roof area rows retain the selected level and area");
+assert.equal(roofAreaSchedule.projectTotals.roofAreas.length, 2, "Roof areas export separately for each selected level");
 
 const jobSetup = createJobSetupPayload(schedule);
 assert.equal(jobSetup.projectName, "Johnson", "Job Setup receives project name");
@@ -392,3 +409,5 @@ assert.equal(
 assert.equal(reopenedAfterRuntimeClear.completedAreas.length, 2, "Floor coverings remain after runtime state is cleared and project is reopened");
 
 console.log("AI Plan Takeoff integration regression checks passed.");
+
+await import('./test-takeoff-material-flow.mjs');

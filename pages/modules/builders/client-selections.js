@@ -1,8 +1,15 @@
+import { builderLocalStorage } from '../../../lib/builders/browserTenantStorage.js';
+import InternalPaintColourSpecification from '../../../components/client-selections/InternalPaintColourSpecification.jsx';
 import Head from "next/head";
+import NextImage from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Check, Download, ExternalLink, Eye, FileText, Home, RefreshCw } from "lucide-react";
 import { useWorkspace } from "../../../hooks/useWorkspace";
+import { useBuilderSelectionFoundation } from '../../../hooks/useBuilderSelectionFoundation';
+import { resolveSelectionSlot } from '../../../lib/builders/selectionRegistry';
 import ProjectCompactBanner from "../../../components/project-workspace/ProjectCompactBanner";
+import DoorProductImage from "../../../components/product-library/DoorProductImage";
+import { isDoorProduct } from "../../../lib/product-library/productPresentation.js";
 import { supabase } from "../../../utils/supabase-client";
 import {
   ALL_GUIDED_REQUIREMENTS,
@@ -36,6 +43,7 @@ import {
   garageDoorSizeOptions,
   garageDoorWorkflowProduct,
   guidedRequirementByKey,
+  nextIncompleteRequirement,
   priceStateForProduct,
   productAllowance,
   productClientPrice,
@@ -64,7 +72,7 @@ import {
   renderFinalInclusionsScheduleHtml,
 } from "../../../lib/builders/finalInclusionsSchedule";
 
-const SELECTION_COLUMNS = "id, session_id, snapshot_id, category, subcategory, room, title, description, allowance_amount, selected_product_name, selected_supplier_name, selected_colour, selected_finish, selected_details, status, selected_at, metadata, created_at, updated_at, brand, product_name, model_number, image_url, specification_url, finish, colour, included_allowance, client_selection_price, calculated_client_selection_price, variation_amount, selection_status, is_active";
+const SELECTION_COLUMNS = "workspace_id, selection_slot_id, baseline_product_id, baseline_unit_price, active_product_id, active_unit_price, selection_source, location_id, id, session_id, snapshot_id, category, subcategory, room, title, description, allowance_amount, selected_product_name, selected_supplier_name, selected_colour, selected_finish, selected_details, status, selected_at, metadata, created_at, updated_at, brand, product_name, model_number, image_url, specification_url, finish, colour, included_allowance, client_selection_price, calculated_client_selection_price, variation_amount, selection_status, is_active";
 const SESSION_COLUMNS = "id, project_id, snapshot_id, session_name, original_estimate_total, private_upgrade_ceiling, current_net_selection_variation, current_updated_estimate_total, warning_threshold_percent, selection_budget_status, status, metadata, created_at, updated_at";
 const PRODUCT_COLUMNS = "*, builder_product_suppliers(supplier_name), builder_product_manufacturers(manufacturer_name), builder_product_categories(category_name)";
 const ENTRY_DOORS_DASHBOARD_IMAGE_URL = "/images/product-library/entry-doors/entry-doors-dashboard-contemporary.webp";
@@ -111,8 +119,15 @@ const SHARED_GARAGE_DOOR_CATALOGUE_PRODUCTS = (windowsDoorsGarageCatalogue.produ
   .map((product) => normalizeMasterProductRecord(product));
 const DEMO_SELECTIONS_STORAGE_KEY = "clientSelections.demoSelections.v1";
 
-export default function BuilderClientSelectionsPage() {
+export default function BuilderClientSelectionsPage(props) {
+  const { workspaceId, loading } = useWorkspace();
+  if (loading) return <div role="status">Loading builder workspace...</div>;
+  return <BuilderClientSelectionsPageContent key={workspaceId || 'anonymous-local'} {...props} />;
+}
+
+function BuilderClientSelectionsPageContent() {
   const { workspaceId, loading: workspaceLoading } = useWorkspace();
+  const { foundation } = useBuilderSelectionFoundation();
   const [projects, setProjects] = useState([]);
   const [snapshots, setSnapshots] = useState([]);
   const [sessions, setSessions] = useState([]);
@@ -120,7 +135,7 @@ export default function BuilderClientSelectionsPage() {
   const [demoSelections, setDemoSelections] = useState(() => {
     if (typeof window === "undefined") return [];
     try {
-      const saved = window.localStorage.getItem(DEMO_SELECTIONS_STORAGE_KEY);
+      const saved = builderLocalStorage.getItem(DEMO_SELECTIONS_STORAGE_KEY);
       const parsed = saved ? JSON.parse(saved) : [];
       return Array.isArray(parsed) ? parsed : [];
     } catch {
@@ -183,7 +198,7 @@ export default function BuilderClientSelectionsPage() {
   useEffect(() => {
     if (workspaceId || typeof window === "undefined") return;
     try {
-      window.localStorage.setItem(DEMO_SELECTIONS_STORAGE_KEY, JSON.stringify(demoSelections.slice(0, 60)));
+      builderLocalStorage.setItem(DEMO_SELECTIONS_STORAGE_KEY, JSON.stringify(demoSelections.slice(0, 60)));
     } catch {
       // Demo persistence is best-effort only; live projects continue through Supabase.
     }
@@ -271,9 +286,17 @@ export default function BuilderClientSelectionsPage() {
   }), [activeSelections, selectedProject, selectedProjectId, selectedSession, selectedSessionId, selectedSnapshot, selectedSnapshotId, workspaceId]);
   const finalScheduleOutOfDate = useMemo(() => isFinalInclusionsDocumentOutOfDate(finalScheduleDocument, activeSelections), [activeSelections, finalScheduleDocument]);
 
-  const selectedRequirement = useMemo(() => guidedRequirementByKey(selectedRequirementKey) || KITCHEN_REQUIREMENTS[0], [selectedRequirementKey]);
+  const selectedRequirement = useMemo(() => {
+    const requirement = guidedRequirementByKey(selectedRequirementKey) || KITCHEN_REQUIREMENTS[0];
+    const slot = resolveSelectionSlot(workspaceId, requirement.requirementKey, foundation?.aliases || []);
+    const config = foundation?.configurations?.find(item => item.selection_slot_id === slot);
+    return { ...requirement, selectionSlotId: slot === 'UNMAPPED' ? null : slot,
+      ...(config ? { label: config.builder_display_name, quantitySource: config.quantity_source } : {}) };
+  }, [selectedRequirementKey, workspaceId, foundation]);
   const activeRequirementList = selectedRequirement?.areaKey === "exterior" ? EXTERIOR_REQUIREMENTS : selectedRequirement?.areaKey === "appliances" ? APPLIANCE_REQUIREMENTS : KITCHEN_REQUIREMENTS;
   const requirementProducts = useMemo(() => {
+    const config = foundation?.configurations?.find(item => item.selection_slot_id === selectedRequirement.selectionSlotId);
+    if (config?.enabled === false) return [];
     const matchedProducts = productsForRequirement(products, selectedRequirement);
     if (matchedProducts.length) return matchedProducts;
     if (selectedRequirement?.familyKey === "garage-doors") {
@@ -284,9 +307,10 @@ export default function BuilderClientSelectionsPage() {
     }
     if (selectedRequirement?.familyKey !== "cladding") return matchedProducts;
     return SHARED_CLADDING_CATALOGUE_PRODUCTS;
-  }, [products, selectedRequirement]);
+  }, [products, selectedRequirement, foundation]);
   const availableFilters = useMemo(() => filtersForRequirement(selectedRequirement, requirementProducts), [selectedRequirement, requirementProducts]);
   const visibleProducts = useMemo(() => {
+    if (foundation?.configurations?.some(item => item.selection_slot_id === selectedRequirement.selectionSlotId && !item.enabled)) return [];
     const filtered = requirementProducts.filter((product) => availableFilters.every((filter) => {
       const selected = filters[filter.key];
       if (!selected) return true;
@@ -294,7 +318,7 @@ export default function BuilderClientSelectionsPage() {
       return (entity[filter.key] || product[filter.key] || product.metadata?.[filter.key] || "") === selected;
     }));
     return filtered.length ? filtered : placeholderProducts(selectedRequirement);
-  }, [availableFilters, filters, requirementProducts, selectedRequirement]);
+  }, [availableFilters, filters, requirementProducts, selectedRequirement, foundation]);
 
   function openAreas() {
     setScreen("areas");
@@ -374,7 +398,7 @@ export default function BuilderClientSelectionsPage() {
     return data;
   }
 
-  async function selectProduct(product) {
+  async function selectProduct(product, quantityOverride, locationAllocationsOverride) {
     if (!workspaceId || !selectedProjectId || !selectedSnapshotId) {
       const payload = {
         ...createSelectionPayloadFromProduct({
@@ -385,10 +409,26 @@ export default function BuilderClientSelectionsPage() {
           requirement: selectedRequirement,
           product,
           userId: null,
+          quantity: quantityOverride,
+          locationAllocations: locationAllocationsOverride
         }),
         id: `demo-${selectedRequirement.requirementKey}-${Date.now()}`,
       };
-      setDemoSelections((current) => [payload, ...current.map((selection) => selection.selected_details?.requirementKey === selectedRequirement.requirementKey ? { ...selection, selection_status: "replaced", status: "changed", is_active: false } : selection)]);
+      const nextDemoSelections = [payload, ...demoSelections.map((selection) => selection.selected_details?.requirementKey === selectedRequirement.requirementKey ? { ...selection, selection_status: "replaced", status: "changed", is_active: false } : selection)];
+      setDemoSelections(nextDemoSelections);
+      // Auto-advance to next incomplete appliance requirement if applicable
+      try {
+        if (selectedRequirement.areaKey === "appliances") {
+          const selectionMap = selectedByRequirement(nextDemoSelections, APPLIANCE_REQUIREMENTS);
+          const nextReq = nextIncompleteRequirement(APPLIANCE_REQUIREMENTS, selectionMap, selectedRequirement);
+          if (nextReq && nextReq.requirementKey !== selectedRequirement.requirementKey) {
+            openRequirement(nextReq.requirementKey);
+          }
+        }
+      } catch (e) {
+        // Prevent auto-advance errors from breaking the selection flow
+        console.warn("Auto-advance failed:", e);
+      }
       setSuccess(`${selectedRequirement.label} selected. Return to the dashboard when ready.`);
       return true;
     }
@@ -407,6 +447,9 @@ export default function BuilderClientSelectionsPage() {
         requirement: selectedRequirement,
         product,
         userId,
+        previousSelection: selectedMap.get(selectedRequirement.requirementKey),
+        quantity: quantityOverride,
+        locationAllocations: locationAllocationsOverride
       });
       const previous = selectedMap.get(selectedRequirement.requirementKey);
       if (previous?.id) {
@@ -418,6 +461,19 @@ export default function BuilderClientSelectionsPage() {
       const nextSelections = [inserted, ...selections.map((selection) => previous?.id === selection.id ? { ...selection, selection_status: "replaced", status: "changed", is_active: false } : selection)];
       setSelections(nextSelections);
       await persistBudget(session.id, nextSelections.filter((selection) => selection.session_id === session.id && selection.is_active !== false && !["replaced", "removed"].includes(selection.selection_status || selection.status)), userId);
+      // Auto-advance to next incomplete appliance requirement if applicable
+      try {
+        if (selectedRequirement.areaKey === "appliances") {
+          const selectionMap = selectedByRequirement(nextSelections, APPLIANCE_REQUIREMENTS);
+          const nextReq = nextIncompleteRequirement(APPLIANCE_REQUIREMENTS, selectionMap, selectedRequirement);
+          if (nextReq && nextReq.requirementKey !== selectedRequirement.requirementKey) {
+            openRequirement(nextReq.requirementKey);
+          }
+        }
+      } catch (e) {
+        // Prevent auto-advance errors from breaking the selection flow
+        console.warn("Auto-advance failed:", e);
+      }
       setSuccess(`${selectedRequirement.label} selected. Return to the dashboard when ready.`);
       return true;
     } catch (saveError) {
@@ -533,6 +589,7 @@ export default function BuilderClientSelectionsPage() {
         </section>
 
         {error ? <div className="alert error">{error}</div> : null}
+        {foundation?.schedules?.length ? <details className="alert notice"><summary>Builder inclusion schedules</summary><ul>{foundation.schedules.filter(schedule => schedule.active).map(schedule => <li key={schedule.id}>{schedule.display_name || schedule.name} · Version {schedule.version}</li>)}</ul></details> : null}
         {success ? <div className="alert success">{success}</div> : null}
         {workspaceLoading || loading ? <div className="alert notice">Loading selections...</div> : null}
 
@@ -551,7 +608,8 @@ export default function BuilderClientSelectionsPage() {
         {screen === "area" ? <AreaCategories areaKey={selectedArea} title={currentAreaTitle} selectedMap={selectedMap} kitchenTotals={kitchenTotals} applianceTotals={applianceTotals} onOpenCategory={openCategory} currency={selectedProject?.currency} /> : null}
         {screen === "checklist" ? <SelectionChecklist title={KITCHEN_AREA_LABEL} testId="showroom-kitchen-checklist" requirements={KITCHEN_REQUIREMENTS} selectedMap={kitchenMap} totals={kitchenTotals} currency={selectedProject?.currency} onOpenRequirement={openRequirement} /> : null}
         {screen === "appliancesChecklist" ? <SelectionChecklist title={APPLIANCE_AREA_LABEL} testId="showroom-appliances-checklist" requirements={APPLIANCE_REQUIREMENTS} selectedMap={applianceMap} totals={applianceTotals} currency={selectedProject?.currency} onOpenRequirement={openRequirement} /> : null}
-        {screen === "product" ? (
+        {screen === "product" && selectedRequirement?.requirementKey === 'interior-paint' ? <InternalPaintColourSpecification selection={selectedMap.get('interior-paint')} onBack={() => openArea('interior')} /> : null}
+        {screen === "product" && selectedRequirement?.requirementKey !== 'interior-paint' ? (
           <ProductSelectionView
             requirement={selectedRequirement}
             requirements={activeRequirementList}
@@ -579,6 +637,17 @@ export default function BuilderClientSelectionsPage() {
 
 BuilderClientSelectionsPage.disableLayout = true;
 
+function ShowroomImage({ src, fallback, alt, width = 640, height = 400, sizes = "(max-width: 720px) 100vw, (max-width: 1200px) 50vw, 33vw", ...props }) {
+  const Image = NextImage.default || NextImage;
+  const [failedSource, setFailedSource] = useState(null);
+  const placeholder = fallback || visualPlaceholder("Product", "");
+  const source = !src || failedSource === src ? placeholder : src;
+  // Local catalogue images can be resized by Next. Supplier URLs may require
+  // signed access or come from a host outside the image optimizer allowlist.
+  const isLocalImage = source.startsWith("/") && !source.startsWith("//");
+  return <Image {...props} src={source} alt={alt} width={width} height={height} sizes={sizes} unoptimized={!isLocalImage} onError={() => { if (source !== placeholder) setFailedSource(src); }} />;
+}
+
 function AreasView({ totalsByKey, onOpenArea, currency }) {
   return (
     <section className="showroomSection" data-testid="showroom-choose-area">
@@ -588,7 +657,7 @@ function AreasView({ totalsByKey, onOpenArea, currency }) {
           const totals = totalsByKey[area.key] || { completed: 0, total: area.requirements.length, variation: 0 };
           return (
             <button key={area.key} type="button" className="areaCard" onClick={() => onOpenArea(area.key)}>
-              <img src={area.fallback || area.image} alt={`${area.title} residential selections`} onError={(event) => { event.currentTarget.src = area.fallback; }} />
+              <ShowroomImage src={area.fallback || area.image} fallback={area.fallback} alt={`${area.title} residential selections`} sizes="(max-width: 720px) 100vw, 50vw" />
               <div className="areaOverlay">
                 <h3>{area.title}</h3>
                 <p>{totals.completed} of {totals.total} selections complete</p>
@@ -636,10 +705,10 @@ function CategoryCard({ requirement, status, selection, totals, currency, onOpen
   const externalLightingSummary = lightingSummary?.dashboardSummary || (lightingSummary?.summary ? `${lightingSummary.summary.totalFittings || 0} fittings selected` : "");
   return (
     <button type="button" className={`categoryCard ${statusTone(status)} ${isEntryDoor ? "entryDoorCategoryCard" : ""} ${isGarageDoor ? "garageDoorCategoryCard" : ""} ${isExternalLighting ? "externalLightingCategoryCard" : ""}`} onClick={onOpen} data-image-key={requirement.imageKey} data-requirement-key={requirement.requirementKey}>
-      <img src={image} alt={alt} onError={(event) => { event.currentTarget.src = fallback; }} />
+      <ShowroomImage src={image} fallback={fallback} alt={alt} />
       <div className="categoryBody">
         <div><h3>{requirement.label}</h3><p>{label}</p></div>
-        {selection && !isExternalLighting ? <img className="selectedThumb" src={selection.image_url || image} alt="" onError={(event) => { event.currentTarget.src = fallback; }} /> : null}
+        {selection && !isExternalLighting ? <ShowroomImage className="selectedThumb" src={selection.image_url || image} fallback={fallback} alt="" width={64} height={64} sizes="64px" /> : null}
         {totals ? <span>{totals.completed} / {totals.total} - {signedMoney(totals.variation, currency)}</span> : <span>{externalLightingSummary || selection?.selected_product_name || "Open showroom"}</span>}
       </div>
     </button>
@@ -669,8 +738,8 @@ function ProductSelectionView({ requirement, requirements, selectedMap, products
     return <GarageDoorSelectionWorkflow requirement={requirement} requirements={requirements} selectedMap={selectedMap} products={products} libraryProductCount={libraryProductCount} currency={currency} saving={saving} onOpenRequirement={onOpenRequirement} onBack={onBack} onSelect={onSelect} onSaveProgress={onSaveProgress} />;
   }
   const returnToDashboardAfterSelect = requirement.requirementKey === "garage-door";
-  const selectAndMaybeReturn = async (product) => {
-    const saved = await onSelect(product);
+  const selectAndMaybeReturn = async (product, quantity, locationAllocations) => {
+    const saved = await onSelect(product, quantity, locationAllocations);
     if (returnToDashboardAfterSelect) {
       if (saved === false) return;
       onBack();
@@ -694,7 +763,7 @@ function ProductSelectionView({ requirement, requirements, selectedMap, products
         {availableFilters.length ? <div className="filterBar">{availableFilters.map((filter) => <label key={filter.key}><span>{filter.label}</span><select value={filters[filter.key] || ""} onChange={(event) => setFilters((current) => ({ ...current, [filter.key]: event.target.value }))}><option value="">All</option>{filter.values.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>)}</div> : null}
         {!libraryProductCount ? <div className="clientNote">Your builder will confirm final supplier availability for this category.</div> : null}
         <div className="productGrid">
-          {products.map((product) => <ProductCard key={product.productId || product.id || product.productCode} requirement={requirement} product={product} currency={currency} saving={saving} onDetail={() => onDetail(product)} onSelect={() => selectAndMaybeReturn(product)} />)}
+          {products.map((product) => <ProductCard key={product.productId || product.id || product.productCode} requirement={requirement} product={product} currency={currency} saving={saving} onDetail={() => onDetail(product)} onSelect={(selected) => selectAndMaybeReturn(selected?.product || product, selected?.quantity, selected?.locationAllocations)} />)}
         </div>
         <div className="dashboardActions">
           <button type="button" className="primary" onClick={onBack}>Save and Return to Dashboard</button>
@@ -847,7 +916,7 @@ function ExternalLightingSelectionWorkflow({ requirement, requirements, selected
             const attrs = product.attributes || {};
             return (
               <article key={product.productId || product.id || product.productCode} className="lightingProductCard">
-                <button type="button" className="lightingImageButton" onClick={() => startDraft(product)}><img src={requirementImage(requirement, product)} alt={product.productName || "Beacon exterior light"} onError={(event) => { event.currentTarget.src = visualPlaceholder(requirement.label, requirement.imageKey); }} /></button>
+                <button type="button" className="lightingImageButton" onClick={() => startDraft(product)}><ShowroomImage src={requirementImage(requirement, product)} fallback={visualPlaceholder(requirement.label, requirement.imageKey)} alt={product.productName || "Beacon exterior light"} height={480} /></button>
                 <div><strong>{product.productName}</strong><span>SKU {externalLightingSku(product)}</span><span>{externalLightingCategory(product)} / {product.finish || product.colour}</span></div>
                 <div className="lightingBadges"><span>{attrs.ipRating || "IP not published"}</span><span>{attrs.integratedLed ? "Integrated LED" : attrs.globeType || "Globe not published"}</span>{attrs.sensorIncluded ? <span>Sensor</span> : null}<span>{money(productClientPrice(product), currency)}</span></div>
                 <a href={product.officialProductURL || product.productUrl} target="_blank" rel="noreferrer">View Details</a>
@@ -859,7 +928,7 @@ function ExternalLightingSelectionWorkflow({ requirement, requirements, selected
         {draftLine ? (
           <div className="lightingAssignment" data-testid="external-lighting-location-assignment">
             <div className="lightingSelectedProduct">
-              <img src={draftLine.imageUrl} alt={draftLine.productName || "Selected Beacon exterior light"} onError={(event) => { event.currentTarget.src = visualPlaceholder(requirement.label, requirement.imageKey); }} />
+              <ShowroomImage src={draftLine.imageUrl} fallback={visualPlaceholder(requirement.label, requirement.imageKey)} alt={draftLine.productName || "Selected Beacon exterior light"} width={180} height={135} sizes="(max-width: 720px) 100vw, 180px" />
               <dl>
                 <div><dt>Selected product</dt><dd>{draftLine.productName}</dd></div>
                 <div><dt>Beacon SKU</dt><dd>{draftLine.sku}</dd></div>
@@ -905,7 +974,7 @@ function LightingScheduleLine({ line, currency, onEdit, onDuplicate, onRemove })
   const assigned = line.locations?.reduce((sum, location) => sum + (numberValue(location.quantity) || 1), 0) || 0;
   return (
     <article className="lightingScheduleLine" data-schedule-line-id={line.scheduleLineId}>
-      <img src={line.imageUrl} alt={line.productName || "Beacon exterior light"} onError={(event) => { event.currentTarget.src = EXTERNAL_LIGHTING_DASHBOARD_IMAGE_URL; }} />
+      <ShowroomImage src={line.imageUrl} fallback={EXTERNAL_LIGHTING_DASHBOARD_IMAGE_URL} alt={line.productName || "Beacon exterior light"} width={164} height={123} sizes="82px" />
       <div>
         <strong>{line.productName}</strong>
         <span>SKU {line.sku} / {line.category} / {line.finish}</span>
@@ -1101,7 +1170,7 @@ function GarageDoorSelectionWorkflow({ requirement, requirements, selectedMap, p
         ) : null}
         {step === "review" ? (
           <div className="garageReview" data-testid="garage-door-review">
-            <img src={GARAGE_DOORS_DASHBOARD_IMAGE_URL} alt={previewProduct?.productName || "Garage door selection"} />
+            <ShowroomImage src={GARAGE_DOORS_DASHBOARD_IMAGE_URL} alt={previewProduct?.productName || "Garage door selection"} />
             <dl>
               <div><dt>Supplier</dt><dd>{previewProduct?.garageDoorSelection.supplier || "Select supplier"}</dd></div>
               <div><dt>Range</dt><dd>{previewProduct?.garageDoorSelection.range || "Select range"}</dd></div>
@@ -1163,9 +1232,16 @@ function RequirementRow({ requirement, selection, currency, onOpen }) {
   return (
     <article className={`requirementRow ${statusTone(status)}`} data-testid={`selection-row-${requirement.requirementKey}`}>
       <StatusDot status={status} />
-      <img src={thumbnail} alt="" onError={(event) => { event.currentTarget.src = visualPlaceholder(requirement.label, requirement.imageKey); }} />
+      <ShowroomImage src={thumbnail} fallback={visualPlaceholder(requirement.label, requirement.imageKey)} alt="" width={78} height={58} sizes="78px" />
       <div className="rowMain"><h3>{requirement.label}</h3><p>{productName || "Not selected"}</p>{selection?.selected_finish || selection?.finish ? <em>{selection.selected_finish || selection.finish}</em> : null}</div>
-      <div className="rowMoney"><span>Allowance {money(financials.allowance, currency)}</span><span>Selected {selection ? money(financials.selectedPrice, currency) : "Not selected"}</span><strong className={financials.variation > 0 ? "upgradeText" : financials.variation < 0 ? "creditText" : ""}>{signedMoney(financials.variation, currency)}</strong></div>
+      <div className="rowMoney" data-testid={`selection-money-${requirement.requirementKey}`}>
+        <span>Qty {financials.quantity}</span>
+        <span>Included {money(financials.allowance, currency)}{financials.quantity > 1 ? " each" : ""}</span>
+        <span>Selected {!selection ? "Not selected" : financials.priceRequired ? "PRICE REQUIRED" : `${money(financials.selectedPrice, currency)}${financials.quantity > 1 ? " each" : ""}`}</span>
+        {financials.priceRequired
+          ? <strong className="upgradeText">PRICE REQUIRED</strong>
+          : <strong className={financials.variation > 0 ? "upgradeText" : financials.variation < 0 ? "creditText" : ""}>{financials.variation > 0 ? "Upgrade " : financials.variation < 0 ? "Credit " : selection ? "No price change " : ""}{signedMoney(financials.variation, currency)}</strong>}
+      </div>
       <button type="button" onClick={onOpen}>{selection ? "Change" : "Select"}</button>
     </article>
   );
@@ -1180,13 +1256,13 @@ function ProductCard({ requirement, product, currency, saving, onDetail, onSelec
   const selectLabel = requirement.requirementKey === "garage-door" ? "Save and Return to Dashboard" : "Select";
   return (
     <article className="productCard">
-      <img src={requirementImage(requirement, product)} alt={entity.productName || "Product"} onError={(event) => { event.currentTarget.src = visualPlaceholder(requirement.label, requirement.imageKey); }} />
+      {isDoorProduct(product, requirement) ? <DoorProductImage src={requirementImage(requirement, product)} name={entity.productName || "Product"} size="card" /> : <ShowroomImage src={requirementImage(requirement, product)} fallback={visualPlaceholder(requirement.label, requirement.imageKey)} alt={entity.productName || "Product"} />}
       <div className="productBody">
         <span>{entity.brand || entity.supplier || "Approved Range"}</span>
         <h3>{entity.productName || product.product_name}</h3>
         <p>{entity.model ? `Model ${entity.model}` : entity.range || "Model to be confirmed"}</p>
         <em>{[entity.colour, entity.finish, entity.size || entity.width].filter(Boolean).join(" / ") || "Finish to be confirmed"}</em>
-        <div className="summaryTiles"><MiniTotal label="Price" value={state === PRICE_STATES.current ? money(price, currency) : state} tone={state === PRICE_STATES.current ? "" : "warn"} /><MiniTotal label="Allowance" value={money(allowance, currency)} /><MiniTotal label={variation < 0 ? "Credit" : "Upgrade"} value={signedMoney(variation, currency)} tone={variation > 0 ? "bad" : variation < 0 ? "good" : ""} /></div>
+        <div className="summaryTiles"><MiniTotal label="Price" value={state === PRICE_STATES.current ? money(price, currency) : state} tone={state === PRICE_STATES.current ? "" : "warn"} /><MiniTotal label="Allowance" value={money(allowance, currency)} />{state === PRICE_STATES.current || state === PRICE_STATES.allowanceOnly ? <MiniTotal label={variation < 0 ? "Credit" : "Upgrade"} value={signedMoney(variation, currency)} tone={variation > 0 ? "bad" : variation < 0 ? "good" : ""} /> : <MiniTotal label="Upgrade" value="PRICE REQUIRED" tone="warn" />}</div>
         <div className="cardActions"><button type="button" onClick={onDetail}>View Details</button><button type="button" className="primary" disabled={saving} onClick={onSelect}>{saving ? "Saving..." : selectLabel}</button></div>
       </div>
     </article>
@@ -1203,13 +1279,13 @@ function ProductDetails({ product, requirement, currency, saving, onClose, onSel
   return (
     <div className="modalScrim" data-testid="showroom-product-detail">
       <section className="detailPanel">
-        <div className="detailGallery"><img src={requirementImage(requirement, product)} alt={entity.productName || "Product"} onError={(event) => { event.currentTarget.src = visualPlaceholder(requirement.label, requirement.imageKey); }} /><div>{[requirementImage(requirement, product), ...(entity.galleryImages || [])].slice(0, 4).map((image) => <img key={image} src={image} alt="" onError={(event) => { event.currentTarget.src = visualPlaceholder(requirement.label, requirement.imageKey); }} />)}</div></div>
+        <div className="detailGallery">{isDoorProduct(product, requirement) ? <DoorProductImage src={requirementImage(requirement, product)} name={entity.productName || "Product"} size="detail" /> : <ShowroomImage src={requirementImage(requirement, product)} fallback={visualPlaceholder(requirement.label, requirement.imageKey)} alt={entity.productName || "Product"} height={480} sizes="(max-width: 720px) 100vw, 50vw" />}<div>{[requirementImage(requirement, product), ...(entity.galleryImages || [])].slice(0, 4).map((image) => <ShowroomImage key={image} src={image} fallback={visualPlaceholder(requirement.label, requirement.imageKey)} alt="" width={160} height={160} sizes="(max-width: 720px) 25vw, 160px" />)}</div></div>
         <div className="detailInfo">
           <span>{entity.brand || entity.supplier || "Approved Range"}</span>
           <h2>{entity.productName || product.product_name}</h2>
           <dl>{detail("Model", entity.model)}{detail("Range", entity.range)}{detail("Colour", entity.colour)}{detail("Finish", entity.finish)}{detail("Size", entity.size || entity.width)}{detail("Dimensions", entity.dimensions?.label || entity.dimensions)}</dl>
           {swatchValues.length ? <div className="swatches"><strong>Colour</strong>{swatchValues.map((item) => <span key={item.name || item.label} title={item.name || item.label} style={{ background: item.value || item.hex || item.colour }} />)}</div> : null}
-          <div className="summaryTiles"><MiniTotal label="Price" value={state === PRICE_STATES.current ? money(price, currency) : state} tone={state === PRICE_STATES.current ? "" : "warn"} /><MiniTotal label="Allowance" value={money(allowance, currency)} /><MiniTotal label={variation < 0 ? "Credit" : "Upgrade"} value={signedMoney(variation, currency)} tone={variation > 0 ? "bad" : variation < 0 ? "good" : ""} /></div>
+          <div className="summaryTiles"><MiniTotal label="Price" value={state === PRICE_STATES.current ? money(price, currency) : state} tone={state === PRICE_STATES.current ? "" : "warn"} /><MiniTotal label="Allowance" value={money(allowance, currency)} />{state === PRICE_STATES.current || state === PRICE_STATES.allowanceOnly ? <MiniTotal label={variation < 0 ? "Credit" : "Upgrade"} value={signedMoney(variation, currency)} tone={variation > 0 ? "bad" : variation < 0 ? "good" : ""} /> : <MiniTotal label="Upgrade" value="PRICE REQUIRED" tone="warn" />}</div>
           <div className="detailActions">{entity.officialProductURL ? <a href={entity.officialProductURL} target="_blank" rel="noreferrer">View Official Product Page <ExternalLink size={14} /></a> : null}<button type="button" className="primary" disabled={saving} onClick={onSelect}>Select This Product</button><button type="button" onClick={onClose}>Back</button></div>
         </div>
       </section>
@@ -1218,7 +1294,7 @@ function ProductDetails({ product, requirement, currency, saving, onClose, onSel
 }
 
 function RunningSummary({ project, currency }) {
-  return <section className="runningBar" data-testid="showroom-running-variation"><div><span>SELECTIONS SUMMARY</span><strong>{project.completed} / {project.total}</strong></div><MiniTotal label="Allowance" value={money(project.allowance, currency)} /><MiniTotal label="Selected" value={money(project.selected, currency)} /><MiniTotal label="Variation" value={signedMoney(project.variation, currency)} tone={project.variation > 0 ? "bad" : project.variation < 0 ? "good" : ""} /></section>;
+  return <section className="runningBar" data-testid="showroom-running-variation"><div><span>SELECTIONS SUMMARY</span><strong>{project.completed} / {project.total}</strong></div><MiniTotal label="Allowance" value={money(project.allowance, currency)} /><MiniTotal label="Selected" value={money(project.selected, currency)} /><MiniTotal label="Variation" value={signedMoney(project.variation, currency)} tone={project.variation > 0 ? "bad" : project.variation < 0 ? "good" : ""} />{project.priceRequired ? <MiniTotal label="Price required" value={`${project.priceRequired} selection${project.priceRequired === 1 ? "" : "s"}`} tone="warn" /> : null}</section>;
 }
 
 function FinalInclusionsSchedulePanel({ snapshot, document, outOfDate, generating, currency, onGenerate, onDownload }) {
@@ -1405,7 +1481,7 @@ const showroomCss = `
   .showroomActions { display: flex; justify-content: flex-start; align-items: center; gap: 10px; }
   .backButton, .showroom button, .showroom a { min-height: 38px; border-radius: 8px; font-weight: 900; cursor: pointer; text-decoration: none; }
   .backButton { display: inline-flex; align-items: center; gap: 7px; border: 1px solid #cbd5e1; background: #ffffff; color: #0f172a; padding: 9px 12px; }
-  .sectionHeader span, .checklistHeader span, .runningBar span, .setupControls span, .miniTotal span, .finalScheduleTitle span { color: #0f766e; font-size: 12px; font-weight: 950; text-transform: uppercase; letter-spacing: .06em; }
+  .sectionHeader span, .checklistHeader span, .runningBar span, .setupControls span, .miniTotal span, .finalScheduleTitle span { color: #0f766e; font-size: 16px; font-weight: 950; text-transform: uppercase; letter-spacing: .06em; }
   .sectionHeader h2, .checklistHeader h2 { margin: 4px 0; color: inherit; font-size: 30px; line-height: 1.08; letter-spacing: 0; }
   .sectionHeader p, .checklistHeader p { margin: 0; color: #64748b; font-weight: 750; }
   .setupControls { margin-top: 14px; display: grid; grid-template-columns: repeat(3, minmax(180px, 1fr)); gap: 10px; align-items: end; background: #fff; border: 1px solid #d7e0e7; border-radius: 8px; padding: 12px; }
@@ -1432,7 +1508,7 @@ const showroomCss = `
   .finalScheduleTitle p { margin: 0; color: #64748b; font-weight: 750; }
   .scheduleStatus { grid-column: 1 / 3; display: grid; gap: 3px; border: 1px solid #a7f3d0; background: #ecfdf5; color: #047857; border-radius: 8px; padding: 10px 12px; min-width: 0; }
   .scheduleStatus.warn { border-color: #fde68a; background: #fffbeb; color: #b45309; }
-  .scheduleStatus span { overflow-wrap: anywhere; color: inherit; font-size: 12px; font-weight: 800; }
+  .scheduleStatus span { overflow-wrap: anywhere; color: inherit; font-size: 16px; font-weight: 800; }
   .finalScheduleActions { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
   .finalScheduleActions button, .finalScheduleActions a { display: inline-flex; align-items: center; gap: 7px; border: 1px solid #cbd5e1; background: #fff; color: #102033; padding: 9px 11px; }
   .finalScheduleActions button.primary { border-color: #0f766e; background: #0f766e; color: #fff; }
@@ -1468,7 +1544,7 @@ const showroomCss = `
   .requirementRow.red { border-color: #fecaca; background: #fff1f2; }
   .requirementRow > img { width: 78px; height: 58px; object-fit: cover; border-radius: 8px; background: #e2e8f0; }
   .rowMain em { display: block; margin-top: 3px; color: #0f766e; font-style: normal; font-weight: 850; }
-  .rowMoney { display: grid; gap: 3px; color: #475569; font-size: 13px; font-weight: 800; }
+  .rowMoney { display: grid; gap: 3px; color: #475569; font-size: 16px; font-weight: 800; }
   .requirementRow button, .primary { border: 1px solid #0f766e !important; background: #0f766e !important; color: #fff !important; padding: 9px 12px; }
   .statusDot { width: 24px; height: 24px; display: inline-grid; place-items: center; border-radius: 999px; border: 2px solid #cbd5e1; background: #f1f5f9; color: #64748b; }
   .statusDot.green { border-color: #22c55e; background: #dcfce7; color: #15803d; }
@@ -1493,48 +1569,48 @@ const showroomCss = `
   .lightingSchedulePanel { display: grid; gap: 12px; border: 1px solid #d7e0e7; border-radius: 8px; background: #fff; padding: 14px; }
   .lightingScheduleHeader { display: grid; grid-template-columns: minmax(220px, .62fr) minmax(0, 1fr); gap: 12px; align-items: start; }
   .lightingScheduleHeader > div:first-child { display: grid; gap: 3px; }
-  .lightingScheduleHeader span { color: #0f766e; font-size: 11px; font-weight: 950; text-transform: uppercase; }
+  .lightingScheduleHeader span { color: #0f766e; font-size: 16px; font-weight: 950; text-transform: uppercase; }
   .lightingScheduleHeader h3 { margin: 0; color: #102033; font-size: 21px; line-height: 1.15; }
   .lightingSummaryTiles { display: grid; grid-template-columns: repeat(3, minmax(105px, 1fr)); gap: 8px; }
   .lightingScheduleRows { display: grid; gap: 9px; }
   .lightingScheduleLine { display: grid; grid-template-columns: 82px minmax(0, 1fr) minmax(120px, .25fr) auto; gap: 10px; align-items: center; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; padding: 10px; }
-  .lightingScheduleLine > img { width: 82px; aspect-ratio: 4 / 3; object-fit: contain; border-radius: 8px; background: #eef2f6; }
+  .lightingScheduleLine > img { width: 82px; height: auto; aspect-ratio: 4 / 3; object-fit: contain; border-radius: 8px; background: #eef2f6; }
   .lightingScheduleLine strong { display: block; color: #102033; line-height: 1.2; }
-  .lightingScheduleLine span, .lightingScheduleLine em, .lightingScheduleLine small { display: block; margin-top: 3px; color: #64748b; font-size: 12px; font-style: normal; font-weight: 820; overflow-wrap: anywhere; }
+  .lightingScheduleLine span, .lightingScheduleLine em, .lightingScheduleLine small { display: block; margin-top: 3px; color: #64748b; font-size: 16px; font-style: normal; font-weight: 820; overflow-wrap: anywhere; }
   .lightingLineTotals { display: grid; gap: 3px; justify-items: end; text-align: right; }
   .lightingLineTotals strong { color: #0f766e; }
   .lightingLineActions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
-  .lightingLineActions button { border: 1px solid #cbd5e1; background: #fff; color: #102033; padding: 7px 9px; font-size: 12px; }
+  .lightingLineActions button { border: 1px solid #cbd5e1; background: #fff; color: #102033; padding: 7px 9px; font-size: 16px; }
   .lightingCategoryGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
   .lightingCategoryGrid button { display: grid; gap: 4px; min-height: 72px; border: 1px solid #d7e0e7; border-radius: 8px; background: #fff; color: #102033; padding: 11px; text-align: left; }
   .lightingCategoryGrid button.selected { border-color: #0f766e; background: #f0fdfa; box-shadow: inset 0 0 0 1px #0f766e; }
-  .lightingCategoryGrid strong { font-size: 15px; line-height: 1.15; }
-  .lightingCategoryGrid span { color: #64748b; font-size: 12px; font-weight: 850; }
+  .lightingCategoryGrid strong { font-size: 16px; line-height: 1.15; }
+  .lightingCategoryGrid span { color: #64748b; font-size: 16px; font-weight: 850; }
   .lightingFilters { display: grid; grid-template-columns: minmax(220px, 1.1fr) repeat(3, minmax(150px, .7fr)); gap: 10px; align-items: end; border: 1px solid #d7e0e7; border-radius: 8px; background: #f8fafc; padding: 12px; }
   .lightingFilters label, .lightingLocationRow label { display: grid; gap: 5px; min-width: 0; }
-  .lightingFilters span, .lightingLocationRow span { color: #0f766e; font-size: 11px; font-weight: 950; text-transform: uppercase; }
+  .lightingFilters span, .lightingLocationRow span { color: #0f766e; font-size: 16px; font-weight: 950; text-transform: uppercase; }
   .lightingFilters input, .lightingFilters select, .lightingLocationRow input, .lightingLocationRow select { width: 100%; min-width: 0; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; color: #102033; padding: 10px; font-weight: 800; }
   .lightingProductGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; max-height: 640px; overflow: auto; padding-right: 4px; }
   .lightingProductCard { display: grid; grid-template-rows: auto minmax(96px, 1fr) auto auto auto; gap: 10px; border: 1px solid #d7e0e7; border-radius: 8px; background: #fff; padding: 10px; color: #102033; }
   .lightingProductCard.selected { border-color: #0f766e; background: #f0fdfa; box-shadow: inset 0 0 0 1px #0f766e; }
   .lightingImageButton { width: 100%; min-height: 0; border: 0; background: #eef2f6; padding: 0; overflow: hidden; }
-  .lightingImageButton img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: contain; background: #eef2f6; }
+  .lightingImageButton img { display: block; width: 100%; height: auto; aspect-ratio: 4 / 3; object-fit: contain; background: #eef2f6; }
   .lightingProductCard strong { display: block; color: #102033; line-height: 1.2; }
-  .lightingProductCard span { display: block; margin-top: 3px; color: #64748b; font-size: 12px; font-weight: 850; }
-  .lightingProductCard a { color: #0f766e; font-size: 13px; font-weight: 900; }
+  .lightingProductCard span { display: block; margin-top: 3px; color: #64748b; font-size: 16px; font-weight: 850; }
+  .lightingProductCard a { color: #0f766e; font-size: 16px; font-weight: 900; }
   .lightingBadges { display: flex; gap: 6px; flex-wrap: wrap; align-content: start; }
-  .lightingBadges span { margin: 0; border: 1px solid #cbd5e1; border-radius: 999px; background: #fff; color: #334155; padding: 4px 8px; font-size: 11px; line-height: 1; }
+  .lightingBadges span { margin: 0; border: 1px solid #cbd5e1; border-radius: 999px; background: #fff; color: #334155; padding: 4px 8px; font-size: 16px; line-height: 1; }
   .lightingAssignment { display: grid; gap: 12px; border: 1px solid #d7e0e7; border-radius: 8px; background: #fff; padding: 14px; }
   .lightingSelectedProduct { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 14px; align-items: start; }
-  .lightingSelectedProduct img { width: 100%; aspect-ratio: 4 / 3; object-fit: contain; border-radius: 8px; background: #eef2f6; }
+  .lightingSelectedProduct img { width: 100%; height: auto; aspect-ratio: 4 / 3; object-fit: contain; border-radius: 8px; background: #eef2f6; }
   .lightingSelectedProduct dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0; }
   .lightingSelectedProduct dl div { border: 1px solid #e2e8f0; border-radius: 8px; padding: 9px; min-width: 0; }
-  .lightingSelectedProduct dt { color: #64748b; font-size: 11px; font-weight: 950; text-transform: uppercase; }
+  .lightingSelectedProduct dt { color: #64748b; font-size: 16px; font-weight: 950; text-transform: uppercase; }
   .lightingSelectedProduct dd { margin: 3px 0 0; color: #102033; font-weight: 900; overflow-wrap: anywhere; }
   .lightingBulkActions { display: flex; gap: 8px; flex-wrap: wrap; }
   .lightingBulkActions button { border: 1px solid #cbd5e1; background: #fff; color: #102033; padding: 9px 11px; }
   .lightingQuantityPanel { display: grid; grid-template-columns: auto 38px 90px 38px minmax(110px, auto); gap: 8px; align-items: center; justify-content: start; }
-  .lightingQuantityPanel span { color: #0f766e; font-size: 11px; font-weight: 950; text-transform: uppercase; }
+  .lightingQuantityPanel span { color: #0f766e; font-size: 16px; font-weight: 950; text-transform: uppercase; }
   .lightingQuantityPanel button { width: 38px; height: 38px; border: 1px solid #cbd5e1; background: #fff; color: #102033; padding: 0; }
   .lightingQuantityPanel input { width: 90px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; color: #102033; padding: 9px; text-align: center; font-weight: 900; }
   .lightingQuantityPanel strong { color: #0f766e; }
@@ -1553,11 +1629,11 @@ const showroomCss = `
   .garageChoiceGrid button, .garageAccessoryGrid button, .garageColourGrid button { position: relative; display: grid; gap: 7px; min-height: 120px; border: 1px solid #d7e0e7; border-radius: 8px; background: #fff; color: #102033; text-align: left; padding: 12px; }
   .garageChoiceGrid button.selected, .garageAccessoryGrid button.selected, .garageColourGrid button.selected { border-color: #0f766e; background: #f0fdfa; box-shadow: 0 0 0 3px rgba(15,118,110,.18), inset 0 0 0 1px #0f766e; }
   .garageChoiceGrid strong, .garageAccessoryGrid strong, .garageColourGrid strong { font-size: 18px; line-height: 1.15; }
-  .garageChoiceGrid span, .garageAccessoryGrid span, .garageColourGrid em, .garageColourGrid small, .garageSelectedColour small { color: #64748b; font-style: normal; font-size: 13px; font-weight: 800; }
-  .garageChoiceGrid b, .garageColourGrid b { justify-self: start; border: 1px solid #5eead4; border-radius: 999px; background: #ccfbf1; color: #115e59; padding: 3px 8px; font-size: 11px; line-height: 1; }
+  .garageChoiceGrid span, .garageAccessoryGrid span, .garageColourGrid em, .garageColourGrid small, .garageSelectedColour small { color: #64748b; font-style: normal; font-size: 16px; font-weight: 800; }
+  .garageChoiceGrid b, .garageColourGrid b { justify-self: start; border: 1px solid #5eead4; border-radius: 999px; background: #ccfbf1; color: #115e59; padding: 3px 8px; font-size: 16px; line-height: 1; }
   .garageFormPanel { grid-template-columns: repeat(4, minmax(160px, 1fr)); align-items: end; }
   .garageFormPanel label, .garageColourToolbar label { display: grid; gap: 5px; }
-  .garageFormPanel label span, .garageColourToolbar span { color: #0f766e; font-size: 11px; font-weight: 950; text-transform: uppercase; }
+  .garageFormPanel label span, .garageColourToolbar span { color: #0f766e; font-size: 16px; font-weight: 950; text-transform: uppercase; }
   .garageFormPanel input, .garageFormPanel select, .garageColourToolbar input, .garageColourToolbar select { width: 100%; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; color: #102033; padding: 10px; font-weight: 800; }
   .garageColourToolbar { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(180px, .7fr) auto auto; gap: 10px; align-items: end; border: 1px solid #d7e0e7; border-radius: 8px; background: #f8fafc; padding: 12px; }
   .garageColourToolbar a { color: #0f766e; font-weight: 900; }
@@ -1567,28 +1643,28 @@ const showroomCss = `
   .garageSelectedColour { display: grid; grid-template-columns: 130px minmax(0, 1fr) auto; gap: 12px; align-items: center; border: 1px solid #0f766e; border-radius: 8px; background: #f0fdfa; padding: 12px; }
   .garageSelectedColour .garageSwatch { height: 70px; }
   .garageReview { grid-template-columns: minmax(220px, .7fr) minmax(0, 1fr); border: 1px solid #d7e0e7; border-radius: 8px; background: #fff; padding: 14px; }
-  .garageReview img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border-radius: 8px; background: #e2e8f0; }
+  .garageReview img { width: 100%; height: auto; aspect-ratio: 16 / 10; object-fit: cover; border-radius: 8px; background: #e2e8f0; }
   .garageReview dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; }
-  .garageReview dt { color: #64748b; font-size: 11px; font-weight: 950; text-transform: uppercase; }
+  .garageReview dt { color: #64748b; font-size: 16px; font-weight: 950; text-transform: uppercase; }
   .garageReview dd { margin: 3px 0 0; color: #102033; font-weight: 900; }
   .garageReview .dashboardActions { grid-column: 1 / -1; }
   .productCard { overflow: hidden; border: 1px solid #d7e0e7; border-radius: 8px; background: #fff; display: grid; transition: transform .16s ease, box-shadow .16s ease; }
-  .productCard > img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; background: #e2e8f0; }
+  .productCard > img { width: 100%; height: auto; aspect-ratio: 16 / 10; object-fit: cover; background: #e2e8f0; }
   .productBody { display: grid; gap: 9px; padding: 13px; }
-  .productBody span { color: #0f766e; font-weight: 950; font-size: 13px; }
+  .productBody span { color: #0f766e; font-weight: 950; font-size: 16px; }
   .productBody em { color: #334155; font-style: normal; font-weight: 850; }
   .cardActions { margin-top: 2px; }
   .modalScrim { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 20px; background: rgba(11,29,47,.56); }
   .detailPanel { width: min(980px, 96vw); max-height: 92vh; overflow: auto; display: grid; grid-template-columns: minmax(280px,.9fr) minmax(320px,1fr); gap: 18px; border-radius: 8px; background: #fff; padding: 18px; box-shadow: 0 30px 70px rgba(0,0,0,.24); }
-  .detailGallery > img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 8px; background: #e2e8f0; }
+  .detailGallery > img { width: 100%; height: auto; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 8px; background: #e2e8f0; }
   .detailGallery div { margin-top: 8px; display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; }
-  .detailGallery div img { width: 100%; aspect-ratio: 1; border-radius: 8px; object-fit: cover; }
+  .detailGallery div img { width: 100%; height: auto; aspect-ratio: 1; border-radius: 8px; object-fit: cover; }
   .detailInfo { display: grid; gap: 12px; align-content: start; }
-  .detailInfo > span { color: #0f766e; font-weight: 950; text-transform: uppercase; font-size: 12px; letter-spacing: .06em; }
+  .detailInfo > span { color: #0f766e; font-weight: 950; text-transform: uppercase; font-size: 16px; letter-spacing: .06em; }
   .detailInfo h2 { margin: 0; color: #102033; font-size: 30px; line-height: 1.1; }
   .detailInfo dl { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; margin: 0; }
   .detailInfo dl div { border: 1px solid #e2e8f0; border-radius: 8px; padding: 9px; }
-  .detailInfo dt { color: #64748b; font-size: 11px; font-weight: 950; text-transform: uppercase; }
+  .detailInfo dt { color: #64748b; font-size: 16px; font-weight: 950; text-transform: uppercase; }
   .detailInfo dd { margin: 3px 0 0; font-weight: 850; }
   .swatches { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .swatches strong { margin-right: 4px; }

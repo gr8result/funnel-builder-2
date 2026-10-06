@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import puppeteer from "puppeteer";
 
 const baseUrl = process.env.CLIENT_SELECTIONS_BASE_URL || "http://localhost:3000";
-const outDir = path.resolve("test-results", "entry-door-dashboard-imagery");
+const outDir = path.resolve("artifacts/test-results", "entry-door-dashboard-imagery");
 fs.mkdirSync(outDir, { recursive: true });
 
 const browser = await puppeteer.launch({

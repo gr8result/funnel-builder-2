@@ -15,7 +15,7 @@ const baseUrl = process.env.JOHNSON_VERIFY_BASE_URL || "http://localhost:3000";
 const workspaceId = "846885cd-25b9-4eca-b9f9-3fd02f5882d8";
 const projectId = "896be24f-a7fb-4a8e-b652-495fdcaa7fe2";
 const projectSearchText = "Johnson 07-123";
-const outDir = path.join(root, "test-results", "johnson-pdf-import");
+const outDir = path.join(root, "artifacts/test-results", "johnson-pdf-import");
 const downloadDir = path.join(outDir, "downloads");
 fs.mkdirSync(outDir, { recursive: true });
 fs.mkdirSync(downloadDir, { recursive: true });

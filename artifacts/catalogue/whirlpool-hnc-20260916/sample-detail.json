@@ -1,0 +1,125 @@
+{
+  "data": {
+    "products": {
+      "items": [
+        {
+          "id": 18623,
+          "sku": "W7MWBLAUS",
+          "vendorcode": "W7MWBLAUS",
+          "name": "40L Built-In Convection Microwave ",
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/w/7/w7mwblaus_whirlpool_web.jpg"
+          },
+          "product_images": {
+            "thumbnail": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/07ba508bbc2444c0df3c958b3d918048/w/7/w7mwblaus_whirlpool_web.jpg",
+            "small": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/1df791769d8cdc80e3c05129fe5437cf/w/7/w7mwblaus_whirlpool_web.jpg",
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/w/7/w7mwblaus_whirlpool_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/w/7/w7mwblaus_whirlpool_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/w/7/w7mwblaus_whirlpool_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/w/7/w7mwblaus_whirlpool_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/w/7/w7mwblaus_whirlpool_tech.jpg"
+            }
+          ],
+          "thumbnail": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/w/7/w7mwblaus_whirlpool_web.jpg"
+          },
+          "description": {
+            "html": "<p>• 16 cooking functions inc. steam, boil &amp; crisp&nbsp;<br>• '6th Sense' technology<br>• Electronic touch sensor<br>• 7 power levels<br>• Full touch LED display</p>"
+          },
+          "product_dimensions": "W595 x D554 x H455mm",
+          "price_promo": 0,
+          "price_store": 2276,
+          "price_trade": "0.000000",
+          "wels_reg_number": "",
+          "gp_product_group": "MICROWAVES",
+          "__typename": "SimpleProduct",
+          "price_range": {
+            "minimum_price": {
+              "regular_price": {
+                "value": 0,
+                "currency": "AUD"
+              }
+            }
+          }
+        }
+      ],
+      "aggregations": [
+        {
+          "attribute_code": "category_id",
+          "label": "Category",
+          "options": [
+            {
+              "label": "Kitchen",
+              "value": "16",
+              "count": 1
+            },
+            {
+              "label": "Microwaves",
+              "value": "24",
+              "count": 1
+            },
+            {
+              "label": "Built In Microwaves",
+              "value": "941",
+              "count": 1
+            },
+            {
+              "label": "Products",
+              "value": "1036",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "attribute_code": "brand",
+          "label": "Brand",
+          "options": [
+            {
+              "label": "Whirlpool",
+              "value": "1084",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "attribute_code": "colours",
+          "label": "Colour",
+          "options": [
+            {
+              "label": "Black",
+              "value": "937",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "attribute_code": "size_oven",
+          "label": "Oven Size",
+          "options": [
+            {
+              "label": "551 - 600mm",
+              "value": "1102",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "attribute_code": "stock_line_filter",
+          "label": "Stock Line",
+          "options": [
+            {
+              "label": "No",
+              "value": "673",
+              "count": 1
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

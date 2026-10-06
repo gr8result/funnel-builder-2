@@ -1,34 +1,16 @@
 // components/AuthGate.js
-import { useEffect, useState } from "react";
-import { supabase } from "../lib/supabaseClient";
+import { useAuth } from "../context/AuthContext";
+
 
 export default function AuthGate({ children }) {
-  const [loading, setLoading] = useState(true);
-  const [session, setSession] = useState(null);
+  const { loading, session, error, retryAuth } = useAuth();
 
-  useEffect(() => {
-    let mounted = true;
-
-    // 1) Grab current session
-    supabase.auth.getSession().then(({ data }) => {
-      if (!mounted) return;
-      setSession(data?.session ?? null);
-      setLoading(false);
-    });
-
-    // 2) Listen to auth changes (login/logout)
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, sess) => {
-      if (!mounted) return;
-      setSession(sess ?? null);
-      setLoading(false);
-    });
-
-    return () => {
-      mounted = false;
-      sub?.subscription?.unsubscribe?.();
-    };
-  }, []);
-
+  if (error && !session) {
+    return <div role="status" style={{ padding: 24 }}>
+      <p>We couldn’t reconnect to your saved login. Retrying automatically.</p>
+      <button onClick={retryAuth}>Retry connection</button>
+    </div>;
+  }
   if (loading) {
     return (
       <div style={{

@@ -5,6 +5,7 @@ import {
   buildFooterNavigationContext,
   normalizeFooterNavigationProps,
 } from "../lib/website-builder/footerNavigation.js";
+import { readWebsiteBuilderDefaults } from "../data/website-builder-defaults/index.js";
 
 const expectedFooterLinks = [
   ["Home", "/"],
@@ -87,7 +88,7 @@ assert.deepEqual(
   "manual footer label and href edits must not be overwritten by matched page records"
 );
 
-const defaults = JSON.parse(fs.readFileSync("data/website-builder-defaults.json", "utf8"));
+const defaults = await readWebsiteBuilderDefaults();
 const footer = defaults?.projects?.["2208a52a-8175-477e-823c-fc6de7fe4afe"]?.globalFooterBlock
   || findGlobalFooter(defaults);
 assert.equal(footer?.type, "footer");

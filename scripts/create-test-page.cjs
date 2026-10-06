@@ -865,23 +865,20 @@ async function processRow(row) {
   }
   console.log("✔ Project saved to Supabase.");
 
-  // ── 6. Update block defaults in data/website-builder-defaults.json ───────
-  const defaultsPath = path.join(__dirname, "..", "data", "website-builder-defaults.json");
-  let defaults = {};
-  try {
-    defaults = JSON.parse(fs.readFileSync(defaultsPath, "utf8"));
-  } catch {
-    defaults = { templateOverrides: {}, blockDefaults: {} };
-  }
-  if (!defaults.blockDefaults) defaults.blockDefaults = {};
+  // ── 6. Update block defaults in data/website-builder-defaults/ ───────────
+  const { getBlockDefaults, saveBlockDefault } = await import(
+    "../data/website-builder-defaults/index.js"
+  );
+  const currentBlockDefaults = await getBlockDefaults();
 
+  let latestBlockDefaults = currentBlockDefaults;
   for (const [blockType, props] of Object.entries(BLOCK_DEFAULTS_TO_SAVE)) {
-    defaults.blockDefaults[blockType] = { ...defaults.blockDefaults[blockType], ...props };
+    const merged = { ...latestBlockDefaults[blockType], ...props };
+    latestBlockDefaults = await saveBlockDefault(blockType, merged);
     console.log(`✔ Saved defaults for block type: ${blockType}`);
   }
 
-  fs.writeFileSync(defaultsPath, JSON.stringify(defaults, null, 2), "utf8");
-  console.log("✔ Block defaults written to data/website-builder-defaults.json");
+  console.log("✔ Block defaults written to data/website-builder-defaults/block-defaults.json");
 
   console.log(`
 ────────────────────────────────────────────────────────

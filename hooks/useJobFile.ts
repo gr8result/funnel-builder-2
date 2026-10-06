@@ -1,3 +1,4 @@
+import { browserTenantKey, builderLocalStorage } from '../lib/builders/browserTenantStorage.js';
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   createNewJob,
@@ -65,7 +66,7 @@ function canUseBrowserApis(): boolean {
 function safeRecentJobs(): RecentJob[] {
   if (!canUseBrowserApis()) return [];
   try {
-    const parsed = JSON.parse(window.localStorage.getItem(RECENT_JOBS_STORAGE_KEY) || "[]");
+    const parsed = JSON.parse(builderLocalStorage.getItem(RECENT_JOBS_STORAGE_KEY) || "[]");
     if (!Array.isArray(parsed)) return [];
     return parsed
       .filter((item) => item && typeof item === "object")
@@ -92,15 +93,7 @@ function safeRecentJobs(): RecentJob[] {
 
 function saveRecentJobs(recent: RecentJob[]): void {
   if (!canUseBrowserApis()) return;
-  window.localStorage.setItem(RECENT_JOBS_STORAGE_KEY, JSON.stringify(recent.filter(isGenuineRecentJob).slice(0, 3)));
-}
-
-function buildRecentId(fileName: string, modified: string): string {
-  const seed = `${fileName}|${modified}|${Date.now()}`;
-  if (typeof window !== "undefined" && typeof window.btoa === "function") {
-    return window.btoa(encodeURIComponent(seed)).replace(/=+$/g, "");
-  }
-  return seed;
+  builderLocalStorage.setItem(RECENT_JOBS_STORAGE_KEY, JSON.stringify(recent.filter(isGenuineRecentJob).slice(0, 3)));
 }
 
 function createJobDataSnapshot(value: unknown): string {
@@ -158,7 +151,7 @@ function jobIdentity(data: Partial<JobFileData> = {}) {
   const registeredJob = workbook.registeredJob && typeof workbook.registeredJob === "object" ? workbook.registeredJob as Record<string, unknown> : {};
   const jobDetails = data["job-details"] && typeof data["job-details"] === "object" ? data["job-details"] as Record<string, unknown> : {};
   const manifestProject = data.manifest?.project && typeof data.manifest.project === "object" ? data.manifest.project as Record<string, unknown> : {};
-  const projectId = String(jobDetails.projectId || manifestProject.id || data.manifest?.projectId || registeredJob.jobId || workbook.registeredJobId || workbook.commercialProjectId || workbook.projectId || meta.projectId || "").trim();
+  const projectId = String(workbook.jobId || data.jobId || jobDetails.jobId || jobDetails.projectId || manifestProject.id || data.manifest?.projectId || registeredJob.jobId || workbook.registeredJobId || workbook.commercialProjectId || workbook.projectId || meta.projectId || "").trim();
   return {
     projectId,
     projectName: String(data.jobName || jobDetails.projectName || manifestProject.projectName || manifestProject.name || meta.jobName || registeredJob.jobName || workbook.projectName || "").trim(),
@@ -188,7 +181,7 @@ function isGenuineRecentJob(item: Partial<RecentJob> = {}): item is RecentJob {
 async function openHandleDb(): Promise<IDBDatabase | null> {
   if (!canUseBrowserApis() || typeof window.indexedDB === "undefined") return null;
   return new Promise((resolve) => {
-    const request = window.indexedDB.open(HANDLE_DB_NAME, 1);
+    const request = window.indexedDB.open(browserTenantKey(HANDLE_DB_NAME), 1);
     request.onupgradeneeded = () => {
       const db = request.result;
       if (!db.objectStoreNames.contains(HANDLE_STORE_NAME)) {
@@ -255,7 +248,7 @@ export function useJobFile(options: UseJobFileOptions): UseJobFileResult {
     const fileName = String(params.fileName || (params.handle as FileSystemFileHandle | null)?.name || `${params.data.jobName || "Job"}${JOB_FILE_EXTENSION}`);
     const identity = jobIdentity(params.data);
     if (!identity.projectId) return;
-    const id = buildRecentId(fileName, params.data.lastModified || new Date().toISOString());
+    const id = `master-job:${identity.projectId}`;
     const entry: RecentJob = {
       id,
       type: "job",
@@ -276,7 +269,7 @@ export function useJobFile(options: UseJobFileOptions): UseJobFileResult {
     }
 
     setRecentJobs((current) => {
-      const next = [entry, ...current.filter((item) => item.projectId !== entry.projectId && item.fileName !== entry.fileName)].filter(isGenuineRecentJob).slice(0, 3);
+      const next = [entry, ...current.filter((item) => item.projectId !== entry.projectId)].filter(isGenuineRecentJob).slice(0, 3);
       saveRecentJobs(next);
       return next;
     });
@@ -284,7 +277,8 @@ export function useJobFile(options: UseJobFileOptions): UseJobFileResult {
 
   const runOpen = useCallback(async (data: JobFileData, fileName?: string, handle?: JobFileHandle) => {
     await Promise.resolve(onOpenJob?.(data, fileName));
-    if (handle) setCurrentHandle(handle);
+    // Opening an internal/downloaded job detaches any previous job's computer file.
+    setCurrentHandle(handle || null);
     setCurrentFileName(fileName || (handle as FileSystemFileHandle | null)?.name || "");
     setHasActiveJob(true);
     setStorageLocation(handle ? "computer-file" : "download");
@@ -312,8 +306,10 @@ export function useJobFile(options: UseJobFileOptions): UseJobFileResult {
 
   const open = useCallback(async () => {
     if (!enabled) return { ok: false, message: "Job files are disabled." };
+    let selectedFileName = "";
     try {
       const result = await openJob();
+      selectedFileName = result.fileName || result.handle?.name || "";
       if (!result.ok || result.cancelled || !result.data) {
         if (result.message) onError?.(result.message);
         return { ok: Boolean(result.ok), cancelled: result.cancelled, message: result.message };
@@ -322,7 +318,8 @@ export function useJobFile(options: UseJobFileOptions): UseJobFileResult {
       return { ok: true, cancelled: false };
     } catch (error) {
       if (isAbortLikeFileSystemError(error)) return { ok: true, cancelled: true };
-      const message = "This job file could not be opened.";
+      const detail = (error as Error)?.message || "This job file could not be opened.";
+      const message = selectedFileName ? `${selectedFileName}: ${detail}` : detail;
       onError?.(message);
       return { ok: false, message };
     }
@@ -356,12 +353,29 @@ export function useJobFile(options: UseJobFileOptions): UseJobFileResult {
   const save = useCallback(async (overrideData?: JobFileData) => {
     if (!enabled) return { ok: false, message: "Job files are disabled." };
     const currentJobData = overrideData || jobData;
+    // Browsers drop write permission on a stored handle between sessions, so the first
+    // save after a restart would otherwise fail on createWritable(). Re-ask for the
+    // permission the user already granted rather than turning it into a save error.
+    if (currentHandle) {
+      const permitted = await ensurePermission(currentHandle as FileSystemFileHandle);
+      if (!permitted) {
+        return {
+          ok: false,
+          message: `Permission to write ${currentFileName || "the job file"} was not granted, so nothing was saved. Use Save As to choose the file again.`,
+        };
+      }
+    }
     const result = await saveJob(currentJobData, currentHandle, { fallbackToSaveAs: true });
     if (!result.ok || result.cancelled || !result.data) {
       return { ok: Boolean(result.ok), cancelled: result.cancelled, message: result.message || "Job was not saved." };
     }
     // A successful disk write must never rehydrate over edits made while saving.
     if (result.handle) setCurrentHandle(result.handle);
+    // A handle discovered to belong to a different job must actually be forgotten, not just
+    // left unset for this call - the plain "no new handle" case above leaves currentHandle
+    // exactly as it was, which for this result would mean every future Save Job keeps hitting
+    // the same wrong file again.
+    else if (result.clearedStaleHandle) setCurrentHandle(null);
     if (result.fileName) setCurrentFileName(result.fileName);
     setHasActiveJob(true);
     setStorageLocation(result.storageLocation || (result.handle ? "computer-file" : "download"));
@@ -370,7 +384,7 @@ export function useJobFile(options: UseJobFileOptions): UseJobFileResult {
     setDirty(false);
     await pushRecent({ data: result.data, fileName: result.fileName, handle: result.handle || null });
     return { ok: true, cancelled: false, message: result.message, data: result.data };
-  }, [enabled, jobData, currentHandle, pushRecent]);
+  }, [enabled, jobData, currentHandle, currentFileName, pushRecent]);
 
   const saveAs = useCallback(async (overrideData?: JobFileData) => {
     if (!enabled) return { ok: false, message: "Job files are disabled." };

@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import puppeteer from "puppeteer";
 
 const baseUrl = process.env.CLIENT_SELECTIONS_BASE_URL || "http://localhost:3000";
-const outDir = path.resolve("test-results", "entry-door-dashboard-imagery");
+const outDir = path.resolve("artifacts/test-results", "entry-door-dashboard-imagery");
 const dashboardImage = "/images/product-library/entry-doors/entry-doors-dashboard-contemporary.webp";
 const sunburstImage = "/images/product-library/entry-doors/entry-doors-sunburst-lifestyle.jpg";
 const garageDashboardImage = "/images/product-library/garage-doors/garage-doors-modern-flatline.webp";

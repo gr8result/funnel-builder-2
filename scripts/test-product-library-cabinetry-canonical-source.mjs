@@ -22,7 +22,9 @@ import {
   PRODUCT_LIBRARY_CABINETRY_SCHEDULE_TYPE_OPTIONS,
   PRODUCT_LIBRARY_WET_AREA_CABINETRY_SCHEDULE_TYPES,
   getProductLibraryCabinetryColourRecords,
+  getProductLibraryCabinetryBenchtopRecords,
 } from "../lib/product-library/cabinetryCatalogueSelectors.js";
+import { productBelongsToRoomCategory, getProductLibraryRoomCategory, resolveQuotationBuilderMappingForProduct } from "../lib/product-library/productLibraryTaxonomy.js";
 
 const ORG_A = "builder-a-cabinetry";
 
@@ -41,6 +43,8 @@ const cabinetryColours = products.filter((product) => product.familyKey === "cab
 const cabinetryHandles = products.filter((product) => product.familyKey === "handles" && product.supplier === "Handle House");
 const structuralCabinetry = products.filter((product) => product.familyKey === "cabinetry" && product.supplier === "Builder Cabinetry");
 const stoneSurfaces = products.filter((product) => (product.requirementKeys || []).includes("stone-benchtops"));
+const laminateSurfaces = products.filter((product) => product.familyKey === "laminate-benchtops");
+const canonicalLaminateRecords = getProductLibraryCabinetryBenchtopRecords({ material: "laminate" });
 const structuralByType = structuralCabinetry.reduce((counts, product) => {
   const key = product.attributes?.canonicalType || "unknown";
   counts[key] = (counts[key] || 0) + 1;
@@ -83,6 +87,17 @@ assert.equal(structuralByType.shelving_feature, 11, "Shelving, kick, bulkhead, a
 assert.ok(structuralCabinetry.every((product) => product.officialProductUrl === ""), "Builder-defined cabinetry assemblies must not display internal source paths as official product URLs.");
 assert.ok(structuralCabinetry.every((product) => product.sourceName === "Builder Catalogue Item"), "Builder-defined assemblies must be labelled as Builder Catalogue Item.");
 assert.equal(stoneSurfaces.length, 148, "Stone benchtop records should remain available through the shared Product Library catalogue.");
+assert.ok(laminateSurfaces.some((product) => product.brand === "Polytec"), "Verified Polytec laminates must reach the master Product Library.");
+assert.ok(laminateSurfaces.some((product) => product.brand === "Laminex"), "Verified Laminex laminates must reach the master Product Library.");
+assert.deepEqual(new Set(laminateSurfaces.map((product) => product.productId)), new Set(canonicalLaminateRecords.map((record) => record.productId)), "Master Product Library and Cabinetry picker must preserve the same laminate identities.");
+for (const product of laminateSurfaces) {
+  assert.equal(productBelongsToRoomCategory(product, getProductLibraryRoomCategory("benchtops")), true);
+  assert.equal(resolveQuotationBuilderMappingForProduct(product).quotationSectionId, "cabinetry-joinery");
+  assert.equal(product.priceStatus, "quote_required", "Unpublished laminate prices must remain quote required.");
+  assert.equal(product.clientPrice, null);
+  assert.ok(product.variants.length > 0, "Manufacturer finish/sheet variants must survive master normalization.");
+  assert.equal(product.attributes.thicknessKind, "laminate_sheet");
+}
 
 const effective = getEffectiveCabinetryCatalogue({ organisationId: ORG_A });
 const scheduleProducts = structuralCabinetry.filter((product) => product.categoryKey === "Cabinetry Products");
@@ -116,7 +131,7 @@ assert.equal(effective.counts.byCanonicalType.handle_product, 8, "Effective cabi
 assert.equal(effective.counts.byCanonicalType.cabinet_unit, 33, "Effective cabinetry catalogue should include all migrated cabinet unit records, including two Client Selections vanity units.");
 assert.equal(effective.counts.byCanonicalType.hardware_product, 2, "Effective cabinetry catalogue should include migrated hardware records.");
 assert.equal(effective.counts.byCanonicalType.shelving_feature, 11, "Effective cabinetry catalogue should include migrated shelving and feature records.");
-assert.equal(effective.counts.byCanonicalType.benchtop_product, 148, "Effective cabinetry catalogue should include all stone benchtop records.");
+assert.equal(effective.counts.byCanonicalType.benchtop_product, stoneSurfaces.length + laminateSurfaces.length, "Effective cabinetry catalogue should include all stone and verified laminate benchtop records.");
 
 disableProduct(ORG_A, "CABINETRY-HARDWARE-BLUM-SOFT-CLOSE");
 const afterDisable = getEffectiveCabinetryCatalogue({ organisationId: ORG_A });
@@ -135,5 +150,6 @@ console.log(JSON.stringify({
   structuralCabinetry: structuralCabinetry.length,
   structuralByType,
   stoneSurfaces: stoneSurfaces.length,
+  laminateSurfaces: laminateSurfaces.length,
   effectiveCounts: effective.counts,
 }, null, 2));

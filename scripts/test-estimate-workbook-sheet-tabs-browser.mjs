@@ -5,7 +5,7 @@ import puppeteer from "puppeteer";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const baseUrl = process.env.ESTIMATE_WORKBOOK_TABS_BASE_URL || "http://localhost:3000";
-const outDir = path.join(root, "test-results", "estimate-workbook-sheet-tabs");
+const outDir = path.join(root, "artifacts/test-results", "estimate-workbook-sheet-tabs");
 fs.mkdirSync(outDir, { recursive: true });
 
 const browser = await puppeteer.launch({

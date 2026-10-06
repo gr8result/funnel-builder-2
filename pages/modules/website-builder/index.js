@@ -10,6 +10,8 @@ import { seedWebsiteBuilderSharedLibrary } from "../../../lib/website-builder/me
 import { supabase } from "../../../lib/supabaseClient";
 import s from "./website-builder.module.css";
 
+const FEATURED_GALLERY_TEMPLATE_SLUG = "website-residential-home-builder";
+
 const PREVIEW_IMAGE_KEYS = [
   "backgroundImage",
   "imageUrl",
@@ -301,7 +303,13 @@ export default function WebsiteBuilderDashboard() {
     }
 
     try {
-      const nextThemes = TEMPLATES.filter((item) => String(item?.type || "website") === "website").map((item, index) => ({
+      // Residential Home Builder is the featured demo template, so it leads the gallery.
+      const websiteTemplates = TEMPLATES.filter((item) => String(item?.type || "website") === "website");
+      const galleryTemplates = [
+        ...websiteTemplates.filter((item) => item.slug === FEATURED_GALLERY_TEMPLATE_SLUG),
+        ...websiteTemplates.filter((item) => item.slug !== FEATURED_GALLERY_TEMPLATE_SLUG),
+      ];
+      const nextThemes = galleryTemplates.map((item, index) => ({
         id: item.id || item.slug || `theme-${index}`,
         slug: item.slug,
         name: item.name,

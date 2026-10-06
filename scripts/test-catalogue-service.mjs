@@ -1,6 +1,7 @@
 // Verification harness for the catalogue service (Part B acceptance).
 // Run: node --import ./scripts/register-json-loader.mjs scripts/test-catalogue-service.mjs
 import * as svc from "../lib/product-library/catalogueService.js";
+import { queryClientSelectableProducts } from "../lib/product-library/catalogueModel.js";
 
 const ORG = "846885cd-25b9-4eca-b9f9-3fd02f5882d8";
 let pass = 0;
@@ -168,16 +169,26 @@ check("cladding: selections hides disabled product", svc.getClientSelectableProd
 console.log("\n=== consolidation: effective appliance catalogue uses Product Library owner ===");
 freshStorage();
 const appliances = svc.getEffectiveApplianceCatalogue({ organisationId: ORG });
-check("effective appliance product count", appliances.counts.products, 83);
-check("effective appliance pack count", appliances.counts.packs, 35);
-check("effective appliance relationship count", appliances.counts.relationships, 159);
-check("effective appliance brands", appliances.brands, ["Ariston", "Blanco", "Euromaid", "Omega", "Smeg", "Westinghouse"]);
+check("effective appliance product count", appliances.counts.products, 116);
+check("effective appliance pack count", appliances.counts.packs, 24);
+check("effective appliance relationship count", appliances.counts.relationships, 105);
+check("effective appliance brands", appliances.brands, ["Bosch", "Euromaid", "Omega", "Smeg", "Westinghouse"]);
 check("no builder-private appliance leakage by default", appliances.counts.builderPrivateProducts, 0);
 check("canonical appliance IDs are stable", appliances.records.every((record) => record.productId && record.productCode), true);
 const applianceToDisable = appliances.records[0].productCode;
 svc.disableProduct(ORG, applianceToDisable);
-check("explicit appliance disable hides from same org", svc.getEffectiveApplianceCatalogue({ organisationId: ORG }).counts.products, 82);
-check("explicit appliance disable does not leak to other org", svc.getEffectiveApplianceCatalogue({ organisationId: "other-org-1234" }).counts.products, 83);
+check("explicit appliance disable hides from same org", svc.getEffectiveApplianceCatalogue({ organisationId: ORG }).counts.products, 115);
+check("explicit appliance disable does not leak to other org", svc.getEffectiveApplianceCatalogue({ organisationId: "other-org-1234" }).counts.products, 116);
+const historicalBlanco = svc.getMasterProducts().filter((product) => product.attributes?.applianceCatalogue && product.brand === "Blanco");
+check("historical Blanco products and packs remain addressable", historicalBlanco.length, 19);
+for (const product of historicalBlanco) svc.enableProduct(ORG, product.productCode);
+check("builder enablement cannot unretire Blanco", svc.getClientSelectableProducts(ORG).some((product) => product.attributes?.applianceCatalogue && product.brand === "Blanco"), false);
+const bridgeRefs = svc.getBuilderEnablementRefs(ORG);
+check("compatibility refs keep retired appliances inactive", historicalBlanco.every((product) => bridgeRefs.find((ref) => ref.masterProductCode === product.productCode)?.active === false), true);
+const staleRefs = historicalBlanco.map((product) => ({ organisationId: ORG, masterProductCode: product.productCode, enabled: true, active: true }));
+check("legacy selection query rejects retired appliances even with stale enabled refs", queryClientSelectableProducts({ organisationId: ORG, familyKey: "cooktops", masterProducts: svc.getMasterProducts(), builderProducts: staleRefs }).length, 0);
+svc.addBuilderProduct(ORG, { productCode: "private-retired-blanco", familyKey: "cooktops", brand: "Blanco", productName: "Historical tenant Blanco", active: true });
+check("tenant appliance records cannot reintroduce a retired brand", svc.getEffectiveApplianceCatalogue({ organisationId: ORG }).records.some((record) => record.brand === "Blanco"), false);
 const canonical = svc.getEffectiveProductCatalogue({ organisationId: ORG, familyKey: "ovens" }).canonicalProducts[0];
 check("canonical product contract owner", canonical.catalogueOwner, "product-library");
 check("canonical product contract snapshot policy", canonical.snapshotPolicy, "consumers store immutable selection snapshots; Product Library owns the canonical record");

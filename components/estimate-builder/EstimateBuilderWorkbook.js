@@ -1,12 +1,27 @@
+import { browserTenantKey, builderLocalStorage, builderSessionStorage } from '../../lib/builders/browserTenantStorage.js';
+import SelectionBaselineControl from './SelectionBaselineControl.jsx';
+import ClientSelectionsErrorBoundary from './ClientSelectionsErrorBoundary.jsx';
 import { safeSelectionNavigate } from "../../lib/navigation/selectionNavigation.js";
+import { masterJobId, linkTakeoffToMasterJob } from "../../lib/construction-estimation/masterJob.js";
 import EntryDoorFurnitureSchedule from './EntryDoorFurnitureSchedule.jsx';
-import { Component, memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import CabinetryCataloguePicker from './CabinetryCataloguePicker.jsx';
+import CabinetryReconciliation from './CabinetryReconciliation.jsx';
+import { useQuotationSubgroups } from './useQuotationSubgroups.js';
+import { buildQuotationSubgroups, visibleSubgroupRows } from '../../lib/construction-estimation/quotationSubgroups.js';
+import { cabinetryQuoteGroupStatus } from '../../lib/construction-estimation/cabinetryRequirements.js';
+import { cabinetryApplies, isCabinetrySection, finalCabinetryQuotation } from '../../lib/construction-estimation/finalCabinetryQuotation.js';
+import { isCabinetryDivider } from '../../lib/construction-estimation/finalCabinetryQuotation.js';
+import QuotationNotifications from './QuotationNotifications.jsx';
+import JobSetupTakeoffImport, { hasMeasurableTakeoffData } from './JobSetupTakeoffImport.jsx';
+import { createJobSetupWindowSchedule, createCavitySliderCageSchedule, createInternalDoorSizeSchedule, createRobeSlidingDoorSchedule } from '../construction-estimation/ai-plan-takeoff/takeoffSchedule.js';
+import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { DndContext, useDraggable } from "@dnd-kit/core";
 import {
+  AppWindow,
   BarChart3,
   Briefcase,
   Building2,
@@ -30,9 +45,10 @@ import { readJob } from "../../lib/jobFile";
 import { supabase } from "../../utils/supabase-client";
 import { isDeveloperEmail } from "../../lib/adminUsers";
 import { calculateEstimateBuilderWorkbook, V4_DEFAULT_FORMULAS } from "../../lib/construction-estimation/estimateBuilderWorkbookCalculations";
+import { applyPersistedQuotationOrder, stampQuotationOrder } from "../../lib/construction-estimation/quotationOrder";
 import { windowDoorSizeCodeForRow } from "../../lib/construction-estimation/estimateBuilderWorkbookDefaults";
 import { SUBCONTRACTOR_QUOTE_DEDUCTIONS, V4_DATA_SECTIONS } from "../../lib/construction-estimation/estimateWorksheetV4Schema";
-import { quoteQuantity, quoteRate } from "../../lib/construction-estimation/finalQuotationBoq";
+import { quoteLineTotal, quoteQuantity, quoteRate } from "../../lib/construction-estimation/finalQuotationBoq";
 import { syncCommercialSnapshot } from "../../lib/builders/syncCommercialSnapshot";
 import { BUILDER_INCLUSION_SECTION_TITLES, normaliseEstimateInclusions, selectedEstimateInclusionsPackage } from "../../lib/builders/estimateInclusions";
 import { normaliseStandardInclusions, selectedStandardInclusionsPackage } from "../../lib/builders/standardInclusions";
@@ -46,6 +62,7 @@ import ProjectCompactBanner from "../project-workspace/ProjectCompactBanner";
 import {
   downloadRecentTakeoffBackup,
   downloadRecentTakeoffRawIndexedDbRecord,
+  findMostRecentTakeoffSnapshotWithData,
   getTakeoffCounts,
   hasRecoverablePlanPages,
   loadRecentTakeoffJobs,
@@ -55,7 +72,6 @@ import {
   verifyIndexedDbTakeoffRecord,
 } from "../construction-estimation/ai-plan-takeoff/jobPersistence";
 import { loadPdfJs } from "../../lib/pdf/pdfjsLoader";
-import { deriveJobId } from "../../lib/jobFile";
 import ProjectEstimatePackPage from "./project-estimate/ProjectEstimatePackPage";
 import { projectEstimateTextUsesParentResize } from "./project-estimate/ProjectEstimateShared";
 import { createMvpBlock, moveMvpPage, normaliseMvpBlock, serialiseMvpDocument, updateMvpBlockFrame } from "./project-estimate/pageEditorMvp";
@@ -83,10 +99,14 @@ import { useProjectEstimateInstanceSync } from "./project-estimate/persistence/u
 import * as ProjectEstimateApi from "./project-estimate/persistence/ProjectEstimateApiClient";
 import ProjectEstimateTemplateManager from "./project-estimate/components/TemplateManager";
 import ProjectEstimateVersionHistoryPanel from "./project-estimate/components/VersionHistoryPanel";
-import { TextEditingToolbar as WebsiteBuilderTextEditingToolbar } from "../website-builder/page-builder/pbPropertiesPanels";
-import ClientPortalRouteBridge from "../../Client Portal/RouteBridge";
+// Imported from its defining module: pbPropertiesPanels re-exports it but also pulls in the
+// whole website builder (renderer, project store, icon libraries) that this page never uses.
+import { TextEditingToolbar as WebsiteBuilderTextEditingToolbar } from "../website-builder/page-builder/panels/EditorControls";
+import ClientPortalRouteBridge from "../../client-portal/RouteBridge";
 
-export const USE_NEW_TAKEOFF_ENGINE = true;
+// Not exported: one non-component export stops this module being a Fast Refresh boundary, and an
+// edit to anything it imports then remounts the whole workbook and re-reads the job from storage.
+const USE_NEW_TAKEOFF_ENGINE = true;
 
 const APP_LAYERS = Object.freeze({
   content: 0,
@@ -181,6 +201,7 @@ const SUPPLIER_QUOTATION_SECTION_KEY = "subcontractorQuotes";
 const ESTIMATE_WORKBOOK_SHEET_TABS = [
   { key: "dataInput", label: "Data Input" },
   { key: "formulaSheet", label: "Calculations" },
+  { key: "windowSchedule", label: "Window Schedule" },
   { key: "quotation", label: "Quote Sheet" },
 ];
 
@@ -256,6 +277,15 @@ const WORKSPACE_VISUALS = {
     border: "#bfdbfe",
     gradient: "linear-gradient(135deg, #2563eb 0%, #38bdf8 100%)",
     Icon: Calculator,
+  },
+  windowSchedule: {
+    title: "Window Schedule",
+    subtitle: "External windows and external doors measured by AI Plan Takeoff, with opening areas and brick sill lengths.",
+    color: "#0d9488",
+    soft: "#f0fdfa",
+    border: "#99f6e4",
+    gradient: "linear-gradient(135deg, #0d9488 0%, #14b8a6 100%)",
+    Icon: AppWindow,
   },
   standardInclusions: {
     title: "Standard Inclusions",
@@ -469,7 +499,13 @@ function routePageFromEstimateBuilderRoute(router, initialPage = "") {
   return "";
 }
 
-export default function EstimateBuilderWorkbook({ previewMode = false, mode = "", recentId = "", organisationId = "", initialPage = "" } = {}) {
+export default function EstimateBuilderWorkbook(props) {
+  const { workspaceId, loading } = useWorkspace();
+  if (loading) return <div role="status">Loading builder workspace...</div>;
+  return <EstimateBuilderWorkbookContent key={workspaceId || 'anonymous-local'} {...props} />;
+}
+
+function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recentId = "", organisationId = "", initialPage = "" } = {}) {
   const router = useRouter();
   const sheet = useEstimateBuilderWorkbook({}, { previewMode });
   const { workspaceId, loading: workspaceLoading } = useWorkspace();
@@ -487,6 +523,7 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
   const [newJobModalOpen, setNewJobModalOpen] = useState(false);
   const [newJobForm, setNewJobForm] = useState({ jobName: "", clientName: "", jobNumber: "", address: "", notes: "" });
   const [jobFileError, setJobFileError] = useState("");
+  const [openingLocalJobFile, setOpeningLocalJobFile] = useState(false);
   const [localJobFilePrompt, setLocalJobFilePrompt] = useState(null);
   const [saveStatus, setSaveStatus] = useState({ state: "idle", label: "", detail: "" });
   const [commercialSyncStatus, setCommercialSyncStatus] = useState({ state: "idle", message: "", projectId: "", snapshotId: "", syncedAt: "" });
@@ -494,9 +531,9 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
   const explicitJobRestoreAttemptRef = useRef("");
   const [showDeveloperControls, setShowDeveloperControls] = useState(false);
   const [takeoffWorkflowSnapshot, setTakeoffWorkflowSnapshot] = useState(null);
+  const [jobSetupImportRequest, setJobSetupImportRequest] = useState(null);
   const [recentTakeoffJobs, setRecentTakeoffJobs] = useState(() => loadRecentTakeoffJobs());
   const [openTakeoffJobRequest, setOpenTakeoffJobRequest] = useState(null);
-  const autoOpenTakeoffRequestRef = useRef("");
   const jobFilePayload = useMemo(() => workbookToJobFileData(sheet.workbook), [sheet.workbook]);
   const jobFile = useJobFile({
     enabled: !previewMode,
@@ -548,7 +585,7 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
           notes: existingMeta.notes || job.notes || workbookDataValue(workbookSource, "projectNotes") || workbookDataValue(workbookSource, "notes") || "",
           created: existingMeta.created || job.created || new Date().toISOString(),
           lastModified: job.lastModified || existingMeta.lastModified || new Date().toISOString(),
-          localFileOnly: !fallbackProjectId,
+          localFileOnly: existingMeta.localFileOnly ?? !Boolean(workbookSource.commercialProjectId || workbookSource.projectId || existingMeta.workspaceId),
         },
       };
       const loadResult = await sheet.loadJobFileData({ ...job, workbook: nextWorkbook }, fileName || "job.gr8job", options);
@@ -559,9 +596,6 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
   });
   const lockHandlers = previewMode ? previewProtectionHandlers : {};
 
-  useEffect(() => {
-    if (jobFileError && isWorkbookLoaded(sheet.workbook)) setJobFileError("");
-  }, [jobFileError, sheet.workbook]);
   const navigationRouterRef = useRef(router);
   navigationRouterRef.current = router;
   const navigationSheetRef = useRef(sheet);
@@ -594,7 +628,7 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
     if (previewMode || mode || !requestedPage || !WORKSPACE_VISUALS[requestedPage] || workbookPage === requestedPage) return;
     navigationSheetRef.current.setPage(requestedPage);
   }, [mode, previewMode, requestedPage, workbookPage]);
-  const isAdminMode = typeof window !== "undefined" && window.localStorage.getItem("estimate-builder-permission-mode") === "admin";
+  const isAdminMode = typeof window !== "undefined" && builderLocalStorage.getItem("estimate-builder-permission-mode") === "admin";
   const isSaving = saveStatus.state === "saving";
   const isCommercialSyncing = commercialSyncStatus.state === "syncing";
   const activeVisual = workspaceVisual(activePageKey);
@@ -607,8 +641,8 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
     if (previewMode || mode || !sheet.hydrated || !openJobDetails.noJobOpen) return;
     if (typeof window === "undefined") return;
     const explicitJobKey = String(
-      window.sessionStorage.getItem("estimate-builder-explicit-active-job-key")
-        || window.localStorage.getItem("estimate-builder-explicit-active-job-key")
+      builderSessionStorage.getItem("estimate-builder-explicit-active-job-key")
+        || builderLocalStorage.getItem("estimate-builder-explicit-active-job-key")
         || ""
     ).trim();
     if (!explicitJobKey) {
@@ -616,10 +650,12 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
       if (explicitJobRestoreState.state !== "idle") setExplicitJobRestoreState({ state: "idle", key: "", message: "" });
       return;
     }
-    if (explicitJobRestoreAttemptRef.current === explicitJobKey && explicitJobRestoreState.state === "restoring") return;
+    // A failed/superseded restore is still an attempt. Retrying it on every
+    // status render reads and normalizes the same large workbook indefinitely.
+    if (explicitJobRestoreAttemptRef.current === explicitJobKey) return;
     explicitJobRestoreAttemptRef.current = explicitJobKey;
     setExplicitJobRestoreState({ state: "restoring", key: explicitJobKey, message: "" });
-    sheet.restoreExplicitActiveJob?.().then((result) => {
+    navigationSheetRef.current.restoreExplicitActiveJob?.().then((result) => {
       if (result?.ok === false) {
         setExplicitJobRestoreState({ state: "failed", key: explicitJobKey, message: result.message || "The active job could not be restored for this module." });
         return;
@@ -628,7 +664,7 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
     }).catch((error) => {
       setExplicitJobRestoreState({ state: "failed", key: explicitJobKey, message: error?.message || "The active job could not be restored for this module." });
     });
-  }, [activePageKey, explicitJobRestoreState.state, explicitJobRestoreState.key, mode, openJobDetails.noJobOpen, previewMode, sheet]);
+  }, [activePageKey, explicitJobRestoreState.state, mode, openJobDetails.noJobOpen, previewMode, sheet.hydrated]);
   useEffect(() => {
     if (openJobDetails.noJobOpen) return;
     explicitJobRestoreAttemptRef.current = "";
@@ -640,13 +676,27 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
         ...(moduleWorkspaceId ? { workspace_id: moduleWorkspaceId } : {}),
       }).toString()}`
     : "";
+  const updateMasterTakeoffDraft = useCallback((jobData) => {
+    try { return navigationSheetRef.current.updateAiPlanTakeoffDraft(jobData); }
+    catch (error) { return { ok: false, message: error.message }; }
+  }, []);
+  const masterTakeoffWorkspaceReady = selectAiPlanTakeoffJob(sheet.workbook)?.masterJobId === activeBuilderJobId
+    && Boolean(selectAiPlanTakeoffJob(sheet.workbook)?.takeoffId);
+  useEffect(() => {
+    if (activePageKey !== "aiPlanTakeoff" || !sheet.hydrated || openJobDetails.noJobOpen || previewMode || masterTakeoffWorkspaceReady) return;
+    try { navigationSheetRef.current.ensureAiPlanTakeoffWorkspace(); }
+    catch (error) { setJobFileError(error.message); }
+  }, [activePageKey, activeBuilderJobId, sheet.hydrated, openJobDetails.noJobOpen, previewMode, masterTakeoffWorkspaceReady]);
   const takeoffEngineContext = useMemo(() => ({
     embedded: true,
     jobId: deriveTakeoffEngineJobId(sheet.workbook, openJobDetails, moduleWorkspaceId),
-    initialJob: null, // Emergency: no mount-time Takeoff payload hydration.
+    initialJob: selectAiPlanTakeoffJob(sheet.workbook)?.masterJobId === masterJobId(sheet.workbook) ? selectAiPlanTakeoffJob(sheet.workbook) : null,
+    onMasterTakeoffChange: updateMasterTakeoffDraft,
+    onLinkLegacyTakeoff: (jobData) => linkTakeoffToMasterJob(navigationSheetRef.current.getCurrentWorkbook(), jobData, { importLegacy: true }),
     initialQuoteRows: quoteRowsForAiPlanTakeoff(sheet.workbook),
     openTakeoffJobRequest,
     platformContext: {
+      jobId: masterJobId(sheet.workbook),
       noJobOpen: openJobDetails.noJobOpen,
       isHydratingProject: !sheet.hydrated,
       projectId: activeBuilderJobId,
@@ -685,8 +735,11 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
         || (!openJobDetails.noJobOpen ? openJobDetails.jobNumber : "")
         || targetProjectName
         || "";
-      const prepared = prepareAiPlanTakeoffJobForSave(selectAiPlanTakeoffJob(sheet.workbook), {
-        ...jobData,
+      const currentSheet = navigationSheetRef.current;
+      const currentWorkbook = currentSheet.getCurrentWorkbook();
+      const ownedJob = linkTakeoffToMasterJob(currentWorkbook, jobData);
+      const prepared = prepareAiPlanTakeoffJobForSave(selectAiPlanTakeoffJob(currentWorkbook), {
+        ...ownedJob,
         platformProject: attachToPlatform ? {
           ...(jobData?.platformProject || {}),
           projectId: targetProjectId,
@@ -699,36 +752,13 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
         } : {},
       }, attachToPlatform ? targetProjectId : "");
       if (!prepared.ok) return prepared;
-      return sheet.saveAiPlanTakeoffJob?.(prepared.job);
+      return currentSheet.saveAiPlanTakeoffJob?.(prepared.job);
     },
     onAttachToProject: sheet.attachCurrentWorkbookToProject,
     onJobSetupUpdate: async (payload) => {
-      if (payload?.projectName) sheet.updateData("inputDataSheet", "projectName", "value", payload.projectName);
-      if (payload?.siteAddress || payload?.projectAddress) sheet.updateData("inputDataSheet", "projectAddress", "value", payload.siteAddress || payload.projectAddress);
-      const mappedFields = payload?.dataInputFields && typeof payload.dataInputFields === "object" ? payload.dataInputFields : {};
-      Object.entries(mappedFields).forEach(([rowKey, value]) => {
-        if (!rowKey) return;
-        const nextValue = value === null || value === undefined ? "" : String(value);
-        sheet.updateData("inputDataSheet", rowKey, "value", nextValue);
-      });
-      const totalLiving = takeoffQuantityByItem(payload, "floor_total_living");
-      const externalLm = takeoffWallLength(payload, "External walls");
-      const internalLm = takeoffWallLength(payload, "Internal walls");
-      if (totalLiving && !mappedFields.lowerFloorAreaM2) sheet.updateData("inputDataSheet", "lowerFloorAreaM2", "value", String(totalLiving));
-      if (externalLm && !mappedFields.lowerExternalWallsLm) sheet.updateData("inputDataSheet", "lowerExternalWallsLm", "value", String(externalLm));
-      if (internalLm && !mappedFields.lowerInternalWallsLm) sheet.updateData("inputDataSheet", "lowerInternalWallsLm", "value", String(internalLm));
-      sheet.updateTakeoffEngineState?.({
-        ...(sheet.workbook?.takeoffEngine || {}),
-        lastJobSetupSync: {
-          payload,
-          syncedAt: new Date().toISOString(),
-          projectId: activeBuilderJobId,
-          takeoffId: payload?.provenance?.takeoffId || "",
-          revision: Number(payload?.provenance?.revision || 0),
-          transferTime: payload?.provenance?.transferredAt || new Date().toISOString(),
-        },
-      });
-      return { ok: true };
+      setJobSetupImportRequest(payload);
+      navigateWorkspacePage("dataInput");
+      return { ok: true, reviewRequired: true };
     },
     onQuoteSheetUpdate: async ({ previewRows = [], mappings = {}, scheduleSignature = "", syncedAt = new Date().toISOString() }) => {
       const quoteRows = quoteRowsForAiPlanTakeoff(sheet.workbook);
@@ -750,7 +780,7 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
       });
       return { ok: true };
     },
-  }), [sheet, openJobDetails, moduleWorkspaceId, activeCommercialProjectId, activeBuilderJobId, takeoffWorkflowSnapshot, navigateWorkspacePage, openTakeoffJobRequest]);
+  }), [sheet, openJobDetails, moduleWorkspaceId, activeCommercialProjectId, activeBuilderJobId, takeoffWorkflowSnapshot, navigateWorkspacePage, openTakeoffJobRequest, updateMasterTakeoffDraft]);
   const commercialModuleContext = useMemo(() => ({
     embedded: true,
     organisationId: moduleWorkspaceId,
@@ -788,14 +818,15 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
   }, []);
 
   useEffect(() => {
-    setShowDeveloperControls(window.localStorage.getItem("estimate-builder-show-developer-controls") === "true");
+    setShowDeveloperControls(builderLocalStorage.getItem("estimate-builder-show-developer-controls") === "true");
   }, []);
 
   async function runSaveAction(label, action) {
     if (saveStatusTimerRef.current) window.clearTimeout(saveStatusTimerRef.current);
     setSaveStatus({ state: "saving", label, detail: "" });
     try {
-      await new Promise((resolve) => window.setTimeout(resolve, 0));
+      // File pickers must start in the click handler, before a render or timer
+      // can consume the browser's transient user activation.
       const result = await Promise.resolve(action());
       if (result?.cancelled) {
         setSaveStatus({ state: "idle", label: "", detail: "" });
@@ -814,7 +845,7 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
     } catch (error) {
       setSaveStatus({ state: "error", label: "Save failed", detail: error?.message || "Please try again." });
       saveStatusTimerRef.current = window.setTimeout(() => setSaveStatus({ state: "idle", label: "", detail: "" }), 7000);
-      throw error;
+      return { ok: false, message: error?.message || "Please try again." };
     }
   }
 
@@ -828,12 +859,8 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
     setJobPickerMessage("");
     setJobPickerError(null);
     setJobPickerOpen(true);
-    if (workspaceLoading || !moduleWorkspaceId) {
-      setJobPickerMessage("Loading workspace...");
-      return;
-    }
     const jobs = await sheet.refreshSavedJobSummaries?.({ workspaceId: moduleWorkspaceId });
-    if (!jobs?.length) setJobPickerMessage(sheet.savedJobSummariesStatus?.message || "No jobs exist in this workspace");
+    if (!jobs?.length) setJobPickerMessage("No saved jobs yet");
   }
 
   async function openSavedJob(key) {
@@ -873,10 +900,16 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
   }
 
   async function openLocalJobFilePicker() {
+    if (openingLocalJobFile) return;
     setJobFileError("");
     setOpenWorkbookMenu("");
-    const result = await jobFile.open();
-    if (result?.ok === false && result.message) setJobFileError(result.message);
+    setOpeningLocalJobFile(true);
+    try {
+      const result = await jobFile.open();
+      if (result?.ok === false && result.message) setJobFileError(result.message);
+    } finally {
+      setOpeningLocalJobFile(false);
+    }
   }
 
   async function closeActiveJob() {
@@ -905,7 +938,7 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
         fileLastModified: file.lastModified ? new Date(file.lastModified).toISOString() : "",
         identity,
         currentIdentity,
-        dirty: sheet.dirty,
+        dirty: !openJobDetails.noJobOpen && sheet.dirty,
         warning: localJobFileIdentityWarning(file.name, identity),
       };
       if (!prompt.dirty) {
@@ -1047,26 +1080,47 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
   }, [mode, recentId, previewMode, jobFile]);
 
   const isAiPlanTakeoffPage = activePageKey === "aiPlanTakeoff";
+  // The workspace is keyed by master job ID and hydrates initialJob once. A draft
+  // publication or save must not issue another open request for that same workspace.
+
+  // The takeoff attached to this job's live workbook can end up empty even though this
+  // exact job has a real, measured takeoff sitting in its own save history -
+  // hasMeasurableTakeoffData's comment explains why: it is never (re)synced back after
+  // being measured, because that sync currently only happens through an explicit "Save to
+  // Platform" action inside AI Plan Takeoff. Window Schedule (and everything else that
+  // reads workbook.aiPlanTakeoffJob live) would otherwise show nothing until the
+  // estimator happens to reopen AI Plan Takeoff and resave, even though Job Setup's own
+  // importer already recovers and shows this exact data. Recovering this job's own last
+  // measured save here - the same, unambiguous source (not the fuzzier cross-job match
+  // JobSetupTakeoffImport also tries, which stays manual/reviewed because that one can
+  // legitimately be a different job's takeoff) - and resyncing it through the existing
+  // saveAiPlanTakeoffJob means every tab sees it immediately and the next .gr8job save
+  // embeds it, closing the gap without a second opening-data pathway.
+  const takeoffRecoveryAttemptRef = useRef("");
+  const attachedTakeoffJob = selectAiPlanTakeoffJob(sheet.workbook);
+  const takeoffRecoveryJobKey = sheet.workbook.jobId ? `job:${sheet.workbook.jobId}`
+    : sheet.workbook.registeredJob?.jobId ? `job:${sheet.workbook.registeredJob.jobId}` : "";
   useEffect(() => {
-    if (!isAiPlanTakeoffPage || !sheet.hydrated || openJobDetails.noJobOpen) return;
-    const savedTakeoffJob = selectAiPlanTakeoffJob(sheet.workbook);
-    if (!savedTakeoffJob || !hasRecoverablePlanPages(savedTakeoffJob)) return;
-    const pageCount = savedTakeoffJob?.plan?.pages?.length || 0;
-    const requestKey = [
-      activeBuilderJobId || savedTakeoffJob.associatedProjectId || savedTakeoffJob.platformProject?.projectId || "active-job",
-      savedTakeoffJob.takeoffId || "takeoff",
-      savedTakeoffJob.contentChecksum || "",
-      pageCount,
-    ].join(":");
-    if (autoOpenTakeoffRequestRef.current === requestKey) return;
-    autoOpenTakeoffRequestRef.current = requestKey;
-    setOpenTakeoffJobRequest({
-      requestId: `restore:${requestKey}:${Date.now()}`,
-      takeoffId: savedTakeoffJob.takeoffId || requestKey,
-      displayName: savedTakeoffJob.takeoffName || savedTakeoffJob.jobName || openJobDetails.projectName || "AI Plan Takeoff",
-      jobData: savedTakeoffJob,
-    });
-  }, [activeBuilderJobId, isAiPlanTakeoffPage, openJobDetails.noJobOpen, openJobDetails.projectName, sheet.hydrated, sheet.workbook]);
+    if (previewMode || !sheet.hydrated || openJobDetails.noJobOpen) return;
+    if (hasMeasurableTakeoffData(attachedTakeoffJob)) return;
+    const jobKey = takeoffRecoveryJobKey;
+    if (!jobKey || takeoffRecoveryAttemptRef.current === jobKey) return;
+    takeoffRecoveryAttemptRef.current = jobKey;
+    (async () => {
+      const recovery = await findMostRecentTakeoffSnapshotWithData(jobKey).catch(() => ({ ok: false }));
+      const currentSheet = navigationSheetRef.current;
+      const currentWorkbook = currentSheet.workbook;
+      const currentJobKey = currentWorkbook.jobId ? `job:${currentWorkbook.jobId}`
+        : currentWorkbook.registeredJob?.jobId ? `job:${currentWorkbook.registeredJob.jobId}` : "";
+      // A history read may finish after another job opened or a takeoff was
+      // supplied by the user. It must not write its result into that new state.
+      if (currentJobKey !== jobKey || hasMeasurableTakeoffData(selectAiPlanTakeoffJob(currentWorkbook))) return;
+      if (recovery.ok && hasMeasurableTakeoffData(recovery.takeoffJob)) {
+        await currentSheet.saveAiPlanTakeoffJob?.(recovery.takeoffJob);
+      }
+    })();
+  }, [previewMode, openJobDetails.noJobOpen, sheet.hydrated, takeoffRecoveryJobKey, attachedTakeoffJob]);
+
   const triggerTakeoffControl = useCallback((id) => {
     document.getElementById(id)?.click();
   }, []);
@@ -1212,7 +1266,7 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
   if (!sheet.hydrated) return <div role="status">{sheet.persistenceStatus.state === "error" ? `${sheet.persistenceStatus.label} ${sheet.persistenceStatus.detail}` : "Loading complete job..."}</div>;
 
   return (
-    <div style={{ ...styles.shell, ...(previewMode ? styles.previewShell : {}) }} {...lockHandlers}>
+    <div style={{ ...styles.shell, ...(activePageKey !== "quotation" ? { gridTemplateColumns: "280px minmax(0, 1fr)" } : {}), ...(previewMode ? styles.previewShell : {}) }} {...lockHandlers}>
       <style jsx global>{`
         .project-workspace-nav-button:hover {
           transform: translateY(-1px);
@@ -1315,30 +1369,31 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
                       onToggle={() => setOpenWorkbookMenu((current) => current === "file" ? "" : "file")}
                       onClose={() => setOpenWorkbookMenu("")}
                       busy={isSaving}
-                      takeoffMode={isAiPlanTakeoffPage}
+                      takeoffMode={false}
                       recentTakeoffJobs={recentTakeoffJobs}
-                      recentJobs={isAiPlanTakeoffPage ? [] : sheet.recentJobs}
-                      recentLocalJobFiles={isAiPlanTakeoffPage ? [] : jobFile.recentJobs}
+                      recentJobs={sheet.recentJobs}
+                      recentLocalJobFiles={jobFile.recentJobs}
                       onOpenRecentTakeoffJob={openRecentTakeoffJob}
                       onDownloadRecentTakeoffJob={downloadRecentTakeoffJobBackup}
-                      onOpenRecentJob={isAiPlanTakeoffPage ? undefined : openSavedJob}
+                      onOpenRecentJob={openSavedJob}
                       onOpenRecentLocalJobFile={(id) => jobFile.openRecent(id)}
-                      onRemoveRecentJob={isAiPlanTakeoffPage ? undefined : sheet.removeRecentJob}
+                      onRemoveRecentJob={sheet.removeRecentJob}
                       onRemoveRecentLocalJobFile={jobFile.removeRecent}
                       items={isAiPlanTakeoffPage ? [
-                        { section: "NEW", label: "Create New Job", action: () => triggerTakeoffControl("ai-plan-takeoff-new-job-button") },
+                        { section: "NEW", label: "Create New Job", action: () => setNewJobModalOpen(true) },
+                        { section: "OPEN", label: "Open Job File from Computer", action: openLocalJobFilePicker },
                         { section: "OPEN", label: "Import Takeoff Backup From Computer", action: () => triggerTakeoffControl("legacy-job-loader") },
-                        { section: "OPEN", label: "Open Platform Job", action: openJobPicker },
+                        { section: "OPEN", label: "Open Saved Job", action: openJobPicker },
                         ...(hasOpenWorkbook ? [
                           { section: "SAVE", label: "Save Job", action: () => triggerTakeoffControl("ai-plan-takeoff-save-button"), primary: true },
-                          { section: "SAVE", label: "Save Job As", action: () => triggerTakeoffControl("ai-plan-takeoff-save-as-button") },
-                          { section: "SAVE", label: "Download Backup Copy", action: () => triggerTakeoffControl("ai-plan-takeoff-download-backup-button") },
+                          { section: "SAVE", label: "Save Job to Computer", action: () => runSaveAction("Saving job to computer", () => jobFile.save(workbookToJobFileData(sheet.getCurrentWorkbook()))) },
+                          { section: "SAVE", label: "Download Backup Copy", action: () => runSaveAction("Downloading backup copy", () => jobFile.downloadBackup(workbookToJobFileData(sheet.getCurrentWorkbook()))) },
                           { section: "SAVE", label: "Restore Previous Successful Save", action: () => runSaveAction("Restoring previous save", () => sheet.restorePreviousJobRevision()) },
                           { section: "SAVE", label: "Close Job", action: closeActiveJob },
                         ] : []),
                       ] : [
                         { section: "NEW", label: "Create New Job", action: () => setNewJobModalOpen(true) },
-                        { section: "OPEN", label: "Open Platform Job", action: openJobPicker },
+                        { section: "OPEN", label: "Open Saved Job", action: openJobPicker },
                         { section: "OPEN", label: "Open Job File from Computer", action: openLocalJobFilePicker },
                         { section: "TEMPLATE", label: "Create New Job From Master Template", action: () => runTemplateFileAction("Creating job", () => sheet.createJobFromTemplate()) },
                         { section: "TEMPLATE", label: "Save As Base Template", action: () => runTemplateFileAction("Saving base template", () => sheet.saveAsBaseTemplate()) },
@@ -1371,12 +1426,13 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
                     </button>
                   ) : null}
                   <div data-testid="job-persistence-status" role="status">
-                    {saveStatus.state === "saving" ? "Saving\u2026"
+                    {openingLocalJobFile ? "Opening job file\u2026"
+                      : saveStatus.state === "saving" ? "Saving\u2026"
                       : sheet.persistenceStatus.state === "error" ? sheet.persistenceStatus.label
                       : saveStatus.state === "error" ? `${saveStatus.label}: ${saveStatus.detail}`
                       : sheet.persistenceStatus.state === "saving" ? "Saving\u2026"
                       : sheet.dirty ? "Unsaved changes"
-                      : sheet.lastSavedAt ? `Saved at ${new Date(sheet.lastSavedAt).toLocaleTimeString()}` : ""}
+                      : sheet.lastSavedAt ? `Saved at ${new Date(sheet.lastSavedAt).toLocaleTimeString()}${sheet.storagePersisted === false ? " - browser copy only (not protected): also Save Job to Computer" : ""}` : ""}
                   </div>
                   {activePageKey === "quotation" ? (
                     <div style={styles.quoteSearchControls}>
@@ -1425,6 +1481,18 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
               />
             )}
             {activePageKey === "dataInput" && (
+              <div style={styles.pageStack}>
+              <JobSetupTakeoffImport
+                key={activeBuilderJobId || sheet.workbook.jobId || "current-job"}
+                sheet={sheet}
+                takeoffJob={selectAiPlanTakeoffJob(sheet.workbook)}
+                projectId={activeBuilderJobId}
+                jobName={openJobDetails.projectName}
+                jobOpen={!openJobDetails.noJobOpen}
+                request={jobSetupImportRequest}
+                onRequestConsumed={() => setJobSetupImportRequest(null)}
+                onOpenTakeoff={() => navigateWorkspacePage("aiPlanTakeoff")}
+              />
               <DataInputSheet
                 sheet={sheet}
                 sections={dataInputWorkbookSections(sheet)}
@@ -1432,11 +1500,13 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
                 onPickFormulaReference={(key) => insertQuoteQuantityReference(sheet, formulaTarget, key)}
                 canEditFormulas={isAdminMode}
               />
+              </div>
             )}
             {activePageKey === "supplierQuotations" && (
               <SupplierQuotationsSheet sheet={sheet} />
             )}
             {activePageKey === "windowsDoors" && <WindowsDoorsSheet sheet={sheet} />}
+            {activePageKey === "windowSchedule" && <WindowScheduleSheet sheet={sheet} />}
             {activePageKey === "formulaSheet" && (
               <FormulaSheet
                 sheet={sheet}
@@ -1458,6 +1528,8 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
           {['purchaseOrders', 'supplierProcurement', 'procurement'].includes(activePageKey) && <EntryDoorFurnitureSchedule workbook={sheet.workbook} />}
           {activePageKey === "purchaseOrders" && <CommercialPurchaseOrdersPage {...commercialModuleContext} />}
           {activePageKey === "clientSelections" && (
+            <>
+            {commercialModuleContext?.projectId && <SelectionBaselineControl key={sheet.workbook.workspaceId || sheet.workbook.workspace_id} workbook={sheet.workbook} onApply={sheet.applySelectionBaseline} />}
             <ClientSelectionsModuleHost
               moduleContext={commercialModuleContext}
               restoringActiveJob={explicitJobRestoreState.state === "restoring"}
@@ -1467,6 +1539,7 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
               onNewJob={() => setNewJobModalOpen(true)}
               showDeveloperControls={showDeveloperControls}
             />
+            </>
           )}
           {activePageKey === "budgetVsActual" && <CommercialBudgetVsActualPage {...commercialModuleContext} />}
           {activePageKey === "supplierProcurement" && <SupplierProcurementSheet navigateWorkspacePage={navigateWorkspacePage} />}
@@ -1478,7 +1551,7 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
           {activePageKey === "procurement" && <CommercialProcurementSchedulePage {...commercialModuleContext} />}
           {activePageKey === "clientPortal" && <ClientPortalRouteBridge />}
           {activePageKey === "aiPlanTakeoff" && (
-            <AIPlanTakeoffPage {...takeoffEngineContext} />
+            <AIPlanTakeoffPage key={`${activeBuilderJobId || "no-job"}:${sheet.jobLoadVersion}`} {...takeoffEngineContext} onOpenMasterJob={openJobPicker} onNewMasterJob={() => setNewJobModalOpen(true)} />
           )}
           {activePageKey === "gantt" && (
             <GanttBuilderPage sheet={sheet} />
@@ -1541,7 +1614,7 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
         ) : null}
       </main>
 
-      <aside style={styles.summary} data-estimate-builder-live-summary="true">
+      {activePageKey === "quotation" && <aside style={styles.summary} data-estimate-builder-live-summary="true">
         {activePageKey === "projectEstimate" || activePageKey === "clientPage" || activePageKey === "cashflowSummary" ? (
           <>
             <div style={styles.eyebrow}>{activePageKey === "cashflowSummary" ? "Cashflow" : "Project Estimate"}</div>
@@ -1590,7 +1663,7 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
             </Panel>
           </>
         )}
-      </aside>
+      </aside>}
 
       {jobPickerOpen && (
         <JobPickerModal
@@ -1638,9 +1711,13 @@ function ClientSelectionsModuleHost({ moduleContext, restoringActiveJob = false,
   const showDeveloperDetails = useMemo(() => {
     if (process.env.NODE_ENV !== "development" || !showDeveloperControls) return false;
     if (typeof window === "undefined") return false;
-    return window.localStorage.getItem("client-selections-show-developer-details") === "true";
+    return builderLocalStorage.getItem("client-selections-show-developer-details") === "true";
   }, [showDeveloperControls]);
 
+  // The module is imported once. This effect also re-runs on every Fast Refresh and used to clear
+  // the loaded page first, which unmounted Client Selections and reinitialised it from scratch
+  // whenever any source file was saved - and whenever the job's file name changed (Save As).
+  // A different job gets a fresh page through the `key` below, not by unloading the module.
   useEffect(() => {
     let cancelled = false;
     const slowMountTimer = window.setTimeout(() => {
@@ -1652,9 +1729,7 @@ function ClientSelectionsModuleHost({ moduleContext, restoringActiveJob = false,
       });
     }, 10000);
 
-    setLoadedClientSelectionsPage(null);
     setLoadError(null);
-    mountedRef.current = false;
 
     loadCommercialClientSelectionsPage()
       .then((module) => {
@@ -1673,7 +1748,7 @@ function ClientSelectionsModuleHost({ moduleContext, restoringActiveJob = false,
       cancelled = true;
       window.clearTimeout(slowMountTimer);
     };
-  }, [retryKey, moduleContext?.fileState?.fileName, moduleContext?.projectId, moduleContext?.workspaceId]);
+  }, [retryKey]);
 
   const retry = () => {
     setRetryKey((current) => current + 1);
@@ -1718,12 +1793,18 @@ function ClientSelectionsModuleHost({ moduleContext, restoringActiveJob = false,
   return (
     <ClientSelectionsErrorBoundary
       resetKey={`${retryKey}:${moduleContext?.projectId || ""}:${moduleContext?.estimateSnapshotId || moduleContext?.snapshotId || ""}`}
-      showDeveloperDetails={showDeveloperDetails}
-      onRetry={retry}
-      onBackToDashboard={onBackToDashboard}
+      renderError={(boundaryError) => (
+        <ClientSelectionsErrorPanel
+          error={boundaryError}
+          showDeveloperDetails={showDeveloperDetails}
+          onRetry={retry}
+          onBackToDashboard={onBackToDashboard}
+        />
+      )}
       onError={(error, info) => setLoadError({ error, info, source: "react-boundary" })}
     >
       <LoadedClientSelectionsPage
+        key={`${retryKey}:${moduleContext?.workspaceId || ""}:${moduleContext?.projectId || ""}`}
         {...moduleContext}
         embedded
         onEmbeddedBack={onBackToDashboard}
@@ -1733,43 +1814,6 @@ function ClientSelectionsModuleHost({ moduleContext, restoringActiveJob = false,
       />
     </ClientSelectionsErrorBoundary>
   );
-}
-
-class ClientSelectionsErrorBoundary extends Component {
-  constructor(props) {
-    super(props);
-    this.state = { error: null, info: null, errorCode: "" };
-  }
-
-  static getDerivedStateFromError(error) {
-    return { error };
-  }
-
-  componentDidCatch(error, info) {
-    console.error("[Client Selections] component mount error", error, info);
-    this.setState({ info, errorCode: clientSelectionsErrorCode(error, "react-boundary") });
-    this.props.onError?.(error, info);
-  }
-
-  componentDidUpdate(previousProps) {
-    if (previousProps.resetKey !== this.props.resetKey && this.state.error) {
-      this.setState({ error: null, info: null, errorCode: "" });
-    }
-  }
-
-  render() {
-    if (this.state.error) {
-      return (
-        <ClientSelectionsErrorPanel
-          error={{ error: this.state.error, info: this.state.info, source: "react-boundary", errorCode: this.state.errorCode }}
-          showDeveloperDetails={this.props.showDeveloperDetails}
-          onRetry={this.props.onRetry}
-          onBackToDashboard={this.props.onBackToDashboard}
-        />
-      );
-    }
-    return this.props.children;
-  }
 }
 
 function clientSelectionsErrorCode(error, source = "unknown") {
@@ -2192,9 +2236,241 @@ function WorkbookSheetTabs({ activePageKey, onNavigate }) {
   );
 }
 
+// Purchase-order-ready breakdown of the "90mm Cavity Slider Cages" total (119.03): a supplier
+// cannot act on "4 cages", only on "1 x 720mm, 1 x 820mm, 2 x 1020mm". Reuses
+// createCavitySliderCageSchedule - the same grouping createCavitySliderCageSchedule/Window
+// Schedule's own Cavity Slider Frames / Cages table already uses - so this is the existing
+// canonical grouping surfaced here, not a second implementation of it. That schedule groups by
+// level as well as size (a real distinction for tracking which room an opening is in); this
+// procurement view sums across levels because a cage order is specified by size alone, not by
+// which level it is fitted on.
+function cavitySliderSizeBreakdown(workbook) {
+  const takeoffJob = selectAiPlanTakeoffJob(workbook);
+  if (!takeoffJob) return [];
+  try {
+    const schedule = createCavitySliderCageSchedule({
+      completedWallRuns: takeoffJob.completedWallRuns || [],
+      placedOpenings: takeoffJob.placedOpenings || [],
+      pixelsPerMm: takeoffJob.pixelsPerMm,
+      sheetLevels: takeoffJob.sheetLevels || {},
+    });
+    const bySize = new Map();
+    for (const row of schedule.rows || []) {
+      const key = `${row.widthMm}x${row.heightMm}x${row.hostFrameThicknessMm}`;
+      const existing = bySize.get(key) || { widthMm: row.widthMm, heightMm: row.heightMm, hostFrameThicknessMm: row.hostFrameThicknessMm, quantity: 0 };
+      existing.quantity += row.quantity;
+      bySize.set(key, existing);
+    }
+    return Array.from(bySize.values()).sort((a, b) => a.widthMm - b.widthMm);
+  } catch {
+    return [];
+  }
+}
+
+// Turns a cavitySliderSizeBreakdown() entry into a genuine row in the section's own rows array
+// (spliced in right after totalCavitySliderCagesEach - see withCavitySliderSizeRows below) rather
+// than an ad-hoc extra <tr> outside it: an ordinary array member gets the same sequential Item
+// number as every other visible row for free, with no separate numbering system of its own. Its
+// value is carried directly on the row (staticValue) rather than through sheet.preview.quantities,
+// since it comes from createCavitySliderCageSchedule's own grouping, not the quantities object.
+function cavitySliderSizeRow(size, index) {
+  return {
+    key: `cavitySliderSize_${size.widthMm}_${size.heightMm}_${size.hostFrameThicknessMm}_${index}`,
+    label: `${size.hostFrameThicknessMm || 90}mm Cavity Slider Cage — ${size.widthMm}mm`,
+    sectionLabel: "Linings / Trim",
+    unit: "EACH",
+    heading: false,
+    calculated: true,
+    staticValue: size.quantity,
+  };
+}
+// Splices the cavity slider size rows into the Data Input Sheet's own rows array immediately after
+// totalCavitySliderCagesEach (119.03) - a real position in the array, not a rendering side effect -
+// so isRelevantForDataInput/floor-count filtering and the sequential Item numbering both see them
+// exactly like any other row.
+//
+// When there are NO cavity sliders in the current Takeoff (sizeRows is empty - a live computation,
+// never stale), totalCavitySliderCagesEach itself is REMOVED here rather than left in place: that
+// row is a persisted field (calculated: false, editable: true) only updated when Apply Takeoff runs,
+// so an earlier Takeoff state's cage count can otherwise survive on screen with no breakdown
+// underneath it, showing a stale non-zero total for a project that currently has no cavity sliders
+// at all - exactly the "90mm Cavity Slider Cages = 4 with no matching Takeoff data" symptom this
+// fixes. Driving removal off the live sizeRows.length (not the row's own persisted value) means this
+// self-corrects on every render the moment the Takeoff's cavity sliders actually reach zero, with no
+// dependency on Apply Takeoff having been re-run - unlike jamb110x19StockLengthsEach, which has no
+// live breakdown of its own to fall back on and so still needs its own hide-when-persisted-zero rule
+// (isRelevantForNonZeroJambStock in the hook).
+function withCavitySliderSizeRows(sections, sizeRows) {
+  return sections.map((section) => {
+    if (section.key !== "inputDataSheet") return section;
+    const index = section.rows.findIndex((row) => row.key === "totalCavitySliderCagesEach");
+    if (index < 0) return section;
+    const rows = section.rows.slice();
+    if (sizeRows.length) rows.splice(index + 1, 0, ...sizeRows.map(cavitySliderSizeRow));
+    else rows.splice(index, 1);
+    return { ...section, rows };
+  });
+}
+
+// Purchase-order-ready breakdown of STANDARD (hinged/passage) internal doors - the old combined
+// "Internal doors" total (119, now hidden - see HIDDEN_DATA_INPUT_ROW_KEYS in
+// useEstimateBuilderWorkbook.js) told a supplier nothing actionable; "4 x 720mm, 6 x 820mm, ..."
+// does. Reuses createInternalDoorSizeSchedule, which already excludes cavity sliders (own cage kit,
+// see cavitySliderSizeBreakdown) and robe/sliding doors (own product, see
+// robeSlidingDoorSizeBreakdown below) and groups by width x height only - a door leaf's product
+// identity does not change with the host wall's frame thickness, which is what previously produced
+// two same-labelled rows (e.g. "720mm Internal Door" at quantity 7 and again at quantity 1) for
+// what is actually one door product. Summed across levels for the same reason
+// cavitySliderSizeBreakdown sums across levels - a door order is specified by size alone.
+function internalDoorSizeBreakdown(workbook) {
+  const takeoffJob = selectAiPlanTakeoffJob(workbook);
+  if (!takeoffJob) return [];
+  try {
+    const schedule = createInternalDoorSizeSchedule({
+      completedWallRuns: takeoffJob.completedWallRuns || [],
+      placedOpenings: takeoffJob.placedOpenings || [],
+      pixelsPerMm: takeoffJob.pixelsPerMm,
+      sheetLevels: takeoffJob.sheetLevels || {},
+    });
+    const bySize = new Map();
+    for (const row of schedule.rows || []) {
+      const key = `${row.widthMm}x${row.heightMm}`;
+      const existing = bySize.get(key) || { widthMm: row.widthMm, heightMm: row.heightMm, quantity: 0 };
+      existing.quantity += row.quantity;
+      bySize.set(key, existing);
+    }
+    return Array.from(bySize.values()).sort((a, b) => a.widthMm - b.widthMm);
+  } catch {
+    return [];
+  }
+}
+
+// Purchase-order-ready breakdown of robe/sliding doors - a separate product/supplier stream from
+// standard internal doors above (see createRobeSlidingDoorSchedule): must never be combined into
+// the standard-door quantity, product reference, or calculation. Same across-levels, width x
+// height-only grouping as internalDoorSizeBreakdown, for the same reasons.
+function robeSlidingDoorSizeBreakdown(workbook) {
+  const takeoffJob = selectAiPlanTakeoffJob(workbook);
+  if (!takeoffJob) return [];
+  try {
+    const schedule = createRobeSlidingDoorSchedule({
+      completedWallRuns: takeoffJob.completedWallRuns || [],
+      placedOpenings: takeoffJob.placedOpenings || [],
+      pixelsPerMm: takeoffJob.pixelsPerMm,
+      sheetLevels: takeoffJob.sheetLevels || {},
+    });
+    const bySize = new Map();
+    for (const row of schedule.rows || []) {
+      const key = `${row.widthMm}x${row.heightMm}`;
+      const existing = bySize.get(key) || { widthMm: row.widthMm, heightMm: row.heightMm, quantity: 0 };
+      existing.quantity += row.quantity;
+      bySize.set(key, existing);
+    }
+    return Array.from(bySize.values()).sort((a, b) => a.widthMm - b.widthMm);
+  } catch {
+    return [];
+  }
+}
+
+// Turns an internalDoorSizeBreakdown() entry into a genuine row in the section's own rows array
+// (spliced in right after internalDoors - see withInternalDoorSizeRows below), for the same reason
+// cavitySliderSizeRow does: an ordinary array member gets a normal sequential Item number for free.
+function internalDoorSizeRow(size, index) {
+  return {
+    key: `internalDoorSize_${size.widthMm}_${size.heightMm}_${index}`,
+    label: `${size.widthMm}mm Internal Door`,
+    sectionLabel: "Linings / Trim",
+    unit: "EACH",
+    heading: false,
+    calculated: true,
+    staticValue: size.quantity,
+  };
+}
+// Same purpose as internalDoorSizeRow, for the separate robe/sliding-door product category - kept
+// as its own row shape (distinct label/key prefix) rather than reusing internalDoorSizeRow, so the
+// two product categories can never be visually or programmatically confused with one another.
+function robeSlidingDoorSizeRow(size, index) {
+  return {
+    key: `robeSlidingDoorSize_${size.widthMm}_${size.heightMm}_${index}`,
+    label: `${size.widthMm}mm Robe / Sliding Door`,
+    sectionLabel: "Linings / Trim",
+    unit: "EACH",
+    heading: false,
+    calculated: true,
+    staticValue: size.quantity,
+  };
+}
+// Splices the internal door size rows, then the robe/sliding door size rows, into the Data Input
+// Sheet's own rows array immediately after internalDoors (119, now hidden) - a real position in the
+// array, not a rendering side effect - so isRelevantForDataInput/floor-count filtering and the
+// sequential Item numbering both see them exactly like any other row. Both categories are spliced
+// in one call so their relative order (standard doors, then robe/sliding doors) is fixed and never
+// depends on call order elsewhere.
+//
+// REPLACES internalDoors in place (splice(index, 1, ...)) rather than inserting after it and hiding
+// it separately: internalDoors is deliberately NOT in HIDDEN_DATA_INPUT_ROW_KEYS (see the comment
+// there) because that filter runs upstream of this function - hiding it first would delete it from
+// the array before this splice's own findIndex ever ran, findIndex would return -1, and the entire
+// splice would silently no-op, which is exactly the regression that shipped once (the replacement
+// size rows never appeared at all). Replacing it here, in the same step that locates it, guarantees
+// the old combined total is gone and the size rows take its place, in one atomic operation. When
+// there is no Takeoff to derive sizes from (sizeRows and robeSizeRows both empty), the row is still
+// replaced with nothing - the combined total is never shown as a fallback.
+function withInternalDoorSizeRows(sections, sizeRows, robeSizeRows = []) {
+  return sections.map((section) => {
+    if (section.key !== "inputDataSheet") return section;
+    const index = section.rows.findIndex((row) => row.key === "internalDoors");
+    if (index < 0) return section;
+    const rows = section.rows.slice();
+    rows.splice(index, 1, ...sizeRows.map(internalDoorSizeRow), ...robeSizeRows.map(robeSlidingDoorSizeRow));
+    return { ...section, rows };
+  });
+}
+
 function DataInputSheet({ sheet, sections = null, formulaTarget, onPickFormulaReference, canEditFormulas = false }) {
   const readonly = sheet.previewMode;
-  const visibleSections = sections || sheet.dataInputSections || [];
+  const cavitySliderSizeRows = useMemo(() => cavitySliderSizeBreakdown(sheet.workbook), [sheet.workbook]);
+  const internalDoorSizeRows = useMemo(() => internalDoorSizeBreakdown(sheet.workbook), [sheet.workbook]);
+  const robeSlidingDoorSizeRows = useMemo(() => robeSlidingDoorSizeBreakdown(sheet.workbook), [sheet.workbook]);
+  const visibleSections = useMemo(() => {
+    const withCavitySliders = withCavitySliderSizeRows(sections || sheet.dataInputSections || [], cavitySliderSizeRows);
+    return withInternalDoorSizeRows(withCavitySliders, internalDoorSizeRows, robeSlidingDoorSizeRows);
+  }, [sections, sheet.dataInputSections, cavitySliderSizeRows, internalDoorSizeRows, robeSlidingDoorSizeRows]);
+
+  // TEMPORARY DIAGNOSTIC - remove once the live 720/820/1020/110x19 discrepancy is resolved. Logs
+  // every stage between the raw AI Plan Takeoff job and the actual rows this component renders, so
+  // the live browser console can be compared directly against the schedule computed from a static
+  // export of the same job. Gated on window/console existing (SSR safety) and fires once per
+  // recompute, not per render.
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof console === "undefined") return;
+    try {
+      const takeoffJob = selectAiPlanTakeoffJob(sheet.workbook);
+      const inputRows = sheet.workbook?.data?.inputDataSheet?.rows || {};
+      const finalSection = visibleSections.find((section) => section.key === "inputDataSheet");
+      const watchedLabels = new Set(["720mm Internal Door", "820mm Internal Door", "1020mm Internal Door", "2100mm Robe / Sliding Door", "2400mm Robe / Sliding Door"]);
+      const watchedKeys = new Set(["internalDoors", "jamb90x19StockLengthsEach", "jamb110x19StockLengthsEach", "totalCavitySliderCagesEach"]);
+      const finalRows = (finalSection?.rows || [])
+        .map((row, index) => ({ row, index }))
+        .filter(({ row }) => watchedLabels.has(row.label) || watchedKeys.has(row.key) || String(row.key || "").startsWith("cavitySliderSize_"))
+        .map(({ row, index }) => ({
+          item: dataInputRowNumber(row, index),
+          key: row.key,
+          label: row.label,
+          staticValue: row.staticValue,
+          savedValue: inputRows[row.key]?.value,
+        }));
+      console.log("[DOOR-JAMB-DIAGNOSTIC] takeoffJob present:", !!takeoffJob, "completedWallRuns:", takeoffJob?.completedWallRuns?.length ?? null, "placedOpenings:", takeoffJob?.placedOpenings?.length ?? null);
+      console.log("[DOOR-JAMB-DIAGNOSTIC] internalDoorSizeRows (standard, raw breakdown):", JSON.stringify(internalDoorSizeRows));
+      console.log("[DOOR-JAMB-DIAGNOSTIC] robeSlidingDoorSizeRows (raw breakdown):", JSON.stringify(robeSlidingDoorSizeRows));
+      console.log("[DOOR-JAMB-DIAGNOSTIC] cavitySliderSizeRows (raw breakdown):", JSON.stringify(cavitySliderSizeRows));
+      console.log("[DOOR-JAMB-DIAGNOSTIC] saved jamb90x19StockLengthsEach.value:", inputRows.jamb90x19StockLengthsEach?.value, " saved jamb110x19StockLengthsEach.value:", inputRows.jamb110x19StockLengthsEach?.value);
+      console.table(finalRows);
+    } catch (err) {
+      console.log("[DOOR-JAMB-DIAGNOSTIC] threw:", err);
+    }
+  }, [sheet.workbook, visibleSections, internalDoorSizeRows, robeSlidingDoorSizeRows, cavitySliderSizeRows]);
+
   return (
     <div style={styles.pageStack}>
       {visibleSections.map((section) => (
@@ -2253,7 +2529,7 @@ function DataInputSheet({ sheet, sections = null, formulaTarget, onPickFormulaRe
                     </Cell>
                     <Cell tone={tone}>
                       {calculated ? (
-                        <span style={styles.readOnly}>{value(sheet.preview.quantities[row.key])}</span>
+                        <span style={styles.readOnly}>{row.staticValue !== undefined ? row.staticValue : value(sheet.preview.quantities[row.key])}</span>
                       ) : row.options ? (
                         <select
                           id={editId}
@@ -2302,7 +2578,7 @@ function DataInputSheet({ sheet, sections = null, formulaTarget, onPickFormulaRe
                           title={formulaTarget ? `Insert ${row.key}` : row.key}
                           onClick={() => formulaTarget && onPickFormulaReference(row.key)}
                         >
-                          {value(sheet.preview.quantities[row.key])}
+                          {row.staticValue !== undefined ? row.staticValue : value(sheet.preview.quantities[row.key])}
                         </button>
                       ) : ""}
                     </Cell>
@@ -2588,6 +2864,127 @@ function WindowsDoorsSheet({ sheet }) {
   );
 }
 
+// Automatic, read-only: rebuilt from the saved AI Plan Takeoff job every render, the same way
+// Client Selections already rebuilds its own window schedule from placedOpenings. This is a
+// different table to Windows & Doors above, which is a manually keyed price-book sheet with no
+// connection to the takeoff - this one shows exactly what the takeoff measured, and only the
+// external windows and external doors that actually reduce an external wall's area, so it stays
+// the traceable source for Sections 83/84 and the brick sill total rather than a second,
+// independently-typed copy of the same numbers.
+function WindowScheduleSheet({ sheet }) {
+  const takeoffJob = selectAiPlanTakeoffJob(sheet.workbook);
+  const jobSetupRows = sheet.workbook.data?.inputDataSheet?.rows || {};
+  const schedule = useMemo(() => {
+    if (!takeoffJob) return null;
+    try {
+      return createJobSetupWindowSchedule({
+        completedWallRuns: takeoffJob.completedWallRuns || [],
+        placedOpenings: takeoffJob.placedOpenings || [],
+        pixelsPerMm: takeoffJob.pixelsPerMm,
+        sheetLevels: takeoffJob.sheetLevels || {},
+        jobSetupRows,
+      });
+    } catch (error) {
+      console.warn("[Window Schedule] could not be rebuilt from the saved takeoff.", error?.message || error);
+      return null;
+    }
+  }, [takeoffJob, jobSetupRows]);
+  const cavitySliderSchedule = useMemo(() => {
+    if (!takeoffJob) return null;
+    try {
+      return createCavitySliderCageSchedule({
+        completedWallRuns: takeoffJob.completedWallRuns || [],
+        placedOpenings: takeoffJob.placedOpenings || [],
+        pixelsPerMm: takeoffJob.pixelsPerMm,
+        sheetLevels: takeoffJob.sheetLevels || {},
+      });
+    } catch (error) {
+      console.warn("[Cavity Slider Schedule] could not be rebuilt from the saved takeoff.", error?.message || error);
+      return null;
+    }
+  }, [takeoffJob]);
+
+  return (
+    <div style={styles.pageStack}>
+      <section style={styles.section}>
+        <div style={styles.staticSectionHeader}>
+          <span>Window Schedule</span>
+        </div>
+        {!takeoffJob && (
+          <p style={{ padding: 16 }}>No saved AI Plan Takeoff is attached to this job yet. Open AI Plan Takeoff and save a takeoff to populate this schedule.</p>
+        )}
+        {takeoffJob && !schedule?.rows.length && (
+          <p style={{ padding: 16 }}>The saved takeoff has no external windows or external doors measured yet.</p>
+        )}
+        {schedule?.rows.length > 0 && <>
+          <Spreadsheet headers={["Level", "Opening", "Type", "Window Code", "Height", "Width", "Qty", "Glass", "Location", "Area M2", "Wall", "Wall system", "Elevation", "Brick sill", "Sill LM"]}>
+            {schedule.rows.map((row) => (
+              <tr key={row.itemId}>
+                <Cell tone={levelTone({ label: row.level })}>{row.level}</Cell>
+                <Cell>{row.itemId}</Cell>
+                <Cell>{row.openingType}</Cell>
+                <Cell>{row.windowCode || ""}</Cell>
+                <Cell>{value(row.heightMm)} mm</Cell>
+                <Cell>{value(row.widthMm)} mm</Cell>
+                <Cell>{value(row.quantity)}</Cell>
+                <Cell>{row.glassType || ""}</Cell>
+                <Cell>{row.location || ""}</Cell>
+                <Cell final>{value(row.openingAreaM2)}</Cell>
+                <Cell>{row.wallId}</Cell>
+                <Cell>{row.wallSystem}</Cell>
+                <Cell>{row.elevation}</Cell>
+                <Cell>{row.brickSillApplies}</Cell>
+                <Cell final>{value(row.brickSillLm)}</Cell>
+              </tr>
+            ))}
+          </Spreadsheet>
+          <Spreadsheet headers={["Level", "Window area M2", "External door area M2", "External opening area M2", "Brick sill LM"]}>
+            {schedule.levelTotals.map((total) => (
+              <tr key={total.level}>
+                <Cell strong>{total.level}</Cell>
+                <Cell final>{value(total.windowOpeningAreaM2)}</Cell>
+                <Cell final>{value(total.externalDoorOpeningAreaM2)}</Cell>
+                <Cell final>{value(total.externalOpeningAreaM2)}</Cell>
+                <Cell final>{value(total.brickSillLm)}</Cell>
+              </tr>
+            ))}
+            <tr>
+              <Cell strong>All levels</Cell>
+              <Cell final>{value(schedule.levelTotals.reduce((sum, total) => sum + total.windowOpeningAreaM2, 0))}</Cell>
+              <Cell final>{value(schedule.levelTotals.reduce((sum, total) => sum + total.externalDoorOpeningAreaM2, 0))}</Cell>
+              <Cell final>{value(schedule.totalExternalOpeningAreaM2)}</Cell>
+              <Cell final>{value(schedule.totalBrickSillLm)}</Cell>
+            </tr>
+          </Spreadsheet>
+          <p style={{ padding: "8px 16px", fontSize: 13, color: "#64748b" }}>
+            These per-level opening areas feed Sections 83/84 (Ground/Second Level window openings) and the total brick sill length feeds brickVeneerSillsLm directly - nothing here is retyped elsewhere.
+          </p>
+        </>}
+      </section>
+      {cavitySliderSchedule?.rows.length > 0 && (
+        <section style={styles.section}>
+          <div style={styles.staticSectionHeader}>
+            <span>Cavity Slider Frames / Cages</span>
+          </div>
+          <p style={{ padding: "8px 16px 0", fontSize: 13, color: "#64748b" }}>
+            One frame/cage per cavity sliding door measured in the Takeoff - derived directly from those openings, never a separate manual entry.
+          </p>
+          <Spreadsheet headers={["Level", "Size", "Host frame", "Qty"]}>
+            {cavitySliderSchedule.rows.map((row) => (
+              <tr key={row.itemId}>
+                <Cell tone={levelTone({ label: row.level })}>{row.level}</Cell>
+                <Cell strong>{value(row.widthMm)} x {value(row.heightMm)}</Cell>
+                <Cell>{row.hostFrameThicknessMm ? `${row.hostFrameThicknessMm}mm` : "—"}</Cell>
+                <Cell final>{row.quantity}</Cell>
+              </tr>
+            ))}
+          </Spreadsheet>
+        </section>
+      )}
+    </div>
+  );
+}
+
 function FormulaSheet({ sheet, formulaTarget, onPickFormulaReference, canEditFormulas = false }) {
   const rows = formulaRows(sheet);
   const readonly = sheet.previewMode;
@@ -2623,7 +3020,7 @@ function FormulaSheet({ sheet, formulaTarget, onPickFormulaReference, canEditFor
                 title={formulaTarget ? `Insert ${row.key}` : row.key}
                 onClick={() => formulaTarget && onPickFormulaReference(row.key)}
               >
-                {value(sheet.preview.quantities[row.key])}
+                {formulaResultDisplay(sheet, row.key)}
               </button>
             </Cell>
             <Cell>
@@ -2695,6 +3092,36 @@ function QuotationSheet({ sheet, onFormulaTarget }) {
   const [moveSectionNumber, setMoveSectionNumber] = useState("");
   const [moveAfterNumber, setMoveAfterNumber] = useState("");
   const [openApplianceBrands, setOpenApplianceBrands] = useState({});
+  // Collapsible groups inside a large quotation section. Display state only, kept per job in this
+  // browser; nothing about it is written to the job.
+  const quotationSubgroupState = useQuotationSubgroups(`${sheet.workbook.workspaceId || ''}:${sheet.workbook.jobId || ''}`);
+  const cabinetrySelectionsBook = sheet.workbook.clientSelectionsBook;
+  const cabinetryGroupStatus = useMemo(() => cabinetryQuoteGroupStatus({ clientSelectionsBook: cabinetrySelectionsBook }), [cabinetrySelectionsBook]);
+  // Section expand/collapse is UI-only state - it must never go through sheet.toggleQuoteSection/
+  // collapseAllQuoteSections (which write into workbook.quotation and therefore invalidate the
+  // deferredWorkbook/rawPreview calculation memo - see useEstimateBuilderWorkbook.js), or every
+  // click would force a full quotation recalculation just to expand/collapse a section. This local
+  // overlay is read in preference to the saved workbook.quotation[section].collapsed flag (so a
+  // reopened job still restores its last-saved state), and a toggle only ever updates this map -
+  // never sheet.workbook, never a recalculation. Sections not yet touched this session simply fall
+  // through to the saved value below.
+  const [collapsedSectionOverrides, setCollapsedSectionOverrides] = useState({});
+  function isQuoteSectionCollapsed(section) {
+    return Object.hasOwn(collapsedSectionOverrides, section)
+      ? collapsedSectionOverrides[section]
+      : Boolean(sheet.workbook.quotation?.[section]?.collapsed);
+  }
+  function toggleQuoteSectionCollapsed(section) {
+    setCollapsedSectionOverrides((current) => ({ ...current, [section]: !isQuoteSectionCollapsed(section) }));
+  }
+  function collapseAllQuoteSectionsLocal() {
+    setCollapsedSectionOverrides(Object.fromEntries(sheet.quoteSections.map((name) => [name, true])));
+  }
+
+  // Takeoff openings (from the AI Plan Takeoff Window Schedule) with no exact row in the Section 53
+  // WINDOWS price list - each is a visible unpriced line in Section 53 requiring a rate, and is
+  // listed here too (see windowPriceListTakeoffQuantities). The reconciliation totals the Window
+  // Schedule against the matched + unpriced Section 53 lines.
 
   function openOrderManager() {
     setDraftOrder(topLevelQuoteSections(sheet.quoteSections));
@@ -2778,15 +3205,27 @@ function QuotationSheet({ sheet, onFormulaTarget }) {
       if (quoteFeeType(row)) return false;
       if (isHiddenQuoteRow(row)) return false;
       if (!isQuoteRowRelevantForFloorCount(row, sheet.workbook)) return false;
-      if (!hasSelectedWallThickness(sheet.workbook, "90") && is90mmWallFrameQuoteRow(row)) return false;
-      if (isApplianceHeadingQuoteRow(row)) return true;
+      if (!hasSelectedWallThickness(sheet.workbook, "90") && is90mmWallFrameQuoteRow(row) && !(Number(row.qty) > 0)) return false;
+      if (isApplianceHeadingQuoteRow(row) || isCabinetryDivider(row)) return true;
       const haystack = `${row.item || ""} ${row.rawText || ""}`.toLowerCase();
       if (search && !haystack.includes(search)) return false;
       if (sheet.hideUnused && !isUsedQuoteRow(row)) return false;
       return true;
     });
-    const renderedRows = isAppliancePackageSection(section) ? visibleApplianceRows(rows, openApplianceBrands) : rows;
+    // Heading rows divide CABINETRY into rooms and finishes; each can be collapsed. Summaries come
+    // from the calculated section, so they do not change with the search box or Hide unused.
+    const subgroupModel = section === 'CABINETRY' && cabinetryApplies(sheet.workbook.workspaceId)
+      ? buildQuotationSubgroups(previewSection?.rows || [], { headingLevel: (row) => row.cabinetryRowType === 'heading' ? row.cabinetryHeadingLevel : 0, isSpacer: (row) => row.cabinetryRowType === 'spacer' })
+      : null;
+    // A search shows its matches wherever they are.
+    const subgroupOpen = (group) => Boolean(search) || quotationSubgroupState.isOpen(group, subgroupModel, cabinetryGroupStatus);
+    const renderedRows = isAppliancePackageSection(section) ? visibleApplianceRows(rows, openApplianceBrands) : subgroupModel ? visibleSubgroupRows(rows, subgroupModel, subgroupOpen) : rows;
     const showQuoteRows = renderedRows.length > 0 || !isAppliancePackageSection(section);
+    // A section with at least one physical product keeps the full product-detail table
+    // (mixed rows fold their product-only columns away per row, see below); a section
+    // made up entirely of services/labour/allowances uses the compact layout throughout.
+    const finalCabinetrySection = section === 'CABINETRY' && cabinetryApplies(sheet.workbook.workspaceId);
+    const sectionHasPhysicalProduct = !finalCabinetrySection && renderedRows.some((row) => !isApplianceHeadingQuoteRow(row) && isPhysicalProductQuoteRow(row));
     return (
       <section key={section} data-quote-section={section} style={options.nested ? styles.nestedQuoteSection : styles.section}>
         <div
@@ -2816,25 +3255,64 @@ function QuotationSheet({ sheet, onFormulaTarget }) {
             onClick={(event) => {
               event.preventDefault();
               event.stopPropagation();
-              sheet.toggleQuoteSection(section);
+              toggleQuoteSectionCollapsed(section);
             }}
           >
-              <span>{quoteSectionDisplayLabel(options.label || section)}</span>
+              <span>{quoteSectionDisplayLabel(savedSection.displayName || options.label || section)}</span>
             <span style={styles.sectionTotalStack}>
               <strong>{money(sectionTotal)}</strong>
               <small>{quotePercentOfTotal(sectionTotal, sheet.preview.summary.finalQuoteTotal)}</small>
             </span>
           </button>
         </div>
-        {!sheet.workbook.quotation?.[section]?.collapsed && showQuoteRows && (
+        {!isQuoteSectionCollapsed(section) && showQuoteRows && (
         <>
+        {subgroupModel && (
+          <div data-testid="quotation-subgroup-controls" style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', padding: '6px 8px' }}>
+            {[['Expand all', true], ['Collapse all', false]].map(([label, open]) => (
+              <button key={label} type="button" style={{ ...styles.secondaryButton, padding: '4px 10px', fontSize: 12 }} onClick={() => quotationSubgroupState.setAll(subgroupModel, cabinetryGroupStatus, open)}>{label}</button>
+            ))}
+          </div>
+        )}
         <Spreadsheet
-          headers={readonly
-            ? ["", "Image", "Product", "Brand / Manufacturer", "Supplier", "SKU / Model", "Description", "Qty", "Unit", "Price", "Cost", "Source", "Selection", "Notes"]
-            : ["Move", "", "Image", "Product", "Brand / Manufacturer", "Supplier", "SKU / Model", "Description", "Qty", "Unit", "Price", "Cost", "Source", "Selection", "Notes", "Actions"]}
-          compactColumns={readonly ? [0] : [0, 1]}
+          headers={sectionHasPhysicalProduct
+            ? (readonly
+              ? ["Image", "Product", "Brand / Manufacturer", "Supplier", "SKU / Model", "Description", "Qty", "Unit", "Price", "Cost", "Source", "Selection", "Notes"]
+              : ["Move", "Image", "Product", "Brand / Manufacturer", "Supplier", "SKU / Model", "Description", "Qty", "Unit", "Price", "Cost", "Source", "Selection", "Notes", "Actions"])
+            : (readonly
+              ? ["Description", "Qty", "Unit", "Price", "Cost", "Selection"]
+              : ["Move", "Description", "Qty", "Unit", "Price", "Cost", "Selection", "Actions"])}
+          compactColumns={readonly ? [] : [0]}
         >
           {renderedRows.map((row, rowIndex) => {
+            const subgroup = subgroupModel?.groups.get(row.id);
+            if (subgroup) {
+              // The whole coloured heading opens and closes its group.
+              const open = subgroupOpen(subgroup);
+              const toggle = () => quotationSubgroupState.toggle(subgroup, subgroupModel, cabinetryGroupStatus);
+              return <tr key={row.id} role="button" tabIndex={0} aria-expanded={open} data-subgroup-label={row.item} data-subgroup-open={open ? 'true' : 'false'} style={{ cursor: 'pointer' }}
+                onClick={toggle} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggle(); } }}
+                data-cabinetry-row-type={row.cabinetryRowType} data-cabinetry-source-row={row.cabinetrySourceRow} data-cabinetry-heading-level={row.cabinetryHeadingLevel}>
+                <Cell colSpan={readonly ? 6 : 8} heading={subgroup.level === 1} subheading={subgroup.level === 2}>
+                  <span style={{ display: 'flex', alignItems: 'baseline', gap: 16, flexWrap: 'wrap' }}>
+                    <span><span aria-hidden="true" style={{ display: 'inline-block', width: '1.2em' }}>{open ? '▼' : '▶'}</span>{row.item}</span>
+                    <span data-subgroup-summary style={{ marginLeft: 'auto', display: 'flex', gap: 16, fontSize: 13, fontWeight: 600 }}>
+                      {subgroup.level === 1 && subgroup.activeGroups.length > 0 && <span>{subgroup.activeGroups.join(', ')}</span>}
+                      {subgroup.items > 0 && <span>{subgroup.items} {subgroup.items === 1 ? 'item' : 'items'}</span>}
+                      {subgroup.items > 0 && <span>{money(subgroup.total)}</span>}
+                      {subgroup.level === 1 && cabinetryGroupStatus[subgroup.label]?.confirmed && <span>✓ Confirmed</span>}
+                    </span>
+                  </span>
+                </Cell>
+              </tr>;
+            }
+            if (isCabinetryDivider(row)) {
+              return <tr key={row.id} data-cabinetry-row-type={row.cabinetryRowType} data-cabinetry-source-row={row.cabinetrySourceRow} data-cabinetry-heading-level={row.cabinetryHeadingLevel}>
+                {row.cabinetryRowType === 'spacer'
+                  ? <td colSpan={readonly ? 6 : 8} style={{height:16, padding:0, border:0}} aria-hidden="true" />
+                  : <Cell colSpan={readonly ? 6 : 8} heading={row.cabinetryHeadingLevel === 1} subheading={row.cabinetryHeadingLevel === 2}>{row.item}</Cell>}
+              </tr>;
+            }
             if (isApplianceHeadingQuoteRow(row)) {
               const isBrandHeading = row.applianceHeadingLevel === 1;
               const brandKey = applianceBrandKey(row);
@@ -2843,7 +3321,6 @@ function QuotationSheet({ sheet, onFormulaTarget }) {
               return (
                 <tr key={row.id}>
                   {!readonly && <Cell compact />}
-                  <Cell compact />
                   <Cell subheading={row.applianceHeadingLevel !== 1} heading={row.applianceHeadingLevel === 1} />
                   <Cell subheading={row.applianceHeadingLevel !== 1} heading={row.applianceHeadingLevel === 1}>
                     {isBrandHeading ? (
@@ -2866,18 +3343,129 @@ function QuotationSheet({ sheet, onFormulaTarget }) {
                 </tr>
               );
             }
+
+            const rowIsPhysical = isPhysicalProductQuoteRow(row);
+            const moveCell = !readonly && <Cell compact><span style={styles.dragHandle} title="Drag row">::</span></Cell>;
+            const qtyCell = (
+              <Cell>
+                {isBlankQuoteQtyRow(row) ? (
+                  <BufferedInput disabled={row.quantityLocked} style={styles.numberInput} value={quoteInputQty(row, sheet)} onFocus={() => onFormulaTarget({ section, id: row.id })} onCommit={(next) => sheet.updateQuote(section, row.id, "quantity", next)} />
+                ) : isLinkedQuoteQty(row) && !isEditableLinkedQuoteQty(row) ? (
+                  <span style={styles.readOnly}>{value(row.qty)}</span>
+                ) : (
+                  <BufferedInput disabled={row.quantityLocked} style={styles.numberInput} value={quoteInputQty(row, sheet)} onFocus={() => onFormulaTarget({ section, id: row.id })} onCommit={(next) => sheet.updateQuote(section, row.id, "quantity", next)} />
+                )}
+              </Cell>
+            );
+            const unitCell = <Cell><BufferedInput style={styles.unitInput} value={row.unit || ""} onCommit={(next) => sheet.updateQuote(section, row.id, "unit", next)} /></Cell>;
+            const priceCell = <Cell><BufferedInput style={styles.rateInput} value={value(row.selectionSource ? row.activeUnitPrice ?? '' : row.manualRate || row.excelRate)} onCommit={(next) => sheet.updateQuote(section, row.id, "manualRate", currencyInputValue(next))} /></Cell>;
+            const costCell = <Cell final>{quoteCost(row)}</Cell>;
+            const sourceCell = <Cell>{row.source === 'client-selections-internal-product' && row.priceStatus === 'Quote required' && !row.finalRateUsed ? 'Quote required' : row.sourceOfRate}</Cell>;
+            const selectionCell = (colSpan) => (
+              <Cell colSpan={colSpan}>
+                <QuoteSelectionReferenceCell
+                  row={row}
+                  readonly={readonly}
+                  onFormulaFocus={() => onFormulaTarget({ section, id: row.id, field: "quantityFormula", formula: row.derivedQuantityFormula })}
+                  onChange={(key, next) => sheet.updateQuote(section, row.id, key, next)}
+                />
+              </Cell>
+            );
+            const notesCell = (
+              <Cell>
+                <BufferedInput
+                  style={{ ...styles.input, ...styles.quoteNotesInput }}
+                  value={row.notes || ""}
+                  onCommit={(next) => sheet.updateQuote(section, row.id, "notes", next)}
+                />
+              </Cell>
+            );
+            const actionsCell = !readonly && (
+              <Cell>
+                <div style={styles.rowActions}>
+                  <button style={styles.smallButton} onClick={() => focusRowEditor(rowDomId("quote-edit", row.id))}>Edit</button>
+                  <button style={styles.smallButton} onClick={() => sheet.addQuoteLine(section, row.id, "after")}>Insert below</button>
+                  <button style={styles.dangerButton} onClick={() => sheet.deleteQuoteLine(section, row.id)}>Delete</button>
+                </div>
+              </Cell>
+            );
+            const descriptionInputCell = (colSpan) => (
+              <Cell colSpan={colSpan}>
+                <BufferedInput
+                  id={rowDomId("quote-edit", row.id)}
+                  style={{ ...styles.itemInput, ...styles.quoteCompactDescriptionInput }}
+                  value={quoteItem(row)}
+                  onCommit={(next) => sheet.updateQuote(section, row.id, "item", next)}
+                />
+              </Cell>
+            );
+
+            if (!sectionHasPhysicalProduct) {
+              // Every row in this section is a non-physical service/labour/allowance
+              // line, so the whole table uses the compact layout matching the header.
+              return (
+                <tr
+                  key={row.id}
+                  data-quote-row={row.id}
+                  data-cabinetry-import-key={row.cabinetryImportKey || undefined}
+                  draggable={!readonly}
+                  onDragStart={(event) => dragStart(event, section, row.id)}
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={(event) => dropLine(event, section, row.id, "before")}
+                  style={styles.draggableRow}
+                >
+                  {moveCell}
+                  {descriptionInputCell()}
+                  {qtyCell}
+                  {unitCell}
+                  {priceCell}
+                  {costCell}
+                  {selectionCell()}
+                  {actionsCell}
+                </tr>
+              );
+            }
+
+            if (!rowIsPhysical) {
+              // A non-physical row inside a section that also has physical products:
+              // fold the image/product/brand/supplier/SKU/description columns into one
+              // wide description cell, and the source/notes columns into the selection
+              // cell, instead of leaving those columns blank for this row.
+              return (
+                <tr
+                  key={row.id}
+                  data-quote-row={row.id}
+                  data-cabinetry-import-key={row.cabinetryImportKey || undefined}
+                  draggable={!readonly}
+                  onDragStart={(event) => dragStart(event, section, row.id)}
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={(event) => dropLine(event, section, row.id, "before")}
+                  style={styles.draggableRow}
+                >
+                  {moveCell}
+                  {descriptionInputCell(6)}
+                  {qtyCell}
+                  {unitCell}
+                  {priceCell}
+                  {costCell}
+                  {selectionCell(3)}
+                  {actionsCell}
+                </tr>
+              );
+            }
+
             return (
               <tr
                 key={row.id}
                 data-quote-row={row.id}
+                  data-cabinetry-import-key={row.cabinetryImportKey || undefined}
                 draggable={!readonly}
                 onDragStart={(event) => dragStart(event, section, row.id)}
                 onDragOver={(event) => event.preventDefault()}
                 onDrop={(event) => dropLine(event, section, row.id, "before")}
                 style={styles.draggableRow}
               >
-                {!readonly && <Cell compact><span style={styles.dragHandle} title="Drag row">::</span></Cell>}
-                <Cell compact />
+                {moveCell}
                 <Cell><QuoteProductImageCell row={row} /></Cell>
                 <Cell>
                   <BufferedInput
@@ -2891,47 +3479,29 @@ function QuotationSheet({ sheet, onFormulaTarget }) {
                 <Cell><span style={styles.quoteWrapText}>{quoteProductSupplier(row)}</span></Cell>
                 <Cell><span style={styles.quoteWrapText}>{quoteProductSku(row)}</span></Cell>
                 <Cell><span style={styles.quoteDescriptionText}>{quoteProductDescription(row)}</span></Cell>
-                <Cell>
-                  {isBlankQuoteQtyRow(row) ? (
-                    <BufferedInput style={styles.numberInput} value={quoteInputQty(row, sheet)} onFocus={() => onFormulaTarget({ section, id: row.id })} onCommit={(next) => sheet.updateQuote(section, row.id, "quantity", next)} />
-                  ) : isLinkedQuoteQty(row) && !isEditableLinkedQuoteQty(row) ? (
-                    <span style={styles.readOnly}>{value(row.qty)}</span>
-                  ) : (
-                    <BufferedInput style={styles.numberInput} value={quoteInputQty(row, sheet)} onFocus={() => onFormulaTarget({ section, id: row.id })} onCommit={(next) => sheet.updateQuote(section, row.id, "quantity", next)} />
-                  )}
-                </Cell>
-                <Cell><BufferedInput style={styles.unitInput} value={row.unit || ""} onCommit={(next) => sheet.updateQuote(section, row.id, "unit", next)} /></Cell>
-                <Cell><BufferedInput style={styles.rateInput} value={value(row.manualRate || row.excelRate)} onCommit={(next) => sheet.updateQuote(section, row.id, "manualRate", currencyInputValue(next))} /></Cell>
-                <Cell final>{quoteCost(row)}</Cell>
-                <Cell>{row.source === 'client-selections-internal-product' && row.priceStatus === 'Quote required' && !row.finalRateUsed ? 'Quote required' : row.sourceOfRate}</Cell>
-                <Cell>
-                  <QuoteSelectionReferenceCell
-                    row={row}
-                    readonly={readonly}
-                    onChange={(key, next) => sheet.updateQuote(section, row.id, key, next)}
-                  />
-                </Cell>
-                <Cell>
-                  <BufferedInput
-                    style={{ ...styles.input, ...styles.quoteNotesInput }}
-                    value={row.notes || ""}
-                    onCommit={(next) => sheet.updateQuote(section, row.id, "notes", next)}
-                  />
-                </Cell>
-                {!readonly && <Cell>
-                  <div style={styles.rowActions}>
-                    <button style={styles.smallButton} onClick={() => focusRowEditor(rowDomId("quote-edit", row.id))}>Edit</button>
-                    <button style={styles.smallButton} onClick={() => sheet.addQuoteLine(section, row.id, "after")}>Insert below</button>
-                    <button style={styles.dangerButton} onClick={() => sheet.deleteQuoteLine(section, row.id)}>Delete</button>
-                  </div>
-                </Cell>}
+                {qtyCell}
+                {unitCell}
+                {priceCell}
+                {costCell}
+                {sourceCell}
+                {selectionCell()}
+                {notesCell}
+                {actionsCell}
               </tr>
             );
           })}
-          {readonly ? (
-            <tr><Cell /><Cell /><Cell strong>Section total</Cell><Cell /><Cell /><Cell /><Cell /><Cell /><Cell /><Cell /><Cell final>{money(previewSection?.subtotal || 0)}</Cell><Cell /><Cell /><Cell /></tr>
+          {sectionHasPhysicalProduct ? (
+            readonly ? (
+              <tr><Cell /><Cell strong>Section total</Cell><Cell /><Cell /><Cell /><Cell /><Cell /><Cell /><Cell final>{money(previewSection?.subtotal || 0)}</Cell><Cell /><Cell /><Cell /></tr>
+            ) : (
+              <tr><Cell /><Cell /><Cell strong>Section total</Cell><Cell /><Cell /><Cell /><Cell /><Cell /><Cell final>{money(previewSection?.subtotal || 0)}</Cell><Cell /><Cell /><Cell /><Cell /></tr>
+            )
           ) : (
-            <tr><Cell /><Cell /><Cell /><Cell strong>Section total</Cell><Cell /><Cell /><Cell /><Cell /><Cell /><Cell /><Cell /><Cell final>{money(previewSection?.subtotal || 0)}</Cell><Cell /><Cell /><Cell /><Cell /></tr>
+            readonly ? (
+              <tr><Cell strong>Section total</Cell><Cell /><Cell /><Cell /><Cell final>{money(previewSection?.subtotal || 0)}</Cell><Cell /></tr>
+            ) : (
+              <tr><Cell /><Cell strong>Section total</Cell><Cell /><Cell /><Cell /><Cell final>{money(previewSection?.subtotal || 0)}</Cell><Cell /><Cell /></tr>
+            )
           )}
         </Spreadsheet>
         {!readonly && (
@@ -2940,7 +3510,7 @@ function QuotationSheet({ sheet, onFormulaTarget }) {
             <button type="button" style={styles.closeSectionButton} onClick={(event) => {
               event.preventDefault();
               event.stopPropagation();
-              sheet.toggleQuoteSection(section);
+              toggleQuoteSectionCollapsed(section);
             }}>Close section</button>
           </div>
         )}
@@ -2956,12 +3526,15 @@ function QuotationSheet({ sheet, onFormulaTarget }) {
         <div style={styles.tabBar}>
           <button style={styles.primaryButton} onClick={openOrderManager}>Manage Section Order</button>
           <button style={styles.secondaryButton} onClick={() => sheet.renumberQuoteDisplay?.()}>Renumber Display</button>
-          <button style={styles.secondaryButton} onClick={() => sheet.collapseAllQuoteSections?.()}>Collapse All</button>
+          <button style={styles.secondaryButton} onClick={collapseAllQuoteSectionsLocal}>Collapse All</button>
           {sheet.renumberReport && (
             <span style={sheet.renumberReport.ok ? styles.okPill : styles.warningPill}>{sheet.renumberReport.message}</span>
           )}
         </div>
       )}
+      <QuotationNotifications sheet={sheet} styles={styles} />
+      {!readonly && <CabinetryCataloguePicker workspaceId={sheet.workbook.workspaceId} onAdd={sheet.addCabinetryCatalogueItem} />}
+      <CabinetryReconciliation workbook={sheet.workbook} readonly={readonly} onChange={sheet.setCabinetryRequirements} />
       {orderManagerOpen && (
         <div style={styles.orderPanel}>
           <div style={styles.orderPanelHeader}>
@@ -3038,7 +3611,9 @@ function QuotationSheet({ sheet, onFormulaTarget }) {
             const fixOutMaterialsParent = sheet.quoteSections.find((item) => isFixOutMaterialsSection(item));
             const cabinetMakerParent = sheet.quoteSections.find((item) => isCabinetMakerSection(item));
             const appliancePackageParent = sheet.quoteSections.find((item) => isAppliancePackageSection(item));
+            const windowsGroupParent = sheet.quoteSections.find((item) => isWindowsGroupSection(item));
             if (isConcreteSlabSubsection(section)) return null;
+            if (windowsGroupParent && isWindowsGroupSubsection(section)) return null;
             if (wallFramesParent && isWallFramesSubsection(section)) return null;
             if (roofFramingParent && isRoofFramingSubsection(section)) return null;
             if (hardwareParent && isHardwareSubsection(section)) return null;
@@ -3095,14 +3670,16 @@ function QuotationSheet({ sheet, onFormulaTarget }) {
                                                 ? orderedCabinetMakerSubsections(sheet.quoteSections.filter((item) => isCabinetMakerSubsection(item)))
                                                 : isAppliancePackageSection(section)
                                                   ? orderedApplianceBrandSubsections(sheet.quoteSections)
-                                                  : [];
+                                                  : isWindowsGroupSection(section)
+                                                    ? sheet.quoteSections.filter((item) => isWindowsGroupSubsection(item))
+                                                    : [];
             const sectionTotal = childSections.length
               ? childSections.reduce((sum, item) => sum + (sheet.preview.quotation[item]?.subtotal || 0), sheet.preview.quotation[section]?.subtotal || 0)
               : undefined;
             return (
               <div key={section} style={styles.quoteGroup}>
                 {renderQuoteSection(section, { total: sectionTotal, label: wallFramesDisplayLabel(section) || quoteSectionDisplayLabel(section) })}
-                {childSections.length > 0 && !sheet.workbook.quotation?.[section]?.collapsed && (
+                {childSections.length > 0 && !isQuoteSectionCollapsed(section) && (
                   <div style={styles.nestedQuoteStack}>
                     {childSections.map((child) => renderQuoteSection(child, { nested: true, label: quoteSectionDisplayLabel(child) }))}
                   </div>
@@ -3210,7 +3787,7 @@ function SummarySheet({ sheet }) {
                     inputMode="decimal"
                     style={styles.rateInput}
                     disabled={readonly}
-                    value={value(item.row.finalRateUsed || item.row.manualRate || item.row.excelRate)}
+                    value={value(item.row.selectionSource ? item.row.activeUnitPrice ?? '' : item.row.finalRateUsed || item.row.manualRate || item.row.excelRate)}
                     onCommit={(next) => sheet.updateQuote(item.section, item.row.id, "manualRate", currencyInputValue(next))}
                   />
                 </Cell>
@@ -9836,7 +10413,7 @@ export function StandardInclusionsSheet({ sheet }) {
     };
     saveStandard({ masterTemplate, pdfPages: editablePages });
     try {
-      window.localStorage.setItem("premier-inclusions-master-template", JSON.stringify(masterTemplate));
+      builderLocalStorage.setItem("premier-inclusions-master-template", JSON.stringify(masterTemplate));
     } catch {}
     setStandardStatus("Premier Inclusions master template saved.");
   }
@@ -10852,7 +11429,7 @@ function standardDocumentThumbnail(document) {
 async function collectIndexedDbStandardScheduleCandidates() {
   if (typeof window === "undefined" || !window.indexedDB) return [];
   const db = await new Promise((resolve) => {
-    const request = window.indexedDB.open("estimate-builder-template-db");
+    const request = window.indexedDB.open(browserTenantKey("estimate-builder-template-db"));
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => resolve(null);
   });
@@ -13636,6 +14213,8 @@ function normaliseProposalImportedDocuments(importedDocuments = {}) {
     ? importedDocuments.pricedPlans
     : null;
   return {
+    // Keep the saved estimate metadata and any other attachment fields.
+    ...importedDocuments,
     inclusions,
     pricedPlans: pricedPlans ? normaliseImportedProposalDocument(pricedPlans) : null,
   };
@@ -14178,7 +14757,7 @@ async function prepareProposalImageDataUrl(file, { maxDimension = 1800, quality 
 function proposalPerfLog(label, details = {}) {
   if (process.env.NODE_ENV === "production") return;
   if (typeof console === "undefined") return;
-  if (typeof window !== "undefined" && window.localStorage?.getItem("estimate-builder-proposal-perf") !== "true") return;
+  if (typeof window !== "undefined" && builderLocalStorage?.getItem("estimate-builder-proposal-perf") !== "true") return;
   console.debug("[QuoteProposalBuilder]", label, details);
 }
 
@@ -14587,12 +15166,9 @@ function selectedSummaryRows(rows = []) {
   });
 }
 
+// The canonical row cost (engine cost, else qty × rate) - the same function BOQ / procurement use.
 function summaryLineTotal(row) {
-  const cost = Number(row?.cost || 0);
-  if (Number.isFinite(cost) && cost > 0) return cost;
-  const qty = summaryNumber(row?.qty || row?.quantity || 0);
-  const rate = summaryNumber(row?.finalRateUsed || row?.manualRate || row?.excelRate || 0);
-  return Number.isFinite(qty) && Number.isFinite(rate) ? qty * rate : 0;
+  return quoteLineTotal(row || {});
 }
 
 function summaryNumber(value) {
@@ -14635,10 +15211,30 @@ function findPreviewQuoteRowBySource(quotation = {}, sourceRow) {
     .find((row) => quoteRowSourceNumber(row) === sourceRow) || null;
 }
 
-function QuoteSelectionReferenceCell({ row, readonly, onChange }) {
+function QuoteSelectionReferenceCell({ row, readonly, onChange, onFormulaFocus }) {
   const adjustment = quoteSelectionAdjustment(row);
+  const formula = row.derivedQuantityFormula || "";
+  const selection = quoteSelectionSpec(row);
   return (
     <div style={styles.selectionReferenceCell}>
+      {row.selectionSource && <details><summary>{row.selectionStatus || 'Selection'} · {row.activeProductName || row.activeProductId || 'Awaiting selection'}</summary>
+        <div>Baseline: {row.baselineProductName || row.baselineProductId || 'Not recorded'} · {row.baselineUnitPrice == null ? 'Unpriced' : money(row.baselineUnitPrice)}</div>
+        <div>Active: {row.activeProductName || row.activeProductId || 'None'} · {row.activeUnitPrice == null ? 'Unpriced' : money(row.activeUnitPrice)}</div>
+        <div>Source: {row.selectionSource} · Location: {row.locationId || 'Default'}</div>
+        <div>Variation per unit: {row.variationUnitDifference == null ? 'Pending price' : money(row.variationUnitDifference)} · Total: {row.variationTotal == null ? 'Pending price / quantity' : money(row.variationTotal)}</div>
+      </details>}
+      {formula && <>
+        <BufferedInput
+          disabled={readonly || row.generatedTakeoffProductRow || row.quantityLocked}
+          aria-label={`Quantity formula for ${row.item}`}
+          style={styles.selectionSpecInput}
+          value={`=${formula}`}
+          onFocus={onFormulaFocus}
+          onCommit={(next) => onChange("quantityFormula", next)}
+        />
+        <div style={{ ...styles.selectionReferenceMeta, whiteSpace: "pre-line" }}>{row.derivedQuantityExplanation}</div>
+      </>}
+      {(!formula || selection) && <>
       <BufferedInput
         disabled={readonly}
         style={styles.selectionSpecInput}
@@ -14650,6 +15246,7 @@ function QuoteSelectionReferenceCell({ row, readonly, onChange }) {
         <span>Selected {money(numberValue(row.selectionSelectedCost))}</span>
         {adjustment ? <strong style={adjustment > 0 ? styles.selectionAdjustmentBad : styles.selectionAdjustmentGood}>{money(adjustment)}</strong> : null}
       </div>
+      </>}
     </div>
   );
 }
@@ -14666,8 +15263,8 @@ function Spreadsheet({ headers, children, compactColumns = [] }) {
   );
 }
 
-function Cell({ children, strong, heading, subheading, compact, calc, final, tone }) {
-  return <td style={{ ...styles.td, ...(compact ? styles.compactColumn : {}), ...(tone ? styles[tone] : {}), ...(strong ? styles.strongCell : {}), ...(tone && strong ? styles[`${tone}Strong`] : {}), ...(heading ? styles.headingCell : {}), ...(subheading ? styles.subheadingCell : {}), ...(calc ? styles.calcCell : {}), ...(final ? styles.finalCell : {}) }}>{children}</td>;
+function Cell({ children, strong, heading, subheading, compact, calc, final, tone, colSpan }) {
+  return <td colSpan={colSpan} style={{ ...styles.td, ...(compact ? styles.compactColumn : {}), ...(tone ? styles[tone] : {}), ...(strong ? styles.strongCell : {}), ...(tone && strong ? styles[`${tone}Strong`] : {}), ...(heading ? styles.headingCell : {}), ...(subheading ? styles.subheadingCell : {}), ...(calc ? styles.calcCell : {}), ...(final ? styles.finalCell : {}) }}>{children}</td>;
 }
 
 const BufferedInput = memo(function BufferedInput({ value, onCommit, onFocus, commitOnChange = false, ...props }) {
@@ -14760,11 +15357,13 @@ function blockPreviewAction(event) {
 function insertQuoteQuantityReference(sheet, target, key) {
   if (!target?.section || !target?.id || !key) return;
   const row = sheet.workbook.quotation?.[target.section]?.rows?.find((item) => item.id === target.id);
-  const current = String(row?.quantity || "").trim();
+  const current = target.field === "quantityFormula"
+    ? `=${row?.quantityFormulaOverride ? row.formulas?.B || "" : target.formula || row?.formulas?.B || ""}`
+    : String(row?.quantity || "").trim();
   const next = current.startsWith("=")
     ? `${current}${current === "=" ? "" : " + "}${key}`
     : `=${key}`;
-  sheet.updateQuote(target.section, target.id, "quantity", next);
+  sheet.updateQuote(target.section, target.id, target.field || "quantity", next);
   sheet.setPage("quotation");
 }
 
@@ -14999,7 +15598,7 @@ function TemplateFileMenu({ sheet, open, onToggle, onClose, onSaveAction, busy =
   const [newTemplateName, setNewTemplateName] = useState(sheet.workbook.templateName || suggestedUiTemplateName(sheet.workbook));
   const [permissionMode, setPermissionMode] = useState(() => {
     if (typeof window === "undefined") return "client";
-    return window.localStorage.getItem("estimate-builder-permission-mode") || "client";
+    return builderLocalStorage.getItem("estimate-builder-permission-mode") || "client";
   });
   const [selectedSection, setSelectedSection] = useState("APPLIANCE PACKAGE");
   const [message, setMessage] = useState("");
@@ -15056,7 +15655,7 @@ function TemplateFileMenu({ sheet, open, onToggle, onClose, onSaveAction, busy =
               onChange={(event) => {
                 const nextMode = event.target.value;
                 setPermissionMode(nextMode);
-                try { window.localStorage.setItem("estimate-builder-permission-mode", nextMode); } catch {}
+                try { builderLocalStorage.setItem("estimate-builder-permission-mode", nextMode); } catch {}
               }}
             >
               <option value="client">Client</option>
@@ -15264,7 +15863,7 @@ function canonicalEstimateJobContext(workbook = {}) {
     || clientPage.projectAddress
     || "";
   return {
-    projectId: String(registeredJob.jobId || workbook?.registeredJobId || workbook?.commercialProjectId || workbook?.projectId || meta.projectId || "").trim(),
+    projectId: String(workbook.jobId || registeredJob.jobId || workbook?.registeredJobId || workbook?.commercialProjectId || workbook?.projectId || meta.projectId || "").trim(),
     projectName: workbookDataValue(workbook, "projectName") || meta.jobName || registeredJob.jobName || workbook?.projectName || "",
     clientName: workbookDataValue(workbook, "clientName") || workbookDataValue(workbook, "customerName") || meta.clientName || registeredJob.clientName || clientPage.clientName || "",
     jobNumber: workbookDataValue(workbook, "jobNumber") || workbookDataValue(workbook, "quoteNumber") || meta.jobNumber || registeredJob.jobNumber || clientPage.quoteNumber || "",
@@ -15284,7 +15883,7 @@ function localJobFileIdentity(job = {}) {
   const manifestProject = job?.manifest?.project && typeof job.manifest.project === "object" ? job.manifest.project : {};
   const jobDetails = job?.["job-details"] && typeof job["job-details"] === "object" ? job["job-details"] : {};
   return {
-    projectId: String(jobDetails.projectId || manifestProject.id || job.projectId || context.projectId || "").trim(),
+    projectId: String(workbook.jobId || job.jobId || jobDetails.jobId || jobDetails.projectId || manifestProject.id || job.projectId || context.projectId || "").trim(),
     projectName: String(job.jobName || jobDetails.projectName || manifestProject.name || context.projectName || "").trim(),
     jobNumber: String(job.jobNumber || jobDetails.jobNumber || manifestProject.jobNumber || context.jobNumber || "").trim(),
     clientName: String(job.clientName || jobDetails.clientName || manifestProject.clientName || context.clientName || "").trim(),
@@ -15318,21 +15917,7 @@ function includedJobFileSections(job = {}) {
 }
 
 function deriveTakeoffEngineJobId(workbook = {}, openJobDetails = {}, workspaceId = "") {
-  const candidates = [
-    workbook?.registeredJob?.jobId,
-    workbook?.registeredJobId,
-    workbook?.id,
-    workbook?.jobId,
-    workbook?.openedFileName,
-    workbook?.sourceFileName,
-    openJobDetails.fileName,
-    [workspaceId, openJobDetails.projectName, openJobDetails.jobNumber].filter(Boolean).join("-"),
-  ];
-  for (const candidate of candidates) {
-    const derived = deriveJobId(candidate);
-    if (derived) return derived;
-  }
-  return "estimate-builder-unsaved";
+  return masterJobId(workbook);
 }
 
 function selectAiPlanTakeoffJob(workbook = {}) {
@@ -15376,18 +15961,6 @@ function quoteRowsForAiPlanTakeoff(workbook = {}) {
   )).filter((row) => row.id);
 }
 
-function takeoffQuantityByItem(schedulePayload = {}, itemId = "") {
-  const rows = Array.isArray(schedulePayload.floorAreas) ? schedulePayload.floorAreas : [];
-  return rows.find((row) => row.itemId === itemId)?.quantity || 0;
-}
-
-function takeoffWallLength(schedulePayload = {}, category = "") {
-  const rows = Array.isArray(schedulePayload.basicProjectMeasurements) ? schedulePayload.basicProjectMeasurements : [];
-  return rows
-    .filter((row) => row.section === "Walls" && row.category === category)
-    .reduce((sum, row) => sum + (Number(row.quantity) || 0), 0);
-}
-
 function valueOrNotEntered(value) {
   const text = String(value || "").trim();
   return text || "Not entered";
@@ -15411,7 +15984,7 @@ function estimateTakeoffPersistenceCounts(workbook = {}) {
       if (typeof window === "undefined") return null;
       try {
         const jobId = workbook?.openedFileName || workbook?.id || "";
-        const projects = JSON.parse(window.localStorage.getItem("gr8:takeoff:v1") || "[]");
+        const projects = JSON.parse(builderLocalStorage.getItem("gr8:takeoff:v1") || "[]");
         const project = Array.isArray(projects) ? projects.find((item) => item?.jobId === jobId) : null;
         return Array.isArray(project?.pages) ? project.pages.length : 0;
       } catch {
@@ -15431,6 +16004,8 @@ function workbookToJobFileData(workbook = {}) {
   if (typeof window !== "undefined") {
     console.info("[Estimate Builder] Saving workbook", estimateTakeoffPersistenceCounts(workbook));
   }
+  // The exported file carries the explicit section / line order (quotationOrder.js).
+  workbook = workbook?.quotation ? { ...workbook, quotation: stampQuotationOrder(applyPersistedQuotationOrder(workbook.quotation), workbook.quotationSectionOrder) } : workbook;
   return {
     type: "gr8-master-job-package",
     schemaVersion: "gr8job.package.v1",
@@ -15561,7 +16136,7 @@ function commercialProjectMetadataFromWorkbook(workbook = {}, jobFilePayload = {
     clientPhone: registeredJob.clientPhone || "",
     address: jobFilePayload.address || meta.address || registeredJob.siteAddress || clientPage.projectAddress || workbookDataValue(workbook, "siteAddress") || workbookDataValue(workbook, "address") || "",
     notes: jobFilePayload.notes || meta.notes || registeredJob.jobDescription || "",
-    sourceWorkbookJobId: workbook?.id || workbook?.jobId || meta.jobNumber || "",
+    sourceWorkbookJobId: masterJobId(workbook),
     sourceWorkbookFileName: workbook?.openedFileName || workbook?.sourceFileName || "",
     sourceRegisteredJobId: registeredJob.jobId || workbook?.registeredJobId || "",
     quoteNumber: clientPage.quoteNumber || meta.jobNumber || registeredJob.jobNumber || workbookDataValue(workbook, "quoteNumber") || "",
@@ -15718,7 +16293,7 @@ function mergeRecentJobRows(platformJobs = [], localJobs = []) {
   ].filter(isVisibleRecentJobRow);
   const byIdentity = new Map();
   for (const row of rows) {
-    const key = row.projectId || row.fileName || row.key || row.id;
+    const key = row.jobId || row.projectId || row.key || row.id;
     const existing = byIdentity.get(key);
     if (!existing || String(row.lastOpenedAt || row.savedAt || "").localeCompare(String(existing.lastOpenedAt || existing.savedAt || "")) > 0) {
       byIdentity.set(key, row);
@@ -16057,14 +16632,14 @@ function JobPickerModal({ jobs = [], status = {}, message = "", busy = false, op
       ? "Loading jobs..."
       : statusState === "error"
         ? "Unable to load jobs"
-        : "No jobs exist in this workspace";
+        : "No saved jobs yet. Create a job or open a .gr8job file.";
   return (
     <div style={styles.modalBackdrop}>
       <div style={styles.jobPickerModal} role="dialog" aria-modal="true" aria-label="Open project job">
         <div style={styles.jobPickerHeader}>
           <div>
-            <div style={styles.eyebrow}>Open Platform Job</div>
-            <h2 style={styles.jobPickerTitle}>Open Platform Job</h2>
+            <div style={styles.eyebrow}>Master jobs</div>
+            <h2 style={styles.jobPickerTitle}>Open Saved Job</h2>
           </div>
           <button type="button" style={styles.secondaryButton} onClick={onClose}>Close</button>
         </div>
@@ -16096,6 +16671,8 @@ function JobPickerModal({ jobs = [], status = {}, message = "", busy = false, op
             {visibleJobs.map((job) => (
               <button
                 key={job.key}
+                data-testid="master-job-option"
+                data-job-id={job.jobId || job.projectId}
                 type="button"
                 style={{ ...styles.jobPickerRow, ...(job.currentlyOpen ? styles.jobPickerRowCurrent : {}) }}
                 disabled={busy}
@@ -16105,14 +16682,14 @@ function JobPickerModal({ jobs = [], status = {}, message = "", busy = false, op
                   <strong>{job.projectName || job.name || "Unnamed project"}</strong>
                   <span style={styles.jobPickerOpenButton}>{openingJobKey === job.key ? "Opening..." : job.currentlyOpen ? "Currently Open" : "Open Job"}</span>
                 </span>
-                <span>{job.projectId ? `Project ID: ${job.projectId}` : "Project ID: Not recorded"}</span>
+                <span>Job ID: {job.jobId || job.projectId}</span>
                 <small>{job.jobNumber ? `Job #: ${job.jobNumber}` : "Job #: Not recorded"}</small>
                 <small>{job.clientName ? `Client: ${job.clientName}` : "Client: Not recorded"}</small>
                 <small>{job.siteAddress ? `Address: ${job.siteAddress}` : "Address: Not recorded"}</small>
                 <small>{job.status ? `Status: ${job.status}` : "Status: Not recorded"}</small>
                 <small>Existing Project Estimate: {job.hasProjectEstimate ? "Yes" : "No"}</small>
                 <small>Existing Estimate Builder workbook: {job.hasEstimateWorkbook ? "Yes" : "No"}</small>
-                {!job.hasProjectEstimate ? <small>No Project Estimate yet - opening this job will create one from the selected template.</small> : null}
+                {!job.hasProjectEstimate && job.source === "builder_commercial_projects" ? <small>No Project Estimate yet - opening this job will create one from the selected template.</small> : null}
                 <small>Last modified {formatTemplateDate(job.lastModified || job.savedAt)}</small>
               </button>
             ))}
@@ -16331,7 +16908,15 @@ const PRODUCT_LIBRARY_SEARCH_KEYS = ["product_code", "category", "subcategory", 
 
 function productLibraryProducts(sheet) {
   const saved = sheet.workbook.productLibrary?.products || [];
-  return saved.length ? saved.map(normaliseProductLibraryRecord) : deriveProductLibraryFromQuoteSheet(sheet);
+  const products = saved.length ? saved.map(normaliseProductLibraryRecord) : deriveProductLibraryFromQuoteSheet(sheet);
+  const owner = sheet.workbook.workspaceId;
+  if (!cabinetryApplies(owner)) return products;
+  const imported = Object.entries(finalCabinetryQuotation(owner)).flatMap(([section, group]) => group.rows.filter(row => !isCabinetryDivider(row)).map(row => normaliseProductLibraryRecord({
+    id: row.importKey, product_code: row.importKey, category: section, subcategory: row.range,
+    product_name: row.productName, description: row.description, unit: row.unit,
+    sell_price: row.excelRate, active: true, notes: row.priceBasis,
+  })));
+  return [...products.filter(p => !isCabinetrySection(p.category)), ...imported];
 }
 
 function deriveProductLibraryFromQuoteSheet(sheet) {
@@ -16593,7 +17178,7 @@ function sectionCsvRows(sectionName, section) {
       row.item || row.values?.[0] || "",
       row.quantity || row.importedQuantity || "",
       row.unit || "",
-      row.manualRate || row.supplierQuote || row.excelRate || "",
+      row.selectionSource ? row.activeUnitPrice ?? '' : row.manualRate || row.supplierQuote || row.excelRate || "",
       row.notes || "",
       [row.applianceBrand, row.appliancePackage].filter(Boolean).join("/"),
     ]);
@@ -16772,7 +17357,7 @@ function quotationCsvRows(sheet) {
         quoteItem(row),
         isLinkedQuoteQty(row) ? value(row.qty) : quoteInputQty(row, sheet),
         row.unit || "",
-        value(row.finalRateUsed || row.manualRate || row.excelRate),
+        value(row.selectionSource ? row.activeUnitPrice ?? '' : row.finalRateUsed || row.manualRate || row.excelRate),
         quoteCost(row),
         row.sourceOfRate || "",
         row.notes || "",
@@ -16936,19 +17521,34 @@ function currencyInputValue(v) {
   return `$${amount.toLocaleString("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+// The generic cladding-plank row shows the one formula evaluated for each product this job's
+// Takeoff actually uses, straight from the calculation result (sheet.preview.claddingPlanks).
+function formulaResultDisplay(sheet, key) {
+  if (key !== "claddingPlankQty") return value(sheet.preview.quantities[key]);
+  const used = (sheet.preview.claddingPlanks || []).filter((product) => product.claddedWallLm > 0);
+  if (!used.length) return "No Linea walls in the Takeoff";
+  return used.map((product) => `${product.label}: ${product.workingText}`).join(" | ");
+}
+
 function formulaForRow(sheet, row) {
   return userFacingFormula(internalFormulaForRow(sheet, row));
 }
 
 function internalFormulaForRow(sheet, row) {
+  const key = String(row?.key || "");
+  // CORRECTED_DEFAULT_FORMULA_KEYS (Items 64-89.1's own wall-area/deduction rows among them) exists
+  // precisely to override a stale saved formula with the current, correct default - so it must be
+  // checked before "any saved formula wins" below, not after: every real saved workbook has a saved
+  // formula for most keys by default, and that unconditional return previously left this check
+  // unreachable for exactly the rows it was written to repair (same class of bug as Item 78/79's
+  // own calculation, fixed in estimateBuilderWorkbookCalculations.js's currentFormula - this is the
+  // Formula Sheet / Calculations page's own separate copy of that same ordering mistake).
+  if (CORRECTED_DEFAULT_FORMULA_KEYS.has(key)) return V4_DEFAULT_FORMULAS[row.key] || row.formula || "";
   const saved = sheet.workbook.formulas?.[row.key];
   if (saved !== undefined && saved !== null) return String(saved).trim();
   const dynamicFormula = dynamicDefaultFormulaForRow(sheet, row);
-  const key = String(row?.key || "");
-  const correctedDefaultFormula = CORRECTED_DEFAULT_FORMULA_KEYS.has(key) ? V4_DEFAULT_FORMULAS[row.key] : "";
-  const defaultFormula = correctedDefaultFormula || dynamicFormula || V4_DEFAULT_FORMULAS[row.key] || row.defaultFormula || row.formula || "";
+  const defaultFormula = dynamicFormula || V4_DEFAULT_FORMULAS[row.key] || row.defaultFormula || row.formula || "";
   const savedFormula = String(sheet.workbook.formulas?.[row.key] || "").trim();
-  if (CORRECTED_DEFAULT_FORMULA_KEYS.has(key)) return defaultFormula;
   if (dynamicFormula && (TOTAL_WALL_LENGTH_RESULT_KEYS.has(key) || FRAMED_WALL_LENGTH_RESULT_KEYS.has(key))) return dynamicFormula;
   if (dynamicFormula && (!savedFormula || savedFormula === V4_DEFAULT_FORMULAS[row.key])) return dynamicFormula;
   if (!savedFormula || isStaleFormula(row.key, savedFormula)) return defaultFormula;
@@ -16986,6 +17586,17 @@ function dynamicDefaultFormulaForRow(sheet, row) {
 
 function dataInputFormulaForRow(sheet, row) {
   const levels = floorCountToLevels(workbookDataValue(sheet.workbook, "floorCount") || "Single storey");
+  if (String(row?.key || "").startsWith("cavitySliderSize_")) {
+    return `Count of measured cavity sliding doors of this exact size, from the Takeoff (same grouping as ${itemNumberForKey(sheet, "totalCavitySliderCagesEach")}'s own total, summed across levels).`;
+  }
+  if (String(row?.key || "").startsWith("internalDoorSize_")) {
+    return "Count of measured standard (hinged/passage) internal doors of this exact width x height, from the Takeoff, summed across levels. Cavity sliding doors and robe/sliding doors are a different product each and are excluded here - see their own schedules below.";
+  }
+  if (String(row?.key || "").startsWith("robeSlidingDoorSize_")) {
+    return "Count of measured robe/sliding doors of this exact width x height, from the Takeoff, summed across levels. A separate product/supplier stream from standard internal doors and cavity slider cages - never combined with either.";
+  }
+  const wallAreaFormulaNote = WALL_AREA_FORMULA_NOTES[row.key];
+  if (wallAreaFormulaNote) return resolveItemReferences(sheet, wallAreaFormulaNote);
   const framedWallFormulaNote = FRAMED_WALL_LENGTH_FORMULA_NOTES[row.key];
   if (framedWallFormulaNote) return framedWallFormulaNote;
   if (row.key === "lowerRoofPlanAreaM2") {
@@ -17294,6 +17905,56 @@ const CORRECTED_DEFAULT_FORMULA_KEYS = new Set([
   "skirtingLm",
 ]);
 
+// Items 64-89.1's wall-area rows, explicit: a brick/cladding wall on Ground Floor rises straight
+// from the slab to its own ceiling, but on Second/Third Level it must also travel through that
+// level's own floor build-up first - that is the one physical difference every row below states.
+// Net rows only ever deduct openings that belong to their own level (and, for the by-system rows,
+// their own wall system) - never another level's, another system's, or an internal door's.
+const WALL_AREA_LEVEL_LABELS = { lower: "Ground Floor", upper: "Second Level", third: "Third Level" };
+const WALL_AREA_HEIGHT_TERMS = {
+  lower: "Ground Floor Ceiling Height",
+  upper: "(Second Level Ceiling Height + Second Level Floor Thickness)",
+  third: "(Third Level Ceiling Height + Third Level Floor Thickness)",
+};
+const WALL_AREA_SYSTEM_LABELS = { BrickVeneer: "Brick Veneer", LightweightCladding: "Lightweight Cladding", RenderedBrickVeneer: "Rendered Brick Veneer" };
+const WALL_AREA_BY_SYSTEM_FORMULA_NOTES = Object.fromEntries(
+  Object.entries(WALL_AREA_LEVEL_LABELS).flatMap(([prefix, levelLabel]) => Object.entries(WALL_AREA_SYSTEM_LABELS).flatMap(([system, systemLabel]) => [
+    [`${prefix}${system}GrossWallM2`, `GROSS. ${levelLabel} ${systemLabel} wall length x ${WALL_AREA_HEIGHT_TERMS[prefix]}. Openings not deducted.`],
+    [`${prefix}${system}NetWallM2`, `NET. ${levelLabel} ${systemLabel} Gross Wall Area (above) minus ${systemLabel} openings on ${levelLabel} exterior walls only (other systems, other levels and internal doors excluded).`],
+  ]))
+);
+// {{someRowKey}} is resolved to that row's own live sequential Item number (resolveItemReferences,
+// used wherever this note is read) rather than a number written in here directly: since the page is
+// now numbered by visible position, not a fixed Excel row, the same row can be a different Item
+// number on a two-storey job (Third Level's rows absent) than on a three-storey one - a hardcoded
+// "Item 78" would go stale (or simply be wrong) the moment that changes.
+const WALL_AREA_FORMULA_NOTES = {
+  ...WALL_AREA_BY_SYSTEM_FORMULA_NOTES,
+  lowerExternalWallAreaM2: "GROSS ({{lowerExternalWallAreaM2}}). Ground Floor Wall Length x Ground Floor Ceiling Height. Openings not deducted - see {{lowerNetExternalWallAreaM2}} for net.",
+  upperExternalWallAreaM2: "GROSS ({{upperExternalWallAreaM2}}). Second Level Wall Length x (Second Level Ceiling Height + Second Level Floor Thickness). Openings not deducted - see {{upperNetExternalWallAreaM2}} for net.",
+  thirdExternalWallAreaM2: "GROSS ({{thirdExternalWallAreaM2}}). Third Level Wall Length x (Third Level Ceiling Height + Third Level Floor Thickness). Openings not deducted.",
+  totalExternalWallAreaM2: "GROSS ({{totalExternalWallAreaM2}}). {{lowerExternalWallAreaM2}} + {{upperExternalWallAreaM2}} + {{thirdExternalWallAreaM2}}. Openings not deducted.",
+  upperBulkExternalWallAreaM2: "GROSS ({{upperBulkExternalWallAreaM2}}). Same wall-height rule as {{upperExternalWallAreaM2}} (Second Level Ceiling Height + Second Level Floor Thickness) - kept as its own figure for sisalation wrap takeoff. Openings not deducted.",
+  lowerWindowDoorDeductionsM2: "{{lowerWindowDoorDeductionsM2}}. Ground Floor external window/door opening area - Window Schedule's own canonical per-level total. Internal doors and other levels excluded.",
+  upperWindowDoorDeductionsM2: "{{upperWindowDoorDeductionsM2}}. Second Level external window/door opening area - Window Schedule's own canonical per-level total. Internal doors and other levels excluded.",
+  thirdWindowDoorDeductionsM2: "{{thirdWindowDoorDeductionsM2}}. Third Level external window/door opening area - Window Schedule's own canonical per-level total. Internal doors and other levels excluded.",
+  lowerNetExternalWallAreaM2: "NET ({{lowerNetExternalWallAreaM2}}). {{lowerExternalWallAreaM2}} (Gross) minus {{lowerWindowDoorDeductionsM2}} (Ground Floor openings).",
+  upperNetExternalWallAreaM2: "NET ({{upperNetExternalWallAreaM2}}). {{upperExternalWallAreaM2}} (Gross) minus {{upperWindowDoorDeductionsM2}} (Second Level openings).",
+  thirdNetExternalWallAreaM2: "NET ({{thirdNetExternalWallAreaM2}}). {{thirdExternalWallAreaM2}} (Gross) minus {{thirdWindowDoorDeductionsM2}} (Third Level openings).",
+};
+// Looks up a row's current, live displayed Item number by its stable key - the same numbering
+// dataInputRowNumber assigns, computed the same way (position among the rows actually visible
+// right now for this workbook), so a cross-reference in a note can never disagree with what the
+// builder actually sees next to that row.
+function itemNumberForKey(sheet, key) {
+  const section = sheet?.dataInputSections?.find((entry) => entry.key === "inputDataSheet");
+  const index = section?.rows?.findIndex((row) => row.key === key) ?? -1;
+  return index >= 0 ? `Item ${index + 1}` : "Item —";
+}
+function resolveItemReferences(sheet, text) {
+  return String(text || "").replace(/\{\{(\w+)\}\}/g, (_, key) => itemNumberForKey(sheet, key));
+}
+
 const FRAMED_WALL_LENGTH_FORMULA_NOTES = {
   externalFramedWall70mmLm: "= ALL GROUND LEVEL 70MM EXTERNAL WALLS + SECOND LEVEL 70MM EXTERNAL WALLS + THIRD LEVEL 70MM EXTERNAL WALLS",
   externalFramedWall90mmLm: "= ALL GROUND LEVEL 90MM EXTERNAL WALLS + SECOND LEVEL 90MM EXTERNAL WALLS + THIRD LEVEL 90MM EXTERNAL WALLS",
@@ -17454,10 +18115,13 @@ function numberValue(value) {
   return Number.isFinite(number) ? number : 0;
 }
 
+// Shows the engine's canonical cost (qty × rate). A priced row with a blank / 0 quantity shows
+// $0.00 - never a previous cost; a row with no rate and no cost stays blank.
 function quoteCost(row) {
-  const qty = Number(row?.qty || row?.quantity || 0);
-  if (!qty) return "";
-  return money(row?.cost);
+  const cost = Number(row?.cost || 0);
+  const hasRate = String(row?.finalRateUsed ?? "").trim() !== "" && Number(row?.finalRateUsed) !== 0;
+  if (!cost && !hasRate) return "";
+  return money(cost);
 }
 
 function quoteSelectionsCsvRows(sheet) {
@@ -17818,6 +18482,30 @@ function quoteProductDescription(row = {}) {
   return firstQuoteText(row.productDescription, snapshot.description, details.description, details.product_description, row.description, row.rawText);
 }
 
+/**
+ * Distinguishes a physical/catalogue product row (image, brand, supplier, SKU are
+ * meaningful) from a non-physical service/labour/preliminary/allowance row (those
+ * columns would just be blank). There is no dedicated product/service field on a
+ * quote row, so this reads the same underlying fields the product-detail cells
+ * already read from - a manually added or seeded labour/service line never
+ * populates any of them. Supplier is checked on the raw fields only (not via
+ * quoteProductSupplier(), which falls back to the rate source such as "manual" for
+ * display) so a plain line item is never misclassified as a product because of
+ * that fallback.
+ */
+function isPhysicalProductQuoteRow(row = {}) {
+  const details = row.selectedDetails || {};
+  const snapshot = row.productLibrarySnapshot || {};
+  if (details && Object.keys(details).length) return true;
+  if (snapshot && Object.keys(snapshot).length) return true;
+  if (row.source === "client-selections-internal-product") return true;
+  if (firstQuoteText(row.brand, row.selectedBrand, row.manufacturer, row.productManufacturer)) return true;
+  if (firstQuoteText(row.sku, row.model, row.productSku, row.selectedSku, row.productCode, row.canonicalProductId)) return true;
+  if (firstQuoteText(row.supplier, row.selectedSupplier)) return true;
+  if (quoteProductImages(row).length) return true;
+  return false;
+}
+
 function quoteSelectionAdjustment(row = {}) {
   if (row.selectionAdjustment !== undefined && row.selectionAdjustment !== "") return numberValue(row.selectionAdjustment);
   const selected = numberValue(row.selectionSelectedCost);
@@ -17956,8 +18644,15 @@ function moveSectionAfter(sections, movingSection, afterSection) {
   return [...withoutMoving.slice(0, afterIndex + 1), movingSection, ...withoutMoving.slice(afterIndex + 1)];
 }
 
+// The displayed Item number: always the row's own sequential position among the rows actually
+// visible right now (section.rows, in DataInputSheet's render, is already fully filtered -
+// mapping rows and every other hidden row are already gone by the time rowIndex is assigned - and
+// already reflects the current job's own active levels, since isRelevantForFloorCount runs before
+// this). row.sourceRow (an Excel-derived or auto-generated insertion-order decimal like 74.109 or
+// 119.684) is never shown to the builder - it stays only as internal metadata, unrelated to the
+// row's stable key/identity, which nothing here touches.
 function dataInputRowNumber(row, rowIndex = 0) {
-  return row?.sourceRow ?? rowIndex + 1;
+  return rowIndex + 1;
 }
 
 function quoteItem(row) {
@@ -18070,7 +18765,7 @@ function visibleQuoteRowsForDisplay(sheet, section, openApplianceBrands = {}) {
     if (quoteFeeType(row)) return false;
     if (isHiddenQuoteRow(row)) return false;
     if (!isQuoteRowRelevantForFloorCount(row, sheet.workbook)) return false;
-    if (!hasSelectedWallThickness(sheet.workbook, "90") && is90mmWallFrameQuoteRow(row)) return false;
+    if (!hasSelectedWallThickness(sheet.workbook, "90") && is90mmWallFrameQuoteRow(row) && !(Number(row.qty) > 0)) return false;
     if (isApplianceHeadingQuoteRow(row)) return true;
     const haystack = `${row.item || ""} ${row.rawText || ""}`.toLowerCase();
     if (search && !haystack.includes(search)) return false;
@@ -18197,6 +18892,18 @@ function isWallFramesSubsection(section) {
   return WALL_FRAMES_SUBSECTIONS.has(quoteSectionBaseName(section));
 }
 
+// WINDOWS parent + its subsections (window types, glass sliding doors, flyscreens, security
+// screens) - populated by lib/builders/windowQuotationSync.js from the canonical AI Plan Takeoff
+// Window Schedule. "windows" is the existing top-level section already in the imported catalogue;
+// this only adds it to the same parent/child grouping pattern every other multi-part section
+// (Wall Frames, Roof Framing, Hardware, ...) already uses.
+function isWindowsGroupSection(section) {
+  return quoteSectionBaseName(section) === "windows";
+}
+function isWindowsGroupSubsection(section) {
+  return WINDOWS_GROUP_SUBSECTIONS.has(quoteSectionBaseName(section));
+}
+
 function isRoofFramingSection(section) {
   return quoteSectionBaseName(section) === "roof framing";
 }
@@ -18308,7 +19015,7 @@ function isGroupedQuoteSubsection(section, sections = []) {
   if (sections.some((item) => isRenderingSection(item)) && isRenderingSubsection(section)) return true;
   if (sections.some((item) => isPlasterSupplyInstallSection(item)) && isPlasterSupplyInstallSubsection(section)) return true;
   if (sections.some((item) => isFixOutMaterialsSection(item)) && isFixOutMaterialsSubsection(section)) return true;
-  if (sections.some((item) => isCabinetMakerSection(item)) && isCabinetMakerSubsection(section)) return true;
+  if (!sections.some(item => quoteSectionBaseName(item) === "cabinetry - kitchen") && sections.some((item) => isCabinetMakerSection(item)) && isCabinetMakerSubsection(section)) return true;
   if (sections.some((item) => isAppliancePackageSection(item)) && isApplianceBrandSubsection(section)) return true;
   return false;
 }
@@ -18347,7 +19054,7 @@ function quoteChildSectionsForParent(section, sections = []) {
   if (isRenderingSection(section)) return sections.filter((item) => isRenderingSubsection(item));
   if (isPlasterSupplyInstallSection(section)) return sections.filter((item) => isPlasterSupplyInstallSubsection(item));
   if (isFixOutMaterialsSection(section)) return sections.filter((item) => isFixOutMaterialsSubsection(item));
-  if (isCabinetMakerSection(section)) return orderedCabinetMakerSubsections(sections.filter((item) => isCabinetMakerSubsection(item)));
+  if (isCabinetMakerSection(section)) return sections.some(item => quoteSectionBaseName(item) === "cabinetry - kitchen") ? [] : orderedCabinetMakerSubsections(sections.filter((item) => isCabinetMakerSubsection(item)));
   if (isAppliancePackageSection(section)) return orderedApplianceBrandSubsections(sections);
   return [];
 }
@@ -18472,6 +19179,18 @@ const CONCRETE_SLAB_SUBSECTIONS = new Set([
   "concrete",
   "internal beams",
   "concrete pumping",
+]);
+
+const WINDOWS_GROUP_SUBSECTIONS = new Set([
+  "windows - sliding",
+  "windows - double hung",
+  "windows - awning",
+  "windows - louvre",
+  "windows - fixed glass",
+  "windows - casement",
+  "glass sliding doors",
+  "flyscreens",
+  "security screens",
 ]);
 
 const WALL_FRAMES_SUBSECTIONS = new Set([
@@ -19439,6 +20158,7 @@ const styles = {
   quoteProductThumbnail: { width: 64, height: 54, display: "block", border: "1px solid #cbd5e1", borderRadius: 6, backgroundColor: "#f8fafc", backgroundSize: "contain", backgroundPosition: "center", backgroundRepeat: "no-repeat" },
   quoteImagePlaceholder: { width: 64, height: 54, boxSizing: "border-box", display: "grid", placeItems: "center", border: "1px dashed #cbd5e1", borderRadius: 6, background: "#f8fafc", color: "#64748b", fontSize: 11, fontWeight: 800, textAlign: "center" },
   quoteProductNameInput: { minWidth: 240, whiteSpace: "normal", overflowWrap: "anywhere" },
+  quoteCompactDescriptionInput: { minWidth: 420, whiteSpace: "normal", overflowWrap: "anywhere" },
   quoteWrapText: { display: "block", minWidth: 110, maxWidth: 180, whiteSpace: "normal", overflowWrap: "anywhere", lineHeight: 1.35, fontSize: 13, fontWeight: 700, color: "#334155" },
   quoteDescriptionText: { display: "block", minWidth: 220, maxWidth: 360, whiteSpace: "normal", overflowWrap: "anywhere", lineHeight: 1.38, fontSize: 13, fontWeight: 650, color: "#475569" },
   selectionReferenceCell: { minWidth: 210, display: "grid", gap: 5 },
@@ -19478,7 +20198,12 @@ const styles = {
   table: { width: "100%", borderCollapse: "collapse", fontSize: 16 },
   th: { position: "sticky", top: 0, zIndex: 2, background: "#dbeafe", color: "#0f172a", padding: "8px 9px", border: "1px solid #bfdbfe", textAlign: "left", fontWeight: 600, whiteSpace: "nowrap" },
   td: { padding: "5px 7px", border: "1px solid #e2e8f0", color: "#0f172a", verticalAlign: "middle", background: "#ffffff" },
-  compactColumn: { width: 38, minWidth: 38, maxWidth: 38, paddingLeft: 4, paddingRight: 4, textAlign: "center", whiteSpace: "nowrap" },
+  // Row numbers like the wall-thickness rows' 74.101-74.112 are 6 characters wide - too wide for
+  // the previous 38px column at this table's 16px bold tabular-nums font, so the "#" text spilled
+  // out of its cell and ran into the "Section" text beside it with no visible boundary between
+  // them. Widened to fit that width comfortably, with overflow hidden as a hard backstop so a
+  // number can never bleed into the next column even if it ends up longer still.
+  compactColumn: { width: 60, minWidth: 60, maxWidth: 60, paddingLeft: 4, paddingRight: 4, textAlign: "center", whiteSpace: "nowrap", overflow: "hidden" },
   lowerLevelCell: { background: "#eef6ff" },
   upperLevelCell: { background: "#fff7e6" },
   thirdLevelCell: { background: "#f0fdf4" },

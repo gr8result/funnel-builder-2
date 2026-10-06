@@ -3,7 +3,7 @@
 import os,struct,json
 from pathlib import Path
 root=Path(os.environ['LOCALAPPDATA'])/'Google/Chrome/User Data'
-out=Path('test-artifacts/manual-entry-door-recovery');out.mkdir(exist_ok=True,parents=True)
+out=Path('artifacts/test-artifacts/manual-entry-door-recovery');out.mkdir(exist_ok=True,parents=True)
 def var(b,p):
  n=0;s=0
  while True:

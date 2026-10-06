@@ -1,0 +1,7 @@
+Item 17 field used: upperFloorDepthMm
+Upper Level Floor Area field used: upperFloorAreaM2
+current Upper Level Floor Area: 0 m²
+calculation: 0 m² / 3.24 m² per sheet = 0 sheets
+final number of sheets: 0
+files changed: hooks/estimate-builder/useEstimateBuilderWorkbook.js
+save/reload PASS/FAIL: PASS

@@ -11,7 +11,7 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import Head from "next/head";
 import Link from "next/link";
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from "../../../../utils/supabase-client";
 
 import {
   ReactFlow,
@@ -37,10 +37,7 @@ import ConditionNodeDrawer from "../../../../components/nodes/ConditionNodeDrawe
 import NodeColorModal from "../../../../components/automation/NodeColorModal";
 import LeadDetailsModal from "../../../../components/crm/LeadDetailsModal";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
+
 
 const nodeTypes = {
   trigger: TriggerNode,

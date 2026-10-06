@@ -1,2 +1,2 @@
-export { default } from "../../../Client Portal/serverSettings";
+export { default } from "../../../client-portal/serverSettings";
 

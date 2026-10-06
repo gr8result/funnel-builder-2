@@ -13,6 +13,7 @@ const ROOT = process.cwd();
 const cataloguePath = path.join(ROOT, "data/product-library/catalogues/cabinetry/AU-LAMINEX-CABINETRY-COLOURS.json");
 const selectionsSource = fs.readFileSync(path.join(ROOT, "pages/modules/builders/selections-book.js"), "utf8");
 const productLibraryServiceSource = fs.readFileSync(path.join(ROOT, "lib/product-library/catalogueService.js"), "utf8");
+const cabinetrySelectorSource = fs.readFileSync(path.join(ROOT, "lib/product-library/cabinetryCatalogueSelectors.js"), "utf8");
 const catalogue = JSON.parse(fs.readFileSync(cataloguePath, "utf8"));
 const active = LAMINEX_CABINETRY_CATALOGUE.filter((record) => record.availabilityStatus !== "inactive");
 const requiredFields = [
@@ -117,8 +118,9 @@ assert.equal(payload.selected_details.cabinetrySelection.boqLines[0].swatchImage
 assert.equal(payload.selected_details.cabinetrySelection.cabinetmakerRfq.lines[0].officialProductUrl, selected.officialProductUrl, "cabinetmaker RFQ must carry official Laminex URL");
 assert.equal(payload.selected_details.cabinetrySelection.procurementSchedule[0].metadata.priceStatus, selected.priceStatus, "procurement must carry price status");
 
-assert.match(productLibraryServiceSource, /AU-LAMINEX-CABINETRY-COLOURS\.json/, "Product Library must import the Laminex cabinetry catalogue");
-assert.match(productLibraryServiceSource, /familyKey: "cabinet-finish"/, "Product Library must expose Laminex as cabinet-finish products");
-assert.match(productLibraryServiceSource, /attributes:[\s\S]*colourFamily/, "Product Library products must expose colour-family attributes");
+assert.match(productLibraryServiceSource, /getProductLibraryCabinetryMasterProducts/, "Product Library must use the canonical cabinetry selector");
+assert.match(cabinetrySelectorSource, /AU-LAMINEX-CABINETRY-COLOURS\.js/, "The canonical selector must import the Laminex cabinetry catalogue");
+assert.match(cabinetrySelectorSource, /familyKey: "cabinet-finish"/, "Product Library must expose Laminex as cabinet-finish products");
+assert.match(cabinetrySelectorSource, /attributes:[\s\S]*colourFamily/, "Product Library products must expose colour-family attributes");
 
 console.log(`Laminex cabinetry catalogue tests passed. activeColours=${new Set(active.map((record) => record.colourName)).size} activeCombinations=${active.length}`);

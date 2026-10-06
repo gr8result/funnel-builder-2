@@ -1,0 +1,90 @@
+
+query GetProductBySku($sku: String!) {
+    products(filter: { sku: { eq: $sku } }) {
+      items {
+        id
+        sku
+        vendorcode
+        name
+        image {
+            url
+        }
+        product_images {
+          thumbnail
+          small
+          base
+          first_gallery
+          second_gallery
+        }
+        media_gallery {
+          url
+        }
+        thumbnail {
+            url
+        }
+        description {
+            html
+        }
+        product_dimensions
+        price_promo
+        price_store
+        price_trade
+        wels_reg_number
+        gp_product_group
+        __typename
+        ... on SimpleProduct {
+          price_range {
+            minimum_price {
+              regular_price {
+                value
+                currency
+              }
+            }
+          }
+        }
+        ... on ConfigurableProduct {
+          configurable_options {
+            attribute_code
+            attribute_id
+            label
+            values {
+              label
+              value_index
+            }
+          }
+          variants {
+                product {
+                    id
+                    sku
+                    name
+                    price_range {
+                        minimum_price {
+                            regular_price {
+                                value
+                                currency
+                            }
+                            final_price {
+                                value
+                                currency
+                            }
+                        }
+                    }
+                }
+            attributes {
+                code
+                value_index
+            }
+          }
+        }
+      }
+      aggregations {
+        attribute_code
+        label
+            options {
+                label
+                value
+                count
+            }
+      }
+    }
+  }

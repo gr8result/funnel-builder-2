@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const runStamp = new Date().toISOString().replace(/[:.]/g, "-");
-const outDir = path.join(root, "test-results", "johnson-browser-storage", runStamp);
+const outDir = path.join(root, "artifacts/test-results", "johnson-browser-storage", runStamp);
 const chromeUserData = "C:/Users/grant/AppData/Local/Google/Chrome/User Data";
 const terms = [
   "estimate-builder-template-db",

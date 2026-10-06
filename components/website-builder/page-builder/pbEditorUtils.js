@@ -8,6 +8,7 @@ import { openSharedMediaPicker } from "../../../lib/openSharedMediaPicker";
 import { renderWebsiteBlock, websiteBlockKeyframes } from "../WebsiteBlockRenderer";
 import { GRID_ICON_LIBRARY, renderGridLibraryIcon } from "../gridIconLibrary";
 import RichText from "../../RichText";
+import { formatLabel, parsePixelValue } from "./pbTextFormatUtils";
 
 
 // ANIMATION_PRESETS — needed by getSelectOptions below
@@ -96,13 +97,6 @@ function matchesCustomStatsPreset(props, preset) {
   const left = normalizeCustomStatsPreset(props);
   const right = normalizeCustomStatsPreset(preset);
   return JSON.stringify(left) === JSON.stringify(right);
-}
-
-function formatLabel(key) {
-  const text = String(key || "")
-    .replace(/([A-Z])/g, " $1")
-    .trim();
-  return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 function isImageField(key) {
@@ -199,13 +193,6 @@ function supportsCopyRegeneration(blockType) {
     BlockTypes.COLUMNS_2,
     BlockTypes.COLUMNS_3,
   ].includes(blockType);
-}
-
-function parsePixelValue(value, fallback) {
-  const raw = String(value || "").trim();
-  const match = raw.match(/^(\d+)(px)?$/i);
-  if (match) return Number(match[1]);
-  return fallback;
 }
 
 function createImageStackLayer(seed = 0) {

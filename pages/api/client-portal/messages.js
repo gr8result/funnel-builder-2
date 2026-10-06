@@ -1,2 +1,2 @@
-export { default } from "../../../Client Portal/serverMessages";
+export { default } from "../../../client-portal/serverMessages";
 

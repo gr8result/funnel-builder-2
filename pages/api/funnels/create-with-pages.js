@@ -3,7 +3,7 @@
 // Creates a funnel record + all steps pre-filled with section HTML.
 
 import { supabaseAdmin } from '../../../lib/supabaseAdmin';
-import { FUNNEL_TYPES, assemblePage } from '../../../lib/funnelSections';
+import { FUNNEL_TYPES, assemblePage } from '../../../modules/funnels/index.js';
 import { withAuth } from "../../../lib/withWorkspace";
 import { getLimit } from "../../../lib/featureGates";
 

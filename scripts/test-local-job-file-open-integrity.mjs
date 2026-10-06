@@ -11,7 +11,7 @@ assert.ok(workbookSource.includes("if (!prompt.dirty)"), "Local file import must
 assert.ok(workbookSource.includes("mode: \"confirm-open\""), "Local file import must require confirmation before replacing an active dirty workbook.");
 assert.ok(workbookSource.includes("Save Current Job"), "Dirty current jobs must offer a save-before-open option.");
 assert.ok(workbookSource.includes("Discard Changes"), "Dirty current jobs must offer a discard-and-open option.");
-assert.ok(workbookSource.includes("dirty: jobFile.hasActiveJob && jobFile.dirty"), "No active job must not produce a stale unsaved-current-job warning.");
+assert.ok(workbookSource.includes("dirty: !openJobDetails.noJobOpen && sheet.dirty"), "No active job must not produce a stale unsaved-current-job warning.");
 assert.ok(workbookSource.includes("Warning: the selected filename does not match the job identity inside the file."), "Filename/internal identity mismatches must be visible.");
 assert.ok(!workbookSource.includes("localJobFileResolvedToPlatformRef"), "Local files must not be rerouted into platform-project opens.");
 assert.ok(!workbookSource.includes("resolvePlatformProjectForOpenedJob"), "The local-file open pipeline must not auto-resolve a platform project.");

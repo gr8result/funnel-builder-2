@@ -2,94 +2,6 @@
   "updatedAt": "2026-09-04",
   "products": [
     {
-      "productId": "product:appliances:cooktops:ariston:nio-844-do-b-aus",
-      "model": "NIO 844 DO B AUS",
-      "status": "unresolved",
-      "attempts": [
-        {
-          "pageUrl": "https://ariston.com.au/inventory/nio844dob/",
-          "error": "This operation was aborted"
-        },
-        {
-          "pageUrl": "https://harveynormancommercial.com.au/products/NIO844DOBAUS",
-          "title": "Harvey Norman Commercial Division",
-          "exactModelOnPage": true,
-          "images": []
-        },
-        {
-          "pageUrl": "https://harveynormancommercial.com.au/products/NIO%20844%20DO%20B%20AUS",
-          "title": "Harvey Norman Commercial Division",
-          "exactModelOnPage": true,
-          "images": []
-        },
-        {
-          "pageUrl": "https://ariston.com.au/?s=NIO%20844%20DO%20B%20AUS",
-          "error": "This operation was aborted"
-        }
-      ]
-    },
-    {
-      "productId": "product:appliances:cooktops:ariston:pc640ntx",
-      "model": "PC640NTX",
-      "status": "unresolved",
-      "attempts": [
-        {
-          "pageUrl": "https://ariston.com.au/inventory/pc640ntx/",
-          "error": "This operation was aborted"
-        },
-        {
-          "pageUrl": "https://harveynormancommercial.com.au/products/PC640NTX",
-          "title": "Harvey Norman Commercial Division",
-          "exactModelOnPage": true,
-          "images": []
-        },
-        {
-          "pageUrl": "https://ariston.com.au/?s=PC640NTX",
-          "error": "This operation was aborted"
-        }
-      ]
-    },
-    {
-      "productId": "product:appliances:cooktops:ariston:pf604ix",
-      "model": "PF604IX",
-      "status": "unresolved",
-      "attempts": [
-        {
-          "pageUrl": "https://harveynormancommercial.com.au/products/PF604IX",
-          "title": "Harvey Norman Commercial Division",
-          "exactModelOnPage": true,
-          "images": []
-        },
-        {
-          "pageUrl": "https://ariston.com.au/?s=PF604IX",
-          "error": "This operation was aborted"
-        }
-      ]
-    },
-    {
-      "productId": "product:appliances:cooktops:ariston:pkq-755-d-gh-aus",
-      "model": "PKQ 755 D GH AUS",
-      "status": "unresolved",
-      "attempts": [
-        {
-          "pageUrl": "https://harveynormancommercial.com.au/products/PKQ755DGHAUS",
-          "title": "Harvey Norman Commercial Division",
-          "exactModelOnPage": true,
-          "images": []
-        },
-        {
-          "pageUrl": "https://harveynormancommercial.com.au/products/PKQ%20755%20D%20GH%20AUS",
-          "title": "Harvey Norman Commercial Division",
-          "exactModelOnPage": true,
-          "images": []
-        },
-        {
-          "pageUrl": "https://ariston.com.au/?s=PKQ%20755%20D%20GH%20AUS",
-          "error": "This operation was aborted"
-        }
-      ]
-    },
-    {
       "productId": "product:appliances:cooktops:blanco:bcc604t",
       "model": "BCC604T",
       "status": "review-required-local",
@@ -474,23 +386,6 @@
       "image": "/images/catalogues/appliances/products/westinghouse/whi955bd.png"
     },
     {
-      "productId": "product:appliances:dishwashers:ariston:lfo3c23wf",
-      "model": "LFO3C23WF",
-      "status": "unresolved",
-      "attempts": [
-        {
-          "pageUrl": "https://harveynormancommercial.com.au/products/LFO3C23WF",
-          "title": "Harvey Norman Commercial Division",
-          "exactModelOnPage": true,
-          "images": []
-        },
-        {
-          "pageUrl": "https://ariston.com.au/?s=LFO3C23WF",
-          "error": "This operation was aborted"
-        }
-      ]
-    },
-    {
       "productId": "product:appliances:dishwashers:blanco:bdw146x",
       "model": "BDW146X",
       "status": "review-required-local",
@@ -601,27 +496,6 @@
       ]
     },
     {
-      "productId": "product:appliances:freestanding-cookers:ariston:cp059mdx",
-      "model": "CP059MDX",
-      "status": "unresolved",
-      "attempts": [
-        {
-          "pageUrl": "https://ariston.com.au/inventory/freestanding-cooker-cp059mdx-2/",
-          "error": "This operation was aborted"
-        },
-        {
-          "pageUrl": "https://harveynormancommercial.com.au/products/CP059MDX",
-          "title": "Harvey Norman Commercial Division",
-          "exactModelOnPage": true,
-          "images": []
-        },
-        {
-          "pageUrl": "https://ariston.com.au/?s=CP059MDX",
-          "error": "This operation was aborted"
-        }
-      ]
-    },
-    {
       "productId": "product:appliances:freestanding-cookers:blanco:bfs90wx",
       "model": "BFS90WX",
       "status": "review-required-local",
@@ -721,50 +595,6 @@
       "model": "WFE9515SD",
       "status": "already-local",
       "image": "/images/catalogues/appliances/products/westinghouse/wfe9515sd.png"
-    },
-    {
-      "productId": "product:appliances:ovens:ariston:fa5834hixaaus",
-      "model": "FA5834HIXAAUS",
-      "status": "verified-authorised-supplier-local",
-      "productPageUrl": "https://www.lazada.co.id/products/oven-ariston-built-in-electric-oven-fa5834hixaaus-i1257608344.html",
-      "imageSourceUrl": "https://img.lazcdn.com/g/p/af06a9456e00d143f7800eb5f591d280.png_720x720q80.png_.webp",
-      "localPrimaryImage": "/images/catalogues/appliances/products/ariston/ariston-fa5834hixaaus.webp",
-      "localThumbnailImage": "/images/catalogues/appliances/products/ariston/ariston-fa5834hixaaus-thumb.webp",
-      "imageSourceType": "authorised-international-retailer-local",
-      "imageAttribution": "Product image sourced from Lazada Indonesia product listing for Ariston FA5834HIXAAUS.",
-      "imageVerifiedAt": "2026-09-04",
-      "note": "Exact FA5834HIXAAUS listing and product image. Australian official/manufacturer page was not found during this pass.",
-      "validation": {
-        "primaryImage": "/images/catalogues/appliances/products/ariston/ariston-fa5834hixaaus.webp",
-        "thumbnailImage": "/images/catalogues/appliances/products/ariston/ariston-fa5834hixaaus-thumb.webp",
-        "importedContentType": "image/webp",
-        "sourceDimensions": {
-          "width": 475,
-          "height": 514
-        },
-        "localDimensions": {
-          "detail": {
-            "width": 475,
-            "height": 514
-          },
-          "thumbnail": {
-            "width": 296,
-            "height": 320
-          }
-        }
-      }
-    },
-    {
-      "productId": "product:appliances:ovens:ariston:fi9-891-sp-ix-a-aus",
-      "model": "FI9 891 SP IX A AUS",
-      "status": "unresolved",
-      "attempts": [
-        "https://ariston.com.au/inventory/built-in-oven-fi7-891-sp-ix-aus/",
-        "https://www.notice-facile.com/en/manual/1325647/ariston%2Bthermo%2Bfi7-891-sp-ix-a-aus",
-        "https://manuals.plus/hotpoint/hotpoint-fi9-891-sp-ix-ha-multifunction-oven-quick-start-guide"
-      ],
-      "note": "No exact FI9 891 SP IX A AUS product image located. Research found Ariston FI7 891 SP IX A AUS Australian official/manual pages and Hotpoint FI9 891 SP IX HA, but neither is the exact catalogue model.",
-      "imageVerifiedAt": "2026-09-04"
     },
     {
       "productId": "product:appliances:ovens:blanco:bose65xm",
@@ -1031,108 +861,6 @@
           }
         }
       }
-    },
-    {
-      "productId": "product:appliances:rangehoods:ariston:arhc60x",
-      "model": "ARHC60X",
-      "status": "unresolved",
-      "attempts": [
-        {
-          "pageUrl": "https://harveynormancommercial.com.au/products/ARHC60X",
-          "title": "Harvey Norman Commercial Division",
-          "exactModelOnPage": true,
-          "images": []
-        },
-        {
-          "pageUrl": "https://ariston.com.au/?s=ARHC60X",
-          "error": "This operation was aborted"
-        }
-      ]
-    },
-    {
-      "productId": "product:appliances:rangehoods:ariston:arhc90x",
-      "model": "ARHC90X",
-      "status": "unresolved",
-      "attempts": [
-        {
-          "pageUrl": "https://harveynormancommercial.com.au/products/ARHC90X",
-          "title": "Harvey Norman Commercial Division",
-          "exactModelOnPage": true,
-          "images": []
-        },
-        {
-          "pageUrl": "https://ariston.com.au/?s=ARHC90X",
-          "error": "This operation was aborted"
-        }
-      ]
-    },
-    {
-      "productId": "product:appliances:rangehoods:ariston:arhs60x",
-      "model": "ARHS60X",
-      "status": "unresolved",
-      "attempts": [
-        {
-          "pageUrl": "https://harveynormancommercial.com.au/products/ARHS60X",
-          "title": "Harvey Norman Commercial Division",
-          "exactModelOnPage": true,
-          "images": []
-        },
-        {
-          "pageUrl": "https://ariston.com.au/?s=ARHS60X",
-          "error": "This operation was aborted"
-        }
-      ]
-    },
-    {
-      "productId": "product:appliances:rangehoods:ariston:arhs90x",
-      "model": "ARHS90X",
-      "status": "unresolved",
-      "attempts": [
-        {
-          "pageUrl": "https://harveynormancommercial.com.au/products/ARHS90X",
-          "title": "Harvey Norman Commercial Division",
-          "exactModelOnPage": true,
-          "images": []
-        },
-        {
-          "pageUrl": "https://ariston.com.au/?s=ARHS90X",
-          "error": "This operation was aborted"
-        }
-      ]
-    },
-    {
-      "productId": "product:appliances:rangehoods:ariston:aru60x",
-      "model": "ARU60X",
-      "status": "unresolved",
-      "attempts": [
-        {
-          "pageUrl": "https://harveynormancommercial.com.au/products/ARU60X",
-          "title": "Harvey Norman Commercial Division",
-          "exactModelOnPage": true,
-          "images": []
-        },
-        {
-          "pageUrl": "https://ariston.com.au/?s=ARU60X",
-          "error": "This operation was aborted"
-        }
-      ]
-    },
-    {
-      "productId": "product:appliances:rangehoods:ariston:aru90x",
-      "model": "ARU90X",
-      "status": "unresolved",
-      "attempts": [
-        {
-          "pageUrl": "https://harveynormancommercial.com.au/products/ARU90X",
-          "title": "Harvey Norman Commercial Division",
-          "exactModelOnPage": true,
-          "images": []
-        },
-        {
-          "pageUrl": "https://ariston.com.au/?s=ARU90X",
-          "error": "This operation was aborted"
-        }
-      ]
     },
     {
       "productId": "product:appliances:rangehoods:blanco:brc60x",

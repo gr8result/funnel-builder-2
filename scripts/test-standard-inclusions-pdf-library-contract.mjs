@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 const helper = readFileSync("lib/standard-inclusions/pdfLibrary.js", "utf8");
 const api = readFileSync("pages/api/standard-inclusions/pdf-library.js", "utf8");
 const workbook = readFileSync("components/estimate-builder/EstimateBuilderWorkbook.js", "utf8");
-const migration = readFileSync("supabase/migrations/20260812_standard_inclusions_pdf_library.sql", "utf8");
+const migration = readFileSync("supabase/migrations/20260812000000_standard_inclusions_pdf_library.sql", "utf8");
 
 assert.match(migration, /create table if not exists public\.standard_inclusions_schedules/, "Schedule table migration is missing.");
 assert.match(migration, /create table if not exists public\.standard_inclusions_schedule_versions/, "Version table migration is missing.");

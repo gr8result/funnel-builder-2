@@ -1,0 +1,7 @@
+{
+  "url": "https://www.euromaid.com/en-au/live-search?keywords=FS90S",
+  "retrievedAt": "2026-09-16T06:18:26.127Z",
+  "status": 200,
+  "sha256": "eb29240052616d459778e865253a82cb0ab688f8c03deef159a1f479d2a24440",
+  "text": "[{\"command\":\"liveSearchResults\",\"content\":\"\\u003Cdiv class=\\u0022gd-search-suggestions\\u0022\\u003E\\n  \\u003Cdiv class=\\u0022prod-results\\u0022\\u003E\\n        \\n              \\u003Cdiv id=\\u0022gd-search-see-all\\u0022 class=\\u0022search-see-all\\u0022\\u003E\\n        \\u003Cspan class=\\u0022no-results-text\\u0022\\u003ENo results found for\\u003C\\/span\\u003E\\n        \\u003Ca class=\\u0022gd-search__view-all-link\\u0022  href=\\u0022\\/en-au\\/search-results?keywords=FS90S\\u0022\\u003E \\u0027FS90S\\u0027\\u003C\\/a\\u003E\\n      \\u003C\\/div\\u003E\\n      \\u003C\\/div\\u003E\\n\\n  \\u003Cdiv class=\\u0022content-results\\u0022\\u003E\\n          \\u003C\\/div\\u003E\\n\\u003C\\/div\\u003E\\n\"},{\"command\":\"gtagEvent\",\"event_name\":\"search\",\"data\":{\"search_term\":\"fs90s\"}}]"
+}

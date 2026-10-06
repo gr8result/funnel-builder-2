@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useWorkspace } from "../../../hooks/useWorkspace";
 import { supabase } from "../../../utils/supabase-client";
+import FlooringProjectSchedule from "../../../components/client-selections/FlooringProjectSchedule";
 
 const STATUS_OPTIONS = [
   "not_started",
@@ -15,7 +16,7 @@ const STATUS_OPTIONS = [
   "cancelled",
 ];
 
-export default function BuilderProcurementSchedulePage() {
+export default function BuilderProcurementSchedulePage({ workbook = null } = {}) {
   const { workspaceId, activeWorkspace, loading: workspaceLoading } = useWorkspace();
   const [projects, setProjects] = useState([]);
   const [snapshots, setSnapshots] = useState([]);
@@ -332,6 +333,7 @@ export default function BuilderProcurementSchedulePage() {
         <title>Procurement Schedule</title>
       </Head>
       <main style={styles.page}>
+        <FlooringProjectSchedule workbook={workbook} procurement />
         <header style={styles.hero}>
           <div>
             <div style={styles.eyebrow}>Project Commercials</div>
@@ -451,7 +453,7 @@ export default function BuilderProcurementSchedulePage() {
                         <span>{item.section_name || item.boq?.source_section_name || item.source_quote_row_id || "Synced procurement item"}</span>
                       </td>
                       <td style={styles.cell}>{item.supplierName}</td>
-                      <td style={styles.compactCell}>{formatNumber(item.quantity)}</td>
+                      <td style={styles.compactCell}>{item.source_item?.quantityPending || item.metadata?.quantityPending ? "Cutting plan required" : formatNumber(item.quantity)}</td>
                       <td style={styles.compactCell}>{item.unit || "-"}</td>
                       <td style={styles.cell}><input type="date" value={draft.requiredBy} onChange={(event) => updateDraft(item.id, "requiredBy", event.target.value)} style={styles.tableInput} /></td>
                       <td style={styles.cell}><input type="date" value={draft.orderBy} onChange={(event) => updateDraft(item.id, "orderBy", event.target.value)} style={styles.tableInput} /></td>

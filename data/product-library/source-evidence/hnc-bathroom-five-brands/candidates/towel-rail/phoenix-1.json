@@ -1,0 +1,2920 @@
+{
+  "data": {
+    "products": {
+      "total_count": 109,
+      "page_info": {
+        "total_pages": 5
+      },
+      "items": [
+        {
+          "id": 24593,
+          "sku": "651876340",
+          "vendorcode": "651-8763-40",
+          "name": "3-Bar Square Heated Towel Rail ",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/651-8763-40_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/651-8763-40_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/6/5/651-8763-40_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/6/5/651-8763-40_phoenix_tech.jpeg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/651-8763-40_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/651-8763-40_phoenix_tech.jpeg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Can be installed vertically or horizontally<br>• Rails cannot be cut down to size<br>• Suitable for compact living, to hang a towel or robe<br>• Cable exits through bottom mount</p>"
+          },
+          "short_description": {
+            "html": "<p>3-Bar Square Heated Towel Rail </p>"
+          },
+          "product_dimensions": null,
+          "price_store": 1432,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Phoenix"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "651-8763-40"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 24592,
+          "sku": "651876310",
+          "vendorcode": "651-8763-10",
+          "name": "3-Bar Square Heated Towel Rail ",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/651-8763-10_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/651-8763-10_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/6/5/651-8763-10_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/6/5/651-8763-10_phoenix_tech.jpeg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/651-8763-10_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/651-8763-10_phoenix_tech.jpeg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Can be installed vertically or horizontally<br>• Rails cannot be cut down to size<br>• Suitable for compact living, to hang a towel or robe<br>• Cable exits through bottom mount</p>"
+          },
+          "short_description": {
+            "html": "<p>3-Bar Square Heated Towel Rail </p>"
+          },
+          "product_dimensions": null,
+          "price_store": 1320,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Phoenix"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Matte Black",
+                    "value": "940"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "651-8763-10"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Black"
+              }
+            ]
+          }
+        },
+        {
+          "id": 24561,
+          "sku": "144-8030-40",
+          "vendorcode": "144-8030-40",
+          "name": "Wiltern Single Towel Rail 800mm",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/4/144-8030-40_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/4/144-8030-40_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/4/144-8030-40_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/4/144-8030-40_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/4/144-8030-40_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/4/144-8030-40_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Rail can be cut down to size<br>• Designed in Australia<br>• Durable, high quality finish</p>"
+          },
+          "short_description": {
+            "html": "<p>Wiltern 800mm Single Towel Rail </p>"
+          },
+          "product_dimensions": null,
+          "price_store": 242,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL SINGLE"
+              },
+              {
+                "code": "range",
+                "value": "Wiltern"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "144-8030-40"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 24470,
+          "sku": "129850040",
+          "vendorcode": "129-8500-40",
+          "name": "Nuage 290mm Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8500-40_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8500-40_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/2/129-8500-40_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/2/129-8500-40_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8500-40_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8500-40_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Twin screw mounting plate<br>• Designed in Australia<br>• Durable, high quality finish<br>• Unique, organic design</p>"
+          },
+          "short_description": {
+            "html": "<p>Nuage 290mm Single Towel Rail</p>"
+          },
+          "product_dimensions": null,
+          "price_store": 236,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL SINGLE"
+              },
+              {
+                "code": "range",
+                "value": "Nuage"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "129-8500-40"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 24468,
+          "sku": "129850000",
+          "vendorcode": "129-8500-00",
+          "name": "Nuage 290mm Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8500-00_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8500-00_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/2/129-8500-00_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/2/129-8500-00_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8500-00_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8500-00_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Twin screw mounting plate<br>• Designed in Australia<br>• Durable, high quality finish<br>• Unique, organic design</p>"
+          },
+          "short_description": {
+            "html": "<p>Nuage 290mm Single Towel Rail</p>"
+          },
+          "product_dimensions": null,
+          "price_store": 180,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL SINGLE"
+              },
+              {
+                "code": "range",
+                "value": "Nuage"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "129-8500-00"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 24455,
+          "sku": "129813040",
+          "vendorcode": "129-8130-40",
+          "name": "Nuage 800mm Double Towel Rail ",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8130-40_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8130-40_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/2/129-8130-40_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/2/129-8130-40_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8130-40_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8130-40_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Brass rails<br>• Designed in Australia<br>• Durable, high quality finish<br>• Unique, organic design</p>"
+          },
+          "short_description": {
+            "html": "<p>Nuage 800mm Double Towel Rail </p>"
+          },
+          "product_dimensions": null,
+          "price_store": 514,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL DOUBLE"
+              },
+              {
+                "code": "range",
+                "value": "Nuage"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "129-8130-40"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 24453,
+          "sku": "129813000",
+          "vendorcode": "129-8130-00",
+          "name": "Nuage 800mm Double Towel Rail ",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8130-00_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8130-00_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/2/129-8130-00_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/2/129-8130-00_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8130-00_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8130-00_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Brass rails<br>• Designed in Australia<br>• Durable, high quality finish<br>• Unique, organic design</p>"
+          },
+          "short_description": {
+            "html": "<p>Nuage 800mm Double Towel Rail </p>"
+          },
+          "product_dimensions": null,
+          "price_store": 389,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL DOUBLE"
+              },
+              {
+                "code": "range",
+                "value": "Nuage"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "129-8130-00"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 24452,
+          "sku": "129811040",
+          "vendorcode": "129-8110-40",
+          "name": "Nuage 600mm Double Towel Rail ",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8110-40_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8110-40_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/2/129-8110-40_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/2/129-8110-40_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8110-40_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8110-40_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Brass rails<br>• Designed in Australia<br>• Durable, high quality finish<br>• Unique, organic design</p>"
+          },
+          "short_description": {
+            "html": "<p>Nuage 600mm Double Towel Rail </p>"
+          },
+          "product_dimensions": null,
+          "price_store": 444,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL DOUBLE"
+              },
+              {
+                "code": "range",
+                "value": "Nuage"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "129-8110-40"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 24450,
+          "sku": "129811000",
+          "vendorcode": "129-8110-00",
+          "name": "Nuage Double Towel Rail 600mm",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8110-00_phoenix_web.jpeg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8110-00_phoenix_web.jpeg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/2/129-8110-00_phoenix_web.jpeg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/2/129-8110-31_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8110-00_phoenix_web.jpeg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8110-31_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Brass rails<br>• Designed in Australia<br>• Durable, high quality finish<br>• Unique, organic design</p>"
+          },
+          "short_description": {
+            "html": "<p>Nuage 600mm Double Towel Rail </p>"
+          },
+          "product_dimensions": null,
+          "price_store": 333,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL DOUBLE"
+              },
+              {
+                "code": "range",
+                "value": "Nuage"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "129-8110-00"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 24448,
+          "sku": "129803040",
+          "vendorcode": "129-8030-40",
+          "name": "Nuage 800mm Single Towel Rail ",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8030-40_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8030-40_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/2/129-8030-40_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/2/129-8030-40_phoenix_tech.jpeg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8030-40_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8030-40_phoenix_tech.jpeg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Brass rail<br>• Designed in Australia<br>• Durable, high quality finish<br>• Unique, organic design</p>"
+          },
+          "short_description": {
+            "html": "<p>Nuage 800mm Single Towel Rail </p>"
+          },
+          "product_dimensions": null,
+          "price_store": 374,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL SINGLE"
+              },
+              {
+                "code": "range",
+                "value": "Nuage"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "129-8030-40"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 24446,
+          "sku": "129803000",
+          "vendorcode": "129-8030-00",
+          "name": "Nuage 800mm Single Towel Rail ",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8030-00_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8030-00_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/2/129-8030-00_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/2/129-8030-00-phoenix_tech.jpeg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8030-00_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8030-00-phoenix_tech.jpeg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Brass rail<br>• Designed in Australia<br>• Durable, high quality finish<br>• Unique, organic design</p>"
+          },
+          "short_description": {
+            "html": "<p>Nuage 800mm Single Towel Rail </p>"
+          },
+          "product_dimensions": null,
+          "price_store": 292,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL SINGLE"
+              },
+              {
+                "code": "range",
+                "value": "Nuage"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "129-8030-00"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 24445,
+          "sku": "129801040",
+          "vendorcode": "129-8010-40",
+          "name": "Nuage 600mm Single Towel Rail ",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8010-40_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8010-40_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/2/129-8010-40_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/2/129-8010-40_phoenix_tech_1.jpeg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8010-40_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8010-40_phoenix_tech_1.jpeg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Brass rail<br>• Designed in Australia<br>• Durable, high quality finish<br>• Unique, organic design</p>"
+          },
+          "short_description": {
+            "html": "<p>Nuage 600mm Single Towel Rail </p>"
+          },
+          "product_dimensions": null,
+          "price_store": 320,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL SINGLE"
+              },
+              {
+                "code": "range",
+                "value": "Nuage"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "129-8010-40"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 24443,
+          "sku": "129801000",
+          "vendorcode": "129-8010-00",
+          "name": "Nuage 600mm Single Towel Rail ",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8010-00_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8010-00_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/2/129-8010-00_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/2/129-8010-00_phoenix_tech.jpeg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8010-00_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8010-00_phoenix_tech.jpeg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Brass rail<br>• Designed in Australia<br>• Durable, high quality finish<br>• Unique, organic design</p>"
+          },
+          "short_description": {
+            "html": "<p>Nuage 600mm Single Towel Rail </p>"
+          },
+          "product_dimensions": null,
+          "price_store": 236,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL SINGLE"
+              },
+              {
+                "code": "range",
+                "value": "Nuage"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "129-8010-00"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 19684,
+          "sku": "RA81331",
+          "vendorcode": "RA813-31",
+          "name": "Radii 600mm Double Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra81331_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra81331_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/r/a/ra81331_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/r/a/ra81331_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra81331_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra81331_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Round backplates<br>• Rail can be cut down to size</p>"
+          },
+          "short_description": {
+            "html": "<p>Radii 600mm Double Towel Rail</p>"
+          },
+          "product_dimensions": "W600 x D136 x H54mm",
+          "price_store": 215,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W600 x D136 x H54mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL DOUBLE"
+              },
+              {
+                "code": "range",
+                "value": "Radii"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Grey",
+                    "value": "939"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "RA813-31"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Carbon"
+              }
+            ]
+          }
+        },
+        {
+          "id": 19683,
+          "sku": "RA80331",
+          "vendorcode": "RA803-31",
+          "name": "Radii 800mm Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra80331_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra80331_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/r/a/ra80331_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/r/a/ra80331_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra80331_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra80331_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Round backplates<br>• Rail can be cut down to size</p>"
+          },
+          "short_description": {
+            "html": "<p>Radii 800mm Single Towel Rail</p>"
+          },
+          "product_dimensions": "W800 x D79 x H54mm",
+          "price_store": 182,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W800 x D79 x H54mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL SINGLE"
+              },
+              {
+                "code": "range",
+                "value": "Radii"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Grey",
+                    "value": "939"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "RA803-31"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Carbon"
+              }
+            ]
+          }
+        },
+        {
+          "id": 19669,
+          "sku": "650876131",
+          "vendorcode": "650-8761-31",
+          "name": "800mm Heated Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876131_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876131_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/6/5/650876131_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/6/5/650876131_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876131_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876131_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Transformer included<br>• 45 degrees +/- 5 degrees at room temp of 22 degrees<br>• Integrated on &amp; off switch<br>• Cable exits through bottom mount<br>• Can be installed vertically or horizontally</p>"
+          },
+          "short_description": {
+            "html": "<p>800mm Heated Single Towel Rail</p>"
+          },
+          "product_dimensions": "W870 x D82 x H32mm",
+          "price_store": 535,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W870 x D82 x H32mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Phoenix"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Grey",
+                    "value": "939"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "650-8761-31"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Carbon"
+              }
+            ]
+          }
+        },
+        {
+          "id": 19668,
+          "sku": "650876112",
+          "vendorcode": "650-8761-12",
+          "name": "800mm Heated Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876112_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876112_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/6/5/650876112_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/6/5/650876112_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876112_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876112_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Transformer included<br>• 45 degrees +/- 5 degrees at room temp of 22 degrees<br>• Integrated on &amp; off switch<br>• Cable exits through bottom mount<br>• Can be installed vertically or horizontally</p>"
+          },
+          "short_description": {
+            "html": "<p>800mm Heated Single Towel Rail</p>"
+          },
+          "product_dimensions": "W870 x D82 x H32mm",
+          "price_store": 572,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W870 x D82 x H32mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Phoenix"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "650-8761-12"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Gold"
+              }
+            ]
+          }
+        },
+        {
+          "id": 19666,
+          "sku": "650876100",
+          "vendorcode": "650-8761-00",
+          "name": "800mm Heated Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876100_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876100_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/6/5/650876100_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/6/5/650876100_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876100_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876100_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Transformer included<br>• 45 degrees +/- 5 degrees at room temp of 22 degrees<br>• Integrated on &amp; off switch<br>• Cable exits through bottom mount<br>• Can be installed vertically or horizontally</p>"
+          },
+          "short_description": {
+            "html": "<p>800mm Heated Single Towel Rail</p>"
+          },
+          "product_dimensions": "W870 x D82 x H32mm",
+          "price_store": 423,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W870 x D82 x H32mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Phoenix"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "650-8761-00"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 19428,
+          "sku": "GS81131",
+          "vendorcode": "GS811-31",
+          "name": "Gloss 800mm Double Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs81131_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs81131_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/g/s/gs81131_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/g/s/gs81131_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs81131_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs81131_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Sleek design to complement any modern bathroom<br>• Matching tapware and accessories to complete the look</p>"
+          },
+          "short_description": {
+            "html": "<p>Gloss 800mm Double Towel Rail</p>"
+          },
+          "product_dimensions": "W846 x D120 x H26mm",
+          "price_store": 377,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W846 x D120 x H26mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL DOUBLE"
+              },
+              {
+                "code": "range",
+                "value": "Gloss"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Grey",
+                    "value": "939"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "GS811-31"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Carbon"
+              }
+            ]
+          }
+        },
+        {
+          "id": 19427,
+          "sku": "GS80431",
+          "vendorcode": "GS804-31",
+          "name": "Gloss 600mm Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs80431_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs80431_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/g/s/gs80431_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/g/s/gs80431_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs80431_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs80431_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Sleek design to complement any modern bathroom<br>• Matching tapware and accessories to complete the look</p>"
+          },
+          "short_description": {
+            "html": "<p>Gloss 600mm Single Towel Rail</p>"
+          },
+          "product_dimensions": "W582 x D66 x H26mm",
+          "price_store": 231,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W582 x D66 x H26mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL SINGLE"
+              },
+              {
+                "code": "range",
+                "value": "Gloss"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Grey",
+                    "value": "939"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "GS804-31"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Carbon"
+              }
+            ]
+          }
+        },
+        {
+          "id": 19426,
+          "sku": "GS80231",
+          "vendorcode": "GS802-31",
+          "name": "Gloss 800mm Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs80231_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs80231_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/g/s/gs80231_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/g/s/gs80231_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs80231_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs80231_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Sleek design to complement any modern bathroom<br>• Matching tapware and accessories to complete the look</p>"
+          },
+          "short_description": {
+            "html": "<p>Gloss 800mm Single Towel Rail</p>"
+          },
+          "product_dimensions": "W782 x D66 x H26mm",
+          "price_store": 260,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W782 x D66 x H26mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL SINGLE"
+              },
+              {
+                "code": "range",
+                "value": "Gloss"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Grey",
+                    "value": "939"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "GS802-31"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Carbon"
+              }
+            ]
+          }
+        },
+        {
+          "id": 18561,
+          "sku": "GS89331",
+          "vendorcode": "GS893-31",
+          "name": "Gloss Hand Towel Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs89331_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs89331_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/g/s/gs89331_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/g/s/gs89331_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs89331_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs89331_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Modern, compact design<br>• Designed in Australia<br>• Durable, high quality finish</p>"
+          },
+          "short_description": {
+            "html": "<p>Gloss Hand Towel Holder</p>"
+          },
+          "product_dimensions": "W354 x D66 x H26mm",
+          "price_store": 174,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W354 x D66 x H26mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL SINGLE"
+              },
+              {
+                "code": "range",
+                "value": "Gloss"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Grey",
+                    "value": "939"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "GS893-31"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Carbon"
+              }
+            ]
+          }
+        },
+        {
+          "id": 18545,
+          "sku": "111850031",
+          "vendorcode": "111-8500-31",
+          "name": "Vivid Slimline Hand Towel Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/111850031_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/111850031_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/111850031_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/111850031_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/111850031_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/111850031_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Easy fix design with level adjustment mechanism and concealed fixing<br>• Rail can be cut down to size<br>• Dual fixing for secure mount<br>• Designed in Australia</p>"
+          },
+          "short_description": {
+            "html": "<p>Vivid Slimline Hand Towel Holder</p>"
+          },
+          "product_dimensions": "W350 x D68 x H30mm",
+          "price_store": 111,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W350 x D68 x H30mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL SINGLE"
+              },
+              {
+                "code": "range",
+                "value": "Vivid"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Grey",
+                    "value": "939"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "111-8500-31"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Carbon"
+              }
+            ]
+          }
+        },
+        {
+          "id": 18542,
+          "sku": "111811031",
+          "vendorcode": "111-8110-31",
+          "name": "Vivid Slimline 600mm Double Towel Rail ",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/111811031_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/111811031_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/111811031_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/111811031_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/111811031_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/111811031_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Rails can be cut down to size<br>• Level adjustment mechanism <br>• Concealed fixing<br>• Brushed carbon finish</p>"
+          },
+          "short_description": {
+            "html": "<p>Vivid Slimline 600mm Double Towel Rail</p>"
+          },
+          "product_dimensions": "W600 x D124 x H30mm",
+          "price_store": 216,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W600 x D124 x H30mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL DOUBLE"
+              },
+              {
+                "code": "range",
+                "value": "Vivid"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Grey",
+                    "value": "939"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "111-8110-31"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Carbon"
+              }
+            ]
+          }
+        },
+        {
+          "id": 18541,
+          "sku": "111803031",
+          "vendorcode": "111-8030-31",
+          "name": "Vivid Slimline 800mm Single Towel Rail ",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/111803031_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/111803031_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/111803031_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/111803000_phoenix_tech_1.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/111803031_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/111803000_phoenix_tech_1.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Available in single or double rail design<br>• Available with 600mm or 800mm rail lengths<br>• Rail can be cut down to size<br>• Level adjustment mechanism and concealed fixing<br>• Designed in Australia</p>"
+          },
+          "short_description": {
+            "html": "<p>800mm Single Towel Rail</p>"
+          },
+          "product_dimensions": "W800 x D68 x H30mm",
+          "price_store": 151,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W800 x D68 x H30mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL SINGLE"
+              },
+              {
+                "code": "range",
+                "value": "Vivid"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Grey",
+                    "value": "939"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "111-8030-31"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Carbon"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

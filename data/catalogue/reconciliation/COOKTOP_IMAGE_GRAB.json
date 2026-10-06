@@ -1,0 +1,179 @@
+[
+  {
+    "model": "ARHC60X",
+    "brand": "Ariston",
+    "dir": "ariston",
+    "hosts": [
+      "ariston.com.au"
+    ],
+    "status": "unresolved",
+    "captures": 0
+  },
+  {
+    "model": "ARHC90X",
+    "brand": "Ariston",
+    "dir": "ariston",
+    "hosts": [
+      "ariston.com.au"
+    ],
+    "status": "unresolved",
+    "captures": 0
+  },
+  {
+    "model": "ARHS90X",
+    "brand": "Ariston",
+    "dir": "ariston",
+    "hosts": [
+      "ariston.com.au"
+    ],
+    "status": "unresolved",
+    "captures": 0
+  },
+  {
+    "model": "ARU60X",
+    "brand": "Ariston",
+    "dir": "ariston",
+    "hosts": [
+      "ariston.com.au"
+    ],
+    "status": "unresolved",
+    "captures": 0
+  },
+  {
+    "model": "ARU90X",
+    "brand": "Ariston",
+    "dir": "ariston",
+    "hosts": [
+      "ariston.com.au"
+    ],
+    "status": "unresolved",
+    "captures": 0
+  },
+  {
+    "model": "LFO3C23WF",
+    "brand": "Ariston",
+    "dir": "ariston",
+    "hosts": [
+      "ariston.com.au"
+    ],
+    "status": "unresolved",
+    "captures": 0
+  },
+  {
+    "model": "PC640NTX",
+    "brand": "Ariston",
+    "dir": "ariston",
+    "hosts": [
+      "ariston.com.au"
+    ],
+    "status": "resolved",
+    "localPath": "/images/catalogues/appliances/products/ariston/pc640ntx.png",
+    "size": "400x213",
+    "src": "https://ariston.com.au/media/PC640-N-TX-300x159.png",
+    "via": "archived 20200324112534"
+  },
+  {
+    "model": "PKQ 755 D GH AUS",
+    "brand": "Ariston",
+    "dir": "ariston",
+    "hosts": [
+      "ariston.com.au"
+    ],
+    "alt": [
+      "PKQ755",
+      "PKQ 755"
+    ],
+    "status": "resolved",
+    "localPath": "/images/catalogues/appliances/products/ariston/pkq755dghaus.jpg",
+    "size": "850x850",
+    "src": "https://ariston.com.au/media/PKQ755-Lifestyle-LR.jpg",
+    "via": "archived 20200322191557"
+  },
+  {
+    "model": "NIO 844 DO B AUS",
+    "brand": "Ariston",
+    "dir": "ariston",
+    "hosts": [
+      "ariston.com.au"
+    ],
+    "alt": [
+      "NIO844",
+      "nio844dob"
+    ],
+    "status": "resolved",
+    "localPath": "/images/catalogues/appliances/products/ariston/nio844dobaus.jpg",
+    "size": "800x800",
+    "src": "https://ariston.com.au/media/NIO-844-DOB-LR.jpg",
+    "via": "archived 20200317154638"
+  },
+  {
+    "model": "BCG604WX",
+    "brand": "Blanco",
+    "dir": "blanco",
+    "hosts": [
+      "blanco.com.au",
+      "harveynormancommercial.com.au",
+      "appliancesonline.com.au"
+    ],
+    "status": "unresolved",
+    "captures": 0
+  },
+  {
+    "model": "BCG905WX",
+    "brand": "Blanco",
+    "dir": "blanco",
+    "hosts": [
+      "blanco.com.au",
+      "harveynormancommercial.com.au",
+      "appliancesonline.com.au"
+    ],
+    "status": "unresolved",
+    "captures": 0
+  },
+  {
+    "model": "ECCK900",
+    "brand": "Euromaid",
+    "dir": "euromaid",
+    "hosts": [
+      "euromaid.com.au",
+      "harveynormancommercial.com.au",
+      "appliancesonline.com.au"
+    ],
+    "status": "unresolved",
+    "captures": 0
+  },
+  {
+    "model": "GC90S",
+    "brand": "Euromaid",
+    "dir": "euromaid",
+    "hosts": [
+      "euromaid.com.au",
+      "harveynormancommercial.com.au"
+    ],
+    "status": "unresolved",
+    "captures": 0
+  },
+  {
+    "model": "OI90Z",
+    "brand": "Omega",
+    "dir": "omega",
+    "hosts": [
+      "omegaappliances.com.au",
+      "harveynormancommercial.com.au",
+      "appliancesonline.com.au"
+    ],
+    "status": "unresolved",
+    "captures": 0
+  },
+  {
+    "model": "PCR6A5B90A",
+    "brand": "Bosch",
+    "dir": "bosch",
+    "hosts": [
+      "bosch-home.com.au",
+      "harveynormancommercial.com.au"
+    ],
+    "status": "unresolved",
+    "captures": 0
+  }
+]

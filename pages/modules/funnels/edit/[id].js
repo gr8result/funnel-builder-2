@@ -15,7 +15,7 @@ import AuthGate from "../../../../components/AuthGate";
 import AIWriterAssist from "../../../../components/ui/AIWriterAssist";
 import { openSharedMediaPicker } from "../../../../lib/openSharedMediaPicker";
 import { supabase } from "../../../../lib/supabaseClient";
-import { SECTION_BLOCKS, assemblePage } from "../../../../lib/funnelSections";
+import { SECTION_BLOCKS, assemblePage } from "../../../../modules/funnels/index.js";
 
 const STANDARD_TEXT_COLORS = [
   "#111827", "#1f2937", "#374151", "#6b7280", "#9ca3af", "#f3f4f6",
@@ -2156,7 +2156,7 @@ function Editor() {
           // need the last refs to remain valid when clicked.
         });
 
-        // Blocks — load all professional sections from funnelSections.js
+        // Blocks — load all professional sections from the Funnels catalogue
         const bm = e.BlockManager;
         for (const s of SECTION_BLOCKS) {
           try {

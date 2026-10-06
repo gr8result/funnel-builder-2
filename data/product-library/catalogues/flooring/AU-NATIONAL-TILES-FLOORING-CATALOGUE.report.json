@@ -1,0 +1,42 @@
+{
+  "supplier": "National Tiles",
+  "generatedAt": "2026-10-02T22:33:18.839Z",
+  "listedOnStorefront": 116,
+  "products": 15,
+  "variants": 116,
+  "byType": {
+    "hybrid": {
+      "products": 3,
+      "colours": 35
+    },
+    "vinyl": {
+      "products": 3,
+      "colours": 24
+    },
+    "laminate": {
+      "products": 2,
+      "colours": 28
+    },
+    "engineered-timber": {
+      "products": 7,
+      "colours": 29
+    },
+    "timber": {
+      "products": 0,
+      "colours": 0
+    },
+    "carpet": {
+      "products": 0,
+      "colours": 0
+    }
+  },
+  "variantsWithPrice": 116,
+  "variantsWithoutPrice": [],
+  "variantsOnPromotion": [],
+  "variantsWithPackCoverage": 116,
+  "variantsWithImage": 116,
+  "discontinuedVariants": [],
+  "duplicateSkus": [],
+  "pageFailures": [],
+  "imageFailures": []
+}

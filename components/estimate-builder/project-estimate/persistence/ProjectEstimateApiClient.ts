@@ -9,6 +9,7 @@
 // like hero image/logo) for a freshly-created page.
 
 import { supabase } from "../../../../utils/supabase-client";
+import { documentLock } from "../../../../lib/nonStealingLock.js";
 
 export type ProjectEstimateApiPage = {
   id?: string;
@@ -308,6 +309,9 @@ export function serializeProjectEstimateBaseTemplate(input: {
 }
 
 async function request(path: string, { method = "GET", workspaceId, body }: { method?: string; workspaceId: string; body?: any }) {
+  // Covers manual/template actions as well as the instance-sync autosave hook.
+  // Workspace-wide serialization is deliberately broader than a document lock.
+  return documentLock(`api/${workspaceId}`, async () => {
   const headers = await authHeaders(workspaceId);
   const response = await fetch(path, {
     method,
@@ -322,6 +326,7 @@ async function request(path: string, { method = "GET", workspaceId, body }: { me
     throw new ProjectEstimateApiError(payload?.error || defaultMessage, response.status, !!payload?.conflict);
   }
   return payload;
+  });
 }
 
 export { ProjectEstimateApiError };

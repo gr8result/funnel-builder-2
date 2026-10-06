@@ -1,2 +1,2 @@
-export { default } from "../../Client Portal";
+export { default } from "../../client-portal";
 

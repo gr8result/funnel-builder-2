@@ -1,10 +1,20 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { externalizeTakeoffRecoverySnapshot } from './planBlobStorage.js';
+import { useAiTakeoffBridge } from './ai-integration/useAiTakeoffBridge.js';
+import { AiTakeoffDevelopmentAction } from './ai-integration/AiTakeoffDevelopmentAction.jsx';
+import { AiTakeoffAction } from './ai-integration/AiTakeoffAction.jsx';
+import { useAiTakeoffAnalysis } from './ai-integration/useAiTakeoffAnalysis.js';
+import { readPdfAnalysisEvidence } from './ai-integration/analysisPages.js';
+import { parseWindowSizeCode } from './ai-integration/analysisContract.js';
+import { DOOR_SUBTYPE_LABELS } from '../../../lib/construction-estimation/takeoffMaterialQuantities.js';
+import { externalizeTakeoffRecoverySnapshot, materializeTakeoffPlanPages, materializeTakeoffRecoverySnapshot } from './planBlobStorage.js';
+import { getPlanDisplayIdentity, getTakeoffLifecycle, loadTakeoffPlanImage, createTakeoffObjectUrl, revokeTakeoffObjectUrl, logTakeoffPlanLoad, describePlanPageReferences } from './takeoffLifecycle.js';
 import { Stage, Layer, Image as KonvaImage, Line, Circle, Text, Rect, Group } from 'react-konva';
-import { RotateCw, Ruler, ChevronLeft, ChevronRight, DoorOpen, Square, Layers, Trash2, Home, Compass, Download, Upload, MousePointer2 } from 'lucide-react';
+import { RotateCw, Ruler, ChevronLeft, ChevronRight, DoorOpen, Square, Layers, Trash2, Home, Compass, Download, Upload, MousePointer2, RectangleVertical } from 'lucide-react';
 import { calculatePolygonAreaM2, findFloorplanCornerSnapPoint, resolveFloorplanFreePoint } from './floorplanGeometry';
 import { AI_PLAN_TAKEOFF_EXTENSION, filenameWithoutKnownGr8Extension } from '../../../lib/gr8FileTypes.js';
-import { createJobData, createPortableTakeoffExport, createTakeoffContentChecksum, getEmbeddedPlanPages, getSavedFloorCoveringAreas, getTakeoffCounts, rememberRecentTakeoffJob, resolvePortableTakeoffImport } from './jobPersistence';
+const AI_PLAN_TAKEOFF_FILE_DESCRIPTION = 'Gr8 Result AI Plan Takeoff';
+import { EXTERIOR_WALL_CLASSES, normaliseLevel, resolveTakeoffLevel, resolveExteriorClass, runLengthM, createExteriorClassificationTotals, resolveConstructionSystem, EXTERIOR_CONSTRUCTION_SYSTEMS, INTERIOR_CONSTRUCTION_SYSTEMS, CONSTRUCTION_SYSTEM_LABELS, CLADDING_PRODUCTS, CLADDING_PRODUCT_CUSTOM, ROOM_LOCATION_OPTIONS, ROOM_LOCATION_CUSTOM_KEY, resolveOpeningRoom, POST_CORE_TYPES, POST_CORE_TYPE_LABELS, TIMBER_POST_SIZE_OPTIONS, STEEL_SECTION_TYPES, POST_SURROUND_TYPES, POST_SURROUND_TYPE_LABELS, POST_BRICK_FINISH_OPTIONS, resolvePostColumnCore } from './takeoffRunData.js';
+import { createJobData, createPortableTakeoffExport, createTakeoffContentChecksum, getEmbeddedPlanPages, getSavedFloorCoveringAreas, getTakeoffCounts, hasRecoverablePlanPages, rememberRecentTakeoffJob, resolvePortableTakeoffImport } from './jobPersistence';
 import {
   applyQuotePreviewRows,
   createJobSetupPayload,
@@ -20,16 +30,46 @@ import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 const PDFJS_WORKER_SRC = '/pdfjs/pdf.worker.min.mjs';
 const PDFJS_INIT_ERROR_MESSAGE = 'The local PDF engine could not start. Your takeoff has not been changed.';
 const SAVE_VERIFICATION_FAILED_MESSAGE = 'SAVE FAILED – DO NOT CLOSE THIS TAKEOFF';
+const AUTOMATIC_TAKEOFF_SAVE_ENABLED = false;
 pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_SRC;
 
 const MEASURE_LABEL_FONT_SIZE = 24;
 const MEASURE_LABEL_OFFSET = 30;
 const EAVE_WIDTH_OPTIONS = ['450', '600', '900', 'Special'];
 const EAVE_LEVEL_OPTIONS = ['Ground Floor', 'Second Level', 'Third Level'];
+// The Job Setup template carries three level slots. That is its capacity, not a claim about any
+// particular building - a two-storey house uses the first two and leaves the third empty.
+const SHEET_LEVEL_OPTIONS = ['Ground Floor', 'Second Level', 'Third Level'];
 const OPENING_CLASS_OPTIONS = ['Window', 'Internal Door', 'External Door', 'Garage Door', 'Large Glazed/Stacker/Sliding Door', 'Other Opening'];
-const EXTERIOR_WALL_CLASS_OPTIONS = ['Brick Veneer', 'Lightweight Cladding', 'Rendered Masonry', 'Other'];
+// Door Type / subtype refines an Opening Class (e.g. Internal Door -> Hinged vs Cavity Sliding vs
+// Barn) rather than replacing it. DOOR_SUBTYPE_LABELS (takeoffMaterialQuantities.js) is the single
+// source of truth for these values - isCavitySlider/isRobeSlider there match 'Cavity'/'Robe' via a
+// substring check, and the Takeoff Schedule's door grouping reads the same labels.
+const DOOR_SUBTYPE_OPTIONS = Object.entries(DOOR_SUBTYPE_LABELS);
+// Documented on the construction drawing/window schedule, never guessed (e.g. a wet-area window is
+// never auto-set to Obscured without drawing/schedule evidence). Unspecified is the honest default.
+const GLASS_TYPE_OPTIONS = ['Clear', 'Obscured', 'Translucent', 'Tinted', 'Low-E', 'Laminated', 'Toughened', 'Other', 'Unspecified'];
+// A wall/opening saved before this canonical list existed may carry an older synonym ('Standard
+// Clear', 'Low E'); map it forward for display without silently rewriting the stored value until
+// the builder actually edits it. Any other already-documented but non-canonical text is real
+// evidence, not nothing, so it maps to Other rather than the honest-default Unspecified.
+function normaliseGlassType(value) {
+  if (GLASS_TYPE_OPTIONS.includes(value)) return value;
+  if (value === 'Standard Clear') return 'Clear';
+  if (value === 'Low E') return 'Low-E';
+  return value ? 'Other' : 'Unspecified';
+}
+const EXTERIOR_WALL_CLASS_OPTIONS = EXTERIOR_WALL_CLASSES;
+// Snap tolerance, in SCREEN pixels, for pulling a click onto extracted plan geometry. It is divided
+// by stageScale at the point of use to convert it into plan units. This must stay tight: a loose
+// tolerance silently drags a click that landed on the corner you aimed at onto some unrelated line
+// up to a whole room away, which reads as "the tool refuses to draw where I clicked".
+const SNAP_RADIUS_SCREEN_PX = 14;
+// One swatch per construction class. Every value in EXTERIOR_WALL_CLASSES needs an entry: the wall
+// fill reads this map directly, so a missing class paints an undefined fill onto the plan.
 const EXTERIOR_WALL_CLASS_COLOURS = {
-  'Brick Veneer': 'rgba(178, 34, 34, 0.45)',
+  'Face Brick Veneer': 'rgba(178, 34, 34, 0.45)',
+  'Rendered Brick Veneer': 'rgba(230, 126, 34, 0.45)',
   'Lightweight Cladding': 'rgba(30, 136, 229, 0.45)',
   'Rendered Masonry': 'rgba(124, 77, 255, 0.45)',
   Other: 'rgba(117, 117, 117, 0.45)'
@@ -84,6 +124,27 @@ async function storeEmergencyTakeoffSnapshot(snapshot) {
   });
 }
 
+async function loadLatestEmergencyTakeoffSnapshot() {
+  if (typeof window === 'undefined' || !window.indexedDB) return null;
+  return new Promise((resolve) => {
+    const request = window.indexedDB.open('gr8-ai-plan-takeoff-recovery-db', 1);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains('snapshots')) db.createObjectStore('snapshots', { keyPath: 'id' });
+    };
+    request.onerror = () => resolve([]);
+    request.onsuccess = () => {
+      const db = request.result;
+      const transaction = db.transaction('snapshots', 'readonly');
+      const read = transaction.objectStore('snapshots').openCursor(null, 'prev');
+      read.onsuccess = () => resolve(read.result?.value || null);
+      read.onerror = () => resolve([]);
+      transaction.oncomplete = () => db.close();
+      transaction.onerror = () => db.close();
+    };
+  });
+}
+
 function normaliseRecoveredWallRun(run = {}, index = 0) {
   const wallType = String(run.wallType || run.type || run.category || '').toLowerCase();
   const category = run.category || (wallType.includes('external') || wallType.includes('exterior') ? 'exterior' : 'interior');
@@ -95,7 +156,7 @@ function normaliseRecoveredWallRun(run = {}, index = 0) {
     category,
     thicknessMm: Number(run.thicknessMm || run.wallThicknessMm || getDefaultWallThickness(wallType.includes('external') ? 'exterior' : 'interior')),
     alignment: run.alignment || 'outer',
-    exteriorType: category === 'exterior' ? (run.exteriorType || 'Other') : '',
+    exteriorType: category === 'exterior' ? resolveExteriorClass(run) : '',
     linedFaces: Number(run.linedFaces || 2) === 1 ? 1 : 2,
     openingDeductionsEnabled: run.openingDeductionsEnabled !== false,
     wallHeightM: Number(run.wallHeightM || run.heightM || 0) || null
@@ -141,6 +202,21 @@ function normaliseRecoveredFloorplan(floorplan = {}, index = 0) {
   };
 }
 
+function normaliseRecoveredPillar(pillar = {}, index = 0) {
+  return {
+    ...pillar,
+    id: pillar.id || `recovered-pillar-${index + 1}`,
+    page: Number(pillar.page || pillar.pageId || pillar.sourcePage || 1),
+    nodes: Array.isArray(pillar.nodes) ? pillar.nodes : [],
+    coreType: pillar.coreType || 'unclassified',
+    surroundType: pillar.surroundType || 'none',
+    quantity: Number(pillar.quantity) > 0 ? Number(pillar.quantity) : 1,
+    roomKey: pillar.roomKey || '',
+    roomLabel: pillar.roomLabel || '',
+    location: pillar.location || '',
+  };
+}
+
 function normaliseRecoveredPlanPage(page = {}) {
   const naturalWidth = Number(page.naturalWidth || page.width || page.logicalWidth || 0);
   const naturalHeight = Number(page.naturalHeight || page.height || page.logicalHeight || 0);
@@ -168,6 +244,10 @@ function buildTakeoffContentSnapshot({
   completedFloorplans = [],
   completedMeasurements = [],
   completedEaves = [],
+  completedPillars = [],
+  sheetLevels = {},
+  aiAppliedRuns = [],
+  aiAnalysis = null,
 }) {
   return {
     rotation,
@@ -183,6 +263,9 @@ function buildTakeoffContentSnapshot({
     completedFloorplans: Array.isArray(completedFloorplans) ? completedFloorplans : [],
     completedMeasurements: Array.isArray(completedMeasurements) ? completedMeasurements : [],
     completedEaves: Array.isArray(completedEaves) ? completedEaves : [],
+    completedPillars: Array.isArray(completedPillars) ? completedPillars : [],
+    sheetLevels: sheetLevels && typeof sheetLevels === 'object' ? sheetLevels : {},
+    ...((aiAppliedRuns.length || aiAnalysis) ? { scheduleState: { ...(aiAppliedRuns.length ? { aiAppliedRuns } : {}), ...(aiAnalysis ? { aiAnalysis } : {}) } } : {}),
   };
 }
 
@@ -201,14 +284,6 @@ function classifyOpeningValue(opening = {}) {
   if (subtype.includes('internal')) return 'Internal Door';
   if (type === 'door') return 'External Door';
   return 'Other Opening';
-}
-
-function floorFromPage(page = 1) {
-  const pageNumber = Number(page) || 1;
-  if (pageNumber === 1) return { key: 'lower', label: 'Ground Floor' };
-  if (pageNumber === 2) return { key: 'upper', label: 'Second Level' };
-  if (pageNumber === 3) return { key: 'third', label: 'Third Level' };
-  return { key: `sheet${pageNumber}`, label: `Sheet ${pageNumber}` };
 }
 
 function snapToStandardThickness(mm) {
@@ -325,12 +400,18 @@ export default function AIPlanTakeoffStandalone({
   initialJob = null,
   initialQuoteRows = null,
   onSaveToPlatform = null,
+  onMasterTakeoffChange = null,
+  onLinkLegacyTakeoff = null,
+  onOpenMasterJob = null,
+  onNewMasterJob = null,
   onJobSetupUpdate = null,
   onQuoteSheetUpdate = null,
   onBackToDashboard = null,
   openTakeoffJobRequest = null,
+  onTakeoffWorkflowChange = null,
   onRecentTakeoffJobsChange = null,
-  onAttachToProject = null
+  onAttachToProject = null,
+  enableAiTakeoffDevelopment = false
 }) {
   const initialProjectInfo = {
     projectName: platformContext.projectName || '',
@@ -347,6 +428,9 @@ export default function AIPlanTakeoffStandalone({
   const [planPages, setPlanPages] = useState([]);
   const [planFilename, setPlanFilename] = useState(platformContext.fileName || '');
   const [planMissingFromSavedJob, setPlanMissingFromSavedJob] = useState(false);
+  // A plan that cannot be restored must say so. A blank canvas is indistinguishable from a job
+  // that genuinely has no plan, and it hides the asset id needed to diagnose the failure.
+  const [planLoadError, setPlanLoadError] = useState(null);
   const [savedRevision, setSavedRevision] = useState(Number(initialJob?.revision || 0));
   const [lastSuccessfulSaveAt, setLastSuccessfulSaveAt] = useState(initialJob?.updatedAt || '');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -357,6 +441,8 @@ export default function AIPlanTakeoffStandalone({
   const [attachError, setAttachError] = useState('');
   const suppressUnsavedChangeRef = useRef(true);
   const [autosaveRequest, setAutosaveRequest] = useState(null);
+  const masterTakeoffChangeRef = useRef(onMasterTakeoffChange);
+  masterTakeoffChangeRef.current = onMasterTakeoffChange;
   const [projectInfo, setProjectInfo] = useState(initialProjectInfo);
   const [showSchedule, setShowSchedule] = useState(false);
   const [scheduleMappings, setScheduleMappings] = useState({});
@@ -384,14 +470,30 @@ export default function AIPlanTakeoffStandalone({
   const [totalPages, setTotalPages] = useState(1);
 
   const [vectorSegments, setVectorSegments] = useState([]);
+  // Which building level each plan sheet represents, keyed by sheet number. Job Setup's wall and
+  // area fields are all per level, so a measurement whose sheet has no level assigned has nowhere
+  // to import to. A sheet's position in the PDF cannot stand in for this - sheet 3 of a two-storey
+  // set is not a third level - so it is always the estimator's explicit call.
+  const [sheetLevels, setSheetLevels] = useState({});
   const [calibrationMode, setCalibrationMode] = useState(false);
   const [calibPoints, setCalibPoints] = useState([]);
   const [pixelsPerMm, setPixelsPerMm] = useState(null);
 
-  const [activeTool, setActiveTool] = useState('wall'); // 'wall', 'opening', 'floorplan', 'floorcoverings', 'measure', 'eaves', 'select'
+  const [activeTool, setActiveTool] = useState('wall'); // 'wall', 'opening', 'floorplan', 'floorcoverings', 'roofarea', 'measure', 'eaves', 'select'
 
   const [wallCategory, setWallCategory] = useState('exterior');
+  // The construction an exterior wall is drawn as, chosen before the first point rather than
+  // corrected afterwards. It is stamped onto each run at finalisation, so changing it here never
+  // touches a wall that has already been drawn, and it persists across category switches so
+  // returning to Exterior Wall keeps the last construction the estimator picked.
+  const [exteriorWallType, setExteriorWallType] = useState('Other');
   const [detectedWallThicknessMm, setDetectedWallThicknessMm] = useState(230);
+  // Auto-detection measures the gap between parallel plan lines and writes the result straight into
+  // detectedWallThicknessMm, which is the same value the Wall Thickness box shows. Left unguarded it
+  // silently overwrites a thickness the estimator typed - you set 230 for brick veneer, click a
+  // corner, and the run is finalised at whatever the plan lines happened to measure. Typing a
+  // thickness turns detection off until it is switched back on.
+  const [autoDetectWallThickness_Enabled, setAutoDetectWallThicknessEnabled] = useState(true);
   const [alignment, setAlignment] = useState('outer');
   const [activePolyline, setActivePolyline] = useState([]);
   const [completedWallRuns, setCompletedWallRuns] = useState([]);
@@ -405,7 +507,7 @@ export default function AIPlanTakeoffStandalone({
   const [windowSubtype, setWindowSubtype] = useState('standard'); 
   const [doorSubtype, setDoorSubtype] = useState('Entry'); 
   const [openingClass, setOpeningClass] = useState('Window');
-  const [glassType, setGlassType] = useState('Standard Clear');
+  const [glassType, setGlassType] = useState('Clear');
   const [placedOpenings, setPlacedOpenings] = useState([]);
   const [selectedOpeningId, setSelectedOpeningId] = useState(null);
   const [selectedMeasurementId, setSelectedMeasurementId] = useState(null);
@@ -418,6 +520,7 @@ export default function AIPlanTakeoffStandalone({
   const [completedAreas, setCompletedAreas] = useState([]);
   const [selectedAreaId, setSelectedAreaId] = useState(null);
   const [selectedAreaForExclusion, setSelectedAreaForExclusion] = useState(null);
+  const [roofAreaLevel, setRoofAreaLevel] = useState('Ground Floor');
 
   // Floorplan state & Editing state
   const [floorplanType, setFloorplanType] = useState('Footprint'); 
@@ -443,6 +546,26 @@ export default function AIPlanTakeoffStandalone({
   const [eaveLevel, setEaveLevel] = useState('Ground Floor');
   const [eaveAlignment, setEaveAlignment] = useState('outer');
 
+  // Pillars, Posts & Columns - a discrete vertical structural/architectural object, never a wall.
+  // Footprint is drawn the same click-click box way as the floorcoverings box mode (boxStartPoint
+  // is shared - the two tools are never active at once, so reusing it adds no ambiguity).
+  const [completedPillars, setCompletedPillars] = useState([]);
+  const [selectedPillarId, setSelectedPillarId] = useState(null);
+
+  // Exactly one of these seven ids should ever be set at a time: the Delete-key
+  // handler picks the first truthy one in a fixed priority order, so a stale
+  // higher-priority id left over from an earlier selection can otherwise steal
+  // a later delete/edit intended for whatever was actually just clicked.
+  const selectOnly = (type, id) => {
+    setSelectedWallId(type === 'wall' ? id : null);
+    setSelectedAreaId(type === 'area' ? id : null);
+    setSelectedOpeningId(type === 'opening' ? id : null);
+    setSelectedFloorplanId(type === 'floorplan' ? id : null);
+    setSelectedMeasurementId(type === 'measure' ? id : null);
+    setSelectedEaveId(type === 'eaves' ? id : null);
+    setSelectedPillarId(type === 'pillar' ? id : null);
+  };
+
   const [mouseHoverPos, setMouseHoverPos] = useState(null);
 
   const stageRef = useRef(null);
@@ -450,38 +573,54 @@ export default function AIPlanTakeoffStandalone({
   const canvasHostRef = useRef(null);
   const rawCanvasRef = useRef(document.createElement('canvas'));
 
-  // Cleanup canvas and memory on component unmount or job change
+  // Effect cleanup also runs during Fast Refresh/Strict Mode replay. Release
+  // resources only if the same mounted instance does not immediately reattach.
   useEffect(() => {
+    const attachment = ++takeoffLifecycle.attachment;
+    logTakeoffRefresh('component-effect-setup', { attachment });
     return () => {
-      const canvas = rawCanvasRef.current;
-      if (canvas) {
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-        }
-        canvas.width = 0;
-        canvas.height = 0;
-      }
-      // Release object URLs from dataUrl strings to prevent memory leaks
-      if (Array.isArray(planPages)) {
-        planPages.forEach((page) => {
-          if (page?.dataUrl && page.dataUrl.startsWith('blob:')) {
-            try {
-              URL.revokeObjectURL(page.dataUrl);
-            } catch (e) {
-              // Ignore errors from already-revoked URLs
-            }
+      logTakeoffRefresh('component-effect-cleanup', { attachment });
+      queueMicrotask(() => {
+        if (takeoffLifecycle.attachment !== attachment) return;
+        takeoffLifecycle.imageRequest = null;
+        takeoffLifecycle.hydrationVersion += 1;
+        logTakeoffRefresh('component-detached');
+        const canvas = rawCanvasRef.current;
+        if (canvas) {
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
           }
-        });
-      }
+          canvas.width = 0;
+          canvas.height = 0;
+        }
+        // Release object URLs from dataUrl strings to prevent memory leaks
+        if (Array.isArray(planPages)) {
+          planPages.forEach((page) => {
+            if (page?.dataUrl && page.dataUrl.startsWith('blob:')) {
+              try {
+                revokeTakeoffObjectUrl(page.dataUrl, 'plan-unmount', logTakeoffRefresh);
+              } catch (e) {
+                // Ignore errors from already-revoked URLs
+              }
+            }
+          });
+        }
+      });
     };
   }, []);
   const renderTaskRef = useRef(null);
   const loadedInitialJobRef = useRef(false);
+  const takeoffLifecycle = getTakeoffLifecycle(loadedInitialJobRef, {
+    pages: planPages, pageNumber: currentPage, pdfDoc, image,
+    openRequest: openTakeoffJobRequest, openedTakeoffId: openedTakeoffJob?.takeoffId,
+  });
+  const { displayedPlanRef, handledOpenTakeoffRequestRef, log: logTakeoffRefresh } = takeoffLifecycle;
   const sheetViewStateRef = useRef({});
   const fittedSheetViewKeyRef = useRef('');
   const autosaveInFlightRef = useRef(false);
   const autosaveTimerRef = useRef(null);
+  const autosaveIdleRef = useRef(null);
   const queuedAutosaveChecksumRef = useRef('');
   const lastSavedContentChecksumRef = useRef('');
   const lastSeenContentChecksumRef = useRef('');
@@ -518,6 +657,47 @@ export default function AIPlanTakeoffStandalone({
     };
   }, [isRecoveryPreview]);
 
+  const aiTakeoffBridge = useAiTakeoffBridge({
+    jobId: String((openedTakeoffJob?.detached ? '' : (platformContext.jobId || openedTakeoffJob?.masterJobId || openedTakeoffJob?.associatedProjectId || platformContext.projectId)) || openedTakeoffJob?.takeoffId || ''),
+    takeoffId: String(openedTakeoffJob?.takeoffId || ''),
+    planPages, pixelsPerMm, lifecycle: takeoffLifecycle, readOnly: isRecoveryPreview,
+    collections: { completedWallRuns, placedOpenings, completedFloorplans, completedAreas, completedMeasurements, completedEaves, completedPillars },
+    setters: {
+      completedWallRuns: setCompletedWallRuns, placedOpenings: setPlacedOpenings,
+      completedFloorplans: setCompletedFloorplans, completedAreas: setCompletedAreas,
+      completedMeasurements: setCompletedMeasurements, completedEaves: setCompletedEaves,
+      completedPillars: setCompletedPillars,
+    },
+    markCompleted: markTakeoffItemCompleted,
+  });
+
+  const aiTakeoffAnalysis = useAiTakeoffAnalysis({
+    jobId: String((openedTakeoffJob?.detached ? '' : (platformContext.jobId || openedTakeoffJob?.masterJobId || openedTakeoffJob?.associatedProjectId || platformContext.projectId)) || openedTakeoffJob?.takeoffId || ''),
+    takeoffId: String(openedTakeoffJob?.takeoffId || ''),
+    planPages, pixelsPerMm, lifecycle: takeoffLifecycle, readOnly: isRecoveryPreview,
+    bridge: aiTakeoffBridge, setPixelsPerMm, markCompleted: markTakeoffItemCompleted,
+    completedFloorplans,
+    sheetLevels,
+    // Construction defaults already entered in Job Setup resolve what the plans leave unstated.
+    jobSetupRows: platformContext.jobSetupRows || {},
+    // Reading rooms is a user-requested operation; save it the same way an analysis is saved.
+    onRoomsRead: async () => { if (embedded && onSaveToPlatform && platformContext.jobId) await handleSaveJob(); },
+    objectCount: completedWallRuns.length + placedOpenings.length + completedFloorplans.length + completedAreas.length + completedMeasurements.length + completedEaves.length + completedPillars.length,
+    onDetectedLevels: (pages) => setSheetLevels((previous) => {
+      const next = { ...previous };
+      for (const { page, level } of pages) {
+        if ((!next[page] || next[page] === 'Unassigned') && ['Ground Floor', 'Second Level', 'Third Level'].includes(level)) next[page] = level;
+      }
+      return next;
+    }),
+    onCompleted: async () => {
+      setShowSchedule(true);
+      // Analysis is a user-requested operation. Save through the same verified
+      // master-job action used by Save Takeoff, after the hook commits results.
+      if (embedded && onSaveToPlatform && platformContext.jobId) await handleSaveJob();
+    },
+  });
+
   const takeoffContentChecksum = useMemo(() => checksumForTakeoffContent({
     rotation,
     pixelsPerMm,
@@ -528,7 +708,11 @@ export default function AIPlanTakeoffStandalone({
     completedFloorplans,
     completedMeasurements,
     completedEaves,
-  }), [rotation, pixelsPerMm, planPages, completedWallRuns, placedOpenings, completedAreas, completedFloorplans, completedMeasurements, completedEaves]);
+    completedPillars,
+    sheetLevels,
+    aiAppliedRuns: aiTakeoffBridge.appliedRuns,
+    aiAnalysis: aiTakeoffAnalysis.report,
+  }), [rotation, pixelsPerMm, planPages, completedWallRuns, placedOpenings, completedAreas, completedFloorplans, completedMeasurements, completedEaves, completedPillars, sheetLevels, aiTakeoffBridge.appliedRuns, aiTakeoffAnalysis.report]);
 
   const FLOORCOVERING_CONFIGS = {
     'Tiles': { fill: 'rgba(76, 175, 80, 0.35)', stroke: '#2e7d32', text: '#1b5e20' },
@@ -612,6 +796,8 @@ export default function AIPlanTakeoffStandalone({
       completedFloorplans,
       completedMeasurements,
       completedEaves,
+      completedPillars,
+      sheetLevels,
       projectInfo,
       planFilename,
       sourceFileName: importedTakeoffFileName || planFilename || '',
@@ -630,6 +816,10 @@ export default function AIPlanTakeoffStandalone({
         organisationId: platformContext.organisationId || ''
       },
       scheduleState: {
+        aiAppliedRuns: aiTakeoffBridge.appliedRuns,
+        aiAnalysis: aiTakeoffAnalysis.report,
+        aiInspections: aiTakeoffAnalysis.inspections,
+        sheetCalibrations: aiTakeoffAnalysis.sheetCalibrations,
         scheduleMappings,
         quoteSheetRows,
         quotePreviewRows,
@@ -647,9 +837,14 @@ export default function AIPlanTakeoffStandalone({
       completedFloorplans,
       completedMeasurements,
       completedEaves,
+      completedPillars,
+      sheetLevels,
+      aiAppliedRuns: aiTakeoffBridge.appliedRuns,
+      aiAnalysis: aiTakeoffAnalysis.report,
     });
     return {
       ...jobData,
+      ...(platformContext.jobId ? { jobId: platformContext.jobId, masterJobId: platformContext.jobId } : {}),
       contentChecksum,
       takeoffCounts: getTakeoffCounts(jobData),
     };
@@ -659,43 +854,232 @@ export default function AIPlanTakeoffStandalone({
     latestBuildJobDataRef.current = buildJobData;
   });
 
-  const downloadJobFile = (name) => {
-    const safeName = sanitizeJobFileName(name);
+  // Build the complete, self-contained payload for a manually saved file.
+  //
+  // A job held in memory can still describe its plan pages by asset id, and those ids only mean
+  // something in this browser profile's asset store. A file written from them would reopen blank on
+  // any other computer, so the images are materialized into the payload before anything is written.
+  // Verification runs here too: nothing is reported as saved unless the bytes about to be written
+  // would actually reopen.
+  const buildPortableTakeoffPayload = async (name) => {
     const jobData = buildJobData(name);
-    const portable = createPortableTakeoffExport(jobData, { takeoffName: name });
-    const blob = new Blob([JSON.stringify(portable, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${safeName}.takeoff${AI_PLAN_TAKEOFF_EXTENSION}`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const workbook = await materializeTakeoffPlanPages({ aiPlanTakeoffJob: jobData });
+    const materialised = workbook?.aiPlanTakeoffJob || jobData;
+    const portable = createPortableTakeoffExport(materialised, {
+      projectId: attachedProjectId || '',
+      projectName: attachedProjectName || '',
+      takeoffName: name,
+      sourceFileName: importedTakeoffFileName || planFilename || '',
+    });
+    const verified = resolvePortableTakeoffImport(portable);
+    if (!verified.ok) {
+      throw new Error(`The takeoff file was not written because it could not be verified: ${verified.message}`);
+    }
+    return { portable, json: JSON.stringify(portable, null, 2) };
   };
 
-  const writeJobToFile = async (fileHandle, name) => {
-    const writable = await fileHandle.createWritable();
-    await writable.write(JSON.stringify(buildJobData(name), null, 2));
+  // A handle kept from an earlier open or save is only usable while the browser still grants write
+  // permission; it can lapse between sessions. Returning null sends the caller to the picker.
+  const ensureWritableFileHandle = async (handle) => {
+    if (!handle || typeof handle.createWritable !== 'function') return null;
+    try {
+      if (typeof handle.queryPermission === 'function') {
+        let permission = await handle.queryPermission({ mode: 'readwrite' });
+        if (permission === 'prompt' && typeof handle.requestPermission === 'function') {
+          permission = await handle.requestPermission({ mode: 'readwrite' });
+        }
+        if (permission !== 'granted') return null;
+      }
+      return handle;
+    } catch (error) {
+      logTakeoffRefresh('local-file-permission-unavailable', { message: error?.message || String(error) });
+      return null;
+    }
+  };
+
+  const writeTakeoffFileToHandle = async (handle, json) => {
+    const writable = await handle.createWritable();
+    try {
+      await writable.write(json);
+    } catch (error) {
+      await writable.abort?.();
+      throw error;
+    }
     await writable.close();
+  };
+
+  const downloadPortableTakeoffJson = (name, json) => {
+    const filename = `${sanitizeDownloadFileName(name)}${AI_PLAN_TAKEOFF_EXTENSION}`;
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = createTakeoffObjectUrl(blob, 'takeoff-save', logTakeoffRefresh);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = filename;
+    anchor.click();
+    window.setTimeout(() => revokeTakeoffObjectUrl(url, 'takeoff-save', logTakeoffRefresh), 5000);
+    return filename;
+  };
+
+  // Save the takeoff to a file on the user's own computer. The browser still owns the permission
+  // decision: the location can only ever come from the native picker or from a handle the user
+  // already approved, so this can never write somewhere the user did not choose.
+  //
+  // Returns 'saved' (written to a chosen location), 'downloaded' (no File System Access API, so the
+  // browser's download folder took it) or 'cancelled'. Cancellation is not a failure and must never
+  // be reported as a save.
+  const saveTakeoffToComputer = async (name, { handle = null } = {}) => {
+    const { json } = await buildPortableTakeoffPayload(name);
+    const reusable = await ensureWritableFileHandle(handle);
+    if (reusable) {
+      await writeTakeoffFileToHandle(reusable, json);
+      return { status: 'saved', handle: reusable, fileName: reusable.name || `${sanitizeDownloadFileName(name)}${AI_PLAN_TAKEOFF_EXTENSION}`, bytes: json.length };
+    }
+    if (typeof window !== 'undefined' && typeof window.showSaveFilePicker === 'function') {
+      let picked;
+      try {
+        picked = await window.showSaveFilePicker({
+          suggestedName: `${sanitizeDownloadFileName(name)}${AI_PLAN_TAKEOFF_EXTENSION}`,
+          types: [{
+            description: AI_PLAN_TAKEOFF_FILE_DESCRIPTION,
+            accept: { 'application/json': [AI_PLAN_TAKEOFF_EXTENSION] },
+          }],
+        });
+      } catch (error) {
+        if (error?.name === 'AbortError') return { status: 'cancelled' };
+        throw error;
+      }
+      await writeTakeoffFileToHandle(picked, json);
+      return { status: 'saved', handle: picked, fileName: picked.name || `${sanitizeDownloadFileName(name)}${AI_PLAN_TAKEOFF_EXTENSION}`, bytes: json.length };
+    }
+    const fileName = downloadPortableTakeoffJson(name, json);
+    return { status: 'downloaded', handle: null, fileName, bytes: json.length };
+  };
+
+  // Only called once bytes have actually reached the file.
+  const applyLocalSaveResult = (result, name) => {
+    setJobFileHandle(result.handle || null);
+    setJobName(name);
+    if (result.fileName) setImportedTakeoffFileName(result.fileName);
+    setHasUnsavedChanges(false);
+    setLastSuccessfulSaveAt(new Date().toISOString());
+    stampSavedContentBaseline({ contentChecksum: takeoffContentChecksum });
+    setPlatformSaveMessage(result.status === 'downloaded'
+      ? `${result.fileName} was downloaded by the browser. This browser cannot offer a folder picker, so it went to your downloads folder.`
+      : `Saved to ${result.fileName} on this computer.`);
   };
 
   const showPlanPage = useCallback(async (pages, pageNumber) => {
     const page = pages.find((p) => p.pageNumber === pageNumber) || pages[pageNumber - 1];
-    if (!page?.dataUrl) {
-      setImage(null);
-      setVectorSegments([]);
+    return loadTakeoffPlanImage(takeoffLifecycle, page, pageNumber, loadImageFromDataUrl, (img, segments) => {
+      setImage(img);
+      setVectorSegments(segments);
+    });
+  }, []);
+
+  // Restore a saved job's plan images before any of it reaches component state.
+  //
+  // Saved jobs keep their plan pages in the browser asset store and carry only a dataUrlAssetId, so
+  // a job opened without this step arrives with page metadata but no image: overlays, sheet count
+  // and page number all restore correctly and the canvas renders blank. Materializing here, before
+  // loadJobData touches state, also means a failed read leaves the current workspace intact.
+  const restorePlanAssets = async (job, source) => {
+    const references = describePlanPageReferences(getEmbeddedPlanPages(job));
+    logTakeoffPlanLoad('open-job', {
+      source,
+      takeoffId: job?.takeoffId || job?.id || null,
+      jobName: job?.takeoffName || job?.jobName || null,
+      planPageCount: references.length,
+      assetIds: references.map((page) => page.assetId),
+      embeddedImages: references.filter((page) => page.hasEmbeddedImage).length,
+    });
+    if (!references.length) return job;
+    // Pages that already carry their own image need no asset read; this is how a job file carried
+    // from another machine opens without reaching for asset ids this profile has never held.
+    if (references.every((page) => page.hasEmbeddedImage)) {
+      logTakeoffPlanLoad('assets-already-embedded', { source, planPageCount: references.length });
+      return job;
+    }
+    const pending = references.filter((page) => !page.hasEmbeddedImage).map((page) => page.assetId);
+    logTakeoffPlanLoad('asset-read-start', { source, assetIds: pending });
+    let restored;
+    try {
+      const workbook = await materializeTakeoffPlanPages({ aiPlanTakeoffJob: job });
+      restored = workbook?.aiPlanTakeoffJob || job;
+    } catch (error) {
+      logTakeoffPlanLoad('asset-read-failed', { source, assetIds: pending, message: error?.message || String(error) });
+      throw new Error(`Plan images could not be read from browser storage: ${error?.message || error}`);
+    }
+    const materialized = describePlanPageReferences(getEmbeddedPlanPages(restored));
+    logTakeoffPlanLoad('asset-read-end', {
+      source,
+      materializedPages: materialized.filter((page) => page.hasEmbeddedImage).length,
+      planPageCount: materialized.length,
+    });
+    const stillMissing = materialized.filter((page) => !page.hasEmbeddedImage);
+    if (stillMissing.length) {
+      const ids = stillMissing.map((page) => page.assetId || `sheet ${page.pageNumber}`);
+      logTakeoffPlanLoad('asset-missing', { source, assetIds: ids });
+      throw new Error(`Plan image missing from browser storage for ${ids.join(', ')}. The saved job was not changed.`);
+    }
+    await decodeRestoredPlanPage(restored, source);
+    return restored;
+  };
+
+  // Decode the sheet the job will open on before any state is replaced. A restored asset can still
+  // be an undecodable image, and finding that out inside loadJobData would leave the workspace half
+  // swapped: the previous plan gone and the new one unrenderable.
+  const decodeRestoredPlanPage = async (job, source) => {
+    const pages = getEmbeddedPlanPages(job);
+    if (!pages.length) return;
+    const savedPage = Number(job?.currentPage || 1);
+    const page = pages.find((item) => item.pageNumber === savedPage) || pages[savedPage - 1] || pages[0];
+    if (!page?.dataUrl) return;
+    const pageNumber = page.pageNumber ?? savedPage;
+    logTakeoffPlanLoad('image-decode-start', { source, page: pageNumber });
+    try {
+      await loadImageFromDataUrl(page.dataUrl);
+      logTakeoffPlanLoad('image-decode-end', { source, page: pageNumber });
+    } catch (error) {
+      logTakeoffPlanLoad('image-decode-failed', { source, page: pageNumber, assetId: page.dataUrlAssetId || null });
+      throw new Error(`The plan image for sheet ${pageNumber} could not be decoded; the stored image appears to be damaged. The saved job was not changed.`);
+    }
+  };
+
+  // One entry point for every open route, so a route can never be added that skips the asset read.
+  const openTakeoffJob = async (job, fallbackName, source) => {
+    const hydrationVersion = takeoffLifecycle.hydrationVersion;
+    const restored = await restorePlanAssets(job, source);
+    // A newer open that started while this one was reading assets owns the workspace now.
+    if (hydrationVersion !== takeoffLifecycle.hydrationVersion) {
+      logTakeoffPlanLoad('open-superseded', { source, takeoffId: job?.takeoffId || null });
       return;
     }
+    setPlanLoadError(null);
+    await loadJobData(restored, fallbackName);
+  };
 
-    const img = await loadImageFromDataUrl(page.dataUrl);
-    setImage(img);
-    setVectorSegments(page.vectorSegments || []);
-  }, []);
+  const reportPlanLoadFailure = (error, source, job) => {
+    const message = error?.message || String(error);
+    logTakeoffPlanLoad('open-failed', { source, takeoffId: job?.takeoffId || null, message });
+    console.error('TAKEOFF_PLAN_LOAD open failed:', message);
+    setPlanLoadError({ source, message, jobName: job?.takeoffName || job?.jobName || '' });
+  };
 
   const loadJobData = async (data, fallbackName = '') => {
     const imported = resolvePortableTakeoffImport(data);
     const takeoffJobData = imported.ok ? imported.job : data;
     const embeddedPages = normaliseRecoveredPlanPages(getEmbeddedPlanPages(takeoffJobData));
     const isRecoveryPreviewJob = Boolean(takeoffJobData.recoveryPreviewMode);
+    if (embedded && onMasterTakeoffChange && !isRecoveryPreviewJob &&
+      (!platformContext.jobId || takeoffJobData.masterJobId !== platformContext.jobId)) {
+      throw new Error('Open the owning master job, or import this legacy takeoff into the current job.');
+    }
+    const hydrationVersion = ++takeoffLifecycle.hydrationVersion;
+    takeoffLifecycle.imageRequest = null;
+    logTakeoffRefresh('job-hydration-start', {
+      hydrationVersion, page: takeoffJobData.currentPage || 1,
+      activeEavePoints: eavePoints.length, completedEaves: completedEaves.length,
+    });
 
     sheetViewStateRef.current = {};
     fittedSheetViewKeyRef.current = '';
@@ -707,7 +1091,23 @@ export default function AIPlanTakeoffStandalone({
     setCompletedFloorplans((takeoffJobData.completedFloorplans || []).map(normaliseRecoveredFloorplan));
     setCompletedMeasurements(takeoffJobData.completedMeasurements || []);
     setCompletedEaves(takeoffJobData.completedEaves || []);
-    setProjectInfo(takeoffJobData.projectInfo || initialProjectInfo || { projectName: takeoffJobData.jobName || '', clientName: '', siteAddress: '', storeyOrLevelName: '' });
+    setCompletedPillars((takeoffJobData.completedPillars || []).map(normaliseRecoveredPillar));
+    setSheetLevels(takeoffJobData.sheetLevels || {});
+    // A saved takeoff carries whatever projectInfo it had when it was first saved, which is often
+    // all-blank because the platform job was named/addressed after the takeoff was created. Replacing
+    // wholesale would clobber the live job details, so merge per field and let the platform job fill
+    // any blank the saved job hands back.
+    const savedProjectInfo = takeoffJobData.projectInfo || {};
+    setProjectInfo({
+      projectName: savedProjectInfo.projectName
+        || initialProjectInfo.projectName
+        || takeoffJobData.jobName
+        || fallbackName
+        || '',
+      clientName: savedProjectInfo.clientName || initialProjectInfo.clientName || '',
+      siteAddress: savedProjectInfo.siteAddress || initialProjectInfo.siteAddress || '',
+      storeyOrLevelName: savedProjectInfo.storeyOrLevelName || initialProjectInfo.storeyOrLevelName || ''
+    });
     setPlanFilename(takeoffJobData.planFilename || '');
     setImportedTakeoffFileName(takeoffJobData.sourceFileName || '');
     setScheduleMappings(takeoffJobData.scheduleState?.scheduleMappings || {});
@@ -715,6 +1115,8 @@ export default function AIPlanTakeoffStandalone({
     setQuotePreviewRows(takeoffJobData.scheduleState?.quotePreviewRows || []);
     setJobSetupPayload(takeoffJobData.scheduleState?.jobSetupPayload || null);
     setLastQuoteSyncSignature(takeoffJobData.scheduleState?.lastQuoteSyncSignature || '');
+    aiTakeoffBridge.restoreAppliedRuns(takeoffJobData.scheduleState?.aiAppliedRuns);
+    aiTakeoffAnalysis.restoreReport(takeoffJobData.scheduleState?.aiAnalysis, takeoffJobData.scheduleState?.aiInspections, takeoffJobData.scheduleState?.sheetCalibrations);
     setPixelsPerMm(takeoffJobData.pixelsPerMm || null);
     setRotation(takeoffJobData.rotation || 0);
     setTotalPages(embeddedPages.length || takeoffJobData.totalPages || 1);
@@ -731,13 +1133,15 @@ export default function AIPlanTakeoffStandalone({
     setSelectedOpeningId(null);
     setSelectedEaveId(null);
     setSelectedMeasurementId(null);
+    setSelectedPillarId(null);
     setRecoveryPreviewMode(isRecoveryPreviewJob);
     setRecoveryPreviewCounts(isRecoveryPreviewJob ? getTakeoffCounts(takeoffJobData) : null);
 
-    setPlanMissingFromSavedJob(embeddedPages.length === 0 && Boolean(takeoffJobData?.jobName || fallbackName));
+    setPlanMissingFromSavedJob(embeddedPages.length === 0 && Boolean(takeoffJobData.planFilename || takeoffJobData.plan?.pages?.length));
     setSavedRevision(Number(takeoffJobData.revision || 0));
     setLastSuccessfulSaveAt(takeoffJobData.updatedAt || '');
     setOpenedTakeoffJob({
+      masterJobId: takeoffJobData.masterJobId || takeoffJobData.jobId || '',
       takeoffId: takeoffJobData.takeoffId || takeoffJobData.id || `takeoff-${Date.now()}`,
       associatedProjectId: isRecoveryPreviewJob ? '' : (takeoffJobData.associatedProjectId || takeoffJobData.projectId || takeoffJobData.platformProject?.projectId || ''),
       associatedProjectName: isRecoveryPreviewJob ? '' : (takeoffJobData.associatedProjectName || takeoffJobData.platformProject?.projectName || takeoffJobData.projectInfo?.projectName || ''),
@@ -753,6 +1157,10 @@ export default function AIPlanTakeoffStandalone({
       completedFloorplans: takeoffJobData.completedFloorplans || [],
       completedMeasurements: takeoffJobData.completedMeasurements || [],
       completedEaves: takeoffJobData.completedEaves || [],
+      completedPillars: takeoffJobData.completedPillars || [],
+      sheetLevels: takeoffJobData.sheetLevels || {},
+      aiAppliedRuns: takeoffJobData.scheduleState?.aiAppliedRuns || [],
+      aiAnalysis: takeoffJobData.scheduleState?.aiAnalysis || null,
     });
     pendingLoadedContentChecksumRef.current = loadedChecksum;
     lastSeenContentChecksumRef.current = loadedChecksum;
@@ -766,22 +1174,68 @@ export default function AIPlanTakeoffStandalone({
     setAutosaveRequest(null);
     suppressUnsavedChangeRef.current = true;
 
-    if (embeddedPages.length > 0) {
-      await showPlanPage(embeddedPages, takeoffJobData.currentPage || 1);
-    } else {
-      setImage(null);
-      setVectorSegments([]);
-    }
-
     setJobName(takeoffJobData.takeoffName || takeoffJobData.jobName || fallbackName);
+    try {
+      if (embeddedPages.length > 0) {
+        // A saved currentPage can outlive the sheet it referred to. Fall back to the first sheet
+        // rather than asking the canvas for a page that is not there, which renders blank. Only the
+        // displayed sheet moves: no overlay is renumbered, so nothing is re-assigned to a new sheet.
+        const savedPage = Number(takeoffJobData.currentPage || 1);
+        const hasSavedPage = embeddedPages.some((page, index) => page.pageNumber === savedPage || index === savedPage - 1);
+        const restoredPage = hasSavedPage ? savedPage : 1;
+        if (restoredPage !== savedPage) {
+          logTakeoffPlanLoad('current-page-out-of-range', { savedPage, restoredPage, pageCount: embeddedPages.length });
+        }
+        setCurrentPage(restoredPage);
+        await showPlanPage(embeddedPages, restoredPage);
+        logTakeoffPlanLoad('plan-rendered', { page: restoredPage, pageCount: embeddedPages.length });
+      } else {
+        setImage(null);
+        setVectorSegments([]);
+      }
+      logTakeoffRefresh('job-hydration-end', { hydrationVersion, superseded: hydrationVersion !== takeoffLifecycle.hydrationVersion });
+    } catch (error) {
+      logTakeoffRefresh('job-hydration-error', { hydrationVersion });
+      throw error;
+    }
   };
 
   useEffect(() => {
-    // Emergency interlock: initialJob must never hydrate automatically.
+    if (loadedInitialJobRef.current || !initialJob) return;
+    // The workbook can hand over an empty placeholder before it has hydrated. Consuming the restore
+    // on that placeholder latches this guard for the life of the mount, and the real job that
+    // arrives a moment later is then never loaded at all.
+    if (!initialJob.masterJobId && !getEmbeddedPlanPages(initialJob).length) {
+      logTakeoffPlanLoad('initial-job-not-ready', { takeoffId: initialJob?.takeoffId || null });
+      return;
+    }
+    loadedInitialJobRef.current = true;
+    const hydrationVersion = takeoffLifecycle.hydrationVersion;
+    openTakeoffJob(
+      initialJob,
+      initialJob.takeoffName || initialJob.jobName || platformContext.projectName || '',
+      'initial-job',
+    ).catch((error) => {
+      // A later explicit open already owns the workspace. Re-arming startup hydration on this stale
+      // failure would let the old job reload over the top of the one the estimator just opened.
+      if (hydrationVersion !== takeoffLifecycle.hydrationVersion) {
+        logTakeoffPlanLoad('open-failed-superseded', { source: 'initial-job', takeoffId: initialJob?.takeoffId || null });
+        return;
+      }
+      loadedInitialJobRef.current = false;
+      reportPlanLoadFailure(error, 'initial-job', initialJob);
+    });
   }, [initialJob, platformContext.projectName]);
 
   useEffect(() => {
     if (!openTakeoffJobRequest?.jobData) return;
+    // A retained request is a command, not a snapshot to reapply after edits.
+    // Consume it before checksum comparison and before asynchronous image loading.
+    const requestIdentity = openTakeoffJobRequest.requestId ?? openTakeoffJobRequest;
+    if (handledOpenTakeoffRequestRef.current === requestIdentity) {
+      return;
+    }
+    handledOpenTakeoffRequestRef.current = requestIdentity;
     const incomingJob = openTakeoffJobRequest.jobData;
     const incomingChecksum = checksumForTakeoffContent({
       rotation: incomingJob.rotation || 0,
@@ -793,55 +1247,51 @@ export default function AIPlanTakeoffStandalone({
       completedFloorplans: incomingJob.completedFloorplans || [],
       completedMeasurements: incomingJob.completedMeasurements || [],
       completedEaves: incomingJob.completedEaves || [],
+      completedPillars: incomingJob.completedPillars || [],
+      sheetLevels: incomingJob.sheetLevels || {},
+      aiAppliedRuns: incomingJob.scheduleState?.aiAppliedRuns || [],
+      aiAnalysis: incomingJob.scheduleState?.aiAnalysis || null,
     });
     const incomingTakeoffId = String(incomingJob.takeoffId || incomingJob.id || '');
     const currentTakeoffId = String(openedTakeoffJob?.takeoffId || '');
     if (incomingTakeoffId && currentTakeoffId && incomingTakeoffId === currentTakeoffId && incomingChecksum === lastSeenContentChecksumRef.current) {
       return;
     }
-    loadJobData(openTakeoffJobRequest.jobData, openTakeoffJobRequest.displayName || openTakeoffJobRequest.jobData.takeoffName || '').catch((error) => {
-      console.error("Failed to open recent takeoff job:", error);
-      alert("Could not open the selected takeoff job.");
-    });
+    openTakeoffJob(
+      openTakeoffJobRequest.jobData,
+      openTakeoffJobRequest.displayName || openTakeoffJobRequest.jobData.takeoffName || '',
+      'open-request',
+    ).catch((error) => reportPlanLoadFailure(error, 'open-request', openTakeoffJobRequest.jobData));
   }, [openTakeoffJobRequest, openedTakeoffJob?.takeoffId]);
 
   useEffect(() => {
     const handler = (event) => {
       const jobData = event?.detail?.jobData;
       if (!jobData) return;
-      loadJobData(jobData, event.detail.displayName || jobData.takeoffName || '').catch((error) => {
-        console.error("Failed to open recent takeoff job:", error);
-        alert("Could not open the selected takeoff job.");
-      });
+      openTakeoffJob(
+        jobData,
+        event.detail.displayName || jobData.takeoffName || '',
+        'open-recent',
+      ).catch((error) => reportPlanLoadFailure(error, 'open-recent', jobData));
     };
     window.addEventListener('gr8:ai-plan-takeoff:open-recent', handler);
     return () => window.removeEventListener('gr8:ai-plan-takeoff:open-recent', handler);
   }, []);
 
   useEffect(() => {
-    if (suppressUnsavedChangeRef.current) {
+    if (suppressUnsavedChangeRef.current || suppressAutosaveFromLoadRef.current) {
+      const loadedChecksum = pendingLoadedContentChecksumRef.current;
       suppressUnsavedChangeRef.current = false;
-      lastSeenContentChecksumRef.current = takeoffContentChecksum;
-      if (!lastSavedContentChecksumRef.current) {
-        lastSavedContentChecksumRef.current = takeoffContentChecksum;
-      }
-      if (suppressAutosaveFromLoadRef.current && (!pendingLoadedContentChecksumRef.current || pendingLoadedContentChecksumRef.current === takeoffContentChecksum)) {
-        suppressAutosaveFromLoadRef.current = false;
-        pendingLoadedContentChecksumRef.current = '';
-      }
-      return;
-    }
-    if (suppressAutosaveFromLoadRef.current) {
-      if (pendingLoadedContentChecksumRef.current && takeoffContentChecksum !== pendingLoadedContentChecksumRef.current) {
-        return;
-      }
       suppressAutosaveFromLoadRef.current = false;
       pendingLoadedContentChecksumRef.current = '';
-      lastSeenContentChecksumRef.current = takeoffContentChecksum;
-      if (!lastSavedContentChecksumRef.current) {
-        lastSavedContentChecksumRef.current = takeoffContentChecksum;
+      // Opening an empty workspace may leave the checksum unchanged, so this
+      // effect next runs on the first plan import. Suppress only the loaded
+      // content itself; waiting forever for its old checksum discards every edit.
+      if (!loadedChecksum || loadedChecksum === takeoffContentChecksum) {
+        lastSeenContentChecksumRef.current = takeoffContentChecksum;
+        if (!lastSavedContentChecksumRef.current) lastSavedContentChecksumRef.current = takeoffContentChecksum;
+        return;
       }
-      return;
     }
     if (draggingVertex || draggingItem || draggingMeasureId || draggingEaveId) {
       pendingDragChecksumRef.current = takeoffContentChecksum;
@@ -863,6 +1313,13 @@ export default function AIPlanTakeoffStandalone({
       checksum: takeoffContentChecksum,
       editVersion: contentEditVersionRef.current,
     });
+    // Publish only actual content edits into the already-open master workbook.
+    // Its existing autosave owns persistence; parent renders never reload this
+    // workspace or start a second autosave/recalculation feedback loop.
+    if (masterTakeoffChangeRef.current && platformContext.jobId && !isRecoveryPreview) {
+      const result = masterTakeoffChangeRef.current(latestBuildJobDataRef.current(jobName || platformContext.projectName));
+      if (result?.ok === false) setPlatformSaveMessage(result.message);
+    }
   }, [
     takeoffContentChecksum,
     draggingVertex,
@@ -889,6 +1346,7 @@ export default function AIPlanTakeoffStandalone({
   useEffect(() => {
     if (typeof window === 'undefined') return;
     window.__gr8AiPlanTakeoffState = {
+      instanceId: takeoffLifecycle.instanceId,
       activeTool,
       currentPage,
       totalPages,
@@ -896,17 +1354,44 @@ export default function AIPlanTakeoffStandalone({
       stagePos,
       activePolylinePoints: activePolyline.length,
       activeAreaPolylinePoints: activeAreaPolyline.length,
+      eavePoints: eavePoints.length,
+      measurePoints: measurePoints.length,
+      completedEaves: completedEaves.length,
+      completedPillars: completedPillars.length,
+      pixelsPerMm,
+      sheetLevels,
       wallRuns: completedWallRuns.length,
       wallSegments: completedWallRuns.reduce((sum, wall) => sum + Math.max(0, (wall.nodes || []).length - 1), 0),
       openings: placedOpenings.length,
       floorCoverings: completedAreas.length,
       floorplans: completedFloorplans.length,
-      hasCalibration: Boolean(pixelsPerMm)
+      hasCalibration: Boolean(pixelsPerMm),
+      // Selection diagnostics: if clicking a wall does nothing, these say whether the canvas is
+      // listening at all, whether Select is really the active tool, and whether the sheet on screen
+      // actually holds any exterior wall to hit.
+      isRecoveryPreview,
+      selectedWallId,
+      exteriorWallsOnCurrentSheet: completedWallRuns.filter((wall) => (
+        Number(wall.page || wall.pageId || 1) === Number(currentPage)
+        && String(wall.category || '').toLowerCase() === 'exterior'
+      )).length
     };
-  }, [activeTool, currentPage, totalPages, stageScale, stagePos, activePolyline, activeAreaPolyline, completedWallRuns, placedOpenings, completedAreas, completedFloorplans, pixelsPerMm]);
+    if (takeoffLifecycle.lastPage !== currentPage) {
+      logTakeoffRefresh('current-page-change', { from: takeoffLifecycle.lastPage ?? null, to: currentPage });
+      takeoffLifecycle.lastPage = currentPage;
+    }
+    if (takeoffLifecycle.lastEavePoints !== eavePoints) {
+      const previousCount = takeoffLifecycle.lastEavePoints?.length || 0;
+      logTakeoffRefresh('eave-points-change', {
+        page: currentPage, previousCount, count: eavePoints.length,
+        reset: previousCount > 0 && eavePoints.length === 0,
+      });
+      takeoffLifecycle.lastEavePoints = eavePoints;
+    }
+  }, [activeTool, currentPage, totalPages, stageScale, stagePos, activePolyline, activeAreaPolyline, eavePoints, measurePoints, completedEaves, completedPillars, sheetLevels, completedWallRuns, placedOpenings, completedAreas, completedFloorplans, pixelsPerMm, isRecoveryPreview, selectedWallId]);
 
   useEffect(() => {
-    if (typeof window === 'undefined' || process.env.NODE_ENV === 'production') return;
+    if (typeof window === 'undefined' || typeof process === 'undefined' || process.env.NODE_ENV === 'production') return;
     window.__gr8CreateJohnsonSmallTakeoff = () => {
       if (!planPages.length) throw new Error('Import the five-page plan before creating the small test takeoff.');
       const scale = pixelsPerMm || 0.024;
@@ -964,7 +1449,7 @@ export default function AIPlanTakeoffStandalone({
           heightMm: 1800,
           widthMm: 1200,
           subType: 'standard',
-          glassType: 'Standard Clear',
+          glassType: 'Clear',
           x: 320,
           y: 680
         },
@@ -976,7 +1461,7 @@ export default function AIPlanTakeoffStandalone({
           heightMm: 2040,
           widthMm: 820,
           subType: 'Entry',
-          glassType: 'Standard Clear',
+          glassType: 'Clear',
           x: 490,
           y: 730
         }
@@ -1008,6 +1493,21 @@ export default function AIPlanTakeoffStandalone({
     : hasOpenTakeoffJob
       ? (attachedProjectName || attachedProjectId || 'No platform project attached')
       : 'No takeoff job attached';
+
+  const takeoffJobDisplayName = attachedProjectName
+    || projectInfo.projectName
+    || jobName
+    || importedTakeoffFileName
+    || planFilename
+    || 'Untitled takeoff';
+  const takeoffSiteAddress = projectInfo.siteAddress
+    || platformContext.siteAddress
+    || platformContext.projectAddress
+    || '';
+
+  useEffect(() => {
+    onTakeoffWorkflowChange?.({ hasOpenTakeoffJob, isRecoveryPreview });
+  }, [hasOpenTakeoffJob, isRecoveryPreview, onTakeoffWorkflowChange]);
 
   const createRecoverySnapshot = useCallback((jobData, reason = 'save-verification-failed') => {
     if (typeof window === 'undefined') return;
@@ -1053,9 +1553,21 @@ export default function AIPlanTakeoffStandalone({
     const verification = result?.verification;
     if (!result?.ok || !verification?.ok) {
       createRecoverySnapshot(jobData);
+      // Name the check that actually failed. "SAVE FAILED" on its own gives the estimator nothing
+      // to act on and gives support nothing to diagnose, and the reasons are not interchangeable:
+      // a page-count mismatch is a lost plan image, a checksum mismatch is lost measurements.
+      const failed = verification ? [
+        verification.revisionMatches === false && 'revision',
+        verification.checksumMatches === false && 'content checksum',
+        verification.countsMatch === false && 'takeoff item counts',
+        verification.planPageCountMatches === false
+          && `plan pages (sent ${verification.submittedCounts?.renderablePlanPages ?? '?'} readable of ${verification.submittedCounts?.planPages ?? '?'}, stored ${verification.savedCounts?.renderablePlanPages ?? '?'} of ${verification.savedCounts?.planPages ?? '?'})`,
+      ].filter(Boolean) : [];
       return {
         ok: false,
-        message: SAVE_VERIFICATION_FAILED_MESSAGE,
+        message: failed.length
+          ? `${SAVE_VERIFICATION_FAILED_MESSAGE} - could not confirm ${failed.join(', ')}`
+          : `${SAVE_VERIFICATION_FAILED_MESSAGE} - the save did not complete`,
         verification
       };
     }
@@ -1069,6 +1581,11 @@ export default function AIPlanTakeoffStandalone({
   }, [createRecoverySnapshot]);
 
   const clearTakeoffWorkspace = useCallback(() => {
+    aiTakeoffBridge.restoreAppliedRuns();
+    aiTakeoffAnalysis.restoreReport();
+    takeoffLifecycle.hydrationVersion += 1;
+    takeoffLifecycle.imageRequest = null;
+    displayedPlanRef.current = null;
     sheetViewStateRef.current = {};
     fittedSheetViewKeyRef.current = '';
     setImage(null);
@@ -1095,11 +1612,13 @@ export default function AIPlanTakeoffStandalone({
     setCompletedFloorplans([]);
     setCompletedMeasurements([]);
     setCompletedEaves([]);
+    setCompletedPillars([]);
     setSelectedWallId(null);
     setSelectedOpeningId(null);
     setSelectedAreaId(null);
     setSelectedFloorplanId(null);
     setSelectedEaveId(null);
+    setSelectedPillarId(null);
     setSelectedAreaForExclusion(null);
     setDraggingVertex(null);
     setDraggingItem(null);
@@ -1112,6 +1631,7 @@ export default function AIPlanTakeoffStandalone({
 
   const createNewTakeoffJob = () => {
     if (isRecoveryPreview) return;
+    if (embedded && onNewMasterJob) { onNewMasterJob(); return; }
     const defaultName = 'Untitled takeoff';
     const nextName = window.prompt('Takeoff job name', defaultName) || '';
     if (!nextName.trim()) return;
@@ -1142,6 +1662,10 @@ export default function AIPlanTakeoffStandalone({
       window.clearTimeout(autosaveTimerRef.current);
       autosaveTimerRef.current = null;
     }
+    if (autosaveIdleRef.current && typeof window.cancelIdleCallback === 'function') {
+      window.cancelIdleCallback(autosaveIdleRef.current);
+      autosaveIdleRef.current = null;
+    }
     manualSaveInFlightRef.current = true;
     try {
       const result = await Promise.resolve(onSaveToPlatform(jobData));
@@ -1153,16 +1677,16 @@ export default function AIPlanTakeoffStandalone({
         return verifiedSave;
       }
       setJobName(jobData.takeoffName || jobData.jobName);
-      setSavedRevision(verifiedSave.revision);
-      setLastSuccessfulSaveAt(verifiedSave.savedAt);
-      setHasUnsavedChanges(false);
-      setAutosaveRequest(null);
-      stampSavedContentBaseline(jobData);
-      setPlatformSaveMessage(verifiedSave.message);
-      const savedJob = { ...jobData, revision: verifiedSave.revision, updatedAt: verifiedSave.savedAt, storageRecordKey: verifiedSave.key || '' };
-      const recent = rememberRecentTakeoffJob(savedJob);
-      onRecentTakeoffJobsChange?.(recent);
-      return verifiedSave;
+setSavedRevision(verifiedSave.revision);
+       setLastSuccessfulSaveAt(verifiedSave.savedAt);
+       setHasUnsavedChanges(false);
+       setAutosaveRequest(null);
+       stampSavedContentBaseline(jobData);
+       setPlatformSaveMessage(verifiedSave.message);
+       const savedJob = { ...jobData, revision: verifiedSave.revision, updatedAt: verifiedSave.savedAt, storageRecordKey: verifiedSave.key || '' };
+       const recent = rememberRecentTakeoffJob(savedJob);
+       onRecentTakeoffJobsChange?.(recent);
+       return verifiedSave;
     } finally {
       manualSaveInFlightRef.current = false;
     }
@@ -1273,24 +1797,27 @@ export default function AIPlanTakeoffStandalone({
       return;
     }
 
-    if (!jobName) {
-      handleExportTakeoffFile();
-      return;
-    }
-    if (jobFileHandle && window.showSaveFilePicker) {
-      try {
-        await writeJobToFile(jobFileHandle, jobName);
-        return;
-      } catch (err) {
-        if (err?.name === 'AbortError') return;
-        console.error("Failed to overwrite job file:", err);
-        alert("Could not update the open job file. Use Export Takeoff File to download a backup.");
+    // Save writes back to the file this takeoff was opened from or last saved to. With no usable
+    // handle there is no location to write to, so it becomes Save As and asks for one.
+    const name = jobName || attachedProjectName || planFilename || 'Untitled takeoff';
+    try {
+      const result = await saveTakeoffToComputer(name, { handle: jobFileHandle });
+      if (result.status === 'cancelled') {
+        setPlatformSaveMessage('Save was cancelled. Nothing was written and the takeoff still has unsaved changes.');
         return;
       }
+      applyLocalSaveResult(result, name);
+    } catch (error) {
+      const message = error?.message || String(error);
+      setHasUnsavedChanges(true);
+      setPlatformSaveMessage(`Save failed: ${message}`);
+      alert(`Save failed: ${message}`);
     }
-    downloadJobFile(jobName);
   };
 
+  // Save As always writes a file to the user's own computer. The platform is not the permanent
+  // home for a builder's takeoff: a manually saved file has to reopen on another machine, in
+  // another browser, with this browser's storage empty.
   const handleSaveJobAs = async () => {
     if (isRecoveryPreview) {
       alert("Recovery Preview is read-only and cannot be saved as a new takeoff.");
@@ -1300,47 +1827,20 @@ export default function AIPlanTakeoffStandalone({
       alert("No takeoff job is open.");
       return;
     }
-    if (embedded && onSaveToPlatform) {
-      setAttachProjectName(attachedProjectName || 'Johnson 123');
-      setAttachError('');
-      setAttachDialogOpen(true);
-      return;
-    }
-    const nextName = window.prompt('Save takeoff job as', jobName || 'Untitled takeoff') || '';
-    if (!nextName.trim()) return;
-    const nextTakeoff = {
-      takeoffId: `takeoff-${Date.now()}`,
-      associatedProjectId: openedTakeoffJob?.associatedProjectId || '',
-      associatedProjectName: openedTakeoffJob?.associatedProjectName || ''
-    };
-    const jobData = {
-      ...buildJobData(nextName.trim()),
-      takeoffId: nextTakeoff.takeoffId,
-      takeoffName: nextName.trim(),
-      jobName: nextName.trim()
-    };
-    setJobName(nextName.trim());
-    setOpenedTakeoffJob(nextTakeoff);
-    if (embedded && onSaveToPlatform) {
-      const result = await Promise.resolve(onSaveToPlatform(jobData));
-      const verifiedSave = requireVerifiedSave(result, jobData);
-      if (!verifiedSave.ok) {
-        setHasUnsavedChanges(true);
-        setPlatformSaveMessage(verifiedSave.message);
-        alert(verifiedSave.message);
+    const name = jobName || attachedProjectName || planFilename || 'Untitled takeoff';
+    try {
+      const result = await saveTakeoffToComputer(name, { handle: null });
+      if (result.status === 'cancelled') {
+        setPlatformSaveMessage('Save As was cancelled. Nothing was written and the takeoff still has unsaved changes.');
         return;
       }
-      const savedJob = { ...jobData, revision: verifiedSave.revision, updatedAt: verifiedSave.savedAt, storageRecordKey: verifiedSave.key || '' };
-      const recent = rememberRecentTakeoffJob(savedJob);
-      onRecentTakeoffJobsChange?.(recent);
-      setSavedRevision(verifiedSave.revision);
-      setLastSuccessfulSaveAt(verifiedSave.savedAt);
-      setHasUnsavedChanges(false);
-      stampSavedContentBaseline(jobData);
-      setPlatformSaveMessage(verifiedSave.message);
-      return;
+      applyLocalSaveResult(result, name);
+    } catch (error) {
+      const message = error?.message || String(error);
+      setHasUnsavedChanges(true);
+      setPlatformSaveMessage(`Save As failed: ${message}`);
+      alert(`Save As failed: ${message}`);
     }
-    downloadJobFile(nextName.trim());
   };
 
   const handleExportTakeoffFile = async () => {
@@ -1366,12 +1866,12 @@ export default function AIPlanTakeoffStandalone({
     }
     const filename = `${sanitizeDownloadFileName(exportName)}${AI_PLAN_TAKEOFF_EXTENSION}`;
     const blob = new Blob([JSON.stringify(portable, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
+    const url = createTakeoffObjectUrl(blob, 'takeoff-backup', logTakeoffRefresh);
     const a = document.createElement('a');
     a.href = url;
     a.download = filename;
     a.click();
-    window.setTimeout(() => URL.revokeObjectURL(url), 5000);
+    window.setTimeout(() => revokeTakeoffObjectUrl(url, 'takeoff-backup', logTakeoffRefresh), 5000);
   };
 
   useEffect(() => {
@@ -1402,7 +1902,7 @@ export default function AIPlanTakeoffStandalone({
   }, [attachedProjectId, attachedProjectName, currentProjectLabel, savedRevision, lastSuccessfulSaveAt, hasUnsavedChanges, jobName, planFilename, importedTakeoffFileName, buildJobData, attachCurrentDraftToProject, takeoffContentChecksum]);
 
   useEffect(() => {
-    if (!autosaveRequest || !embedded || !onSaveToPlatform || isRecoveryPreview || !hasOpenTakeoffJob || !hasAttachedProject || !planPages.length) return;
+    if (!AUTOMATIC_TAKEOFF_SAVE_ENABLED || !autosaveRequest || !embedded || !onSaveToPlatform || isRecoveryPreview || !hasOpenTakeoffJob || !hasAttachedProject || !planPages.length) return;
     const requestChecksum = autosaveRequest.checksum || takeoffContentChecksum;
     if (!requestChecksum || requestChecksum === lastSavedContentChecksumRef.current) {
       setAutosaveRequest(null);
@@ -1419,7 +1919,8 @@ export default function AIPlanTakeoffStandalone({
       return;
     }
     if (autosaveTimerRef.current) window.clearTimeout(autosaveTimerRef.current);
-    autosaveTimerRef.current = window.setTimeout(async () => {
+    autosaveTimerRef.current = window.setTimeout(() => {
+      const runAutosave = async () => {
       const basis = latestAutosaveBasisRef.current;
       const nextChecksum = basis.checksum || takeoffContentChecksum;
       if (!nextChecksum || nextChecksum === lastSavedContentChecksumRef.current) {
@@ -1431,6 +1932,7 @@ export default function AIPlanTakeoffStandalone({
         return;
       }
       autosaveInFlightRef.current = true;
+      logTakeoffRefresh('autosave-start');
       const nextName = attachedProjectName || platformContext.projectName || jobName || importedTakeoffFileName || planFilename || 'AI Plan Takeoff';
       const buildCurrentJobData = latestBuildJobDataRef.current;
       const jobData = typeof buildCurrentJobData === 'function' ? buildCurrentJobData(nextName) : buildJobData(nextName);
@@ -1452,7 +1954,7 @@ export default function AIPlanTakeoffStandalone({
         const sameEditVersion = Number(basis.editVersion || 0) > 0 && Number(basis.editVersion || 0) === Number(lastSavedEditVersionRef.current || 0);
         if (alreadySavedSameChecksum || sameEditVersion) {
           redundantAutosaveCountRef.current += 1;
-          if (process.env.NODE_ENV !== 'production' && redundantAutosaveCountRef.current > 1) {
+          if (typeof process !== 'undefined' && process.env.NODE_ENV !== 'production' && redundantAutosaveCountRef.current > 1) {
             console.error('[AI Plan Takeoff] Redundant autosave detected without content edit', {
               revision: verifiedSave.revision,
               checksum: nextChecksum,
@@ -1479,6 +1981,7 @@ export default function AIPlanTakeoffStandalone({
         setPlatformSaveMessage(SAVE_VERIFICATION_FAILED_MESSAGE);
       } finally {
         autosaveInFlightRef.current = false;
+        logTakeoffRefresh('autosave-end');
         const queuedChecksum = queuedAutosaveChecksumRef.current;
         queuedAutosaveChecksumRef.current = '';
         if (queuedChecksum && queuedChecksum !== lastSavedContentChecksumRef.current) {
@@ -1490,16 +1993,36 @@ export default function AIPlanTakeoffStandalone({
           });
         }
       }
-    }, 600);
+      };
+      if (typeof window.requestIdleCallback === 'function') {
+        autosaveIdleRef.current = window.requestIdleCallback(() => {
+          autosaveIdleRef.current = null;
+          void runAutosave();
+        }, { timeout: 15000 });
+      } else {
+        void runAutosave();
+      }
+    }, 5000);
     return () => {
       if (autosaveTimerRef.current) {
         window.clearTimeout(autosaveTimerRef.current);
         autosaveTimerRef.current = null;
       }
+      if (autosaveIdleRef.current && typeof window.cancelIdleCallback === 'function') {
+        window.cancelIdleCallback(autosaveIdleRef.current);
+        autosaveIdleRef.current = null;
+      }
     };
   }, [autosaveRequest, embedded, onSaveToPlatform, isRecoveryPreview, hasOpenTakeoffJob, hasAttachedProject, planPages.length, attachedProjectName, jobName, platformContext.projectName, importedTakeoffFileName, planFilename, takeoffContentChecksum, onRecentTakeoffJobsChange, requireVerifiedSave, createRecoverySnapshot]);
 
   const confirmImportedTakeoff = (imported, fileName) => {
+    if (embedded && onLinkLegacyTakeoff) {
+      if (!platformContext.jobId) {
+        setPlatformSaveMessage('Create or open a master job before importing a takeoff.');
+        return 'cancel';
+      }
+      return window.confirm(`Import ${fileName} into ${platformContext.projectName}? The existing master job will own its plans and takeoff results.`) ? 'attach' : 'cancel';
+    }
     const counts = imported.summary.counts || {};
     const message = [
       `Filename: ${fileName}`,
@@ -1535,7 +2058,7 @@ export default function AIPlanTakeoffStandalone({
     }
     try {
       const [fileHandle] = await window.showOpenFilePicker({
-        types: [{ description: 'Takeoff Job', accept: { 'application/json': [AI_PLAN_TAKEOFF_EXTENSION, '.json'] } }],
+        types: [{ description: AI_PLAN_TAKEOFF_FILE_DESCRIPTION, accept: { 'application/json': [AI_PLAN_TAKEOFF_EXTENSION, '.json'] } }],
         multiple: false
       });
       const file = await fileHandle.getFile();
@@ -1555,14 +2078,17 @@ export default function AIPlanTakeoffStandalone({
       }
       const importChoice = confirmImportedTakeoff(imported, file.name);
       if (importChoice === 'cancel') return;
-      const takeoffJobData = { ...imported.job, sourceFileName: file.name };
+      const takeoffJobData = embedded && onLinkLegacyTakeoff
+        ? onLinkLegacyTakeoff({ ...imported.job, sourceFileName: file.name })
+        : { ...imported.job, sourceFileName: file.name };
       if (importChoice === 'open') {
         takeoffJobData.associatedProjectId = '';
         takeoffJobData.associatedProjectName = '';
         takeoffJobData.platformProject = {};
         takeoffJobData.openedWithoutAttaching = true;
       }
-      setJobFileHandle(null);
+      // Keep the handle so a later Save writes back to this same file instead of asking again.
+      setJobFileHandle(fileHandle);
       await loadJobData(takeoffJobData, filenameWithoutKnownGr8Extension(file.name));
       setImportedTakeoffFileName(file.name);
       if (embedded && onSaveToPlatform && importChoice === 'attach') {
@@ -1629,7 +2155,9 @@ export default function AIPlanTakeoffStandalone({
         }
         const importChoice = confirmImportedTakeoff(imported, file.name);
         if (importChoice === 'cancel') return;
-        const takeoffJobData = { ...imported.job, sourceFileName: file.name };
+        const takeoffJobData = embedded && onLinkLegacyTakeoff
+          ? onLinkLegacyTakeoff({ ...imported.job, sourceFileName: file.name })
+          : { ...imported.job, sourceFileName: file.name };
         if (importChoice === 'open') {
           takeoffJobData.associatedProjectId = '';
           takeoffJobData.associatedProjectName = '';
@@ -1726,7 +2254,7 @@ export default function AIPlanTakeoffStandalone({
   };
 
   const getEaveLengthMm = (eave, scalePxPerMm) => {
-    return eave.lengthMm || getWallRunLengthMm(getEaveNodes(eave), scalePxPerMm);
+    return runLengthM({ ...eave, nodes: getEaveNodes(eave) }, scalePxPerMm) * 1000;
   };
 
   const finalizeCurrentWallRun = useCallback(() => {
@@ -1744,17 +2272,17 @@ export default function AIPlanTakeoffStandalone({
       thicknessMm: snapToStandardThickness(detectedWallThicknessMm),
       alignment,
       lengthMm,
-      exteriorType: wallCategory === 'exterior' ? 'Other' : '',
+      exteriorType: wallCategory === 'exterior' ? exteriorWallType : '',
       linedFaces: 2,
       openingDeductionsEnabled: true,
       wallHeightM: null
     };
 
     setCompletedWallRuns((prev) => [...prev, newRun]);
-    setSelectedWallId(newRun.id);
+    selectOnly('wall', newRun.id);
     setActivePolyline([]);
     markTakeoffItemCompleted('wall-run');
-  }, [activePolyline, pixelsPerMm, currentPage, wallCategory, detectedWallThicknessMm, alignment, getWallRunLengthMm, markTakeoffItemCompleted]);
+  }, [activePolyline, pixelsPerMm, currentPage, wallCategory, exteriorWallType, detectedWallThicknessMm, alignment, getWallRunLengthMm, markTakeoffItemCompleted]);
 
   const finalizeCurrentEaveRun = useCallback(() => {
     if (eavePoints.length < 2 || !pixelsPerMm) {
@@ -1797,6 +2325,7 @@ export default function AIPlanTakeoffStandalone({
         setSelectedOpeningId(null);
         setSelectedEaveId(null);
         setSelectedMeasurementId(null);
+        setSelectedPillarId(null);
         setDraggingVertex(null);
         setDraggingItem(null);
         setDraggingMeasureId(null);
@@ -1812,6 +2341,7 @@ export default function AIPlanTakeoffStandalone({
       else if (selectedFloorplanId) target = { type: 'floorplan', id: selectedFloorplanId };
       else if (selectedMeasurementId) target = { type: 'measure', id: selectedMeasurementId };
       else if (selectedEaveId) target = { type: 'eaves', id: selectedEaveId };
+      else if (selectedPillarId) target = { type: 'pillar', id: selectedPillarId };
       if (!target) return;
       const ok = window.confirm('Delete selected item?');
       if (!ok) return;
@@ -1824,10 +2354,11 @@ export default function AIPlanTakeoffStandalone({
       setSelectedAreaId(null);
       setSelectedOpeningId(null);
       setSelectedEaveId(null);
+      setSelectedPillarId(null);
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [deleteMarkupItem, isRecoveryPreview, markTakeoffItemCompleted, selectedAreaId, selectedEaveId, selectedFloorplanId, selectedMeasurementId, selectedOpeningId, selectedWallId]);
+  }, [deleteMarkupItem, isRecoveryPreview, markTakeoffItemCompleted, selectedAreaId, selectedEaveId, selectedFloorplanId, selectedMeasurementId, selectedOpeningId, selectedWallId, selectedPillarId]);
 
   useEffect(() => {
     if (openingType === 'door') {
@@ -1881,6 +2412,7 @@ export default function AIPlanTakeoffStandalone({
 
   const renderPdfPage = useCallback(async (pdf, pageNumber) => {
     if (!pdf) return;
+    logTakeoffRefresh('plan-asset-load-start', { page: pageNumber, source: 'pdf-render' });
     if (renderTaskRef.current) {
       try { await renderTaskRef.current.cancel(); } catch (err) {}
     }
@@ -1911,8 +2443,12 @@ export default function AIPlanTakeoffStandalone({
 
       const img = new window.Image();
       img.src = canvas.toDataURL('image/png');
-      img.onload = () => setImage(img);
+      img.onload = () => {
+        setImage(img);
+        logTakeoffRefresh('plan-asset-load-end', { page: pageNumber, source: 'pdf-render' });
+      };
     } catch (error) {
+      logTakeoffRefresh('plan-asset-load-error', { page: pageNumber, source: 'pdf-render' });
       if (error?.name !== 'RenderingCancelledException') console.error("PDF Render Error:", error);
     }
   }, []);
@@ -1943,26 +2479,48 @@ export default function AIPlanTakeoffStandalone({
       logicalWidth: unscaledViewport.width,
       logicalHeight: unscaledViewport.height,
       renderScale: totalScale,
-      vectorSegments: vectorSegmentsForPage
+      vectorSegments: vectorSegmentsForPage,
+      ...await readPdfAnalysisEvidence(page, unscaledViewport)
     };
   };
 
   useEffect(() => {
+    const next = getPlanDisplayIdentity(planPages, currentPage, pdfDoc);
+    const previous = displayedPlanRef.current;
+    if (previous?.pageNumber === next.pageNumber && previous.asset === next.asset) return;
+    displayedPlanRef.current = next;
     if (planPages.length > 0) {
-      showPlanPage(planPages, currentPage);
+      showPlanPage(planPages, currentPage).catch((error) => {
+        if (displayedPlanRef.current === next) displayedPlanRef.current = null;
+        console.error('Failed to display takeoff plan:', error);
+      });
     } else if (pdfDoc) {
       renderPdfPage(pdfDoc, currentPage);
     }
-    setActivePolyline([]);
-    setActiveAreaPolyline([]);
-    setEavePoints([]);
-    setBoxStartPoint(null);
+    // Only a deliberate sheet change ends these sheet-specific drafts. A new
+    // metadata object, image decode or effect replay must preserve live points.
+    if (previous && previous.pageNumber !== currentPage) {
+      setActivePolyline([]);
+      setActiveAreaPolyline([]);
+      setEavePoints([]);
+      setBoxStartPoint(null);
+    }
   }, [pdfDoc, planPages, currentPage, renderPdfPage, showPlanPage]);
+
+  useEffect(() => {
+    if (image || !planPages.length) return;
+    const page = planPages.find((item) => item.pageNumber === currentPage) || planPages[currentPage - 1];
+    if (page?.dataUrl) void showPlanPage(planPages, currentPage).catch((error) => {
+      console.error('Failed to recover takeoff plan image:', error);
+    });
+  }, [image, planPages, currentPage, showPlanPage]);
 
   const handleFileUpload = async (e, options = {}) => {
     const file = e.target.files[0];
     if (!file) return;
     const preserveTakeoffs = Boolean(options.preserveTakeoffs);
+    takeoffLifecycle.hydrationVersion += 1;
+    takeoffLifecycle.imageRequest = null;
 
     setPdfEngineError('');
 
@@ -1984,6 +2542,8 @@ export default function AIPlanTakeoffStandalone({
         setMeasurePoints([]);
         setEavePoints([]);
         if (!preserveTakeoffs) {
+          aiTakeoffBridge.restoreAppliedRuns();
+          aiTakeoffAnalysis.restoreReport();
           setCompletedMeasurements([]);
           setCompletedEaves([]);
           setCompletedWallRuns([]);
@@ -2022,6 +2582,8 @@ export default function AIPlanTakeoffStandalone({
     setMeasurePoints([]);
     setEavePoints([]);
     if (!preserveTakeoffs) {
+      aiTakeoffBridge.restoreAppliedRuns();
+      aiTakeoffAnalysis.restoreReport();
       setCompletedMeasurements([]);
       setCompletedEaves([]);
       setCompletedWallRuns([]);
@@ -2041,7 +2603,8 @@ export default function AIPlanTakeoffStandalone({
 
     setPdfDoc(null);
     const img = new window.Image();
-    img.src = URL.createObjectURL(file);
+    logTakeoffRefresh('plan-asset-load-start', { page: 1, source: 'image-upload' });
+    img.src = createTakeoffObjectUrl(file, 'plan-upload', logTakeoffRefresh);
     img.onload = () => {
       const canvas = rawCanvasRef.current;
       canvas.width = img.width;
@@ -2066,6 +2629,7 @@ export default function AIPlanTakeoffStandalone({
       setPlanMissingFromSavedJob(false);
       setVectorSegments([]);
       setImage(img);
+      logTakeoffRefresh('plan-asset-load-end', { page: 1, source: 'image-upload' });
     };
   };
 
@@ -2073,30 +2637,18 @@ export default function AIPlanTakeoffStandalone({
     const stage = stageRef.current;
     if (!stage) return null;
     const nativeEvent = event?.evt || event?.nativeEvent || event;
-    const hostRect = canvasHostRef.current?.getBoundingClientRect?.();
-    const point = nativeEvent
-      && hostRect
-      && Number.isFinite(nativeEvent.clientX)
-      && Number.isFinite(nativeEvent.clientY)
-      ? {
-          x: nativeEvent.clientX - hostRect.left,
-          y: nativeEvent.clientY - hostRect.top
-        }
-      : stage.getPointerPosition();
+    if ((Number.isFinite(nativeEvent?.clientX) && Number.isFinite(nativeEvent?.clientY)) || nativeEvent?.touches) {
+      // Konva normalizes client pixels against the actual canvas content box,
+      // including CSS scaling. Subtracting the host rect alone shrinks nodes.
+      stage.setPointersPositions(nativeEvent);
+    }
+    const point = stage.getPointerPosition();
     if (!point) return null;
 
-    const stageScaleValue = Number(stage.scaleX?.() || stageScale || 1);
-    const stageLocalPoint = {
-      x: (point.x - Number(stage.x?.() || 0)) / stageScaleValue,
-      y: (point.y - Number(stage.y?.() || 0)) / stageScaleValue
-    };
-
-    if (layerRef.current) {
-      const transform = layerRef.current.getTransform().copy().invert();
-      return transform.point(stageLocalPoint);
-    }
-
-    return stageLocalPoint;
+    // Remove the complete displayed transform once: Stage zoom/pan plus the
+    // plan Layer's rotation/offset. All tools store the same logical plan units.
+    const transform = (layerRef.current || stage).getAbsoluteTransform().copy().invert();
+    return transform.point(point);
   };
 
   const scheduleMouseHoverPos = useCallback((nextHoverPos) => {
@@ -2133,7 +2685,7 @@ export default function AIPlanTakeoffStandalone({
   }, [rememberCurrentSheetView, totalPages]);
 
   const getStrictWallSnapPoint = (rawX, rawY) => {
-    const nodeSnapRadius = 120 / stageScale;
+    const nodeSnapRadius = SNAP_RADIUS_SCREEN_PX / stageScale;
     let bestSnap = null;
     let minDistance = nodeSnapRadius;
 
@@ -2180,10 +2732,11 @@ export default function AIPlanTakeoffStandalone({
   };
 
   const getFloorplanCornerSnapPoint = (rawX, rawY) => {
-    return findFloorplanCornerSnapPoint(vectorSegments, { x: rawX, y: rawY }, 120 / stageScale);
+    return findFloorplanCornerSnapPoint(vectorSegments, { x: rawX, y: rawY }, SNAP_RADIUS_SCREEN_PX / stageScale);
   };
 
   const autoDetectWallThickness = (clickX, clickY, nearestSegment) => {
+    if (!autoDetectWallThickness_Enabled) return;
     if (!nearestSegment || !pixelsPerMm) return;
 
     const dx = nearestSegment.x2 - nearestSegment.x1;
@@ -2215,17 +2768,6 @@ export default function AIPlanTakeoffStandalone({
       if (calculatedMm >= 70 && calculatedMm <= 350) {
         setDetectedWallThicknessMm(snapToStandardThickness(calculatedMm));
       }
-    }
-  };
-
-  const autoDetectOpeningDimensions = (clickX, clickY, nearestSegment) => {
-    if (!nearestSegment || !pixelsPerMm) return;
-    const segLengthMm = Math.round(Math.hypot(nearestSegment.x2 - nearestSegment.x1, nearestSegment.y2 - nearestSegment.y1) / pixelsPerMm);
-    if (segLengthMm >= 400 && segLengthMm <= 5000) {
-      setOpeningWidthMm(segLengthMm);
-      const hDec = Math.round(openingHeightMm / 100);
-      const wDec = Math.round(segLengthMm / 100);
-      setSizeCodeInput(`${hDec}${wDec}`);
     }
   };
 
@@ -2307,6 +2849,8 @@ export default function AIPlanTakeoffStandalone({
           if (realMm && parseFloat(realMm) > 0) {
             const ratio = distPx / parseFloat(realMm);
             setPixelsPerMm(ratio);
+            // Remember which sheet this calibration was measured on; AI Takeoff treats it as authoritative.
+            aiTakeoffAnalysis.recordSheetCalibration(currentPage, ratio);
             markTakeoffItemCompleted('calibration');
             alert(`Scale calibrated: ${ratio.toFixed(4)} px/mm`);
           }
@@ -2364,9 +2908,6 @@ export default function AIPlanTakeoffStandalone({
       const targetWall = completedWallRuns.find((wall) => wall.id === selectedWallId && Number(wall.page || 1) === Number(currentPage));
       const wallSnap = targetWall ? nearestPointOnNodes(targetWall.nodes || [], pos.x, pos.y) : nearestWallSnapOnPage(pos.x, pos.y, currentPage);
       const snap = wallSnap || getGeneralSnapPoint(pos.x, pos.y);
-      if (snap.nearestSegment) {
-        autoDetectOpeningDimensions(snap.x, snap.y, snap.nearestSegment);
-      }
 
       const hDec = Math.round(openingHeightMm / 100);
       const wDec = Math.round(openingWidthMm / 100);
@@ -2413,11 +2954,16 @@ export default function AIPlanTakeoffStandalone({
         brickSillRequired: false,
         location: '',
         frameJambDetails: '',
+        roomKey: '',
+        roomLabel: '',
         x: snap.x,
         y: snap.y
       };
 
       setPlacedOpenings((prev) => [...prev, newOpening]);
+      // The opening editor must appear immediately against this same canonical opening - no
+      // Select tool, no re-click - exactly like a freshly drawn wall auto-selects itself.
+      selectOnly('opening', newOpening.id);
       markTakeoffItemCompleted(openingType);
     } else if (activeTool === 'floorplan') {
       const snap = getFloorplanCornerSnapPoint(pos.x, pos.y);
@@ -2429,10 +2975,16 @@ export default function AIPlanTakeoffStandalone({
       const previousPoint = activeAreaPolyline[activeAreaPolyline.length - 1];
       const nextPoint = resolveFloorplanFreePoint(pos, previousPoint, shiftKey);
       setActiveAreaPolyline((prev) => [...prev, nextPoint]);
-    } else if (activeTool === 'floorcoverings') {
+    } else if (activeTool === 'floorcoverings' || activeTool === 'roofarea') {
       const snap = getGeneralSnapPoint(pos.x, pos.y);
 
-      if (areaDrawMode === 'box') {
+      if (activeTool === 'roofarea') {
+        if (activeAreaPolyline.length >= 3 && Math.hypot(snap.x - activeAreaPolyline[0].x, snap.y - activeAreaPolyline[0].y) <= 12 / stageScale) {
+          finalizeCurrentArea();
+          return;
+        }
+        setActiveAreaPolyline((prev) => [...prev, { x: snap.x, y: snap.y }]);
+      } else if (areaDrawMode === 'box') {
         if (!boxStartPoint) {
           setBoxStartPoint({ x: snap.x, y: snap.y });
         } else {
@@ -2470,6 +3022,49 @@ export default function AIPlanTakeoffStandalone({
         // Free movement without axis locking for areas
         setActiveAreaPolyline((prev) => [...prev, { x: snap.x, y: snap.y }]);
       }
+    } else if (activeTool === 'pillar') {
+      // Same click-click rectangle gesture the floorcoverings box mode already uses: first click
+      // sets one corner, second click sets the opposite corner and finalises. A discrete vertical
+      // object, never a wall - its own tool, own array, own canonical fields.
+      const snap = getGeneralSnapPoint(pos.x, pos.y);
+      if (!boxStartPoint) {
+        setBoxStartPoint({ x: snap.x, y: snap.y });
+        return;
+      }
+      const p1 = boxStartPoint;
+      const p2 = { x: snap.x, y: snap.y };
+      const widthPx = Math.abs(p2.x - p1.x);
+      const depthPx = Math.abs(p2.y - p1.y);
+      if (widthPx < 2 || depthPx < 2) { setBoxStartPoint(null); return; }
+      const boxNodes = [
+        { x: p1.x, y: p1.y },
+        { x: p2.x, y: p1.y },
+        { x: p2.x, y: p2.y },
+        { x: p1.x, y: p2.y },
+      ];
+      // The drawn box is the FINISHED/visible footprint - the surround's outer face when a surround
+      // exists, or the core itself when it does not (surroundType defaults to 'none' here, so
+      // coreWidthMm/coreDepthMm start equal to the drawn box; adding a surround later leaves these
+      // as the correct core dimensions and the drawn box becomes the surround's own footprint).
+      const widthMm = pixelsPerMm ? Math.round(widthPx / pixelsPerMm) : null;
+      const depthMm = pixelsPerMm ? Math.round(depthPx / pixelsPerMm) : null;
+      const newPillar = {
+        id: Date.now() + Math.random(),
+        page: currentPage,
+        level: levelForPage(currentPage) || 'Unassigned',
+        nodes: boxNodes,
+        coreType: 'unclassified',
+        coreWidthMm: widthMm,
+        coreDepthMm: depthMm,
+        surroundType: 'none',
+        heightMm: null,
+        quantity: 1,
+        roomKey: '', roomLabel: '', location: '',
+      };
+      setCompletedPillars((prev) => [...prev, newPillar]);
+      selectOnly('pillar', newPillar.id);
+      setBoxStartPoint(null);
+      markTakeoffItemCompleted('pillar-box');
     }
   };
 
@@ -2482,7 +3077,7 @@ export default function AIPlanTakeoffStandalone({
     e.cancelBubble = true;
     if (activeTool === 'wall') finalizeCurrentWallRun();
     else if (activeTool === 'eaves') finalizeCurrentEaveRun();
-    else if (activeTool === 'floorplan' || activeTool === 'floorcoverings') finalizeCurrentArea();
+    else if (activeTool === 'floorplan' || activeTool === 'floorcoverings' || activeTool === 'roofarea') finalizeCurrentArea();
   };
 
   const finalizeCurrentArea = () => {
@@ -2506,6 +3101,22 @@ export default function AIPlanTakeoffStandalone({
       setSelectedFloorplanId(newFloorplan.id);
       setActiveAreaPolyline([]);
       markTakeoffItemCompleted('floorplan-area');
+      return;
+    }
+
+    if (activeTool === 'roofarea') {
+      const roofArea = {
+        id: `roof-area-${Date.now()}`,
+        page: currentPage,
+        category: 'Roof Area',
+        level: roofAreaLevel,
+        nodes: [...activeAreaPolyline],
+        exclusions: [],
+      };
+      setCompletedAreas((prev) => [...prev, roofArea]);
+      setSelectedAreaId(roofArea.id);
+      setActiveAreaPolyline([]);
+      markTakeoffItemCompleted('roof-area');
       return;
     }
 
@@ -2825,6 +3436,18 @@ export default function AIPlanTakeoffStandalone({
     )));
   };
 
+  const commitWallVertexDrag = (wallId, vertexIndex, event) => {
+    const position = event.target.position();
+    setCompletedWallRuns((prev) => prev.map((wall) => {
+      if (wall.id !== wallId) return wall;
+      const nodes = [...wall.nodes];
+      nodes[vertexIndex] = { x: position.x, y: position.y };
+      return { ...wall, nodes, lengthMm: getWallRunLengthMm(nodes, pixelsPerMm) };
+    }));
+    pointerEditInProgressRef.current = true;
+    handleMouseUp();
+  };
+
   const updateWallRunCategory = (wallId, category) => {
     setCompletedWallRuns((prev) => prev.map((wall) => {
       if (wall.id !== wallId) return wall;
@@ -2865,7 +3488,26 @@ export default function AIPlanTakeoffStandalone({
       setCompletedEaves((prev) => prev.filter((e) => e.id !== id));
       if (selectedEaveId === id) setSelectedEaveId(null);
     }
+    if (type === 'pillar') {
+      setCompletedPillars((prev) => prev.filter((p) => p.id !== id));
+      if (selectedPillarId === id) setSelectedPillarId(null);
+    }
   }
+
+  const levelForPage = useCallback((page) => {
+    const assigned = normaliseLevel(sheetLevels?.[Number(page)]);
+    return assigned !== 'Unassigned' ? assigned : '';
+  }, [sheetLevels]);
+  const currentSheetLevel = levelForPage(currentPage);
+  const unassignedSheetsWithMeasurements = React.useMemo(() => {
+    const pagesWithWork = new Set();
+    [completedWallRuns, completedFloorplans, completedAreas, completedPillars].forEach((collection) => {
+      (collection || []).forEach((item) => pagesWithWork.add(Number(item.page || item.pageId || 1)));
+    });
+    return [...pagesWithWork]
+      .filter((page) => page !== Number(currentPage) && !levelForPage(page))
+      .sort((a, b) => a - b);
+  }, [completedWallRuns, completedFloorplans, completedAreas, completedPillars, currentPage, levelForPage]);
 
   const activePageWalls = React.useMemo(() => completedWallRuns.filter((w) => Number(w.page || w.pageId || 1) === Number(currentPage)), [completedWallRuns, currentPage]);
   const activePageAreas = React.useMemo(() => completedAreas.filter((a) => Number(a.page || a.pageId || 1) === Number(currentPage)), [completedAreas, currentPage]);
@@ -2873,6 +3515,7 @@ export default function AIPlanTakeoffStandalone({
   const activePageFloorplans = React.useMemo(() => completedFloorplans.filter((f) => Number(f.page || f.pageId || 1) === Number(currentPage)), [completedFloorplans, currentPage]);
   const activePageMeasurements = React.useMemo(() => completedMeasurements.filter((m) => Number(m.page || m.pageId || 1) === Number(currentPage)), [completedMeasurements, currentPage]);
   const activePageEaves = React.useMemo(() => completedEaves.filter((e) => Number(e.page || e.pageId || 1) === Number(currentPage)), [completedEaves, currentPage]);
+  const activePagePillars = React.useMemo(() => completedPillars.filter((p) => Number(p.page || p.pageId || 1) === Number(currentPage)), [completedPillars, currentPage]);
 
   const pageFootprintArea = activePageFloorplans
     .filter((f) => f.type === 'Footprint')
@@ -2901,29 +3544,17 @@ export default function AIPlanTakeoffStandalone({
   const pageEaveTotals = EAVE_LEVEL_OPTIONS.reduce((acc, level) => {
     acc[level] = EAVE_WIDTH_OPTIONS.reduce((widthAcc, widthOption) => {
       widthAcc[widthOption] = activePageEaves
-        .filter((eave) => eave.level === level && eave.widthOption === widthOption)
+        .filter((eave) => resolveTakeoffLevel(eave, sheetLevels) === level && String(eave.widthOption) === widthOption)
         .reduce((sum, eave) => sum + getEaveLengthMm(eave, pixelsPerMm), 0);
       return widthAcc;
     }, {});
     return acc;
   }, {});
   const totalEavesLengthMm = activePageEaves.reduce((sum, eave) => sum + getEaveLengthMm(eave, pixelsPerMm), 0);
-  const exteriorWallClassificationTotals = useMemo(() => {
-    const result = {
-      all: { 'Brick Veneer': 0, 'Lightweight Cladding': 0, 'Rendered Masonry': 0, Other: 0 },
-      byFloor: {}
-    };
-    completedWallRuns.forEach((wall) => {
-      if (String(wall.category || '').toLowerCase() !== 'exterior') return;
-      const floor = floorFromPage(wall.page).label;
-      const className = EXTERIOR_WALL_CLASS_OPTIONS.includes(wall.exteriorType) ? wall.exteriorType : 'Other';
-      const lengthM = (Number(wall.lengthMm) || 0) / 1000;
-      if (!result.byFloor[floor]) result.byFloor[floor] = { 'Brick Veneer': 0, 'Lightweight Cladding': 0, 'Rendered Masonry': 0, Other: 0 };
-      result.byFloor[floor][className] += lengthM;
-      result.all[className] += lengthM;
-    });
-    return result;
-  }, [completedWallRuns]);
+  const exteriorWallClassificationTotals = useMemo(
+    () => createExteriorClassificationTotals(completedWallRuns, pixelsPerMm, sheetLevels),
+    [completedWallRuns, pixelsPerMm, sheetLevels]
+  );
 
   const baseScale = 6.0;
   const dpr = window.devicePixelRatio || 1;
@@ -2982,6 +3613,7 @@ export default function AIPlanTakeoffStandalone({
 
   const selectedFp = activePageFloorplans.find(f => f.id === selectedFloorplanId);
   const selectedWall = activePageWalls.find(w => w.id === selectedWallId);
+  const selectedWallSystem = selectedWall ? resolveConstructionSystem(selectedWall) : null;
   const selectModeActive = activeTool === 'select';
   const markupListening = !isRecoveryPreview;
 
@@ -2992,6 +3624,7 @@ export default function AIPlanTakeoffStandalone({
     && !draggingItem
     && !draggingMeasureId
     && !draggingEaveId
+    && activeTool !== 'select'
     && activeTool !== 'measure'
     && activeTool !== 'eaves'
     && activePolyline.length === 0
@@ -3044,7 +3677,9 @@ export default function AIPlanTakeoffStandalone({
     rememberCurrentSheetView({ scale: stage.scaleX?.() || stageScale, pos: nextPos });
   };
   const selectedEave = activePageEaves.find(e => e.id === selectedEaveId);
+  const selectedPillar = activePagePillars.find(p => p.id === selectedPillarId);
   const takeoffSchedule = React.useMemo(() => createTakeoffSchedule({
+    aiAnalysis: aiTakeoffAnalysis.report,
     projectInfo,
     planFilename,
     totalPages,
@@ -3056,19 +3691,21 @@ export default function AIPlanTakeoffStandalone({
     completedFloorplans,
     completedMeasurements,
     completedEaves,
+    completedPillars,
+    sheetLevels,
     jobSetupRows: platformContext.jobSetupRows || {}
-  }), [projectInfo, planFilename, totalPages, currentPage, pixelsPerMm, completedWallRuns, placedOpenings, completedAreas, completedFloorplans, completedMeasurements, completedEaves, platformContext.jobSetupRows]);
+  }), [projectInfo, planFilename, totalPages, currentPage, pixelsPerMm, completedWallRuns, placedOpenings, completedAreas, completedFloorplans, completedMeasurements, completedEaves, completedPillars, sheetLevels, platformContext.jobSetupRows, aiTakeoffAnalysis.report]);
   const scheduleSignature = React.useMemo(() => getScheduleSignature(takeoffSchedule), [takeoffSchedule]);
   const quoteSheetOutOfDate = !!lastQuoteSyncSignature && lastQuoteSyncSignature !== scheduleSignature;
 
   const downloadTextFile = (filename, content, type) => {
     const blob = new Blob([content], { type });
-    const url = URL.createObjectURL(blob);
+    const url = createTakeoffObjectUrl(blob, 'schedule-export', logTakeoffRefresh);
     const a = document.createElement('a');
     a.href = url;
     a.download = filename;
     a.click();
-    URL.revokeObjectURL(url);
+    revokeTakeoffObjectUrl(url, 'schedule-export', logTakeoffRefresh);
   };
 
   const handleExportCsv = () => {
@@ -3116,10 +3753,20 @@ export default function AIPlanTakeoffStandalone({
       return;
     }
     const payload = createJobSetupPayload(takeoffSchedule, {
+      jobId: platformContext.jobId || openedTakeoffJob?.masterJobId || '',
       takeoffId: openedTakeoffJob?.takeoffId || '',
       revision: savedRevision,
+      projectId: openedTakeoffJob?.associatedProjectId || platformContext.projectId || '',
+      sheetLevels,
     });
     setJobSetupPayload(payload);
+    if (embedded && onJobSetupUpdate) {
+      Promise.resolve(onJobSetupUpdate(payload)).then((result) => {
+        if (result?.ok === false) throw new Error(result.message || 'Job Setup import could not be prepared.');
+        setPlatformSaveMessage('Review the measured quantities in Job Setup to complete the import.');
+      }).catch((error) => setPlatformSaveMessage(error.message));
+      return;
+    }
     const previewRows = Array.isArray(payload.mappingPreview) ? payload.mappingPreview : [];
     const missingRows = previewRows.filter((row) => row.status === 'missing');
     const previewText = [
@@ -3128,7 +3775,11 @@ export default function AIPlanTakeoffStandalone({
       `Fields prepared: ${previewRows.length}`,
       `Missing or blank fields: ${missingRows.length}`,
       '',
-      ...previewRows.slice(0, 20).map((row) => `${row.destinationKey}: ${row.value ?? ''}`),
+      // The builder reviewing this confirmation sees the real Job Setup destination it is about to
+      // update (e.g. "Ground Floor 200mm Core-filled Blockwork: 6 LM"), never the internal row key
+      // (e.g. "lowerCoreFilledBlockworkLm") - Job Setup import mappings must read as clean,
+      // human-readable Takeoff -> Job Setup pairs, not opaque IDs.
+      ...previewRows.slice(0, 20).map((row) => `${row.label || row.destinationKey}: ${row.value ?? ''}${row.unit ? ` ${row.unit}` : ''}`),
       ...(previewRows.length > 20 ? ['...'] : []),
       '',
       ...(payload.warnings || []).map((warning) => `Warning: ${warning}`),
@@ -3138,10 +3789,11 @@ export default function AIPlanTakeoffStandalone({
     const confirmed = window.confirm(previewText);
     if (!confirmed) return;
     if (onJobSetupUpdate) {
-      Promise.resolve(onJobSetupUpdate(payload)).then(() => {
+      Promise.resolve(onJobSetupUpdate(payload)).then((result) => {
+        if (result?.ok === false) throw new Error(result.message || 'Job Setup import failed.');
         const updatedFields = previewRows.filter((row) => row.status === 'ready').map((row) => row.destinationKey);
         setPlatformSaveMessage(`Exported Takeoff to Job Setup (${updatedFields.length} fields updated).`);
-      });
+      }).catch((error) => setPlatformSaveMessage(error.message));
     }
   };
 
@@ -3180,23 +3832,21 @@ export default function AIPlanTakeoffStandalone({
   const handleScheduleItemClick = (row) => {
     const page = row.planSheet || row.page;
     if (page) goToSheet(page);
-    setSelectedFloorplanId(null);
-    setSelectedWallId(null);
-    setSelectedAreaId(null);
-    setSelectedOpeningId(null);
-    setSelectedEaveId(null);
     const wall = completedWallRuns.find((item) => item.id === row.itemId);
     const floorplan = completedFloorplans.find((item) => item.id === row.itemId);
     const area = completedAreas.find((item) => item.id === row.itemId);
     const opening = placedOpenings.find((item) => item.id === row.itemId);
     const eave = completedEaves.find((item) => item.id === row.itemId);
     const measurement = completedMeasurements.find((item) => item.id === row.itemId);
-    if (wall) setSelectedWallId(wall.id);
-    if (floorplan) setSelectedFloorplanId(floorplan.id);
-    if (area) setSelectedAreaId(area.id);
-    if (opening) setSelectedOpeningId(opening.id);
-    if (eave) setSelectedEaveId(eave.id);
-    if (measurement) setSelectedMeasurementId(measurement.id);
+    const pillar = completedPillars.find((item) => item.id === row.itemId);
+    if (wall) selectOnly('wall', wall.id);
+    else if (floorplan) selectOnly('floorplan', floorplan.id);
+    else if (area) selectOnly('area', area.id);
+    else if (opening) selectOnly('opening', opening.id);
+    else if (eave) selectOnly('eaves', eave.id);
+    else if (measurement) selectOnly('measure', measurement.id);
+    else if (pillar) selectOnly('pillar', pillar.id);
+    else selectOnly(null, null);
   };
 
   const renderScheduleRows = (title, rows, quantityLabel = 'Quantity') => (
@@ -3225,6 +3875,7 @@ export default function AIPlanTakeoffStandalone({
                   {row.level || row.planSheet ? `${row.level || ''} ${row.planSheet ? `Sheet ${row.planSheet}` : ''}` : row.itemId}
                   {row.grossAreaM2 !== undefined ? ` Gross ${row.grossAreaM2} m2 / Net ${row.netAreaM2} m2` : ''}
                   {row.totalOpeningAreaM2 !== undefined ? ` Area ${row.totalOpeningAreaM2} m2` : ''}
+                  {row.notes ? <div>{row.notes}</div> : null}
                 </td>
               </tr>
             ))}
@@ -3233,6 +3884,182 @@ export default function AIPlanTakeoffStandalone({
       </div>
     </details>
   );
+
+  const handleWallSystemRowClick = (row) => {
+    if (!row.walls?.length) return;
+    const target = row.walls[0];
+    if (target.page) goToSheet(target.page);
+    selectOnly('wall', target.id);
+  };
+
+  // The redesigned wall sections: grouped by level, then by canonical construction system and
+  // frame, replacing the old flat "Other"-hiding rows. Zero rows are hidden; Unclassified is
+  // always shown (only) when it actually carries length, with a review callout and a click that
+  // navigates straight to its first wall run.
+  const renderWallSystemSchedule = (title, wallSystems, side) => (
+    <details open style={{ border: '1px solid #d1d5db', borderRadius: '6px', background: '#fff' }}>
+      <summary style={{ padding: '8px 10px', cursor: 'pointer', fontWeight: 'bold', color: '#111827' }}>{title}</summary>
+      <div style={{ maxHeight: '260px', overflow: 'auto', padding: '4px 8px 8px' }}>
+        {!(wallSystems?.levels || []).some((levelGroup) => levelGroup[side].rows.some((row) => row.lengthM > 0)) && (
+          <div style={{ padding: '8px', color: '#6b7280', fontSize: '12px' }}>No measured walls.</div>
+        )}
+        {(wallSystems?.levels || []).map((levelGroup) => {
+          const group = levelGroup[side];
+          const visibleRows = group.rows.filter((row) => row.lengthM > 0);
+          if (!visibleRows.length) return null;
+          const unclassified = group.rows.find((row) => row.system === 'unclassified' && row.lengthM > 0);
+          return (
+            <div key={levelGroup.level} style={{ marginBottom: '10px' }}>
+              <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#374151', textTransform: 'uppercase', padding: '4px 0' }}>
+                {levelGroup.level} &mdash; {side === 'external' ? 'External Walls' : 'Internal Walls'}
+              </div>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                <thead>
+                  <tr style={{ background: '#f3f4f6' }}>
+                    <th style={{ textAlign: 'left', padding: '5px', borderBottom: '1px solid #ddd' }}>Wall System</th>
+                    <th style={{ textAlign: 'left', padding: '5px', borderBottom: '1px solid #ddd' }}>Frame</th>
+                    <th style={{ textAlign: 'right', padding: '5px', borderBottom: '1px solid #ddd' }}>Length (lm)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleRows.flatMap((row) => [
+                    <tr key={row.itemId} onClick={() => handleWallSystemRowClick(row)}
+                      style={{ cursor: row.walls.length ? 'pointer' : 'default', background: row.system === 'unclassified' ? '#fff7ed' : 'transparent' }}>
+                      <td style={{ padding: '5px', borderBottom: '1px solid #eee', color: row.system === 'unclassified' ? '#b45309' : '#111827', fontWeight: row.system === 'unclassified' ? 'bold' : 'normal' }}>
+                        {row.system === 'unclassified' ? `⚠ Unclassified ${side === 'external' ? 'External' : 'Internal'} Wall — REVIEW REQUIRED` : row.label}
+                      </td>
+                      <td style={{ padding: '5px', borderBottom: '1px solid #eee' }}>{row.frameLabel}</td>
+                      <td style={{ padding: '5px', borderBottom: '1px solid #eee', textAlign: 'right', fontWeight: 'bold' }}>{row.lengthM.toFixed(2)}</td>
+                    </tr>,
+                    // Cladding product is DETAIL under its parent row, never a second wall total.
+                    ...row.products.map((product) => (
+                      <tr key={`${row.itemId}:${product.label}`} style={{ color: '#6b7280', fontSize: '11px' }}>
+                        <td style={{ padding: '2px 5px 2px 20px', borderBottom: '1px solid #f3f4f6' }}>{product.label}</td>
+                        <td style={{ padding: '2px 5px', borderBottom: '1px solid #f3f4f6' }} />
+                        <td style={{ padding: '2px 5px', borderBottom: '1px solid #f3f4f6', textAlign: 'right' }}>{product.lengthM.toFixed(2)}</td>
+                      </tr>
+                    )),
+                  ])}
+                  <tr style={{ fontWeight: 'bold', borderTop: '2px solid #d1d5db' }}>
+                    <td style={{ padding: '5px' }} colSpan={2}>{levelGroup.level} {side === 'external' ? 'External' : 'Internal'} Total</td>
+                    <td style={{ padding: '5px', textAlign: 'right' }}>{group.totalLengthM.toFixed(2)}</td>
+                  </tr>
+                </tbody>
+              </table>
+              {unclassified && (
+                <div style={{ fontSize: '11px', color: '#b45309', padding: '4px 2px' }}>
+                  &#9888; {unclassified.walls.length} unclassified wall run{unclassified.walls.length === 1 ? '' : 's'}, {unclassified.lengthM.toFixed(2)} lm on {levelGroup.level} &mdash; click above to review.
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </details>
+  );
+
+  const handleOpeningRowClick = (row) => {
+    const target = row.openings?.[0];
+    if (!target) return;
+    if (target.page) goToSheet(target.page);
+    selectOnly('opening', target.id);
+  };
+
+  // Windows are grouped by level then shown as real, human-readable rows - actual code, size,
+  // qty and glass, never an internal window_schedule_N id as the primary description (Phase 2A).
+  const renderWindowSchedule = (windows) => {
+    const rows = (windows || []).filter((row) => row.category === 'Window');
+    const byLevel = new Map();
+    rows.forEach((row) => { if (!byLevel.has(row.floor)) byLevel.set(row.floor, []); byLevel.get(row.floor).push(row); });
+    const sillTotal = (windows || []).find((row) => row.itemId === 'brick_sill_total');
+    return (
+      <details open style={{ border: '1px solid #d1d5db', borderRadius: '6px', background: '#fff' }}>
+        <summary style={{ padding: '8px 10px', cursor: 'pointer', fontWeight: 'bold', color: '#111827' }}>Windows</summary>
+        <div style={{ maxHeight: '260px', overflow: 'auto', padding: '4px 8px 8px' }}>
+          {!rows.length && <div style={{ padding: '8px', color: '#6b7280', fontSize: '12px' }}>No measured windows.</div>}
+          {Array.from(byLevel.entries()).map(([level, levelRows]) => (
+            <div key={level} style={{ marginBottom: '10px' }}>
+              <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#374151', textTransform: 'uppercase', padding: '4px 0' }}>Windows &mdash; {level}</div>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                <thead>
+                  <tr style={{ background: '#f3f4f6' }}>
+                    <th style={{ textAlign: 'left', padding: '5px', borderBottom: '1px solid #ddd' }}>Code</th>
+                    <th style={{ textAlign: 'left', padding: '5px', borderBottom: '1px solid #ddd' }}>Size</th>
+                    <th style={{ textAlign: 'right', padding: '5px', borderBottom: '1px solid #ddd' }}>Qty</th>
+                    <th style={{ textAlign: 'left', padding: '5px', borderBottom: '1px solid #ddd' }}>Glass</th>
+                    <th style={{ textAlign: 'left', padding: '5px', borderBottom: '1px solid #ddd' }}>Location</th>
+                    <th style={{ textAlign: 'left', padding: '5px', borderBottom: '1px solid #ddd' }}>Wall System</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {levelRows.map((row) => (
+                    <tr key={row.itemId} onClick={() => handleOpeningRowClick({ ...row, itemIds: [row.itemId] })}>
+                      <td style={{ padding: '5px', borderBottom: '1px solid #eee', fontWeight: 'bold' }}>{row.code || row.itemId}</td>
+                      <td style={{ padding: '5px', borderBottom: '1px solid #eee' }}>{row.sizeLabel || '—'}</td>
+                      <td style={{ padding: '5px', borderBottom: '1px solid #eee', textAlign: 'right' }}>{row.quantity}</td>
+                      <td style={{ padding: '5px', borderBottom: '1px solid #eee' }}>{row.glassType || 'Unspecified'}</td>
+                      <td style={{ padding: '5px', borderBottom: '1px solid #eee' }}>{row.roomLabel || row.location}</td>
+                      <td style={{ padding: '5px', borderBottom: '1px solid #eee', color: '#6b7280' }}>{row.hostWallSystem || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ))}
+          {sillTotal && sillTotal.quantity > 0 && (
+            <div style={{ fontSize: '11px', color: '#475569', padding: '4px 2px' }}>Total brick-veneer sill length: {sillTotal.quantity.toFixed(2)} lm</div>
+          )}
+        </div>
+      </details>
+    );
+  };
+
+  // Doors follow the same human-readable principle: real code/type, size and qty, never an
+  // internal door_schedule_N id as the primary description (Phase 2A).
+  const renderDoorSchedule = (doors) => {
+    const byLevel = new Map();
+    (doors || []).forEach((row) => { if (!byLevel.has(row.floor)) byLevel.set(row.floor, []); byLevel.get(row.floor).push(row); });
+    return (
+      <details open style={{ border: '1px solid #d1d5db', borderRadius: '6px', background: '#fff' }}>
+        <summary style={{ padding: '8px 10px', cursor: 'pointer', fontWeight: 'bold', color: '#111827' }}>Doors</summary>
+        <div style={{ maxHeight: '260px', overflow: 'auto', padding: '4px 8px 8px' }}>
+          {!(doors || []).length && <div style={{ padding: '8px', color: '#6b7280', fontSize: '12px' }}>No measured doors.</div>}
+          {Array.from(byLevel.entries()).map(([level, levelRows]) => (
+            <div key={level} style={{ marginBottom: '10px' }}>
+              <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#374151', textTransform: 'uppercase', padding: '4px 0' }}>Doors &mdash; {level}</div>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                <thead>
+                  <tr style={{ background: '#f3f4f6' }}>
+                    <th style={{ textAlign: 'left', padding: '5px', borderBottom: '1px solid #ddd' }}>Code</th>
+                    {/* Cavity Sliding Door / Barn Door / Hinged etc. - never collapsed into the
+                        coarser "Internal Door" openingClass, so the framing requirement a cavity
+                        slider carries (a frame/cage) is never silently lost in this schedule. */}
+                    <th style={{ textAlign: 'left', padding: '5px', borderBottom: '1px solid #ddd' }}>Type</th>
+                    <th style={{ textAlign: 'left', padding: '5px', borderBottom: '1px solid #ddd' }}>Size</th>
+                    <th style={{ textAlign: 'right', padding: '5px', borderBottom: '1px solid #ddd' }}>Qty</th>
+                    <th style={{ textAlign: 'left', padding: '5px', borderBottom: '1px solid #ddd' }}>Location</th>
+                    <th style={{ textAlign: 'left', padding: '5px', borderBottom: '1px solid #ddd' }}>Wall System</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {levelRows.map((row) => (
+                    <tr key={row.itemId} onClick={() => handleOpeningRowClick({ ...row, itemIds: [row.itemId] })}>
+                      <td style={{ padding: '5px', borderBottom: '1px solid #eee', fontWeight: 'bold' }}>{row.code || `${row.widthMm || ''}${row.widthMm ? ' ' : ''}${row.doorType}`}</td>
+                      <td style={{ padding: '5px', borderBottom: '1px solid #eee', fontWeight: row.isCavitySlider ? 'bold' : 'normal', color: row.isCavitySlider ? '#7c2d12' : 'inherit' }}>{row.doorStyle || row.doorType}</td>
+                      <td style={{ padding: '5px', borderBottom: '1px solid #eee' }}>{row.sizeLabel || '—'}</td>
+                      <td style={{ padding: '5px', borderBottom: '1px solid #eee', textAlign: 'right' }}>{row.quantity}</td>
+                      <td style={{ padding: '5px', borderBottom: '1px solid #eee' }}>{row.roomLabel || row.location}</td>
+                      <td style={{ padding: '5px', borderBottom: '1px solid #eee', color: '#6b7280' }}>{row.hostWallSystem || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ))}
+        </div>
+      </details>
+    );
+  };
 
   if (embedded && platformContext.isHydratingProject) {
     return (
@@ -3255,6 +4082,25 @@ export default function AIPlanTakeoffStandalone({
             Back to Project Dashboard
           </button>
         )}
+        {embedded && onOpenMasterJob && (
+          <button type="button" data-testid="takeoff-open-master-job" onClick={onOpenMasterJob}
+            style={{ padding: 10, background: '#fff', color: '#115e59', border: '1px solid #99d8d2', borderRadius: 6, cursor: 'pointer', fontWeight: 700 }}>
+            Open Job
+          </button>
+        )}
+
+        {/* Job identity: the takeoff panel must name the job it belongs to, so a sheet printed or
+            screenshotted from here can never be misread as belonging to another job. */}
+        <div style={{ background: '#fff', padding: '10px 12px', borderRadius: '6px', border: '2px solid #6d28d9', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+          <span style={{ fontSize: '11px', fontWeight: 'bold', letterSpacing: '0.06em', color: '#6d28d9', textTransform: 'uppercase' }}>Takeoff for</span>
+          <strong style={{ fontSize: '15px', color: '#0f172a', lineHeight: 1.25 }}>{takeoffJobDisplayName}</strong>
+          <span style={{ fontSize: '13px', color: takeoffSiteAddress ? '#334155' : '#94a3b8', fontStyle: takeoffSiteAddress ? 'normal' : 'italic', lineHeight: 1.25 }}>
+            {takeoffSiteAddress || 'No site address set - add one in Takeoff Schedule'}
+          </span>
+          {projectInfo.clientName ? (
+            <span style={{ fontSize: '12px', color: '#64748b', lineHeight: 1.25 }}>Client: {projectInfo.clientName}</span>
+          ) : null}
+        </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
           <button
@@ -3273,7 +4119,7 @@ export default function AIPlanTakeoffStandalone({
           />
           <label style={{ padding: '8px', background: isRecoveryPreview ? '#e5e7eb' : '#fff', border: '1px solid #ccc', borderRadius: '4px', textAlign: 'center', cursor: isRecoveryPreview ? 'not-allowed' : 'pointer', fontSize: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
             <Upload size={16} /> Open Plan
-            <input type="file" accept="image/*,.pdf" onChange={handleFileUpload} disabled={isRecoveryPreview} style={{ display: 'none' }} />
+            <input type="file" accept="image/*,.pdf" onChange={handleFileUpload} disabled={isRecoveryPreview || (embedded && !platformContext.jobId)} style={{ display: 'none' }} />
           </label>
           <label style={{ display: 'none' }}>
             Relink Original Plan
@@ -3287,7 +4133,7 @@ export default function AIPlanTakeoffStandalone({
             style={{ padding: '8px', background: hasOpenTakeoffJob && !isRecoveryPreview ? '#455a64' : '#94a3b8', color: '#fff', border: 'none', borderRadius: '4px', cursor: hasOpenTakeoffJob && !isRecoveryPreview ? 'pointer' : 'not-allowed', fontSize: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
             title="Download a complete portable takeoff backup"
           >
-            <Download size={16} /> Download Backup
+            <Download size={16} /> Export Takeoff
           </button>
           <button
             id="ai-plan-takeoff-save-button"
@@ -3306,7 +4152,7 @@ export default function AIPlanTakeoffStandalone({
             style={{ padding: '8px', background: isRecoveryPreview ? '#94a3b8' : '#4caf50', color: '#fff', border: 'none', borderRadius: '4px', cursor: isRecoveryPreview ? 'not-allowed' : 'pointer', fontSize: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
             title="Import a previously exported takeoff backup into this project"
           >
-            <Upload size={16} /> Import Backup From Computer
+            <Upload size={16} /> Import Takeoff
           </button>
           <input id="legacy-job-loader" type="file" accept=".gr8takeoff,.json" onChange={handleLoadJob} style={{ display: 'none' }} />
         </div>
@@ -3339,9 +4185,7 @@ export default function AIPlanTakeoffStandalone({
         {!hasOpenTakeoffJob && (
           <div style={{ background: '#fff7ed', border: '1px solid #fdba74', borderRadius: '6px', padding: '12px', color: '#9a3412', fontSize: '13px', display: 'grid', gap: '10px' }}>
             <strong style={{ color: '#7c2d12', fontSize: '15px' }}>No takeoff job open</strong>
-            <button type="button" onClick={handleOpenJob} style={{ padding: '9px', background: '#4caf50', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Import Backup From Computer</button>
-            <button type="button" onClick={() => document.getElementById('legacy-job-loader')?.click()} style={{ padding: '9px', background: '#fff', color: '#111827', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Import Takeoff Backup From Computer</button>
-            <button type="button" onClick={createNewTakeoffJob} style={{ padding: '9px', background: '#111827', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Create New Takeoff Job</button>
+            <button type="button" onClick={createNewTakeoffJob} style={{ padding: '9px', background: '#111827', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>{embedded && onNewMasterJob ? 'Create New Job' : 'Create New Takeoff Job'}</button>
           </div>
         )}
         {importedTakeoffFileName && (
@@ -3352,6 +4196,11 @@ export default function AIPlanTakeoffStandalone({
         {platformSaveMessage && (
           <div style={{ background: platformSaveMessage.includes('SAVE FAILED') ? '#fef2f2' : '#ecfdf5', border: `1px solid ${platformSaveMessage.includes('SAVE FAILED') ? '#fca5a5' : '#86efac'}`, borderRadius: '4px', padding: '6px 8px', color: platformSaveMessage.includes('SAVE FAILED') ? '#991b1b' : '#166534', fontSize: '12px', fontWeight: 'bold' }}>{platformSaveMessage}</div>
         )}
+        <AiTakeoffAction analysis={aiTakeoffAnalysis} schedule={takeoffSchedule} sheetLevels={sheetLevels} disabled={isRecoveryPreview || !image}
+          onReview={() => setShowSchedule(true)} onSave={handleSaveJob}
+          onGoToPage={(page) => { if (page >= 1 && page <= totalPages) setCurrentPage(page); }}
+          onCalibrate={() => { setCalibrationMode(true); setCalibPoints([]); setActivePolyline([]); setActiveAreaPolyline([]); }} />
+        <AiTakeoffDevelopmentAction bridge={aiTakeoffBridge} currentPage={currentPage} enabled={enableAiTakeoffDevelopment} disabled={isRecoveryPreview || !image || !pixelsPerMm} />
         {attachDialogOpen && (
           <div
             onClick={() => !attachSaving && setAttachDialogOpen(false)}
@@ -3431,13 +4280,53 @@ export default function AIPlanTakeoffStandalone({
           </div>
         )}
 
+        {/* Job Setup's wall and area inputs are all per level, so every measurement needs to know
+            which storey its sheet represents before any of it can import. Nothing else can supply
+            this: the sheet's position in the PDF says nothing about the building. */}
+        {planPages.length > 0 && (
+          <div style={{ background: '#fff', padding: '10px 12px', borderRadius: '4px', border: `2px solid ${currentSheetLevel ? '#0f766e' : '#f59e0b'}`, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <label style={{ fontSize: '13px', fontWeight: 'bold', color: '#0f172a' }}>
+              Sheet {currentPage} is which level?
+            </label>
+            <select
+              id="ai-plan-takeoff-sheet-level-select"
+              value={currentSheetLevel}
+              disabled={isRecoveryPreview}
+              onChange={(event) => {
+                const nextLevel = event.target.value;
+                setSheetLevels((prev) => {
+                  const next = { ...prev };
+                  if (nextLevel) next[currentPage] = nextLevel;
+                  else delete next[currentPage];
+                  return next;
+                });
+                markTakeoffItemCompleted('sheet-level-assignment');
+              }}
+              style={{ padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: 'bold', fontSize: '14px' }}
+            >
+              <option value="">Not assigned</option>
+              {SHEET_LEVEL_OPTIONS.map((level) => <option key={level} value={level}>{level}</option>)}
+            </select>
+            <span style={{ fontSize: '11px', color: currentSheetLevel ? '#475569' : '#b45309', fontWeight: currentSheetLevel ? 'normal' : 'bold', lineHeight: 1.35 }}>
+              {currentSheetLevel
+                ? `Walls, floor areas and roof areas on this sheet import as ${currentSheetLevel}.`
+                : 'Until this sheet has a level, nothing measured on it can import into Job Setup.'}
+            </span>
+            {unassignedSheetsWithMeasurements.length > 0 && (
+              <span style={{ fontSize: '11px', color: '#b45309', fontWeight: 'bold' }}>
+                Also unassigned with measurements on them: {unassignedSheetsWithMeasurements.map((page) => `Sheet ${page}`).join(', ')}.
+              </span>
+            )}
+          </div>
+        )}
+
         <div style={{ display: 'flex', gap: '8px' }}>
           <button
             onClick={() => setRotation((r) => (r + 90) % 360)}
             disabled={isRecoveryPreview}
             style={{ flex: 1, padding: '10px', cursor: isRecoveryPreview ? 'not-allowed' : 'pointer', background: isRecoveryPreview ? '#e5e7eb' : '#fff', border: '1px solid #ccc', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '15px', fontWeight: '600' }}
           >
-            <RotateCw size={18} /> Rotate 90Â°
+            <RotateCw size={18} /> Rotate 90°
           </button>
           <button
             onClick={() => { setCalibrationMode(!calibrationMode); setCalibPoints([]); setActivePolyline([]); setActiveAreaPolyline([]); }}
@@ -3483,6 +4372,12 @@ export default function AIPlanTakeoffStandalone({
             <DoorOpen size={14} style={{ verticalAlign: 'middle', marginRight: '2px' }} /> Openings
           </button>
           <button
+            onClick={() => { setActiveTool('pillar'); setActivePolyline([]); setActiveAreaPolyline([]); setEavePoints([]); setBoxStartPoint(null); }}
+            style={{ flex: 1, padding: '8px', fontSize: '12px', fontWeight: 'bold', border: 'none', borderRadius: '4px', cursor: 'pointer', background: activeTool === 'pillar' ? '#fff' : 'transparent', color: activeTool === 'pillar' ? '#1976d2' : '#555' }}
+          >
+            <RectangleVertical size={14} style={{ verticalAlign: 'middle', marginRight: '2px' }} /> Posts / Columns
+          </button>
+          <button
             onClick={() => { setActiveTool('floorplan'); setActivePolyline([]); setActiveAreaPolyline([]); setEavePoints([]); }}
             style={{ flex: 1, padding: '8px', fontSize: '12px', fontWeight: 'bold', border: 'none', borderRadius: '4px', cursor: 'pointer', background: activeTool === 'floorplan' ? '#fff' : 'transparent', color: activeTool === 'floorplan' ? '#1976d2' : '#555' }}
           >
@@ -3493,6 +4388,12 @@ export default function AIPlanTakeoffStandalone({
             style={{ flex: 1, padding: '8px', fontSize: '12px', fontWeight: 'bold', border: 'none', borderRadius: '4px', cursor: 'pointer', background: activeTool === 'floorcoverings' ? '#fff' : 'transparent', color: activeTool === 'floorcoverings' ? '#1976d2' : '#555' }}
           >
             <Square size={14} style={{ verticalAlign: 'middle', marginRight: '2px' }} /> Areas
+          </button>
+          <button
+            onClick={() => { setActiveTool('roofarea'); setActivePolyline([]); setActiveAreaPolyline([]); setEavePoints([]); }}
+            style={{ flex: 1, padding: '8px', fontSize: '12px', fontWeight: 'bold', border: 'none', borderRadius: '4px', cursor: 'pointer', background: activeTool === 'roofarea' ? '#fff' : 'transparent', color: activeTool === 'roofarea' ? '#b45309' : '#555' }}
+          >
+            <Home size={14} style={{ verticalAlign: 'middle', marginRight: '2px' }} /> Roof
           </button>
           <button
             onClick={() => { setActiveTool('eaves'); setActivePolyline([]); setActiveAreaPolyline([]); setMeasurePoints([]); }}
@@ -3519,6 +4420,25 @@ export default function AIPlanTakeoffStandalone({
               </button>
             </div>
 
+            {wallCategory === 'exterior' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '14px', fontWeight: 'bold', color: '#333' }}>Exterior Wall Type:</label>
+                <select
+                  id="ai-plan-takeoff-exterior-wall-type"
+                  value={resolveExteriorClass({ exteriorType: exteriorWallType })}
+                  onChange={(event) => setExteriorWallType(event.target.value)}
+                  style={{ padding: '8px', fontSize: '14px', border: '1px solid #1976d2', borderRadius: '4px', fontWeight: 'bold', background: exteriorWallType === 'Other' ? '#fff7ed' : '#fff' }}
+                >
+                  {EXTERIOR_WALL_CLASS_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
+                </select>
+                <span style={{ fontSize: '12px', color: exteriorWallType === 'Other' ? '#b45309' : '#475569', fontWeight: exteriorWallType === 'Other' ? 'bold' : 'normal', lineHeight: 1.35 }}>
+                  {exteriorWallType === 'Other'
+                    ? 'Walls drawn now are recorded as Other and carry no brick, render or cladding quantities.'
+                    : `Walls drawn now are recorded as ${exteriorWallType}. Walls already drawn are unchanged.`}
+                </span>
+              </div>
+            )}
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               <label style={{ fontSize: '14px', fontWeight: 'bold', color: '#333' }}>Wall Alignment:</label>
               <div style={{ display: 'flex', gap: '6px' }}>
@@ -3537,15 +4457,30 @@ export default function AIPlanTakeoffStandalone({
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', background: '#f5f5f5', padding: '8px', borderRadius: '4px' }}>
-              <label style={{ fontSize: '14px', fontWeight: 'bold', color: '#333', flex: 1 }}>Wall Thickness:</label>
-              <input
-                type="number"
-                value={detectedWallThicknessMm}
-                onChange={(e) => setDetectedWallThicknessMm(parseFloat(e.target.value) || 0)}
-                style={{ width: '80px', padding: '4px', fontSize: '14px', fontWeight: 'bold' }}
-              />
-              <span style={{ fontSize: '14px', color: '#1976d2' }}>mm</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', background: '#f5f5f5', padding: '8px', borderRadius: '4px' }}>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <label style={{ fontSize: '14px', fontWeight: 'bold', color: '#333', flex: 1 }}>Wall Thickness:</label>
+                <input
+                  type="number"
+                  value={detectedWallThicknessMm}
+                  onChange={(e) => {
+                    setDetectedWallThicknessMm(parseFloat(e.target.value) || 0);
+                    setAutoDetectWallThicknessEnabled(false);
+                  }}
+                  style={{ width: '80px', padding: '4px', fontSize: '14px', fontWeight: 'bold' }}
+                />
+                <span style={{ fontSize: '14px', color: '#1976d2' }}>mm</span>
+              </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: autoDetectWallThickness_Enabled ? '#475569' : '#b45309', fontWeight: autoDetectWallThickness_Enabled ? 'normal' : 'bold' }}>
+                <input
+                  type="checkbox"
+                  checked={autoDetectWallThickness_Enabled}
+                  onChange={(e) => setAutoDetectWallThicknessEnabled(e.target.checked)}
+                />
+                {autoDetectWallThickness_Enabled
+                  ? 'Auto-detect thickness from the plan lines'
+                  : `Locked to ${detectedWallThicknessMm}mm - auto-detect off`}
+              </label>
             </div>
 
             {selectedWall && (
@@ -3673,11 +4608,7 @@ export default function AIPlanTakeoffStandalone({
                   onChange={(e) => setDoorSubtype(e.target.value)}
                   style={{ flex: 1, padding: '6px', fontSize: '14px', border: '1px solid #ccc', borderRadius: '4px', background: '#fff', fontWeight: 'bold' }}
                 >
-                  <option value="Entry">Entry Doors</option>
-                  <option value="Internal">Internal Doors</option>
-                  <option value="Robe">Robe Sliders</option>
-                  <option value="PanelLift">Garage Panel lift Door</option>
-                  <option value="Roller">Roller Door</option>
+                  {DOOR_SUBTYPE_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                 </select>
               </div>
             )}
@@ -3700,11 +4631,7 @@ export default function AIPlanTakeoffStandalone({
                 onChange={(e) => setGlassType(e.target.value)}
                 style={{ flex: 1, padding: '6px', fontSize: '14px', border: '1px solid #ccc', borderRadius: '4px', background: '#fff', fontWeight: 'bold' }}
               >
-                <option value="Standard Clear">Standard Clear</option>
-                <option value="Obscured">Obscured (OBS)</option>
-                <option value="Tinted">Tinted</option>
-                <option value="Low E">Low E</option>
-                <option value="Other">Other</option>
+                {GLASS_TYPE_OPTIONS.filter((option) => option !== 'Unspecified').map((option) => <option key={option} value={option}>{option}</option>)}
               </select>
             </div>
           </div>
@@ -3724,14 +4651,98 @@ export default function AIPlanTakeoffStandalone({
                   </select>
                 </label>
                 {selectedWall.category === 'exterior' && (
-                  <label style={{ fontSize: '12px' }}>Construction class
-                    <select value={selectedWall.exteriorType || 'Other'} onChange={(e) => { updateWallRun(selectedWall.id, { exteriorType: e.target.value }); markTakeoffItemCompleted('wall-construction-edit'); }} style={{ width: '100%', padding: '6px', marginTop: '4px' }}>
-                      {EXTERIOR_WALL_CLASS_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
-                    </select>
-                  </label>
+                  <>
+                    <label style={{ fontSize: '12px' }}>Construction system
+                      <select value={selectedWallSystem.system} onChange={(e) => {
+                        const nextSystem = e.target.value;
+                        const framed = nextSystem === 'brick_veneer' || nextSystem === 'lightweight_cladding';
+                        updateWallRun(selectedWall.id, {
+                          constructionSystem: nextSystem,
+                          frameThicknessMm: framed ? (selectedWallSystem.frameThicknessMm || 70) : null,
+                          exteriorType: nextSystem === 'brick_veneer' ? (selectedWallSystem.exteriorFinish === 'rendered_brick' ? 'Rendered Brick Veneer' : 'Face Brick Veneer')
+                            : nextSystem === 'lightweight_cladding' ? 'Lightweight Cladding'
+                              : nextSystem === 'core_filled_blockwork' ? 'Rendered Masonry'
+                                : 'Other',
+                        });
+                        markTakeoffItemCompleted('wall-construction-system-edit');
+                      }} style={{ width: '100%', padding: '6px', marginTop: '4px' }}>
+                        {EXTERIOR_CONSTRUCTION_SYSTEMS.map((system) => <option key={system} value={system}>{CONSTRUCTION_SYSTEM_LABELS[system]}</option>)}
+                      </select>
+                    </label>
+                    {(selectedWallSystem.system === 'brick_veneer' || selectedWallSystem.system === 'lightweight_cladding') && (
+                      <label style={{ fontSize: '12px' }}>Frame thickness
+                        <select value={selectedWallSystem.frameThicknessMm || 70} onChange={(e) => { updateWallRun(selectedWall.id, { frameThicknessMm: Number(e.target.value) }); markTakeoffItemCompleted('wall-frame-thickness-edit'); }} style={{ width: '100%', padding: '6px', marginTop: '4px' }}>
+                          <option value={70}>70mm</option>
+                          <option value={90}>90mm</option>
+                        </select>
+                      </label>
+                    )}
+                    {selectedWallSystem.system === 'brick_veneer' && (
+                      <label style={{ fontSize: '12px' }}>Exterior finish
+                        <select value={selectedWallSystem.exteriorFinish || 'face_brick'} onChange={(e) => {
+                          const finish = e.target.value;
+                          updateWallRun(selectedWall.id, { exteriorFinish: finish, exteriorType: finish === 'rendered_brick' ? 'Rendered Brick Veneer' : 'Face Brick Veneer' });
+                          markTakeoffItemCompleted('wall-exterior-finish-edit');
+                        }} style={{ width: '100%', padding: '6px', marginTop: '4px' }}>
+                          <option value="face_brick">Face Brick</option>
+                          <option value="rendered_brick">Rendered Brick</option>
+                        </select>
+                      </label>
+                    )}
+                    {selectedWallSystem.system === 'lightweight_cladding' && (
+                      <>
+                        <label style={{ fontSize: '12px' }}>Cladding product
+                          <select value={CLADDING_PRODUCTS.includes(selectedWall.exteriorFinish) ? selectedWall.exteriorFinish : 'Unspecified'} onChange={(e) => { updateWallRun(selectedWall.id, { exteriorFinish: e.target.value, exteriorFinishCustomLabel: e.target.value === CLADDING_PRODUCT_CUSTOM ? selectedWall.exteriorFinishCustomLabel || '' : '' }); markTakeoffItemCompleted('wall-cladding-product-edit'); }} style={{ width: '100%', padding: '6px', marginTop: '4px' }}>
+                            {CLADDING_PRODUCTS.map((product) => <option key={product} value={product}>{product}</option>)}
+                          </select>
+                        </label>
+                        {selectedWall.exteriorFinish === CLADDING_PRODUCT_CUSTOM && (
+                          <label style={{ fontSize: '12px' }}>Custom cladding product description
+                            <input type="text" value={selectedWall.exteriorFinishCustomLabel || ''} onChange={(e) => updateWallRun(selectedWall.id, { exteriorFinishCustomLabel: e.target.value })} onBlur={() => markTakeoffItemCompleted('wall-cladding-product-custom-edit')} style={{ width: '100%', padding: '6px', marginTop: '4px' }} />
+                          </label>
+                        )}
+                      </>
+                    )}
+                    {selectedWallSystem.system === 'custom' && (
+                      <label style={{ fontSize: '12px' }}>Custom system description
+                        <input type="text" value={selectedWall.customSystemLabel || ''} onChange={(e) => updateWallRun(selectedWall.id, { customSystemLabel: e.target.value })} onBlur={() => markTakeoffItemCompleted('wall-custom-label-edit')} style={{ width: '100%', padding: '6px', marginTop: '4px' }} />
+                      </label>
+                    )}
+                    {selectedWallSystem.system === 'unclassified' && (
+                      <span style={{ fontSize: '11px', color: '#b45309', fontWeight: 'bold' }}>&#9888; Unclassified external wall &mdash; select a construction system above to clear this from review.</span>
+                    )}
+                  </>
                 )}
                 {selectedWall.category === 'interior' && (
                   <>
+                    <label style={{ fontSize: '12px' }}>Construction system
+                      <select value={selectedWallSystem.system} onChange={(e) => {
+                        const nextSystem = e.target.value;
+                        updateWallRun(selectedWall.id, {
+                          constructionSystem: nextSystem,
+                          ...(nextSystem === 'internal_timber_frame' ? { thicknessMm: selectedWallSystem.frameThicknessMm || 70, frameThicknessMm: selectedWallSystem.frameThicknessMm || 70 } : {}),
+                        });
+                        markTakeoffItemCompleted('wall-construction-system-edit');
+                      }} style={{ width: '100%', padding: '6px', marginTop: '4px' }}>
+                        {INTERIOR_CONSTRUCTION_SYSTEMS.map((system) => <option key={system} value={system}>{CONSTRUCTION_SYSTEM_LABELS[system]}</option>)}
+                      </select>
+                    </label>
+                    {selectedWallSystem.system === 'internal_timber_frame' && (
+                      <label style={{ fontSize: '12px' }}>Frame thickness
+                        <select value={selectedWallSystem.frameThicknessMm || 70} onChange={(e) => { const mm = Number(e.target.value); updateWallRun(selectedWall.id, { thicknessMm: mm, frameThicknessMm: mm }); markTakeoffItemCompleted('wall-frame-thickness-edit'); }} style={{ width: '100%', padding: '6px', marginTop: '4px' }}>
+                          <option value={70}>70mm</option>
+                          <option value={90}>90mm</option>
+                        </select>
+                      </label>
+                    )}
+                    {selectedWallSystem.system === 'custom' && (
+                      <label style={{ fontSize: '12px' }}>Custom system description
+                        <input type="text" value={selectedWall.customSystemLabel || ''} onChange={(e) => updateWallRun(selectedWall.id, { customSystemLabel: e.target.value })} onBlur={() => markTakeoffItemCompleted('wall-custom-label-edit')} style={{ width: '100%', padding: '6px', marginTop: '4px' }} />
+                      </label>
+                    )}
+                    {selectedWallSystem.system === 'unclassified' && (
+                      <span style={{ fontSize: '11px', color: '#b45309', fontWeight: 'bold' }}>&#9888; Unclassified internal wall &mdash; select a construction system above to clear this from review.</span>
+                    )}
                     <label style={{ fontSize: '12px' }}>Wall height override (m)
                       <input
                         type="number"
@@ -3768,28 +4779,258 @@ export default function AIPlanTakeoffStandalone({
                           {OPENING_CLASS_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
                         </select>
                       </label>
-                      <label style={{ fontSize: '12px' }}>Location / room
-                        <input value={opening?.location || ''} onChange={(e) => setPlacedOpenings((prev) => prev.map((item) => item.id === opening.id ? { ...item, location: e.target.value } : item))} onBlur={() => markTakeoffItemCompleted('opening-location-edit')} style={{ width: '100%', padding: '6px', marginTop: '4px' }} />
+                      <label style={{ fontSize: '12px' }}>{opening?.type === 'window' ? 'Window' : 'Door'} Code / Tag
+                        <input
+                          value={opening?.itemTag || ''}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            setPlacedOpenings((prev) => prev.map((item) => {
+                              if (item.id !== opening.id) return item;
+                              const next = { ...item, itemTag: value };
+                              // "1218" = 1200mm high x 1800mm wide (Australian height-first shorthand,
+                              // Phase 2A rule) - typing a valid 4-digit size code fills both dimensions
+                              // in one step. A dimension already OBSERVED from a higher-authority window
+                              // schedule (AI-read, not derived) is never overwritten by this shorthand;
+                              // the builder can still correct either field afterwards regardless.
+                              const parsed = item.type === 'window' ? parseWindowSizeCode(value.trim()) : null;
+                              if (parsed) {
+                                if (item.analysisEvidence?.fields?.heightMm?.basis !== 'OBSERVED') next.heightMm = parsed.heightMm;
+                                if (item.analysisEvidence?.fields?.widthMm?.basis !== 'OBSERVED') next.widthMm = parsed.widthMm;
+                              }
+                              return next;
+                            }));
+                          }}
+                          onBlur={() => markTakeoffItemCompleted('opening-tag-edit')}
+                          style={{ width: '100%', padding: '6px', marginTop: '4px' }}
+                        />
                       </label>
+                      {opening?.type !== 'window' && (
+                        <label style={{ fontSize: '12px' }}>Door Type
+                          <select
+                            value={opening?.subType || ''}
+                            onChange={(e) => { setPlacedOpenings((prev) => prev.map((item) => item.id === opening.id ? { ...item, subType: e.target.value } : item)); markTakeoffItemCompleted('opening-door-type-edit'); }}
+                            style={{ width: '100%', padding: '6px', marginTop: '4px' }}
+                          >
+                            <option value="">Choose door type</option>
+                            {DOOR_SUBTYPE_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                          </select>
+                        </label>
+                      )}
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <label style={{ fontSize: '12px', flex: 1 }}>Height (mm)
+                          <input type="number" value={opening?.heightMm || ''} onChange={(e) => setPlacedOpenings((prev) => prev.map((item) => item.id === opening.id ? { ...item, heightMm: parseFloat(e.target.value) || 0 } : item))} onBlur={() => markTakeoffItemCompleted('opening-height-edit')} style={{ width: '100%', padding: '6px', marginTop: '4px' }} />
+                        </label>
+                        <label style={{ fontSize: '12px', flex: 1 }}>Width (mm)
+                          <input type="number" value={opening?.widthMm || ''} onChange={(e) => setPlacedOpenings((prev) => prev.map((item) => item.id === opening.id ? { ...item, widthMm: parseFloat(e.target.value) || 0 } : item))} onBlur={() => markTakeoffItemCompleted('opening-width-edit')} style={{ width: '100%', padding: '6px', marginTop: '4px' }} />
+                        </label>
+                      </div>
+                      {(() => {
+                        const room = resolveOpeningRoom(opening);
+                        return (
+                          <>
+                            <label style={{ fontSize: '12px' }}>Room / Location
+                              <select
+                                value={room.roomKey}
+                                onChange={(e) => {
+                                  const key = e.target.value;
+                                  const canonical = ROOM_LOCATION_OPTIONS.find((r) => r.key === key);
+                                  setPlacedOpenings((prev) => prev.map((item) => {
+                                    if (item.id !== opening.id) return item;
+                                    if (key === ROOM_LOCATION_CUSTOM_KEY) return { ...item, roomKey: key, roomLabel: '', location: '' };
+                                    return { ...item, roomKey: key, roomLabel: canonical?.label || '', location: canonical?.label || '' };
+                                  }));
+                                  markTakeoffItemCompleted('opening-room-edit');
+                                }}
+                                style={{ width: '100%', padding: '6px', marginTop: '4px' }}
+                              >
+                                <option value="" disabled>Choose room</option>
+                                {ROOM_LOCATION_OPTIONS.map((option) => <option key={option.key} value={option.key}>{option.label}</option>)}
+                              </select>
+                            </label>
+                            {room.roomKey === ROOM_LOCATION_CUSTOM_KEY && (
+                              <label style={{ fontSize: '12px' }}>Custom room name
+                                <input
+                                  value={room.custom ? room.roomLabel : ''}
+                                  onChange={(e) => setPlacedOpenings((prev) => prev.map((item) => item.id === opening.id ? { ...item, roomKey: ROOM_LOCATION_CUSTOM_KEY, roomLabel: e.target.value, location: e.target.value } : item))}
+                                  onBlur={() => markTakeoffItemCompleted('opening-room-custom-edit')}
+                                  style={{ width: '100%', padding: '6px', marginTop: '4px' }}
+                                  placeholder="Describe this room/location"
+                                />
+                              </label>
+                            )}
+                          </>
+                        );
+                      })()}
                       <label style={{ fontSize: '12px' }}>Glass type
-                        <input value={opening?.glassType || ''} onChange={(e) => setPlacedOpenings((prev) => prev.map((item) => item.id === opening.id ? { ...item, glassType: e.target.value } : item))} onBlur={() => markTakeoffItemCompleted('opening-glass-edit')} style={{ width: '100%', padding: '6px', marginTop: '4px' }} />
+                        <select value={normaliseGlassType(opening?.glassType)} onChange={(e) => { setPlacedOpenings((prev) => prev.map((item) => item.id === opening.id ? { ...item, glassType: e.target.value } : item)); markTakeoffItemCompleted('opening-glass-edit'); }} style={{ width: '100%', padding: '6px', marginTop: '4px' }}>
+                          {GLASS_TYPE_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
+                        </select>
                       </label>
-                      <label style={{ fontSize: '12px' }}>Frame/Jamb details
-                        <input value={opening?.frameJambDetails || ''} onChange={(e) => setPlacedOpenings((prev) => prev.map((item) => item.id === opening.id ? { ...item, frameJambDetails: e.target.value } : item))} onBlur={() => markTakeoffItemCompleted('opening-jamb-edit')} style={{ width: '100%', padding: '6px', marginTop: '4px' }} />
+                      {/* Frame/Jamb details, Frame material, Frame colour, Sill type and the manual Brick
+                          sill required toggle are intentionally not shown here - they are unnecessary
+                          clutter in the normal Takeoff editor. Brick sill requirement is now derived from
+                          the host wall's construction system (brickSillLength), not a manual per-opening
+                          toggle. Any value an older AI response or import already stored on this opening
+                          is preserved untouched; this UI change never deletes it. */}
+                    </>
+                  );
+                })()}
+              </div>
+            )}
+            {activePagePillars.find((item) => item.id === selectedPillarId) && (
+              <div style={{ border: '1px solid #cbd5e1', borderRadius: '6px', padding: '8px', display: 'grid', gap: '6px' }}>
+                <strong style={{ fontSize: '12px' }}>Selected post / column</strong>
+                {(() => {
+                  const pillar = activePagePillars.find((item) => item.id === selectedPillarId);
+                  const update = (patch) => setCompletedPillars((prev) => prev.map((item) => item.id === pillar.id ? { ...item, ...patch } : item));
+                  const room = resolveOpeningRoom(pillar);
+                  return (
+                    <>
+                      <label style={{ fontSize: '12px' }}>Post / Column type
+                        <select
+                          value={pillar.coreType === 'unclassified' ? '' : pillar.coreType}
+                          onChange={(e) => { update({ coreType: e.target.value }); markTakeoffItemCompleted('pillar-core-type-edit'); }}
+                          style={{ width: '100%', padding: '6px', marginTop: '4px' }}
+                        >
+                          <option value="" disabled>Choose type</option>
+                          {POST_CORE_TYPES.filter((type) => type !== 'unclassified').map((type) => <option key={type} value={type}>{POST_CORE_TYPE_LABELS[type]}</option>)}
+                        </select>
                       </label>
-                      <label style={{ fontSize: '12px' }}>Frame material
-                        <input value={opening?.frameMaterial || ''} onChange={(e) => setPlacedOpenings((prev) => prev.map((item) => item.id === opening.id ? { ...item, frameMaterial: e.target.value } : item))} onBlur={() => markTakeoffItemCompleted('opening-frame-material-edit')} style={{ width: '100%', padding: '6px', marginTop: '4px' }} />
+                      {pillar.coreType === 'timber' && (
+                        <label style={{ fontSize: '12px' }}>Timber size
+                          <select
+                            value={pillar.timberSizeOption || ''}
+                            onChange={(e) => {
+                              const option = e.target.value;
+                              const [w, d] = option.match(/^(\d+) x (\d+)$/)?.slice(1).map(Number) || [];
+                              update({ timberSizeOption: option, ...(w && d ? { coreWidthMm: w, coreDepthMm: d } : {}) });
+                              markTakeoffItemCompleted('pillar-timber-size-edit');
+                            }}
+                            style={{ width: '100%', padding: '6px', marginTop: '4px' }}
+                          >
+                            <option value="" disabled>Choose size</option>
+                            {TIMBER_POST_SIZE_OPTIONS.map((option) => <option key={option} value={option}>{option === 'Custom' ? option : `${option} mm`}</option>)}
+                          </select>
+                        </label>
+                      )}
+                      {pillar.coreType === 'steel' && (
+                        <>
+                          <label style={{ fontSize: '12px' }}>Steel section
+                            <select
+                              value={pillar.steelSectionType || ''}
+                              onChange={(e) => { update({ steelSectionType: e.target.value }); markTakeoffItemCompleted('pillar-steel-section-edit'); }}
+                              style={{ width: '100%', padding: '6px', marginTop: '4px' }}
+                            >
+                              <option value="" disabled>Choose section</option>
+                              {STEEL_SECTION_TYPES.map((option) => <option key={option} value={option}>{option}</option>)}
+                            </select>
+                          </label>
+                          {/* The documented designation (e.g. "150 x 100", "Ø89" for a CHS) is the
+                              authoritative label for a steel section - a section is not always well
+                              represented by plain width x depth (a CHS has one diameter, not two
+                              dimensions), so this is preserved alongside, never instead of, the
+                              numeric core width/depth used for framing calculations. */}
+                          <label style={{ fontSize: '12px' }}>Section size / designation
+                            <input
+                              value={pillar.steelSectionDesignation || ''}
+                              onChange={(e) => update({ steelSectionDesignation: e.target.value })}
+                              onBlur={() => markTakeoffItemCompleted('pillar-steel-designation-edit')}
+                              style={{ width: '100%', padding: '6px', marginTop: '4px' }}
+                              placeholder="e.g. 100 x 100, or Ø89 for CHS"
+                            />
+                          </label>
+                        </>
+                      )}
+                      {pillar.coreType === 'brick' && (
+                        <label style={{ fontSize: '12px' }}>Brick finish
+                          <select
+                            value={pillar.brickFinish || ''}
+                            onChange={(e) => { update({ brickFinish: e.target.value }); markTakeoffItemCompleted('pillar-brick-finish-edit'); }}
+                            style={{ width: '100%', padding: '6px', marginTop: '4px' }}
+                          >
+                            <option value="" disabled>Choose finish</option>
+                            {POST_BRICK_FINISH_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
+                          </select>
+                        </label>
+                      )}
+                      {pillar.coreType === 'custom' && (
+                        <label style={{ fontSize: '12px' }}>Custom type description
+                          <input value={pillar.coreCustomLabel || ''} onChange={(e) => update({ coreCustomLabel: e.target.value })} onBlur={() => markTakeoffItemCompleted('pillar-core-custom-edit')} style={{ width: '100%', padding: '6px', marginTop: '4px' }} />
+                        </label>
+                      )}
+                      {/* Always visible and always editable, regardless of a standard-size pick:
+                          a standard timber size (or a steel/brick selection) fills these in as a
+                          shortcut, but the actual mm values shown here - never a hidden preset
+                          name - are what is authoritative. Editing either field directly (e.g.
+                          150x150 -> 140x140) needs no redraw and no switch to Custom first;
+                          picking a new standard size afterwards simply overwrites them again. */}
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <label style={{ fontSize: '12px', flex: 1 }}>Width (mm)
+                          <input type="number" value={pillar.coreWidthMm || ''} onChange={(e) => update({ coreWidthMm: parseFloat(e.target.value) || null })} onBlur={() => markTakeoffItemCompleted('pillar-core-width-edit')} style={{ width: '100%', padding: '6px', marginTop: '4px' }} />
+                        </label>
+                        <label style={{ fontSize: '12px', flex: 1 }}>Depth (mm)
+                          <input type="number" value={pillar.coreDepthMm || ''} onChange={(e) => update({ coreDepthMm: parseFloat(e.target.value) || null })} onBlur={() => markTakeoffItemCompleted('pillar-core-depth-edit')} style={{ width: '100%', padding: '6px', marginTop: '4px' }} />
+                        </label>
+                      </div>
+                      <label style={{ fontSize: '12px' }}>Surround / Cladding
+                        <select
+                          value={pillar.surroundType || 'none'}
+                          onChange={(e) => { update({ surroundType: e.target.value }); markTakeoffItemCompleted('pillar-surround-type-edit'); }}
+                          style={{ width: '100%', padding: '6px', marginTop: '4px' }}
+                        >
+                          {POST_SURROUND_TYPES.map((type) => <option key={type} value={type}>{POST_SURROUND_TYPE_LABELS[type]}</option>)}
+                        </select>
                       </label>
-                      <label style={{ fontSize: '12px' }}>Frame colour
-                        <input value={opening?.frameColour || ''} onChange={(e) => setPlacedOpenings((prev) => prev.map((item) => item.id === opening.id ? { ...item, frameColour: e.target.value } : item))} onBlur={() => markTakeoffItemCompleted('opening-frame-colour-edit')} style={{ width: '100%', padding: '6px', marginTop: '4px' }} />
+                      {pillar.surroundType && pillar.surroundType !== 'none' && (
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <label style={{ fontSize: '12px', flex: 1 }}>Finished width (mm)
+                            <input type="number" value={pillar.surroundWidthMm || ''} onChange={(e) => update({ surroundWidthMm: parseFloat(e.target.value) || null })} onBlur={() => markTakeoffItemCompleted('pillar-surround-width-edit')} style={{ width: '100%', padding: '6px', marginTop: '4px' }} />
+                          </label>
+                          <label style={{ fontSize: '12px', flex: 1 }}>Finished depth (mm)
+                            <input type="number" value={pillar.surroundDepthMm || ''} onChange={(e) => update({ surroundDepthMm: parseFloat(e.target.value) || null })} onBlur={() => markTakeoffItemCompleted('pillar-surround-depth-edit')} style={{ width: '100%', padding: '6px', marginTop: '4px' }} />
+                          </label>
+                        </div>
+                      )}
+                      {pillar.surroundType === 'custom' && (
+                        <label style={{ fontSize: '12px' }}>Custom surround description
+                          <input value={pillar.surroundCustomLabel || ''} onChange={(e) => update({ surroundCustomLabel: e.target.value })} onBlur={() => markTakeoffItemCompleted('pillar-surround-custom-edit')} style={{ width: '100%', padding: '6px', marginTop: '4px' }} />
+                        </label>
+                      )}
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <label style={{ fontSize: '12px', flex: 1 }}>Height (mm)
+                          <input type="number" value={pillar.heightMm || ''} onChange={(e) => update({ heightMm: parseFloat(e.target.value) || null })} onBlur={() => markTakeoffItemCompleted('pillar-height-edit')} style={{ width: '100%', padding: '6px', marginTop: '4px' }} />
+                        </label>
+                        <label style={{ fontSize: '12px', flex: 1 }}>Quantity
+                          <input type="number" min="1" value={pillar.quantity || 1} onChange={(e) => update({ quantity: parseFloat(e.target.value) || 1 })} onBlur={() => markTakeoffItemCompleted('pillar-quantity-edit')} style={{ width: '100%', padding: '6px', marginTop: '4px' }} />
+                        </label>
+                      </div>
+                      <label style={{ fontSize: '12px' }}>Room / Location
+                        <select
+                          value={room.roomKey}
+                          onChange={(e) => {
+                            const key = e.target.value;
+                            const canonical = ROOM_LOCATION_OPTIONS.find((r) => r.key === key);
+                            if (key === ROOM_LOCATION_CUSTOM_KEY) update({ roomKey: key, roomLabel: '', location: '' });
+                            else update({ roomKey: key, roomLabel: canonical?.label || '', location: canonical?.label || '' });
+                            markTakeoffItemCompleted('pillar-room-edit');
+                          }}
+                          style={{ width: '100%', padding: '6px', marginTop: '4px' }}
+                        >
+                          <option value="" disabled>Choose room</option>
+                          {ROOM_LOCATION_OPTIONS.map((option) => <option key={option.key} value={option.key}>{option.label}</option>)}
+                        </select>
                       </label>
-                      <label style={{ fontSize: '12px' }}>Sill type
-                        <input value={opening?.sillType || ''} onChange={(e) => setPlacedOpenings((prev) => prev.map((item) => item.id === opening.id ? { ...item, sillType: e.target.value } : item))} onBlur={() => markTakeoffItemCompleted('opening-sill-edit')} style={{ width: '100%', padding: '6px', marginTop: '4px' }} />
-                      </label>
-                      <label style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <input type="checkbox" checked={Boolean(opening?.brickSillRequired)} onChange={(e) => { setPlacedOpenings((prev) => prev.map((item) => item.id === opening.id ? { ...item, brickSillRequired: e.target.checked } : item)); markTakeoffItemCompleted('opening-brick-sill-toggle'); }} />
-                        Brick sill required
-                      </label>
+                      {room.roomKey === ROOM_LOCATION_CUSTOM_KEY && (
+                        <label style={{ fontSize: '12px' }}>Custom room name
+                          <input
+                            value={room.custom ? room.roomLabel : ''}
+                            onChange={(e) => update({ roomKey: ROOM_LOCATION_CUSTOM_KEY, roomLabel: e.target.value, location: e.target.value })}
+                            onBlur={() => markTakeoffItemCompleted('pillar-room-custom-edit')}
+                            style={{ width: '100%', padding: '6px', marginTop: '4px' }}
+                            placeholder="Describe this room/location"
+                          />
+                        </label>
+                      )}
                     </>
                   );
                 })()}
@@ -3868,10 +5109,11 @@ export default function AIPlanTakeoffStandalone({
                   {EAVE_WIDTH_OPTIONS.map((widthOption) => <option key={widthOption} value={widthOption}>{widthOption === 'Special' ? 'Special' : `${widthOption}mm`}</option>)}
                 </select>
                 <select
-                  value={selectedEave.level}
+                  value={resolveTakeoffLevel(selectedEave, sheetLevels)}
                   onChange={(e) => setCompletedEaves((prev) => prev.map((item) => item.id === selectedEave.id ? { ...item, level: e.target.value } : item))}
                   style={{ padding: '6px', fontSize: '12px', fontWeight: 'bold' }}
                 >
+                  {resolveTakeoffLevel(selectedEave, sheetLevels) === 'Unassigned' && <option value="Unassigned">Not assigned</option>}
                   {EAVE_LEVEL_OPTIONS.map((level) => <option key={level} value={level}>{level}</option>)}
                 </select>
                 <select
@@ -3981,6 +5223,19 @@ export default function AIPlanTakeoffStandalone({
           </div>
         )}
 
+        {activeTool === 'roofarea' && (
+          <div style={{ background: '#fff', padding: '12px', borderRadius: '6px', border: '1px solid #f59e0b', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <strong style={{ color: '#92400e' }}>Roof Area Takeoff</strong>
+            <select value={roofAreaLevel} onChange={(event) => setRoofAreaLevel(event.target.value)} style={{ padding: '8px', borderRadius: '4px', border: '1px solid #f59e0b', fontWeight: 'bold' }}>
+              <option>Ground Floor</option>
+              <option>Second Level</option>
+              <option>Third Level</option>
+            </select>
+            <span style={{ fontSize: '12px', color: '#666' }}>Click each roof boundary corner, then click the first corner again or use Complete Roof Area.</span>
+            {activeAreaPolyline.length > 2 && <button onClick={finalizeCurrentArea} style={{ width: '100%', padding: '10px', background: '#f59e0b', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Complete Roof Area</button>}
+          </div>
+        )}
+
         {/* Floorcovering Schedule Summary Card */}
         <div style={{ background: '#fff', padding: '12px', borderRadius: '6px', border: '2px solid #2e7d32', display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <h4 style={{ margin: 0, fontSize: '15px', color: '#2e7d32', borderBottom: '1px solid #eee', paddingBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -3995,13 +5250,13 @@ export default function AIPlanTakeoffStandalone({
                   <span style={{ width: '12px', height: '12px', background: cfg.stroke, display: 'inline-block', borderRadius: '2px' }}></span>
                   Total {cat}:
                 </span>
-                <strong>{catTotal.toFixed(2)} mÂ²</strong>
+                <strong>{catTotal.toFixed(2)} m²</strong>
               </div>
             );
           })}
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px', fontWeight: 'bold', borderTop: '1px dashed #ccc', paddingTop: '6px', color: '#1b5e20' }}>
             <span>Total Floor Area:</span>
-            <span>{totalFloorAreaM2.toFixed(2)} mÂ²</span>
+            <span>{totalFloorAreaM2.toFixed(2)} m²</span>
           </div>
         </div>
 
@@ -4012,17 +5267,17 @@ export default function AIPlanTakeoffStandalone({
           </h4>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
             <span>Gross Footprint Area:</span>
-            <strong>{pageFootprintArea.toFixed(2)} mÂ²</strong>
+            <strong>{pageFootprintArea.toFixed(2)} m²</strong>
           </div>
           {activePageFloorplans.filter(f => f.type !== 'Footprint').map((fp) => (
             <div key={fp.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', paddingLeft: '8px', color: '#555' }}>
               <span>Less {fp.label}:</span>
-              <span>- {calculatePolygonAreaM2(fp.nodes, pixelsPerMm).toFixed(2)} mÂ²</span>
+              <span>- {calculatePolygonAreaM2(fp.nodes, pixelsPerMm).toFixed(2)} m²</span>
             </div>
           ))}
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px', fontWeight: 'bold', borderTop: '1px dashed #ccc', paddingTop: '6px', color: '#0d47a1' }}>
             <span>Total Living Area:</span>
-            <span>{pageTotalLivingArea.toFixed(2)} mÂ²</span>
+            <span>{pageTotalLivingArea.toFixed(2)} m²</span>
           </div>
         </div>
 
@@ -4071,10 +5326,10 @@ export default function AIPlanTakeoffStandalone({
             {activePageFloorplans.map((fp) => (
               <div 
                 key={fp.id} 
-                onClick={() => setSelectedFloorplanId(fp.id)}
+                onClick={() => selectOnly('floorplan', fp.id)}
                 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '14px', background: fp.id === selectedFloorplanId ? '#bbdefb' : '#e3f2fd', padding: '6px 8px', borderRadius: '4px', cursor: 'pointer', border: fp.id === selectedFloorplanId ? '1px solid #1976d2' : 'none' }}
               >
-                <span><strong>[Plan] {fp.label}:</strong> {calculatePolygonAreaM2(fp.nodes, pixelsPerMm).toFixed(2)} mÂ²</span>
+                <span><strong>[Plan] {fp.label}:</strong> {calculatePolygonAreaM2(fp.nodes, pixelsPerMm).toFixed(2)} m²</span>
                 <Trash2 size={16} style={{ cursor: 'pointer', color: '#d32f2f' }} onClick={(e) => { e.stopPropagation(); deleteMarkupItem('floorplan', fp.id); }} />
               </div>
             ))}
@@ -4085,10 +5340,10 @@ export default function AIPlanTakeoffStandalone({
               return (
                 <div 
                   key={areaItem.id} 
-                  onClick={() => setSelectedAreaId(areaItem.id)}
+                  onClick={() => selectOnly('area', areaItem.id)}
                   style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '14px', background: isSelected ? '#c8e6c9' : '#f1f8e9', padding: '6px 8px', borderRadius: '4px', cursor: 'pointer', borderLeft: `4px solid ${cfg.stroke}`, border: isSelected ? '1px solid #2e7d32' : 'none' }}
                 >
-                  <span><strong>{areaItem.category}:</strong> {getNetFloorcoveringAreaM2(areaItem, pixelsPerMm).toFixed(2)} mÂ²</span>
+                  <span><strong>{areaItem.category}:</strong> {getNetFloorcoveringAreaM2(areaItem, pixelsPerMm).toFixed(2)} m²</span>
                   <Trash2 size={16} style={{ cursor: 'pointer', color: '#d32f2f' }} onClick={(e) => { e.stopPropagation(); deleteMarkupItem('area', areaItem.id); }} />
                 </div>
               );
@@ -4099,7 +5354,7 @@ export default function AIPlanTakeoffStandalone({
               return (
                 <div 
                   key={wall.id}
-                  onClick={() => setSelectedWallId(wall.id)}
+                  onClick={() => selectOnly('wall', wall.id)}
                   style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '14px', background: isSelected ? '#bbdefb' : '#e3f2fd', padding: '6px 8px', borderRadius: '4px', cursor: 'pointer', border: isSelected ? '1px solid #1976d2' : 'none' }}
                 >
                   <span><strong>{wall.category} ({wall.thicknessMm}mm):</strong> {(wall.lengthMm / 1000).toFixed(2)} m</span>
@@ -4128,16 +5383,10 @@ export default function AIPlanTakeoffStandalone({
               return (
                 <div
                   key={eave.id}
-                  onClick={() => {
-                    setSelectedEaveId(eave.id);
-                    setSelectedFloorplanId(null);
-                    setSelectedWallId(null);
-                    setSelectedAreaId(null);
-                    setSelectedOpeningId(null);
-                  }}
+                  onClick={() => selectOnly('eaves', eave.id)}
                   style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '14px', background: eave.id === selectedEaveId ? '#b2ebf2' : '#e0f7fa', padding: '6px 8px', borderRadius: '4px', border: eave.id === selectedEaveId ? '1px solid #00838f' : '1px solid #80deea', cursor: 'pointer' }}
                 >
-                  <span><strong>Eaves #{idx + 1}:</strong> {getEaveWidthLabel(eave)} {eave.level} - {pixelsPerMm ? `${(distMm / 1000).toFixed(2)} m` : `${fallbackPx.toFixed(1)} px`}</span>
+                  <span><strong>Eaves #{idx + 1}:</strong> {getEaveWidthLabel(eave)} {resolveTakeoffLevel(eave, sheetLevels)} - {pixelsPerMm ? `${(distMm / 1000).toFixed(2)} m` : `${fallbackPx.toFixed(1)} px`}</span>
                   <Trash2 size={16} style={{ cursor: 'pointer', color: '#d32f2f' }} onClick={(e) => { e.stopPropagation(); deleteMarkupItem('eaves', eave.id); }} />
                 </div>
               );
@@ -4150,7 +5399,7 @@ export default function AIPlanTakeoffStandalone({
               return (
                 <div 
                   key={op.id} 
-                  onClick={() => setSelectedOpeningId(op.id)}
+                  onClick={() => selectOnly('opening', op.id)}
                   style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '14px', background: isSelected ? '#ffe0b2' : '#fff3e0', padding: '8px', borderRadius: '4px', border: isSelected ? '1px solid #f57c00' : '1px solid #ffe0b2', cursor: 'pointer' }}
                 >
                   <span><strong>{dynamicTag}</strong> (H:{op.heightMm} x W:{op.widthMm})</span>
@@ -4159,7 +5408,23 @@ export default function AIPlanTakeoffStandalone({
               );
             })}
 
-            {activePageFloorplans.length === 0 && activePageAreas.length === 0 && activePageWalls.length === 0 && activePageOpenings.length === 0 && activePageMeasurements.length === 0 && activePageEaves.length === 0 && (
+            {activePagePillars.map((pillar) => {
+              const core = resolvePostColumnCore(pillar);
+              const isSelected = pillar.id === selectedPillarId;
+              const sizeLabel = pillar.coreWidthMm && pillar.coreDepthMm ? `${pillar.coreWidthMm}x${pillar.coreDepthMm}` : 'size not set';
+              return (
+                <div
+                  key={pillar.id}
+                  onClick={() => selectOnly('pillar', pillar.id)}
+                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '14px', background: isSelected ? '#c7d2fe' : '#e0e7ff', padding: '8px', borderRadius: '4px', border: isSelected ? '1px solid #4338ca' : '1px solid #c7d2fe', cursor: 'pointer' }}
+                >
+                  <span><strong>{core.displayLabel}</strong> ({sizeLabel})</span>
+                  <Trash2 size={16} style={{ cursor: 'pointer', color: '#d32f2f' }} onClick={(e) => { e.stopPropagation(); deleteMarkupItem('pillar', pillar.id); }} />
+                </div>
+              );
+            })}
+
+            {activePageFloorplans.length === 0 && activePageAreas.length === 0 && activePageWalls.length === 0 && activePageOpenings.length === 0 && activePageMeasurements.length === 0 && activePageEaves.length === 0 && activePagePillars.length === 0 && (
               <span style={{ fontSize: '13px', color: '#888', fontStyle: 'italic' }}>No markups on this sheet yet.</span>
             )}
           </div>
@@ -4192,7 +5457,7 @@ export default function AIPlanTakeoffStandalone({
         </div>
 
         <div style={{ background: '#212121', color: '#fff', padding: '14px', borderRadius: '6px', fontSize: '15px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <div><strong>Total Floorcoverings Area:</strong> {totalFloorAreaM2.toFixed(2)} mÂ²</div>
+          <div><strong>Total Floorcoverings Area:</strong> {totalFloorAreaM2.toFixed(2)} m²</div>
           <div><strong>Net Exterior Walls:</strong> {(netExteriorWallLengthMm / 1000).toFixed(2)} m</div>
           <div><strong>Interior Walls:</strong> {(rawInteriorWallLengthMm / 1000).toFixed(2)} m</div>
           <div><strong>Eaves:</strong> {(totalEavesLengthMm / 1000).toFixed(2)} m</div>
@@ -4204,7 +5469,8 @@ export default function AIPlanTakeoffStandalone({
         <div style={{ position: 'fixed', inset: '24px', background: '#f9fafb', border: '1px solid #9ca3af', borderRadius: '8px', zIndex: 50, display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}>
           <div style={{ padding: '14px 16px', borderBottom: '1px solid #d1d5db', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#111827', color: '#fff', borderRadius: '8px 8px 0 0' }}>
             <strong style={{ fontSize: '18px' }}>Takeoff Schedule</strong>
-            <button onClick={() => setShowSchedule(false)} style={{ background: '#fff', border: 'none', borderRadius: '4px', padding: '6px 10px', cursor: 'pointer', fontWeight: 'bold' }}>Close</button>
+            {/* Colour must be explicit: the header sets color:#fff, which this button would otherwise inherit onto its white background. */}
+            <button onClick={() => setShowSchedule(false)} style={{ background: '#fff', color: '#111827', border: 'none', borderRadius: '4px', padding: '6px 10px', cursor: 'pointer', fontWeight: 'bold' }}>Close</button>
           </div>
 
           <div style={{ padding: '12px 16px', borderBottom: '1px solid #d1d5db', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', background: '#fff' }}>
@@ -4237,10 +5503,17 @@ export default function AIPlanTakeoffStandalone({
               </div>
               <h4 style={{ margin: 0 }}>Current Sheet {currentPage}</h4>
               {renderScheduleRows('Floor Areas', takeoffSchedule.currentSheet.floorAreas)}
-              {renderScheduleRows('Exterior Walls', takeoffSchedule.currentSheet.exteriorWalls, 'Length')}
-              {renderScheduleRows('Interior Walls and Plasterboard', takeoffSchedule.currentSheet.interiorWallsAndPlasterboard, 'Length')}
-              {renderScheduleRows('Windows', takeoffSchedule.currentSheet.windows, 'Count')}
-              {renderScheduleRows('Doors', takeoffSchedule.currentSheet.doors, 'Count')}
+              {renderWallSystemSchedule('Exterior Walls', takeoffSchedule.currentSheet.wallSystems, 'external')}
+              {renderWallSystemSchedule('Internal Walls', takeoffSchedule.currentSheet.wallSystems, 'internal')}
+              <details style={{ border: '1px solid #e5e7eb', borderRadius: '6px', background: '#fafafa' }}>
+                <summary style={{ padding: '6px 10px', cursor: 'pointer', fontSize: '12px', color: '#6b7280' }}>Diagnostic wall detail (advanced)</summary>
+                <div style={{ padding: '6px' }}>
+                  {renderScheduleRows('Interior Walls and Plasterboard', takeoffSchedule.currentSheet.interiorWallsAndPlasterboard, 'Length')}
+                </div>
+              </details>
+              {renderWindowSchedule(takeoffSchedule.currentSheet.windows)}
+              {renderDoorSchedule(takeoffSchedule.currentSheet.doors)}
+              {renderScheduleRows('Roof Areas', takeoffSchedule.currentSheet.roofAreas)}
               {renderScheduleRows('Roof and Eaves', takeoffSchedule.currentSheet.roofAndEaves)}
               {renderScheduleRows('Floor Finishes', takeoffSchedule.currentSheet.floorFinishes)}
             </div>
@@ -4248,11 +5521,18 @@ export default function AIPlanTakeoffStandalone({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <h4 style={{ margin: 0 }}>Combined Project Totals</h4>
               {renderScheduleRows('Floor Areas', takeoffSchedule.projectTotals.floorAreas)}
-              {renderScheduleRows('Exterior Walls', takeoffSchedule.projectTotals.exteriorWalls, 'Length')}
-              {renderScheduleRows('Interior Walls and Plasterboard', takeoffSchedule.projectTotals.interiorWallsAndPlasterboard, 'Length')}
-              {renderScheduleRows('Individual Wall Records', takeoffSchedule.projectTotals.wallRecords, 'Length')}
-              {renderScheduleRows('Windows', takeoffSchedule.projectTotals.windows, 'Count')}
-              {renderScheduleRows('Doors', takeoffSchedule.projectTotals.doors, 'Count')}
+              {renderWallSystemSchedule('Exterior Walls', takeoffSchedule.projectTotals.wallSystems, 'external')}
+              {renderWallSystemSchedule('Internal Walls', takeoffSchedule.projectTotals.wallSystems, 'internal')}
+              <details style={{ border: '1px solid #e5e7eb', borderRadius: '6px', background: '#fafafa' }}>
+                <summary style={{ padding: '6px 10px', cursor: 'pointer', fontSize: '12px', color: '#6b7280' }}>Diagnostic wall detail (advanced)</summary>
+                <div style={{ padding: '6px' }}>
+                  {renderScheduleRows('Interior Walls and Plasterboard', takeoffSchedule.projectTotals.interiorWallsAndPlasterboard, 'Length')}
+                  {renderScheduleRows('Individual Wall Records', takeoffSchedule.projectTotals.wallRecords, 'Length')}
+                </div>
+              </details>
+              {renderWindowSchedule(takeoffSchedule.projectTotals.windows)}
+              {renderDoorSchedule(takeoffSchedule.projectTotals.doors)}
+              {renderScheduleRows('Roof Areas', takeoffSchedule.projectTotals.roofAreas)}
               {renderScheduleRows('Roof and Eaves', takeoffSchedule.projectTotals.roofAndEaves)}
               {renderScheduleRows('Floor Finishes', takeoffSchedule.projectTotals.floorFinishes)}
               {renderScheduleRows('Rooms and Measurements', takeoffSchedule.projectTotals.rooms)}
@@ -4321,6 +5601,34 @@ export default function AIPlanTakeoffStandalone({
         onMouseUpCapture={isRecoveryPreview ? undefined : handleStageContentPointerUp}
         style={{ flex: 1, position: 'relative', background: '#e5e5e5', minWidth: 0, touchAction: 'none' }}
       >
+        {/* A plan that failed to restore must name what failed. Without this the canvas is simply
+            blank, which looks identical to a job that has no plan and hides the asset id. The open
+            that failed never reached loadJobData, so the workspace behind this notice is intact. */}
+        {planLoadError && (
+          <div style={{ position: 'absolute', inset: 0, zIndex: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(248, 250, 252, 0.96)' }}>
+            <div style={{ background: '#fff', border: '2px solid #dc2626', borderRadius: '8px', padding: '24px', maxWidth: '520px', boxShadow: '0 16px 40px rgba(15, 23, 42, 0.18)' }}>
+              <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#991b1b', marginBottom: '8px' }}>
+                Plan could not be loaded{planLoadError.jobName ? `: ${planLoadError.jobName}` : ''}
+              </div>
+              <div style={{ fontSize: '13px', color: '#334155', lineHeight: 1.6, marginBottom: '8px', wordBreak: 'break-word' }}>
+                {planLoadError.message}
+              </div>
+              <div style={{ fontSize: '12px', color: '#64748b', lineHeight: 1.5, marginBottom: '16px' }}>
+                Nothing was changed. The takeoff open on screen is still the one you had.
+                Console entries tagged TAKEOFF_PLAN_LOAD record each step of the attempt.
+              </div>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <label style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '10px 14px', background: '#1976d2', color: '#fff', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}>
+                  <Upload size={16} /> Relink Original Plan
+                  <input type="file" accept="image/*,.pdf" onChange={(event) => { setPlanLoadError(null); handleFileUpload(event, { preserveTakeoffs: true }); }} style={{ display: 'none' }} />
+                </label>
+                <button type="button" onClick={() => setPlanLoadError(null)} style={{ padding: '10px 14px', background: '#fff', color: '#111827', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}>
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         {planMissingFromSavedJob && !image && (
           <div style={{ position: 'absolute', inset: 0, zIndex: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc' }}>
             <div style={{ background: '#fff', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '24px', maxWidth: '420px', textAlign: 'center', boxShadow: '0 16px 40px rgba(15, 23, 42, 0.12)' }}>
@@ -4356,7 +5664,7 @@ export default function AIPlanTakeoffStandalone({
           onDblClick={isRecoveryPreview ? undefined : () => {
             if (activeTool === 'wall') finalizeCurrentWallRun();
             else if (activeTool === 'eaves') finalizeCurrentEaveRun();
-            else if (activeTool === 'floorplan' || activeTool === 'floorcoverings') finalizeCurrentArea();
+            else if (activeTool === 'floorplan' || activeTool === 'floorcoverings' || activeTool === 'roofarea') finalizeCurrentArea();
           }}
           onMouseMove={isRecoveryPreview ? undefined : handleMouseMove}
           onMouseUp={isRecoveryPreview ? undefined : handleMouseUp}
@@ -4365,6 +5673,7 @@ export default function AIPlanTakeoffStandalone({
           scaleY={stageScale}
           x={stagePos.x}
           y={stagePos.y}
+          style={{ cursor: activeTool === 'select' ? 'pointer' : 'crosshair' }}
           ref={stageRef}
         >
           <Layer
@@ -4411,17 +5720,13 @@ export default function AIPlanTakeoffStandalone({
                     onClick={(e) => {
                       if (!selectModeActive) return;
                       e.cancelBubble = true;
-                      setSelectedFloorplanId(fp.id);
-                      setSelectedWallId(null);
-                      setSelectedAreaId(null);
-                      setSelectedOpeningId(null);
-                      setSelectedEaveId(null);
+                      selectOnly('floorplan', fp.id);
                     }}
                   />
                   <Text
                     x={fp.nodes[0].x}
                     y={fp.nodes[0].y}
-                    text={`${fp.label}: ${calculatePolygonAreaM2(fp.nodes, pixelsPerMm).toFixed(2)} mÂ²`}
+                    text={`${fp.label}: ${calculatePolygonAreaM2(fp.nodes, pixelsPerMm).toFixed(2)} m²`}
                     fontSize={13 / stageScale}
                     fill={fp.stroke}
                     fontStyle="bold"
@@ -4446,6 +5751,9 @@ export default function AIPlanTakeoffStandalone({
                           draggable={selectModeActive}
                           onDragStart={() => setDraggingVertex({ type: 'floorplan', id: fp.id, vertexIndex: idx })}
                           onClick={(e) => {
+                            // Cancelling the bubble stops the Stage from seeing this click, so it must never happen
+                            // before the tool check, or this markup eats clicks meant for the tool that is drawing.
+                            if (!selectModeActive) return;
                             e.cancelBubble = true;
                             if (fp.nodes.length > 3) deleteVertexFromPolygon('floorplan', fp.id, idx);
                           }}
@@ -4460,6 +5768,9 @@ export default function AIPlanTakeoffStandalone({
                           opacity={0.7}
                           listening={markupListening}
                           onClick={(e) => {
+                            // Cancelling the bubble stops the Stage from seeing this click, so it must never happen
+                            // before the tool check, or this markup eats clicks meant for the tool that is drawing.
+                            if (!selectModeActive) return;
                             e.cancelBubble = true;
                             addVertexToPolygon('floorplan', fp.id, idx);
                           }}
@@ -4486,16 +5797,12 @@ export default function AIPlanTakeoffStandalone({
                     listening={markupListening}
                     hitStrokeWidth={18 / stageScale}
                     onClick={(e) => {
-                      e.cancelBubble = true;
                       if (!selectModeActive && areaDrawMode !== 'exclusion') return;
+                      e.cancelBubble = true;
                       if (areaDrawMode === 'exclusion') {
                         setSelectedAreaForExclusion(area.id);
                       } else {
-                        setSelectedAreaId(area.id);
-                        setSelectedFloorplanId(null);
-                        setSelectedWallId(null);
-                        setSelectedOpeningId(null);
-                        setSelectedEaveId(null);
+                        selectOnly('area', area.id);
                       }
                     }}
                   />
@@ -4513,7 +5820,7 @@ export default function AIPlanTakeoffStandalone({
                   <Text
                     x={area.nodes[0].x}
                     y={area.nodes[0].y}
-                    text={`${area.category}: ${getNetFloorcoveringAreaM2(area, pixelsPerMm).toFixed(2)} mÂ²`}
+                    text={`${area.category}: ${getNetFloorcoveringAreaM2(area, pixelsPerMm).toFixed(2)} m²`}
                     fontSize={13 / stageScale}
                     fill={cfg.text}
                     fontStyle="bold"
@@ -4538,6 +5845,9 @@ export default function AIPlanTakeoffStandalone({
                           draggable={selectModeActive}
                           onDragStart={() => setDraggingVertex({ type: 'area', id: area.id, vertexIndex: idx })}
                           onClick={(e) => {
+                            // Cancelling the bubble stops the Stage from seeing this click, so it must never happen
+                            // before the tool check, or this markup eats clicks meant for the tool that is drawing.
+                            if (!selectModeActive) return;
                             e.cancelBubble = true;
                             if (area.nodes.length > 3) deleteVertexFromPolygon('area', area.id, idx);
                           }}
@@ -4552,6 +5862,9 @@ export default function AIPlanTakeoffStandalone({
                           opacity={0.7}
                           listening={markupListening}
                           onClick={(e) => {
+                            // Cancelling the bubble stops the Stage from seeing this click, so it must never happen
+                            // before the tool check, or this markup eats clicks meant for the tool that is drawing.
+                            if (!selectModeActive) return;
                             e.cancelBubble = true;
                             addVertexToPolygon('area', area.id, idx);
                           }}
@@ -4572,7 +5885,7 @@ export default function AIPlanTakeoffStandalone({
                   {polyPoints.length > 0 && (
                     <Line
                       points={polyPoints.flatMap((p) => [p.x, p.y])}
-                      fill={run.category === 'exterior' ? (EXTERIOR_WALL_CLASS_COLOURS[run.exteriorType || 'Other'] || EXTERIOR_WALL_CLASS_COLOURS.Other) : "rgba(171, 71, 188, 0.4)"}
+                      fill={run.category === 'exterior' ? EXTERIOR_WALL_CLASS_COLOURS[resolveExteriorClass(run)] : "rgba(171, 71, 188, 0.4)"}
                       stroke={isSelected ? "#d32f2f" : (run.category === 'exterior' ? "#0033aa" : "#7b1fa2")}
                       strokeWidth={(isSelected ? 2.5 : 1.5) / stageScale}
                       closed
@@ -4581,11 +5894,7 @@ export default function AIPlanTakeoffStandalone({
                       onClick={(e) => {
                         if (!selectModeActive) return;
                         e.cancelBubble = true;
-                        setSelectedWallId(run.id);
-                        setSelectedFloorplanId(null);
-                        setSelectedAreaId(null);
-                        setSelectedOpeningId(null);
-                        setSelectedEaveId(null);
+                        selectOnly('wall', run.id);
                       }}
                     />
                   )}
@@ -4599,11 +5908,7 @@ export default function AIPlanTakeoffStandalone({
                     onClick={(e) => {
                       if (!selectModeActive) return;
                       e.cancelBubble = true;
-                      setSelectedWallId(run.id);
-                      setSelectedFloorplanId(null);
-                      setSelectedAreaId(null);
-                      setSelectedOpeningId(null);
-                      setSelectedEaveId(null);
+                      selectOnly('wall', run.id);
                     }}
                   />
 
@@ -4611,23 +5916,27 @@ export default function AIPlanTakeoffStandalone({
                     const nextNode = run.nodes[idx + 1];
                     const midX = nextNode ? (node.x + nextNode.x) / 2 : null;
                     const midY = nextNode ? (node.y + nextNode.y) / 2 : null;
-                    const isEndpoint = idx === 0 || idx === run.nodes.length - 1;
 
                     return (
                       <React.Fragment key={`wall-handles-${idx}`}>
-                        {isEndpoint ? (
-                          <Circle
-                            x={node.x}
-                            y={node.y}
-                            radius={6.5 / stageScale}
-                            fill="#d32f2f"
-                            stroke="#fff"
-                            strokeWidth={1.5 / stageScale}
-                            listening={markupListening}
-                            draggable={selectModeActive}
-                            onDragStart={() => setDraggingVertex({ type: 'wall', id: run.id, vertexIndex: idx })}
-                          />
-                        ) : null}
+                        <Circle
+                          x={node.x}
+                          y={node.y}
+                          radius={6.5 / stageScale}
+                          fill="#d32f2f"
+                          stroke="#fff"
+                          strokeWidth={1.5 / stageScale}
+                          listening={markupListening}
+                          draggable={selectModeActive}
+                          onDragStart={(event) => {
+                            event.cancelBubble = true;
+                            setDraggingVertex({ type: 'wall', id: run.id, vertexIndex: idx });
+                          }}
+                          onDragEnd={(event) => {
+                            event.cancelBubble = true;
+                            commitWallVertexDrag(run.id, idx, event);
+                          }}
+                        />
                         {midX !== null && midY !== null && (
                           <Circle
                             x={midX}
@@ -4640,6 +5949,9 @@ export default function AIPlanTakeoffStandalone({
                             listening={markupListening}
                             visible={selectModeActive}
                             onClick={(e) => {
+                              // Cancelling the bubble stops the Stage from seeing this click, so it must never happen
+                              // before the tool check, or this markup eats clicks meant for the tool that is drawing.
+                              if (!selectModeActive) return;
                               e.cancelBubble = true;
                               addVertexToPolygon('wall', run.id, idx);
                             }}
@@ -4668,17 +5980,13 @@ export default function AIPlanTakeoffStandalone({
                   draggable={!isRecoveryPreview && selectModeActive}
                   onDragStart={() => {
                     if (!selectModeActive) return;
-                    setSelectedOpeningId(op.id);
-                    setSelectedFloorplanId(null);
-                    setSelectedWallId(null);
-                    setSelectedAreaId(null);
-                    setSelectedEaveId(null);
+                    selectOnly('opening', op.id);
                     setDraggingItem({ type: 'opening', id: op.id });
                   }}
                   onClick={(e) => {
                     if (!selectModeActive) return;
                     e.cancelBubble = true;
-                    setSelectedOpeningId(op.id);
+                    selectOnly('opening', op.id);
                   }}
                 >
                   <Rect
@@ -4737,8 +6045,8 @@ export default function AIPlanTakeoffStandalone({
                 y={Math.min(boxStartPoint.y, mouseHoverPos.y)}
                 width={Math.abs(mouseHoverPos.x - boxStartPoint.x)}
                 height={Math.abs(mouseHoverPos.y - boxStartPoint.y)}
-                fill={FLOORCOVERING_CONFIGS[floorcoveringOption]?.fill || "rgba(76, 175, 80, 0.3)"}
-                stroke={FLOORCOVERING_CONFIGS[floorcoveringOption]?.stroke || "#2e7d32"}
+                fill={activeTool === 'pillar' ? 'rgba(79, 70, 229, 0.3)' : (FLOORCOVERING_CONFIGS[floorcoveringOption]?.fill || "rgba(76, 175, 80, 0.3)")}
+                stroke={activeTool === 'pillar' ? '#4338ca' : (FLOORCOVERING_CONFIGS[floorcoveringOption]?.stroke || "#2e7d32")}
                 strokeWidth={1.5 / stageScale}
               />
             )}
@@ -4791,14 +6099,14 @@ export default function AIPlanTakeoffStandalone({
                     hitStrokeWidth={24 / stageScale}
                     onDragStart={() => {
                       if (!selectModeActive) return;
-                      setSelectedMeasurementId(meas.id);
+                      selectOnly('measure', meas.id);
                       setDraggingMeasureId(meas.id);
                       pointerEditInProgressRef.current = true;
                     }}
                     onClick={(e) => {
                       if (!selectModeActive) return;
                       e.cancelBubble = true;
-                      setSelectedMeasurementId(meas.id);
+                      selectOnly('measure', meas.id);
                     }}
                   />
                   <Circle x={offP1.x} y={offP1.y} radius={3.5 / stageScale} fill="#2e7d32" />
@@ -4814,14 +6122,14 @@ export default function AIPlanTakeoffStandalone({
                     draggable={selectModeActive}
                     onDragStart={() => {
                       if (!selectModeActive) return;
-                      setSelectedMeasurementId(meas.id);
+                      selectOnly('measure', meas.id);
                       setDraggingMeasureId(meas.id);
                       pointerEditInProgressRef.current = true;
                     }}
                     onClick={(e) => {
                       if (!selectModeActive) return;
                       e.cancelBubble = true;
-                      setSelectedMeasurementId(meas.id);
+                      selectOnly('measure', meas.id);
                     }}
                   />
                 </Group>
@@ -4847,12 +6155,11 @@ export default function AIPlanTakeoffStandalone({
                       closed
                       listening={markupListening}
                       onClick={(e) => {
+                        // Cancelling the bubble stops the Stage from seeing this click, so it must never happen
+                        // before the tool check, or this markup eats clicks meant for the tool that is drawing.
+                        if (!selectModeActive) return;
                         e.cancelBubble = true;
-                        setSelectedEaveId(eave.id);
-                        setSelectedFloorplanId(null);
-                        setSelectedWallId(null);
-                        setSelectedAreaId(null);
-                        setSelectedOpeningId(null);
+                        selectOnly('eaves', eave.id);
                       }}
                     />
                   )}
@@ -4863,18 +6170,17 @@ export default function AIPlanTakeoffStandalone({
                     dash={[3 / stageScale, 3 / stageScale]}
                     listening={markupListening}
                     onClick={(e) => {
+                      // Cancelling the bubble stops the Stage from seeing this click, so it must never happen
+                      // before the tool check, or this markup eats clicks meant for the tool that is drawing.
+                      if (!selectModeActive) return;
                       e.cancelBubble = true;
-                      setSelectedEaveId(eave.id);
-                      setSelectedFloorplanId(null);
-                      setSelectedWallId(null);
-                      setSelectedAreaId(null);
-                      setSelectedOpeningId(null);
+                      selectOnly('eaves', eave.id);
                     }}
                   />
                   <Text
                     x={labelNode.x}
                     y={labelNode.y - MEASURE_LABEL_OFFSET / stageScale}
-                    text={`${getEaveWidthLabel(eave)} ${eave.level}: ${lengthLabel}`}
+                    text={`${getEaveWidthLabel(eave)} ${resolveTakeoffLevel(eave, sheetLevels)}: ${lengthLabel}`}
                     fontSize={16 / stageScale}
                     fill="#006064"
                     fontStyle="bold"
@@ -4899,6 +6205,9 @@ export default function AIPlanTakeoffStandalone({
                           draggable
                           onDragStart={() => setDraggingVertex({ type: 'eaves', id: eave.id, vertexIndex: idx })}
                           onClick={(e) => {
+                            // Cancelling the bubble stops the Stage from seeing this click, so it must never happen
+                            // before the tool check, or this markup eats clicks meant for the tool that is drawing.
+                            if (!selectModeActive) return;
                             e.cancelBubble = true;
                             if (nodes.length > 2) deleteVertexFromPolygon('eaves', eave.id, idx);
                           }}
@@ -4914,6 +6223,9 @@ export default function AIPlanTakeoffStandalone({
                             opacity={0.75}
                             listening={markupListening}
                             onClick={(e) => {
+                              // Cancelling the bubble stops the Stage from seeing this click, so it must never happen
+                              // before the tool check, or this markup eats clicks meant for the tool that is drawing.
+                              if (!selectModeActive) return;
                               e.cancelBubble = true;
                               addVertexToPolygon('eaves', eave.id, idx);
                             }}
@@ -4922,6 +6234,61 @@ export default function AIPlanTakeoffStandalone({
                       </React.Fragment>
                     );
                   })}
+                </Group>
+              );
+            })}
+
+            {/* Pillars, Posts & Columns - a discrete vertical structural object, visually distinct
+                from walls (black), openings, areas (green/blue) and eaves (cyan): solid indigo
+                fill/stroke, never rendered or reachable as a wall. */}
+            {activePagePillars.map((pillar) => {
+              const nodes = pillar.nodes || [];
+              const isSelected = pillar.id === selectedPillarId;
+              const core = resolvePostColumnCore(pillar);
+              const labelNode = nodes[0] || { x: 0, y: 0 };
+              const sizeLabel = pillar.coreWidthMm && pillar.coreDepthMm ? `${pillar.coreWidthMm}x${pillar.coreDepthMm}` : '';
+              return (
+                <Group key={pillar.id}>
+                  {nodes.length >= 3 && (
+                    <Line
+                      points={nodes.flatMap((n) => [n.x, n.y])}
+                      fill={isSelected ? 'rgba(79, 70, 229, 0.45)' : 'rgba(79, 70, 229, 0.28)'}
+                      stroke={isSelected ? '#312e81' : '#4338ca'}
+                      strokeWidth={(isSelected ? 2.5 : 1.5) / stageScale}
+                      closed
+                      listening={markupListening}
+                      onClick={(e) => {
+                        if (!selectModeActive) return;
+                        e.cancelBubble = true;
+                        selectOnly('pillar', pillar.id);
+                      }}
+                    />
+                  )}
+                  <Text
+                    x={labelNode.x}
+                    y={labelNode.y - MEASURE_LABEL_OFFSET / stageScale}
+                    text={`${core.displayLabel}${sizeLabel ? ` ${sizeLabel}` : ''}`}
+                    fontSize={14 / stageScale}
+                    fill="#312e81"
+                    fontStyle="bold"
+                    listening={false}
+                  />
+                  {/* Corner handles are shown for orientation only when selected - resizing the
+                      footprint is done via the Width/Depth fields in the editor, which keep the
+                      rectangle axis-aligned (dragging one corner of an existing rectangle freely
+                      would otherwise distort it into an arbitrary quadrilateral). */}
+                  {isSelected && nodes.map((node, idx) => (
+                    <Circle
+                      key={`pillar-handle-${idx}`}
+                      x={node.x}
+                      y={node.y}
+                      radius={5 / stageScale}
+                      fill="#4338ca"
+                      stroke="#fff"
+                      strokeWidth={1.5 / stageScale}
+                      listening={false}
+                    />
+                  ))}
                 </Group>
               );
             })}
@@ -5001,22 +6368,29 @@ export default function AIPlanTakeoffStandalone({
               </React.Fragment>
             )}
 
+            {/* Pointer crosshair. This is the last child of the layer, so it paints on top of every
+                markup, and it is pinned to the cursor - which means its hit region sits under the
+                pointer on every single click. It must never listen, or it swallows the click that
+                was meant for the wall, area or opening underneath and selection silently dies. */}
             {mouseHoverPos && (
-              <Group x={mouseHoverPos.x} y={mouseHoverPos.y}>
+              <Group x={mouseHoverPos.x} y={mouseHoverPos.y} listening={false}>
                 <Line
                   points={[-24 / stageScale, 0, 24 / stageScale, 0]}
                   stroke={mouseHoverPos.snapped ? "#00e676" : "#ff1744"}
                   strokeWidth={3 / stageScale}
+                  listening={false}
                 />
                 <Line
                   points={[0, -24 / stageScale, 0, 24 / stageScale]}
                   stroke={mouseHoverPos.snapped ? "#00e676" : "#ff1744"}
                   strokeWidth={3 / stageScale}
+                  listening={false}
                 />
                 <Circle
                   radius={8 / stageScale}
                   stroke={mouseHoverPos.snapped ? "#00e676" : "#ff1744"}
                   strokeWidth={2.5 / stageScale}
+                  listening={false}
                 />
               </Group>
             )}

@@ -167,6 +167,6 @@ const ws3 = XLSX.utils.aoa_to_sheet(buildAddOnSheet());
 ws3["!cols"] = [{ wch: 22 }, { wch: 28 }, { wch: 28 }, { wch: 28 }, { wch: 28 }];
 XLSX.utils.book_append_sheet(wb, ws3, "Add-on (Delta) Prices");
 
-const outPath = path.join(__dirname, "..", "pricing-grid.xlsx");
+const outPath = path.join(__dirname, "..", "data/pricing-grid.xlsx");
 XLSX.writeFile(wb, outPath);
 console.log("Written:", outPath);

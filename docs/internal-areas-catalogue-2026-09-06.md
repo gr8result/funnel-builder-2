@@ -50,15 +50,15 @@ See [machine-readable quality report](../data/product-library/catalogues/interna
 | Client selection UI and requirements | `pages/modules/builders/selections-book.js`; `lib/builders/clientSelectionWorkflow.js`; `components/product-library/InternalCataloguePicker.jsx` |
 | Selection/quotation projection | `lib/product-library/internalSelection.js`; `hooks/estimate-builder/useEstimateBuilderWorkbook.js`; `components/estimate-builder/EstimateBuilderWorkbook.js` |
 | Media/source evidence | `public/images/product-library/internal-areas/`; official source captures in the existing `data/product-library/source-evidence/entry-door-furniture/` cache |
-| Regression/live verification | `scripts/test-internal-areas-catalogue.mjs`, `test-selection-navigation.mjs`, `verify-internal-areas-live.mjs`, `verify-internal-quotation-live.mjs`; `test-artifacts/internal-areas-live/` |
+| Regression/live verification | `scripts/test-internal-areas-catalogue.mjs`, `test-selection-navigation.mjs`, `verify-internal-areas-live.mjs`, `verify-internal-quotation-live.mjs`; `artifacts/test-artifacts/internal-areas-live/` |
 
 ## Verification
 
 Canonical identity, official-source metadata, image decoding, enable/disable propagation, all four requirement selectors, CSV round trips, separate trim matching, quotation projection, quantity validation and GST handling pass regression tests. Existing package exchange, exterior furniture, manual exterior-door recovery and navigation guard tests also pass.
 
-Targeted ESLint, including both new JSX components, passes with warnings (zero errors). Repository typecheck reports the existing backup-file error `test-results/job-persistence-repair-before/useJobFile.ts:13` (`../lib/jobFile` cannot be resolved). No clean full-repository typecheck is claimed.
+Targeted ESLint, including both new JSX components, passes with warnings (zero errors). Repository typecheck reports the existing backup-file error `artifacts/test-results/job-persistence-repair-before/useJobFile.ts:13` (`../lib/jobFile` cannot be resolved). No clean full-repository typecheck is claimed.
 
-Live test result is recorded in [runtime report](../test-artifacts/internal-areas-live/report.json). The test uses isolated Chrome and a synthetic saved job, blocks remote job mutations, and never opens the normal Takeoff route or the user's saved Takeoff payload.
+Live test result is recorded in [runtime report](../artifacts/test-artifacts/internal-areas-live/report.json). The test uses isolated Chrome and a synthetic saved job, blocks remote job mutations, and never opens the normal Takeoff route or the user's saved Takeoff payload.
 
 The browser verified local category/product images for all four door/handle brands, the combined trim card and subsections, three real CSV downloads (103 unique IDs per scope), and the labelled image-error fallback. It selected and saved four products, refreshed, reopened the saved job file and confirmed all four selections remained visible. Back/Forward returned to the intended Client Selections route with zero page runtime errors.
 
@@ -71,6 +71,6 @@ The saved test job contains:
 | Skirting | Porta 200067 | Bullnose 41 × 18 mm Meranti, 2.1 m, 10 LENGTH | Quote required |
 | Architraves | Porta 200067 | Same canonical profile, independently saved, 6 LENGTH | Quote required |
 
-Evidence: [category cards](../test-artifacts/internal-areas-live/01-internal-category-cards.png), [Corinthian products](../test-artifacts/internal-areas-live/02-Corinthian-Doors.png), [Gainsborough products](../test-artifacts/internal-areas-live/02-Gainsborough.png), [reopened handle selection](../test-artifacts/internal-areas-live/07-reopened-Internal-Door-Furniture.png), [reopened skirting](../test-artifacts/internal-areas-live/07-reopened-Skirting.png), and [reopened architraves](../test-artifacts/internal-areas-live/07-reopened-Architraves.png).
+Evidence: [category cards](../artifacts/test-artifacts/internal-areas-live/01-internal-category-cards.png), [Corinthian products](../artifacts/test-artifacts/internal-areas-live/02-Corinthian-Doors.png), [Gainsborough products](../artifacts/test-artifacts/internal-areas-live/02-Gainsborough.png), [reopened handle selection](../artifacts/test-artifacts/internal-areas-live/07-reopened-Internal-Door-Furniture.png), [reopened skirting](../artifacts/test-artifacts/internal-areas-live/07-reopened-Skirting.png), and [reopened architraves](../artifacts/test-artifacts/internal-areas-live/07-reopened-Architraves.png).
 
-The separate [quotation runtime report](../test-artifacts/internal-areas-live/quotation-runtime-report.json) verifies the actual left-navigation transition from the reopened test job, four rendered product rows, retained quantities and Quote-required labels. Its [quotation screenshot](../test-artifacts/internal-areas-live/08-quotation-saved-products.png) is the quotation visual evidence; the earlier `06` capture used a direct URL navigation and is superseded.
+The separate [quotation runtime report](../artifacts/test-artifacts/internal-areas-live/quotation-runtime-report.json) verifies the actual left-navigation transition from the reopened test job, four rendered product rows, retained quantities and Quote-required labels. Its [quotation screenshot](../artifacts/test-artifacts/internal-areas-live/08-quotation-saved-products.png) is the quotation visual evidence; the earlier `06` capture used a direct URL navigation and is superseded.

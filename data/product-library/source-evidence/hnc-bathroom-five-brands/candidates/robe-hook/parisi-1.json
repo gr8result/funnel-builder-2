@@ -1,0 +1,2922 @@
+{
+  "data": {
+    "products": {
+      "total_count": 35,
+      "page_info": {
+        "total_pages": 2
+      },
+      "items": [
+        {
+          "id": 22896,
+          "sku": "PPHKD50",
+          "vendorcode": "PP.HKD.50",
+          "name": "Envy Double Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/P/P/PPHKD50_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/P/P/PPHKD50_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/P/P/PPHKD50_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/P/P/PPHKD50_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/P/P/PPHKD50_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/P/P/PPHKD50_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<ul><li>Wall mounted</li><li>Dual fixing points </li></ul>"
+          },
+          "short_description": {
+            "html": "Envy Double Robe Hook"
+          },
+          "product_dimensions": null,
+          "price_store": 90,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Envy"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Gun Metal",
+                    "value": "947"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "PP.HKD.50"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Fucile"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22895,
+          "sku": "PPHKD48",
+          "vendorcode": "PP.HKD.48",
+          "name": "Envy Double Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/P/P/PPHKD48_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/P/P/PPHKD48_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/P/P/PPHKD48_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/P/P/PPHKD48_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/P/P/PPHKD48_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/P/P/PPHKD48_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<ul><li>Wall mounted</li><li>Dual fixing points </li></ul>"
+          },
+          "short_description": {
+            "html": "Envy Double Robe Hook"
+          },
+          "product_dimensions": null,
+          "price_store": 94,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Envy"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Bronze",
+                    "value": "935"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "PP.HKD.48"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Bronze"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22894,
+          "sku": "PPHKD46",
+          "vendorcode": "PP.HKD.46",
+          "name": "Envy Double Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/P/P/PPHKD46_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/P/P/PPHKD46_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/P/P/PPHKD46_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/P/P/PPHKD46_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/P/P/PPHKD46_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/P/P/PPHKD46_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<ul><li>Wall mounted</li><li>Dual fixing points </li></ul>"
+          },
+          "short_description": {
+            "html": "Envy Double Robe Hook"
+          },
+          "product_dimensions": null,
+          "price_store": 90,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Envy"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "PP.HKD.46"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Brass"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22893,
+          "sku": "PPHKD41",
+          "vendorcode": "PP.HKD.41",
+          "name": "Envy Double Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/P/P/PPHKD41_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/P/P/PPHKD41_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/P/P/PPHKD41_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/P/P/PPHKD41_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/P/P/PPHKD41_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/P/P/PPHKD41_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<ul><li>Wall mounted</li><li>Dual fixing points </li></ul>"
+          },
+          "short_description": {
+            "html": "Envy Double Robe Hook"
+          },
+          "product_dimensions": null,
+          "price_store": 84,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Envy"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "PP.HKD.41"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22892,
+          "sku": "PPHKD02",
+          "vendorcode": "PP.HKD.02",
+          "name": "Envy Double Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/P/P/PPHKD02_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/P/P/PPHKD02_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/P/P/PPHKD02_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/P/P/PPHKD02_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/P/P/PPHKD02_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/P/P/PPHKD02_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<ul><li>Wall mounted</li><li>Dual fixing points </li></ul>"
+          },
+          "short_description": {
+            "html": "Envy Double Robe Hook"
+          },
+          "product_dimensions": null,
+          "price_store": 74,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Envy"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Matte Black",
+                    "value": "940"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "PP.HKD.02"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Black"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22891,
+          "sku": "PPHKD",
+          "vendorcode": "PP.HKD",
+          "name": "Envy Double Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/P/P/PPHKD_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/P/P/PPHKD_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/P/P/PPHKD_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/P/P/PPHKD_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/P/P/PPHKD_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/P/P/PPHKD_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<ul><li>Wall mounted</li><li>Dual fixing points </li></ul>"
+          },
+          "short_description": {
+            "html": "Envy Double Robe Hook"
+          },
+          "product_dimensions": null,
+          "price_store": 60,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Envy"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "PP.HKD"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22750,
+          "sku": "NE03150",
+          "vendorcode": "NE031.50",
+          "name": "Linfa Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03150_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03150_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE03150_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE03150_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03150_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03150_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<ul><li>Wall mounted</li><li>Dual fixing points</li><li>Single hook</li></ul>"
+          },
+          "short_description": {
+            "html": "Linfa Robe Hook"
+          },
+          "product_dimensions": null,
+          "price_store": 55,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Linfa"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Gun Metal",
+                    "value": "947"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "NE031.50"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Fucile"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22749,
+          "sku": "NE03146",
+          "vendorcode": "NE031.46",
+          "name": "Linfa Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03146_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03146_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE03146_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE03146_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03146_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03146_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<ul><li>Wall mounted</li><li>Dual fixing points</li><li>Single hook</li></ul>"
+          },
+          "short_description": {
+            "html": "Linfa Robe Hook"
+          },
+          "product_dimensions": null,
+          "price_store": 55,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Linfa"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "NE031.46"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Brass"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22748,
+          "sku": "NE03141",
+          "vendorcode": "NE031.41",
+          "name": "Linfa Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03141_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03141_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE03141_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE03141_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03141_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03141_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<ul><li>Wall mounted</li><li>Dual fixing points</li><li>Single hook</li></ul>"
+          },
+          "short_description": {
+            "html": "Linfa Robe Hook"
+          },
+          "product_dimensions": null,
+          "price_store": 49,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Linfa"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "NE031.41"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22747,
+          "sku": "NE03102",
+          "vendorcode": "NE031.02",
+          "name": "Linfa Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03102_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03102_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE03102_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE03102_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03102_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03102_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<ul><li>Wall mounted</li><li>Dual fixing points</li><li>Single hook</li></ul>"
+          },
+          "short_description": {
+            "html": "Linfa Robe Hook"
+          },
+          "product_dimensions": null,
+          "price_store": 49,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Linfa"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Matte Black",
+                    "value": "940"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "NE031.02"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Black"
+              }
+            ]
+          }
+        },
+        {
+          "id": 20002,
+          "sku": "PPHK48",
+          "vendorcode": "PP.HK.48",
+          "name": "Envy Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/p/pphk48_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/p/pphk48_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/p/p/pphk48_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/p/p/pphk48_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/p/pphk48_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/p/pphk48_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Wall mounted<br>• Brass construction<br>• Matte finish</p>"
+          },
+          "short_description": {
+            "html": "<p>Envy Robe Hook</p>"
+          },
+          "product_dimensions": "W19 x D34 x H19mm",
+          "price_store": 60,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W19 x D34 x H19mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Envy"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Bronze",
+                    "value": "935"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "PP.HK.48"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Bronze"
+              }
+            ]
+          }
+        },
+        {
+          "id": 19925,
+          "sku": "ERHK50",
+          "vendorcode": "ER.HK.50",
+          "name": "Ellisse Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/erhk50_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/erhk50_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/e/r/erhk50_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/e/r/erhk50_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/erhk50_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/erhk50_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Single fixing point<br>• Brass construction<br>• Round design</p>"
+          },
+          "short_description": {
+            "html": "<p>Ellisse Robe Hook</p>"
+          },
+          "product_dimensions": "W50 x D48 x H50mm",
+          "price_store": 229,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W50 x D48 x H50mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Ellisse"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Gun Metal",
+                    "value": "947"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "ER.HK.50"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Fucile"
+              }
+            ]
+          }
+        },
+        {
+          "id": 19924,
+          "sku": "ERHK48",
+          "vendorcode": "ER.HK.48",
+          "name": "Ellisse Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/erhk48_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/erhk48_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/e/r/erhk48_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/e/r/erhk48_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/erhk48_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/erhk48_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Single fixing point<br>• Brass construction<br>• Matte finish<br>• Round design</p>"
+          },
+          "short_description": {
+            "html": "<p>Ellisse Robe Hook</p>"
+          },
+          "product_dimensions": "W50 x D48 x H50mm",
+          "price_store": 245,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W50 x D48 x H50mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Ellisse"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Bronze",
+                    "value": "935"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "ER.HK.48"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Bronze"
+              }
+            ]
+          }
+        },
+        {
+          "id": 19923,
+          "sku": "ERHK46",
+          "vendorcode": "ER.HK.46",
+          "name": "Ellisse Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/erhk46_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/erhk46_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/e/r/erhk46_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/e/r/erhk46_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/erhk46_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/erhk46_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Single fixing point<br>• Brass construction<br>• Round design</p>"
+          },
+          "short_description": {
+            "html": "<p>Ellisse Robe Hook</p>"
+          },
+          "product_dimensions": "W50 x D48 x H50mm",
+          "price_store": 229,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W50 x D48 x H50mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Ellisse"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "ER.HK.46"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Brass"
+              }
+            ]
+          }
+        },
+        {
+          "id": 19922,
+          "sku": "ERHK41",
+          "vendorcode": "ER.HK.41",
+          "name": "Ellisse Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/erhk41_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/erhk41_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/e/r/erhk41_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/e/r/erhk41_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/erhk41_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/erhk41_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Single fixing point<br>• Brass construction<br>• Round design</p>"
+          },
+          "short_description": {
+            "html": "<p>Ellisse Robe Hook</p>"
+          },
+          "product_dimensions": "W50 x D48 x H50mm",
+          "price_store": 214,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W50 x D48 x H50mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Ellisse"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "ER.HK.41"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 19921,
+          "sku": "ERHK02",
+          "vendorcode": "ER.HK.02",
+          "name": "Ellisse Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/erhk02_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/erhk02_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/e/r/erhk02_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/e/r/erhk02_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/erhk02_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/erhk02_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Single fixing point<br>• Brass construction<br>• Round design</p>"
+          },
+          "short_description": {
+            "html": "<p>Ellisse Robe Hook</p>"
+          },
+          "product_dimensions": "W50 x D48 x H50mm",
+          "price_store": 194,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W50 x D48 x H50mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Ellisse"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Matte Black",
+                    "value": "940"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "ER.HK.02"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Black"
+              }
+            ]
+          }
+        },
+        {
+          "id": 19920,
+          "sku": "ERHK",
+          "vendorcode": "ER.HK",
+          "name": "Ellisse Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/erhk_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/erhk_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/e/r/erhk_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/e/r/erhk_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/erhk_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/erhk_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Single fixing point<br>• Brass construction<br>• Round design</p>"
+          },
+          "short_description": {
+            "html": "<p>Ellisse Robe Hook</p>"
+          },
+          "product_dimensions": "W50 x D48 x H50mm",
+          "price_store": 165,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W50 x D48 x H50mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Ellisse"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "ER.HK"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 17809,
+          "sku": "TOHK48",
+          "vendorcode": "TO.HK.48",
+          "name": "Tondo Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/tohk48_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/tohk48_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/t/o/tohk48_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/t/o/tohk48_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/tohk48_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/tohk48_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Brass Composition<br>• Organic shape</p>"
+          },
+          "short_description": {
+            "html": "<p>Tondo Robe Hook</p>"
+          },
+          "product_dimensions": "W15 x D55 x H15 mm",
+          "price_store": 60,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W15 x D55 x H15 mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Tondo"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Bronze",
+                    "value": "935"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "TO.HK.48"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Bronze"
+              }
+            ]
+          }
+        },
+        {
+          "id": 15018,
+          "sku": "TOHK02",
+          "vendorcode": "TO.HK.02",
+          "name": "Tondo Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/tohk02_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/tohk02_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/t/o/tohk02_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/t/o/tohk02_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/tohk02_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/tohk02_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Brass Composition <br />&bull; Organic shape</p>"
+          },
+          "short_description": {
+            "html": "<p>Tondo Robe Hook</p>"
+          },
+          "product_dimensions": "W15 x D55 x H15mm",
+          "price_store": 45,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W15 x D55 x H15mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Tondo"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Matte Black",
+                    "value": "940"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "TO.HK.02"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Black"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14995,
+          "sku": "NE02141",
+          "vendorcode": "NE021.41",
+          "name": "L'Hotel Robe Hook ",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/n/e/ne02141_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/n/e/ne02141_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/n/e/ne02141_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/n/e/ne02141_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/n/e/ne02141_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/n/e/ne02141_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Single fixing point<br />&bull; Brass construction<br />&bull; Contemporary curves and clean lines<br />&bull; A durable and a practical solution for your bathroom</p>"
+          },
+          "short_description": {
+            "html": "<p>L'Hotel Robe Hook&nbsp;</p>"
+          },
+          "product_dimensions": "W20x D34 x H20mm",
+          "price_store": 49,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W20x D34 x H20mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "L'Hotel"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "NE021.41"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14963,
+          "sku": "TOHK41",
+          "vendorcode": "TO.HK.41",
+          "name": "Tondo Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/tohk41_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/tohk41_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/t/o/tohk41_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/t/o/tohk41_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/tohk41_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/tohk41_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Brass Composition <br />&bull; Organic shape</p>"
+          },
+          "short_description": {
+            "html": "<p>Tondo Robe Hook</p>"
+          },
+          "product_dimensions": "W15 x D55 x H15mm",
+          "price_store": 49,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W15 x D55 x H15mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Tondo"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "TO.HK.41"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14926,
+          "sku": "TOHK46",
+          "vendorcode": "TO.HK.46",
+          "name": "Tondo Robe Hook ",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/tohk46_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/tohk46_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/t/o/tohk46_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/t/o/tohk46_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/tohk46_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/tohk46_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Brass Composition <br />&bull; Organic shape</p>"
+          },
+          "short_description": {
+            "html": "<p>Tondo Robe Hook&nbsp;</p>"
+          },
+          "product_dimensions": "W15 x D55 x H15 mm",
+          "price_store": 55,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W15 x D55 x H15 mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Tondo"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "TO.HK.46"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Brass"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14912,
+          "sku": "PPHK50",
+          "vendorcode": "PP.HK.50",
+          "name": "Envy Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/p/pphk50_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/p/pphk50_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/p/p/pphk50_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/p/p/pphk50_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/p/pphk50_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/p/pphk50_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Single Fixing <br />&bull; Brass</p>"
+          },
+          "short_description": {
+            "html": "<p>Envy Robe Hook</p>"
+          },
+          "product_dimensions": "W20 x D30 x H20",
+          "price_store": 55,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W20 x D30 x H20"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Envy"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Gun Metal",
+                    "value": "947"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "PP.HK.50"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Fucile"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14856,
+          "sku": "NE02102",
+          "vendorcode": "NE021.02",
+          "name": "L’Hotel Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/n/e/ne02102_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/n/e/ne02102_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/n/e/ne02102_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/n/e/ne02102_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/n/e/ne02102_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/n/e/ne02102_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Single fixing point<br />&bull; Brass construction<br />&bull; Contemporary curves and clean lines<br />&bull; A durable and a practical solution for your bathroom</p>"
+          },
+          "short_description": {
+            "html": "<p>L&rsquo;Hotel Robe Hook</p>"
+          },
+          "product_dimensions": "W20x D34 x H20mm",
+          "price_store": 45,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W20x D34 x H20mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "L'Hotel"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Matte Black",
+                    "value": "940"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "NE021.02"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Black"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14851,
+          "sku": "NE02150",
+          "vendorcode": "NE021.50",
+          "name": "L'Hotel Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/n/e/ne02150_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/n/e/ne02150_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/n/e/ne02150_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/n/e/ne02150_parisi_tech_1.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/n/e/ne02150_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/n/e/ne02150_parisi_tech_1.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Single fixing<br />&bull; Brass construction<br />&bull; Contemporary curves and clean lines<br />&bull; A durable and a practical solution for your bathroom</p>"
+          },
+          "short_description": {
+            "html": "<p>L'Hotel Robe Hook</p>"
+          },
+          "product_dimensions": "W20x D34 x H20mm",
+          "price_store": 55,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W20x D34 x H20mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "L'Hotel"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Gun Metal",
+                    "value": "947"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "NE021.50"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Fucile"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

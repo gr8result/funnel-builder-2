@@ -1,3 +1,4 @@
+import { takeoffProcurementDetails, refreshTakeoffProcurementItems } from '../../../lib/construction-estimation/takeoffProcurement.js';
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { withWorkspace } from "../../../lib/withWorkspace";
 import { quotationSectionsForFinalBoq, quoteLineTotal, quoteQuantity, quoteRate, shouldIncludeQuoteRowInFinalBoq } from "../../../lib/construction-estimation/finalQuotationBoq.js";
@@ -89,6 +90,7 @@ async function handler(req, res) {
       projectId: project.id,
       snapshotId: snapshot.id,
       workbook,
+      calculated,
       boqItemMap,
     });
 
@@ -343,6 +345,7 @@ function buildBoqItemRows({ workspaceId, userId, projectId, snapshotId, calculat
     quoteRows.forEach((row, rowIndex) => {
       if (!shouldIncludeQuoteRowInFinalBoq(row)) return;
       const sourceQuoteRowId = firstText(row.id, row.quoteRowId, row.sourceRow, row.excelRow);
+      const material = takeoffProcurementDetails({ ...row, section: sectionKey }, calculated.quantities);
       rows.push({
         workspace_id: workspaceId,
         project_id: projectId,
@@ -354,9 +357,9 @@ function buildBoqItemRows({ workspaceId, userId, projectId, snapshotId, calculat
         source_section_name: firstText(row.section, section.displayName, sectionKey),
         item_name: firstText(row.item, row.description, row.values?.[0]) || "Untitled line item",
         description: firstText(row.description, row.item, row.values?.[0]),
-        quantity: decimalNumber(quoteQuantity(row)),
-        unit: textOrNull(row.unit),
-        unit_rate: decimalNumber(quoteRate(row)),
+        quantity: decimalNumber(material.qty ?? quoteQuantity(row)),
+        unit: textOrNull(material.unit || row.unit),
+        unit_rate: decimalNumber(quoteRate(row) / (material.rateDivisor || 1)),
         line_total: moneyNumber(quoteLineTotal(row)),
         rate_source: textOrNull(row.sourceOfRate),
         line_type: textOrNull(row.lineType),
@@ -368,6 +371,8 @@ function buildBoqItemRows({ workspaceId, userId, projectId, snapshotId, calculat
           takeoffQuantitySource: row.takeoffQuantitySource || row.measurementSource || row.quantitySource || null,
           linkedTakeoffMeasurementId: row.takeoffMeasurementId || row.linkedTakeoffMeasurementId || null,
           quantityKey: row.quantityKey,
+          canonicalQuantityKey: material.canonicalQuantityKey,
+          supplierGroup: material.supplierGroup,
           autoQuantity: row.autoQuantity,
           quoteRequired: row.quoteRequired,
           feeType: row.feeType,
@@ -382,8 +387,8 @@ function buildBoqItemRows({ workspaceId, userId, projectId, snapshotId, calculat
   return rows;
 }
 
-function buildProcurementRows({ workspaceId, userId, projectId, snapshotId, workbook, boqItemMap }) {
-  const items = Array.isArray(workbook.procurement?.items) ? workbook.procurement.items : [];
+function buildProcurementRows({ workspaceId, userId, projectId, snapshotId, workbook, calculated, boqItemMap }) {
+  const items = refreshTakeoffProcurementItems(calculated, Array.isArray(workbook.procurement?.items) ? workbook.procurement.items : []);
   return items.map((item) => {
     const sourceQuoteRowId = firstText(item.quoteRowId, item.source_quote_row_id, item.linkedQuoteRowId);
     return {
@@ -409,6 +414,9 @@ function buildProcurementRows({ workspaceId, userId, projectId, snapshotId, work
       source_item: stripLargeFields(item),
       metadata: stripLargeFields({
         supplier: item.supplier,
+        ...(item.flooringType === "carpet" ? { quoteRequired: item.quoteRequired, quantityPending: item.quantityPending, costPending: item.costPending, netAreaM2: item.netAreaM2, estimatedOrderAreaM2: item.estimatedOrderAreaM2, materialRateExGst: item.materialRateExGst, locationSchedule: item.locationSchedule } : {}),
+        supplierGroup: item.supplierGroup,
+        canonicalQuantityKey: item.canonicalQuantityKey,
         supplierQuoteNumber: item.supplierQuoteNumber,
         assignedPurchasingOfficer: item.assignedPurchasingOfficer,
         notes: item.notes,
@@ -441,7 +449,7 @@ function projectSourceFields(projectInput, workbook) {
   const clientPage = plainObject(workbook.clientPage);
   const sourceFileName = firstText(projectInput.source_workbook_file_name, projectInput.sourceWorkbookFileName, workbook.openedFileName, workbook.sourceFileName);
   return {
-    source_workbook_job_id: firstText(projectInput.source_workbook_job_id, projectInput.sourceWorkbookJobId, workbook.id, workbook.jobId, meta.jobNumber),
+    source_workbook_job_id: firstText(workbook.jobId, projectInput.source_workbook_job_id, projectInput.sourceWorkbookJobId, workbook.id),
     source_workbook_file_name: sourceFileName,
     source_registered_job_id: firstText(projectInput.source_registered_job_id, projectInput.sourceRegisteredJobId, registered.jobId, workbook.registeredJobId),
     source_quote_number: firstText(projectInput.source_quote_number, projectInput.quoteNumber, clientPage.quoteNumber, meta.jobNumber),

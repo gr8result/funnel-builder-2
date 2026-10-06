@@ -1,0 +1,53 @@
+{
+  "generatedAt": "2026-10-05T22:36:53.560Z",
+  "beacon": {
+    "total": 470,
+    "byCategory": {
+      "Downlights": 48,
+      "Pendants": 48,
+      "Ceiling Lights": 48,
+      "Wall Lights": 48,
+      "Bathroom Lighting": 39,
+      "Strip / Cabinet Lighting": 40,
+      "Step Lights": 25,
+      "Ceiling Fans": 126,
+      "Exterior Lighting": 48
+    },
+    "images": 470,
+    "regularPrices": 470,
+    "promotionalPrices": 9,
+    "withSpecifications": 470
+  },
+  "dulux": {
+    "colours": 4971,
+    "families": {
+      "whites-and-neutrals": 66,
+      "browns": 110,
+      "yellows": 106,
+      "greys": 58,
+      "blues": 224,
+      "greens": 196,
+      "oranges": 49,
+      "reds": 140,
+      "purples": 152,
+      "": 3870
+    },
+    "validSwatches": 4971,
+    "products": 23,
+    "byCategory": {
+      "Interior Wall Paint": 5,
+      "Wet Area Paint": 1,
+      "Ceiling Paint": 4,
+      "Exterior Paint": 6,
+      "Trim / Door Paint": 5,
+      "Primer / Sealer / Undercoat": 2
+    },
+    "withPublishedPackagePricing": 18,
+    "withoutPublishedPricing": 5,
+    "withTechnicalData": 23
+  },
+  "failures": {
+    "beacon": [],
+    "dulux": []
+  }
+}

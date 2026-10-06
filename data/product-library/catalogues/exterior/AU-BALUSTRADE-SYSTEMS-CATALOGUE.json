@@ -1,0 +1,1818 @@
+{
+  "catalogue": "AU-BALUSTRADE-SYSTEMS-CATALOGUE",
+  "generatedAt": "2026-09-28T07:24:51.157Z",
+  "note": "Configurable balustrade systems priced per LM at indicative estimating rates (price_status allowance_only; attributes.estimatingRate). The ProtectorAl glass and aluminium systems remain in AU-EXTERIOR-FINISHES-CATALOGUE.json and are upgraded in place by this script.",
+  "rateFamilies": {
+    "timber": {
+      "ratePerLm": 325,
+      "evidence": [
+        {
+          "source": "The Quote Yard - Balustrade Installation Cost NSW 2026 (published 24 Aug 2026)",
+          "url": "https://www.thequoteyard.com.au/services/balustrade-installation-cost-2026-nsw",
+          "range": "$200-$450",
+          "appliesTo": "Timber balustrade",
+          "capturedAt": "2026-09-28"
+        },
+        {
+          "source": "ServiceTasker - How Much Do Balustrades Cost in Australia (2026 cost guide)",
+          "url": "https://servicetasker.com.au/cost-guides/how-much-do-balustrades-cost",
+          "range": "$200-$450",
+          "appliesTo": "Timber",
+          "capturedAt": "2026-09-28"
+        },
+        {
+          "source": "QHI (Queensland) - Balustrades & Handrails supplied and installed, from $220 per lineal metre",
+          "url": "https://qhi.net.au/products/balustrades-handrails-from-220-per-lineal-metre",
+          "range": "from $220",
+          "appliesTo": "Timber vertical balustrade, deck / landing / stairs (QLD)",
+          "capturedAt": "2026-09-28"
+        }
+      ]
+    },
+    "aluminium": {
+      "ratePerLm": 325,
+      "evidence": [
+        {
+          "source": "The Quote Yard - Balustrade Installation Cost NSW 2026 (published 24 Aug 2026)",
+          "url": "https://www.thequoteyard.com.au/services/balustrade-installation-cost-2026-nsw",
+          "range": "$250-$450",
+          "appliesTo": "Aluminium balustrade",
+          "capturedAt": "2026-09-28"
+        },
+        {
+          "source": "ServiceTasker - How Much Do Balustrades Cost in Australia (2026 cost guide)",
+          "url": "https://servicetasker.com.au/cost-guides/how-much-do-balustrades-cost",
+          "range": "$200-$350",
+          "appliesTo": "Aluminium",
+          "capturedAt": "2026-09-28"
+        }
+      ]
+    },
+    "aluminiumBlade": {
+      "ratePerLm": 400,
+      "evidence": [
+        {
+          "source": "The Quote Yard - Balustrade Installation Cost NSW 2026 (published 24 Aug 2026)",
+          "url": "https://www.thequoteyard.com.au/services/balustrade-installation-cost-2026-nsw",
+          "range": "$250-$450",
+          "appliesTo": "Aluminium balustrade (blade / batten sits at the upper end)",
+          "capturedAt": "2026-09-28"
+        },
+        {
+          "source": "ServiceTasker - How Much Do Balustrades Cost in Australia (2026 cost guide)",
+          "url": "https://servicetasker.com.au/cost-guides/how-much-do-balustrades-cost",
+          "range": "$200-$350",
+          "appliesTo": "Aluminium",
+          "capturedAt": "2026-09-28"
+        }
+      ]
+    },
+    "steel": {
+      "ratePerLm": 300,
+      "evidence": [
+        {
+          "source": "ServiceTasker - How Much Do Balustrades Cost in Australia (2026 cost guide)",
+          "url": "https://servicetasker.com.au/cost-guides/how-much-do-balustrades-cost",
+          "range": "$230-$370",
+          "appliesTo": "Horizontal steel balustrades",
+          "capturedAt": "2026-09-28"
+        },
+        {
+          "source": "QHI (Queensland) - Balustrades & Handrails supplied and installed, from $220 per lineal metre",
+          "url": "https://qhi.net.au/products/balustrades-handrails-from-220-per-lineal-metre",
+          "range": "from $220",
+          "appliesTo": "Vertical metal (BlueScope steel) panels with hardwood rail (QLD)",
+          "capturedAt": "2026-09-28"
+        }
+      ]
+    },
+    "steelFlatBar": {
+      "ratePerLm": 350,
+      "evidence": [
+        {
+          "source": "ServiceTasker - How Much Do Balustrades Cost in Australia (2026 cost guide)",
+          "url": "https://servicetasker.com.au/cost-guides/how-much-do-balustrades-cost",
+          "range": "$230-$370",
+          "appliesTo": "Steel balustrades",
+          "capturedAt": "2026-09-28"
+        },
+        {
+          "source": "ServiceTasker - How Much Do Balustrades Cost in Australia (2026 cost guide)",
+          "url": "https://servicetasker.com.au/cost-guides/how-much-do-balustrades-cost",
+          "range": "$350-$500",
+          "appliesTo": "Horizontal stainless steel balustrades",
+          "capturedAt": "2026-09-28"
+        }
+      ]
+    },
+    "wire": {
+      "ratePerLm": 400,
+      "evidence": [
+        {
+          "source": "The Quote Yard - Balustrade Installation Cost NSW 2026 (published 24 Aug 2026)",
+          "url": "https://www.thequoteyard.com.au/services/balustrade-installation-cost-2026-nsw",
+          "range": "$300-$500",
+          "appliesTo": "Wire balustrade",
+          "capturedAt": "2026-09-28"
+        },
+        {
+          "source": "ServiceTasker - How Much Do Balustrades Cost in Australia (2026 cost guide)",
+          "url": "https://servicetasker.com.au/cost-guides/how-much-do-balustrades-cost",
+          "range": "$300-$450",
+          "appliesTo": "Stainless steel cable balustrades",
+          "capturedAt": "2026-09-28"
+        }
+      ]
+    },
+    "framedGlass": {
+      "ratePerLm": 400,
+      "evidence": [
+        {
+          "source": "Home Upkeep - Glass Balustrade Cost in Melbourne 2026 Guide (updated 7 Jun 2026)",
+          "url": "https://homeupkeep.com.au/glass-balustrade-cost-melbourne/",
+          "range": "$250-$450",
+          "appliesTo": "Framed glass (full aluminium frame)",
+          "capturedAt": "2026-09-28"
+        },
+        {
+          "source": "ServiceTasker - How Much Do Balustrades Cost in Australia (2026 cost guide)",
+          "url": "https://servicetasker.com.au/cost-guides/how-much-do-balustrades-cost",
+          "range": "$400-$550",
+          "appliesTo": "Framed glass with stainless steel",
+          "capturedAt": "2026-09-28"
+        }
+      ]
+    },
+    "semiFrameless": {
+      "ratePerLm": 525,
+      "evidence": [
+        {
+          "source": "Home Upkeep - Glass Balustrade Cost in Melbourne 2026 Guide (updated 7 Jun 2026)",
+          "url": "https://homeupkeep.com.au/glass-balustrade-cost-melbourne/",
+          "range": "$400-$650",
+          "appliesTo": "Semi-frameless (posts between glass)",
+          "capturedAt": "2026-09-28"
+        },
+        {
+          "source": "The Quote Yard - Balustrade Installation Cost NSW 2026 (published 24 Aug 2026)",
+          "url": "https://www.thequoteyard.com.au/services/balustrade-installation-cost-2026-nsw",
+          "range": "$400-$700",
+          "appliesTo": "Semi frameless glass",
+          "capturedAt": "2026-09-28"
+        }
+      ]
+    },
+    "framelessSpigot": {
+      "ratePerLm": 650,
+      "evidence": [
+        {
+          "source": "Aqua Vista Glass (Brisbane) - The Cost for Glass Balustrades (updated 4 Sep 2025)",
+          "url": "https://www.aquavistaglass.com.au/blog/glass-balustrade-cost/",
+          "range": "$375-$425 (standard frameless); $675-$755 (custom frameless)",
+          "appliesTo": "Frameless glass, Brisbane",
+          "capturedAt": "2026-09-28"
+        },
+        {
+          "source": "Home Upkeep - Glass Balustrade Cost in Melbourne 2026 Guide (updated 7 Jun 2026)",
+          "url": "https://homeupkeep.com.au/glass-balustrade-cost-melbourne/",
+          "range": "$600-$900",
+          "appliesTo": "Fully frameless / spigot-mounted",
+          "capturedAt": "2026-09-28"
+        },
+        {
+          "source": "The Quote Yard - Balustrade Installation Cost NSW 2026 (published 24 Aug 2026)",
+          "url": "https://www.thequoteyard.com.au/services/balustrade-installation-cost-2026-nsw",
+          "range": "$600-$1,000",
+          "appliesTo": "Frameless glass",
+          "capturedAt": "2026-09-28"
+        },
+        {
+          "source": "ServiceTasker - How Much Do Balustrades Cost in Australia (2026 cost guide)",
+          "url": "https://servicetasker.com.au/cost-guides/how-much-do-balustrades-cost",
+          "range": "$700-$1,000",
+          "appliesTo": "Spigot bottom-mounted frameless glass",
+          "capturedAt": "2026-09-28"
+        }
+      ]
+    },
+    "framelessChannelTop": {
+      "ratePerLm": 725,
+      "evidence": [
+        {
+          "source": "Home Upkeep - Glass Balustrade Cost in Melbourne 2026 Guide (updated 7 Jun 2026)",
+          "url": "https://homeupkeep.com.au/glass-balustrade-cost-melbourne/",
+          "range": "$550-$800",
+          "appliesTo": "Channel-mounted frameless",
+          "capturedAt": "2026-09-28"
+        },
+        {
+          "source": "ServiceTasker - How Much Do Balustrades Cost in Australia (2026 cost guide)",
+          "url": "https://servicetasker.com.au/cost-guides/how-much-do-balustrades-cost",
+          "range": "$900-$1,200",
+          "appliesTo": "Channel-mounted frameless",
+          "capturedAt": "2026-09-28"
+        }
+      ]
+    },
+    "framelessSideMount": {
+      "ratePerLm": 750,
+      "evidence": [
+        {
+          "source": "Aqua Vista Glass (Brisbane) - The Cost for Glass Balustrades (updated 4 Sep 2025)",
+          "url": "https://www.aquavistaglass.com.au/blog/glass-balustrade-cost/",
+          "range": "$375-$425 (standard frameless); $675-$755 (custom frameless)",
+          "appliesTo": "Frameless / pin-fixed glass, Brisbane",
+          "capturedAt": "2026-09-28"
+        },
+        {
+          "source": "ServiceTasker - How Much Do Balustrades Cost in Australia (2026 cost guide)",
+          "url": "https://servicetasker.com.au/cost-guides/how-much-do-balustrades-cost",
+          "range": "$600-$900",
+          "appliesTo": "Glass side-mounted double-pressure bracket (frameless)",
+          "capturedAt": "2026-09-28"
+        },
+        {
+          "source": "ServiceTasker - How Much Do Balustrades Cost in Australia (2026 cost guide)",
+          "url": "https://servicetasker.com.au/cost-guides/how-much-do-balustrades-cost",
+          "range": "$800-$1,100",
+          "appliesTo": "Side-mounted frameless glass",
+          "capturedAt": "2026-09-28"
+        }
+      ]
+    },
+    "framelessChannelFascia": {
+      "ratePerLm": 850,
+      "evidence": [
+        {
+          "source": "ServiceTasker - How Much Do Balustrades Cost in Australia (2026 cost guide)",
+          "url": "https://servicetasker.com.au/cost-guides/how-much-do-balustrades-cost",
+          "range": "$800-$1,100",
+          "appliesTo": "Side-mounted frameless glass",
+          "capturedAt": "2026-09-28"
+        },
+        {
+          "source": "ServiceTasker - How Much Do Balustrades Cost in Australia (2026 cost guide)",
+          "url": "https://servicetasker.com.au/cost-guides/how-much-do-balustrades-cost",
+          "range": "$900-$1,200",
+          "appliesTo": "Channel-mounted frameless",
+          "capturedAt": "2026-09-28"
+        }
+      ]
+    }
+  },
+  "products": [
+    {
+      "product_code": "BALUSTRADE-GLASS-FRAMED-ALUMINIUM",
+      "family_key": "balustrades",
+      "requirement_keys": "balustrades",
+      "category_key": "Balustrades",
+      "top_level_area": "exterior",
+      "manufacturer": "Railsafe",
+      "brand": "Railsafe",
+      "supplier": "Railsafe",
+      "range": "Framed Glass — Aluminium Framed",
+      "product_name": "Framed glass balustrade — aluminium frame",
+      "model": "Framed Glass balustrade",
+      "description": "Glass infill held in a continuous aluminium frame: posts, bottom rail and handrail, glazed with rubber wedges. Powder-coated frame.",
+      "colour": "",
+      "finish": "Black powder coat",
+      "configuration": "framed_glass",
+      "material": "Glass",
+      "primary_image_url": "/images/catalogues/exterior/balustrades/framed-glass-aluminium.jpg",
+      "thumbnail_url": "/images/catalogues/exterior/balustrades/framed-glass-aluminium.jpg",
+      "image_source_url": "https://railsafe.com.au/product-category/framed-glass/",
+      "image_source_type": "supplier_or_installer_project_photo",
+      "image_verified_at": "2026-09-28",
+      "image_status": "verified_range",
+      "official_product_url": "https://railsafe.com.au/product-category/framed-glass/",
+      "specification_url": "https://railsafe.com.au/product-category/framed-glass/",
+      "supplier_url": "https://railsafe.com.au/product-category/framed-glass/",
+      "client_price": 400,
+      "price_status": "allowance_only",
+      "price_unit": "LM",
+      "currency": "AUD",
+      "gst_included": "true",
+      "price_verified_at": "2026-09-28",
+      "country": "AU",
+      "regions": "AU;QLD",
+      "active": "true",
+      "discontinued": "false",
+      "archived": "false",
+      "source_type": "configurable_system_catalogue",
+      "source_name": "Railsafe Framed Glass balustrade",
+      "source_url": "https://railsafe.com.au/product-category/framed-glass/",
+      "source_retrieved_at": "2026-09-28",
+      "source_verified_at": "2026-09-28",
+      "attributes": {
+        "recordType": "balustrade_system",
+        "selectionModel": "configurable_system",
+        "clientSelectionOrder": 10,
+        "systemType": "Framed Glass — Aluminium Framed",
+        "material": "Glass",
+        "glassSystem": "Framed",
+        "mountingOptions": [
+          "Top mounted (base-plated posts)",
+          "Face mounted (side-fixed posts)"
+        ],
+        "defaultMounting": "Top mounted (base-plated posts)",
+        "applications": [
+          "Balcony",
+          "Deck",
+          "Upper patio",
+          "Verandah",
+          "Void"
+        ],
+        "finishOptions": [
+          "Black powder coat",
+          "White powder coat",
+          "Monument powder coat",
+          "Other Dulux powder-coat colour (to order)"
+        ],
+        "glassOptions": [
+          "Clear toughened safety glass",
+          "Translucent / frosted (to order)"
+        ],
+        "referenceSystem": {
+          "brand": "Railsafe",
+          "name": "Framed Glass balustrade",
+          "url": "https://railsafe.com.au/product-category/framed-glass/"
+        },
+        "priceUnit": "LM",
+        "estimatingRate": {
+          "ratePerLm": 400,
+          "basis": "indicative_estimating_rate",
+          "label": "Indicative estimating rate - supply and install, inc GST",
+          "family": "framedGlass",
+          "setAt": "2026-09-28",
+          "evidence": [
+            {
+              "source": "Home Upkeep - Glass Balustrade Cost in Melbourne 2026 Guide (updated 7 Jun 2026)",
+              "url": "https://homeupkeep.com.au/glass-balustrade-cost-melbourne/",
+              "range": "$250-$450",
+              "appliesTo": "Framed glass (full aluminium frame)",
+              "capturedAt": "2026-09-28"
+            },
+            {
+              "source": "ServiceTasker - How Much Do Balustrades Cost in Australia (2026 cost guide)",
+              "url": "https://servicetasker.com.au/cost-guides/how-much-do-balustrades-cost",
+              "range": "$400-$550",
+              "appliesTo": "Framed glass with stainless steel",
+              "capturedAt": "2026-09-28"
+            }
+          ],
+          "note": "Market allowance for preliminary estimating and client selections. Not a supplier quoted price; replace with the supplier / subcontractor quotation at procurement."
+        },
+        "priceBasis": "Indicative estimating rate inc GST (supply and install)",
+        "keySpec": "Framed Glass — Aluminium Framed · Top mounted (base-plated posts) · Balcony / Deck / Upper patio",
+        "compliance": "Height, openings and loads must meet NCC / AS 1170.1; confirm with the installer for each location.",
+        "notes": [],
+        "optionalRequirement": true
+      }
+    },
+    {
+      "product_code": "BALUSTRADE-GLASS-SEMI-FRAMELESS-POSTS",
+      "family_key": "balustrades",
+      "requirement_keys": "balustrades",
+      "category_key": "Balustrades",
+      "top_level_area": "exterior",
+      "manufacturer": "Glass Outlet",
+      "brand": "Glass Outlet",
+      "supplier": "Glass Outlet",
+      "range": "Semi-Frameless Glass — Post Mounted",
+      "product_name": "Semi-frameless glass balustrade — post mounted",
+      "model": "Australis semi-frameless glass balustrade",
+      "description": "Toughened glass panels clamped between posts with a continuous top handrail. Aluminium or stainless posts.",
+      "colour": "",
+      "finish": "Black powder-coated aluminium posts",
+      "configuration": "semi-frameless_glass",
+      "material": "Glass",
+      "primary_image_url": "/images/catalogues/exterior/balustrades/semi-frameless-glass-posts.webp",
+      "thumbnail_url": "/images/catalogues/exterior/balustrades/semi-frameless-glass-posts.webp",
+      "image_source_url": "https://www.glassoutlet.com.au/glass-balustrade",
+      "image_source_type": "supplier_or_installer_project_photo",
+      "image_verified_at": "2026-09-28",
+      "image_status": "verified_range",
+      "official_product_url": "https://www.glassoutlet.com.au/glass-balustrade",
+      "specification_url": "https://www.glassoutlet.com.au/glass-balustrade",
+      "supplier_url": "https://www.glassoutlet.com.au/glass-balustrade",
+      "client_price": 525,
+      "price_status": "allowance_only",
+      "price_unit": "LM",
+      "currency": "AUD",
+      "gst_included": "true",
+      "price_verified_at": "2026-09-28",
+      "country": "AU",
+      "regions": "AU;QLD",
+      "active": "true",
+      "discontinued": "false",
+      "archived": "false",
+      "source_type": "configurable_system_catalogue",
+      "source_name": "Glass Outlet Australis semi-frameless glass balustrade",
+      "source_url": "https://www.glassoutlet.com.au/glass-balustrade",
+      "source_retrieved_at": "2026-09-28",
+      "source_verified_at": "2026-09-28",
+      "attributes": {
+        "recordType": "balustrade_system",
+        "selectionModel": "configurable_system",
+        "clientSelectionOrder": 20,
+        "systemType": "Semi-Frameless Glass — Post Mounted",
+        "material": "Glass",
+        "glassSystem": "Semi-Frameless",
+        "mountingOptions": [
+          "Top mounted (base-plated posts)",
+          "Face mounted (side-fixed posts)",
+          "Core drilled posts"
+        ],
+        "defaultMounting": "Top mounted (base-plated posts)",
+        "applications": [
+          "Balcony",
+          "Deck",
+          "Upper patio",
+          "Verandah",
+          "External stairs"
+        ],
+        "finishOptions": [
+          "Black powder-coated aluminium posts",
+          "White powder-coated aluminium posts",
+          "Stainless steel posts (satin / mirror)"
+        ],
+        "glassOptions": [
+          "Clear toughened safety glass"
+        ],
+        "referenceSystem": {
+          "brand": "Glass Outlet",
+          "name": "Australis semi-frameless glass balustrade",
+          "url": "https://www.glassoutlet.com.au/glass-balustrade"
+        },
+        "priceUnit": "LM",
+        "estimatingRate": {
+          "ratePerLm": 525,
+          "basis": "indicative_estimating_rate",
+          "label": "Indicative estimating rate - supply and install, inc GST",
+          "family": "semiFrameless",
+          "setAt": "2026-09-28",
+          "evidence": [
+            {
+              "source": "Home Upkeep - Glass Balustrade Cost in Melbourne 2026 Guide (updated 7 Jun 2026)",
+              "url": "https://homeupkeep.com.au/glass-balustrade-cost-melbourne/",
+              "range": "$400-$650",
+              "appliesTo": "Semi-frameless (posts between glass)",
+              "capturedAt": "2026-09-28"
+            },
+            {
+              "source": "The Quote Yard - Balustrade Installation Cost NSW 2026 (published 24 Aug 2026)",
+              "url": "https://www.thequoteyard.com.au/services/balustrade-installation-cost-2026-nsw",
+              "range": "$400-$700",
+              "appliesTo": "Semi frameless glass",
+              "capturedAt": "2026-09-28"
+            }
+          ],
+          "note": "Market allowance for preliminary estimating and client selections. Not a supplier quoted price; replace with the supplier / subcontractor quotation at procurement."
+        },
+        "priceBasis": "Indicative estimating rate inc GST (supply and install)",
+        "keySpec": "Semi-Frameless Glass — Post Mounted · Top mounted (base-plated posts) · Balcony / Deck / Upper patio",
+        "compliance": "Height, openings and loads must meet NCC / AS 1170.1; confirm with the installer for each location.",
+        "notes": [],
+        "optionalRequirement": true
+      }
+    },
+    {
+      "product_code": "BALUSTRADE-GLASS-FRAMELESS-CHANNEL-TOP",
+      "family_key": "balustrades",
+      "requirement_keys": "balustrades",
+      "category_key": "Balustrades",
+      "top_level_area": "exterior",
+      "manufacturer": "Glass House AU",
+      "brand": "Glass House AU",
+      "supplier": "Glass House AU",
+      "range": "Frameless Glass — Channel Top Mounted",
+      "product_name": "Frameless glass balustrade — channel, top mounted",
+      "model": "VersaTilt deck mount channel kit",
+      "description": "Glass set in a continuous deck-mounted aluminium base channel with adjustable glazing - no spigots or posts.",
+      "colour": "",
+      "finish": "Clear anodised aluminium channel",
+      "configuration": "frameless_glass",
+      "material": "Glass",
+      "primary_image_url": "/images/catalogues/exterior/balustrades/frameless-glass-channel-top-mount.png",
+      "thumbnail_url": "/images/catalogues/exterior/balustrades/frameless-glass-channel-top-mount.png",
+      "image_source_url": "https://glasshouseau.com/products/deck-mount-channel-kit",
+      "image_source_type": "supplier_or_installer_project_photo",
+      "image_verified_at": "2026-09-28",
+      "image_status": "verified_range",
+      "official_product_url": "https://glasshouseau.com/products/deck-mount-channel-kit",
+      "specification_url": "https://glasshouseau.com/products/deck-mount-channel-kit",
+      "supplier_url": "https://glasshouseau.com/products/deck-mount-channel-kit",
+      "client_price": 725,
+      "price_status": "allowance_only",
+      "price_unit": "LM",
+      "currency": "AUD",
+      "gst_included": "true",
+      "price_verified_at": "2026-09-28",
+      "country": "AU",
+      "regions": "AU;QLD",
+      "active": "true",
+      "discontinued": "false",
+      "archived": "false",
+      "source_type": "configurable_system_catalogue",
+      "source_name": "Glass House AU VersaTilt deck mount channel kit",
+      "source_url": "https://glasshouseau.com/products/deck-mount-channel-kit",
+      "source_retrieved_at": "2026-09-28",
+      "source_verified_at": "2026-09-28",
+      "attributes": {
+        "recordType": "balustrade_system",
+        "selectionModel": "configurable_system",
+        "clientSelectionOrder": 40,
+        "systemType": "Frameless Glass — Channel Top Mounted",
+        "material": "Glass",
+        "glassSystem": "Frameless",
+        "mountingOptions": [
+          "Top mounted (base channel)"
+        ],
+        "defaultMounting": "Top mounted (base channel)",
+        "applications": [
+          "Balcony",
+          "Deck",
+          "Upper patio",
+          "Void"
+        ],
+        "finishOptions": [
+          "Clear anodised aluminium channel",
+          "Black channel cladding (to order)"
+        ],
+        "glassOptions": [
+          "12 mm toughened",
+          "Laminated toughened (per engineering)"
+        ],
+        "referenceSystem": {
+          "brand": "Glass House AU",
+          "name": "VersaTilt deck mount channel kit",
+          "url": "https://glasshouseau.com/products/deck-mount-channel-kit"
+        },
+        "priceUnit": "LM",
+        "estimatingRate": {
+          "ratePerLm": 725,
+          "basis": "indicative_estimating_rate",
+          "label": "Indicative estimating rate - supply and install, inc GST",
+          "family": "framelessChannelTop",
+          "setAt": "2026-09-28",
+          "evidence": [
+            {
+              "source": "Home Upkeep - Glass Balustrade Cost in Melbourne 2026 Guide (updated 7 Jun 2026)",
+              "url": "https://homeupkeep.com.au/glass-balustrade-cost-melbourne/",
+              "range": "$550-$800",
+              "appliesTo": "Channel-mounted frameless",
+              "capturedAt": "2026-09-28"
+            },
+            {
+              "source": "ServiceTasker - How Much Do Balustrades Cost in Australia (2026 cost guide)",
+              "url": "https://servicetasker.com.au/cost-guides/how-much-do-balustrades-cost",
+              "range": "$900-$1,200",
+              "appliesTo": "Channel-mounted frameless",
+              "capturedAt": "2026-09-28"
+            }
+          ],
+          "note": "Market allowance for preliminary estimating and client selections. Not a supplier quoted price; replace with the supplier / subcontractor quotation at procurement."
+        },
+        "priceBasis": "Indicative estimating rate inc GST (supply and install)",
+        "keySpec": "Frameless Glass — Channel Top Mounted · Top mounted (base channel) · Balcony / Deck / Upper patio",
+        "compliance": "Height, openings and loads must meet NCC / AS 1170.1; confirm with the installer for each location.",
+        "notes": [],
+        "optionalRequirement": true
+      }
+    },
+    {
+      "product_code": "BALUSTRADE-GLASS-FRAMELESS-CHANNEL-FASCIA",
+      "family_key": "balustrades",
+      "requirement_keys": "balustrades",
+      "category_key": "Balustrades",
+      "top_level_area": "exterior",
+      "manufacturer": "Glass House AU",
+      "brand": "Glass House AU",
+      "supplier": "Glass House AU",
+      "range": "Frameless Glass — Channel Face Mounted",
+      "product_name": "Frameless glass balustrade — channel, fascia / face mounted",
+      "model": "VersaTilt face mount channel kit",
+      "description": "Aluminium channel fixed to the face of the slab or balcony edge, keeping the full floor area clear; glass sits outside the edge.",
+      "colour": "",
+      "finish": "Clear anodised aluminium channel",
+      "configuration": "frameless_glass",
+      "material": "Glass",
+      "primary_image_url": "/images/catalogues/exterior/balustrades/frameless-glass-channel-fascia-mount.jpg",
+      "thumbnail_url": "/images/catalogues/exterior/balustrades/frameless-glass-channel-fascia-mount.jpg",
+      "image_source_url": "https://glasshouseau.com/products/face-mount-channel-kit",
+      "image_source_type": "supplier_or_installer_project_photo",
+      "image_verified_at": "2026-09-28",
+      "image_status": "verified_range",
+      "official_product_url": "https://glasshouseau.com/products/face-mount-channel-kit",
+      "specification_url": "https://glasshouseau.com/products/face-mount-channel-kit",
+      "supplier_url": "https://glasshouseau.com/products/face-mount-channel-kit",
+      "client_price": 850,
+      "price_status": "allowance_only",
+      "price_unit": "LM",
+      "currency": "AUD",
+      "gst_included": "true",
+      "price_verified_at": "2026-09-28",
+      "country": "AU",
+      "regions": "AU;QLD",
+      "active": "true",
+      "discontinued": "false",
+      "archived": "false",
+      "source_type": "configurable_system_catalogue",
+      "source_name": "Glass House AU VersaTilt face mount channel kit",
+      "source_url": "https://glasshouseau.com/products/face-mount-channel-kit",
+      "source_retrieved_at": "2026-09-28",
+      "source_verified_at": "2026-09-28",
+      "attributes": {
+        "recordType": "balustrade_system",
+        "selectionModel": "configurable_system",
+        "clientSelectionOrder": 50,
+        "systemType": "Frameless Glass — Channel Face Mounted",
+        "material": "Glass",
+        "glassSystem": "Frameless",
+        "mountingOptions": [
+          "Face mounted (fascia channel)"
+        ],
+        "defaultMounting": "Face mounted (fascia channel)",
+        "applications": [
+          "Balcony",
+          "Upper patio",
+          "Void"
+        ],
+        "finishOptions": [
+          "Clear anodised aluminium channel",
+          "Black channel cladding (to order)"
+        ],
+        "glassOptions": [
+          "12 mm toughened",
+          "Laminated toughened (per engineering)"
+        ],
+        "referenceSystem": {
+          "brand": "Glass House AU",
+          "name": "VersaTilt face mount channel kit",
+          "url": "https://glasshouseau.com/products/face-mount-channel-kit"
+        },
+        "priceUnit": "LM",
+        "estimatingRate": {
+          "ratePerLm": 850,
+          "basis": "indicative_estimating_rate",
+          "label": "Indicative estimating rate - supply and install, inc GST",
+          "family": "framelessChannelFascia",
+          "setAt": "2026-09-28",
+          "evidence": [
+            {
+              "source": "ServiceTasker - How Much Do Balustrades Cost in Australia (2026 cost guide)",
+              "url": "https://servicetasker.com.au/cost-guides/how-much-do-balustrades-cost",
+              "range": "$800-$1,100",
+              "appliesTo": "Side-mounted frameless glass",
+              "capturedAt": "2026-09-28"
+            },
+            {
+              "source": "ServiceTasker - How Much Do Balustrades Cost in Australia (2026 cost guide)",
+              "url": "https://servicetasker.com.au/cost-guides/how-much-do-balustrades-cost",
+              "range": "$900-$1,200",
+              "appliesTo": "Channel-mounted frameless",
+              "capturedAt": "2026-09-28"
+            }
+          ],
+          "note": "Market allowance for preliminary estimating and client selections. Not a supplier quoted price; replace with the supplier / subcontractor quotation at procurement."
+        },
+        "priceBasis": "Indicative estimating rate inc GST (supply and install)",
+        "keySpec": "Frameless Glass — Channel Face Mounted · Face mounted (fascia channel) · Balcony / Upper patio / Void",
+        "compliance": "Height, openings and loads must meet NCC / AS 1170.1; confirm with the installer for each location.",
+        "notes": [],
+        "optionalRequirement": true
+      }
+    },
+    {
+      "product_code": "BALUSTRADE-GLASS-FRAMELESS-SIDE-PINS",
+      "family_key": "balustrades",
+      "requirement_keys": "balustrades",
+      "category_key": "Balustrades",
+      "top_level_area": "exterior",
+      "manufacturer": "Aussie Stairs",
+      "brand": "Aussie Stairs",
+      "supplier": "Aussie Stairs",
+      "range": "Frameless Glass — Side Mounted (Pins)",
+      "product_name": "Frameless glass balustrade — side mounted pins / standoffs",
+      "model": "Glass balustrades (side-mounted)",
+      "description": "Drilled toughened glass fixed to the balcony edge or stair stringer with stainless standoff pins - the glass floats beside the edge.",
+      "colour": "",
+      "finish": "Stainless steel pins (316 / 2205)",
+      "configuration": "frameless_glass",
+      "material": "Glass",
+      "primary_image_url": "/images/catalogues/exterior/balustrades/frameless-glass-side-mount-pins-external.jpg",
+      "thumbnail_url": "/images/catalogues/exterior/balustrades/frameless-glass-side-mount-pins-external.jpg",
+      "image_source_url": "https://www.aussiestairs.com.au/balustrades/glass-balustrades",
+      "image_source_type": "supplier_or_installer_project_photo",
+      "image_verified_at": "2026-09-28",
+      "image_status": "verified_range",
+      "official_product_url": "https://www.aussiestairs.com.au/balustrades/glass-balustrades",
+      "specification_url": "https://www.aussiestairs.com.au/balustrades/glass-balustrades",
+      "supplier_url": "https://www.aussiestairs.com.au/balustrades/glass-balustrades",
+      "client_price": 750,
+      "price_status": "allowance_only",
+      "price_unit": "LM",
+      "currency": "AUD",
+      "gst_included": "true",
+      "price_verified_at": "2026-09-28",
+      "country": "AU",
+      "regions": "AU;QLD",
+      "active": "true",
+      "discontinued": "false",
+      "archived": "false",
+      "source_type": "configurable_system_catalogue",
+      "source_name": "Aussie Stairs Glass balustrades (side-mounted)",
+      "source_url": "https://www.aussiestairs.com.au/balustrades/glass-balustrades",
+      "source_retrieved_at": "2026-09-28",
+      "source_verified_at": "2026-09-28",
+      "attributes": {
+        "recordType": "balustrade_system",
+        "selectionModel": "configurable_system",
+        "clientSelectionOrder": 60,
+        "systemType": "Frameless Glass — Side Mounted (Pins)",
+        "material": "Glass",
+        "glassSystem": "Frameless",
+        "mountingOptions": [
+          "Side mounted (standoff pins)",
+          "Face mounted (standoff pins)"
+        ],
+        "defaultMounting": "Side mounted (standoff pins)",
+        "applications": [
+          "Balcony",
+          "External stairs",
+          "Deck",
+          "Upper patio",
+          "Void"
+        ],
+        "finishOptions": [
+          "Stainless steel pins (316 / 2205)",
+          "Black pins (to order)"
+        ],
+        "glassOptions": [
+          "15 mm toughened, drilled for standoffs",
+          "Laminated toughened (per engineering)"
+        ],
+        "referenceSystem": {
+          "brand": "Aussie Stairs",
+          "name": "Glass balustrades (side-mounted)",
+          "url": "https://www.aussiestairs.com.au/balustrades/glass-balustrades"
+        },
+        "priceUnit": "LM",
+        "estimatingRate": {
+          "ratePerLm": 750,
+          "basis": "indicative_estimating_rate",
+          "label": "Indicative estimating rate - supply and install, inc GST",
+          "family": "framelessSideMount",
+          "setAt": "2026-09-28",
+          "evidence": [
+            {
+              "source": "Aqua Vista Glass (Brisbane) - The Cost for Glass Balustrades (updated 4 Sep 2025)",
+              "url": "https://www.aquavistaglass.com.au/blog/glass-balustrade-cost/",
+              "range": "$375-$425 (standard frameless); $675-$755 (custom frameless)",
+              "appliesTo": "Frameless / pin-fixed glass, Brisbane",
+              "capturedAt": "2026-09-28"
+            },
+            {
+              "source": "ServiceTasker - How Much Do Balustrades Cost in Australia (2026 cost guide)",
+              "url": "https://servicetasker.com.au/cost-guides/how-much-do-balustrades-cost",
+              "range": "$600-$900",
+              "appliesTo": "Glass side-mounted double-pressure bracket (frameless)",
+              "capturedAt": "2026-09-28"
+            },
+            {
+              "source": "ServiceTasker - How Much Do Balustrades Cost in Australia (2026 cost guide)",
+              "url": "https://servicetasker.com.au/cost-guides/how-much-do-balustrades-cost",
+              "range": "$800-$1,100",
+              "appliesTo": "Side-mounted frameless glass",
+              "capturedAt": "2026-09-28"
+            }
+          ],
+          "note": "Market allowance for preliminary estimating and client selections. Not a supplier quoted price; replace with the supplier / subcontractor quotation at procurement."
+        },
+        "priceBasis": "Indicative estimating rate inc GST (supply and install)",
+        "keySpec": "Frameless Glass — Side Mounted (Pins) · Side mounted (standoff pins) · Balcony / External stairs / Deck",
+        "compliance": "Height, openings and loads must meet NCC / AS 1170.1; confirm with the installer for each location.",
+        "notes": [],
+        "optionalRequirement": true
+      }
+    },
+    {
+      "product_code": "BALUSTRADE-GLASS-FRAMELESS-STAIR-SIDE-PINS",
+      "family_key": "balustrades",
+      "requirement_keys": "balustrades",
+      "category_key": "Balustrades",
+      "top_level_area": "exterior",
+      "manufacturer": "Aussie Stairs",
+      "brand": "Aussie Stairs",
+      "supplier": "Aussie Stairs",
+      "range": "Frameless Glass — Stair Side Mounted",
+      "product_name": "Frameless glass stair balustrade — side mounted to stringer",
+      "model": "Glass balustrades (stair)",
+      "description": "Raked glass panels pinned to the stair stringer, continuing to the void or landing.",
+      "colour": "",
+      "finish": "Stainless steel pins",
+      "configuration": "frameless_glass",
+      "material": "Glass",
+      "primary_image_url": "/images/catalogues/exterior/balustrades/frameless-glass-side-mount-pins-stair.jpg",
+      "thumbnail_url": "/images/catalogues/exterior/balustrades/frameless-glass-side-mount-pins-stair.jpg",
+      "image_source_url": "https://www.aussiestairs.com.au/balustrades/glass-balustrades",
+      "image_source_type": "supplier_or_installer_project_photo",
+      "image_verified_at": "2026-09-28",
+      "image_status": "verified_range",
+      "official_product_url": "https://www.aussiestairs.com.au/balustrades/glass-balustrades",
+      "specification_url": "https://www.aussiestairs.com.au/balustrades/glass-balustrades",
+      "supplier_url": "https://www.aussiestairs.com.au/balustrades/glass-balustrades",
+      "client_price": 750,
+      "price_status": "allowance_only",
+      "price_unit": "LM",
+      "currency": "AUD",
+      "gst_included": "true",
+      "price_verified_at": "2026-09-28",
+      "country": "AU",
+      "regions": "AU;QLD",
+      "active": "true",
+      "discontinued": "false",
+      "archived": "false",
+      "source_type": "configurable_system_catalogue",
+      "source_name": "Aussie Stairs Glass balustrades (stair)",
+      "source_url": "https://www.aussiestairs.com.au/balustrades/glass-balustrades",
+      "source_retrieved_at": "2026-09-28",
+      "source_verified_at": "2026-09-28",
+      "attributes": {
+        "recordType": "balustrade_system",
+        "selectionModel": "configurable_system",
+        "clientSelectionOrder": 70,
+        "systemType": "Frameless Glass — Stair Side Mounted",
+        "material": "Glass",
+        "glassSystem": "Frameless",
+        "mountingOptions": [
+          "Stair mounted (stringer pins)"
+        ],
+        "defaultMounting": "Stair mounted (stringer pins)",
+        "applications": [
+          "Internal stairs",
+          "External stairs",
+          "Void"
+        ],
+        "finishOptions": [
+          "Stainless steel pins",
+          "Black pins (to order)"
+        ],
+        "glassOptions": [
+          "Toughened, drilled and raked to the stair"
+        ],
+        "referenceSystem": {
+          "brand": "Aussie Stairs",
+          "name": "Glass balustrades (stair)",
+          "url": "https://www.aussiestairs.com.au/balustrades/glass-balustrades"
+        },
+        "priceUnit": "LM",
+        "estimatingRate": {
+          "ratePerLm": 750,
+          "basis": "indicative_estimating_rate",
+          "label": "Indicative estimating rate - supply and install, inc GST",
+          "family": "framelessSideMount",
+          "setAt": "2026-09-28",
+          "evidence": [
+            {
+              "source": "Aqua Vista Glass (Brisbane) - The Cost for Glass Balustrades (updated 4 Sep 2025)",
+              "url": "https://www.aquavistaglass.com.au/blog/glass-balustrade-cost/",
+              "range": "$375-$425 (standard frameless); $675-$755 (custom frameless)",
+              "appliesTo": "Frameless / pin-fixed glass, Brisbane",
+              "capturedAt": "2026-09-28"
+            },
+            {
+              "source": "ServiceTasker - How Much Do Balustrades Cost in Australia (2026 cost guide)",
+              "url": "https://servicetasker.com.au/cost-guides/how-much-do-balustrades-cost",
+              "range": "$600-$900",
+              "appliesTo": "Glass side-mounted double-pressure bracket (frameless)",
+              "capturedAt": "2026-09-28"
+            },
+            {
+              "source": "ServiceTasker - How Much Do Balustrades Cost in Australia (2026 cost guide)",
+              "url": "https://servicetasker.com.au/cost-guides/how-much-do-balustrades-cost",
+              "range": "$800-$1,100",
+              "appliesTo": "Side-mounted frameless glass",
+              "capturedAt": "2026-09-28"
+            }
+          ],
+          "note": "Market allowance for preliminary estimating and client selections. Not a supplier quoted price; replace with the supplier / subcontractor quotation at procurement."
+        },
+        "priceBasis": "Indicative estimating rate inc GST (supply and install)",
+        "keySpec": "Frameless Glass — Stair Side Mounted · Stair mounted (stringer pins) · Internal stairs / External stairs / Void",
+        "compliance": "Height, openings and loads must meet NCC / AS 1170.1; confirm with the installer for each location.",
+        "notes": [
+          "Rate applies per raked LM of stair plus landing / void run."
+        ],
+        "optionalRequirement": true
+      }
+    },
+    {
+      "product_code": "BALUSTRADE-ALUMINIUM-BATTEN-BLADE",
+      "family_key": "balustrades",
+      "requirement_keys": "balustrades",
+      "category_key": "Balustrades",
+      "top_level_area": "exterior",
+      "manufacturer": "ProtectorAl",
+      "brand": "ProtectorAl",
+      "supplier": "ProtectorAl",
+      "range": "Aluminium — Vertical Batten",
+      "product_name": "Aluminium batten / blade balustrade",
+      "model": "Batten balustrade panel",
+      "description": "Vertical aluminium batten infill panels (1050 mm high batten panel in the reference range) for a contemporary finish.",
+      "colour": "",
+      "finish": "Black powder coat",
+      "configuration": "aluminium",
+      "material": "Aluminium",
+      "primary_image_url": "/images/catalogues/exterior/balustrades/aluminium-batten-blade.jpg",
+      "thumbnail_url": "/images/catalogues/exterior/balustrades/aluminium-batten-blade.jpg",
+      "image_source_url": "https://protectoraluminium.com.au/products/aluminium-balustrade/",
+      "image_source_type": "supplier_or_installer_project_photo",
+      "image_verified_at": "2026-09-28",
+      "image_status": "verified_range",
+      "official_product_url": "https://protectoraluminium.com.au/products/aluminium-balustrade/",
+      "specification_url": "https://protectoraluminium.com.au/products/aluminium-balustrade/",
+      "supplier_url": "https://protectoraluminium.com.au/products/aluminium-balustrade/",
+      "client_price": 400,
+      "price_status": "allowance_only",
+      "price_unit": "LM",
+      "currency": "AUD",
+      "gst_included": "true",
+      "price_verified_at": "2026-09-28",
+      "country": "AU",
+      "regions": "AU;QLD",
+      "active": "true",
+      "discontinued": "false",
+      "archived": "false",
+      "source_type": "configurable_system_catalogue",
+      "source_name": "ProtectorAl Batten balustrade panel",
+      "source_url": "https://protectoraluminium.com.au/products/aluminium-balustrade/",
+      "source_retrieved_at": "2026-09-28",
+      "source_verified_at": "2026-09-28",
+      "attributes": {
+        "recordType": "balustrade_system",
+        "selectionModel": "configurable_system",
+        "clientSelectionOrder": 110,
+        "systemType": "Aluminium — Vertical Batten",
+        "material": "Aluminium",
+        "glassSystem": null,
+        "mountingOptions": [
+          "Top mounted (base-plated posts)",
+          "Face mounted (side-fixed posts)"
+        ],
+        "defaultMounting": "Top mounted (base-plated posts)",
+        "applications": [
+          "Balcony",
+          "Deck",
+          "Verandah",
+          "Upper patio"
+        ],
+        "finishOptions": [
+          "Black powder coat",
+          "White powder coat",
+          "Other colours (to order)"
+        ],
+        "glassOptions": [],
+        "referenceSystem": {
+          "brand": "ProtectorAl",
+          "name": "Batten balustrade panel",
+          "url": "https://protectoraluminium.com.au/products/aluminium-balustrade/"
+        },
+        "priceUnit": "LM",
+        "estimatingRate": {
+          "ratePerLm": 400,
+          "basis": "indicative_estimating_rate",
+          "label": "Indicative estimating rate - supply and install, inc GST",
+          "family": "aluminiumBlade",
+          "setAt": "2026-09-28",
+          "evidence": [
+            {
+              "source": "The Quote Yard - Balustrade Installation Cost NSW 2026 (published 24 Aug 2026)",
+              "url": "https://www.thequoteyard.com.au/services/balustrade-installation-cost-2026-nsw",
+              "range": "$250-$450",
+              "appliesTo": "Aluminium balustrade (blade / batten sits at the upper end)",
+              "capturedAt": "2026-09-28"
+            },
+            {
+              "source": "ServiceTasker - How Much Do Balustrades Cost in Australia (2026 cost guide)",
+              "url": "https://servicetasker.com.au/cost-guides/how-much-do-balustrades-cost",
+              "range": "$200-$350",
+              "appliesTo": "Aluminium",
+              "capturedAt": "2026-09-28"
+            }
+          ],
+          "note": "Market allowance for preliminary estimating and client selections. Not a supplier quoted price; replace with the supplier / subcontractor quotation at procurement."
+        },
+        "priceBasis": "Indicative estimating rate inc GST (supply and install)",
+        "keySpec": "Aluminium — Vertical Batten · Top mounted (base-plated posts) · Balcony / Deck / Verandah",
+        "compliance": "Height, openings and loads must meet NCC / AS 1170.1; confirm with the installer for each location.",
+        "notes": [],
+        "optionalRequirement": true
+      }
+    },
+    {
+      "product_code": "BALUSTRADE-ALUMINIUM-TRADITIONAL-VERTICAL",
+      "family_key": "balustrades",
+      "requirement_keys": "balustrades",
+      "category_key": "Balustrades",
+      "top_level_area": "exterior",
+      "manufacturer": "Slatwerx",
+      "brand": "Slatwerx",
+      "supplier": "Slatwerx",
+      "range": "Aluminium — Traditional Vertical",
+      "product_name": "Aluminium balustrade — traditional vertical (Queenslander style)",
+      "model": "AIRE aluminium balustrade system",
+      "description": "Low-maintenance aluminium balustrade with a traditional vertical look for verandahs and character homes.",
+      "colour": "",
+      "finish": "White powder coat",
+      "configuration": "aluminium",
+      "material": "Aluminium",
+      "primary_image_url": "/images/catalogues/exterior/balustrades/aluminium-horizontal-rail.jpg",
+      "thumbnail_url": "/images/catalogues/exterior/balustrades/aluminium-horizontal-rail.jpg",
+      "image_source_url": "https://www.slatwerx.com.au/products/aire%e2%84%a2-aluminium-balustrade-system",
+      "image_source_type": "supplier_or_installer_project_photo",
+      "image_verified_at": "2026-09-28",
+      "image_status": "verified_range",
+      "official_product_url": "https://www.slatwerx.com.au/products/aire%e2%84%a2-aluminium-balustrade-system",
+      "specification_url": "https://www.slatwerx.com.au/products/aire%e2%84%a2-aluminium-balustrade-system",
+      "supplier_url": "https://www.slatwerx.com.au/products/aire%e2%84%a2-aluminium-balustrade-system",
+      "client_price": 325,
+      "price_status": "allowance_only",
+      "price_unit": "LM",
+      "currency": "AUD",
+      "gst_included": "true",
+      "price_verified_at": "2026-09-28",
+      "country": "AU",
+      "regions": "AU;QLD",
+      "active": "true",
+      "discontinued": "false",
+      "archived": "false",
+      "source_type": "configurable_system_catalogue",
+      "source_name": "Slatwerx AIRE aluminium balustrade system",
+      "source_url": "https://www.slatwerx.com.au/products/aire%e2%84%a2-aluminium-balustrade-system",
+      "source_retrieved_at": "2026-09-28",
+      "source_verified_at": "2026-09-28",
+      "attributes": {
+        "recordType": "balustrade_system",
+        "selectionModel": "configurable_system",
+        "clientSelectionOrder": 120,
+        "systemType": "Aluminium — Traditional Vertical",
+        "material": "Aluminium",
+        "glassSystem": null,
+        "mountingOptions": [
+          "Top mounted (base-plated posts)",
+          "Face mounted (side-fixed posts)"
+        ],
+        "defaultMounting": "Top mounted (base-plated posts)",
+        "applications": [
+          "Verandah",
+          "Balcony",
+          "Deck"
+        ],
+        "finishOptions": [
+          "White powder coat",
+          "Other colours (to order)"
+        ],
+        "glassOptions": [],
+        "referenceSystem": {
+          "brand": "Slatwerx",
+          "name": "AIRE aluminium balustrade system",
+          "url": "https://www.slatwerx.com.au/products/aire%e2%84%a2-aluminium-balustrade-system"
+        },
+        "priceUnit": "LM",
+        "estimatingRate": {
+          "ratePerLm": 325,
+          "basis": "indicative_estimating_rate",
+          "label": "Indicative estimating rate - supply and install, inc GST",
+          "family": "aluminium",
+          "setAt": "2026-09-28",
+          "evidence": [
+            {
+              "source": "The Quote Yard - Balustrade Installation Cost NSW 2026 (published 24 Aug 2026)",
+              "url": "https://www.thequoteyard.com.au/services/balustrade-installation-cost-2026-nsw",
+              "range": "$250-$450",
+              "appliesTo": "Aluminium balustrade",
+              "capturedAt": "2026-09-28"
+            },
+            {
+              "source": "ServiceTasker - How Much Do Balustrades Cost in Australia (2026 cost guide)",
+              "url": "https://servicetasker.com.au/cost-guides/how-much-do-balustrades-cost",
+              "range": "$200-$350",
+              "appliesTo": "Aluminium",
+              "capturedAt": "2026-09-28"
+            }
+          ],
+          "note": "Market allowance for preliminary estimating and client selections. Not a supplier quoted price; replace with the supplier / subcontractor quotation at procurement."
+        },
+        "priceBasis": "Indicative estimating rate inc GST (supply and install)",
+        "keySpec": "Aluminium — Traditional Vertical · Top mounted (base-plated posts) · Verandah / Balcony / Deck",
+        "compliance": "Height, openings and loads must meet NCC / AS 1170.1; confirm with the installer for each location.",
+        "notes": [],
+        "optionalRequirement": true
+      }
+    },
+    {
+      "product_code": "BALUSTRADE-STEEL-VERTICAL-PANELS-HARDWOOD-RAIL",
+      "family_key": "balustrades",
+      "requirement_keys": "balustrades",
+      "category_key": "Balustrades",
+      "top_level_area": "exterior",
+      "manufacturer": "QHI",
+      "brand": "QHI",
+      "supplier": "QHI",
+      "range": "Steel — Vertical Panels, Hardwood Rail",
+      "product_name": "Steel vertical panel balustrade with hardwood top rail",
+      "model": "Vertical metal panels (BlueScope steel)",
+      "description": "Fabricated BlueScope steel vertical panels between timber posts with a hardwood top rail - a common Queensland deck balustrade.",
+      "colour": "",
+      "finish": "White",
+      "configuration": "steel",
+      "material": "Steel",
+      "primary_image_url": "/images/catalogues/exterior/balustrades/steel-vertical-panels-hardwood-rail.jpg",
+      "thumbnail_url": "/images/catalogues/exterior/balustrades/steel-vertical-panels-hardwood-rail.jpg",
+      "image_source_url": "https://qhi.net.au/products/balustrades-handrails-from-220-per-lineal-metre",
+      "image_source_type": "supplier_or_installer_project_photo",
+      "image_verified_at": "2026-09-28",
+      "image_status": "verified_range",
+      "official_product_url": "https://qhi.net.au/products/balustrades-handrails-from-220-per-lineal-metre",
+      "specification_url": "https://qhi.net.au/products/balustrades-handrails-from-220-per-lineal-metre",
+      "supplier_url": "https://qhi.net.au/products/balustrades-handrails-from-220-per-lineal-metre",
+      "client_price": 300,
+      "price_status": "allowance_only",
+      "price_unit": "LM",
+      "currency": "AUD",
+      "gst_included": "true",
+      "price_verified_at": "2026-09-28",
+      "country": "AU",
+      "regions": "AU;QLD",
+      "active": "true",
+      "discontinued": "false",
+      "archived": "false",
+      "source_type": "configurable_system_catalogue",
+      "source_name": "QHI Vertical metal panels (BlueScope steel)",
+      "source_url": "https://qhi.net.au/products/balustrades-handrails-from-220-per-lineal-metre",
+      "source_retrieved_at": "2026-09-28",
+      "source_verified_at": "2026-09-28",
+      "attributes": {
+        "recordType": "balustrade_system",
+        "selectionModel": "configurable_system",
+        "clientSelectionOrder": 130,
+        "systemType": "Steel — Vertical Panels, Hardwood Rail",
+        "material": "Steel",
+        "glassSystem": null,
+        "mountingOptions": [
+          "Top mounted (timber posts)",
+          "Face mounted (to deck frame)"
+        ],
+        "defaultMounting": "Top mounted (timber posts)",
+        "applications": [
+          "Deck",
+          "External stairs",
+          "Verandah",
+          "Balcony"
+        ],
+        "finishOptions": [
+          "White",
+          "Cream",
+          "Black"
+        ],
+        "glassOptions": [],
+        "referenceSystem": {
+          "brand": "QHI",
+          "name": "Vertical metal panels (BlueScope steel)",
+          "url": "https://qhi.net.au/products/balustrades-handrails-from-220-per-lineal-metre"
+        },
+        "priceUnit": "LM",
+        "estimatingRate": {
+          "ratePerLm": 300,
+          "basis": "indicative_estimating_rate",
+          "label": "Indicative estimating rate - supply and install, inc GST",
+          "family": "steel",
+          "setAt": "2026-09-28",
+          "evidence": [
+            {
+              "source": "ServiceTasker - How Much Do Balustrades Cost in Australia (2026 cost guide)",
+              "url": "https://servicetasker.com.au/cost-guides/how-much-do-balustrades-cost",
+              "range": "$230-$370",
+              "appliesTo": "Horizontal steel balustrades",
+              "capturedAt": "2026-09-28"
+            },
+            {
+              "source": "QHI (Queensland) - Balustrades & Handrails supplied and installed, from $220 per lineal metre",
+              "url": "https://qhi.net.au/products/balustrades-handrails-from-220-per-lineal-metre",
+              "range": "from $220",
+              "appliesTo": "Vertical metal (BlueScope steel) panels with hardwood rail (QLD)",
+              "capturedAt": "2026-09-28"
+            }
+          ],
+          "note": "Market allowance for preliminary estimating and client selections. Not a supplier quoted price; replace with the supplier / subcontractor quotation at procurement."
+        },
+        "priceBasis": "Indicative estimating rate inc GST (supply and install)",
+        "keySpec": "Steel — Vertical Panels, Hardwood Rail · Top mounted (timber posts) · Deck / External stairs / Verandah",
+        "compliance": "Height, openings and loads must meet NCC / AS 1170.1; confirm with the installer for each location.",
+        "notes": [],
+        "optionalRequirement": true
+      }
+    },
+    {
+      "product_code": "BALUSTRADE-STEEL-FLAT-BAR-VERTICAL",
+      "family_key": "balustrades",
+      "requirement_keys": "balustrades",
+      "category_key": "Balustrades",
+      "top_level_area": "exterior",
+      "manufacturer": "Weldingmen",
+      "brand": "Weldingmen",
+      "supplier": "Weldingmen",
+      "range": "Steel — Vertical Flat Bar",
+      "product_name": "Powder-coated steel flat bar balustrade",
+      "model": "Black flat bar balustrades",
+      "description": "Custom-fabricated vertical flat bar steel balustrade with a steel top rail, powder coated.",
+      "colour": "",
+      "finish": "Black powder coat",
+      "configuration": "steel",
+      "material": "Steel",
+      "primary_image_url": "/images/catalogues/exterior/balustrades/steel-flat-bar-vertical.webp",
+      "thumbnail_url": "/images/catalogues/exterior/balustrades/steel-flat-bar-vertical.webp",
+      "image_source_url": "https://weldingmen.com.au/black-flat-bar-balustrades-sydney/",
+      "image_source_type": "supplier_or_installer_project_photo",
+      "image_verified_at": "2026-09-28",
+      "image_status": "verified_range",
+      "official_product_url": "https://weldingmen.com.au/black-flat-bar-balustrades-sydney/",
+      "specification_url": "https://weldingmen.com.au/black-flat-bar-balustrades-sydney/",
+      "supplier_url": "https://weldingmen.com.au/black-flat-bar-balustrades-sydney/",
+      "client_price": 350,
+      "price_status": "allowance_only",
+      "price_unit": "LM",
+      "currency": "AUD",
+      "gst_included": "true",
+      "price_verified_at": "2026-09-28",
+      "country": "AU",
+      "regions": "AU;QLD",
+      "active": "true",
+      "discontinued": "false",
+      "archived": "false",
+      "source_type": "configurable_system_catalogue",
+      "source_name": "Weldingmen Black flat bar balustrades",
+      "source_url": "https://weldingmen.com.au/black-flat-bar-balustrades-sydney/",
+      "source_retrieved_at": "2026-09-28",
+      "source_verified_at": "2026-09-28",
+      "attributes": {
+        "recordType": "balustrade_system",
+        "selectionModel": "configurable_system",
+        "clientSelectionOrder": 140,
+        "systemType": "Steel — Vertical Flat Bar",
+        "material": "Steel",
+        "glassSystem": null,
+        "mountingOptions": [
+          "Top mounted (base plates)",
+          "Face mounted (side-fixed)",
+          "Stair mounted"
+        ],
+        "defaultMounting": "Top mounted (base plates)",
+        "applications": [
+          "Balcony",
+          "External stairs",
+          "Internal stairs",
+          "Void",
+          "Upper patio"
+        ],
+        "finishOptions": [
+          "Black powder coat",
+          "Other Dulux powder-coat colour (to order)"
+        ],
+        "glassOptions": [],
+        "referenceSystem": {
+          "brand": "Weldingmen",
+          "name": "Black flat bar balustrades",
+          "url": "https://weldingmen.com.au/black-flat-bar-balustrades-sydney/"
+        },
+        "priceUnit": "LM",
+        "estimatingRate": {
+          "ratePerLm": 350,
+          "basis": "indicative_estimating_rate",
+          "label": "Indicative estimating rate - supply and install, inc GST",
+          "family": "steelFlatBar",
+          "setAt": "2026-09-28",
+          "evidence": [
+            {
+              "source": "ServiceTasker - How Much Do Balustrades Cost in Australia (2026 cost guide)",
+              "url": "https://servicetasker.com.au/cost-guides/how-much-do-balustrades-cost",
+              "range": "$230-$370",
+              "appliesTo": "Steel balustrades",
+              "capturedAt": "2026-09-28"
+            },
+            {
+              "source": "ServiceTasker - How Much Do Balustrades Cost in Australia (2026 cost guide)",
+              "url": "https://servicetasker.com.au/cost-guides/how-much-do-balustrades-cost",
+              "range": "$350-$500",
+              "appliesTo": "Horizontal stainless steel balustrades",
+              "capturedAt": "2026-09-28"
+            }
+          ],
+          "note": "Market allowance for preliminary estimating and client selections. Not a supplier quoted price; replace with the supplier / subcontractor quotation at procurement."
+        },
+        "priceBasis": "Indicative estimating rate inc GST (supply and install)",
+        "keySpec": "Steel — Vertical Flat Bar · Top mounted (base plates) · Balcony / External stairs / Internal stairs",
+        "compliance": "Height, openings and loads must meet NCC / AS 1170.1; confirm with the installer for each location.",
+        "notes": [],
+        "optionalRequirement": true
+      }
+    },
+    {
+      "product_code": "BALUSTRADE-STAINLESS-WIRE-TIMBER-POSTS",
+      "family_key": "balustrades",
+      "requirement_keys": "balustrades",
+      "category_key": "Balustrades",
+      "top_level_area": "exterior",
+      "manufacturer": "Miami Stainless",
+      "brand": "Miami Stainless",
+      "supplier": "Miami Stainless",
+      "range": "Stainless Wire — Timber Posts",
+      "product_name": "Stainless wire balustrade with timber posts",
+      "model": "Wire balustrade",
+      "description": "Tensioned 316 stainless wire between timber posts under a timber top rail.",
+      "colour": "",
+      "finish": "Stainless steel wire (316)",
+      "configuration": "steel",
+      "material": "Steel",
+      "primary_image_url": "/images/catalogues/exterior/balustrades/stainless-wire-timber-posts.jpg",
+      "thumbnail_url": "/images/catalogues/exterior/balustrades/stainless-wire-timber-posts.jpg",
+      "image_source_url": "https://www.miamistainless.com.au/glass-balustrade",
+      "image_source_type": "supplier_or_installer_project_photo",
+      "image_verified_at": "2026-09-28",
+      "image_status": "verified_range",
+      "official_product_url": "https://www.miamistainless.com.au/",
+      "specification_url": "https://www.miamistainless.com.au/",
+      "supplier_url": "https://www.miamistainless.com.au/",
+      "client_price": 400,
+      "price_status": "allowance_only",
+      "price_unit": "LM",
+      "currency": "AUD",
+      "gst_included": "true",
+      "price_verified_at": "2026-09-28",
+      "country": "AU",
+      "regions": "AU;QLD",
+      "active": "true",
+      "discontinued": "false",
+      "archived": "false",
+      "source_type": "configurable_system_catalogue",
+      "source_name": "Miami Stainless Wire balustrade",
+      "source_url": "https://www.miamistainless.com.au/",
+      "source_retrieved_at": "2026-09-28",
+      "source_verified_at": "2026-09-28",
+      "attributes": {
+        "recordType": "balustrade_system",
+        "selectionModel": "configurable_system",
+        "clientSelectionOrder": 150,
+        "systemType": "Stainless Wire — Timber Posts",
+        "material": "Steel",
+        "glassSystem": null,
+        "mountingOptions": [
+          "Top mounted (timber posts)"
+        ],
+        "defaultMounting": "Top mounted (timber posts)",
+        "applications": [
+          "Deck",
+          "Verandah",
+          "Upper patio"
+        ],
+        "finishOptions": [
+          "Stainless steel wire (316)"
+        ],
+        "glassOptions": [],
+        "referenceSystem": {
+          "brand": "Miami Stainless",
+          "name": "Wire balustrade",
+          "url": "https://www.miamistainless.com.au/"
+        },
+        "priceUnit": "LM",
+        "estimatingRate": {
+          "ratePerLm": 400,
+          "basis": "indicative_estimating_rate",
+          "label": "Indicative estimating rate - supply and install, inc GST",
+          "family": "wire",
+          "setAt": "2026-09-28",
+          "evidence": [
+            {
+              "source": "The Quote Yard - Balustrade Installation Cost NSW 2026 (published 24 Aug 2026)",
+              "url": "https://www.thequoteyard.com.au/services/balustrade-installation-cost-2026-nsw",
+              "range": "$300-$500",
+              "appliesTo": "Wire balustrade",
+              "capturedAt": "2026-09-28"
+            },
+            {
+              "source": "ServiceTasker - How Much Do Balustrades Cost in Australia (2026 cost guide)",
+              "url": "https://servicetasker.com.au/cost-guides/how-much-do-balustrades-cost",
+              "range": "$300-$450",
+              "appliesTo": "Stainless steel cable balustrades",
+              "capturedAt": "2026-09-28"
+            }
+          ],
+          "note": "Market allowance for preliminary estimating and client selections. Not a supplier quoted price; replace with the supplier / subcontractor quotation at procurement."
+        },
+        "priceBasis": "Indicative estimating rate inc GST (supply and install)",
+        "keySpec": "Stainless Wire — Timber Posts · Top mounted (timber posts) · Deck / Verandah / Upper patio",
+        "compliance": "Height, openings and loads must meet NCC / AS 1170.1; confirm with the installer for each location.",
+        "notes": [
+          "Horizontal wire can be climbable: not permitted where the floor is more than 4 m above the surface below (NCC)."
+        ],
+        "optionalRequirement": true
+      }
+    },
+    {
+      "product_code": "BALUSTRADE-TIMBER-VERTICAL-PAINTED",
+      "family_key": "balustrades",
+      "requirement_keys": "balustrades",
+      "category_key": "Balustrades",
+      "top_level_area": "exterior",
+      "manufacturer": "",
+      "brand": "Trade built",
+      "supplier": "Carpentry (builder)",
+      "range": "Timber — Square Vertical Balusters, Painted",
+      "product_name": "Timber vertical balustrade — painted (deck / stairs)",
+      "model": "Timber — Square Vertical Balusters, Painted",
+      "description": "Pre-primed pine posts, rails and square vertical balusters, painted - the traditional Queensland deck and stair balustrade. Built by the carpenter.",
+      "colour": "",
+      "finish": "Paint - colour to schedule",
+      "configuration": "timber",
+      "material": "Timber",
+      "primary_image_url": "/images/catalogues/exterior/balustrades/timber-vertical-painted-deck.jpg",
+      "thumbnail_url": "/images/catalogues/exterior/balustrades/timber-vertical-painted-deck.jpg",
+      "image_source_url": "https://qhi.net.au/products/balustrades-handrails-from-220-per-lineal-metre",
+      "image_source_type": "supplier_or_installer_project_photo",
+      "image_verified_at": "2026-09-28",
+      "image_status": "verified_range",
+      "official_product_url": "",
+      "specification_url": "",
+      "supplier_url": "",
+      "client_price": 325,
+      "price_status": "allowance_only",
+      "price_unit": "LM",
+      "currency": "AUD",
+      "gst_included": "true",
+      "price_verified_at": "2026-09-28",
+      "country": "AU",
+      "regions": "AU;QLD",
+      "active": "true",
+      "discontinued": "false",
+      "archived": "false",
+      "source_type": "configurable_system_catalogue",
+      "source_name": "Builder-configured balustrade system",
+      "source_url": "",
+      "source_retrieved_at": "2026-09-28",
+      "source_verified_at": "2026-09-28",
+      "attributes": {
+        "recordType": "balustrade_system",
+        "selectionModel": "configurable_system",
+        "clientSelectionOrder": 200,
+        "systemType": "Timber — Square Vertical Balusters, Painted",
+        "material": "Timber",
+        "glassSystem": null,
+        "mountingOptions": [
+          "Top mounted (timber posts)",
+          "Stair mounted"
+        ],
+        "defaultMounting": "Top mounted (timber posts)",
+        "applications": [
+          "Deck",
+          "External stairs",
+          "Verandah",
+          "Balcony"
+        ],
+        "finishOptions": [
+          "Paint - colour to schedule"
+        ],
+        "glassOptions": [],
+        "timberOptions": {
+          "species": [
+            "Pre-primed treated pine (external)"
+          ],
+          "postSize": [
+            "90 × 90 mm",
+            "100 × 100 mm"
+          ],
+          "handrailProfile": [
+            "Flat top rail",
+            "Rounded / bullnose rail"
+          ],
+          "balusterProfile": [
+            "Square vertical baluster"
+          ],
+          "balusterSpacing": [
+            "Maximum 125 mm gap (NCC)"
+          ],
+          "finish": [
+            "Painted"
+          ],
+          "use": [
+            "External"
+          ]
+        },
+        "referenceSystem": null,
+        "priceUnit": "LM",
+        "estimatingRate": {
+          "ratePerLm": 325,
+          "basis": "indicative_estimating_rate",
+          "label": "Indicative estimating rate - supply and install, inc GST",
+          "family": "timber",
+          "setAt": "2026-09-28",
+          "evidence": [
+            {
+              "source": "The Quote Yard - Balustrade Installation Cost NSW 2026 (published 24 Aug 2026)",
+              "url": "https://www.thequoteyard.com.au/services/balustrade-installation-cost-2026-nsw",
+              "range": "$200-$450",
+              "appliesTo": "Timber balustrade",
+              "capturedAt": "2026-09-28"
+            },
+            {
+              "source": "ServiceTasker - How Much Do Balustrades Cost in Australia (2026 cost guide)",
+              "url": "https://servicetasker.com.au/cost-guides/how-much-do-balustrades-cost",
+              "range": "$200-$450",
+              "appliesTo": "Timber",
+              "capturedAt": "2026-09-28"
+            },
+            {
+              "source": "QHI (Queensland) - Balustrades & Handrails supplied and installed, from $220 per lineal metre",
+              "url": "https://qhi.net.au/products/balustrades-handrails-from-220-per-lineal-metre",
+              "range": "from $220",
+              "appliesTo": "Timber vertical balustrade, deck / landing / stairs (QLD)",
+              "capturedAt": "2026-09-28"
+            }
+          ],
+          "note": "Market allowance for preliminary estimating and client selections. Not a supplier quoted price; replace with the supplier / subcontractor quotation at procurement."
+        },
+        "priceBasis": "Indicative estimating rate inc GST (supply and install)",
+        "keySpec": "Timber — Square Vertical Balusters, Painted · Top mounted (timber posts) · Deck / External stairs / Verandah",
+        "compliance": "Height, openings and loads must meet NCC / AS 1170.1; confirm with the installer for each location.",
+        "notes": [],
+        "optionalRequirement": true
+      }
+    },
+    {
+      "product_code": "BALUSTRADE-TIMBER-TRADITIONAL-VERANDAH",
+      "family_key": "balustrades",
+      "requirement_keys": "balustrades",
+      "category_key": "Balustrades",
+      "top_level_area": "exterior",
+      "manufacturer": "Classic Woodcraft",
+      "brand": "Classic Woodcraft",
+      "supplier": "Carpentry (builder)",
+      "range": "Timber — Traditional Turned / Dowel",
+      "product_name": "Traditional timber verandah balustrade — painted",
+      "model": "Timber balustrading (rails, posts, balusters)",
+      "description": "Traditional painted timber balustrade with moulded rail - suits Queenslanders, Federation and heritage homes.",
+      "colour": "",
+      "finish": "Paint - colour to schedule",
+      "configuration": "timber",
+      "material": "Timber",
+      "primary_image_url": "/images/catalogues/exterior/balustrades/timber-traditional-verandah-painted.png",
+      "thumbnail_url": "/images/catalogues/exterior/balustrades/timber-traditional-verandah-painted.png",
+      "image_source_url": "https://woodturn.com.au/collections/balustrading-1",
+      "image_source_type": "supplier_or_installer_project_photo",
+      "image_verified_at": "2026-09-28",
+      "image_status": "verified_range",
+      "official_product_url": "https://woodturn.com.au/collections/balustrading-1",
+      "specification_url": "https://woodturn.com.au/collections/balustrading-1",
+      "supplier_url": "https://woodturn.com.au/collections/balustrading-1",
+      "client_price": 325,
+      "price_status": "allowance_only",
+      "price_unit": "LM",
+      "currency": "AUD",
+      "gst_included": "true",
+      "price_verified_at": "2026-09-28",
+      "country": "AU",
+      "regions": "AU;QLD",
+      "active": "true",
+      "discontinued": "false",
+      "archived": "false",
+      "source_type": "configurable_system_catalogue",
+      "source_name": "Classic Woodcraft Timber balustrading (rails, posts, balusters)",
+      "source_url": "https://woodturn.com.au/collections/balustrading-1",
+      "source_retrieved_at": "2026-09-28",
+      "source_verified_at": "2026-09-28",
+      "attributes": {
+        "recordType": "balustrade_system",
+        "selectionModel": "configurable_system",
+        "clientSelectionOrder": 210,
+        "systemType": "Timber — Traditional Turned / Dowel",
+        "material": "Timber",
+        "glassSystem": null,
+        "mountingOptions": [
+          "Top mounted (timber posts)"
+        ],
+        "defaultMounting": "Top mounted (timber posts)",
+        "applications": [
+          "Verandah",
+          "Balcony"
+        ],
+        "finishOptions": [
+          "Paint - colour to schedule"
+        ],
+        "glassOptions": [],
+        "timberOptions": {
+          "species": [
+            "Treated pine (external)",
+            "Hardwood"
+          ],
+          "postSize": [
+            "90 × 90 mm",
+            "100 × 100 mm"
+          ],
+          "handrailProfile": [
+            "Traditional moulded rail"
+          ],
+          "balusterProfile": [
+            "Turned baluster",
+            "Dowel / square"
+          ],
+          "balusterSpacing": [
+            "Maximum 125 mm gap (NCC)"
+          ],
+          "finish": [
+            "Painted"
+          ],
+          "use": [
+            "External"
+          ]
+        },
+        "referenceSystem": {
+          "brand": "Classic Woodcraft",
+          "name": "Timber balustrading (rails, posts, balusters)",
+          "url": "https://woodturn.com.au/collections/balustrading-1"
+        },
+        "priceUnit": "LM",
+        "estimatingRate": {
+          "ratePerLm": 325,
+          "basis": "indicative_estimating_rate",
+          "label": "Indicative estimating rate - supply and install, inc GST",
+          "family": "timber",
+          "setAt": "2026-09-28",
+          "evidence": [
+            {
+              "source": "The Quote Yard - Balustrade Installation Cost NSW 2026 (published 24 Aug 2026)",
+              "url": "https://www.thequoteyard.com.au/services/balustrade-installation-cost-2026-nsw",
+              "range": "$200-$450",
+              "appliesTo": "Timber balustrade",
+              "capturedAt": "2026-09-28"
+            },
+            {
+              "source": "ServiceTasker - How Much Do Balustrades Cost in Australia (2026 cost guide)",
+              "url": "https://servicetasker.com.au/cost-guides/how-much-do-balustrades-cost",
+              "range": "$200-$450",
+              "appliesTo": "Timber",
+              "capturedAt": "2026-09-28"
+            },
+            {
+              "source": "QHI (Queensland) - Balustrades & Handrails supplied and installed, from $220 per lineal metre",
+              "url": "https://qhi.net.au/products/balustrades-handrails-from-220-per-lineal-metre",
+              "range": "from $220",
+              "appliesTo": "Timber vertical balustrade, deck / landing / stairs (QLD)",
+              "capturedAt": "2026-09-28"
+            }
+          ],
+          "note": "Market allowance for preliminary estimating and client selections. Not a supplier quoted price; replace with the supplier / subcontractor quotation at procurement."
+        },
+        "priceBasis": "Indicative estimating rate inc GST (supply and install)",
+        "keySpec": "Timber — Traditional Turned / Dowel · Top mounted (timber posts) · Verandah / Balcony",
+        "compliance": "Height, openings and loads must meet NCC / AS 1170.1; confirm with the installer for each location.",
+        "notes": [],
+        "optionalRequirement": true
+      }
+    },
+    {
+      "product_code": "BALUSTRADE-TIMBER-STAIR-STAINED",
+      "family_key": "balustrades",
+      "requirement_keys": "balustrades",
+      "category_key": "Balustrades",
+      "top_level_area": "exterior",
+      "manufacturer": "Sunstate Timbers",
+      "brand": "Sunstate Timbers",
+      "supplier": "Stair / joinery supplier",
+      "range": "Timber — Stair Balustrade, Stained",
+      "product_name": "Timber stair balustrade — stained / natural",
+      "model": "Timber handrails and balustrades (Brisbane)",
+      "description": "Hardwood handrail, newels and balusters for internal stairs and voids, stained or clear finished.",
+      "colour": "",
+      "finish": "Stain - colour to schedule",
+      "configuration": "timber",
+      "material": "Timber",
+      "primary_image_url": "/images/catalogues/exterior/balustrades/timber-stair-stained.jpg",
+      "thumbnail_url": "/images/catalogues/exterior/balustrades/timber-stair-stained.jpg",
+      "image_source_url": "https://sunstatetimbers.com.au/timber-handrails-and-balustrades/",
+      "image_source_type": "supplier_or_installer_project_photo",
+      "image_verified_at": "2026-09-28",
+      "image_status": "verified_range",
+      "official_product_url": "https://sunstatetimbers.com.au/timber-handrails-and-balustrades/",
+      "specification_url": "https://sunstatetimbers.com.au/timber-handrails-and-balustrades/",
+      "supplier_url": "https://sunstatetimbers.com.au/timber-handrails-and-balustrades/",
+      "client_price": 325,
+      "price_status": "allowance_only",
+      "price_unit": "LM",
+      "currency": "AUD",
+      "gst_included": "true",
+      "price_verified_at": "2026-09-28",
+      "country": "AU",
+      "regions": "AU;QLD",
+      "active": "true",
+      "discontinued": "false",
+      "archived": "false",
+      "source_type": "configurable_system_catalogue",
+      "source_name": "Sunstate Timbers Timber handrails and balustrades (Brisbane)",
+      "source_url": "https://sunstatetimbers.com.au/timber-handrails-and-balustrades/",
+      "source_retrieved_at": "2026-09-28",
+      "source_verified_at": "2026-09-28",
+      "attributes": {
+        "recordType": "balustrade_system",
+        "selectionModel": "configurable_system",
+        "clientSelectionOrder": 220,
+        "systemType": "Timber — Stair Balustrade, Stained",
+        "material": "Timber",
+        "glassSystem": null,
+        "mountingOptions": [
+          "Stair mounted",
+          "Top mounted (newel posts)"
+        ],
+        "defaultMounting": "Stair mounted",
+        "applications": [
+          "Internal stairs",
+          "Void"
+        ],
+        "finishOptions": [
+          "Stain - colour to schedule",
+          "Clear / natural finish"
+        ],
+        "glassOptions": [],
+        "timberOptions": {
+          "species": [
+            "Tasmanian Oak",
+            "Spotted Gum",
+            "Blackbutt",
+            "Other hardwood (to order)"
+          ],
+          "postSize": [
+            "Newel post to design"
+          ],
+          "handrailProfile": [
+            "Profile to supplier range (e.g. 100+ profiles)"
+          ],
+          "balusterProfile": [
+            "Turned baluster",
+            "Square baluster"
+          ],
+          "balusterSpacing": [
+            "Maximum 125 mm gap (NCC)"
+          ],
+          "finish": [
+            "Stained",
+            "Clear"
+          ],
+          "use": [
+            "Internal"
+          ]
+        },
+        "referenceSystem": {
+          "brand": "Sunstate Timbers",
+          "name": "Timber handrails and balustrades (Brisbane)",
+          "url": "https://sunstatetimbers.com.au/timber-handrails-and-balustrades/"
+        },
+        "priceUnit": "LM",
+        "estimatingRate": {
+          "ratePerLm": 325,
+          "basis": "indicative_estimating_rate",
+          "label": "Indicative estimating rate - supply and install, inc GST",
+          "family": "timber",
+          "setAt": "2026-09-28",
+          "evidence": [
+            {
+              "source": "The Quote Yard - Balustrade Installation Cost NSW 2026 (published 24 Aug 2026)",
+              "url": "https://www.thequoteyard.com.au/services/balustrade-installation-cost-2026-nsw",
+              "range": "$200-$450",
+              "appliesTo": "Timber balustrade",
+              "capturedAt": "2026-09-28"
+            },
+            {
+              "source": "ServiceTasker - How Much Do Balustrades Cost in Australia (2026 cost guide)",
+              "url": "https://servicetasker.com.au/cost-guides/how-much-do-balustrades-cost",
+              "range": "$200-$450",
+              "appliesTo": "Timber",
+              "capturedAt": "2026-09-28"
+            },
+            {
+              "source": "QHI (Queensland) - Balustrades & Handrails supplied and installed, from $220 per lineal metre",
+              "url": "https://qhi.net.au/products/balustrades-handrails-from-220-per-lineal-metre",
+              "range": "from $220",
+              "appliesTo": "Timber vertical balustrade, deck / landing / stairs (QLD)",
+              "capturedAt": "2026-09-28"
+            }
+          ],
+          "note": "Market allowance for preliminary estimating and client selections. Not a supplier quoted price; replace with the supplier / subcontractor quotation at procurement."
+        },
+        "priceBasis": "Indicative estimating rate inc GST (supply and install)",
+        "keySpec": "Timber — Stair Balustrade, Stained · Stair mounted · Internal stairs / Void",
+        "compliance": "Height, openings and loads must meet NCC / AS 1170.1; confirm with the installer for each location.",
+        "notes": [],
+        "optionalRequirement": true
+      }
+    }
+  ]
+}

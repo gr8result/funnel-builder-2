@@ -31,11 +31,11 @@ import {
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const outputPaths = {
-  report: path.join(repoRoot, "MASTER_CATALOGUE_RECONCILIATION_REPORT.md"),
-  mapping: path.join(repoRoot, "MASTER_CATALOGUE_RECONCILED_MAPPING.csv"),
-  duplicates: path.join(repoRoot, "MASTER_CATALOGUE_DUPLICATE_REVIEW.csv"),
-  unresolved: path.join(repoRoot, "MASTER_CATALOGUE_UNRESOLVED_REVIEW.csv"),
-  migrationPlan: path.join(repoRoot, "MASTER_CATALOGUE_STAGE3_MIGRATION_PLAN.md"),
+  report: path.join(repoRoot, "docs/catalogue/MASTER_CATALOGUE_RECONCILIATION_REPORT.md"),
+  mapping: path.join(repoRoot, "data/catalogue/reconciliation/MASTER_CATALOGUE_RECONCILED_MAPPING.csv"),
+  duplicates: path.join(repoRoot, "data/catalogue/reconciliation/MASTER_CATALOGUE_DUPLICATE_REVIEW.csv"),
+  unresolved: path.join(repoRoot, "data/catalogue/reconciliation/MASTER_CATALOGUE_UNRESOLVED_REVIEW.csv"),
+  migrationPlan: path.join(repoRoot, "docs/catalogue/MASTER_CATALOGUE_STAGE3_MIGRATION_PLAN.md"),
 };
 
 const importedWorkbook = readJson("lib/construction-estimation/importedExcelWorkbookTemplate.json");

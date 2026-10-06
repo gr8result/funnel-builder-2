@@ -12,13 +12,15 @@
 
 # testing
 /coverage
-/test-results/
+/artifacts/test-results/
 
 # next.js
 /.next/
 /.next-dev/
 /.next-build/
 /out/
+# one-off NEXT_DIST_DIR runs from debugging sessions (.next-<investigation-name>/)
+/.next-*/
 
 # production
 /build
@@ -57,6 +59,10 @@ node_modules/
 # local editor artifacts
 .history/
 
+# python virtualenv and tool caches (tesseract.js eng.traineddata lives here)
+.venv/
+.cache/
+
 # local scratch and generated helpers
 tmp/
 tmp-thumbs/
@@ -74,7 +80,7 @@ website-builder-sites/_emergency-drafts/
 website-builder-sites-backup-*/
 website-builder-sites-*-backup-*/
 recovery/
-/2208a52a-8175-477e-823c-fc6de7fe4afe/
+/archive/website-builder-export-2208a52a/
 website-builder-sites/**/full-project.json
 website-builder-sites/**/metadata.json
 website-builder-sites/**/*.tmp

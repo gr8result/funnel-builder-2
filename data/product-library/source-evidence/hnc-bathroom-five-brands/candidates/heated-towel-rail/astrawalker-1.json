@@ -1,0 +1,468 @@
+{
+  "data": {
+    "products": {
+      "total_count": 4,
+      "page_info": {
+        "total_pages": 1
+      },
+      "items": [
+        {
+          "id": 22611,
+          "sku": "A6958V2H60037",
+          "vendorcode": "A69.58.V2.H.600.37",
+          "name": "Icon 600mm Heated Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6958v2h60037_astrawalker_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6958v2h60037_astrawalker_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/6/a6958v2h60037_astrawalker_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/6/a6958v2h60037_astrawalker_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6958v2h60037_astrawalker_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6958v2h60037_astrawalker_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Sydney Bronze finish<br>• Round bar<br>• Right or left hand entry point<br>• Requires transformer</p>"
+          },
+          "short_description": {
+            "html": "<p>Icon 600mm Heated Single Towel Rail</p>"
+          },
+          "product_dimensions": "W600 x D80 x H32mm",
+          "price_store": 0,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W600 x D80 x H32mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Icon"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Astrawalker",
+                    "value": "355"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Bronze",
+                    "value": "935"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "A69.58.V2.H.600.37"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22610,
+          "sku": "A6958V2H60035",
+          "vendorcode": "A69.58.V2.H.600.35",
+          "name": "Icon 600mm Heated Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6958v2h60035_astrawalker_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6958v2h60035_astrawalker_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/6/a6958v2h60035_astrawalker_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/6/a6958v2h60035_astrawalker_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6958v2h60035_astrawalker_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6958v2h60035_astrawalker_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Champagne Brass finish<br>• Round bar<br>• Right or left hand entry point<br>• Requires transformer</p>"
+          },
+          "short_description": {
+            "html": "<p>Icon 600mm Heated Single Towel Rail</p>"
+          },
+          "product_dimensions": "W600 x D80 x H32mm",
+          "price_store": 849,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W600 x D80 x H32mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Icon"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Astrawalker",
+                    "value": "355"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "A69.58.V2.H.600.35"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22609,
+          "sku": "A6958V2H60010",
+          "vendorcode": "A69.58.V2.H.600.10",
+          "name": "Icon 600mm Heated Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6958v2h60010_astrawalker_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6958v2h60010_astrawalker_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/6/a6958v2h60010_astrawalker_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/6/a6958v2h60010_astrawalker_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6958v2h60010_astrawalker_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6958v2h60010_astrawalker_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Ice Grey finish<br>• Round bar<br>• Right or left hand entry point<br>• Requires transformer</p>"
+          },
+          "short_description": {
+            "html": "<p>Icon 600mm Heated Single Towel Rail</p>"
+          },
+          "product_dimensions": "W600 x D80 x H32mm",
+          "price_store": 849,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W600 x D80 x H32mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Icon"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Astrawalker",
+                    "value": "355"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Grey",
+                    "value": "939"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "A69.58.V2.H.600.10"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22608,
+          "sku": "A6958V2H60001",
+          "vendorcode": "A69.58.V2.H.600.01",
+          "name": "Icon 600mm Heated Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6958v2h60001_astrawalker_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6958v2h60001_astrawalker_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/6/a6958v2h60001_astrawalker_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/6/a6958v2h60001_astrawalker_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6958v2h60001_astrawalker_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6958v2h60001_astrawalker_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Brushed Platinum finish<br>• Round bar<br>• Right or left hand entry point<br>• Requires transformer</p>"
+          },
+          "short_description": {
+            "html": "<p>Icon 600mm Heated Single Towel Rail</p>"
+          },
+          "product_dimensions": "W600 x D80 x H32mm",
+          "price_store": 0,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W600 x D80 x H32mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Icon"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Astrawalker",
+                    "value": "355"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Silver",
+                    "value": "942"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "A69.58.V2.H.600.01"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

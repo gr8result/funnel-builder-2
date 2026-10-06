@@ -1,0 +1,127 @@
+{
+  "data": {
+    "products": {
+      "items": [
+        {
+          "id": 25109,
+          "sku": "WDFS3I4PBSAU",
+          "vendorcode": "WDFS3I4PBSAU",
+          "name": "600mm Fully Integrated Dishwasher ",
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/w/d/wdfs3i4pbsau_whirlpool_web.jpeg"
+          },
+          "product_images": {
+            "thumbnail": "https://backend.harveynormancommercial.com.au/static/version1767508927/frontend/Hnc/Lumachild/en_US/Magento_Catalog/images/product/placeholder/thumbnail.jpg",
+            "small": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/1df791769d8cdc80e3c05129fe5437cf/w/d/wdfs3i4pbsau_whirlpool_web.jpeg",
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/w/d/wdfs3i4pbsau_whirlpool_web.jpeg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/w/d/wdfs3i4pbsau_whirlpool_web.jpeg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/w/d/wdfs3i4pbsau_whirlpool_tech.png"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/w/d/wdfs3i4pbsau_whirlpool_web.jpeg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/w/d/wdfs3i4pbsau_whirlpool_tech.png"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/w/d/wdfs3i4pbsau_whirlpool_web1.jpeg"
+            }
+          ],
+          "description": {
+            "html": "<p>• 11.5 L/min, WELS 5 stars<br>• 8 wash programs <br>• 6th Sense automatic wash sensor  <br>• 43 dB(A) noise level <br>• 14 place settings</p>"
+          },
+          "product_dimensions": "W600 x D590 x H850mm",
+          "price_promo": 0,
+          "price_store": 1583,
+          "wels_reg_number": "D03014",
+          "gp_product_group": "DISHWASHER",
+          "__typename": "SimpleProduct"
+        }
+      ],
+      "aggregations": [
+        {
+          "attribute_code": "category_id",
+          "label": "Category",
+          "options": [
+            {
+              "label": "Kitchen",
+              "value": "16",
+              "count": 1
+            },
+            {
+              "label": "Dishwashers",
+              "value": "28",
+              "count": 1
+            },
+            {
+              "label": "Freestanding/Built in Dishwashers ",
+              "value": "136",
+              "count": 1
+            },
+            {
+              "label": "Products",
+              "value": "1036",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "attribute_code": "brand",
+          "label": "Brand",
+          "options": [
+            {
+              "label": "Whirlpool",
+              "value": "1084",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "attribute_code": "colours",
+          "label": "Colour",
+          "options": [
+            {
+              "label": "Stainless Steel",
+              "value": "943",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "attribute_code": "stock_line_filter",
+          "label": "Stock Line",
+          "options": [
+            {
+              "label": "No",
+              "value": "673",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "attribute_code": "wels_water_rating",
+          "label": "Water Rating",
+          "options": [
+            {
+              "label": "5",
+              "value": "922",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "attribute_code": "energy_rating",
+          "label": "Energy Rating",
+          "options": [
+            {
+              "label": "4",
+              "value": "1001",
+              "count": 1
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

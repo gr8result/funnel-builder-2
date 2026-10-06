@@ -8,7 +8,7 @@ import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 dotenv.config({ path: path.resolve(".env.local") });
 
 const baseUrl = process.argv[2] || "http://localhost:3000";
-const outDir = path.join("test-results", "takeoff-v3-acceptance");
+const outDir = path.join("artifacts/test-results", "takeoff-v3-acceptance");
 fs.mkdirSync(outDir, { recursive: true });
 
 const results = [];

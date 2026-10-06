@@ -90,7 +90,7 @@ assert.ok(PRODUCT_LIBRARY_ROOM_CATEGORIES.every((category) => category.id && cat
   "package_component_ids",
   "package_component_models",
 ].forEach((column) => assert.ok(PRODUCT_LIBRARY_IMPORT_COLUMNS.includes(column), `Master import schema must support ${column}`));
-const importTemplateHeader = read("PRODUCT_LIBRARY_IMPORT_TEMPLATE.csv").split(/\r?\n/)[0].split(",");
+const importTemplateHeader = read("data/catalogue/imports/PRODUCT_LIBRARY_IMPORT_TEMPLATE.csv").split(/\r?\n/)[0].split(",");
 ["applicable_room_ids", "category_ids", "brand_logo_url", "wels_rating", "warranty", "package_component_ids"].forEach((column) => {
   assert.ok(importTemplateHeader.includes(column), `CSV/XLSX import template must support ${column}`);
 });

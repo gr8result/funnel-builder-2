@@ -10,7 +10,7 @@ dotenv.config({ path: path.join(root, ".env.local") });
 dotenv.config({ path: path.join(root, ".env") });
 
 const runStamp = new Date().toISOString().replace(/[:.]/g, "-");
-const outDir = path.join(root, "test-results", "johnson-recovery", runStamp);
+const outDir = path.join(root, "artifacts/test-results", "johnson-recovery", runStamp);
 fs.mkdirSync(outDir, { recursive: true });
 
 const workspaceId = "846885cd-25b9-4eca-b9f9-3fd02f5882d8";

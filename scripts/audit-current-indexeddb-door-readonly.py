@@ -1,6 +1,6 @@
 ﻿import sys,types,os,json
 from pathlib import Path
-sys.path.insert(0,'test-artifacts/manual-entry-door-recovery/python-deps')
+sys.path.insert(0,'artifacts/test-artifacts/manual-entry-door-recovery/python-deps')
 ns={};source=Path('scripts/audit-local-door-selections-readonly.py').read_text(encoding='utf-8-sig');exec(source[:source.index('latest={}')],ns)
 sys.modules['snappy']=types.SimpleNamespace(decompress=ns['snappy'])
 import compression.zstd
@@ -23,7 +23,7 @@ def plain(v):
  if isinstance(v,dict):return {str(k):plain(x) for k,x in v.items()}
  if isinstance(v,(str,int,float,bool)) or v is None:return v
  return None
-out=Path('test-artifacts/manual-entry-door-recovery');report={'source':str(path),'storageKey':'job:03-09/123','savedAt':data.get('savedAt'),'books':[]}
+out=Path('artifacts/test-artifacts/manual-entry-door-recovery');report={'source':str(path),'storageKey':'job:03-09/123','savedAt':data.get('savedAt'),'books':[]}
 for name in ['selectionsBook','clientSelectionsBook','builderSelectionsBook','selectionSchedule','selectionSchedules']:
  b=workbook.get(name)
  if not isinstance(b,dict):continue

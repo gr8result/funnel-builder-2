@@ -9,7 +9,13 @@ import {
 class MemoryJobFileHandle {
   constructor(name) {
     this.name = name;
-    this.bytes = new TextEncoder().encode(JSON.stringify({ workbook: { jobFileMeta: { jobName: "Initial" } } })).buffer;
+    // Empty, matching a brand-new save location: this fixture is exercising the master job
+    // round trip, not the separate "this handle already holds a different job" guard.
+    // The previous placeholder JSON here (a fake workbook with no jobId at all) was itself a
+    // "different job" as far as that guard is concerned, so writeJob correctly refused it -
+    // this test was failing before writeJob learned to report that refusal instead of
+    // throwing it, not because of anything this test itself set out to verify.
+    this.bytes = new ArrayBuffer(0);
   }
 
   async getFile() {

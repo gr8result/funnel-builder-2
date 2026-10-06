@@ -1,2 +1,2 @@
-export { default } from "../../../Client Portal/serverInvitations";
+export { default } from "../../../client-portal/serverInvitations";
 

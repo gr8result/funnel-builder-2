@@ -9,7 +9,7 @@ dotenv.config({ path: ".env", quiet: true });
 
 const baseUrl = process.env.PRODUCT_LIBRARY_TEST_URL || "http://localhost:3012/modules/estimate-builder?page=dataInput";
 const ownerEmail = process.env.PRODUCT_LIBRARY_TEST_EMAIL || "support@gr8result.com";
-const outDir = path.join(process.cwd(), "test-artifacts", "job-persistence-repair", String(Date.now()));
+const outDir = path.join(process.cwd(), "artifacts/test-artifacts", "job-persistence-repair", String(Date.now()));
 fs.mkdirSync(outDir, { recursive: true });
 
 async function mintSession() {
@@ -179,10 +179,10 @@ try {
  // Exercise the actual persistence implementation against this browser's real database.
  const good=await record('job:'+target.jobId);
  const rejected=await page.evaluate(async ({source,good})=>{
-  const module=await import('data:text/javascript;base64,'+btoa(source));
+  const mod=await import('data:text/javascript;base64,'+btoa(source));
   const incomplete={...good.workbook};delete incomplete.productLibrary;
   try {
-   await module.persistCompleteJob({key:good.key,workbook:incomplete,name:good.name,savedAt:new Date().toISOString(),storeName:'jobs',
+   await mod.persistCompleteJob({key:good.key,workbook:incomplete,name:good.name,savedAt:new Date().toISOString(),storeName:'jobs',
     openDatabase:()=>new Promise((resolve,reject)=>{const r=indexedDB.open('estimate-builder-template-db',2);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)}),
     activePointer:r=>({key:r.key})});
    return {rejected:false};

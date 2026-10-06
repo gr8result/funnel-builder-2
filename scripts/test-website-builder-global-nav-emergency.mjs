@@ -14,7 +14,7 @@ const USER_ID = "35ab846e-0764-498b-b1f8-7d2cf27d85a5";
 const PROJECT_ID = "2208a52a-8175-477e-823c-fc6de7fe4afe";
 const OWNER_EMAIL = "support@gr8result.com";
 const BASE_URL = (process.env.WB_BROWSER_BASE_URL || "http://localhost:3000").replace(/\/+$/, "");
-const OUT_DIR = path.join(process.cwd(), "test-results", "website-builder-global-nav-emergency");
+const OUT_DIR = path.join(process.cwd(), "artifacts/test-results", "website-builder-global-nav-emergency");
 const EXPECTED_TOP_LABELS = ["Home", "Modules", "About Us", "Contact Us", "Contact Support"];
 
 fs.mkdirSync(OUT_DIR, { recursive: true });

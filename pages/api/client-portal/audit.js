@@ -1,2 +1,2 @@
-export { default } from "../../../Client Portal/serverAudit";
+export { default } from "../../../client-portal/serverAudit";
 

@@ -1,8 +1,11 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { withWorkspace } from '../../../lib/withWorkspace';
+import { CURRENT_BUILDER_WORKSPACE_ID } from '../../../lib/builders/currentBuilderSeed';
 import { buildApprovedClientSelectionsCatalogue, PRODUCT_LIBRARY_SOURCE_CSV } from "../../../lib/product-library/catalogueModel";
 
-export default async function handler(req, res) {
+async function handler(req, res) {
+  res.setHeader('Cache-Control', 'private, no-store');
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
     res.status(405).json({ error: "Method not allowed" });
@@ -10,10 +13,14 @@ export default async function handler(req, res) {
   }
 
   try {
+    // This CSV is the current builder's quote sheet, never a platform catalogue.
+    if (req.workspaceId !== CURRENT_BUILDER_WORKSPACE_ID) {
+      return res.status(200).json({ products: [], hierarchy: [], productFamilies: [], preview: [], audit: null });
+    }
     const csvPath = path.join(process.cwd(), PRODUCT_LIBRARY_SOURCE_CSV);
     const csv = await fs.readFile(csvPath, "utf8");
     const catalogue = buildApprovedClientSelectionsCatalogue(csv, {
-      organisationId: String(req.query.organisationId || req.query.workspaceId || "approved-template"),
+      organisationId: req.workspaceId,
     });
     res.status(200).json({
       sourcePath: catalogue.sourcePath,
@@ -36,3 +43,5 @@ export default async function handler(req, res) {
     res.status(500).json({ error: error?.message || "Could not build approved Client Selections catalogue." });
   }
 }
+
+export default withWorkspace(handler);

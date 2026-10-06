@@ -1,0 +1,275 @@
+{
+  "generatedAt": "2026-09-16T06:24:30.106Z",
+  "totalSourceCount": 38,
+  "pagination": [
+    {
+      "current_page": 1,
+      "page_size": 28,
+      "total_pages": 2,
+      "totalCount": 38,
+      "returnedCount": 28,
+      "skus": [
+        "EBM28TB",
+        "EFS50EW",
+        "EUM52S",
+        "UCG52B",
+        "EFS54FCSEW",
+        "EFS54FCSGW",
+        "E14FID",
+        "CPT6MB",
+        "CPT6S",
+        "RFT6MB",
+        "ECE640K",
+        "EPO617ASTB",
+        "EO605DTB",
+        "EO605MTS",
+        "EO610ATB",
+        "R60FS",
+        "R60FW",
+        "E14DWX",
+        "E14DWB",
+        "EC64GS",
+        "ECE641T",
+        "ECI640TE",
+        "ESL60RDS",
+        "EUM85S",
+        "CPT9S",
+        "CPT9MB",
+        "EO916ASTB",
+        "EO910TS"
+      ]
+    },
+    {
+      "current_page": 2,
+      "page_size": 28,
+      "total_pages": 2,
+      "totalCount": 38,
+      "returnedCount": 10,
+      "skus": [
+        "EPO917ASTB",
+        "EFS9010CERS",
+        "EC95GLS",
+        "ECI950TE",
+        "EFS9010AINDB",
+        "EFS9010DFS",
+        "ESL90RDS",
+        "UCG90B",
+        "EC64GB",
+        "EC95GLB"
+      ]
+    }
+  ],
+  "familyCounts": {
+    "microwaves": 1,
+    "freestanding-cookers": 6,
+    "rangehoods": 13,
+    "dishwashers": 3,
+    "cooktops": 8,
+    "ovens": 7
+  },
+  "exactManufacturerMatches": 38,
+  "localImages": 38,
+  "verifiedHncPrices": 38,
+  "existingMatches": 12,
+  "absentLegacy": [
+    {
+      "existingProductId": "product:appliances:cooktops:euromaid:ecck900",
+      "manufacturerModel": "ECCK900",
+      "hncCurrentlyListed": false,
+      "classification": "absent-from-hnc-manufacturer-unverified",
+      "manufacturerUrl": null,
+      "archivedDocument": null,
+      "primaryImage": null,
+      "imageSourceUrl": null,
+      "imageSourceOrganisation": null,
+      "imageStatus": "exact-image-unavailable",
+      "rejectedCandidates": [],
+      "preserveHistoricalId": true,
+      "doNotSubstituteModel": true
+    },
+    {
+      "existingProductId": "product:appliances:cooktops:euromaid:gc90s",
+      "manufacturerModel": "GC90S",
+      "hncCurrentlyListed": false,
+      "classification": "absent-from-hnc-manufacturer-unverified",
+      "manufacturerUrl": null,
+      "archivedDocument": null,
+      "primaryImage": null,
+      "imageSourceUrl": null,
+      "imageSourceOrganisation": null,
+      "imageStatus": "exact-image-unavailable",
+      "rejectedCandidates": [],
+      "preserveHistoricalId": true,
+      "doNotSubstituteModel": true
+    },
+    {
+      "existingProductId": "product:appliances:cooktops:euromaid:kcs4",
+      "manufacturerModel": "KCS4",
+      "hncCurrentlyListed": false,
+      "classification": "absent-from-hnc-manufacturer-unverified",
+      "manufacturerUrl": null,
+      "archivedDocument": null,
+      "primaryImage": null,
+      "imageSourceUrl": null,
+      "imageSourceOrganisation": null,
+      "imageStatus": "exact-image-unavailable",
+      "rejectedCandidates": [],
+      "preserveHistoricalId": true,
+      "doNotSubstituteModel": true
+    },
+    {
+      "existingProductId": "product:appliances:cooktops:euromaid:wk60s",
+      "manufacturerModel": "WK60S",
+      "hncCurrentlyListed": false,
+      "classification": "absent-from-hnc-manufacturer-unverified",
+      "manufacturerUrl": null,
+      "archivedDocument": null,
+      "primaryImage": null,
+      "imageSourceUrl": null,
+      "imageSourceOrganisation": null,
+      "imageStatus": "exact-image-unavailable",
+      "rejectedCandidates": [],
+      "preserveHistoricalId": true,
+      "doNotSubstituteModel": true
+    },
+    {
+      "existingProductId": "product:appliances:dishwashers:euromaid:edw14s",
+      "manufacturerModel": "EDW14S",
+      "hncCurrentlyListed": false,
+      "classification": "absent-from-hnc-manufacturer-archived-document-found",
+      "manufacturerUrl": "https://www.euromaid.com/sites/g/files/emiian466/files/2021-03/EDW14S-Spec-Sheet-20200316.pdf",
+      "archivedDocument": {
+        "url": "https://www.euromaid.com/sites/g/files/emiian466/files/2021-03/EDW14S-Spec-Sheet-20200316.pdf",
+        "file": "data\\product-library\\source-evidence\\euromaid\\hnc-complete-range-2026-09-16\\manufacturer-archived-edw14s.pdf",
+        "checkedAt": "2026-09-16",
+        "sha256": "09fab10378786b517ff93842ceed8d4105c69684a622cb33b8e4476448a0dc1b",
+        "bytes": 461718
+      },
+      "primaryImage": null,
+      "imageSourceUrl": null,
+      "imageSourceOrganisation": null,
+      "imageStatus": "exact-image-unavailable",
+      "rejectedCandidates": [],
+      "preserveHistoricalId": true,
+      "doNotSubstituteModel": true
+    },
+    {
+      "existingProductId": "product:appliances:freestanding-cookers:euromaid:gg90s",
+      "manufacturerModel": "GG90S",
+      "hncCurrentlyListed": false,
+      "classification": "absent-from-hnc-manufacturer-archived-document-found",
+      "manufacturerUrl": "https://www.euromaid.com/sites/g/files/emiian466/files/2021-04/GG90S_Product-Card.pdf",
+      "archivedDocument": {
+        "url": "https://www.euromaid.com/sites/g/files/emiian466/files/2021-04/GG90S_Product-Card.pdf",
+        "file": "data\\product-library\\source-evidence\\euromaid\\hnc-complete-range-2026-09-16\\manufacturer-archived-gg90s.pdf",
+        "checkedAt": "2026-09-16",
+        "sha256": "67765e3cbbfc4fdc9c408cbf10ffd40d4794e5c9d42ce0e933715a4b5e7975d6",
+        "bytes": 457937
+      },
+      "primaryImage": null,
+      "imageSourceUrl": null,
+      "imageSourceOrganisation": null,
+      "imageStatus": "exact-image-unavailable",
+      "rejectedCandidates": [],
+      "preserveHistoricalId": true,
+      "doNotSubstituteModel": true
+    },
+    {
+      "existingProductId": "product:appliances:rangehoods:euromaid:cs60s",
+      "manufacturerModel": "CS60S",
+      "hncCurrentlyListed": false,
+      "classification": "absent-from-hnc-manufacturer-unverified",
+      "manufacturerUrl": null,
+      "archivedDocument": null,
+      "primaryImage": null,
+      "imageSourceUrl": null,
+      "imageSourceOrganisation": null,
+      "imageStatus": "exact-image-unavailable",
+      "rejectedCandidates": [],
+      "preserveHistoricalId": true,
+      "doNotSubstituteModel": true
+    },
+    {
+      "existingProductId": "product:appliances:rangehoods:euromaid:fs90s",
+      "manufacturerModel": "FS90S",
+      "hncCurrentlyListed": false,
+      "classification": "absent-from-hnc-manufacturer-unverified",
+      "manufacturerUrl": null,
+      "archivedDocument": null,
+      "primaryImage": null,
+      "imageSourceUrl": null,
+      "imageSourceOrganisation": null,
+      "imageStatus": "exact-image-unavailable",
+      "rejectedCandidates": [],
+      "preserveHistoricalId": true,
+      "doNotSubstituteModel": true
+    },
+    {
+      "existingProductId": "product:appliances:rangehoods:euromaid:rs6s",
+      "manufacturerModel": "RS6S",
+      "hncCurrentlyListed": false,
+      "classification": "absent-from-hnc-exact-manufacturer-page-found",
+      "manufacturerUrl": "https://www.euromaid.com/en-au/60cm-slide-out-rangehood-stainless-steel-0",
+      "archivedDocument": null,
+      "primaryImage": "/images/catalogues/appliances/products/euromaid/hnc-rs6s.png",
+      "imageSourceUrl": "https://images.cdn.europe-west1.gcp.commercetools.com/d1001ae5-31d1-4521-9dd3-e29eb4fb4828/RS6S_FrontOn_LR-kyGTnddj.png",
+      "imageSourceOrganisation": "Euromaid Australia",
+      "imageSourcePageUrl": "https://www.euromaid.com/en-au/60cm-slide-out-rangehood-stainless-steel-0",
+      "imageStatus": "verified-official-local",
+      "imageCheckedAt": "2026-09-16",
+      "imageWidth": 2899,
+      "imageHeight": 1512,
+      "imageBytes": 908803,
+      "imageSha256": "dfdeaa9c50a35076bf49dd7bd70a6e1aa949f914baae0f1908f185e82ed43908",
+      "rejectedCandidates": [],
+      "preserveHistoricalId": true,
+      "doNotSubstituteModel": true
+    },
+    {
+      "existingProductId": "product:appliances:rangehoods:euromaid:rs9s",
+      "manufacturerModel": "RS9S",
+      "hncCurrentlyListed": false,
+      "classification": "absent-from-hnc-exact-manufacturer-page-found",
+      "manufacturerUrl": "https://www.euromaid.com/en-au/90cm-slide-out-rangehood-stainless-steel-0",
+      "archivedDocument": null,
+      "primaryImage": "/images/catalogues/appliances/products/euromaid/hnc-rs9s.jpg",
+      "imageSourceUrl": "https://images.cdn.europe-west1.gcp.commercetools.com/d1001ae5-31d1-4521-9dd3-e29eb4fb4828/RS9S_FrontOn_LR-0iwhMdDm.jpg",
+      "imageSourceOrganisation": "Euromaid Australia",
+      "imageSourcePageUrl": "https://www.euromaid.com/en-au/90cm-slide-out-rangehood-stainless-steel-0",
+      "imageStatus": "verified-official-local",
+      "imageCheckedAt": "2026-09-16",
+      "imageWidth": 2399,
+      "imageHeight": 877,
+      "imageBytes": 127291,
+      "imageSha256": "d1df0c8b79e783bfb990afb6ea0f523455b16ba27c048300407649872e06e2b3",
+      "rejectedCandidates": [],
+      "preserveHistoricalId": true,
+      "doNotSubstituteModel": true
+    }
+  ],
+  "discrepancies": [
+    {
+      "model": "ECE641T",
+      "differences": [
+        {
+          "field": "cooktopType",
+          "hncTitle": "600mm Induction Cooktop",
+          "manufacturerTitle": "60cm 4 Zone Ceramic Cooktop | Touch Control",
+          "resolution": "manufacturer-exact-model-title-used-for-type"
+        }
+      ]
+    },
+    {
+      "model": "EC95GLB",
+      "differences": [
+        {
+          "field": "titleWidth",
+          "title": "Eclipse 600mm Gas Cooktop",
+          "dimensions": "W880 x D521x H105* (height includes trivets*)",
+          "resolution": "actual-dimensions-retained-title-preserved-as-source"
+        }
+      ]
+    }
+  ],
+  "failures": []
+}

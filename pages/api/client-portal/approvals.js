@@ -1,2 +1,2 @@
-export { default } from "../../../Client Portal/serverApprovals";
+export { default } from "../../../client-portal/serverApprovals";
 

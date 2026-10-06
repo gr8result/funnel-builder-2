@@ -1,0 +1,862 @@
+{
+  "schemaVersion": "appliance-hnc-exact-model-details.v1",
+  "checkedAt": "2026-09-11",
+  "scope": "Prepared narrow PBH6B5K90A field patch only; main catalogue and runtime files are not changed by this evidence artifact.",
+  "model": "PBH6B5K90A",
+  "productId": "product:cooktops:bosch:pbh6b5k90a",
+  "updates": {
+    "manufacturerModel": "PBH6B5K90A",
+    "sku": "PBH6B5K90A",
+    "productName": "Bosch Series 2 600mm Gas Cooktop",
+    "shortDescription": "Series 2 600mm Gas Cooktop",
+    "fullDescription": "4 cooking zones\nCast iron pan supports with rubber feet\nSword knobs\nDishwasher-suitable pan supports\nSafety gas cut-off",
+    "descriptionStatus": "verified-complete",
+    "specifications": {
+      "family": "cooktops",
+      "manufacturerModel": "PBH6B5K90A",
+      "width": "580 mm",
+      "widthMm": 580,
+      "finish": "Stainless Steel",
+      "fuelOrEnergyType": "Gas",
+      "cooktopType": "Gas",
+      "height": "51.8 mm",
+      "heightMm": 51.8,
+      "depth": "510 mm",
+      "depthMm": 510,
+      "colour": "Stainless Steel",
+      "cookingZonesOrBurners": 4,
+      "zones": "4 cooking zones",
+      "controlType": "Sword knobs",
+      "features": [
+        "4 cooking zones",
+        "Cast iron pan supports with rubber feet",
+        "Sword knobs",
+        "Dishwasher-suitable pan supports",
+        "Safety gas cut-off"
+      ],
+      "dimensions": "W580 x D510 x H51.8mm"
+    },
+    "specificationStatus": "partial",
+    "specificationSources": {
+      "family": {
+        "status": "verified-authorised-supplier",
+        "source": "Harvey Norman Commercial",
+        "sourceUrl": "https://www.harveynormancommercial.com.au/products/PBH6B5K90A",
+        "sourceCheckedAt": "2026-09-11"
+      },
+      "manufacturerModel": {
+        "status": "verified-authorised-supplier",
+        "source": "Harvey Norman Commercial",
+        "sourceUrl": "https://www.harveynormancommercial.com.au/products/PBH6B5K90A",
+        "sourceCheckedAt": "2026-09-11"
+      },
+      "width": {
+        "status": "verified-authorised-supplier",
+        "source": "Harvey Norman Commercial",
+        "sourceUrl": "https://www.harveynormancommercial.com.au/products/PBH6B5K90A",
+        "sourceCheckedAt": "2026-09-11"
+      },
+      "widthMm": {
+        "status": "verified-authorised-supplier",
+        "source": "Harvey Norman Commercial",
+        "sourceUrl": "https://www.harveynormancommercial.com.au/products/PBH6B5K90A",
+        "sourceCheckedAt": "2026-09-11"
+      },
+      "finish": {
+        "status": "verified-authorised-supplier",
+        "source": "Harvey Norman Commercial",
+        "sourceUrl": "https://www.harveynormancommercial.com.au/products/PBH6B5K90A",
+        "sourceCheckedAt": "2026-09-11"
+      },
+      "fuelOrEnergyType": {
+        "status": "verified-authorised-supplier",
+        "source": "Harvey Norman Commercial",
+        "sourceUrl": "https://www.harveynormancommercial.com.au/products/PBH6B5K90A",
+        "sourceCheckedAt": "2026-09-11"
+      },
+      "cooktopType": {
+        "status": "verified-authorised-supplier",
+        "source": "Harvey Norman Commercial",
+        "sourceUrl": "https://www.harveynormancommercial.com.au/products/PBH6B5K90A",
+        "sourceCheckedAt": "2026-09-11"
+      },
+      "height": {
+        "status": "verified-authorised-supplier",
+        "source": "Harvey Norman Commercial",
+        "sourceUrl": "https://www.harveynormancommercial.com.au/products/PBH6B5K90A",
+        "sourceCheckedAt": "2026-09-11"
+      },
+      "heightMm": {
+        "status": "verified-authorised-supplier",
+        "source": "Harvey Norman Commercial",
+        "sourceUrl": "https://www.harveynormancommercial.com.au/products/PBH6B5K90A",
+        "sourceCheckedAt": "2026-09-11"
+      },
+      "depth": {
+        "status": "verified-authorised-supplier",
+        "source": "Harvey Norman Commercial",
+        "sourceUrl": "https://www.harveynormancommercial.com.au/products/PBH6B5K90A",
+        "sourceCheckedAt": "2026-09-11"
+      },
+      "depthMm": {
+        "status": "verified-authorised-supplier",
+        "source": "Harvey Norman Commercial",
+        "sourceUrl": "https://www.harveynormancommercial.com.au/products/PBH6B5K90A",
+        "sourceCheckedAt": "2026-09-11"
+      },
+      "colour": {
+        "status": "verified-authorised-supplier",
+        "source": "Harvey Norman Commercial",
+        "sourceUrl": "https://www.harveynormancommercial.com.au/products/PBH6B5K90A",
+        "sourceCheckedAt": "2026-09-11"
+      },
+      "cookingZonesOrBurners": {
+        "status": "verified-authorised-supplier",
+        "source": "Harvey Norman Commercial",
+        "sourceUrl": "https://www.harveynormancommercial.com.au/products/PBH6B5K90A",
+        "sourceCheckedAt": "2026-09-11"
+      },
+      "zones": {
+        "status": "verified-authorised-supplier",
+        "source": "Harvey Norman Commercial",
+        "sourceUrl": "https://www.harveynormancommercial.com.au/products/PBH6B5K90A",
+        "sourceCheckedAt": "2026-09-11"
+      },
+      "controlType": {
+        "status": "verified-authorised-supplier",
+        "source": "Harvey Norman Commercial",
+        "sourceUrl": "https://www.harveynormancommercial.com.au/products/PBH6B5K90A",
+        "sourceCheckedAt": "2026-09-11"
+      },
+      "features": {
+        "status": "verified-authorised-supplier",
+        "source": "Harvey Norman Commercial",
+        "sourceUrl": "https://www.harveynormancommercial.com.au/products/PBH6B5K90A",
+        "sourceCheckedAt": "2026-09-11"
+      },
+      "dimensions": {
+        "status": "verified-authorised-supplier",
+        "source": "Harvey Norman Commercial",
+        "sourceUrl": "https://www.harveynormancommercial.com.au/products/PBH6B5K90A",
+        "sourceCheckedAt": "2026-09-11",
+        "sourceField": "product_dimensions"
+      }
+    },
+    "width": "580 mm",
+    "widthMm": 580,
+    "height": "51.8 mm",
+    "heightMm": 51.8,
+    "depth": "510 mm",
+    "depthMm": 510,
+    "colour": "Stainless Steel",
+    "finish": "Stainless Steel",
+    "availableColours": [
+      "Stainless Steel"
+    ],
+    "availableFinishes": [
+      "Stainless Steel"
+    ],
+    "fuelOrEnergyType": "Gas",
+    "costPrice": 798,
+    "sourceCostPrice": 798,
+    "sellPrice": 798,
+    "tenantSellPrice": 798,
+    "currentRetailReference": 798,
+    "currentRetailReferenceSourceUrl": "https://www.harveynormancommercial.com.au/products/PBH6B5K90A",
+    "priceStatus": "fixed",
+    "gstStatus": "inclusive",
+    "currency": "AUD",
+    "priceSource": {
+      "sourceOrganisation": "Harvey Norman Commercial",
+      "sourceUrl": "https://www.harveynormancommercial.com.au/products/PBH6B5K90A",
+      "sourceCheckedAt": "2026-09-11",
+      "priceType": "listed-srp",
+      "sourceField": "price_store",
+      "priceLabel": "SRP (INC. GST)",
+      "currency": "AUD",
+      "listedPrice": 798,
+      "gstIncluded": true,
+      "verificationStatus": "verified-listed-price"
+    },
+    "priceSourceUrl": "https://www.harveynormancommercial.com.au/products/PBH6B5K90A",
+    "priceVerifiedAt": "2026-09-11",
+    "primaryImage": "/images/catalogues/appliances/products/bosch/pbh6b5k90a.jpg",
+    "imageStatus": "verified-authorised-supplier-local",
+    "imageSourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/p/b/pbh6b5k90a_bosch_web.jpg",
+    "imageSourcePageUrl": "https://www.harveynormancommercial.com.au/products/PBH6B5K90A",
+    "imageSourceOrganisation": "Harvey Norman Commercial",
+    "imageVerificationStatus": "verified-authorised-exact-model",
+    "imageVerifiedAt": "2026-09-11",
+    "imageCheckedAt": "2026-09-11",
+    "productPageUrl": "https://www.harveynormancommercial.com.au/products/PBH6B5K90A",
+    "productPageStatus": "verified-exact-model",
+    "sourceCheckedAt": "2026-09-11",
+    "source": {
+      "type": "authorised_supplier_product_page",
+      "file": "data/product-library/catalogues/appliances/AU-BOSCH-APPLIANCE-RANGE.json",
+      "sourceName": "Harvey Norman Commercial exact product page",
+      "sourceUrl": "https://www.harveynormancommercial.com.au/products/PBH6B5K90A",
+      "sourceVerifiedAt": "2026-09-11"
+    },
+    "research": {
+      "verificationStatus": "verified-basic",
+      "sourceType": "authorised_supplier_product_page",
+      "sourceOrganisation": "Harvey Norman Commercial",
+      "checkedAt": "2026-09-11",
+      "verificationNote": "Exact HNC product page title, physical dimensions, colour, gas category, all five listed features, SRP and product photo verified. Unstated gas connection and installation requirements remain unspecified."
+    },
+    "evidence": {
+      "sourceOrganisation": "Harvey Norman Commercial",
+      "sourceUrl": "https://www.harveynormancommercial.com.au/products/PBH6B5K90A",
+      "sourceCheckedAt": "2026-09-11",
+      "evidenceStatus": "verified-exact-model-source-fields",
+      "evidenceFile": "data/product-library/source-evidence/bosch/hnc-pbh6b5k90a-details-2026-09-11.json",
+      "imageAndPriceEvidenceFile": "data/product-library/source-evidence/bosch/hnc-cooktop-corrections-2026-09-11.json",
+      "price": {
+        "sourceOrganisation": "Harvey Norman Commercial",
+        "sourceUrl": "https://www.harveynormancommercial.com.au/products/PBH6B5K90A",
+        "sourceCheckedAt": "2026-09-11",
+        "priceType": "listed-srp",
+        "sourceField": "price_store",
+        "priceLabel": "SRP (INC. GST)",
+        "currency": "AUD",
+        "listedPrice": 798,
+        "gstIncluded": true,
+        "verificationStatus": "verified-listed-price"
+      },
+      "fields": {
+        "productName": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/PBH6B5K90A",
+          "sourceCheckedAt": "2026-09-11",
+          "sourceField": "brand aggregation plus name"
+        },
+        "manufacturerModel": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/PBH6B5K90A",
+          "sourceCheckedAt": "2026-09-11",
+          "sourceField": "sku and vendorcode"
+        },
+        "shortDescription": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/PBH6B5K90A",
+          "sourceCheckedAt": "2026-09-11",
+          "sourceField": "name"
+        },
+        "fullDescription": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/PBH6B5K90A",
+          "sourceCheckedAt": "2026-09-11",
+          "sourceField": "description.html"
+        },
+        "physicalDimensions": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/PBH6B5K90A",
+          "sourceCheckedAt": "2026-09-11",
+          "sourceField": "product_dimensions"
+        },
+        "colour": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/PBH6B5K90A",
+          "sourceCheckedAt": "2026-09-11",
+          "sourceField": "colours aggregation"
+        },
+        "fuelOrEnergyType": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/PBH6B5K90A",
+          "sourceCheckedAt": "2026-09-11",
+          "sourceField": "Gas Cooktops category and product name"
+        },
+        "features": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/PBH6B5K90A",
+          "sourceCheckedAt": "2026-09-11",
+          "sourceField": "description.html"
+        },
+        "sourceTitle": {
+          "status": "verified-authorised-supplier",
+          "source": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/PBH6B5K90A",
+          "sourceCheckedAt": "2026-09-11",
+          "sourceField": "name"
+        }
+      }
+    },
+    "sourceTitle": "Series 2 600mm Gas Cooktop"
+  },
+  "supplierEvidence": {
+    "sourceUrl": "https://www.harveynormancommercial.com.au/products/PBH6B5K90A",
+    "finalUrl": "https://www.harveynormancommercial.com.au/products/PBH6B5K90A",
+    "httpStatus": 200,
+    "retrievedAt": "2026-09-11T05:55:56.248Z",
+    "htmlSha256": "01de55adb93a068b668d3a410ec6d1c2bf62dd8f53a26fda814bae397bddcefb",
+    "product": {
+      "__typename": "SimpleProduct",
+      "id": 22183,
+      "sku": "PBH6B5K90A",
+      "vendorcode": "PBH6B5K90A",
+      "name": "Series 2 600mm Gas Cooktop",
+      "image": {
+        "__typename": "ProductImage",
+        "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/b/pbh6b5k90a_bosch_web.jpg"
+      },
+      "product_images": {
+        "__typename": "ProductImages",
+        "thumbnail": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/07ba508bbc2444c0df3c958b3d918048/p/b/pbh6b5k90a_bosch_web.jpg",
+        "small": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/1df791769d8cdc80e3c05129fe5437cf/p/b/pbh6b5k90a_bosch_web.jpg",
+        "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/b/pbh6b5k90a_bosch_web.jpg",
+        "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/p/b/pbh6b5k90a_bosch_web.jpg",
+        "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/p/b/pbh6b5k90a_bosch_tech.jpg"
+      },
+      "media_gallery": [
+        {
+          "__typename": "ProductImage",
+          "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/b/pbh6b5k90a_bosch_web.jpg"
+        },
+        {
+          "__typename": "ProductImage",
+          "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/b/pbh6b5k90a_bosch_tech.jpg"
+        },
+        {
+          "__typename": "ProductImage",
+          "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/b/pbh6b5k90a_bosch_insitu.jpg"
+        }
+      ],
+      "thumbnail": {
+        "__typename": "ProductImage",
+        "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/b/pbh6b5k90a_bosch_web.jpg"
+      },
+      "description": {
+        "__typename": "ComplexTextValue",
+        "html": "<p>• 4 cooking zones<br>• Cast iron pan supports with rubber feet<br>• Sword knobs<br>• Dishwasher-suitable pan supports<br>• Safety gas cut-off</p>"
+      },
+      "product_dimensions": "W580 x D510 x H51.8mm",
+      "price_promo": 0,
+      "price_store": 798,
+      "price_trade": "0.000000",
+      "wels_reg_number": "",
+      "gp_product_group": "COOKTOPS",
+      "price_range": {
+        "__typename": "PriceRange",
+        "minimum_price": {
+          "__typename": "ProductPrice",
+          "regular_price": {
+            "__typename": "Money",
+            "value": 0,
+            "currency": "AUD"
+          }
+        }
+      }
+    },
+    "aggregations": [
+      {
+        "__typename": "Aggregation",
+        "attribute_code": "category_id",
+        "label": "Category",
+        "options": [
+          {
+            "__typename": "AggregationOption",
+            "label": "Kitchen",
+            "value": "16",
+            "count": 1
+          },
+          {
+            "__typename": "AggregationOption",
+            "label": "Cooktops",
+            "value": "23",
+            "count": 1
+          },
+          {
+            "__typename": "AggregationOption",
+            "label": "Gas Cooktops ",
+            "value": "107",
+            "count": 1
+          },
+          {
+            "__typename": "AggregationOption",
+            "label": "Products",
+            "value": "1036",
+            "count": 1
+          }
+        ]
+      },
+      {
+        "__typename": "Aggregation",
+        "attribute_code": "brand",
+        "label": "Brand",
+        "options": [
+          {
+            "__typename": "AggregationOption",
+            "label": "Bosch",
+            "value": "82",
+            "count": 1
+          }
+        ]
+      },
+      {
+        "__typename": "Aggregation",
+        "attribute_code": "colours",
+        "label": "Colour",
+        "options": [
+          {
+            "__typename": "AggregationOption",
+            "label": "Stainless Steel",
+            "value": "943",
+            "count": 1
+          }
+        ]
+      },
+      {
+        "__typename": "Aggregation",
+        "attribute_code": "size_cooktop",
+        "label": "Cooktop Size",
+        "options": [
+          {
+            "__typename": "AggregationOption",
+            "label": "300 - 600mm",
+            "value": "1090",
+            "count": 1
+          }
+        ]
+      },
+      {
+        "__typename": "Aggregation",
+        "attribute_code": "stock_line_filter",
+        "label": "Stock Line",
+        "options": [
+          {
+            "__typename": "AggregationOption",
+            "label": "Yes",
+            "value": "672",
+            "count": 1
+          }
+        ]
+      }
+    ],
+    "visibleProductText": "SRP (INC. GST):\n$798\nCOLOUR: Stainless Steel\nPRODUCT CODE: PBH6B5K90A\nSIZE: W580 x D510 x H51.8mm\nFEATURES:\n4 cooking zones\nCast iron pan supports with rubber feet\nSword knobs\nDishwasher-suitable pan supports\nSafety gas cut-off\n",
+    "photo": {
+      "localPath": "/images/catalogues/appliances/products/bosch/pbh6b5k90a.jpg",
+      "sourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/p/b/pbh6b5k90a_bosch_web.jpg",
+      "localSha256": "23269feeec867092b592c6fdb5cfee181fda2d1c67eefd7aece7e3b83accaf5b",
+      "sourceSha256": "8a8efc344598f573b0f2f34e7891479c3ef481f3006fd6463a2f601e998a6368",
+      "sourceBytesMatchLocal": false,
+      "httpStatus": 200,
+      "meanAbsoluteChannelDifference": 0,
+      "decodedPixelSha256": "a5b03c7211f028dc64e885751618db9932b46f1fb18f54c8372f28281884efe7",
+      "sourcePixelsExactlyMatchLocal": true,
+      "visuallyVerified": true,
+      "decision": "Retain existing exact-model local asset unchanged. Fresh source JPEG encoding/metadata differs but every decoded pixel at full 1968 x 1528 resolution is identical."
+    }
+  },
+  "limitations": [
+    "HNC nominal title says 600mm; actual product_dimensions explicitly state width 580 mm. Both are preserved without substituting nominal width.",
+    "Installation type, connection requirements, gas conversion, cutout sizes and warranty are not inferred from the listed features.",
+    "specificationStatus remains partial because unspecified technical requirements are not invented."
+  ],
+  "uiIntegrationNote": "specifications becomes specificationSummary in the existing selectors. Current applianceFeatureList candidates do not include specs.features; add that array to its existing candidates to render the full five-feature list without redesigning cards.",
+  "readOnlyCooktopGapAudit": {
+    "currentVisibleCooktops": 14,
+    "modelsMissingPhysicalDimensions": [
+      "PBH6B5K90A",
+      "PKE611CA2A",
+      "PKE611BA2A",
+      "PUG611AA5H",
+      "PNK6B6K40A",
+      "PUE611BB5H",
+      "PPH6A6I10A",
+      "PIX631HC1H",
+      "PXX695HC1E",
+      "PKM875DP1A",
+      "PCR9A5I90A",
+      "PIV931HC1E",
+      "PRS9A6H40A",
+      "PXV975DV1E"
+    ],
+    "modelsMissingFullDescription": [
+      "PBH6B5K90A",
+      "PKE611CA2A",
+      "PKE611BA2A",
+      "PUG611AA5H",
+      "PNK6B6K40A",
+      "PUE611BB5H",
+      "PPH6A6I10A",
+      "PIX631HC1H",
+      "PXX695HC1E",
+      "PKM875DP1A",
+      "PCR9A5I90A",
+      "PIV931HC1E",
+      "PRS9A6H40A",
+      "PXV975DV1E"
+    ],
+    "modelsMissingFeatures": [
+      "PBH6B5K90A",
+      "PKE611CA2A",
+      "PKE611BA2A",
+      "PUG611AA5H",
+      "PNK6B6K40A",
+      "PUE611BB5H",
+      "PPH6A6I10A",
+      "PIX631HC1H",
+      "PXX695HC1E",
+      "PKM875DP1A",
+      "PCR9A5I90A",
+      "PIV931HC1E",
+      "PRS9A6H40A",
+      "PXV975DV1E"
+    ],
+    "modelsMissingSpecificationFinish": [
+      "PNK6B6K40A",
+      "PUE611BB5H",
+      "PPH6A6I10A",
+      "PIX631HC1H",
+      "PXX695HC1E",
+      "PKM875DP1A",
+      "PCR9A5I90A",
+      "PIV931HC1E",
+      "PRS9A6H40A",
+      "PXV975DV1E"
+    ],
+    "records": [
+      {
+        "model": "PBH6B5K90A",
+        "missingFields": [
+          "width",
+          "widthMm",
+          "height",
+          "heightMm",
+          "depth",
+          "depthMm",
+          "fullDescription",
+          "finish",
+          "colour",
+          "specifications.features",
+          "specifications.cookingZonesOrBurners",
+          "specifications.controlType"
+        ],
+        "catalogueTitle": "Bosch Series 2 600mm Gas Cooktop",
+        "exactHncTitle": "Series 2 600mm Gas Cooktop",
+        "hncDimensions": "W580 x D510 x H51.8mm",
+        "hncFeaturesAvailable": true,
+        "evidenceFile": "data/product-library/source-evidence/bosch/hnc-cooktop-corrections-2026-09-11.json",
+        "changedByThisPatch": true
+      },
+      {
+        "model": "PKE611CA2A",
+        "missingFields": [
+          "width",
+          "widthMm",
+          "height",
+          "heightMm",
+          "depth",
+          "depthMm",
+          "fullDescription",
+          "finish",
+          "colour",
+          "specifications.features",
+          "specifications.cookingZonesOrBurners",
+          "specifications.controlType"
+        ],
+        "catalogueTitle": "Bosch Series 2 600mm Ceramic Cooktop",
+        "exactHncTitle": "Series 2 600mm Ceramic Cooktop",
+        "hncDimensions": "W592 x D522 x H 46mm",
+        "hncFeaturesAvailable": true,
+        "evidenceFile": "data/product-library/source-evidence/bosch/hnc-cooktop-corrections-2026-09-11.json",
+        "changedByThisPatch": false
+      },
+      {
+        "model": "PKE611BA2A",
+        "missingFields": [
+          "width",
+          "widthMm",
+          "height",
+          "heightMm",
+          "depth",
+          "depthMm",
+          "fullDescription",
+          "finish",
+          "colour",
+          "specifications.features",
+          "specifications.cookingZonesOrBurners",
+          "specifications.controlType"
+        ],
+        "catalogueTitle": "Bosch Series 4 600mm Ceramic Cooktop",
+        "exactHncTitle": "Series 4 600mm Ceramic Cooktop ",
+        "hncDimensions": "W592 x D522 x H45mm",
+        "hncFeaturesAvailable": true,
+        "evidenceFile": "data/product-library/source-evidence/bosch/hnc-cooktop-corrections-2026-09-11.json",
+        "changedByThisPatch": false
+      },
+      {
+        "model": "PUG611AA5H",
+        "missingFields": [
+          "width",
+          "widthMm",
+          "height",
+          "heightMm",
+          "depth",
+          "depthMm",
+          "fullDescription",
+          "finish",
+          "colour",
+          "specifications.features",
+          "specifications.cookingZonesOrBurners",
+          "specifications.controlType"
+        ],
+        "catalogueTitle": "Bosch Series 2 600mm Induction Cooktop",
+        "exactHncTitle": "Series 2 600mm Induction Cooktop",
+        "hncDimensions": "W592 x D522 x H51 mm",
+        "hncFeaturesAvailable": true,
+        "evidenceFile": "data/product-library/source-evidence/bosch/hnc-cooktop-corrections-2026-09-11.json",
+        "changedByThisPatch": false
+      },
+      {
+        "model": "PNK6B6K40A",
+        "missingFields": [
+          "width",
+          "widthMm",
+          "height",
+          "heightMm",
+          "depth",
+          "depthMm",
+          "fullDescription",
+          "finish",
+          "colour",
+          "specifications.features",
+          "specifications.finish",
+          "specifications.cookingZonesOrBurners",
+          "specifications.controlType"
+        ],
+        "catalogueTitle": "Bosch Series 4 600m Gas Cooktop",
+        "exactHncTitle": "Series 4 600m Gas Cooktop",
+        "hncDimensions": "W590 x D520 x H45mm",
+        "hncFeaturesAvailable": true,
+        "evidenceFile": "data/product-library/source-evidence/bosch/hnc-cooktop-corrections-2026-09-11.json",
+        "changedByThisPatch": false
+      },
+      {
+        "model": "PUE611BB5H",
+        "missingFields": [
+          "width",
+          "widthMm",
+          "height",
+          "heightMm",
+          "depth",
+          "depthMm",
+          "fullDescription",
+          "finish",
+          "colour",
+          "specifications.features",
+          "specifications.finish",
+          "specifications.cookingZonesOrBurners",
+          "specifications.controlType"
+        ],
+        "catalogueTitle": "Bosch Series 4 600mm Induction Cooktop",
+        "exactHncTitle": "Series 4 600mm Induction Cooktop",
+        "hncDimensions": "W592 x D522 x H51mm",
+        "hncFeaturesAvailable": true,
+        "evidenceFile": "data/product-library/source-evidence/bosch/hnc-cooktop-corrections-2026-09-11.json",
+        "changedByThisPatch": false
+      },
+      {
+        "model": "PPH6A6I10A",
+        "missingFields": [
+          "width",
+          "widthMm",
+          "height",
+          "heightMm",
+          "depth",
+          "depthMm",
+          "fullDescription",
+          "finish",
+          "colour",
+          "specifications.features",
+          "specifications.finish",
+          "specifications.cookingZonesOrBurners",
+          "specifications.controlType"
+        ],
+        "catalogueTitle": "Bosch Series 6 600mm Gas Cooktop",
+        "exactHncTitle": "Series 6 600mm Gas Cooktop",
+        "hncDimensions": "W590 x D520 x H45mm",
+        "hncFeaturesAvailable": true,
+        "evidenceFile": "data/product-library/source-evidence/bosch/hnc-cooktop-corrections-2026-09-11.json",
+        "changedByThisPatch": false
+      },
+      {
+        "model": "PIX631HC1H",
+        "missingFields": [
+          "width",
+          "widthMm",
+          "height",
+          "heightMm",
+          "depth",
+          "depthMm",
+          "fullDescription",
+          "finish",
+          "colour",
+          "specifications.features",
+          "specifications.finish",
+          "specifications.cookingZonesOrBurners",
+          "specifications.controlType"
+        ],
+        "catalogueTitle": "Bosch Series 6 600mm Induction Cooktop",
+        "exactHncTitle": "Series 6 600mm Induction Cooktop ",
+        "hncDimensions": "W592 x D522 x H51mm",
+        "hncFeaturesAvailable": true,
+        "evidenceFile": "data/product-library/source-evidence/bosch/hnc-cooktop-corrections-2026-09-11.json",
+        "changedByThisPatch": false
+      },
+      {
+        "model": "PXX695HC1E",
+        "missingFields": [
+          "width",
+          "widthMm",
+          "height",
+          "heightMm",
+          "depth",
+          "depthMm",
+          "fullDescription",
+          "finish",
+          "colour",
+          "specifications.features",
+          "specifications.finish",
+          "specifications.cookingZonesOrBurners",
+          "specifications.controlType"
+        ],
+        "catalogueTitle": "Bosch Series 6 600mm Induction Cooktop",
+        "exactHncTitle": "Series 6 600mm Induction Cooktop ",
+        "hncDimensions": "W606 x D527 x H51mm",
+        "hncFeaturesAvailable": true,
+        "evidenceFile": "data/product-library/source-evidence/bosch/hnc-cooktop-corrections-2026-09-11.json",
+        "changedByThisPatch": false
+      },
+      {
+        "model": "PKM875DP1A",
+        "missingFields": [
+          "width",
+          "widthMm",
+          "height",
+          "heightMm",
+          "depth",
+          "depthMm",
+          "fullDescription",
+          "finish",
+          "colour",
+          "specifications.features",
+          "specifications.finish",
+          "specifications.cookingZonesOrBurners",
+          "specifications.controlType"
+        ],
+        "catalogueTitle": "Bosch Series 8 800mm Ceramic Cooktop",
+        "exactHncTitle": "Series 8 800mm Ceramic Cooktop",
+        "hncDimensions": "W816 x D527mm",
+        "hncFeaturesAvailable": true,
+        "evidenceFile": "data/product-library/source-evidence/bosch/hnc-cooktop-corrections-2026-09-11.json",
+        "changedByThisPatch": false
+      },
+      {
+        "model": "PCR9A5I90A",
+        "missingFields": [
+          "width",
+          "widthMm",
+          "height",
+          "heightMm",
+          "depth",
+          "depthMm",
+          "fullDescription",
+          "finish",
+          "colour",
+          "specifications.features",
+          "specifications.finish",
+          "specifications.cookingZonesOrBurners",
+          "specifications.controlType"
+        ],
+        "catalogueTitle": "Bosch Series 6 900mm Gas Cooktop",
+        "exactHncTitle": "Series 6 900mm Gas Cooktop",
+        "hncDimensions": "W915 x D520 x H51.5mm",
+        "hncFeaturesAvailable": true,
+        "evidenceFile": "data/product-library/source-evidence/bosch/hnc-cooktop-corrections-2026-09-11.json",
+        "changedByThisPatch": false
+      },
+      {
+        "model": "PIV931HC1E",
+        "missingFields": [
+          "width",
+          "widthMm",
+          "height",
+          "heightMm",
+          "depth",
+          "depthMm",
+          "fullDescription",
+          "finish",
+          "colour",
+          "specifications.features",
+          "specifications.finish",
+          "specifications.cookingZonesOrBurners",
+          "specifications.controlType"
+        ],
+        "catalogueTitle": "Bosch Series 6 900mm Induction Cooktop",
+        "exactHncTitle": "Series 6 900mm Induction Cooktop ",
+        "hncDimensions": "W918 x D522 x H51mm",
+        "hncFeaturesAvailable": true,
+        "evidenceFile": "data/product-library/source-evidence/bosch/hnc-cooktop-corrections-2026-09-11.json",
+        "changedByThisPatch": false
+      },
+      {
+        "model": "PRS9A6H40A",
+        "missingFields": [
+          "width",
+          "widthMm",
+          "height",
+          "heightMm",
+          "depth",
+          "depthMm",
+          "fullDescription",
+          "finish",
+          "colour",
+          "specifications.features",
+          "specifications.finish",
+          "specifications.cookingZonesOrBurners",
+          "specifications.controlType"
+        ],
+        "catalogueTitle": "Bosch Series 8 900mm Gas Cooktop",
+        "exactHncTitle": "Series 8 900mm Gas Cooktop ",
+        "hncDimensions": "W915 x D520 x H45mm",
+        "hncFeaturesAvailable": true,
+        "evidenceFile": "data/product-library/source-evidence/bosch/hnc-cooktop-corrections-2026-09-11.json",
+        "changedByThisPatch": false
+      },
+      {
+        "model": "PXV975DV1E",
+        "missingFields": [
+          "width",
+          "widthMm",
+          "height",
+          "heightMm",
+          "depth",
+          "depthMm",
+          "fullDescription",
+          "finish",
+          "colour",
+          "specifications.features",
+          "specifications.finish",
+          "specifications.cookingZonesOrBurners",
+          "specifications.controlType"
+        ],
+        "catalogueTitle": "Bosch Series 8 900mm Induction Cooktop",
+        "exactHncTitle": "Series 8 900mm Induction Cooktop",
+        "hncDimensions": "W916 x D527 x H51mm",
+        "hncFeaturesAvailable": true,
+        "evidenceFile": "data/product-library/source-evidence/bosch/hnc-cooktop-corrections-2026-09-11.json",
+        "changedByThisPatch": false
+      }
+    ]
+  }
+}

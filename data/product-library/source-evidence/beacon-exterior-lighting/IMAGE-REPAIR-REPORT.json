@@ -1,0 +1,795 @@
+{
+  "repairedAt": "2026-09-09",
+  "reason": "Beacon Lighting migrated product media to assets.beaconlighting.com.au; the previously stored www.beaconlighting.com.au/media/catalog URLs now return 404.",
+  "method": "Re-read each product's own official_product_url and took the supplier-published og:image, then verified the URL serves image/* before writing it back.",
+  "counts": {
+    "total": 87,
+    "repaired": 85,
+    "alreadyCurrent": 0,
+    "failed": 2,
+    "skipped": 0
+  },
+  "products": [
+    {
+      "product_code": "BEACON-EXT-2303181",
+      "product_name": "Sentinel 2 Light Wall Bracket In Black",
+      "page": "https://www.beaconlighting.com.au/sentinel-2-light-wall-bracket-in-black",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/3/2303181.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/230318.jpg",
+      "bytes": 67492
+    },
+    {
+      "product_code": "BEACON-EXT-2203077",
+      "product_name": "Sentinel 12V Spike Spot In Black",
+      "page": "https://www.beaconlighting.com.au/sentinel-12v-spike-spot-in-black",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/2/2203077.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/220307.jpg",
+      "bytes": 36914
+    },
+    {
+      "product_code": "BEACON-EXT-2461141",
+      "product_name": "Wanaka 2 Light 240V Adjustable Exterior Wall Light In Black",
+      "page": "https://www.beaconlighting.com.au/wanaka-2-light-240v-adjustable-exterior-wall-light-in-black",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/4/2461141.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/246114.jpg",
+      "bytes": 49854
+    },
+    {
+      "product_code": "BEACON-EXT-2203371",
+      "product_name": "Wanaka 12 24V Spike Spot With DIY Quick Connect In Black",
+      "page": "https://www.beaconlighting.com.au/wanaka-12-24v-spike-spot-with-diy-quick-connect-in-black",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/2/2203371.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/220337.jpg",
+      "bytes": 33834
+    },
+    {
+      "product_code": "BEACON-EXT-22099111",
+      "product_name": "Festoon Ii 20 Light LED Exterior String Light Kit In Black With Warm White",
+      "page": "https://www.beaconlighting.com.au/festoon-ii-20-light-led-exterior-string-light-kit-in-black-with-warm-white",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/2/22099111.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/220991.jpg",
+      "bytes": 71845
+    },
+    {
+      "product_code": "BEACON-EXT-2209882",
+      "product_name": "Festoon Solar 12 Light LED Exterior String Light Kit In Black With Warm White",
+      "page": "https://www.beaconlighting.com.au/festoon-solar-12-light-led-exterior-string-light-kit-in-black-with-warm-white",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/2/2209882.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/220988.jpg",
+      "bytes": 50112
+    },
+    {
+      "product_code": "BEACON-EXT-2209890",
+      "product_name": "Festoon Speaker 8 Light LED Exterior String Light Kit With Wireless Speakers In Black With Warm White",
+      "page": "https://www.beaconlighting.com.au/festoon-speaker-8-light-led-exterior-string-light-kit-with-wireless-speakers-in-black-with-warm-white",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/2/2209890.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/220989.jpg",
+      "bytes": 49260
+    },
+    {
+      "product_code": "BEACON-EXT-2380121",
+      "product_name": "Made By Mayfair Seaside Escarpment Exterior Wall Bracket In Brass With Spanish Alabaster Shade",
+      "page": "https://www.beaconlighting.com.au/made-by-mayfair-seaside-escarpment-exterior-wall-bracket-in-brass-with-spanish-alabaster-shade",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/3/2380121.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/238012.jpg",
+      "bytes": 77719
+    },
+    {
+      "product_code": "BEACON-EXT-2313880",
+      "product_name": "Made By Mayfair Seaside Sol Exterior Wall Sconce In Solid Brass With Spanish Alabaster Shade",
+      "page": "https://www.beaconlighting.com.au/made-by-mayfair-seaside-sol-exterior-wall-sconce-in-solid-brass-with-spanish-alabaster-shade",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/3/2313880.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/231388.jpg",
+      "bytes": 89628
+    },
+    {
+      "product_code": "BEACON-EXT-2313930",
+      "product_name": "Made By Mayfair Seaside St Kilda Exterior Wall Bracket In Solid Brass With Spanish Alabaster Shade",
+      "page": "https://www.beaconlighting.com.au/made-by-mayfair-seaside-st-kilda-exterior-wall-bracket-in-solid-brass-with-spanish-alabaster-shade",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/3/2313930.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/231393.jpg",
+      "bytes": 47509
+    },
+    {
+      "product_code": "BEACON-EXT-2304423",
+      "product_name": "Made By Mayfair Seaside Escarpment Exterior Wall Bracket In Verdigris With Spanish Alabaster Shade",
+      "page": "https://www.beaconlighting.com.au/made-by-mayfair-seaside-escarpment-exterior-wall-bracket-in-verdigris-with-spanish-alabaster-shade",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/3/2304423.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/230442.jpg",
+      "bytes": 95814
+    },
+    {
+      "product_code": "BEACON-EXT-2313892",
+      "product_name": "Made By Mayfair Seaside Sol Exterior Wall Sconce In Verdigris With Spanish Alabaster Shade",
+      "page": "https://www.beaconlighting.com.au/made-by-mayfair-seaside-sol-exterior-wall-sconce-in-verdigris-with-spanish-alabaster-shade",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/3/2313892.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/231389.jpg",
+      "bytes": 217250
+    },
+    {
+      "product_code": "BEACON-EXT-2313941",
+      "product_name": "Made By Mayfair Seaside St Kilda Exterior Wall Bracket In Verdigris With Spanish Alabaster Shade",
+      "page": "https://www.beaconlighting.com.au/made-by-mayfair-seaside-st-kilda-exterior-wall-bracket-in-verdigris-with-spanish-alabaster-shade",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/3/2313941.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/231394.jpg",
+      "bytes": 79028
+    },
+    {
+      "product_code": "BEACON-EXT-2304400",
+      "product_name": "Made By Mayfair Seaside Exterior Up Down Wall Bracket In Verdigris",
+      "page": "https://www.beaconlighting.com.au/made-by-mayfair-seaside-exterior-up-down-wall-bracket-in-verdigris",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/3/2304400.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/230440.jpg",
+      "bytes": 66753
+    },
+    {
+      "product_code": "BEACON-EXT-2300942",
+      "product_name": "Made By Mayfair Seaside Exterior 2 Light Adjustable Spotlight In Brass",
+      "page": "https://www.beaconlighting.com.au/made-by-mayfair-seaside-exterior-2-light-adjustable-spotlight-in-brass",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/3/2300942.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/230094.jpg",
+      "bytes": 54395
+    },
+    {
+      "product_code": "BEACON-EXT-2300914",
+      "product_name": "Made By Mayfair Seaside Adjustable Exterior Wall Spot In Brass",
+      "page": "https://www.beaconlighting.com.au/made-by-mayfair-seaside-adjustable-exterior-wall-spot-in-brass",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/3/2300914.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/230091.jpg",
+      "bytes": 100129
+    },
+    {
+      "product_code": "BEACON-EXT-2300901",
+      "product_name": "Made By Mayfair Seaside Exterior Wall Bracket In Brass",
+      "page": "https://www.beaconlighting.com.au/made-by-mayfair-seaside-exterior-wall-bracket-in-brass",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/3/2300901.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/230090.jpg",
+      "bytes": 152415
+    },
+    {
+      "product_code": "BEACON-EXT-2300921",
+      "product_name": "Made By Mayfair Seaside Exterior Wall Down Light Bracket In Brass",
+      "page": "https://www.beaconlighting.com.au/made-by-mayfair-seaside-exterior-wall-down-light-bracket-in-brass",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/3/2300921_1.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/230092_2_1.jpg",
+      "bytes": 256570
+    },
+    {
+      "product_code": "BEACON-EXT-2304411",
+      "product_name": "Made By Mayfair Seaside Exterior 2 Light Adjustable Spotlight In Verdigris",
+      "page": "https://www.beaconlighting.com.au/made-by-mayfair-seaside-exterior-2-light-adjustable-spotlight-in-verdigris",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/3/2304411.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/230441.jpg",
+      "bytes": 49997
+    },
+    {
+      "product_code": "BEACON-EXT-2393785",
+      "product_name": "Yamba 1 Light Wall Bracket In White With Frosted Glass Diffuser",
+      "page": "https://www.beaconlighting.com.au/yamba-1-light-wall-bracket-in-white-with-frosted-glass-diffuser",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/3/2393785.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/239378.jpg",
+      "bytes": 61635
+    },
+    {
+      "product_code": "BEACON-EXT-2393762",
+      "product_name": "Yamba 1 Light Wall Bracket In Black With Frosted Glass Diffuser",
+      "page": "https://www.beaconlighting.com.au/yamba-1-light-wall-bracket-in-black-with-frosted-glass-diffuser",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/3/2393762.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/239376.jpg",
+      "bytes": 82155
+    },
+    {
+      "product_code": "BEACON-EXT-2393773",
+      "product_name": "Yamba 1 Light Wall Bracket In Bronze With Frosted Glass Diffuser",
+      "page": "https://www.beaconlighting.com.au/yamba-1-light-wall-bracket-in-bronze-with-frosted-glass-diffuser",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/3/2393773.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/239377.jpg",
+      "bytes": 70650
+    },
+    {
+      "product_code": "BEACON-EXT-2402620",
+      "product_name": "Alert Ii 2 Light Floodlight In Black",
+      "page": "https://www.beaconlighting.com.au/alert-ii-2-light-floodlight-in-black",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/4/2402620.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/240262.jpg",
+      "bytes": 122404
+    },
+    {
+      "product_code": "BEACON-EXT-2396410",
+      "product_name": "Peninsula LED Adjustable Warm White Spot Light In White",
+      "page": "https://www.beaconlighting.com.au/peninsula-led-adjustable-warm-white-spot-light-in-white",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/3/2396410.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "failed",
+      "reason": "product page: HTTP 404"
+    },
+    {
+      "product_code": "BEACON-EXT-2409270",
+      "product_name": "Ledlux Field 50w LED Exterior Flood Light With Sensor In Black",
+      "page": "https://www.beaconlighting.com.au/ledlux-field-50w-led-exterior-flood-light-with-sensor-in-black",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/4/2409270.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/240927.jpg",
+      "bytes": 92898
+    },
+    {
+      "product_code": "BEACON-EXT-2395504",
+      "product_name": "Southampton 1 Light Small Wall Sconce In White",
+      "page": "https://www.beaconlighting.com.au/southampton-1-light-small-wall-sconce-in-white",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/3/2395504.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/239550.jpg",
+      "bytes": 55360
+    },
+    {
+      "product_code": "BEACON-EXT-2313300",
+      "product_name": "Northampton 1 Light Small Hexagon Exterior Wall Bracket In Black",
+      "page": "https://www.beaconlighting.com.au/northampton-1-light-small-hexagon-exterior-wall-bracket-in-black",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/3/2313300_1.png?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/231330.jpg",
+      "bytes": 117669
+    },
+    {
+      "product_code": "BEACON-EXT-2409250",
+      "product_name": "Ledlux Field 30w LED Exterior Flood Light With Sensor In Black",
+      "page": "https://www.beaconlighting.com.au/ledlux-field-30w-led-exterior-flood-light-with-sensor-in-black",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/4/2409250_1.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/240925.jpg",
+      "bytes": 88896
+    },
+    {
+      "product_code": "BEACON-EXT-2396210",
+      "product_name": "Balmoral 1 Light Small Exterior Wall Bracket In Bronze",
+      "page": "https://www.beaconlighting.com.au/balmoral-1-light-small-exterior-wall-bracket-in-bronze",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/3/2396210.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/239621.jpg",
+      "bytes": 66224
+    },
+    {
+      "product_code": "BEACON-EXT-2313920",
+      "product_name": "Made By Mayfair Seaside St Kilda Exterior Wall Bracket In Aged Solid Bronze With Spanish Alabaster Shade",
+      "page": "https://www.beaconlighting.com.au/made-by-mayfair-seaside-st-kilda-exterior-wall-bracket-in-aged-solid-bronze-with-spanish-alabaster-shade",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/3/2313920.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/231392.jpg",
+      "bytes": 56517
+    },
+    {
+      "product_code": "BEACON-EXT-23964410",
+      "product_name": "Peninsula LED Adjustable Cool White Spot Light In White",
+      "page": "https://www.beaconlighting.com.au/peninsula-led-adjustable-cool-white-spot-light-in-white",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/3/23964410.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/239643.jpg",
+      "bytes": 83261
+    },
+    {
+      "product_code": "BEACON-EXT-2370160",
+      "product_name": "Mfl Glebe 2 Light 12V LED Up Down Spot Light In Black",
+      "page": "https://www.beaconlighting.com.au/mfl-glebe-2-light-12v-led-up-down-spot-light-in-black",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/3/2370160_1.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "failed",
+      "reason": "product page: HTTP 404"
+    },
+    {
+      "product_code": "BEACON-EXT-2304430",
+      "product_name": "Made By Mayfair Seaside Adjustable Exterior Wall Spot In Verdigris",
+      "page": "https://www.beaconlighting.com.au/made-by-mayfair-seaside-adjustable-exterior-wall-spot-in-verdigris",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/3/2304430.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/230443.jpg",
+      "bytes": 81079
+    },
+    {
+      "product_code": "BEACON-EXT-2409220",
+      "product_name": "Ledlux Field 20w LED Exterior Flood Light In Black",
+      "page": "https://www.beaconlighting.com.au/ledlux-field-20w-led-exterior-flood-light-in-black",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/4/2409220.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/240922.jpg",
+      "bytes": 105312
+    },
+    {
+      "product_code": "BEACON-EXT-2409230",
+      "product_name": "Ledlux Field 20w LED Exterior Flood Light With Sensor In Black",
+      "page": "https://www.beaconlighting.com.au/ledlux-field-20w-led-exterior-flood-light-with-sensor-in-black",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/4/2409230.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/240923.jpg",
+      "bytes": 96165
+    },
+    {
+      "product_code": "BEACON-EXT-2461113",
+      "product_name": "Wanaka 2 Light 240V Up Down Exterior Wall Light In Black",
+      "page": "https://www.beaconlighting.com.au/wanaka-2-light-240v-up-down-exterior-wall-light-in-black",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/4/2461113.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/246111.jpg",
+      "bytes": 76329
+    },
+    {
+      "product_code": "BEACON-EXT-2396602",
+      "product_name": "Wanaka 2 Light 240V Up Down Exterior Wall Light In White",
+      "page": "https://www.beaconlighting.com.au/wanaka-2-light-240v-up-down-exterior-wall-light-in-white",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/3/2396602.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/239660.jpg",
+      "bytes": 45033
+    },
+    {
+      "product_code": "BEACON-EXT-2400011",
+      "product_name": "Wanaka 2 Light 240V Adjustable Wall Light With Sensor In Black",
+      "page": "https://www.beaconlighting.com.au/wanaka-2-light-240v-adjustable-wall-light-with-sensor-in-black",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/4/2400011.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/240001.jpg",
+      "bytes": 49334
+    },
+    {
+      "product_code": "BEACON-EXT-2396622",
+      "product_name": "Wanaka 2 Light 240V Adjustable Exterior Wall Light In White",
+      "page": "https://www.beaconlighting.com.au/wanaka-2-light-240v-adjustable-exterior-wall-light-in-white",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/3/2396622.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/239662.jpg",
+      "bytes": 38649
+    },
+    {
+      "product_code": "BEACON-EXT-2461124",
+      "product_name": "Wanaka 2 Light 240V Up Down Exterior Wall Light With Sensor In Black",
+      "page": "https://www.beaconlighting.com.au/wanaka-2-light-240v-up-down-exterior-wall-light-with-sensor-in-black",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/4/2461124.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/246112.jpg",
+      "bytes": 88593
+    },
+    {
+      "product_code": "BEACON-EXT-2393814",
+      "product_name": "Southampton 1 Light Small Wall Bracket With Microwave Sensor In Antique Black With Bronze Accents",
+      "page": "https://www.beaconlighting.com.au/southampton-1-light-small-wall-bracket-with-microwave-sensor-in-antique-black-with-bronze-accents",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/3/2393814_1.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/239381.jpg",
+      "bytes": 87784
+    },
+    {
+      "product_code": "BEACON-EXT-2211632",
+      "product_name": "Raya Small Solar LED Bollard With Sensor In Black",
+      "page": "https://www.beaconlighting.com.au/raya-small-solar-led-bollard-with-sensor-in-black",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/2/2211632.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/221163.jpg",
+      "bytes": 30590
+    },
+    {
+      "product_code": "BEACON-EXT-2211600",
+      "product_name": "Raya Small Solar LED Pillar Mount Light With Sensor In Black",
+      "page": "https://www.beaconlighting.com.au/raya-small-solar-led-pillar-mount-light-with-sensor-in-black",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/2/2211600.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/221160.jpg",
+      "bytes": 41845
+    },
+    {
+      "product_code": "BEACON-EXT-2291292",
+      "product_name": "Sunset Solar LED Spike Spot In Black",
+      "page": "https://www.beaconlighting.com.au/sunset-solar-led-spike-spot-in-black",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/2/2291292.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/229129.jpg",
+      "bytes": 49539
+    },
+    {
+      "product_code": "BEACON-EXT-2409350",
+      "product_name": "Captain Small Solar LED Flood Light With Sensor In Black",
+      "page": "https://www.beaconlighting.com.au/captain-small-solar-led-flood-light-with-sensor-in-black",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/4/2409350.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/240935.jpg",
+      "bytes": 114686
+    },
+    {
+      "product_code": "BEACON-EXT-2211620",
+      "product_name": "Raya Pillar Mount For Large Solar LED Light Head In Black",
+      "page": "https://www.beaconlighting.com.au/raya-pillar-mount-for-large-solar-led-light-head-in-black",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/2/2211620.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/221162.jpg",
+      "bytes": 51215
+    },
+    {
+      "product_code": "BEACON-EXT-2292507",
+      "product_name": "Kewarra LED Solar Bollard In Black",
+      "page": "https://www.beaconlighting.com.au/kewarra-led-solar-bollard-in-black",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/2/2292507.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/229250.jpg",
+      "bytes": 31404
+    },
+    {
+      "product_code": "BEACON-EXT-2211640",
+      "product_name": "Raya 2m Post For Large Solar LED Light Head In Black",
+      "page": "https://www.beaconlighting.com.au/raya-2m-post-for-large-solar-led-light-head-in-black",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/2/2211640.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/221164.jpg",
+      "bytes": 28790
+    },
+    {
+      "product_code": "BEACON-EXT-2211610",
+      "product_name": "Raya Large Solar LED Light Head Only In Black",
+      "page": "https://www.beaconlighting.com.au/raya-large-solar-led-light-head-only-in-black",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/2/2211610.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/221161.jpg",
+      "bytes": 46902
+    },
+    {
+      "product_code": "BEACON-EXT-2211202",
+      "product_name": "Taylor Solar LED Bollard With Sensor In Black",
+      "page": "https://www.beaconlighting.com.au/taylor-solar-led-bollard-with-sensor-in-black",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/2/2211202.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/221120.jpg",
+      "bytes": 29367
+    },
+    {
+      "product_code": "BEACON-EXT-2211263",
+      "product_name": "Sunset Solar 4 Light LED Spike Spot Kit In Black",
+      "page": "https://www.beaconlighting.com.au/sunset-solar-4-light-led-spike-spot-kit-in-black",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/2/2211263.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/221126.jpg",
+      "bytes": 123320
+    },
+    {
+      "product_code": "BEACON-EXT-2210150",
+      "product_name": "Sunset Opal Solar LED Wall Bracket With Sensor In Black",
+      "page": "https://www.beaconlighting.com.au/sunset-opal-solar-led-wall-bracket-with-sensor-in-black",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/2/2210150.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/221015.jpg",
+      "bytes": 43784
+    },
+    {
+      "product_code": "BEACON-EXT-2291261",
+      "product_name": "Sunset Solar 1 Light Adjustable Bollard In Stainless Steel",
+      "page": "https://www.beaconlighting.com.au/sunset-solar-1-light-adjustable-bollard-in-stainless-steel",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/2/2291261_1.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/229126.jpg",
+      "bytes": 37981
+    },
+    {
+      "product_code": "BEACON-EXT-2409361",
+      "product_name": "Captain Large Solar LED Flood Light With Sensor In Black",
+      "page": "https://www.beaconlighting.com.au/captain-large-solar-led-flood-light-with-sensor-in-black",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/4/2409361.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/240936.jpg",
+      "bytes": 151733
+    },
+    {
+      "product_code": "BEACON-EXT-2210160",
+      "product_name": "Sunset Opal Solar LED Wall Bracket With Sensor In White",
+      "page": "https://www.beaconlighting.com.au/sunset-opal-solar-led-wall-bracket-with-sensor-in-white",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/2/2210160.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/221016.jpg",
+      "bytes": 38136
+    },
+    {
+      "product_code": "BEACON-EXT-2211250",
+      "product_name": "Sunset Illumi Solar LED Wall Bracket With 240V Backup And Sensor In Black",
+      "page": "https://www.beaconlighting.com.au/sunset-illumi-solar-led-wall-bracket-with-240v-backup-and-sensor-in-black",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/2/2211250.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/221125.jpg",
+      "bytes": 43357
+    },
+    {
+      "product_code": "BEACON-EXT-2409400",
+      "product_name": "Sunset Solar Dela Security Light With Motion Sensor In Black",
+      "page": "https://www.beaconlighting.com.au/sunset-solar-dela-security-light-with-motion-sensor-in-black",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/4/2409400.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/240940.jpg",
+      "bytes": 73542
+    },
+    {
+      "product_code": "BEACON-EXT-2211150",
+      "product_name": "Ted Solar Rechargable Multi Functional LED Utility Light In Assorted Colours",
+      "page": "https://www.beaconlighting.com.au/ted-solar-rechargable-multi-functional-led-utility-light-in-assorted-colours",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/2/2211150.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/221115.jpg",
+      "bytes": 66447
+    },
+    {
+      "product_code": "BEACON-EXT-2211800",
+      "product_name": "Halo Hybrid Solar 12V 24V 30m Bud Lights In Black",
+      "page": "https://www.beaconlighting.com.au/halo-hybrid-solar-12v-24v-30m-bud-lights-in-black",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/2/2211800.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/221180.jpg",
+      "bytes": 226995
+    },
+    {
+      "product_code": "BEACON-EXT-2308846",
+      "product_name": "Southampton 1 Light Small Wall Bracket In Antique Black With Bronze Accents",
+      "page": "https://www.beaconlighting.com.au/southampton-1-light-small-wall-bracket-in-antique-black-with-bronze-accents",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/3/2308846.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/230884.jpg",
+      "bytes": 111745
+    },
+    {
+      "product_code": "BEACON-EXT-2308825",
+      "product_name": "Southampton 1 Light Small Wall Sconce In Antique Black With Bronze Accents",
+      "page": "https://www.beaconlighting.com.au/southampton-1-light-small-wall-sconce-in-antique-black-with-bronze-accents",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/3/2308825.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/230882.jpg",
+      "bytes": 68875
+    },
+    {
+      "product_code": "BEACON-EXT-DUSK-1-LIGHT-LARGE-EXTERIOR-IP44-PENDANT-IN-MATTE-BLACK-",
+      "product_name": "Dusk 1 Light Large Exterior IP44 Pendant In Matte Black With Opal Acrylic Shade",
+      "page": "https://www.beaconlighting.com.au/dusk-1-light-large-exterior-ip44-pendant-in-matte-black-with-opal-acrylic-shade",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/z/1/z183512.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/018351.jpg",
+      "bytes": 28570
+    },
+    {
+      "product_code": "BEACON-EXT-2308892",
+      "product_name": "Southampton 1 Light Large Exterior Pendant In Antique Black With Bronze Accents",
+      "page": "https://www.beaconlighting.com.au/southampton-1-light-large-exterior-pendant-in-antique-black-with-bronze-accents",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/3/2308892.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/230889.jpg",
+      "bytes": 48785
+    },
+    {
+      "product_code": "BEACON-EXT-DUSK-1-LIGHT-SMALL-EXTERIOR-IP44-PENDANT-IN-MATTE-BLACK-",
+      "product_name": "Dusk 1 Light Small Exterior IP44 Pendant In Matte Black With Opal Acrylic Shade",
+      "page": "https://www.beaconlighting.com.au/dusk-1-light-small-exterior-ip44-pendant-in-matte-black-with-opal-acrylic-shade",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/z/1/z183502.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/018350.jpg",
+      "bytes": 28262
+    },
+    {
+      "product_code": "BEACON-EXT-2308860",
+      "product_name": "Southampton 1 Light DIY Undereave Light In Antique Black",
+      "page": "https://www.beaconlighting.com.au/southampton-1-light-diy-undereave-light-in-antique-black",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/3/2308860.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/230886.jpg",
+      "bytes": 86473
+    },
+    {
+      "product_code": "BEACON-EXT-2308871",
+      "product_name": "Southampton 1 Light Small Exterior Pendant In Antique Black With Bronze Accents",
+      "page": "https://www.beaconlighting.com.au/southampton-1-light-small-exterior-pendant-in-antique-black-with-bronze-accents",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/3/2308871.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/230887.jpg",
+      "bytes": 41613
+    },
+    {
+      "product_code": "BEACON-EXT-CHRYSLER-1-LIGHT-EXTERIOR-IP44-ROD-SUSPENSION-IN-BLACK",
+      "product_name": "Chrysler 1 Light Exterior IP44 Rod Suspension In Black",
+      "page": "https://www.beaconlighting.com.au/chrysler-1-light-exterior-ip44-rod-suspension-in-black",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/z/3/z392380.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/039238.jpg",
+      "bytes": 30052
+    },
+    {
+      "product_code": "BEACON-EXT-2308881",
+      "product_name": "Southampton 1 Light Medium Exterior Pendant In Antique Black With Bronze Accents",
+      "page": "https://www.beaconlighting.com.au/southampton-1-light-medium-exterior-pendant-in-antique-black-with-bronze-accents",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/3/2308881.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/230888.jpg",
+      "bytes": 45214
+    },
+    {
+      "product_code": "BEACON-EXT-2294064",
+      "product_name": "Wanaka 1 Light 12 24V Pendant With DIY Quick Connect In Black",
+      "page": "https://www.beaconlighting.com.au/wanaka-1-light-12-24v-pendant-with-diy-quick-connect-in-black",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/2/2294064.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/229406.jpg",
+      "bytes": 30551
+    },
+    {
+      "product_code": "BEACON-EXT-1214541",
+      "product_name": "Ge 6 5w Glass Opal Es LED Gls Globe In Warm White",
+      "page": "https://www.beaconlighting.com.au/ge-6-5w-glass-opal-es-led-gls-globe-in-warm-white",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/1/2/1214541.png?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/121454.jpg",
+      "bytes": 94665
+    },
+    {
+      "product_code": "BEACON-EXT-1215090",
+      "product_name": "Ge 4 9w LED Gu10 Globe In Warm White",
+      "page": "https://www.beaconlighting.com.au/ge-4-9w-led-gu10-globe-in-warm-white",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/1/2/1215090.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/121509.jpg",
+      "bytes": 154401
+    },
+    {
+      "product_code": "BEACON-EXT-1214501",
+      "product_name": "Ge 4 8w Glass Opal Es LED Gls Globe In Warm White",
+      "page": "https://www.beaconlighting.com.au/ge-4-8w-glass-opal-es-led-gls-globe-in-warm-white",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/1/2/1214501.png?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/121450.jpg",
+      "bytes": 94469
+    },
+    {
+      "product_code": "BEACON-EXT-2000261",
+      "product_name": "Thermalite 3 In 1 Bathroom Heater Exhaust Fan And Light In White With 2x 275w Heat Lamps",
+      "page": "https://www.beaconlighting.com.au/thermalite-3-in-1-bathroom-heater-exhaust-fan-and-light-in-white-with-2x-275w-heat-lamps",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/0/2000261.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/200026.jpg",
+      "bytes": 160311
+    },
+    {
+      "product_code": "BEACON-EXT-1281620",
+      "product_name": "Lucci 18w 200mm Gx53 LED Cct Dimmable Globe",
+      "page": "https://www.beaconlighting.com.au/lucci-18w-200mm-gx53-led-cct-dimmable-globe",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/1/2/1281620.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/128162.jpg",
+      "bytes": 33455
+    },
+    {
+      "product_code": "BEACON-EXT-1700657",
+      "product_name": "Eclipse Maxi LED Recessed Colour Switch 90mm Cut Out Downlight In White",
+      "page": "https://www.beaconlighting.com.au/eclipse-maxi-led-recessed-colour-switch-90mm-cut-out-downlight-in-white",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/1/7/1700657_1.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/170065.jpg",
+      "bytes": 43991
+    },
+    {
+      "product_code": "BEACON-EXT-1215712",
+      "product_name": "Ge 7w Clear LED G95 Es Globe In Warm White",
+      "page": "https://www.beaconlighting.com.au/ge-7w-clear-led-g95-es-globe-in-warm-white",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/1/2/1215712.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/121571.jpg",
+      "bytes": 52890
+    },
+    {
+      "product_code": "BEACON-EXT-1281610",
+      "product_name": "Lucci 12w 152mm Gx53 LED Cct Dimmable Globe",
+      "page": "https://www.beaconlighting.com.au/lucci-12w-152mm-gx53-led-cct-dimmable-globe",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/1/2/1281610.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/128161.jpg",
+      "bytes": 33521
+    },
+    {
+      "product_code": "BEACON-EXT-2130243",
+      "product_name": "Bayside Somerset 122cm Fan In White",
+      "page": "https://www.beaconlighting.com.au/bayside-somerset-122cm-fan-in-white",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/1/2130243.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/213024.jpg",
+      "bytes": 31071
+    },
+    {
+      "product_code": "BEACON-EXT-1215550",
+      "product_name": "Ge 7w Heritage LED Gls Es Globe In Warm White",
+      "page": "https://www.beaconlighting.com.au/ge-7w-heritage-led-gls-es-globe-in-warm-white",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/1/2/1215550.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/121555.jpg",
+      "bytes": 58303
+    },
+    {
+      "product_code": "BEACON-EXT-1215920",
+      "product_name": "Ge 4w Heritage LED Candle Ses Globe In Warm White",
+      "page": "https://www.beaconlighting.com.au/ge-4w-heritage-led-candle-ses-globe-in-warm-white",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/1/2/1215920.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/121592.jpg",
+      "bytes": 55873
+    },
+    {
+      "product_code": "BEACON-EXT-2130401",
+      "product_name": "Whitehaven 142cm Dc Fan In White",
+      "page": "https://www.beaconlighting.com.au/whitehaven-142cm-dc-fan-in-white",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/1/2130401.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/213040.jpg",
+      "bytes": 65152
+    },
+    {
+      "product_code": "BEACON-EXT-2000301",
+      "product_name": "Thermalite 3 In 1 Bathroom Heater Exhaust Fan And Light In White With 4x 275w Heat Lamps",
+      "page": "https://www.beaconlighting.com.au/thermalite-3-in-1-bathroom-heater-exhaust-fan-and-light-in-white-with-4x-275w-heat-lamps",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/0/2000301.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/200030.jpg",
+      "bytes": 167331
+    },
+    {
+      "product_code": "BEACON-EXT-2133045",
+      "product_name": "Slipstream 122cm Dc Fan With Light In White",
+      "page": "https://www.beaconlighting.com.au/slipstream-122cm-dc-fan-with-light-in-white",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/2/1/2133045.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/213304.jpg",
+      "bytes": 33192
+    },
+    {
+      "product_code": "BEACON-EXT-1216172",
+      "product_name": "Ge 7 5w Heritage Dimmable LED Pilot Es Globe In Warm White",
+      "page": "https://www.beaconlighting.com.au/ge-7-5w-heritage-dimmable-led-pilot-es-globe-in-warm-white",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/1/2/1216172.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/121617.jpg",
+      "bytes": 49422
+    },
+    {
+      "product_code": "BEACON-EXT-1214870",
+      "product_name": "Ge 4 7w LED Opal Ses Candle Warm White Globe",
+      "page": "https://www.beaconlighting.com.au/ge-4-7w-led-opal-ses-candle-warm-white-globe",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/1/2/1214870.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/121487.jpg",
+      "bytes": 39192
+    },
+    {
+      "product_code": "BEACON-EXT-1211000",
+      "product_name": "Ge 3 4w Gu10 Globe In Warm White",
+      "page": "https://www.beaconlighting.com.au/ge-3-4w-gu10-globe-in-warm-white",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/1/2/1211000.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/121100.jpg",
+      "bytes": 64774
+    },
+    {
+      "product_code": "BEACON-EXT-1281630",
+      "product_name": "Lucci 21w 220mm Gx53 LED Cct Dimmable Globe",
+      "page": "https://www.beaconlighting.com.au/lucci-21w-220mm-gx53-led-cct-dimmable-globe",
+      "previous_image": "https://www.beaconlighting.com.au/media/catalog/product/1/2/1281630.jpg?quality=85&bg-color=255,255,255&fit=bounds&width=360&height=450&canvas=360:450",
+      "status": "repaired",
+      "new_image": "https://assets.beaconlighting.com.au/images/128163.jpg",
+      "bytes": 34354
+    }
+  ]
+}

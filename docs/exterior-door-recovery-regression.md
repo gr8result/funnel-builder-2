@@ -17,7 +17,7 @@ The selection-book loading effect also now depends on the primitive workspace ID
 - Chrome Profile 6 IndexedDB `estimate-builder-template-db`, `jobs`, key `job:03-09/123`, saved `2026-09-05T00:58:52.224Z`: the current selection-book aliases contain only `Entry Door Included Selection`, model `Standard`, with no guided product. Metadata was read offline, then that single record was decoded offline to extract selection fields only. No original Takeoff data entered React, the workbook application or a browser page.
 - Downloads `Johnson 123.gr8job` and `New Job 03 09.gr8job` both internally identify **New Job 03/09**, `03-09/123`. Only their job-details and client-selections ZIP members were inspected, not their estimate/Takeoff member. Both have the same generic entry-door placeholder.
 
-The Savoy belongs to the server project Johnson 123; it must not be substituted into New Job 03/09. Original records, localStorage, IndexedDB and downloaded jobs were not cleared, migrated or overwritten. Audit evidence is in `test-artifacts/manual-entry-door-recovery/` (`server-audit.json`, `local-storage-audit.json`, `saved-files-audit.json`, `indexeddb-current-selection-audit.json`).
+The Savoy belongs to the server project Johnson 123; it must not be substituted into New Job 03/09. Original records, localStorage, IndexedDB and downloaded jobs were not cleared, migrated or overwritten. Audit evidence is in `artifacts/test-artifacts/manual-entry-door-recovery/` (`server-audit.json`, `local-storage-audit.json`, `saved-files-audit.json`, `indexeddb-current-selection-audit.json`).
 
 ## Verification
 
@@ -28,8 +28,8 @@ Live scripts use separate Chrome profiles and synthetic jobs, with all Supabase 
 - `scripts/verify-manual-entry-door-recovery-live.mjs`: Client Selections → Exterior → Entry Doors → saved Savoy visible → manual location/quantity → Door Furniture → four brands → Lemaar/options → Confirm → Save Progress → refresh → reopen saved test job → same door, hardware, finish and quantity.
 - `scripts/verify-empty-entry-door-live.mjs`: no door selection and no Takeoff schedule → Add Entry Door → location/level → Hume design/size/configuration/finish/glazing → Zanda hardware → Confirm → Save Progress → refresh → chosen door and manual location remain.
 
-Runtime reports and screenshots are in `test-artifacts/manual-entry-door-recovery/live/` and `empty-live/`. Reports, rather than the presence of screenshots from an earlier run, determine pass/fail.
+Runtime reports and screenshots are in `artifacts/test-artifacts/manual-entry-door-recovery/live/` and `empty-live/`. Reports, rather than the presence of screenshots from an earlier run, determine pass/fail.
 
 Both live reports passed on 6 September 2026 with zero page errors. The reopened legacy fixture retains Savoy XS26-1200, Lemaar Zalla Chrome Plate, quantity 2 and Front Entry / Ground. The empty-job fixture retains Hume Carringbush XCB1 and Zanda hardware at the manually added Side Entry / Ground location after refresh. Lint completed successfully with existing warnings. The manual-door, furniture, navigation, exterior-door and Takeoff recovery regression scripts passed.
 
-Full repository typecheck is not clean: the completed run reported `TS2307` in `test-results/job-persistence-repair-before/useJobFile.ts:13` because the backup imports `../lib/jobFile`, which does not exist at that relative location. Subsequent broad reruns were stopped after several minutes; no full typecheck pass is claimed. That unrelated backup was left untouched.
+Full repository typecheck is not clean: the completed run reported `TS2307` in `artifacts/test-results/job-persistence-repair-before/useJobFile.ts:13` because the backup imports `../lib/jobFile`, which does not exist at that relative location. Subsequent broad reruns were stopped after several minutes; no full typecheck pass is claimed. That unrelated backup was left untouched.

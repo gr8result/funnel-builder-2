@@ -15,7 +15,7 @@ dotenv.config({ path: ".env", quiet: true });
 
 const baseUrl = process.env.PRODUCT_LIBRARY_TEST_URL || "http://localhost:3000/modules/estimate-builder?page=productLibrary";
 const ownerEmail = process.env.PRODUCT_LIBRARY_TEST_EMAIL || "support@gr8result.com";
-const outDir = path.join(process.cwd(), "test-artifacts", "exterior-catalogue-grouping", String(Date.now()));
+const outDir = path.join(process.cwd(), "artifacts/test-artifacts", "exterior-catalogue-grouping", String(Date.now()));
 fs.mkdirSync(outDir, { recursive: true });
 
 async function mintSession() {

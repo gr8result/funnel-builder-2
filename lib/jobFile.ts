@@ -80,6 +80,16 @@ export type JobFileData = {
 
 export type JobFileHandle = FileSystemFileHandle | null;
 
+// A distinct class, not a string message, so a handler can tell "the stored handle belongs to
+// a different job" apart from every other way reading or writing a file can fail (a missing
+// file, a corrupt zip, a permissions error) without parsing error text.
+class WrongJobFileError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "WrongJobFileError";
+  }
+}
+
 export type JobFileResult = {
   ok: boolean;
   cancelled?: boolean;
@@ -88,6 +98,16 @@ export type JobFileResult = {
   fileName?: string;
   data?: JobFileData;
   storageLocation?: "computer-file" | "download";
+  // The stored/chosen handle points at a real .gr8job file, but reading it back shows a
+  // different job's identity. Returned rather than thrown so a caller can decide what "a
+  // wrong file" should mean for the operation it is actually performing - saveJob treats it
+  // as a reason to fall back to a safe internal save, saveJobAs treats it as a reason to ask
+  // the user to choose again. Neither must let it become an uncaught exception.
+  wrongJobFile?: boolean;
+  // Set on saveJob's own fallback result (handle is deliberately null on that result) so the
+  // caller storing the handle knows to actively forget the stale one - not merely skip
+  // updating it, which would leave the same wrong handle in place for every future save.
+  clearedStaleHandle?: boolean;
 };
 
 const JOB_FILE_TYPES: FilePickerAcceptType[] = [
@@ -116,9 +136,8 @@ function slugFileName(name: string): string {
 }
 
 /**
- * JobFileData has no persistent unique id (see the JobFileData type above) — the
- * file itself, identified by name, is the closest stable identity a job has.
- * Slugified so it is safe to use as a storage key.
+ * @deprecated Legacy filename slug for old integrations only. Never use it as
+ * project identity: .gr8job packages carry a permanent jobId.
  */
 export function deriveJobId(fileName: string): string | null {
   const trimmed = String(fileName || "").trim();
@@ -173,7 +192,12 @@ function normalizeJobData(input: Partial<JobFileData> = {}): JobFileData {
     quotationSection,
     input,
   });
-  const jobId = String(sections.jobDetails.projectId || canonicalProjectId({ ...base, "job-details": sections.jobDetails })).trim();
+  const jobId = canonicalProjectId({ ...base, "job-details": sections.jobDetails });
+  if (workbook) {
+    base.workbook = { ...workbook, jobId };
+    sections.estimate.workbook = base.workbook;
+  }
+  sections.jobDetails = { ...sections.jobDetails, jobId };
   const manifestBase = { ...base, jobId, projectDetails: sections.jobDetails };
   return {
     ...base,
@@ -217,9 +241,14 @@ function buildMasterJobSections(
 ) {
   const workbook = base.workbook || {};
   const input = context.input;
+  const canonicalProjectEstimate = workbook.projectEstimateBuilder || asRecord(workbook.clientPage)?.proposalBuilder || null;
+  // Each saved location may contain an independent document. Preserve both when
+  // present; legacy jobs may have their only document under clientPage.
+  const workbookForPackage = workbook;
   return {
     jobDetails: {
       ...context.jobDetailsSection,
+      jobId: String(workbook.jobId || base.jobId || context.jobDetailsSection.jobId || ""),
       jobName: base.jobName,
       clientName: base.clientName,
       jobNumber: base.jobNumber,
@@ -233,11 +262,11 @@ function buildMasterJobSections(
     },
     estimate: {
       ...context.estimateSection,
-      workbook,
-      data: workbook.data || context.estimateSection.data || null,
-      quotation: workbook.quotation || context.estimateSection.quotation || null,
-      projectEstimate: base.projectEstimate || null,
-      summaryAdjustments: workbook.summaryAdjustments || base.pricing || {},
+      workbook: workbookForPackage,
+      data: workbookForPackage.data || context.estimateSection.data || null,
+      quotation: workbookForPackage.quotation || context.estimateSection.quotation || null,
+      projectEstimate: canonicalProjectEstimate ? null : base.projectEstimate || null,
+      summaryAdjustments: workbookForPackage.summaryAdjustments || base.pricing || {},
     },
     takeoff: {
       ...context.takeoffSection,
@@ -352,17 +381,18 @@ function canonicalProjectId(base: Partial<JobFileData>): string {
   const meta = workbook.jobFileMeta && typeof workbook.jobFileMeta === "object" ? workbook.jobFileMeta as Record<string, unknown> : {};
   const jobDetails = asRecord(base["job-details"]) || asRecord(base.projectDetails) || {};
   const manifestProject = base.manifest?.project && typeof base.manifest.project === "object" ? base.manifest.project as Record<string, unknown> : {};
-  const existing = base.jobId
+  const existing = workbook.jobId
+    || base.jobId
+    || jobDetails.jobId
     || jobDetails.projectId
     || manifestProject.id
     || base.manifest?.projectId
     || meta.projectId
     || workbook.projectId
     || workbook.id
-    || workbook.jobId
-    || base.jobNumber;
+    || asRecord(workbook.registeredJob)?.jobId;
   if (existing) return String(existing);
-  return `local-${slugFileName(`${base.jobName || "job"}-${base.address || ""}`).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "job"}`;
+  return crypto.randomUUID();
 }
 
 function sectionFileEntries(payload: JobFileData): Record<string, unknown> {
@@ -756,10 +786,14 @@ export async function writeJob(handle: JobFileHandle, job: Partial<JobFileData>)
         existing = { fileName: handle.name, bytes: await currentFile.arrayBuffer() };
         if (existing.bytes.byteLength) {
           const previous = await readJob(currentFile);
-          if (previous.jobId !== payload.jobId) throw new Error("This computer file belongs to a different job. Choose a different file.");
+          if (previous.jobId !== payload.jobId) throw new WrongJobFileError("This computer file belongs to a different job. Choose a different file.");
           payload = nextSavePayload({ ...job, masterRevision: Math.max(Number(job.masterRevision || 0), Number(previous.masterRevision || 0)) });
         }
       } catch (error) {
+        // A file genuinely belonging to a different job is not a read failure - it must reach
+        // the caller exactly as WrongJobFileError, not be folded into the generic
+        // "cannot preserve" message that a real read failure gets below.
+        if (error instanceof WrongJobFileError) throw error;
         const missing = (error as { code?: string; name?: string }).code === "ENOENT" || (error as Error).name === "NotFoundError";
         if (!missing) throw new Error(`Cannot preserve the previous computer file: ${(error as Error).message}`);
       }
@@ -783,6 +817,12 @@ export async function writeJob(handle: JobFileHandle, job: Partial<JobFileData>)
       if (isAbortLikeFileSystemError(error)) {
         return { ok: true, cancelled: true, handle, data: payload };
       }
+      // Returned rather than thrown: this handle pointing at the wrong job is expected,
+      // recoverable input for saveJob/saveJobAs to act on (see their own handling), never a
+      // reason for the whole save operation - or the page - to crash.
+      if (error instanceof WrongJobFileError) {
+        return { ok: false, wrongJobFile: true, handle, data: payload, message: error.message };
+      }
       throw error;
     }
   }
@@ -802,26 +842,7 @@ export async function writeJob(handle: JobFileHandle, job: Partial<JobFileData>)
 }
 
 export async function createNewJob(job: Partial<JobFileData>): Promise<JobFileResult> {
-  const payload = normalizeJobData(job);
-
-  if (!supportsFileSystemAccess()) {
-    return writeJob(null, payload);
-  }
-
-  try {
-    const handle = await (window as FilePickerWindow).showSaveFilePicker?.({
-      suggestedName: buildSuggestedName(payload.jobName),
-      types: JOB_FILE_TYPES,
-      excludeAcceptAllOption: false,
-    });
-    if (!handle) return { ok: true, cancelled: true, data: payload };
-    return writeJob(handle, payload);
-  } catch (error: unknown) {
-    if (isAbortLikeFileSystemError(error)) {
-      return { ok: true, cancelled: true, data: payload };
-    }
-    throw error;
-  }
+  return saveJobAs(job);
 }
 
 export async function openJob(): Promise<JobFileResult> {
@@ -864,7 +885,24 @@ export async function saveJob(job: Partial<JobFileData>, currentHandle: JobFileH
     return fallbackToSaveAs ? saveJobAs(job) : { ok: false, message: "No active job file handle." };
   }
   try {
-    return await writeJob(currentHandle, job);
+    const result = await writeJob(currentHandle, job);
+    // Save Job is the normal, no-dialog save: the linked computer file belonging to a
+    // different job (a stale link, most often left over from an earlier recovery that
+    // reassigned this job's id) must not stop the job itself from being saved, and must not
+    // pop an unexpected file picker either - that is what "Save Job to Computer File" is for.
+    // Clearing the handle here (returning none) is what actually breaks the stale link:
+    // useJobFile.save() only keeps a handle it is given back.
+    if (result.wrongJobFile) {
+      const fallback = await writeJob(null, job);
+      return {
+        ...fallback,
+        clearedStaleHandle: true,
+        message: fallback.ok
+          ? `Job saved as a new file - the previously linked computer file belongs to a different job, so it was not updated. Use "Save Job to Computer File" to link a file for this job. ${fallback.message || ""}`.trim()
+          : fallback.message,
+      };
+    }
+    return result;
   } catch (error: unknown) {
     const message = String((error as Error)?.message || "");
     if (isAbortLikeFileSystemError(error)) {
@@ -898,23 +936,23 @@ function isStaleFileHandleError(message: string): boolean {
 }
 
 export async function saveJobAs(job: Partial<JobFileData>): Promise<JobFileResult> {
-  const payload = normalizeJobData(job);
-
   if (!supportsFileSystemAccess()) {
-    return writeJob(null, payload);
+    return writeJob(null, job);
   }
 
   try {
+    // Acquire the destination before normalizing or packaging a large workbook.
+    // That work can outlast the user activation required by the native picker.
     const handle = await (window as FilePickerWindow).showSaveFilePicker?.({
-      suggestedName: buildSuggestedName(payload.jobName),
+      suggestedName: buildSuggestedName(job.jobName || "Job"),
       types: JOB_FILE_TYPES,
       excludeAcceptAllOption: false,
     });
-    if (!handle) return { ok: true, cancelled: true, data: payload };
-    return writeJob(handle, payload);
+    if (!handle) return { ok: true, cancelled: true };
+    return writeJob(handle, job);
   } catch (error: unknown) {
     if (isAbortLikeFileSystemError(error)) {
-      return { ok: true, cancelled: true, data: payload };
+      return { ok: true, cancelled: true };
     }
     throw error;
   }

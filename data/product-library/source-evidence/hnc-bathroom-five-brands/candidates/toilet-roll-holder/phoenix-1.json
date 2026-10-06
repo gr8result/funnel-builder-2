@@ -1,0 +1,2905 @@
+{
+  "data": {
+    "products": {
+      "total_count": 30,
+      "page_info": {
+        "total_pages": 2
+      },
+      "items": [
+        {
+          "id": 24567,
+          "sku": "144-8200-40",
+          "vendorcode": "144-8200-40",
+          "name": "Wiltern Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/4/144-8200-40_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/4/144-8200-40_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/4/144-8200-40_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/4/144-8200-40_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/4/144-8200-40_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/4/144-8200-40_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Twin screw mounting plate <br>• Designed in Australia<br>• Durable, high quality finish</p>"
+          },
+          "short_description": {
+            "html": "<p>Wiltern Toilet Roll Holder</p>"
+          },
+          "product_dimensions": null,
+          "price_store": 121,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Wiltern"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "144-8200-40"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 24564,
+          "sku": "144-8200-00",
+          "vendorcode": "144-8200-00",
+          "name": "Wiltern Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/4/144-8200-00_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/4/144-8200-00_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/4/144-8200-00_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/4/144-8200-00_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/4/144-8200-00_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/4/144-8200-00_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Twin screw mounting plate <br>• Designed in Australia<br>• Durable, high quality finish</p>"
+          },
+          "short_description": {
+            "html": "<p>Wiltern Toilet Roll Holder</p>"
+          },
+          "product_dimensions": null,
+          "price_store": 99,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Wiltern"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "144-8200-00"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 24458,
+          "sku": "129820040",
+          "vendorcode": "129-8200-40",
+          "name": "Nuage Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8200-40_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8200-40_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/2/129-8200-40_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/2/129-8200-40_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8200-40_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8200-40_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Twin screw mounting plate <br>• Designed in Australia<br>• Durable, high quality finish<br>• Unique, organic design </p>"
+          },
+          "short_description": {
+            "html": "<p>Nuage Toilet Roll Holder</p>"
+          },
+          "product_dimensions": null,
+          "price_store": 166,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Nuage"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "129-8200-40"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 24456,
+          "sku": "129820000",
+          "vendorcode": "129-8200-00",
+          "name": "Nuage Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8200-00_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8200-00_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/2/129-8200-00_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/2/129-8200-00_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8200-00_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8200-00_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Twin screw mounting plate <br>• Designed in Australia<br>• Durable, high quality finish<br>• Unique, organic design </p>"
+          },
+          "short_description": {
+            "html": "<p>Nuage Toilet Roll Holder</p>"
+          },
+          "product_dimensions": null,
+          "price_store": 124,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Nuage"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "129-8200-00"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 19685,
+          "sku": "RA89231",
+          "vendorcode": "RA892-31",
+          "name": "Radii Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra89231_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra89231_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/r/a/ra89231_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/r/a/ra89231_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra89231_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra89231_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Round backplate<br>• Twin screw mounting plate<br>• Versatile design</p>"
+          },
+          "short_description": {
+            "html": "<p>Radii Toilet Roll Holder</p>"
+          },
+          "product_dimensions": "W138 x D79 x H54mm",
+          "price_store": 95,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W138 x D79 x H54mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Radii"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Grey",
+                    "value": "939"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "RA892-31"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Carbon"
+              }
+            ]
+          }
+        },
+        {
+          "id": 18560,
+          "sku": "GS89231",
+          "vendorcode": "GS892-31",
+          "name": "Gloss Toilet Roll Holder ",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs89231_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs89231_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/g/s/gs89231_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/g/s/gs89231_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs89231_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs89231_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Modern, compact design<br>• Twin screw mounting plate for a stable installation<br>• Designed in Australia<br>• Durable, high quality finish</p>"
+          },
+          "short_description": {
+            "html": "<p>Gloss Toilet Roll Holder</p>"
+          },
+          "product_dimensions": "W176 x D60 x H25mm",
+          "price_store": 154,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W176 x D60 x H25mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Gloss"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Grey",
+                    "value": "939"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "GS892-31"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Carbon"
+              }
+            ]
+          }
+        },
+        {
+          "id": 18535,
+          "sku": "111820031",
+          "vendorcode": "111-8200-31",
+          "name": "Vivid Slimline Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/111820031_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/111820031_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/111820031_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/111820000_phoenix_tech_1.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/111820031_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/111820000_phoenix_tech_1.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Level adjustment mechanism and concealed fixing<br>• Dual fixing for a secure mount<br>• Designed in Australia<br>• Durable, high quality finish</p>"
+          },
+          "short_description": {
+            "html": "<p>Vivid Slimline Toilet Roll Holder</p>"
+          },
+          "product_dimensions": "W180 x D30 x H85",
+          "price_store": 101,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W180 x D30 x H85"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Vivid"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Grey",
+                    "value": "939"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "111-8200-31"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Carbon"
+              }
+            ]
+          }
+        },
+        {
+          "id": 18523,
+          "sku": "134820010",
+          "vendorcode": "134-8200-10",
+          "name": "Cromford Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/3/134820010_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/3/134820010_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/3/134820010_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/3/134820010_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/3/134820010_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/3/134820010_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Twin screw mounting plate <br>• Designed in Australia<br>• Durable, high quality finish</p>"
+          },
+          "short_description": {
+            "html": "<p>Cromford Toilet Roll Holder</p>"
+          },
+          "product_dimensions": "W138 x D61 x H90mm",
+          "price_store": 105,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W138 x D61 x H90mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Cromford"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Matte Black",
+                    "value": "940"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "134-8200-10"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Black"
+              }
+            ]
+          }
+        },
+        {
+          "id": 18510,
+          "sku": "134820012",
+          "vendorcode": "134-8200-12",
+          "name": "Cromford Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/3/134820012_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/3/134820012_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/3/134820012_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/3/134820012_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/3/134820012_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/3/134820012_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Twin screw mounting plate <br>• Designed in Australia<br>• Durable, high quality finish</p>"
+          },
+          "short_description": {
+            "html": "<p>Cromford Toilet Roll Holder</p>"
+          },
+          "product_dimensions": "W138 x D61 x H90mm",
+          "price_store": 165,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W138 x D61 x H90mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Cromford"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "134-8200-12"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Gold"
+              }
+            ]
+          }
+        },
+        {
+          "id": 18507,
+          "sku": "134820000",
+          "vendorcode": "134-8200-00",
+          "name": "Cromford Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/3/134820000_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/3/134820000_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/3/134820000_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/3/134820000_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/3/134820000_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/3/134820000_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Twin screw mounting plate <br>• Designed in Australia<br>• Durable, high quality finish</p>"
+          },
+          "short_description": {
+            "html": "<p>Cromford Toilet Roll Holder</p>"
+          },
+          "product_dimensions": null,
+          "price_store": 92,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Cromford"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "134-8200-00"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 18495,
+          "sku": "134820040",
+          "vendorcode": "134-8200-40",
+          "name": "Cromford Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/3/134820040_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/3/134820040_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/3/134820040_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/3/134820040_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/3/134820040_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/3/134820040_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Twin screw mounting plate <br>• Designed in Australia<br>• Durable, high quality finish</p>"
+          },
+          "short_description": {
+            "html": "<p>Cromford Toilet Roll Holder</p>"
+          },
+          "product_dimensions": "W138 x D61 x H90mm",
+          "price_store": 119,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W138 x D61 x H90mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Cromford"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "134-8200-40"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 15891,
+          "sku": "111820012",
+          "vendorcode": "111-8200-12",
+          "name": "Vivid Slimline Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/111820012_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/111820012_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/111820012_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/111820012_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/111820012_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/111820012_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Unique fixing mechanism allows for quick level adjustment during installation<br />&bull; Matching tapware available to complete your bathroom look<br />&bull; Quality electroplated finish<br />&bull; Twin pillar installation for sturdier fixing<br />&bull; Available in other finishes</p>"
+          },
+          "short_description": {
+            "html": "<p>Vivid Slimline Toilet Roll Holder</p>"
+          },
+          "product_dimensions": "W180 x D30 x H85mm",
+          "price_store": 150,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W180 x D30 x H85mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Vivid"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "size_mm",
+                "selected_options": [
+                  {
+                    "label": "180",
+                    "value": "808"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "111-8200-12"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Gold"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14609,
+          "sku": "RS892BN",
+          "vendorcode": "RS892BN",
+          "name": "Radii Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/s/rs892bn_pheonix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/s/rs892bn_pheonix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/r/s/rs892bn_pheonix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/r/s/rs892bn_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/s/rs892bn_pheonix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/s/rs892bn_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Square flange<br />&bull; Australian designed<br />&bull; Will suit any contemporary bathroom<br />&bull; Wide, flat surfaces beautifully designed to complement modern trends</p>"
+          },
+          "short_description": {
+            "html": "Radii Toilet Roll Holder"
+          },
+          "product_dimensions": null,
+          "price_store": 95,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Radii"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "RS892BN"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14547,
+          "sku": "RA89212",
+          "vendorcode": "RA892-12",
+          "name": "Radii Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra89212_pheonix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra89212_pheonix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/r/a/ra89212_pheonix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/r/a/ra89212_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra89212_pheonix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra89212_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Round flange<br />&bull; Australian designed<br />&bull; Will suit any contemporary bathroom<br />&bull; Solid brass construction with a quality chrome finish<br />&bull; Wide, flat surfaces beautifully designed to complement modern trends</p>"
+          },
+          "short_description": {
+            "html": "Radii Toilet Roll Holder"
+          },
+          "product_dimensions": null,
+          "price_store": 111,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Radii"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Black Glass",
+                    "value": "938"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "RA892-12"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Gold"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14531,
+          "sku": "RA892BN",
+          "vendorcode": "RA892BN",
+          "name": "Radii Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra892bn_pheonix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra892bn_pheonix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/r/a/ra892bn_pheonix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/s/c/screenshot_2026-02-13_at_2.40.49_pm.png"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra892bn_pheonix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/s/c/screenshot_2026-02-13_at_2.40.49_pm.png"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Round flange<br />&bull; Australian designed<br />&bull; Will suit any contemporary bathroom<br />&bull; Solid brass construction with a quality chrome finish<br />&bull; Wide, flat surfaces beautifully designed to complement modern trends</p>"
+          },
+          "short_description": {
+            "html": "Radii Toilet Roll Holder"
+          },
+          "product_dimensions": null,
+          "price_store": 95,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Radii"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "RA892BN"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14523,
+          "sku": "GS892MB",
+          "vendorcode": "GS892MB",
+          "name": "Gloss Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs892mb_pheonix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs892mb_pheonix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/g/s/gs892mb_pheonix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/g/s/gs892mb_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs892mb_pheonix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs892mb_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Australian designed<br />&bull; Luminous body and style<br />&bull; Modern functional design<br />&bull; It's striking looks will compliment any modern interior design</p>"
+          },
+          "short_description": {
+            "html": "Gloss Toilet Roll Holder"
+          },
+          "product_dimensions": null,
+          "price_store": 154,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Gloss"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Matte Black",
+                    "value": "940"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "GS892MB"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Black"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14522,
+          "sku": "GS89240",
+          "vendorcode": "GS892-40",
+          "name": "Gloss Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs89240_pheonix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs89240_pheonix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/g/s/gs89240_pheonix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/g/s/gs89240_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs89240_pheonix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs89240_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Australian designed<br />&bull; Luminous body and style<br />&bull; Modern functional design<br />&bull; It's striking looks will compliment any modern interior design</p>"
+          },
+          "short_description": {
+            "html": "Gloss Toilet Roll Holder"
+          },
+          "product_dimensions": null,
+          "price_store": 154,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Gloss"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "GS892-40"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14459,
+          "sku": "GS89212",
+          "vendorcode": "GS892-12",
+          "name": "Gloss Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs89212_pheonix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs89212_pheonix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/g/s/gs89212_pheonix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/g/s/gs89212_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs89212_pheonix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs89212_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Australian designed<br />&bull; Luminous body and style<br />&bull; Modern functional design<br />&bull; It's striking looks will compliment any modern interior design</p>"
+          },
+          "short_description": {
+            "html": "Gloss Toilet Roll Holder"
+          },
+          "product_dimensions": null,
+          "price_store": 197,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Gloss"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "GS892-12"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Gold"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14433,
+          "sku": "111820010",
+          "vendorcode": "111-8200-10",
+          "name": "Vivid Slimline Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/111820010_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/111820010_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/111820010_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/111820010_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/111820010_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/111820010_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Unique fixing mechanism allows for quick level adjustment during installation<br />&bull; Matching tapware available to complete your bathroom look<br />&bull; Quality electroplated finish<br />&bull; Twin pillar installation for sturdier fixing<br />&bull; Available in chrome or brushed nickel or matte black</p>"
+          },
+          "short_description": {
+            "html": "Vivid Slimline Toilet Roll Holder"
+          },
+          "product_dimensions": null,
+          "price_store": 89,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Vivid"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Matte Black",
+                    "value": "940"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "111-8200-10"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Black"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14425,
+          "sku": "111820040",
+          "vendorcode": "111-8200-40",
+          "name": "Vivid Slimline Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/111820040_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/111820040_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/111820040_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/111820040_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/111820040_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/111820040_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Unique fixing mechanism allows for quick level adjustment during installation<br />&bull; Matching tapware available to complete your bathroom look<br />&bull; Quality electroplated finish<br />&bull; Twin pillar installation for sturdier fixing<br />&bull; Available in chrome or brushed nickel or matte black</p>"
+          },
+          "short_description": {
+            "html": "Vivid Slimline Toilet Roll Holder"
+          },
+          "product_dimensions": null,
+          "price_store": 101,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Vivid"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "111-8200-40"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14381,
+          "sku": "111820000",
+          "vendorcode": "111-8200-00",
+          "name": "Vivid Slimline Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/111820000_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/111820000_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/111820000_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/111820000_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/111820000_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/111820000_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Unique fixing mechanism allows for quick level adjustment during installation<br />&bull; Matching tapware available to complete your bathroom look<br />&bull; Quality electroplated finish<br />&bull; Twin pillar installation for sturdier fixing<br />&bull; Available in chrome or brushed nickel or matte black</p>"
+          },
+          "short_description": {
+            "html": "Vivid Slimline Toilet Roll Holder"
+          },
+          "product_dimensions": null,
+          "price_store": 72,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Vivid"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "111-8200-00"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 11739,
+          "sku": "RS892MB",
+          "vendorcode": "RS892MB",
+          "name": "Radii Toilet Roll Holder ",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/s/rs892mb_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/s/rs892mb_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/r/s/rs892mb_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/r/s/rs892mb_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/s/rs892mb_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/s/rs892mb_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Australian designed <br />&bull; Wide, flat surfaces compliment modern trends</p>"
+          },
+          "short_description": {
+            "html": "<p>Radii Toilet Roll Holder&nbsp;</p>"
+          },
+          "product_dimensions": null,
+          "price_store": 83,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Radii"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Matte Black",
+                    "value": "940"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "RS892MB"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Black"
+              }
+            ]
+          }
+        },
+        {
+          "id": 10920,
+          "sku": "RA892MB",
+          "vendorcode": "RA892MB",
+          "name": "Radii Toilet Roll Holder ",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra892mb_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra892mb_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/r/a/ra892mb_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/r/a/ra892mb_phoenix_techweb.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra892mb_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra892mb_phoenix_techweb.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Australian designed<br />&bull; Supported by a 7 year warranty<br />&bull; Matching tapware available to complete your bathroom look<br />&bull; Wide, flat surfaces beautifully designed to complement modern trends</p>"
+          },
+          "short_description": {
+            "html": "<p>Radii Toilet Roll Holder</p>"
+          },
+          "product_dimensions": null,
+          "price_store": 83,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Radii"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Matte Black",
+                    "value": "940"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "RA892MB"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Black"
+              }
+            ]
+          }
+        },
+        {
+          "id": 7447,
+          "sku": "RS891CHR",
+          "vendorcode": "RS891CHR",
+          "name": "Radii Double Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/s/rs891chr_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/s/rs891chr_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/r/s/rs891chr_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/r/s/rs891chr_web_1.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/s/rs891chr_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/s/rs891chr_web_1.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/s/rs891chr_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Square flange<br />&bull; Will suit any contemporary bathroom<br />&bull;&nbsp;Seductive sensual curves and sculptural form</p>"
+          },
+          "short_description": {
+            "html": "<p>Radii Double Toilet Roll Holder</p>"
+          },
+          "product_dimensions": null,
+          "price_store": 77,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Radii"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "RS891CHR"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 3295,
+          "sku": "RA891CHR",
+          "vendorcode": "RA891CHR",
+          "name": "Radii Double Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra891chr_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra891chr_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/r/a/ra891chr_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/r/a/ra891chr_web_1.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra891chr_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra891chr_web_1.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra891chr_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Round flange<br />&bull; Australian designed<br />&bull; Will suit any contemporary bathroom<br />&bull; Solid brass construction with a quality chrome finish<br />&bull;&nbsp;Wide, flat surfaces beautifully designed to complement modern trends</p>"
+          },
+          "short_description": {
+            "html": "<p>Radii Double Toilet Roll Holder</p>"
+          },
+          "product_dimensions": null,
+          "price_store": 77,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Radii"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "RA891CHR"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,2862 @@
+{
+  "data": {
+    "products": {
+      "total_count": 24,
+      "page_info": {
+        "total_pages": 1
+      },
+      "items": [
+        {
+          "id": 23314,
+          "sku": "TO.HTR60-A4.50",
+          "vendorcode": "TO.HTR60-A4.50",
+          "name": "Tondo 4-Bar Heated Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a4.50_parisi_web.jpeg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a4.50_parisi_web.jpeg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/t/o/to.htr60-a4.50_parisi_web.jpeg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/t/o/to.htr60-a4.50_parisi_tech_1.jpeg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a4.50_parisi_web.jpeg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a4.50_parisi_tech_1.jpeg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Digital controller<br>• On/Off timer<br>• Temperature adjustment<br>• Heating temperature 40 to 60C<br>• 240V, 50/60Hz power voltage</p>"
+          },
+          "short_description": {
+            "html": "<p>Tondo 4-Bar Heated Towel Rail</p>"
+          },
+          "product_dimensions": "W600 x D100 x H658mm",
+          "price_store": 1620,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W600 x D100 x H658mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "TONDO"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Fucile",
+                    "value": "1214"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "TO.HTR60-A4.50"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Fucile"
+              }
+            ]
+          }
+        },
+        {
+          "id": 23313,
+          "sku": "TO.HTR60-A4.48",
+          "vendorcode": "TO.HTR60-A4.48",
+          "name": "Tondo 4-Bar Heated Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a4.48_parisi_web.jpeg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a4.48_parisi_web.jpeg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/t/o/to.htr60-a4.48_parisi_web.jpeg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/t/o/to.htr60-a4.48_parisi_tech.jpeg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a4.48_parisi_web.jpeg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a4.48_parisi_tech.jpeg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Digital controller<br>• On/Off timer, matte bronze finish<br>• Temperature adjustment<br>• Heating temperature 40 to 60C<br>• 240V, 50/60Hz power voltage</p>"
+          },
+          "short_description": {
+            "html": "<p>Tondo 4-Bar Heated Towel Rail</p>"
+          },
+          "product_dimensions": "W600 x D100 x H658mm",
+          "price_store": 1750,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W600 x D100 x H658mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Tondo"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Bronze",
+                    "value": "935"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "TO.HTR60-A4.48"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Bronze"
+              }
+            ]
+          }
+        },
+        {
+          "id": 23312,
+          "sku": "TO.HTR60-A4.46",
+          "vendorcode": "TO.HTR60-A4.46",
+          "name": "Tondo 4-Bar Heated Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a4.46_parisi_web.jpeg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a4.46_parisi_web.jpeg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/t/o/to.htr60-a4.46_parisi_web.jpeg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/t/o/to.htr60-a4.46_parisi_tech.jpeg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a4.46_parisi_web.jpeg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a4.46_parisi_tech.jpeg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Digital controller<br>• On/Off timer, PVD<br>• Temperature adjustment<br>• Heating temperature 40 to 60C<br>• 240V, 50/60Hz power voltage</p>"
+          },
+          "short_description": {
+            "html": "<p>Tondo 4-Bar Heated Towel Rail</p>"
+          },
+          "product_dimensions": "W600 x D100 x H658mm",
+          "price_store": 1620,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W600 x D100 x H658mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "TONDO"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "TO.HTR60-A4.46"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Brass"
+              }
+            ]
+          }
+        },
+        {
+          "id": 23311,
+          "sku": "TO.HTR60-A4.41",
+          "vendorcode": "TO.HTR60-A4.41",
+          "name": "Tondo 4-Bar Heated Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a4.41_parisi_web.jpeg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a4.41_parisi_web.jpeg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/t/o/to.htr60-a4.41_parisi_web.jpeg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/t/o/to.htr60-a4.41_parisi_tech.jpeg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a4.41_parisi_web.jpeg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a4.41_parisi_tech.jpeg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Digital controller<br>• On/Off timer<br>• Temperature adjustment<br>• Heating temperature 40 to 60C<br>• 240V, 50/60Hz power voltage</p>"
+          },
+          "short_description": {
+            "html": "<p>Tondo 4-Bar Heated Towel Rail</p>"
+          },
+          "product_dimensions": "W600 x D100 x H658mm",
+          "price_store": 1510,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W600 x D100 x H658mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "TONDO"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "TO.HTR60-A4.41"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 23310,
+          "sku": "TO.HTR60-A4.02",
+          "vendorcode": "TO.HTR60-A4.02",
+          "name": "Tondo 4-Bar Heated Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a4.02_parisi_web.jpeg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a4.02_parisi_web.jpeg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/t/o/to.htr60-a4.02_parisi_web.jpeg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/t/o/to.htr60-a4.02_parisi_tech.jpeg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a4.02_parisi_web.jpeg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a4.02_parisi_tech.jpeg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Digital controller<br>• On/Off timer, matte black finish<br>• Temperature adjustment<br>• Heating temperature 40 to 60C<br>• 240V, 50/60Hz power voltage</p>"
+          },
+          "short_description": {
+            "html": "<p>Tondo 4-Bar Heated Towel Rail</p>"
+          },
+          "product_dimensions": "W600 x D100 x H658mm",
+          "price_store": 1400,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W600 x D100 x H658mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "TONDO"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Black",
+                    "value": "937"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "TO.HTR60-A4.02"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Black"
+              }
+            ]
+          }
+        },
+        {
+          "id": 23309,
+          "sku": "TO.HTR60-A4",
+          "vendorcode": "TO.HTR60-A4",
+          "name": "Tondo 4-Bar Heated Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a4_parisi_web.jpeg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a4_parisi_web.jpeg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/t/o/to.htr60-a4_parisi_web.jpeg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/t/o/to.htr60-a4_parisi_tech.jpeg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a4_parisi_web.jpeg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a4_parisi_tech.jpeg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Digital controller<br>• On/Off timer<br>• Temperature adjustment<br>• Heating temperature 40 to 60C<br>• 240V, 50/60Hz power voltage</p>"
+          },
+          "short_description": {
+            "html": "<p>Tondo 4-Bar Heated Towel Rail</p>"
+          },
+          "product_dimensions": "W600 x D100 x H658mm",
+          "price_store": 1245,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W600 x D100 x H658mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Tondo"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "TO.HTR60-A4"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 23308,
+          "sku": "TO.HTR60-A3.48",
+          "vendorcode": "TO.HTR60-A3.48",
+          "name": "Tondo 3-Bar Heated Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a3.48_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a3.48_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/t/o/to.htr60-a3.48_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/t/o/to.htr60-a2.48_parisi_tech_1.jpeg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a3.48_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a2.48_parisi_tech_1.jpeg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a3.48_parisi_insitu.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Digital controller<br>• On/Off timer, matte bronze finish<br>• Temperature adjustment<br>• Heating temperature 40 to 60C<br>• 240V, 50/60Hz power voltage</p>"
+          },
+          "short_description": {
+            "html": "<p>Tondo 3-Bar Heated Towel Rail</p>"
+          },
+          "product_dimensions": "W600 x D100 x H502mm",
+          "price_store": 1424,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W600 x D100 x H502mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Tondo"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Bronze",
+                    "value": "935"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "TO.HTR60-A3.48"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Bronze"
+              }
+            ]
+          }
+        },
+        {
+          "id": 23307,
+          "sku": "TO.HTR60-A3.41",
+          "vendorcode": "TO.HTR60-A3.41",
+          "name": "Tondo 3-Bar Heated Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a3.41_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a3.41_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/t/o/to.htr60-a3.41_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/t/o/to.htr60-a3.41_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a3.41_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a3.41_parisi_tech.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a3.41_parisi_insitu.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Digital controller<br>• On/Off timer<br>• Temperature adjustment<br>• Heating temperature 40 to 60C<br>• 240V, 50/60Hz power voltage</p>"
+          },
+          "short_description": {
+            "html": "<p>Tondo 3-Bar Heated Towel Rail</p>"
+          },
+          "product_dimensions": "W600 x D100 x H502mm",
+          "price_store": 1229,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W600 x D100 x H502mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "TONDO"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "TO.HTR60-A3.41"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 23306,
+          "sku": "TO.HTR60-A3.02",
+          "vendorcode": "TO.HTR60-A3.02",
+          "name": "TONDO HTR 600-3BAR+CONTR MBTondo 3-Bar Heated Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a3.02_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a3.02_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/t/o/to.htr60-a3.02_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/t/o/to.htr60-a3.02_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a3.02_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a3.02_parisi_tech.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a3.02_parisi_insitu.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Digital controller<br>• On/Off timer, matte black finish<br>• Temperature adjustment<br>• Heating temperature 40 to 60C<br>• 240V, 50/60Hz power voltage</p>"
+          },
+          "short_description": {
+            "html": "<p>Tondo 3-Bar Heated Towel Rail</p>"
+          },
+          "product_dimensions": "W600 x D100 x H502mm",
+          "price_store": 1139,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W600 x D100 x H502mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "TONDO"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Black",
+                    "value": "937"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "TO.HTR60-A3.02"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Black"
+              }
+            ]
+          }
+        },
+        {
+          "id": 23305,
+          "sku": "TO.HTR60-A3",
+          "vendorcode": "TO.HTR60-A3",
+          "name": "Tondo 3-Bar Heated Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a3_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a3_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/t/o/to.htr60-a3_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/t/o/to.htr60-a3_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a3_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a3_parisi_tech.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a3_parisi_insitu.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Digital controller<br>• On/Off timer<br>• Temperature adjustment<br>• Heating temperature 40 to 60C<br>• 240V, 50/60Hz power voltage</p>"
+          },
+          "short_description": {
+            "html": "<p>Tondo 3-Bar Heated Towel Rail</p>"
+          },
+          "product_dimensions": "W600 x D100 x H502mm",
+          "price_store": 1009,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W600 x D100 x H502mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Tondo"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "TO.HTR60-A3"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 23304,
+          "sku": "TO.HTR60-A2.50",
+          "vendorcode": "TO.HTR60-A2.50",
+          "name": "Tondo 2-Bar Heated Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a2.50_parisi_web.jpeg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a2.50_parisi_web.jpeg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/t/o/to.htr60-a2.50_parisi_web.jpeg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/t/o/to.htr60-a2.50_parisi_tech.jpeg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a2.50_parisi_web.jpeg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a2.50_parisi_tech.jpeg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Digital controller<br>• On/Off timer<br>• Temperature adjustment<br>• Heating temperature 40 to 60C<br>• 240V, 50/60Hz power voltage</p>"
+          },
+          "short_description": {
+            "html": "<p>Tondo 2-Bar Heated Towel Rail</p>"
+          },
+          "product_dimensions": "W600 x D100 x H346mm",
+          "price_store": 1019,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W600 x D100 x H346mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Tondo"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Fucile",
+                    "value": "1214"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "TO.HTR60-A2.50"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Fucile"
+              }
+            ]
+          }
+        },
+        {
+          "id": 23303,
+          "sku": "TO.HTR60-A2.41",
+          "vendorcode": "TO.HTR60-A2.41",
+          "name": "Tondo 2-Bar Heated Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a2.41_parisi_web.jpeg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a2.41_parisi_web.jpeg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/t/o/to.htr60-a2.41_parisi_web.jpeg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/t/o/to.htr60-a2.41_parisi_tech.jpeg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a2.41_parisi_web.jpeg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a2.41_parisi_tech.jpeg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Digital controller<br>• On/Off timer<br>• Temperature adjustment<br>• Heating temperature 40 to 60C<br>• 240V, 50/60Hz power voltage</p>"
+          },
+          "short_description": {
+            "html": "<p>Tondo 2-Bar Heated Towel Rail</p>"
+          },
+          "product_dimensions": "W600 x D100 x H346mm",
+          "price_store": 950,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W600 x D100 x H346mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "TONDO"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "TO.HTR60-A2.41"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 23302,
+          "sku": "TO.HTR60-A2.02",
+          "vendorcode": "TO.HTR60-A2.02",
+          "name": "Tondo 2-Bar Heated Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a2.02_parisi_web.jpeg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a2.02_parisi_web.jpeg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/t/o/to.htr60-a2.02_parisi_web.jpeg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/t/o/to.htr60-a2.02_parisi_tech.jpeg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a2.02_parisi_web.jpeg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a2.02_parisi_tech.jpeg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Digital controller<br>• On/Off timer, matte black finish<br>• Temperature adjustment<br>• Heating temperature 40 to 60C<br>• 240V, 50/60Hz power voltage</p>"
+          },
+          "short_description": {
+            "html": "<p>Tondo 2-Bar Heated Towel Rail</p>"
+          },
+          "product_dimensions": "W600 x D100 x H346mm",
+          "price_store": 880,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W600 x D100 x H346mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "TONDO"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Black",
+                    "value": "937"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "TO.HTR60-A2.02"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Black"
+              }
+            ]
+          }
+        },
+        {
+          "id": 23301,
+          "sku": "TO.HTR60-A2",
+          "vendorcode": "TO.HTR60-A2",
+          "name": "Tondo 2-Bar Heated Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a2_parisi_web.jpeg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a2_parisi_web.jpeg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/t/o/to.htr60-a2_parisi_web.jpeg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/t/o/to.htr60-a2_parisi_tech.jpeg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a2_parisi_web.jpeg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a2_parisi_tech.jpeg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Digital controller<br>• On/Off timer<br>• Temperature adjustment<br>• Heating temperature 40 to 60C<br>• 240V, 50/60Hz power voltage</p>"
+          },
+          "short_description": {
+            "html": "<p>Tondo 2-Bar Heated Towel Rail</p>"
+          },
+          "product_dimensions": "W600 x D100 x H346mm",
+          "price_store": 775,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W600 x D100 x H346mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Tondo"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "TO.HTR60-A2"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 23190,
+          "sku": "PV.HTR.50",
+          "vendorcode": "PV.HTR.50",
+          "name": "Envy Vertical Heated Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/v/pv.htr.50_parisi_web.jpeg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/v/pv.htr.50_parisi_web.jpeg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/p/v/pv.htr.50_parisi_web.jpeg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/p/v/pv.htr.50_parisi_tech.jpeg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/v/pv.htr.50_parisi_web.jpeg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/v/pv.htr.50_parisi_tech.jpeg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Integrated digital controller<br>• Top dual swivel robe hooks<br>• ON/OFF timer<br>• Temperature adjustment<br>• Dual fixing points </p>"
+          },
+          "short_description": {
+            "html": "<p>Envy Vertical Heated Towel Rail</p>"
+          },
+          "product_dimensions": "W110 x D117 x H1403mm",
+          "price_store": 1105,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W110 x D117 x H1403mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "ENVY"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Fucile",
+                    "value": "1214"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "PV.HTR.50"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Fucile"
+              }
+            ]
+          }
+        },
+        {
+          "id": 23189,
+          "sku": "PV.HTR.02",
+          "vendorcode": "PV.HTR.02",
+          "name": "Envy Vertical Heated Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/v/pv.htr.02_parisi_web.jpeg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/v/pv.htr.02_parisi_web.jpeg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/p/v/pv.htr.02_parisi_web.jpeg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/p/v/pv.htr.02_parisi_tech.jpeg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/v/pv.htr.02_parisi_web.jpeg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/v/pv.htr.02_parisi_tech.jpeg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Integrated digital controller<br>• Top dual swivel robe hooks<br>• ON/OFF timer, matte black finish<br>• Temperature adjustment<br>• Dual fixing points</p>"
+          },
+          "short_description": {
+            "html": "<p>Envy Vertical Heated Towel Rail</p>"
+          },
+          "product_dimensions": "W110 x D117 x H1403mm",
+          "price_store": 950,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W110 x D117 x H1403mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "ENVY"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Black",
+                    "value": "937"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "PV.HTR.02"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Black"
+              }
+            ]
+          }
+        },
+        {
+          "id": 23188,
+          "sku": "PV.HTR",
+          "vendorcode": "PV.HTR",
+          "name": "Envy Vertical Heated Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/v/pv.htr_parisi_web.jpeg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/v/pv.htr_parisi_web.jpeg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/p/v/pv.htr_parisi_web.jpeg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/p/v/pv.htr_parisi_tech.jpeg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/v/pv.htr_parisi_web.jpeg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/v/pv.htr_parisi_tech.jpeg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Integrated digital controller<br>• Top dual swivel robe hooks<br>• ON/OFF timer<br>• Temperature adjustment<br>• Dual fixing points </p>"
+          },
+          "short_description": {
+            "html": "<p>Envy Vertical Heated Towel Rail</p>"
+          },
+          "product_dimensions": "W110 x D117 x H1403mm",
+          "price_store": 830,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W110 x D117 x H1403mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "ENVY"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "PV.HTR"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 23133,
+          "sku": "TO.HTR60-A3.46",
+          "vendorcode": "TO.HTR60-A3.46",
+          "name": "Tondo 3-Bar Heated Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a3.46_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a3.46_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/t/o/to.htr60-a3.46_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/t/o/to.htr60-a2.46_parisi_tech.jpeg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a3.46_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a2.46_parisi_tech.jpeg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a3.46_parisi_insitu.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Digital controller<br>• On/Off timer, PVD<br>• Temperature adjustment<br>• Heating temperature 40 to 60C<br>• 240V, 50/60Hz power voltage</p>"
+          },
+          "short_description": {
+            "html": "<p>Tondo 3-Bar Heated Towel Rail</p>"
+          },
+          "product_dimensions": "W600 x D100 x H502mm",
+          "price_store": 1320,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W600 x D100 x H502mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Tondo"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "TO.HTR60-A3.46"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Brass"
+              }
+            ]
+          }
+        },
+        {
+          "id": 23128,
+          "sku": "TO.HTR60-A2.48",
+          "vendorcode": "TO.HTR60-A2.48",
+          "name": "Tondo 2-Bar Heated Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a2.48_parisi_web.jpeg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a2.48_parisi_web.jpeg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/t/o/to.htr60-a2.48_parisi_web.jpeg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/t/o/to.htr60-a2.48_parisi_tech.jpeg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a2.48_parisi_web.jpeg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a2.48_parisi_tech.jpeg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Digital controller<br>• On/Off timer, matte bronze finish<br>• Temperature adjustment<br>• Heating temperature 40 to 60C<br>• 240V, 50/60Hz power voltage</p>"
+          },
+          "short_description": {
+            "html": "<p>Tondo 2-Bar Heated Towel Rail</p>"
+          },
+          "product_dimensions": "W600 x D100 x H346mm",
+          "price_store": 1100,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W600 x D100 x H346mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Tondo"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Bronze",
+                    "value": "935"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "TO.HTR60-A2.48"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Bronze"
+              }
+            ]
+          }
+        },
+        {
+          "id": 23094,
+          "sku": "TO.HTR60-A2.46",
+          "vendorcode": "TO.HTR60-A2.46",
+          "name": "Tondo 2-Bar Heated Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/T/O/TO.HTR60-A2.46_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/T/O/TO.HTR60-A2.46_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/T/O/TO.HTR60-A2.46_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/T/O/TO.HTR60-A2.46_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/T/O/TO.HTR60-A2.46_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/T/O/TO.HTR60-A2.46_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Digital controller<br>• On/Off timer <br>• Temperature adjustment <br>• Heating temperature 40 to 60C <br>• 240V, 50/60Hz power voltage</p>"
+          },
+          "short_description": {
+            "html": "Tondo 2-Bar Heated Towel Rail"
+          },
+          "product_dimensions": "W600 x D100 x H346mm",
+          "price_store": 1019,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W600 x D100 x H346mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Tondo"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "TO.HTR60-A2.46"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Brass"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22899,
+          "sku": "PV.HTR.48",
+          "vendorcode": "PV.HTR.48",
+          "name": "Envy Vertical Heated Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/P/V/PV.HTR.48_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/P/V/PV.HTR.48_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/P/V/PV.HTR.48_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/P/V/PV.HTR.48_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/P/V/PV.HTR.48_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/P/V/PV.HTR.48_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<ul><li>Integrated digital controller</li><li>Top dual swivel robe hooks</li><li>ON/OFF timer</li><li>Temperature adjustment</li><li>Dual fixing points </li></ul>"
+          },
+          "short_description": {
+            "html": "<p>Envy Vertical Heated Towel Rail</p>"
+          },
+          "product_dimensions": "W110 x D117 x H1403mm",
+          "price_store": 1184,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W110 x D117 x H1403mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Envy"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Bronze",
+                    "value": "935"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "PV.HTR.48"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Bronze"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22898,
+          "sku": "PV.HTR.46",
+          "vendorcode": "PV.HTR.46",
+          "name": "Envy Vertical Heated Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/P/V/PV.HTR.46_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/P/V/PV.HTR.46_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/P/V/PV.HTR.46_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/P/V/PV.HTR.46_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/P/V/PV.HTR.46_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/P/V/PV.HTR.46_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<ul><li>Integrated digital controller</li><li>Top dual swivel robe hooks</li><li>ON/OFF timer</li><li>Temperature adjustment</li><li>Dual fixing points </li></ul>"
+          },
+          "short_description": {
+            "html": "<p>Envy Vertical Heated Towel Rail</p>"
+          },
+          "product_dimensions": "W110 x D117 x H1403mm",
+          "price_store": 1105,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W110 x D117 x H1403mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Envy"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "PV.HTR.46"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Brass"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22897,
+          "sku": "PV.HTR.41",
+          "vendorcode": "PV.HTR.41",
+          "name": "Envy Vertical Heated Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/P/V/PV.HTR.41_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/P/V/PV.HTR.41_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/P/V/PV.HTR.41_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/P/V/PV.HTR.41_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/P/V/PV.HTR.41_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/P/V/PV.HTR.41_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<ul><li>Integrated digital controller</li><li>Top dual swivel robe hooks</li><li>ON/OFF timer</li><li>Temperature adjustment</li><li>Dual fixing points </li></ul>"
+          },
+          "short_description": {
+            "html": "<p>Envy Vertical Heated Towel Rail</p>"
+          },
+          "product_dimensions": "W110 x D117 x H1403mm",
+          "price_store": 1029,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W110 x D117 x H1403mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Envy"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "PV.HTR.41"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22706,
+          "sku": "TO.HTR60-A3.50",
+          "vendorcode": "TO.HTR60-A3.50",
+          "name": "Tondo 3-Bar Heated Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/T/O/TO.HTR60-A3.50_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/T/O/TO.HTR60-A3.50_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/T/O/TO.HTR60-A3.50_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/T/O/TO.HTR60-A3.50_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/T/O/TO.HTR60-A3.50_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/T/O/TO.HTR60-A3.50_parisi_tech.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a3_parisi_insitu_1.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Digital controller <br>• On/Off timer<br>• Temperature adjustment <br>• Heating temperature 40 to 60C <br>• 240V, 50/60Hz power voltage</p>"
+          },
+          "short_description": {
+            "html": "Tondo 3-Bar Heated Towel Rail"
+          },
+          "product_dimensions": "W600 x D100 x H502mm",
+          "price_store": 1320,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W600 x D100 x H502mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Tondo"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Fucile",
+                    "value": "1214"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "TO.HTR60-A3.50"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Fucile"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

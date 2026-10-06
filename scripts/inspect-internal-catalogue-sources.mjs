@@ -11,5 +11,5 @@ if(process.argv[1]?.endsWith('inspect-internal-catalogue-sources.mjs')){
  console.log([...c.doc.querySelectorAll('a[href]')].filter(a=>/page\//.test(a.href)).map(a=>a.href));
  console.log([...c.doc.scripts].filter(s=>s.src).map(s=>s.src).slice(-12));
  const imgs=[...c.doc.querySelectorAll('img')];console.log(imgs.slice(6,10).map(i=>({src:i.src,alt:i.alt,html:i.outerHTML.slice(0,700)})));
- await fs.writeFile('test-artifacts/corinthian-listing.html',c.html);
+ await fs.writeFile('artifacts/test-artifacts/corinthian-listing.html',c.html);
 }

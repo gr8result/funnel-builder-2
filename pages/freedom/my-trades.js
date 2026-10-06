@@ -51,6 +51,22 @@ function pendingAlertFlags(trade) {
   return { within3: distance <= 3, watchlist: false };
 }
 
+/**
+ * Sum of quantity * limit price across pending BUY orders, by currency. This is the
+ * maximum cash a broker would need to fill every open order - never counted as an
+ * investment, since none of it is owned until an actual execution occurs.
+ */
+function pendingBuyTotalsByCurrency(trades = []) {
+  const totals = new Map();
+  trades.forEach((trade) => {
+    const value = numberOrNull(trade.estimatedOrderValue);
+    if (value == null) return;
+    const currency = trade.currency || "USD";
+    totals.set(currency, (totals.get(currency) || 0) + value);
+  });
+  return totals;
+}
+
 function dateInputValue(value) {
   if (!value) return "";
   const parsed = new Date(value);
@@ -1961,6 +1977,176 @@ function PortfolioSummary({ holdings, brokerPortfolioSnapshot }) {
 }
 
 /**
+ * Open Orders table - one unified view of every currently open broker order,
+ * whether it lives as a standalone pending short-term trade (AD8, MSFT, ...)
+ * or as a sell order attached to a long-term holding (CBA, JBLU). Read-only:
+ * editing/cancelling stays on the existing per-record controls elsewhere on
+ * this page. Never infers a fill from a displayed price - Filled/Remaining
+ * come only from broker-confirmed fields.
+ */
+function expiryLabel(order) {
+  if (order.goodTillCancelled) return "Good Till Cancelled";
+  if (order.expiry) {
+    const parsed = new Date(order.expiry);
+    return Number.isFinite(parsed.getTime()) ? parsed.toLocaleDateString() : String(order.expiry);
+  }
+  return "--";
+}
+
+/** Standalone pending short-term trade -> unified open-order row. */
+function orderRowFromTrade(trade) {
+  const side = trade.side === "SELL" || trade.orderClassification === "PENDING_SELL_ORDER" ? "SELL" : "BUY";
+  const filled = numberOrNull(trade.filledQuantity) ?? 0;
+  const quantity = numberOrNull(trade.quantity) ?? 0;
+  return {
+    key: trade.id,
+    symbol: trade.symbol,
+    side,
+    orderType: trade.cmcSnapshot?.orderType || (side === "SELL" ? "Limit Sell" : "Limit Buy"),
+    quantity,
+    price: trade.entryPrice,
+    currency: trade.currency || "USD",
+    filled,
+    remaining: Math.max(0, quantity - filled),
+    status: trade.orderStatus || "Waiting for Entry",
+    expiry: expiryLabel(trade),
+    extendedHours: Boolean(trade.extendedHours || trade.cmcSnapshot?.extendedHours),
+    source: "Standalone pending order",
+  };
+}
+
+/** A sell order attached to a long-term holding (CBA/JBLU) -> unified row. */
+function orderRowFromAttachedSell(order, holding) {
+  const filled = numberOrNull(order.cmcSnapshot?.filled) ?? 0;
+  const quantity = numberOrNull(order.quantity) ?? 0;
+  return {
+    key: order.id,
+    symbol: holding.symbol,
+    side: "SELL",
+    orderType: order.orderType || "Limit Sell",
+    quantity,
+    price: order.targetPrice,
+    currency: order.cmcSnapshot?.currency || holding.nativeCurrency || holding.currency || "USD",
+    filled,
+    remaining: Math.max(0, quantity - filled),
+    status: order.status || "Open",
+    expiry: expiryLabel(order),
+    extendedHours: Boolean(order.extendedHours || order.cmcSnapshot?.extendedHours),
+    source: `Attached to ${holding.symbol} holding`,
+  };
+}
+
+function OpenOrdersTable({ orders }) {
+  if (!orders.length) return null;
+  return (
+    <section className="fdOpenOrdersSection">
+      <h2>Open Orders</h2>
+      <p className="fdSectionNote">
+        Orders placed with the broker but not yet filled. These do not change Active Holdings quantities
+        until execution is confirmed.
+      </p>
+      <div className="fdOpenOrdersTableWrap">
+        <table className="fdOpenOrdersTable">
+          <thead>
+            <tr>
+              <th>Ticker</th>
+              <th>Buy/Sell</th>
+              <th>Order Type</th>
+              <th>Quantity</th>
+              <th>Price</th>
+              <th>Filled</th>
+              <th>Remaining</th>
+              <th>Status</th>
+              <th>Expiry</th>
+            </tr>
+          </thead>
+          <tbody>
+            {orders.map((order) => (
+              <tr key={order.key} className={"fdOrderRow fdOrderRow-" + order.side.toLowerCase()}>
+                <td className="fdOrderSymbol">{order.symbol}</td>
+                <td>
+                  <span className={"fdOrderSideBadge fdOrderSideBadge-" + order.side.toLowerCase()}>{order.side}</span>
+                </td>
+                <td>{order.orderType}{order.extendedHours ? <span className="fdOrderExtendedHours"> (Extended Hours)</span> : null}</td>
+                <td>{order.quantity.toLocaleString("en-US")}</td>
+                <td>{marketMoney(order.price, order.currency)}</td>
+                <td>{order.filled.toLocaleString("en-US")}</td>
+                <td>{order.remaining.toLocaleString("en-US")}</td>
+                <td>{order.status}</td>
+                <td>{order.expiry}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <style jsx>{`
+        .fdOpenOrdersSection {
+          margin-bottom: 28px;
+        }
+        .fdOpenOrdersSection h2 {
+          font-size: 18px;
+          font-weight: 900;
+          margin: 0 0 6px;
+        }
+        .fdOpenOrdersTableWrap {
+          overflow-x: auto;
+        }
+        .fdOpenOrdersTable {
+          border-collapse: collapse;
+          width: 100%;
+        }
+        .fdOpenOrdersTable th {
+          border-bottom: 2px solid var(--fd-line);
+          color: var(--fd-ink-dim);
+          font-size: 11px;
+          font-weight: 800;
+          padding: 8px 10px;
+          text-align: left;
+          text-transform: uppercase;
+          white-space: nowrap;
+        }
+        .fdOpenOrdersTable td {
+          border-bottom: 1px solid var(--fd-line);
+          font-size: 13px;
+          padding: 10px;
+          white-space: nowrap;
+        }
+        .fdOrderSymbol {
+          font-weight: 900;
+        }
+        .fdOrderRow-buy {
+          background: rgba(59, 130, 246, 0.04);
+        }
+        .fdOrderRow-sell {
+          background: rgba(239, 68, 68, 0.04);
+        }
+        .fdOrderSideBadge {
+          border-radius: 6px;
+          display: inline-block;
+          font-size: 11px;
+          font-weight: 900;
+          padding: 4px 10px;
+          text-transform: uppercase;
+        }
+        .fdOrderSideBadge-buy {
+          background: rgba(59, 130, 246, 0.15);
+          color: #3b82f6;
+        }
+        .fdOrderSideBadge-sell {
+          background: rgba(239, 68, 68, 0.15);
+          color: #ef4444;
+        }
+        .fdOrderExtendedHours {
+          color: var(--fd-ink-dim);
+          font-size: 11px;
+          font-weight: 700;
+        }
+      `}</style>
+    </section>
+  );
+}
+
+/**
  * Main Dashboard
  */
 const PORTFOLIO_COLLECTION_NAMES = ["holdings", "pendingBuyOrders", "pendingSellOrders", "shortTermHoldings", "closedShortTermTrades"];
@@ -2022,6 +2208,14 @@ export default function MyTradesDashboard() {
   const pendingBuys = collections.pendingBuyOrders.data.filter(trade => trade.orderClassification === "PENDING_BUY_ORDER" && trade.status === "pending");
   const pendingSells = collections.pendingSellOrders.data.filter(trade => trade.orderClassification === "PENDING_SELL_ORDER" && trade.status === "pending");
   const closedTrades = collections.closedShortTermTrades.data;
+
+  // Unified Open Orders table: standalone pending trades + sell orders attached to holdings.
+  const openOrderRows = useMemo(() => {
+    const fromTrades = [...pendingBuys, ...pendingSells].map(orderRowFromTrade);
+    const fromAttachedSells = holdings.flatMap((holding) =>
+      (holding.pendingSellOrders || []).map((order) => orderRowFromAttachedSell(order, holding)));
+    return [...fromTrades, ...fromAttachedSells].sort((a, b) => a.symbol.localeCompare(b.symbol));
+  }, [pendingBuys, pendingSells, holdings]);
   const collectionNotice = (name, label) => {
     const collection = collections[name];
     if (collection.status === "error") return (
@@ -2235,6 +2429,11 @@ export default function MyTradesDashboard() {
           {pendingBuys.length > 0 && (
             <>
               <h3 className="fdOrdersSubhead">Pending BUY Orders</h3>
+              <p className="fdSectionNote fdPendingTotal">
+                Total pending: {[...pendingBuyTotalsByCurrency(pendingBuys)]
+                  .map(([currency, total]) => formatMoney(total, currency))
+                  .join(" + ")}
+              </p>
               <div className="fdOrdersGrid">
                 {pendingBuys.map(trade => (
                   <PendingOrderMonitorCard
@@ -2271,6 +2470,9 @@ export default function MyTradesDashboard() {
           )}
         </section>
       )}
+
+      {/* Open Orders - unified table across standalone pending trades and holding-attached sell orders */}
+      <OpenOrdersTable orders={openOrderRows} />
 
       {/* Active Holdings Section */}
       {(activeHoldings.length > 0 || collections.holdings.status !== "success" || collections.shortTermHoldings.status !== "success") && (

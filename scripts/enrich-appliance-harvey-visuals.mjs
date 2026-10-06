@@ -110,7 +110,6 @@ function candidatePages(product = {}) {
     brand === "smeg" ? `https://www.smeg.com/au/products/${compact}` : "",
     brand === "westinghouse" ? `https://www.westinghouse.com.au/search/?q=${encodeURIComponent(product.manufacturerModel)}` : "",
     brand === "blanco" ? `https://www.blanco.com/au-en/search/?query=${encodeURIComponent(product.manufacturerModel)}` : "",
-    brand === "ariston" ? `https://ariston.com.au/?s=${encodeURIComponent(product.manufacturerModel)}` : "",
   ].filter(Boolean))).slice(0, 4);
 }
 

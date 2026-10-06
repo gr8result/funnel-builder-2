@@ -1,10 +1,19 @@
+import BuilderCsvImport from '../../../components/product-library/BuilderCsvImport.jsx';
+import { browserTenantKey } from '../../../lib/builders/browserTenantStorage.js';
+import { isInternalPaintColourCategory } from '../../../lib/product-library/paintCategoryCompatibility.js';
+import PaintColourLibrary from '../../../components/client-selections/PaintColourLibrary.jsx';
+import { CATALOGUE_SORT_OPTIONS, sortCatalogueProducts, catalogueFilterValues, isTrimProduct, INTERNAL_CATALOGUE_SECTIONS } from "../../../lib/product-library/cataloguePresentation";
+import TrimCatalogueRate from "../../../components/product-library/TrimCatalogueRate";
+import StairSelectionWizard from '../../../components/product-library/StairSelectionWizard';
+import {FURNITURE_SORT_OPTIONS, furnitureFinishes, furnitureFunctions, filteredFurnitureProduct} from '../../../lib/product-library/doorFurnitureVariants';
 import { EXTERIOR_CATALOGUE_SECTIONS, exteriorSectionForProduct } from "../../../lib/product-library/exteriorCatalogueSections";
 import { useDoorFurniturePicker } from '../../../components/estimate-builder/DoorFurniturePicker';
 import VerifiedProductImage from '../../../components/product-library/VerifiedProductImage';
+import FlooringLibraryBrowser from '../../../components/product-library/FlooringLibraryBrowser';
 import { safeSelectionNavigate } from "../../../lib/navigation/selectionNavigation.js";
 import Head from "next/head";
 import { useRouter } from "next/router";
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { Archive, ArrowLeft, Boxes, Check, Copy, Edit3, FileDown, FileUp, FolderOpen, ImagePlus, Package, Pencil, Plus, RefreshCw, Upload, X } from "lucide-react";
 import { useWorkspace } from "../../../hooks/useWorkspace";
 import {
@@ -18,7 +27,6 @@ import {
   MASTER_PRODUCT_CATALOGUE_IMPORT_TEMPLATE,
   PRODUCT_ENTITY_FIELDS,
   PRODUCT_FAMILIES,
-  PRODUCT_LIBRARY_IMPORT_COLUMNS,
   PRODUCT_LIBRARY_SELECTIONS_KEY,
   TAXONOMY_CATEGORY_DEFINITIONS,
   TOP_LEVEL_AREAS,
@@ -38,7 +46,6 @@ import {
   resolveProductLibraryImage,
   productLibrarySelectionsFromJobFile,
   selectionKeyForFamily,
-  previewProductImportRows,
 } from "../../../lib/product-library/catalogueModel";
 import {
   addBuilderProduct,
@@ -59,8 +66,6 @@ import {
   getProductLibrarySectionFamilies,
   productBelongsToRoom,
   productBelongsToRoomCategory,
-  resolveProductLibrarySectionForFamily,
-  resolveQuotationBuilderMappingForProduct,
 } from "../../../lib/product-library/productLibraryTaxonomy";
 import {
   PRODUCT_LIBRARY_EXCHANGE_COLUMNS,
@@ -89,812 +94,71 @@ import {
   getLegacyQuotationCompatibleApplianceRecords,
   getPlatformMasterApplianceRecords,
 } from "../../../lib/product-library/applianceCatalogueSelectors";
+import { isApplianceRecordSelectable } from "../../../lib/product-library/applianceCatalogueSelectorsCore.js";
 import { supabase } from "../../../utils/supabase-client";
+import { ApplianceBrandLogo, ApplianceCard, ApplianceImage } from "../../../components/product-library/ApplianceCard";
+import ProductLibraryProductImage from "../../../components/product-library/ProductLibraryProductImage";
+import {
+  applianceConfigurationBucket,
+  applianceDimensionLabel,
+  applianceFeatureList,
+  applianceFilterOptionValues,
+  applianceHncPriceLabel,
+  appliancePriceLabel,
+  applianceSpecificationEntries,
+  applianceSelectionUnavailableReason,
+  applianceStatusClass,
+  applianceValue,
+} from "../../../lib/product-library/applianceCataloguePresentation";
+import {
+  CABINETRY_SECTION_KEY,
+  CABINETRY_SUBCATEGORIES,
+  CATALOGUE_GROUP_SUBCATEGORIES,
+  PLUMBING_SECTION_KEY,
+  PLUMBING_GROUPS,
+  cabinetrySubcategoryForProduct,
+  catalogueSectionExportFileName,
+  catalogueSubcategoryForProduct,
+  productBelongsToCabinetryCatalogue,
+  productBelongsToCatalogueSection,
+  productMatchesCabinetrySubcategory,
+  productMatchesCatalogueSubcategory,
+} from "../../../lib/product-library/catalogueSectionRules";
+import PlumbingCategoryLanding from "../../../components/product-library/PlumbingCategoryLanding";
+import PlumbingProductCard from "../../../components/product-library/PlumbingProductCard";
+import PlumbingProductDetailModal from "../../../components/product-library/PlumbingProductDetailModal";
+import PlumbingBrandBar from "../../../components/product-library/PlumbingBrandBar";
+import PlumbingFilterToolbar from "../../../components/product-library/PlumbingFilterToolbar";
+import { DEFAULT_JOB_FILE_NAME, EMPTY_PRODUCT, PRODUCT_LIBRARY_JOB_STORAGE_KEY } from "../../../lib/product-library/productLibraryConstants";
+import { csvRecords } from "../../../lib/product-library/productLibraryCsv";
+import { mapDbProductToEntity } from "../../../lib/product-library/productLibraryDbMapper";
+import { downloadBlob, downloadCsv, downloadJson, downloadText } from "../../../lib/product-library/productLibraryDownloads";
+import { masterProductMatchesFilters } from "../../../lib/product-library/productLibraryFilters";
+import { slugify, swatchLabel, swatchStyle, uniqueValues } from "../../../lib/product-library/productLibraryFormat";
+import {
+  builderEnablementForProduct,
+  catalogueProductSelectionKey,
+  categoryBelongsToArea,
+  familyBelongsToArea,
+  groupedSupplierHierarchy,
+  masterProductsForFamily,
+  productCategoryLabel,
+  productEnabledLabel,
+  productPriceLabel,
+  productUnitLabel,
+  productVerifiedImage,
+  quotationSectionLabel,
+} from "../../../lib/product-library/productPresentation";
 
 // Product Library kitchen seed/import coverage includes AU-KITCHEN-PRODUCT-CATALOGUE.json.
-const EMPTY_PRODUCT = {
-  product_code: "",
-  product_name: "",
-  supplier_name: "",
-  brand: "",
-  range: "",
-  model: "",
-  description: "",
-  colour: "",
-  finish: "",
-  size: "",
-  texture: "",
-  primary_image: "",
-  official_product_url: "",
-  specification_url: "",
-  supplier_url: "",
-  width: "",
-  height: "",
-  depth: "",
-  variant_name: "",
-  gallery_images: "",
-  rrp: "",
-  builder_cost: "",
-  client_price: "",
-  currency: "AUD",
-  gst_treatment: "GST inclusive",
-  price_unit: "",
-  price_status: "price_pending",
-  price_source_url: "",
-  price_verified_at: "",
-  image_source_url: "",
-  image_status: "missing",
-  image_verified_at: "",
-  region: "QLD",
-  price_effective_date: "",
-  discontinued: false,
-  archived: false,
-  active: true,
-};
 
-const PRODUCT_LIBRARY_JOB_STORAGE_KEY = "gr8:product-library:job-file";
-const DEFAULT_JOB_FILE_NAME = "product-library-selections.gr8job";
-
-function slugify(value) {
-  return String(value || "")
-    .trim()
-    .toLowerCase()
-    .replace(/&/g, "and")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+export default function BuilderProductLibraryPage(props) {
+  const { workspaceId, loading } = useWorkspace();
+  if (loading) return <div role="status">Loading builder workspace...</div>;
+  return <BuilderProductLibraryPageContent key={workspaceId || 'anonymous-local'} {...props} />;
 }
 
-function downloadJson(fileName, payload) {
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-}
-
-function downloadText(fileName, text, type = "text/plain;charset=utf-8") {
-  const blob = new Blob([text], { type });
-  downloadBlob(fileName, blob);
-}
-
-function downloadBlob(fileName, blob) {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-}
-
-function money(value) {
-  return Number(value || 0).toLocaleString("en-AU", {
-    style: "currency",
-    currency: "AUD",
-    maximumFractionDigits: 0,
-  });
-}
-
-function uniqueValues(values) {
-  return Array.from(new Set(values.map((value) => String(value || "").trim()).filter(Boolean))).sort((left, right) => left.localeCompare(right));
-}
-
-function masterProductMatchesFilters(product, filters) {
-  const search = String(filters.search || "").trim().toLowerCase();
-  const haystack = [product.productName, product.brand, product.manufacturer, product.supplier, product.range, product.model, product.sku, product.productCode].filter(Boolean).join(" ").toLowerCase();
-  if (search && !haystack.includes(search)) return false;
-  if (filters.area && product.topLevelArea !== filters.area) return false;
-  if (filters.section) {
-    const section = PRODUCT_LIBRARY_CATALOGUE_SECTIONS.find((item) => item.key === filters.section);
-    const quotationMapping = resolveQuotationBuilderMappingForProduct(product);
-    const productSection = resolveProductLibrarySectionForFamily(product.familyKey || product.familyId || "");
-    const sectionMatches = quotationMapping.quotationSectionId
-      ? quotationMapping.quotationSectionId === filters.section
-      : productSection?.key === filters.section || productBelongsToCatalogueSection(product, section);
-    if (section && !sectionMatches) return false;
-  }
-  if (filters.category) {
-    const roomCategory = getProductLibraryRoomCategory(filters.category);
-    if (roomCategory) {
-      if (!productBelongsToRoomCategory(product, roomCategory)) return false;
-    } else if (product.categoryKey !== filters.category && product.category !== filters.category) {
-      return false;
-    }
-  }
-  if (filters.family && product.familyKey !== filters.family) return false;
-  if (filters.manufacturer && product.manufacturer !== filters.manufacturer) return false;
-  if (filters.brand && product.brand !== filters.brand) return false;
-  if (filters.supplier && product.supplier !== filters.supplier) return false;
-  if (filters.range && product.range !== filters.range) return false;
-  if (filters.room && !productBelongsToRoom(product, filters.room)) return false;
-  if (filters.region && !(product.regions || []).includes("AU") && !(product.regions || []).includes(filters.region)) return false;
-  if (filters.imageStatus && product.imageStatus !== filters.imageStatus) return false;
-  if (filters.priceStatus && product.priceStatus !== filters.priceStatus) return false;
-  if (filters.ownership === "builder-private" && !product.isCustom && !product.organisationId && !product.builderId) return false;
-  if (filters.ownership === "platform-master" && (product.isCustom || product.organisationId || product.builderId)) return false;
-  if (filters.clientSelectable) {
-    const selectable = product.clientSelectable ?? product.attributes?.clientSelectable ?? product.attributes?.selectableStatus !== "reference-only";
-    if (filters.clientSelectable === "yes" && selectable === false) return false;
-    if (filters.clientSelectable === "no" && selectable !== false) return false;
-  }
-  if (filters.quotationEnabled) {
-    const quotationEnabled = product.quotationEnabled ?? product.attributes?.quotationEnabled ?? true;
-    if (filters.quotationEnabled === "yes" && quotationEnabled === false) return false;
-    if (filters.quotationEnabled === "no" && quotationEnabled !== false) return false;
-  }
-  if (filters.status === "active" && product.active === false) return false;
-  if (filters.status === "inactive" && product.active !== false && product.archived !== true) return false;
-  if (filters.status === "discontinued" && !product.discontinued) return false;
-  return true;
-}
-
-function productPriceLabel(product) {
-  const status = product.priceStatus || "price_pending";
-  if (product.builderPrice != null) return money(product.builderPrice);
-  if (status === "current") return money(product.clientPrice ?? product.rrp ?? product.normalizedUnitPrice);
-  if (status === "quote_required") return "Quote required";
-  if (status === "allowance_only") return "Allowance only";
-  if (status === "expired") return "Price expired";
-  return "Price pending";
-}
-
-function productUnitLabel(product = {}) {
-  return product.priceUnit || product.unit || product.uom || "EACH";
-}
-
-function productEnabledLabel(product = {}, field = "clientSelectable") {
-  const attributes = product.attributes || {};
-  const value = product[field] ?? attributes[field] ?? (field === "quotationEnabled" ? true : attributes.selectableStatus !== "reference-only");
-  return value === false ? "No" : "Yes";
-}
-
-function quotationSectionLabel(product = {}) {
-  const mapping = resolveQuotationBuilderMappingForProduct(product);
-  return mapping.quotationSection || "Unmapped";
-}
-
-function productCategoryLabel(product = {}) {
-  if (product.sourceType === "canonical_cabinetry_workflow") return product.categoryKey;
-  const category = PRODUCT_LIBRARY_ROOM_CATEGORIES.find((item) => productBelongsToRoomCategory(product, item));
-  return category?.name || familyByKey(product.familyKey)?.displayName || product.category || product.categoryKey || "Uncategorised";
-}
-
-function catalogueProductSelectionKey(product = {}) {
-  return product.productId || product.productCode || product.model || product.sku || "";
-}
-
-const CABINETRY_SECTION_KEY = "cabinetry-joinery";
-const PLUMBING_SECTION_KEY = "plumbing-fixtures-tapware";
-const LIGHTING_ELECTRICAL_SECTION_KEY = "lighting-electrical";
-const CABINETRY_SUBCATEGORIES = [
-  { key: "all", label: "All Cabinetry", fileName: "cabinetry-all.csv" },
-  { key: "cabinetry-products", label: "Cabinetry Products", fileName: "cabinetry-products.csv" },
-  { key: "cabinet-doors-panels", label: "Cabinet Doors & Panels", fileName: "cabinet-doors-panels.csv" },
-  { key: "board-colours-finishes", label: "Board Colours & Finishes", fileName: "cabinet-board-colours-finishes.csv" },
-  { key: "cabinet-handles", label: "Handles", fileName: "cabinet-handles.csv" },
-  { key: "cabinet-hardware", label: "Cabinet Hardware", fileName: "cabinet-hardware.csv" },
-  { key: "cabinet-benchtops", label: "Benchtops & Surfaces", fileName: "cabinet-benchtops.csv" },
-  { key: "cabinet-accessories", label: "Cabinet Accessories", fileName: "cabinet-accessories.csv" },
-];
-
-const PLUMBING_SUBCATEGORIES = [
-  { key: "all", label: "All Plumbing", fileName: "plumbing-fixtures-tapware-all.csv" },
-  { key: "toilets", label: "Toilets", fileName: "plumbing-toilets.csv" },
-  { key: "basins", label: "Basins", fileName: "plumbing-basins.csv" },
-  { key: "baths", label: "Baths", fileName: "plumbing-baths.csv" },
-  { key: "showers-screens", label: "Showers and Screens", fileName: "plumbing-showers-screens.csv" },
-  { key: "kitchen-sinks", label: "Kitchen Sinks", fileName: "plumbing-kitchen-sinks.csv" },
-  { key: "laundry-tubs", label: "Laundry Tubs", fileName: "plumbing-laundry-tubs.csv" },
-  { key: "basin-mixers", label: "Basin Mixers", fileName: "tapware-basin-mixers.csv" },
-  { key: "sink-mixers", label: "Sink Mixers", fileName: "tapware-sink-mixers.csv" },
-  { key: "shower-mixers", label: "Shower Mixers", fileName: "tapware-shower-mixers.csv" },
-  { key: "bath-mixers", label: "Bath Mixers", fileName: "tapware-bath-mixers.csv" },
-  { key: "shower-outlets", label: "Shower Outlets", fileName: "tapware-shower-outlets.csv" },
-  { key: "accessories", label: "Accessories", fileName: "plumbing-accessories.csv" },
-];
-
-const LIGHTING_ELECTRICAL_SUBCATEGORIES = [
-  { key: "all", label: "All Lighting & Electrical", fileName: "lighting-electrical-all.csv" },
-  { key: "interior-lighting", label: "Interior Lighting", fileName: "lighting-interior.csv" },
-  { key: "exterior-lighting", label: "Exterior Lighting", fileName: "lighting-exterior.csv" },
-  { key: "downlights", label: "Downlights", fileName: "lighting-downlights.csv" },
-  { key: "pendant-lights", label: "Pendant Lights", fileName: "lighting-pendant-lights.csv" },
-  { key: "wall-lights", label: "Wall Lights", fileName: "lighting-wall-lights.csv" },
-  { key: "power-points", label: "Power Points", fileName: "electrical-power-points.csv" },
-  { key: "switches", label: "Switches", fileName: "electrical-switches.csv" },
-  { key: "fans", label: "Fans", fileName: "electrical-fans.csv" },
-  { key: "smoke-alarms", label: "Smoke Alarms", fileName: "electrical-smoke-alarms.csv" },
-  { key: "electrical-appliances-accessories", label: "Electrical Appliances/Accessories", fileName: "electrical-appliances-accessories.csv" },
-];
-
-const CATALOGUE_GROUP_SUBCATEGORIES = {
-  roofing: EXTERIOR_CATALOGUE_SECTIONS.roofing.map(([key, label]) => ({ key, label, fileName: `roofing-${key}.csv` })),
-  [CABINETRY_SECTION_KEY]: CABINETRY_SUBCATEGORIES,
-  [PLUMBING_SECTION_KEY]: PLUMBING_SUBCATEGORIES,
-  [LIGHTING_ELECTRICAL_SECTION_KEY]: LIGHTING_ELECTRICAL_SUBCATEGORIES,
-};
-
-const SECTION_EXPORT_FILE_NAMES = {
-  appliances: "appliances-white-goods.csv",
-  [CABINETRY_SECTION_KEY]: "cabinetry-all.csv",
-  [PLUMBING_SECTION_KEY]: "plumbing-fixtures-tapware-all.csv",
-  "doors-door-furniture": "doors-door-furniture.csv",
-  windows: "windows.csv",
-  roofing: "roofing.csv",
-  cladding: "cladding.csv",
-  flooring: "flooring.csv",
-  tiles: "tiles.csv",
-  painting: "painting.csv",
-  [LIGHTING_ELECTRICAL_SECTION_KEY]: "lighting-electrical-all.csv",
-  "fix-out": "fix-out.csv",
-  "external-products": "external-products.csv",
-};
-
-function cabinetrySubcategoryForProduct(product = {}) {
-  const assignedCategory = CABINETRY_SUBCATEGORIES.find((item) => item.label === product.categoryKey);
-  if (assignedCategory) return assignedCategory.key;
-  const familyKey = product.familyKey || product.familyId || "";
-  const attributes = product.attributes || {};
-  const canonicalType = String(attributes.canonicalType || attributes.categoryType || "").toLowerCase();
-  const productType = String(product.productType || product.product_type || attributes.productType || "").toLowerCase();
-  const text = [
-    product.categoryKey,
-    product.category,
-    product.categoryId,
-    product.section,
-    product.sectionName,
-    product.range,
-    product.collection,
-    product.productName,
-    product.model,
-    product.sku,
-    product.productCode,
-    product.description,
-    product.sourceName,
-    product.sourceType,
-    attributes.fixtureType,
-    attributes.handleUse,
-    attributes.choiceType,
-    attributes.productApplication,
-    attributes.application,
-    attributes.quotationMappingId,
-  ].filter(Boolean).join(" ").toLowerCase();
-  if (/oven|cooktop|rangehood|dishwasher|microwave|fridge|refrigerat|appliance/.test(familyKey) || /appliance catalogue|appliance pack|white goods/.test(text)) return "";
-  if (["entry-doors", "garage-doors", "internal-doors", "door-hardware"].includes(familyKey)) return "";
-  if (/entry door|external door|garage door|internal door|door furniture|mortice lock|deadbolt|smart lock|digital lock|door closer/.test(text)) return "";
-  if (["stone-benchtops", "stone-20mm-tops", "stone-40mm-tops"].includes(familyKey) || /benchtop|stone benchtop|caesarstone|smartstone|neolith|stone ambassador/.test(text)) return "cabinet-benchtops";
-  if (familyKey === "cabinet-finish" || canonicalType === "finish_product" || productType === "cabinet-finish" || /cabinet finish|board colour|board color|laminex|polytec|decorated panel|decorative board|colour collection/.test(text)) return "board-colours-finishes";
-  if (familyKey === "handles") return /entry|external|door/.test(text) ? "" : "cabinet-handles";
-  if (canonicalType === "handle_product" || productType === "handles" || /cabinet handle|handle house|pull handle|finger pull|sharkfin|channel pull/.test(text)) return /entry|external|door furniture/.test(text) ? "" : "cabinet-handles";
-  if (canonicalType === "hardware_product" || productType === "hardware" || /blum|hinge|runner|hardware|soft-close|soft close|drawer runner|cabinet hardware/.test(text)) return "cabinet-hardware";
-  if (canonicalType === "cabinet_unit" || productType === "cabinetry" || /cabinet unit|base unit|wall unit|overhead|pantry|vanity|cupboard|cabinet product|cabinetry product/.test(text)) return "cabinetry-products";
-  if (/cabinet door|door panel|drawer front|end panel|appliance panel|kick panel|doors & panels|doors and panels/.test(text)) return "cabinet-doors-panels";
-  if (familyKey === "cabinetry") return "cabinet-accessories";
-  if (/cabinet|cabinetry|joinery|cleated shelving|bulkhead|shelving/.test(text)) return "cabinet-accessories";
-  return "";
-}
-
-function productBelongsToCabinetryCatalogue(product = {}) {
-  return cabinetrySubcategoryForProduct(product) !== "";
-}
-
-function productMatchesCabinetrySubcategory(product = {}, subcategoryKey = "all") {
-  if (subcategoryKey === "cabinetry-products") return product.categoryKey === "Cabinetry Products";
-  if (!productBelongsToCabinetryCatalogue(product)) return false;
-  if (!subcategoryKey || subcategoryKey === "all") return true;
-  return cabinetrySubcategoryForProduct(product) === subcategoryKey;
-}
-
-function catalogueProductText(product = {}) {
-  const attributes = product.attributes || {};
-  return [
-    product.familyKey,
-    product.familyId,
-    product.categoryKey,
-    product.category,
-    product.categoryId,
-    product.section,
-    product.sectionName,
-    product.range,
-    product.collection,
-    product.productName,
-    product.model,
-    product.sku,
-    product.productCode,
-    product.description,
-    product.sourceName,
-    product.productType,
-    attributes.fixtureType,
-    attributes.handleUse,
-    attributes.choiceType,
-    attributes.productApplication,
-    attributes.application,
-    attributes.canonicalType,
-    attributes.categoryType,
-    attributes.quotationMappingId,
-    attributes.quotationLineCategory,
-  ].filter(Boolean).join(" ").toLowerCase();
-}
-
-function plumbingSubcategoryForProduct(product = {}) {
-  const familyKey = product.familyKey || product.familyId || "";
-  const text = catalogueProductText(product);
-  if (/oven|cooktop|rangehood|dishwasher|microwave|fridge|refrigerat|appliance/.test(familyKey) || /appliance catalogue|appliance pack|white goods/.test(text)) return "";
-  if (familyKey === "toilet" || /toilet|wc suite/.test(text)) return "toilets";
-  if (familyKey === "basin" || /basin/.test(text) && !/mixer|tap/.test(text)) return "basins";
-  if (familyKey === "bath" || /bath/.test(text) && !/mixer|tap/.test(text)) return "baths";
-  if (familyKey === "shower-screen" || /shower screen|shower panel|shower rail/.test(text)) return "showers-screens";
-  if (familyKey === "kitchen-sinks" && /laundry|tub/.test(text)) return "laundry-tubs";
-  if (familyKey === "kitchen-sinks" || /kitchen sink|sink bowl|flushline sink/.test(text)) return "kitchen-sinks";
-  if (familyKey === "basin-mixer" || /basin mixer/.test(text)) return "basin-mixers";
-  if (familyKey === "kitchen-sink-mixers" || /sink mixer|kitchen mixer|laundry mixer/.test(text)) return "sink-mixers";
-  if (familyKey === "shower-mixer" || /shower mixer/.test(text)) return "shower-mixers";
-  if (/bath mixer|bath tap/.test(text)) return "bath-mixers";
-  if (familyKey === "shower-outlet" || /shower outlet|shower head|hand shower|rail shower/.test(text)) return "shower-outlets";
-  if (familyKey === "tapware" || /mixer|tapware|tap /.test(text)) return "sink-mixers";
-  if (["vanity", "accessories"].includes(familyKey) || /accessor|towel rail|floor waste|soap|robe hook|toilet roll/.test(text)) return "accessories";
-  return "";
-}
-
-function lightingElectricalSubcategoryForProduct(product = {}) {
-  const familyKey = product.familyKey || product.familyId || "";
-  const text = catalogueProductText(product);
-  if (!["lighting", "external-lighting", "electrical", "electrical-fixtures"].includes(familyKey) && !/light|downlight|pendant|wall light|power point|switch|fan|smoke alarm|electrical/.test(text)) return "";
-  if (familyKey === "external-lighting" || /external|exterior|outdoor|alfresco/.test(text) && /light/.test(text)) return "exterior-lighting";
-  if (/downlight/.test(text)) return "downlights";
-  if (/pendant/.test(text)) return "pendant-lights";
-  if (/wall light|wall sconce/.test(text)) return "wall-lights";
-  if (/power point|gpo|outlet/.test(text)) return "power-points";
-  if (/switch/.test(text)) return "switches";
-  if (/fan|ceiling fan|exhaust fan/.test(text)) return "fans";
-  if (/smoke alarm|smoke detector/.test(text)) return "smoke-alarms";
-  if (/appliance|accessor|electrical/.test(text) && !/light/.test(text)) return "electrical-appliances-accessories";
-  return "interior-lighting";
-}
-
-function catalogueSubcategoryForProduct(product = {}, sectionKey = "") {
-  if (sectionKey === "roofing") return exteriorSectionForProduct(product, "roofing");
-  if (sectionKey === CABINETRY_SECTION_KEY) return cabinetrySubcategoryForProduct(product);
-  if (sectionKey === PLUMBING_SECTION_KEY) return plumbingSubcategoryForProduct(product);
-  if (sectionKey === LIGHTING_ELECTRICAL_SECTION_KEY) return lightingElectricalSubcategoryForProduct(product);
-  return "";
-}
-
-function productBelongsToCatalogueSection(product = {}, sectionItem = null) {
-  if (!sectionItem) return false;
-  if (sectionItem.key === CABINETRY_SECTION_KEY || sectionItem.key === PLUMBING_SECTION_KEY || sectionItem.key === LIGHTING_ELECTRICAL_SECTION_KEY) {
-    return catalogueSubcategoryForProduct(product, sectionItem.key) !== "";
-  }
-  const familyKey = product.familyKey || product.familyId || "";
-  return new Set(sectionItem.familyKeys || []).has(familyKey);
-}
-
-function productMatchesCatalogueSubcategory(product = {}, sectionKey = "", subcategoryKey = "all") {
-  if (sectionKey === CABINETRY_SECTION_KEY && subcategoryKey === "cabinetry-products") return product.categoryKey === "Cabinetry Products";
-  if (!subcategoryKey || subcategoryKey === "all") return true;
-  return catalogueSubcategoryForProduct(product, sectionKey) === subcategoryKey;
-}
-
-function catalogueSectionExportFileName(sectionItem = null) {
-  if (!sectionItem) return "product-library-section.csv";
-  return SECTION_EXPORT_FILE_NAMES[sectionItem.key] || `${slugify(sectionItem.displayName)}.csv`;
-}
-
-function swatchLabel(swatch) {
-  if (swatch && typeof swatch === "object") return swatch.name || swatch.officialName || swatch.hex || swatch.swatchHex || "Colour";
-  return String(swatch || "");
-}
-
-function swatchStyle(swatch) {
-  const colour = swatch && typeof swatch === "object" ? swatch.hex || swatch.swatchHex : "";
-  return colour ? { "--swatch-colour": colour } : {};
-}
-
-function masterProductsForFamily(products = [], familyItem) {
-  if (!familyItem) return [];
-  return products.filter((product) => product.familyKey === familyItem.familyKey);
-}
-
-function builderEnablementForProduct(product, enablements = [], organisationId = "") {
-  return enablements.find((item) => item.organisationId === organisationId && item.masterProductCode === product?.productCode) || null;
-}
-
-function productDisplayImage(product, familyItem) {
-  return resolveProductLibraryImage({ product, family: familyItem, familyKey: familyItem?.familyKey, areaKey: familyItem?.topLevelArea });
-}
-
-function productHasVerifiedImage(product = {}) {
-  const image = product.primaryImage || product.primaryImageUrl || product.primary_image || product.primary_image_url || "";
-  const status = String(product.imageStatus || product.image_status || "").toLowerCase();
-  if (!image) return false;
-  if (/unavailable|missing|pending|review|required/.test(status)) return false;
-  return /verified|exact|official/.test(status);
-}
-
-function productVerifiedImage(product = {}) {
-  return productHasVerifiedImage(product) ? (product.primaryImage || product.primaryImageUrl || product.primary_image || product.primary_image_url) : "";
-}
-
-function ProductImageAwaitingVerification({ product, large = false }) {
-  return (
-    <span className={large ? "product-image-awaiting large" : "product-image-awaiting"} role="img" aria-label="Product image awaiting verification">
-      <strong>{product?.brand || product?.manufacturer || "Product Library"}</strong>
-      <small>Image awaiting verification</small>
-    </span>
-  );
-}
-
-function ProductLibraryProductImage({ product, familyItem, large = false }) {
-  const verifiedImage = productVerifiedImage(product);
-  if (product.attributes?.internalAreasCatalogue) return <div><VerifiedProductImage src={verifiedImage} name={product.productName} style={{width:'100%',height:large?360:220}}/>{product.attributes.imageScope?<small>{product.attributes.imageScope}</small>:null}</div>;
-  if (verifiedImage) return <img src={verifiedImage} alt={product.productName} loading={large ? "eager" : "lazy"} decoding="async" />;
-  if (productIsAppliance(product, familyItem)) {
-    return <ProductImageAwaitingVerification product={product} large={large} />;
-  }
-  return <img src={productDisplayImage(product, familyItem)} alt={product.productName} loading={large ? "eager" : "lazy"} decoding="async" />;
-}
-
-function supplierNameForProduct(product) {
-  return product.supplier || product.manufacturer || product.brand || "Unassigned Supplier";
-}
-
-function rangeNameForProduct(product) {
-  return product.range || product.collection || product.profile || "Unassigned Range";
-}
-
-function groupedSupplierHierarchy(products = [], familyItem = null, enablements = [], organisationId = "") {
-  const suppliers = new Map();
-  products.forEach((product) => {
-    const supplierName = supplierNameForProduct(product);
-    const rangeName = rangeNameForProduct(product);
-    if (!suppliers.has(supplierName)) {
-      suppliers.set(supplierName, { name: supplierName, products: [], ranges: new Map(), enabled: 0 });
-    }
-    const supplier = suppliers.get(supplierName);
-    const enabled = Boolean(builderEnablementForProduct(product, enablements, organisationId)?.enabled);
-    supplier.products.push(product);
-    if (enabled) supplier.enabled += 1;
-    if (!supplier.ranges.has(rangeName)) {
-      supplier.ranges.set(rangeName, { name: rangeName, products: [], enabled: 0, image: productDisplayImage(product, familyItem) });
-    }
-    const range = supplier.ranges.get(rangeName);
-    range.products.push(product);
-    if (enabled) range.enabled += 1;
-    if (!range.image) range.image = productDisplayImage(product, familyItem);
-  });
-  return Array.from(suppliers.values()).map((supplier) => ({
-    ...supplier,
-    image: productDisplayImage(supplier.products[0], familyItem),
-    ranges: Array.from(supplier.ranges.values()).sort((left, right) => left.name.localeCompare(right.name)),
-  })).sort((left, right) => left.name.localeCompare(right.name));
-}
-
-const APPLIANCE_FALLBACK_IMAGES = {
-  ovens: "/images/catalogues/appliances/fallbacks/oven.svg",
-  cooktops: "/images/catalogues/appliances/fallbacks/cooktop.svg",
-  rangehoods: "/images/catalogues/appliances/fallbacks/rangehood.svg",
-  dishwashers: "/images/catalogues/appliances/fallbacks/dishwasher.svg",
-  "freestanding-cookers": "/images/catalogues/appliances/fallbacks/freestanding-cooker.svg",
-  microwaves: "/images/catalogues/appliances/fallbacks/microwave.svg",
-  fridges: "/images/catalogues/appliances/fallbacks/refrigerator.svg",
-  "appliance-packs": "/images/catalogues/appliances/fallbacks/appliance-pack.svg",
-  generic: "/images/catalogues/appliances/fallbacks/generic.svg",
-};
-
-const APPLIANCE_FAMILY_KEYS = new Set(Object.keys(APPLIANCE_FALLBACK_IMAGES));
-
-function productIsAppliance(product = {}, familyItem = null) {
-  const familyKey = product.familyKey || familyItem?.familyKey || "";
-  return APPLIANCE_FAMILY_KEYS.has(familyKey)
-    || familyItem?.categoryKey === "appliances"
-    || product.categoryKey === "appliances"
-    || product.sourceName === "Canonical Appliance Catalogue";
-}
-
-function appliancePriceLabel(record, { admin = true } = {}) {
-  if (!admin) return record.priceStatus === "quote_required" ? "Quote required" : "Price held in Product Library";
-  if (record.priceStatus === "quote_required") return "Quote required";
-  if (record.priceStatus === "price_pending") return "Price pending";
-  if (record.price == null || record.price === "") return record.priceStatus || "No price";
-  return `${money(record.price)} ${record.unit || ""}`.trim();
-}
-
-function applianceStatusClass(status = "") {
-  if (status === "active-selectable") return "status-pill on";
-  if (status === "active-reference-only") return "status-pill";
-  return "status-pill off";
-}
-
-function applianceValue(value, fallback = "Not supplied") {
-  if (Array.isArray(value)) return value.length ? value.join(", ") : fallback;
-  if (value == null || value === "") return fallback;
-  return String(value);
-}
-
-function applianceSizeBucket(record = {}) {
-  const widthText = `${record.width || ""} ${record.widthMm || ""} ${record.name || ""} ${record.productName || ""}`.toUpperCase();
-  if (/\b90\s*CM\b|\b900\s*MM\b/.test(widthText) || Number(record.widthMm) >= 850) return "900 mm";
-  if (/\b60\s*CM\b|\b600\s*MM\b/.test(widthText) || (Number(record.widthMm) >= 550 && Number(record.widthMm) < 850)) return "600 mm";
-  return "Other size";
-}
-
-function applianceConfigurationBucket(record = {}) {
-  const text = [
-    record.fuelOrEnergyType,
-    record.installationType,
-    record.finish,
-    record.name,
-    record.productName,
-    record.specificationSummary?.rangehoodType,
-    record.specificationSummary?.cooktopType,
-  ].join(" ").toLowerCase();
-  if (/induction/.test(text)) return "Induction";
-  if (/ceramic/.test(text)) return "Ceramic";
-  if (/\bgas\b/.test(text)) return "Gas";
-  if (/electric/.test(text)) return "Electric";
-  if (/canopy/.test(text)) return "Canopy";
-  if (/slide/.test(text)) return "Slide-out";
-  if (/fixed/.test(text)) return "Fixed";
-  if (/undermount|under mount/.test(text)) return "Undermount";
-  if (/freestanding|free standing/.test(text)) return "Freestanding";
-  return "Other configuration";
-}
-
-function applianceDimensionLabel(record = {}) {
-  const width = record.width || (record.widthMm ? `W${record.widthMm}` : "");
-  const depth = record.depth || (record.depthMm ? `D${record.depthMm}` : "");
-  const height = record.height || (record.heightMm ? `H${record.heightMm}` : "");
-  return [width, depth, height].filter(Boolean).join(" x ");
-}
-
-function applianceFeatureList(record = {}) {
-  const specs = record.specificationSummary || record.specifications || {};
-  const candidates = [
-    specs.capacity,
-    specs.functions,
-    specs.zones,
-    specs.placeSettings,
-    specs.rangehoodType,
-    specs.cooktopType,
-    specs.energyRating,
-    specs.warranty,
-    record.warranty,
-  ];
-  return uniqueValues(candidates.flatMap((value) => Array.isArray(value) ? value : [value])).slice(0, 8);
-}
-
-function applianceFilterOptionValues(records = []) {
-  return {
-    widths: uniqueValues(records.map(applianceSizeBucket)),
-    fuels: uniqueValues(records.map((record) => record.fuelOrEnergyType || applianceConfigurationBucket(record))),
-    installs: uniqueValues(records.map((record) => record.installationType)),
-    finishes: uniqueValues(records.map((record) => record.finish)),
-    verifications: uniqueValues(records.map((record) => record.verificationStatus)),
-  };
-}
-
-function groupAppliancesForBrand(records = []) {
-  return records.reduce((groups, record) => {
-    const family = record.familyId || "other";
-    const size = applianceSizeBucket(record);
-    const configuration = applianceConfigurationBucket(record);
-    const key = `${family}::${size}::${configuration}`;
-    if (!groups.has(key)) groups.set(key, { family, size, configuration, records: [] });
-    groups.get(key).records.push(record);
-    return groups;
-  }, new Map());
-}
-
-function ApplianceImage({ record, large = false }) {
-  if (record?.image) return <img src={record.image} alt={`${record.name || record.productName || "Appliance"} product`} loading={large ? "eager" : "lazy"} />;
-  return (
-    <span
-      className={large ? "appliance-image-fallback large" : "appliance-image-fallback"}
-      role="img"
-      aria-label={`${record?.familyName || "Appliance"} exact image required`}
-    >
-      <strong>{record?.brandName || record?.brand || "Product Library"}</strong>
-      <small>{record?.imageFallbackLabel || APPLIANCE_IMAGE_FALLBACK_LABEL}</small>
-    </span>
-  );
-}
-
-function ApplianceCard({ record, brand, onOpen, onSelect, compareLabel = "Compare" }) {
-  return (
-    <article className="product-option management-card appliance-visual-card" data-appliance-product={record.productId} data-appliance-family={record.familyId}>
-      <div className="appliance-card-logo">{brand ? <ApplianceBrandLogo brand={brand} /> : <strong>{record.brand || "Brand"}</strong>}</div>
-      <div className="appliance-card-media">
-        <ApplianceImage record={record} />
-      </div>
-      <div className="appliance-card-copy">
-        <span>{record.familyName || "Appliance"}</span>
-        <strong>{record.name}</strong>
-        <small>{record.model || record.productCode || "Model pending"}</small>
-        <small>{[
-          applianceDimensionLabel(record),
-          applianceConfigurationBucket(record),
-          record.finish,
-        ].filter(Boolean).join(" / ")}</small>
-      </div>
-      <div className="appliance-card-footer">
-        <strong>{appliancePriceLabel(record)}</strong>
-        <span className={record.image ? "status-pill on" : "status-pill"}>{record.image ? "verified image" : "exact image required"}</span>
-      </div>
-      <div className="card-actions appliance-card-actions">
-        <button type="button" onClick={() => onOpen(record)}>View Details</button>
-        <button type="button" onClick={() => onSelect(record)}><Check size={15} /> Select Product</button>
-        <button type="button" className="secondary" onClick={() => onOpen(record)}><Copy size={15} /> {compareLabel}</button>
-      </div>
-    </article>
-  );
-}
-
-function ApplianceBrandLogo({ brand }) {
-  if (brand?.logoUrl) {
-    return (
-      <span className="appliance-brand-logo" style={brand.logoBackground ? { "--brand-logo-background": brand.logoBackground } : {}}>
-        <img src={brand.logoUrl} alt={`${brand.brandName} logo`} />
-      </span>
-    );
-  }
-  return <span className="appliance-brand-logo text-logo">{brand?.brandName || "Brand"}</span>;
-}
-
-function categoryBelongsToArea(categoryItem, areaKey) {
-  if (areaKey === "exterior") return categoryItem.topLevelArea === "exterior";
-  if (areaKey === "interior") return categoryItem.topLevelArea !== "exterior";
-  return categoryItem.topLevelArea === areaKey;
-}
-
-function familyBelongsToArea(familyItem, areaKey) {
-  if (areaKey === "exterior") return familyItem.topLevelArea === "exterior";
-  if (areaKey === "kitchen") {
-    const kitchenFamilyKeys = new Set([
-      "cabinetry",
-      "cabinet-finish",
-      "handles",
-      "stone-benchtops",
-      "stone-20mm-tops",
-      "stone-40mm-tops",
-      "splashback",
-      "kitchen-sinks",
-      "kitchen-sink-mixers",
-      "ovens",
-      "cooktops",
-      "rangehoods",
-      "dishwashers",
-      "microwaves",
-      "flooring",
-      "lighting",
-      "paint",
-    ]);
-    return familyItem.topLevelArea === "kitchen" || kitchenFamilyKeys.has(familyItem.familyKey);
-  }
-  if (areaKey === "interior") return familyItem.topLevelArea !== "exterior";
-  return familyItem.topLevelArea === areaKey;
-}
-
-function parseCsv(text) {
-  const rows = [];
-  let row = [];
-  let cell = "";
-  let quoted = false;
-  for (let index = 0; index < text.length; index += 1) {
-    const char = text[index];
-    const next = text[index + 1];
-    if (quoted && char === '"' && next === '"') {
-      cell += '"';
-      index += 1;
-    } else if (char === '"') {
-      quoted = !quoted;
-    } else if (!quoted && char === ",") {
-      row.push(cell);
-      cell = "";
-    } else if (!quoted && (char === "\n" || char === "\r")) {
-      if (char === "\r" && next === "\n") index += 1;
-      row.push(cell);
-      if (row.some((value) => String(value).trim())) rows.push(row);
-      row = [];
-      cell = "";
-    } else {
-      cell += char;
-    }
-  }
-  row.push(cell);
-  if (row.some((value) => String(value).trim())) rows.push(row);
-  return rows;
-}
-
-function csvRecords(text) {
-  const rows = parseCsv(text);
-  if (!rows.length) return [];
-  const headers = rows[0].map((header) => slugify(header).replace(/-/g, "_"));
-  return rows.slice(1).map((row) => Object.fromEntries(headers.map((header, index) => [header, row[index] || ""])));
-}
-
-function csvCell(value) {
-  const text = String(value ?? "");
-  return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
-}
-
-function downloadCsv(fileName, rows) {
-  const csv = rows.map((row) => row.map(csvCell).join(",")).join("\r\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-}
-
-function mapDbProductToEntity(product, categoryName = "", supplierName = "", brandName = "") {
-  const entity = product.metadata?.productEntity || {};
-  return {
-    productId: product.id,
-    productCode: product.sku || entity.productCode || "",
-    organisationId: product.workspace_id || "",
-    linkedQuoteItemCode: product.quote_structure_row_id || entity.linkedQuoteItemCode || "",
-    approvedSourceKey: entity.approvedSourceKey || product.metadata?.approvedSourceKey || "",
-    familyKey: entity.familyKey || product.metadata?.familyKey || "",
-    topLevelArea: entity.topLevelArea || product.metadata?.topLevelArea || "",
-    category: categoryName || entity.category || product.quote_structure_section || "",
-    subcategory: entity.subcategory || product.selection_type || "",
-    productType: entity.productType || product.selection_type || "",
-    tags: entity.tags || [],
-    compatibleAreaTypes: entity.compatibleAreaTypes || [],
-    productName: product.product_name,
-    supplier: supplierName || entity.supplier || "",
-    brand: brandName || entity.brand || "",
-    range: entity.range || product.metadata?.range || "",
-    model: product.model || "",
-    description: product.description || "",
-    colour: entity.colour || product.metadata?.colour || "",
-    finish: entity.finish || product.metadata?.finish || "",
-    size: entity.size || product.metadata?.size || "",
-    width: entity.width || entity.dimensions?.width || "",
-    height: entity.height || entity.dimensions?.height || "",
-    depth: entity.depth || entity.dimensions?.depth || "",
-    dimensions: entity.dimensions || {},
-    variants: entity.variants || [],
-      primaryImage: product.primary_image_url || entity.primaryImage || "",
-    thumbnail: product.primary_image_url || entity.thumbnail || "",
-    galleryImages: entity.galleryImages || [],
-    colourSwatches: entity.colourSwatches || [],
-    imageAltText: entity.imageAltText || product.product_name,
-    imageSource: entity.imageSource || "",
-    officialProductURL: product.product_url || entity.officialProductURL || "",
-    specificationURL: product.datasheet_pdf_url || entity.specificationURL || "",
-      supplierURL: product.supplier_website_url || entity.supplierURL || "",
-    RRP: entity.RRP || 0,
-    builderCost: entity.builderCost || Number(product.base_allowance || 0),
-    clientPrice: entity.clientPrice || Number(product.upgrade_cost || 0),
-    allowance: Number(product.base_allowance || 0),
-    upgradePrice: Number(product.upgrade_cost || 0),
-    currency: entity.currency || "AUD",
-    gstTreatment: entity.gstTreatment || "GST inclusive",
-    priceSource: entity.priceSource || "workspace product",
-    priceEffectiveDate: entity.priceEffectiveDate || entity.effectiveDate || "",
-    effectiveDate: entity.priceEffectiveDate || entity.effectiveDate || "",
-    priceStatus: entity.priceStatus || "workspace",
-    active: product.active !== false,
-    discontinued: entity.discontinued || false,
-    archived: product.active === false,
-    unavailable: entity.unavailable || false,
-    imageReviewRequired: !product.primary_image_url,
-    priceReviewRequired: !product.base_allowance && !product.upgrade_cost,
-    raw: product,
-  };
-}
-
-export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = false, workbook, projectId, onClientSelectionsSave, selectionBook, selectionMode } = {}) {
+function BuilderProductLibraryPageContent({ embeddedInEstimateBuilder = false, workbook, projectId, onClientSelectionsSave, selectionBook, selectionMode } = {}) {
   const router = useRouter();
   const { workspaceId, activeWorkspace, loading: workspaceLoading } = useWorkspace();
   const furniturePicker = useDoorFurniturePicker({workbook, projectId, workspaceId, onClientSelectionsSave, selectionBook, selectionMode});
@@ -911,9 +175,14 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
   const [routeHydrated, setRouteHydrated] = useState(false);
   const [jobFile, setJobFile] = useState({ [PRODUCT_LIBRARY_SELECTIONS_KEY]: {}, workbook: { [PRODUCT_LIBRARY_SELECTIONS_KEY]: {} } });
+  const PLUMBING_DEFAULT_FILTERS = { search: "", brand: "all", finish: "all", price: "all", productType: "all", sort: "name-asc" };
+  const [plumbingFilters, setPlumbingFilters] = useState(PLUMBING_DEFAULT_FILTERS);
+  const [plumbingDetailProduct, setPlumbingDetailProduct] = useState(null);
+  const plumbingSubcategoryRouteKey = typeof router.query.catalogueSubcategory === "string" ? router.query.catalogueSubcategory : "";
+  useEffect(() => { setPlumbingFilters(PLUMBING_DEFAULT_FILTERS); }, [plumbingSubcategoryRouteKey]);
   const [jobFileName, setJobFileName] = useState(DEFAULT_JOB_FILE_NAME);
   const [adminOpen, setAdminOpen] = useState(false);
-  const [importPreview, setImportPreview] = useState(null);
+  const [builderImportFile, setBuilderImportFile] = useState(null);
   const [masterCatalogueOpen, setMasterCatalogueOpen] = useState(false);
   const [masterProducts, setMasterProducts] = useState([]);
   const [builderEnablements, setBuilderEnablements] = useState([]);
@@ -925,6 +194,7 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
   const [selectedCatalogueItemIds, setSelectedCatalogueItemIds] = useState([]);
   const [catalogueRevision, setCatalogueRevision] = useState(0);
   const [masterFilters, setMasterFilters] = useState({ search: "", area: "", section: "", category: "", family: "", manufacturer: "", brand: "", supplier: "", range: "", room: "", region: "", imageStatus: "", priceStatus: "", ownership: "", clientSelectable: "", quotationEnabled: "", status: "" });
+  const [stairPreview,setStairPreview]=useState(null);
   const [applianceFilters, setApplianceFilters] = useState({ search: "", productType: "", width: "", fuel: "", install: "", finish: "", status: "", verification: "", selectable: "", sourcePlatform: "", tenantId: "", sort: "name" });
   const [applianceImportInfoOpen, setApplianceImportInfoOpen] = useState(false);
   const [productForm, setProductForm] = useState(EMPTY_PRODUCT);
@@ -939,14 +209,14 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
   const applianceMode = catalogueMode === "appliances";
   const browseMode = router.query.browse === "all" ? "all" : "room";
   const selectedRoomKey = typeof router.query.room === "string" ? router.query.room : "";
-  const selectedRoomCategoryKey = typeof router.query.roomCategory === "string" ? router.query.roomCategory : "";
+  const selectedRoomCategoryKey = typeof router.query.roomCategory === "string" && !isInternalPaintColourCategory(router.query.roomCategory) ? router.query.roomCategory : "";
   const [roomVisibleCount,setRoomVisibleCount]=useState(48);
   const paginatedInternalCategory=['internal-doors','door-furniture','skirting-architraves','skirting','architraves'].includes(selectedRoomCategoryKey);
-  useEffect(()=>setRoomVisibleCount(48),[selectedRoomCategoryKey,masterFilters.brand,masterFilters.range,masterFilters.search]);
+  useEffect(()=>setRoomVisibleCount(48),[selectedRoomCategoryKey,masterFilters.brand,masterFilters.range,masterFilters.search,masterFilters.function,masterFilters.finishes]);
   const selectedRoomProductId = typeof router.query.roomProduct === "string" ? router.query.roomProduct : "";
   const selectedRoom = selectedRoomKey ? getProductLibraryRoom(selectedRoomKey) : null;
   const selectedRoomCategories = useMemo(() => selectedRoomKey ? getProductLibraryRoomCategories(selectedRoomKey) : [], [selectedRoomKey]);
-  const selectedRoomCategory = selectedRoomCategoryKey ? getProductLibraryRoomCategory(selectedRoom?.key === "exterior" && selectedRoomCategoryKey === "door-furniture" ? "external-door-furniture" : selectedRoomCategoryKey) : null;
+  const selectedRoomCategory = selectedRoomCategoryKey ? getProductLibraryRoomCategory(selectedRoomCategoryKey, selectedRoom?.key) : null;
   const catalogueSectionKey = typeof router.query.catalogueSection === "string" ? router.query.catalogueSection : "";
   const selectedCatalogueSection = catalogueSectionKey ? getProductLibraryCatalogueSection(catalogueSectionKey) : null;
   const cabinetrySubcategoryKey = typeof router.query.cabinetrySubcategory === "string" ? router.query.cabinetrySubcategory : "all";
@@ -993,9 +263,9 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
   }, [familyMasterProducts, selectedFamily, selectedRangeGroup, selectedSupplierGroup]);
   const selectedProduct = visibleProducts.find((product) => product.productCode === selectedProductCode || product.productId === selectedProductCode) || visibleProducts[0] || null;
   const masterManufacturers = useMemo(() => uniqueValues(masterProducts.map((product) => product.manufacturer)), [masterProducts]);
-  const masterBrands = useMemo(() => uniqueValues(masterProducts.map((product) => product.brand)), [masterProducts]);
+
   const masterSuppliers = useMemo(() => uniqueValues(masterProducts.map((product) => product.supplier)), [masterProducts]);
-  const masterRanges = useMemo(() => uniqueValues(masterProducts.map((product) => product.range)), [masterProducts]);
+
   const filteredMasterProducts = useMemo(() => masterProducts.filter((product) => masterProductMatchesFilters(product, masterFilters)), [masterFilters, masterProducts]);
   const effectiveCatalogueProducts = useMemo(() => getEffectiveProductCatalogue({
     tenantId: workspaceId || "",
@@ -1009,17 +279,37 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
     includeDisabled: true,
   }).products, [builderEnablements, catalogueRevision, masterProducts, workspaceId]);
   const roomProducts = useMemo(() => selectedRoom ? effectiveCatalogueProducts.filter((product) => productBelongsToRoom(product, selectedRoom.key)) : [], [effectiveCatalogueProducts, selectedRoom]);
-  const exteriorSections = EXTERIOR_CATALOGUE_SECTIONS[selectedRoomCategory?.key] || [];
+  const exteriorSections = INTERNAL_CATALOGUE_SECTIONS[selectedRoomCategory?.key] || EXTERIOR_CATALOGUE_SECTIONS[selectedRoomCategory?.key] || [];
   const exteriorSectionKey = typeof router.query.exteriorSection === "string" && exteriorSections.some(([key]) => key === router.query.exteriorSection) ? router.query.exteriorSection : "all";
   const allRoomCategoryProducts = useMemo(() => effectiveCatalogueProducts.filter((product) => productBelongsToRoomCategory(product, selectedRoomCategory)), [effectiveCatalogueProducts, selectedRoomCategory]);
+  const filterScopeProducts = useMemo(() => effectiveCatalogueProducts.filter(product => {
+    if (selectedRoomCategory) return productBelongsToRoomCategory(product, selectedRoomCategory);
+    if (selectedCatalogueSection) return productBelongsToCatalogueSection(product, selectedCatalogueSection);
+    if (selectedFamily) return product.familyKey === selectedFamily.familyKey;
+    return masterProductMatchesFilters(product, {category: masterFilters.category, section: masterFilters.section, family: masterFilters.family, room: selectedRoom?.key || masterFilters.room});
+  }), [effectiveCatalogueProducts, selectedRoomCategory, selectedCatalogueSection, selectedFamily, selectedRoom, masterFilters.category, masterFilters.section, masterFilters.family, masterFilters.room]);
+  const {brands: masterBrands, ranges: masterRanges} = useMemo(() => catalogueFilterValues(filterScopeProducts, masterFilters.brand), [filterScopeProducts, masterFilters.brand]);
+  useEffect(() => {
+    if (masterFilters.range && !masterRanges.includes(masterFilters.range)) setMasterFilters(current => ({...current,range:''}));
+  }, [masterRanges, masterFilters.range]);
+  const [productView, setProductView] = useState('grid');
+  useEffect(() => {try {setProductView(localStorage.getItem(`product-library:view:${workspaceId || 'default'}`)==='list'?'list':'grid');} catch {}}, [workspaceId]);
+  function changeProductView(view) {setProductView(view);try {localStorage.setItem(`product-library:view:${workspaceId || 'default'}`,view);} catch {}}
+  async function saveTrimRates(product, rates) {
+    if (!workspaceId) throw Error('Choose a builder organisation before editing prices.');
+    updateBuilderProductOverride(workspaceId, product.productCode, {builderPrice: rates.price_per_stock_length, customFields: {productAttributes: {...product.attributes,...rates,priceIncludesGst:true,priceBasis:'builder_catalogue_estimate',priceNote:'Editable builder catalogue rate, AUD including GST. Not a verified supplier price.'}}});
+    setCatalogueRevision(value=>value+1);
+    setSuccess('Builder trim prices saved. Product Library selections and quotation prices use this rate.');
+  }
   const roomCategoryProducts = useMemo(() => {
     if (!selectedRoomCategory) return [];
     return effectiveCatalogueProducts
       .filter((product) => productBelongsToRoomCategory(product, selectedRoomCategory))
-      .filter((product) => exteriorSectionKey === "all" || (selectedRoomCategory.key === 'skirting-architraves' ? productBelongsToRoomCategory(product, getProductLibraryRoomCategory(exteriorSectionKey)) : exteriorSectionForProduct(product, selectedRoomCategory.key) === exteriorSectionKey))
+      .filter((product) => exteriorSectionKey === "all" || (selectedRoomCategory.key === 'skirting-architraves' ? productBelongsToRoomCategory(product, getProductLibraryRoomCategory(exteriorSectionKey)) : (INTERNAL_CATALOGUE_SECTIONS[selectedRoomCategory.key] ? product.attributes?.catalogueSection === exteriorSectionKey : exteriorSectionForProduct(product, selectedRoomCategory.key) === exteriorSectionKey)))
       .filter((product) => !selectedRoom || productBelongsToRoom(product, selectedRoom.key))
-      .filter((product) => masterProductMatchesFilters(product, masterFilters));
+      .filter((product) => masterProductMatchesFilters(product, masterFilters)).map(product => selectedRoomCategory.key === 'door-furniture' ? filteredFurnitureProduct(product,masterFilters) : product);
   }, [effectiveCatalogueProducts, masterFilters, selectedRoom, selectedRoomCategory, exteriorSectionKey]);
+  const catalogueSortOptions = selectedRoomCategory?.key === 'door-furniture' ? [...CATALOGUE_SORT_OPTIONS,...FURNITURE_SORT_OPTIONS] : CATALOGUE_SORT_OPTIONS;
   const currentFilteredProducts = useMemo(() => {
     if (selectedRoomCategory) return roomCategoryProducts;
     if (selectedRoom) return roomProducts.filter((product) => masterProductMatchesFilters(product, masterFilters));
@@ -1054,6 +344,94 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
     () => catalogueGroupProducts.filter((product) => productMatchesCatalogueSubcategory(product, selectedCatalogueSection?.key, selectedCatalogueSubcategory?.key || "all")),
     [catalogueGroupProducts, selectedCatalogueSection?.key, selectedCatalogueSubcategory?.key]
   );
+  const plumbingActiveVisibleProducts = useMemo(
+    () => catalogueGroupVisibleProducts.filter((product) => product.active !== false && product.archived !== true),
+    [catalogueGroupVisibleProducts]
+  );
+  const plumbingCountsByCategory = useMemo(() => {
+    if (selectedCatalogueSection?.key !== PLUMBING_SECTION_KEY) return {};
+    const counts = {};
+    for (const product of catalogueGroupProducts) {
+      if (product.active === false || product.archived === true) continue;
+      const key = catalogueSubcategoryForProduct(product, PLUMBING_SECTION_KEY);
+      if (key) counts[key] = (counts[key] || 0) + 1;
+    }
+    return counts;
+  }, [catalogueGroupProducts, selectedCatalogueSection?.key]);
+  const plumbingLandingMode = selectedCatalogueSection?.key === PLUMBING_SECTION_KEY && !router.query.catalogueSubcategory;
+  // Toilets genuinely mixes two distinct product types on HNC: actual toilet
+  // suites/pans, and dual-flush push plates/panels (a cistern-button
+  // accessory for in-wall cisterns, not a toilet itself). Keeping them in one
+  // canonical category (per the fixed taxonomy) but letting the customer tell
+  // them apart via a simple Product Type filter, rather than inventing a new
+  // top-level category or silently dropping the flush plates.
+  const plumbingProductTypeOf = (product) => {
+    if (catalogueSubcategoryForProduct(product, PLUMBING_SECTION_KEY) !== "toilets") return "";
+    return /flush.*(push )?(panel|plate)|push (panel|plate)/i.test(product.productName || "") ? "Flush Plate / Panel" : "Toilet Suite / Pan";
+  };
+  const plumbingProductTypeOptions = useMemo(
+    () => Array.from(new Set(plumbingActiveVisibleProducts.map(plumbingProductTypeOf).filter(Boolean))).sort((a, b) => a.localeCompare(b)),
+    [plumbingActiveVisibleProducts]
+  );
+  const plumbingBrandOptions = useMemo(
+    () => Array.from(new Set(plumbingActiveVisibleProducts.map((product) => product.brand || product.manufacturer).filter(Boolean))).sort((a, b) => a.localeCompare(b)),
+    [plumbingActiveVisibleProducts]
+  );
+  const plumbingBrandCounts = useMemo(() => {
+    const counts = {};
+    for (const product of plumbingActiveVisibleProducts) {
+      const brand = product.brand || product.manufacturer;
+      if (brand) counts[brand] = (counts[brand] || 0) + 1;
+    }
+    return counts;
+  }, [plumbingActiveVisibleProducts]);
+  const plumbingFinishOptions = useMemo(
+    () => Array.from(new Set(plumbingActiveVisibleProducts.map((product) => product.finish || product.colour).filter(Boolean))).sort((a, b) => a.localeCompare(b)),
+    [plumbingActiveVisibleProducts]
+  );
+  const plumbingPriceOf = (product) => {
+    const value = product.tenantSellPrice ?? product.clientPrice ?? product.rrp;
+    return typeof value === "number" ? value : null;
+  };
+  const plumbingFilteredProducts = useMemo(() => {
+    const search = plumbingFilters.search.trim().toLowerCase();
+    let list = plumbingActiveVisibleProducts.filter((product) => {
+      if (plumbingFilters.brand !== "all" && (product.brand || product.manufacturer) !== plumbingFilters.brand) return false;
+      if (plumbingFilters.finish !== "all" && (product.finish || product.colour) !== plumbingFilters.finish) return false;
+      if (plumbingFilters.productType !== "all" && plumbingProductTypeOf(product) !== plumbingFilters.productType) return false;
+      if (plumbingFilters.price !== "all") {
+        const price = plumbingPriceOf(product);
+        if (price == null) return false;
+        if (plumbingFilters.price === "under-200" && !(price < 200)) return false;
+        if (plumbingFilters.price === "200-500" && !(price >= 200 && price < 500) ) return false;
+        if (plumbingFilters.price === "500-1000" && !(price >= 500 && price < 1000)) return false;
+        if (plumbingFilters.price === "over-1000" && !(price >= 1000)) return false;
+      }
+      if (search) {
+        const haystack = [product.productName, product.brand, product.manufacturer, product.model, product.sku].filter(Boolean).join(" ").toLowerCase();
+        if (!haystack.includes(search)) return false;
+      }
+      return true;
+    });
+    const sort = plumbingFilters.sort;
+    list = [...list].sort((a, b) => {
+      if (sort === "brand-asc") {
+        const brandCompare = (a.brand || a.manufacturer || "").localeCompare(b.brand || b.manufacturer || "");
+        if (brandCompare !== 0) return brandCompare;
+        return (a.productName || "").localeCompare(b.productName || "");
+      }
+      if (sort === "price-asc" || sort === "price-desc") {
+        const priceA = plumbingPriceOf(a);
+        const priceB = plumbingPriceOf(b);
+        if (priceA == null && priceB == null) return (a.productName || "").localeCompare(b.productName || "");
+        if (priceA == null) return 1; // unpriced products sink to the end rather than breaking the sort
+        if (priceB == null) return -1;
+        return sort === "price-asc" ? priceA - priceB : priceB - priceA;
+      }
+      return (a.productName || "").localeCompare(b.productName || "");
+    });
+    return list;
+  }, [plumbingActiveVisibleProducts, plumbingFilters]);
   const selectedCatalogueGroupProducts = useMemo(
     () => catalogueGroupProducts.filter((product) => selectedCatalogueItemSet.has(catalogueProductSelectionKey(product))),
     [catalogueGroupProducts, selectedCatalogueItemSet]
@@ -1086,24 +464,24 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
   const cabinetrySelectedRange = cabinetrySelectedBrand?.ranges.find((range) => range.name === cabinetryRangeName) || null;
   const cabinetryVisibleColourProducts = cabinetrySelectedRange?.products || cabinetrySelectedBrand?.products || cabinetDoorPanelProducts;
   const selectedRoomProduct = useMemo(() => {
-    if (!selectedRoomProductId) return null;
+    if (!selectedRoomProductId || !selectedRoomCategory) return null;
     return effectiveCatalogueProducts.find((product) => product.productId === selectedRoomProductId || product.productCode === selectedRoomProductId) || null;
-  }, [effectiveCatalogueProducts, selectedRoomProductId]);
+  }, [effectiveCatalogueProducts, selectedRoomProductId, selectedRoomCategory]);
   const applianceFamilies = useMemo(() => getApplianceFamilies(), []);
   const applianceFamily = applianceFamilies.find((family) => family.familyId === applianceFamilyKey) || null;
   const applianceBrands = useMemo(() => applianceFamilyKey ? getApplianceBrandsByFamily(applianceFamilyKey) : getApplianceBrands().map((brand) => brand.brandName), [applianceFamilyKey]);
   const applianceBrandCards = useMemo(() => getApplianceBrands({ familyId: applianceFamilyKey }), [applianceFamilyKey]);
   const selectedApplianceBrand = useMemo(() => getApplianceBrandByName(applianceBrandName), [applianceBrandName]);
   const applianceSourceRecordsForBrand = useMemo(() => {
-    if (!applianceBrandName) return getPlatformMasterApplianceRecords();
-    return getPlatformMasterApplianceRecords().filter((record) => record.brand === applianceBrandName || record.brandName === applianceBrandName);
+    if (!applianceBrandName) return getActiveProductLibraryApplianceRecords();
+    return getActiveProductLibraryApplianceRecords().filter((record) => record.brand === applianceBrandName || record.brandName === applianceBrandName);
   }, [applianceBrandName]);
   const applianceFilterOptions = useMemo(() => applianceFilterOptionValues(applianceSourceRecordsForBrand), [applianceSourceRecordsForBrand]);
   const applianceModels = useMemo(() => {
     if (!applianceBrandName) return [];
     const sourceRecords = applianceFamilyKey
       ? getApplianceModelsByFamilyAndBrand(applianceFamilyKey, applianceBrandName)
-      : getPlatformMasterApplianceRecords().filter((record) => record.brand === applianceBrandName || record.brandName === applianceBrandName);
+      : getActiveProductLibraryApplianceRecords().filter((record) => record.brand === applianceBrandName || record.brandName === applianceBrandName);
     return filterApplianceRecords(sourceRecords, { ...applianceFilters, family: applianceFamilyKey, brand: applianceBrandName });
   }, [applianceBrandName, applianceFamilyKey, applianceFilters]);
   const appliancePacksForBrand = useMemo(() => {
@@ -1120,7 +498,10 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
     if (!applianceProductId) return [];
     return getApplianceRecordsByFamily("appliance-packs").filter((pack) => (pack.components || []).some((component) => component.productId === applianceProductId));
   }, [applianceProductId]);
-  const selectedApplianceProduct = useMemo(() => applianceProductId ? getApplianceProductById(applianceProductId) : null, [applianceProductId]);
+  const selectedApplianceProduct = useMemo(() => {
+    const record = applianceProductId ? getApplianceProductById(applianceProductId) : null;
+    return record && record.active !== false && record.selectable !== false && !["hidden", "draft"].includes(record.eligibility) ? record : null;
+  }, [applianceProductId]);
   const applianceCatalogueStats = useMemo(() => ({
     platformMaster: getPlatformMasterApplianceRecords().length,
     active: getActiveProductLibraryApplianceRecords().length,
@@ -1233,7 +614,7 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
-      const raw = window.localStorage.getItem(PRODUCT_LIBRARY_JOB_STORAGE_KEY);
+      const raw = window.localStorage.getItem(browserTenantKey(PRODUCT_LIBRARY_JOB_STORAGE_KEY));
       if (!raw) return;
       const saved = JSON.parse(raw);
       setJobFile(saved.jobFile || saved);
@@ -1324,11 +705,20 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
     if (!workspaceId) return;
     setLoading(true);
     setError("");
+    async function loadWorkspaceProducts() {
+      const data = [];
+      for (let offset = 0; ; offset += 1000) {
+        const result = await supabase.from("builder_products").select("*").eq("workspace_id", workspaceId).order("updated_at", { ascending: false }).order("id").range(offset, offset + 999);
+        if (result.error) return result;
+        data.push(...result.data);
+        if (result.data.length < 1000) return { data, error: null };
+      }
+    }
     const [categoryResult, supplierResult, manufacturerResult, productResult] = await Promise.all([
       supabase.from("builder_product_categories").select("*").or(`workspace_id.eq.${workspaceId},workspace_id.is.null`).order("sort_order", { ascending: true }),
       supabase.from("builder_product_suppliers").select("*").eq("workspace_id", workspaceId).order("supplier_name", { ascending: true }),
       supabase.from("builder_product_manufacturers").select("*").eq("workspace_id", workspaceId).order("manufacturer_name", { ascending: true }),
-      supabase.from("builder_products").select("*").eq("workspace_id", workspaceId).order("updated_at", { ascending: false }),
+      loadWorkspaceProducts(),
     ]);
     const firstError = categoryResult.error || supplierResult.error || manufacturerResult.error || productResult.error;
     if (firstError) {
@@ -1511,10 +901,11 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
 
   function clearApplianceFilters() {
     setApplianceFilters({ search: "", productType: "", width: "", fuel: "", install: "", finish: "", status: "", verification: "", selectable: "", sourcePlatform: "", tenantId: "", sort: "name" });
+    openApplianceCatalogue({ applianceBrand: applianceBrandName });
   }
 
   function selectApplianceRecord(record) {
-    if (!record?.productId) return;
+    if (!record?.productId || !isApplianceRecordSelectable(record)) return;
     const selectionKey = `appliances:${record.recordType === "appliance-pack" ? "package" : record.familyId}:${record.productId}`;
     const selectedAt = new Date().toISOString();
     const nextSelection = {
@@ -1565,6 +956,59 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
       },
     });
     setSuccess(`${record.name || record.model || "Appliance"} selected from Product Library.`);
+  }
+
+  // Generic Client Selections write for any non-appliance catalogue product
+  // (plumbing, kitchen, etc.) - same PRODUCT_LIBRARY_SELECTIONS_KEY/jobFile
+  // persistence selectApplianceRecord uses above, just built from a generic
+  // normalised catalogue record instead of an appliance-specific one.
+  function selectCatalogueProduct(product, sectionKey) {
+    if (!product?.productId && !product?.productCode) return;
+    const productId = product.productId || product.productCode;
+    const selectionKey = `catalogue:${sectionKey || product.familyKey || "product"}:${productId}`;
+    const selectedAt = new Date().toISOString();
+    const nextSelection = {
+      productId,
+      stableProductId: product.stableProductId || productId,
+      recordType: "catalogue-product",
+      familyId: product.familyKey || product.familyId || "",
+      familyName: product.categoryKey || product.familyKey || "",
+      brand: product.brand || product.manufacturer || "",
+      model: product.model || product.sku || product.productCode || "",
+      productName: product.productName || "",
+      description: product.description || "",
+      specifications: {
+        finish: product.finish || product.colour || "",
+        dimensions: product.dimensions || product.size || "",
+        material: product.material || "",
+        configuration: product.configuration || "",
+      },
+      image: productVerifiedImage(product) || "",
+      selectedPrice: (product.tenantSellPrice ?? product.clientPrice ?? product.rrp ?? null),
+      priceStatus: product.priceStatus || "price_pending",
+      allowance: 0,
+      variation: 0,
+      catalogueVersion: "product-library.catalogue.v1",
+      selectedAt,
+      sourceUrl: product.officialProductUrl || product.sourceUrl || "",
+      sourceName: product.sourceName || product.supplier || "",
+      components: [],
+    };
+    const currentSelections = productLibrarySelectionsFromJobFile(jobFile);
+    const nextSelections = { ...currentSelections, [selectionKey]: nextSelection };
+    persistJobFile({
+      ...jobFile,
+      [PRODUCT_LIBRARY_SELECTIONS_KEY]: nextSelections,
+      workbook: {
+        ...(jobFile.workbook || {}),
+        [PRODUCT_LIBRARY_SELECTIONS_KEY]: nextSelections,
+      },
+    });
+    setSuccess(`${product.productName || product.model || "Product"} selected from Product Library.`);
+  }
+
+  function isCatalogueProductSelectable(product = {}) {
+    return Boolean(product) && product.active !== false && product.archived !== true && product.enabled !== false;
   }
 
   function countProductsForFamily(familyItem) {
@@ -1769,7 +1213,7 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
   }
 
   function selectAllFilteredCatalogueItems() {
-    const visibleKeys = manageableProducts.map(catalogueProductSelectionKey).filter(Boolean);
+    const visibleKeys = sortCatalogueProducts(manageableProducts, masterFilters.sort).map(catalogueProductSelectionKey).filter(Boolean);
     setSelectedCatalogueItemIds(Array.from(new Set(visibleKeys)));
   }
 
@@ -1779,7 +1223,7 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
   }
 
   function selectAllVisibleCatalogueGroupItems() {
-    const visibleKeys = catalogueGroupVisibleProducts.map(catalogueProductSelectionKey).filter(Boolean);
+    const visibleKeys = sortCatalogueProducts(catalogueGroupVisibleProducts, masterFilters.sort).map(catalogueProductSelectionKey).filter(Boolean);
     setSelectedCatalogueItemIds(Array.from(new Set(visibleKeys)));
   }
 
@@ -1884,16 +1328,7 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
   function handleProductCsvPreview(event) {
     const file = event.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const records = csvRecords(String(reader.result || ""));
-      const preview = previewProductImportRows(records, { organisationId: workspaceId || "", existingProducts: orgProducts });
-      setImportPreview({ fileName: file.name, records, preview });
-      setAdminOpen(true);
-      setSuccess(`Previewed ${preview.length} row${preview.length === 1 ? "" : "s"} from ${file.name}.`);
-    };
-    reader.onerror = () => setError("Could not read that CSV file.");
-    reader.readAsText(file);
+    setBuilderImportFile(file);
     event.target.value = "";
   }
 
@@ -2013,28 +1448,6 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
     if (saveError) throw saveError;
     setProducts((current) => [data, ...current.filter((product) => product.id !== data.id)]);
     return data;
-  }
-
-  async function importPreviewRows() {
-    if (!workspaceId || !importPreview) return;
-    setSaving(true);
-    setError("");
-    try {
-      const actionableRows = importPreview.preview.filter((row) => !row.errors.length && row.entity && row.action !== "skip-unchanged");
-      for (const row of actionableRows) {
-        await saveEntityProduct(row.entity, row.action === "update" ? "update" : "create");
-      }
-      const created = actionableRows.filter((row) => row.action === "create").length;
-      const updated = actionableRows.filter((row) => row.action === "update").length;
-      const skipped = importPreview.preview.filter((row) => row.action === "skip-unchanged").length;
-      const errored = importPreview.preview.filter((row) => row.errors.length).length;
-      setSuccess(`Import complete: ${created} created, ${updated} updated, ${skipped} unchanged skipped, ${errored} row error${errored === 1 ? "" : "s"}.`);
-      setImportPreview(null);
-      await loadLibrary();
-    } catch (saveError) {
-      setError(saveError.message || "Product import failed.");
-    }
-    setSaving(false);
   }
 
   async function saveManualProduct(event) {
@@ -2224,7 +1637,7 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
     setJobFile(nextJobFile);
     setJobFileName(nextFileName || DEFAULT_JOB_FILE_NAME);
     if (typeof window !== "undefined") {
-      window.localStorage.setItem(PRODUCT_LIBRARY_JOB_STORAGE_KEY, JSON.stringify({ fileName: nextFileName || DEFAULT_JOB_FILE_NAME, jobFile: nextJobFile }));
+      window.localStorage.setItem(browserTenantKey(PRODUCT_LIBRARY_JOB_STORAGE_KEY), JSON.stringify({ fileName: nextFileName || DEFAULT_JOB_FILE_NAME, jobFile: nextJobFile }));
     }
   }
 
@@ -2284,7 +1697,11 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
       <Head>
         <title>Product Library | Gr8 Result</title>
       </Head>
-      <main className="page">
+      <main className="page" data-product-view={productView}>
+        <BuilderCsvImport key={workspaceId} workspaceId={workspaceId} selectedFile={builderImportFile} products={products} onImported={loadLibrary} />
+        {stairPreview?<div role="dialog" aria-modal="true" aria-label="Stair configuration preview" style={{position:'fixed',inset:0,zIndex:1800,background:'#0008',padding:20,overflowY:'auto'}}><div style={{maxWidth:1050,margin:'auto'}}><StairSelectionWizard key={stairPreview.productId} products={allRoomCategoryProducts} initialProductId={stairPreview.productId} preview onBack={()=>setStairPreview(null)} onSelect={()=>setSuccess('Stair configuration preview complete. Select this stair in Client Selections to attach it to a job.')}/></div></div>:null}
+        {!selectedRoomCategory && selectedCatalogueProducts.length ? <div className="catalogue-selection-actions"><button type="button" disabled={saving} onClick={()=>downloadProducts(selectedCatalogueProducts,{label:'selected'})}>Export selected CSV</button><button type="button" disabled={saving} onClick={()=>downloadProducts(selectedCatalogueProducts,{label:'selected',includeImages:true})}>Export selected + images ZIP</button></div> : null}
+        <div className="catalogue-view-controls" data-testid="catalogue-view-controls"><span>Product view</span><button type="button" aria-pressed={productView==='grid'} onClick={()=>changeProductView('grid')}>Grid view</button><button type="button" aria-pressed={productView==='list'} onClick={()=>changeProductView('list')}>List view</button><label>Sort By <select aria-label="Catalogue Sort By" value={masterFilters.sort || 'name'} onChange={e=>{setMasterFilters(c=>({...c,sort:e.target.value}));setApplianceFilters(c=>({...c,sort:e.target.value}));}}>{catalogueSortOptions.map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label></div>
         {furniturePicker.panel}
         {furniturePicker.enabled?<div aria-label="Door furniture brands" style={{display:'flex',gap:12,flexWrap:'wrap'}}>{['Lockwood','Gainsborough','Lemaar','Zanda'].map(brand=><button type="button" key={brand} data-testid={`furniture-brand-${brand}`} onClick={()=>setMasterFilters(current=>({...current,brand:current.brand===brand?'':brand}))}>{brand}</button>)}</div>:null}
         <header className="standard-banner">
@@ -2505,7 +1922,7 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
                     <span role="columnheader">Client Selections</span>
                     <span role="columnheader">Quotation Builder</span>
                   </div>
-                  {manageableProducts.length ? manageableProducts.map((product) => {
+                  {manageableProducts.length ? sortCatalogueProducts(manageableProducts, masterFilters.sort).map((product) => {
                     const key = catalogueProductSelectionKey(product);
                     const checked = selectedCatalogueItemSet.has(key);
                     const familyItem = familyByKey(product.familyKey);
@@ -2519,10 +1936,10 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
                         <strong>{product.productName || "Unnamed product"}</strong>
                         <span>{product.brand || product.manufacturer || product.supplier || "No brand"}</span>
                         <span>{product.range || product.collection || "No range"}</span>
-                        <span>{[product.model, product.sku, product.productCode].filter(Boolean).join(" / ") || "No model"}</span>
+                        <span>{[product.model, product.sku, product.productCode, ...(product.attributes?.controlledVariants || []).map(v=>v.productCode)].filter(Boolean).join(" / ") || "No model"}</span>
                         <span>{productCategoryLabel(product)}</span>
                         <span>{quotationSectionLabel(product)}</span>
-                        <span>{productPriceLabel(product)}</span>
+                        <span>{isTrimProduct(product) ? <TrimCatalogueRate product={product} onSave={saveTrimRates}/> : productPriceLabel(product)}</span>
                         <span>{productUnitLabel(product)}</span>
                         <span>{product.active === false || product.archived ? "Inactive" : product.enabled === false ? "Disabled" : product.discontinued ? "Discontinued" : "Active"}</span>
                         <span>{productEnabledLabel(product, "clientSelectable")}</span>
@@ -2671,12 +2088,8 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
             ) : null}
 
             <div className="master-filters appliance-filters">
-              <input value={applianceFilters.search} onChange={(event) => setApplianceFilters((current) => ({ ...current, search: event.target.value }))} placeholder="Search model, name, family, brand, width, fuel, install, finish" />
-              <select value={applianceFilters.productType || applianceFamilyKey} onChange={(event) => {
-                const nextType = event.target.value;
-                setApplianceFilters((current) => ({ ...current, productType: nextType }));
-                if (nextType) openApplianceCatalogue({ applianceBrand: applianceBrandName, applianceFamily: nextType });
-              }}>
+              <input aria-label="Search appliances" value={applianceFilters.search} onChange={(event) => setApplianceFilters((current) => ({ ...current, search: event.target.value }))} placeholder="Search model, SKU, name, category, or specifications" />
+              <select aria-label="Appliance category" value={applianceFamilyKey} onChange={(event) => openApplianceCatalogue({ applianceBrand: applianceBrandName, applianceFamily: event.target.value })}>
                 <option value="">All product types</option>
                 {applianceFamilies.map((family) => <option key={family.familyId} value={family.familyId}>{family.name}</option>)}
               </select>
@@ -2696,7 +2109,7 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
                 <option value="">All finishes</option>
                 {applianceFilterOptions.finishes.map((finish) => <option key={finish} value={finish}>{finish}</option>)}
               </select>
-              <select value={applianceFilters.status} onChange={(event) => setApplianceFilters((current) => ({ ...current, status: event.target.value }))}>
+              <select aria-label="Appliance eligibility" value={applianceFilters.status} onChange={(event) => setApplianceFilters((current) => ({ ...current, status: event.target.value }))}>
                 <option value="">Eligibility Status</option>
                 {APPLIANCE_ELIGIBILITY_STATES.map((status) => <option key={status} value={status}>{status}</option>)}
               </select>
@@ -2704,7 +2117,7 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
                 <option value="">Verification</option>
                 {applianceFilterOptions.verifications.map((status) => <option key={status} value={status}>{status}</option>)}
               </select>
-              <select value={applianceFilters.selectable} onChange={(event) => setApplianceFilters((current) => ({ ...current, selectable: event.target.value }))}>
+              <select aria-label="Appliance selectable status" value={applianceFilters.selectable} onChange={(event) => setApplianceFilters((current) => ({ ...current, selectable: event.target.value }))}>
                 <option value="">Selectable</option>
                 <option value="client-selectable">Client-selectable</option>
                 <option value="not-client-selectable">Not client-selectable</option>
@@ -2715,10 +2128,8 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
                 <option value="tenant">Tenant-specific</option>
               </select>
               <input value={applianceFilters.tenantId} onChange={(event) => setApplianceFilters((current) => ({ ...current, tenantId: event.target.value }))} placeholder="Tenant ID" />
-              <select value={applianceFilters.sort} onChange={(event) => setApplianceFilters((current) => ({ ...current, sort: event.target.value }))}>
-                <option value="name">Sort by name</option>
-                <option value="price-asc">Price low to high</option>
-                <option value="price-desc">Price high to low</option>
+              <select value={masterFilters.sort || 'name'} onChange={(event) => {setMasterFilters((current) => ({ ...current, sort: event.target.value }));setApplianceFilters((current) => ({ ...current, sort: event.target.value }));}}>
+                {catalogueSortOptions.map(([key,label])=><option key={key} value={key}>{label}</option>)}
               </select>
               <button type="button" onClick={clearApplianceFilters}>Clear all</button>
             </div>
@@ -2733,7 +2144,7 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
             {!applianceBrandName ? (
               <div className="tile-grid supplier-grid" data-testid="appliance-brand-list">
                 {applianceBrandCards.map((brand) => {
-                  const brandProducts = getPlatformMasterApplianceRecords().filter((record) => (record.brand || record.brandName) === brand.brandName);
+                  const brandProducts = getActiveProductLibraryApplianceRecords().filter((record) => (record.brand || record.brandName) === brand.brandName);
                   const brandPacks = getApplianceRecordsByFamily("appliance-packs").filter((record) => (record.brand || record.brandName) === brand.brandName);
                   const selectableCount = brandProducts.filter((record) => record.selectableStatus === "client-selectable").length + brandPacks.filter((record) => record.selectableStatus === "client-selectable").length;
                   return (
@@ -2769,7 +2180,7 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
                     {[...applianceFamilies].map((family) => {
                       const count = family.familyId === "appliance-packs"
                         ? getApplianceRecordsByFamily("appliance-packs").filter((record) => (record.brand || record.brandName) === applianceBrandName).length
-                        : getPlatformMasterApplianceRecords().filter((record) => (record.brand || record.brandName) === applianceBrandName && record.familyId === family.familyId).length;
+                        : getActiveProductLibraryApplianceRecords().filter((record) => (record.brand || record.brandName) === applianceBrandName && record.familyId === family.familyId).length;
                       return (
                         <button
                           key={family.familyId}
@@ -2791,8 +2202,9 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
                     <strong>{appliancePacksForBrand.length} package{appliancePacksForBrand.length === 1 ? "" : "s"}</strong>
                   </div>
                   <div className="product-grid appliance-model-grid">
-                    {appliancePacksForBrand.map((record) => (
+                    {sortCatalogueProducts(appliancePacksForBrand,masterFilters.sort).map((record) => (
                       <article key={record.productId} className="product-option management-card appliance-pack-card appliance-visual-card" data-testid="appliance-package-card" data-appliance-product={record.productId}>
+                        <label><input type="checkbox" aria-label={`Select ${record.name} for export`} checked={selectedCatalogueItemSet.has(catalogueProductSelectionKey(record))} onChange={()=>toggleCatalogueItemSelection(record)} /> Select for export</label>
                         <div className="appliance-card-logo">{selectedApplianceBrand ? <ApplianceBrandLogo brand={selectedApplianceBrand} /> : <strong>{record.brand}</strong>}</div>
                         <div className="appliance-card-copy">
                           <span>Appliance Package</span>
@@ -2812,7 +2224,8 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
                         </div>
                         <div className="card-actions appliance-card-actions">
                           <button type="button" onClick={() => openApplianceCatalogue({ applianceFamily: "appliance-packs", applianceBrand: applianceBrandName, applianceProduct: record.productId })}>View Package Details</button>
-                          <button type="button" onClick={() => selectApplianceRecord(record)}><Check size={15} /> Select Package</button>
+                          <button type="button" disabled={!isApplianceRecordSelectable(record)} title={applianceSelectionUnavailableReason(record) || undefined} onClick={() => selectApplianceRecord(record)}><Check size={15} /> Select Package</button>
+                          {!isApplianceRecordSelectable(record) ? <small className="warning-text">{applianceSelectionUnavailableReason(record)}</small> : null}
                         </div>
                       </article>
                     ))}
@@ -2822,7 +2235,7 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
                 ) : null}
                 {visibleApplianceFamilies.map((family) => {
                   const familyRecords = applianceModels.filter((record) => record.familyId === family.familyId);
-                  const groups = Array.from(groupAppliancesForBrand(familyRecords).values()).sort((left, right) => `${left.size} ${left.configuration}`.localeCompare(`${right.size} ${right.configuration}`));
+                  const groups = [{family:family.familyId,size:'All models',configuration:family.name,records:familyRecords}];
                   return (
                     <section key={family.familyId} className="appliance-category-section" data-appliance-category={family.familyId}>
                       <div className="section-heading compact-heading">
@@ -2833,10 +2246,12 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
                         <div key={`${group.family}-${group.size}-${group.configuration}`} className="appliance-size-group" data-appliance-size-group={`${group.size} ${group.configuration}`}>
                           <h3>{group.size} / {group.configuration}</h3>
                           <div className="product-grid appliance-model-grid">
-                            {group.records.map((record) => (
+                            {sortCatalogueProducts(group.records, masterFilters.sort).map((record) => (
                               <ApplianceCard
                                 key={record.productId}
                                 record={record}
+                                onExport={toggleCatalogueItemSelection}
+                                exportSelected={selectedCatalogueItemSet.has(catalogueProductSelectionKey(record))}
                                 brand={selectedApplianceBrand}
                                 onOpen={(nextRecord) => openApplianceCatalogue({ applianceFamily: nextRecord.familyId, applianceBrand: applianceBrandName, applianceProduct: nextRecord.productId })}
                                 onSelect={selectApplianceRecord}
@@ -2871,7 +2286,14 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
                           {getApplianceBrandByName(selectedApplianceProduct.brand) ? <ApplianceBrandLogo brand={getApplianceBrandByName(selectedApplianceProduct.brand)} /> : null}
                           <h2>{selectedApplianceProduct.name}</h2>
                           <p>{[selectedApplianceProduct.brand, selectedApplianceProduct.model, selectedApplianceProduct.familyName].filter(Boolean).join(" / ")}</p>
-                          <strong className="appliance-detail-price">{appliancePriceLabel(selectedApplianceProduct)}</strong>
+                          {selectedApplianceProduct.manualReviewReason && (selectedApplianceProduct.sourceDiscrepancies?.length > 0 || selectedApplianceProduct.manualReviewRequired) ? (
+                            <aside className="appliance-source-review" role="note" data-testid="appliance-source-review">
+                              <strong>{selectedApplianceProduct.sourceDiscrepancies?.length ? "Source discrepancy requires review" : "Product verification required"}</strong>
+                              <p>{selectedApplianceProduct.manualReviewReason}</p>
+                            </aside>
+                          ) : null}
+                          {applianceHncPriceLabel(selectedApplianceProduct) ? <strong className="appliance-detail-price" data-testid="appliance-hnc-price">{applianceHncPriceLabel(selectedApplianceProduct)}</strong> : null}
+                          {!applianceHncPriceLabel(selectedApplianceProduct) || (!selectedApplianceProduct.priceIsHncReference && selectedApplianceProduct.price != null && selectedApplianceProduct.price !== "") ? <strong className="appliance-detail-price">{applianceHncPriceLabel(selectedApplianceProduct) ? "Catalogue price: " : ""}{appliancePriceLabel(selectedApplianceProduct)}</strong> : null}
                           <dl className="appliance-detail-quick-specs">
                             <dt>Product Code</dt>
                             <dd>{selectedApplianceProduct.model || selectedApplianceProduct.productCode}</dd>
@@ -2893,13 +2315,26 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
                             <span>{selectedApplianceProduct.selectableStatus}</span>
                           </div>
                           <div className="card-actions appliance-detail-actions">
-                            <button type="button" onClick={() => selectApplianceRecord(selectedApplianceProduct)}><Check size={16} /> Select {selectedApplianceProduct.recordType === "appliance-pack" ? "Package" : "Product"}</button>
+                            <button type="button" disabled={!isApplianceRecordSelectable(selectedApplianceProduct)} title={applianceSelectionUnavailableReason(selectedApplianceProduct) || undefined} onClick={() => selectApplianceRecord(selectedApplianceProduct)}><Check size={16} /> Select {selectedApplianceProduct.recordType === "appliance-pack" ? "Package" : "Product"}</button>
                             <button type="button" className="secondary" onClick={() => openApplianceCatalogue({ applianceFamily: selectedApplianceProduct.familyId, applianceBrand: selectedApplianceProduct.brand })}><ArrowLeft size={16} /> Back to Product Grid</button>
                             <button type="button" className="secondary" onClick={() => setSuccess(`${selectedApplianceProduct.name} is ready for comparison from the canonical Product Library record.`)}><Copy size={16} /> Compare</button>
                           </div>
                         </div>
                       </div>
                       <p className="appliance-description">{selectedApplianceProduct.description}</p>
+                      {applianceSpecificationEntries(selectedApplianceProduct).length ? (
+                        <section className="component-list" data-testid="appliance-product-specifications">
+                          <h3>Product Specifications</h3>
+                          <dl className="appliance-detail-quick-specs">
+                            {applianceSpecificationEntries(selectedApplianceProduct).map((specification) => (
+                              <Fragment key={specification.key}>
+                                <dt>{specification.label}</dt>
+                                <dd>{specification.value}</dd>
+                              </Fragment>
+                            ))}
+                          </dl>
+                        </section>
+                      ) : null}
                       {selectedApplianceProduct.recordType === "appliance-pack" ? (
                         <div className="component-list" data-testid="appliance-pack-components">
                           <strong>Component Products</strong>
@@ -2953,6 +2388,10 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
                         <dd>{[selectedApplianceProduct.supplier, selectedApplianceProduct.brand, selectedApplianceProduct.range].filter(Boolean).join(" / ") || "Not supplied"}</dd>
                         <dt>Product / Model</dt>
                         <dd>{[selectedApplianceProduct.name, selectedApplianceProduct.model].filter(Boolean).join(" / ")}</dd>
+                        <dt>SKU</dt>
+                        <dd>{applianceValue(selectedApplianceProduct.sku)}</dd>
+                        <dt>Subcategory</dt>
+                        <dd>{applianceValue(selectedApplianceProduct.subfamilyName || selectedApplianceProduct.subfamilyId)}</dd>
                         <dt>Specifications</dt>
                         <dd>{[
                           selectedApplianceProduct.width || (selectedApplianceProduct.widthMm ? `${selectedApplianceProduct.widthMm} mm wide` : ""),
@@ -2963,19 +2402,33 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
                           selectedApplianceProduct.installationType,
                         ].filter(Boolean).join(" / ") || "Partial specifications only"}</dd>
                         <dt>Price / Status</dt>
-                        <dd>{appliancePriceLabel(selectedApplianceProduct)} / {selectedApplianceProduct.priceStatus}</dd>
+                        <dd>{selectedApplianceProduct.priceIsHncReference ? applianceHncPriceLabel(selectedApplianceProduct) : appliancePriceLabel(selectedApplianceProduct)} / {selectedApplianceProduct.priceStatus}</dd>
+                        {applianceHncPriceLabel(selectedApplianceProduct) ? <>
+                          <dt>HNC Listed Price</dt>
+                          <dd>{applianceHncPriceLabel(selectedApplianceProduct)}</dd>
+                          <dt>HNC Price Checked</dt>
+                          <dd>{applianceValue(selectedApplianceProduct.hncPriceCheckedAt || selectedApplianceProduct.priceCheckedAt || selectedApplianceProduct.sourceCheckedAt)}</dd>
+                        </> : null}
                         <dt>Product Page</dt>
                         <dd>{selectedApplianceProduct.productPageUrl ? <a href={selectedApplianceProduct.productPageUrl} target="_blank" rel="noreferrer">{selectedApplianceProduct.productPageUrl}</a> : "Not supplied"}</dd>
+                        <dt>Supplier Source</dt>
+                        <dd>{selectedApplianceProduct.supplierProductUrl || selectedApplianceProduct.hncSupplierUrl || selectedApplianceProduct.supplierUrl ? <a href={selectedApplianceProduct.supplierProductUrl || selectedApplianceProduct.hncSupplierUrl || selectedApplianceProduct.supplierUrl} target="_blank" rel="noreferrer">{selectedApplianceProduct.supplierProductUrl || selectedApplianceProduct.hncSupplierUrl || selectedApplianceProduct.supplierUrl}</a> : "Not supplied"}</dd>
+                        <dt>Manufacturer Source</dt>
+                        <dd>{selectedApplianceProduct.manufacturerProductUrl || selectedApplianceProduct.manufacturerUrl ? <a href={selectedApplianceProduct.manufacturerProductUrl || selectedApplianceProduct.manufacturerUrl} target="_blank" rel="noreferrer">{selectedApplianceProduct.manufacturerProductUrl || selectedApplianceProduct.manufacturerUrl}</a> : "Not supplied"}</dd>
+                        <dt>Price Source</dt>
+                        <dd>{selectedApplianceProduct.priceSourceUrl || selectedApplianceProduct.priceSource?.sourceUrl ? <a href={selectedApplianceProduct.priceSourceUrl || selectedApplianceProduct.priceSource?.sourceUrl} target="_blank" rel="noreferrer">{selectedApplianceProduct.priceSource?.priceLabel || selectedApplianceProduct.priceSource?.sourceOrganisation || "Verified price source"}</a> : "Not supplied"}</dd>
                         <dt>Documents</dt>
                         <dd>{selectedApplianceProduct.documentUrls?.length ? selectedApplianceProduct.documentUrls.map((url) => <a key={url} href={url} target="_blank" rel="noreferrer">{url}</a>) : "Not supplied"}</dd>
                         <dt>Image Attribution</dt>
                         <dd>{applianceValue(selectedApplianceProduct.imageAttribution || selectedApplianceProduct.imageFallbackLabel)}</dd>
+                        <dt>Image Source</dt>
+                        <dd>{selectedApplianceProduct.imageSourceUrl ? <a href={selectedApplianceProduct.imageSourceUrl} target="_blank" rel="noreferrer">Exact model image source</a> : "Not supplied"}</dd>
                         <dt>Source Checked</dt>
                         <dd>{applianceValue(selectedApplianceProduct.sourceCheckedAt)}</dd>
                         <dt>Catalogue Version</dt>
                         <dd>{selectedApplianceProduct.schemaVersion || "product-library.appliance-catalogue.v1"}</dd>
                         <dt>Image Status</dt>
-                        <dd>{selectedApplianceProduct.image ? "exact image referenced" : "exact image required - category fallback shown"}</dd>
+                        <dd>{selectedApplianceProduct.image ? "exact image referenced" : "Exact product image unavailable"}</dd>
                         <dt>Applicable Rooms</dt>
                         <dd>{applianceValue(selectedApplianceProduct.applicableRooms)}</dd>
                         <dt>Selectable Status</dt>
@@ -3058,8 +2511,10 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
                 if (search && !`${categoryItem.name} ${categoryItem.group}`.toLowerCase().includes(search)) return null;
                 return (
                   <button key={categoryItem.key} type="button" className="visual-tile category-tile" onClick={() => openRoomCategory(categoryItem.key)} data-room-category={categoryItem.key}>
-                    {['internal-doors','door-furniture','skirting-architraves'].includes(categoryItem.key) ? <VerifiedProductImage className="tile-image contain-image" src={categoryItem.representativeImage} name={categoryItem.name} style={{width:'100%'}}/> : categoryItem.key === "bricks" ? (
+                    {categoryItem.key === "internal-doors" ? <img className="tile-image" src={categoryItem.representativeImage} alt="Internal door" style={{objectFit:"cover",width:"100%"}}/> : ['door-furniture','skirting-architraves'].includes(categoryItem.key) ? <VerifiedProductImage className="tile-image contain-image" src={categoryItem.representativeImage} name={categoryItem.name} style={{width:'100%'}}/> : categoryItem.key === "bricks" ? (
                       <img className="tile-image bricks-category-image" src={categoryItem.representativeImage} alt="Light clay brick exterior wall sample" width="1200" height="784" />
+                    ) : ["shelving", "flooring", "electrical-fixtures"].includes(categoryItem.key) ? (
+                      <img className="tile-image" src={categoryItem.representativeImage} alt={categoryItem.name} />
                     ) : (
                       <span className="tile-image contain-image" style={{ backgroundImage: `url(${categoryItem.representativeImage})` }} />
                     )}
@@ -3086,7 +2541,7 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
               <span>{selectedRoom.name}</span>
               <strong>{selectedRoomCategory.name}</strong>
             </div>
-            {selectedRoomCategory.key === "cabinet-doors-panels" ? (
+            {selectedRoomCategory.key === "flooring" ? <FlooringLibraryBrowser products={effectiveCatalogueProducts} /> : selectedRoomCategory.key === "cabinet-doors-panels" ? (
               <div className="cabinetry-catalogue-browser" data-testid="product-library-cabinet-doors-panels-browser">
                 {!cabinetrySelectedBrand ? (
                   <>
@@ -3149,7 +2604,7 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
                       <button type="button" onClick={() => openManageCatalogueItems({ room: selectedRoom?.key || "", category: selectedRoomCategory?.key || "", section: "cabinetry-joinery", brand: cabinetrySelectedBrand.name, range: cabinetrySelectedRange.name })}><Boxes size={16} /> Manage Catalogue Items</button>
                     </div>
                     <div className="product-grid room-product-grid cabinetry-colour-grid" data-testid="cabinetry-colour-grid" data-cabinetry-brand={cabinetrySelectedBrand.name} data-cabinetry-range={cabinetrySelectedRange.name}>
-                      {cabinetryVisibleColourProducts.map((product) => (
+                      {sortCatalogueProducts(cabinetryVisibleColourProducts, masterFilters.sort).map((product) => (
                         <article key={product.productId} className="product-option management-card room-product-card cabinetry-colour-card" data-room-product={product.productId} data-cabinetry-colour-id={product.productCode}>
                           <div className="product-card-logo">{cabinetrySelectedBrand.logo ? <img src={cabinetrySelectedBrand.logo} alt={`${cabinetrySelectedBrand.name} logo`} /> : <strong>{cabinetrySelectedBrand.name}</strong>}</div>
                           <button type="button" className="product-pick contain-product swatch-product" onClick={() => openRoomProduct(product.productId)}>
@@ -3158,7 +2613,7 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
                           </button>
                           <small>{product.model || product.sku || product.productCode}</small>
                           <small>{[product.finish, product.material, product.attributes?.sheetDoorApplicability].filter(Boolean).join(" / ")}</small>
-                          <span>{productPriceLabel(product)}</span>
+                          <span>{isTrimProduct(product) ? <TrimCatalogueRate product={product} onSave={saveTrimRates}/> : productPriceLabel(product)}</span>
                           <div className="card-actions">
                             <button type="button" onClick={() => openRoomProduct(product.productId)}>Colour Details</button>
                           </div>
@@ -3170,14 +2625,14 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
               </div>
             ) : (
               <>
-                {exteriorSections.length ? <>
+                {selectedRoomCategory ? <>
                   <div className="cabinetry-subcategory-tabs" data-testid="exterior-section-tabs">
-                    {exteriorSections.map(([key, label]) => <button type="button" key={key} className={exteriorSectionKey === key ? "selected" : ""} onClick={() => pushProductLibraryRoute({ room: selectedRoom.key, roomCategory: selectedRoomCategory.key, exteriorSection: key })}>{label}</button>)}
+                    {exteriorSections.map(([key, label]) => <button type="button" key={key} className={exteriorSectionKey === key ? "selected" : ""} onClick={() => pushProductLibraryRoute({ room: selectedRoom.key, roomCategory: selectedRoomCategoryKey, exteriorSection: key })}>{label}</button>)}
                   </div>
                   <div className="admin-actions catalogue-selection-actions">
-                    <button type="button" onClick={() => setSelectedCatalogueItemIds((current) => [...new Set([...current, ...roomCategoryProducts.map(catalogueProductSelectionKey)])])}>Select All Visible</button>
+                    <button type="button" onClick={() => setSelectedCatalogueItemIds((current) => [...new Set([...current, ...sortCatalogueProducts(roomCategoryProducts, masterFilters.sort).map(catalogueProductSelectionKey)])])}>Select All Visible</button>
                     <button type="button" onClick={() => setSelectedCatalogueItemIds([])}>Clear Selection</button>
-                    <button type="button" disabled={saving || !allRoomCategoryProducts.length} onClick={() => downloadProducts(allRoomCategoryProducts, { label: selectedRoomCategory.key, fileName: `${selectedRoomCategory.key}.csv` })}>Download All {selectedRoomCategory.key === 'roofing' ? 'Roofing' : selectedRoomCategory.key === 'skirting-architraves' ? 'Skirting & Architraves' : 'Entry Doors'} CSV</button>
+                    <button type="button" disabled={saving || !allRoomCategoryProducts.length} onClick={() => downloadProducts(allRoomCategoryProducts, { label: selectedRoomCategory.key, fileName: `${selectedRoomCategory.key}.csv` })}>Download All {selectedRoomCategory.key === 'roofing' ? 'Roofing' : selectedRoomCategory.key === 'entry-doors' ? 'Entry Doors' : selectedRoomCategory.name} CSV</button>
                     <button type="button" disabled={saving || !roomCategoryProducts.length} onClick={() => downloadProducts(roomCategoryProducts, { label: exteriorSectionKey, fileName: `${selectedRoomCategory.key}-${exteriorSectionKey}.csv` })}>Download Current Section CSV</button>
                     <button type="button" disabled={saving || !allRoomCategoryProducts.some((product) => selectedCatalogueItemSet.has(catalogueProductSelectionKey(product)))} onClick={() => downloadProducts(allRoomCategoryProducts.filter((product) => selectedCatalogueItemSet.has(catalogueProductSelectionKey(product))), { label: `${selectedRoomCategory.key}-selected` })}>Download Selected CSV</button>
                     <button type="button" disabled={saving || !allRoomCategoryProducts.some((product) => selectedCatalogueItemSet.has(catalogueProductSelectionKey(product)))} onClick={() => downloadProducts(allRoomCategoryProducts.filter((product) => selectedCatalogueItemSet.has(catalogueProductSelectionKey(product))), { includeImages: true, label: `${selectedRoomCategory.key}-selected` })}>Download Selected + Images ZIP</button>
@@ -3186,9 +2641,13 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
                 <div className="category-toolbar">
                   <span>{roomCategoryProducts.length} product{roomCategoryProducts.length === 1 ? "" : "s"}</span>
                   {!furniturePicker.enabled ? <button type="button" onClick={() => openManageCatalogueItems({ room: selectedRoom?.key || "", category: selectedRoomCategory?.key || "" })}><Boxes size={16} /> Manage Catalogue Items</button> : null}
-                  <label>Sort By <select value={masterFilters.sort || "name"} onChange={(event) => setMasterFilters((current) => ({ ...current, sort: event.target.value }))}><option value="name">Name</option><option value="brand">Brand</option><option value="price">Price</option></select></label>
+                  <label>Sort By <select value={masterFilters.sort || "name"} onChange={(event) => setMasterFilters((current) => ({ ...current, sort: event.target.value }))}>{catalogueSortOptions.map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label>
                 </div>
                 <div className="master-filters product-filter-bar" data-testid="product-category-filters">
+                  {selectedRoomCategory.key === 'door-furniture' ? <>
+                    <label>Function <select aria-label="Internal furniture function" value={masterFilters.function || ''} onChange={e=>setMasterFilters(c=>({...c,function:e.target.value}))}><option value="">All functions</option>{[...new Set(filterScopeProducts.filter(p=>!masterFilters.brand||p.brand===masterFilters.brand).flatMap(furnitureFunctions))].sort().map(value=><option key={value}>{value}</option>)}</select></label>
+                    <fieldset style={{gridColumn:'1 / -1',display:'flex',flexWrap:'wrap',gap:8,maxHeight:150,overflowY:'auto',padding:10,border:'1px solid #cbd5e1',borderRadius:8}}><legend>Colour/Finish</legend>{[...new Set(filterScopeProducts.filter(p=>(!masterFilters.brand||p.brand===masterFilters.brand)&&(!masterFilters.range||p.range===masterFilters.range)).flatMap(furnitureFinishes))].sort().map(value=><label key={value} style={{display:'inline-flex',alignItems:'center',gap:5,marginRight:12}}><input type="checkbox" style={{width:16,minWidth:16,height:16,minHeight:16,padding:0,margin:0}} aria-label={`Finish ${value}`} checked={(masterFilters.finishes||[]).includes(value)} onChange={e=>setMasterFilters(c=>({...c,finishes:e.target.checked?[...(c.finishes||[]),value]:(c.finishes||[]).filter(f=>f!==value)}))}/>{value}</label>)}{masterFilters.finishes?.length?<button type="button" onClick={()=>setMasterFilters(c=>({...c,finishes:[]}))}>Clear finishes</button>:null}</fieldset>
+                  </> : null}
                   <input value={masterFilters.search} onChange={(event) => setMasterFilters((current) => ({ ...current, search: event.target.value }))} placeholder="Search products, models, brands or codes" />
                   <select value={masterFilters.brand} onChange={(event) => setMasterFilters((current) => ({ ...current, brand: event.target.value }))}>
                     <option value="">Brand</option>
@@ -3211,11 +2670,11 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
                   </select>
                 </div>
                 <div className="product-grid room-product-grid">
-                  {roomCategoryProducts.slice(0,paginatedInternalCategory?roomVisibleCount:roomCategoryProducts.length).map((product) => {
+                  {sortCatalogueProducts(roomCategoryProducts, masterFilters.sort).slice(0,paginatedInternalCategory?roomVisibleCount:roomCategoryProducts.length).map((product) => {
                     const brand = getApplianceBrandByName(product.brand || product.manufacturer || "");
                     return (
                       <article key={product.productId} className="product-option management-card room-product-card" style={furniturePicker.enabled && furniturePicker.isSelected(product) ? {border:"3px solid #1764d9",background:"#eef6ff"} : undefined} data-room-product={product.productId}>
-                        {exteriorSections.length ? <label><input type="checkbox" aria-label={`Select ${product.productName} for export`} checked={selectedCatalogueItemSet.has(catalogueProductSelectionKey(product))} onChange={() => toggleCatalogueItemSelection(product)} /> Select for export</label> : null}
+                        {true ? <label><input type="checkbox" aria-label={`Select ${product.productName} for export`} checked={selectedCatalogueItemSet.has(catalogueProductSelectionKey(product))} onChange={() => toggleCatalogueItemSelection(product)} /> Select for export</label> : null}
                         <div className="product-card-logo">{brand ? <ApplianceBrandLogo brand={brand} /> : <strong>{product.brand || product.manufacturer || "Brand pending"}</strong>}</div>
                         <button type="button" className="product-pick contain-product" onClick={() => openRoomProduct(product.productId)}>
                           <ProductLibraryProductImage product={product} familyItem={familyByKey(product.familyKey)} />
@@ -3223,8 +2682,10 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
                         </button>
                         <small>{product.model || product.sku || product.productCode}</small>
                         <small>{[product.size, product.configuration, product.finish].filter(Boolean).join(" / ") || product.familyKey}</small>
-                        <span>{furniturePicker.enabled && product.clientPrice == null ? "Rate required" : productPriceLabel(product)}</span>
+                        <span>{isTrimProduct(product) ? <TrimCatalogueRate product={product} onSave={saveTrimRates}/> : furniturePicker.enabled && product.clientPrice == null ? "Rate required" : productPriceLabel(product)}</span>
+                        <small>{product.active === false ? "Inactive" : "Active"} | {product.priceStatus === "current" ? "Current rate" : "Quote required"}</small>
                         <div className="card-actions">
+                          {product.attributes?.completeStairCatalogue?<button type="button" data-testid="configure-complete-stair" onClick={()=>setStairPreview(product)}>Configure stair</button>:null}
                           {furniturePicker.enabled && product.active !== false ? <button type="button" data-testid="select-door-furniture" onClick={() => furniturePicker.open(product)} style={{background:'#1764d9',color:'white',fontWeight:700}}>{furniturePicker.isSelected(product) ? 'Selected (Change Selection)' : 'Select'}</button> : null}
                           <button type="button" onClick={() => openRoomProduct(product.productId)}>View Details</button>
                           <button type="button" className="secondary" onClick={furniturePicker.enabled ? () => furniturePicker.compare(product) : undefined}>Compare</button>
@@ -3247,6 +2708,7 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
 
         {!selectedArea && !applianceMode && !selectedCatalogueSection && browseMode === "room" && selectedRoomProduct ? (
           <section className="family-layout room-product-detail" data-testid="product-library-product-detail" data-room-product={selectedRoomProduct.productId}>
+            {selectedFamily?.familyKey === 'exterior-paint' ? <PaintColourLibrary /> : null}
             <div className="family-main">
               <div className="catalogue-breadcrumb">
                 <button type="button" onClick={() => pushProductLibraryRoute({})}>Rooms</button>
@@ -3270,7 +2732,14 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
                     <dt>Dimensions</dt>
                     <dd>{[selectedRoomProduct.width, selectedRoomProduct.height, selectedRoomProduct.depth, selectedRoomProduct.dimensions].filter((value) => value && typeof value !== "object").join(" x ") || selectedRoomProduct.size || "Not supplied"}</dd>
                     <dt>Key Specifications</dt>
-                    <dd>{[selectedRoomProduct.familyKey, selectedRoomProduct.configuration, selectedRoomProduct.material, selectedRoomProduct.profile].filter(Boolean).join(" / ") || "Specifications pending"}</dd>
+                    <dd>
+                      {[selectedRoomProduct.familyKey, selectedRoomProduct.configuration, selectedRoomProduct.material, selectedRoomProduct.profile].filter(Boolean).join(" / ") || "Specifications pending"}
+                      {selectedRoomProduct.familyKey === "cooktops" && ["Bosch", "Euromaid"].includes(selectedRoomProduct.brand) && selectedRoomProduct.attributes?.specificationSummary?.features?.length ? (
+                        <ul data-testid="appliance-product-features">
+                          {applianceFeatureList(selectedRoomProduct).map((feature) => <li key={feature}>{feature}</li>)}
+                        </ul>
+                      ) : null}
+                    </dd>
                     <dt>Availability</dt>
                     <dd>{selectedRoomProduct.active === false || selectedRoomProduct.archived ? "Inactive" : "Active"}</dd>
                     <dt>Specification Sheet</dt>
@@ -3298,7 +2767,7 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
                   <dt>Categories</dt>
                   <dd>{PRODUCT_LIBRARY_ROOM_CATEGORIES.filter((categoryItem) => productBelongsToRoomCategory(selectedRoomProduct, categoryItem)).map((categoryItem) => categoryItem.name).slice(0, 8).join(", ") || "Not assigned"}</dd>
                   <dt>Source</dt>
-                  <dd>{selectedRoomProduct.sourceName || selectedRoomProduct.sourceUrl || "Product Library"}</dd>
+                  <dd>{selectedRoomProduct.familyKey === "cooktops" && ["Bosch", "Euromaid"].includes(selectedRoomProduct.brand) && selectedRoomProduct.officialProductUrl ? <a href={selectedRoomProduct.officialProductUrl} target="_blank" rel="noreferrer">{selectedRoomProduct.officialProductUrl}</a> : selectedRoomProduct.sourceName || selectedRoomProduct.sourceUrl || "Product Library"}</dd>
                   <dt>Image Status</dt>
                   <dd>{selectedRoomProduct.imageStatus || "missing"}</dd>
                 </dl>
@@ -3337,7 +2806,107 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
           </section>
         ) : null}
 
-        {selectedCatalogueSection && !applianceMode ? (
+        {selectedCatalogueSection?.key === PLUMBING_SECTION_KEY && !applianceMode && plumbingLandingMode ? (
+          <section className="purpose" data-testid="plumbing-catalogue-landing" data-catalogue-section={selectedCatalogueSection.key}>
+            <div className="section-heading">
+              <span>Product Catalogue</span>
+              <strong>{selectedCatalogueSection.displayName}</strong>
+              <button type="button" onClick={() => openManageCatalogueItems({ section: selectedCatalogueSection.key })}><Boxes size={16} /> Manage Catalogue Items</button>
+            </div>
+            <PlumbingCategoryLanding
+              countsByCategory={plumbingCountsByCategory}
+              onOpenCategory={(categoryKey) => setCatalogueSubcategory(categoryKey)}
+            />
+          </section>
+        ) : null}
+
+        {selectedCatalogueSection?.key === PLUMBING_SECTION_KEY && !applianceMode && !plumbingLandingMode ? (
+          <section className="purpose" data-testid="plumbing-catalogue-category" data-catalogue-section={selectedCatalogueSection.key} data-plumbing-category={selectedCatalogueSubcategory?.key}>
+            <div className="section-heading">
+              <span>Product Catalogue</span>
+              <strong>{selectedCatalogueSubcategory?.label || selectedCatalogueSection.displayName}</strong>
+              <button type="button" className="secondary" onClick={() => setCatalogueSubcategory("all")}><ArrowLeft size={16} /> All Categories</button>
+              <button type="button" onClick={() => openManageCatalogueItems({ section: selectedCatalogueSection.key })}><Boxes size={16} /> Manage Catalogue Items</button>
+            </div>
+            <PlumbingBrandBar
+              brands={plumbingBrandOptions}
+              selectedBrand={plumbingFilters.brand}
+              onSelectBrand={(brand) => setPlumbingFilters((current) => ({ ...current, brand }))}
+              countsByBrand={plumbingBrandCounts}
+              totalCount={plumbingActiveVisibleProducts.length}
+            />
+            <PlumbingFilterToolbar
+              categoryLabel={selectedCatalogueSubcategory?.label || selectedCatalogueSection.displayName}
+              totalCount={plumbingActiveVisibleProducts.length}
+              visibleCount={plumbingFilteredProducts.length}
+              filters={plumbingFilters}
+              onChange={setPlumbingFilters}
+              onClearAll={() => setPlumbingFilters(PLUMBING_DEFAULT_FILTERS)}
+              finishOptions={plumbingFinishOptions}
+              priceOptions={[
+                { value: "all", label: "Any Price" },
+                { value: "under-200", label: "Under $200" },
+                { value: "200-500", label: "$200 - $500" },
+                { value: "500-1000", label: "$500 - $1000" },
+                { value: "over-1000", label: "Over $1000" },
+              ]}
+              sortOptions={[
+                { value: "name-asc", label: "Name A-Z" },
+                { value: "brand-asc", label: "Brand A-Z" },
+                { value: "price-asc", label: "Price Low-High" },
+                { value: "price-desc", label: "Price High-Low" },
+              ]}
+            />
+            {plumbingProductTypeOptions.length > 1 ? (
+              <div className="plumbing-product-type-row">
+                <label>
+                  Product Type
+                  <select
+                    aria-label="Product Type"
+                    value={plumbingFilters.productType}
+                    onChange={(event) => setPlumbingFilters((current) => ({ ...current, productType: event.target.value }))}
+                  >
+                    <option value="all">All Product Types</option>
+                    {plumbingProductTypeOptions.map((type) => <option key={type} value={type}>{type}</option>)}
+                  </select>
+                </label>
+              </div>
+            ) : null}
+            <div className="plumbing-product-grid" data-testid="plumbing-product-grid">
+              {plumbingFilteredProducts.length ? plumbingFilteredProducts.map((product) => (
+                <PlumbingProductCard
+                  key={catalogueProductSelectionKey(product)}
+                  product={product}
+                  familyItem={familyByKey(product.familyKey)}
+                  selectable={isCatalogueProductSelectable(product)}
+                  onViewDetails={(p) => setPlumbingDetailProduct(p)}
+                  onSelect={(p) => selectCatalogueProduct(p, selectedCatalogueSubcategory?.key)}
+                />
+              )) : (
+                <div className="empty-state compact">
+                  <strong>No products match these filters.</strong>
+                  <span>Try clearing a filter, or import more HNC products for this category from Manage Catalogue Items.</span>
+                </div>
+              )}
+            </div>
+          </section>
+        ) : null}
+
+        {plumbingDetailProduct ? (
+          <PlumbingProductDetailModal
+            product={plumbingDetailProduct}
+            familyItem={familyByKey(plumbingDetailProduct.familyKey)}
+            selectable={isCatalogueProductSelectable(plumbingDetailProduct)}
+            onClose={() => setPlumbingDetailProduct(null)}
+            onSelect={(p) => { selectCatalogueProduct(p, selectedCatalogueSubcategory?.key); setPlumbingDetailProduct(null); }}
+          />
+        ) : null}
+
+        {selectedCatalogueSection?.key === "flooring" && !applianceMode ? <section className="purpose" data-testid="product-library-catalogue-section" data-catalogue-section="flooring">
+          <div className="section-heading"><span>Product Library</span><strong>Flooring</strong><button type="button" onClick={() => openManageCatalogueItems({ section: "flooring" })}><Boxes size={16} /> Manage Catalogue Items</button></div>
+          <FlooringLibraryBrowser products={effectiveCatalogueProducts} />
+        </section> : null}
+        {selectedCatalogueSection && ![PLUMBING_SECTION_KEY, "flooring"].includes(selectedCatalogueSection.key) && !applianceMode ? (
           <section className="purpose" data-testid={selectedCatalogueSection.key === CABINETRY_SECTION_KEY ? "product-library-cabinetry-catalogue" : "product-library-catalogue-section"} data-catalogue-section={selectedCatalogueSection.key}>
             <div className="section-heading">
               <span>Product Catalogue</span>
@@ -3396,7 +2965,7 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
                 <span role="columnheader">Client Selections</span>
                 <span role="columnheader">Quotation Builder</span>
               </div>
-              {catalogueGroupVisibleProducts.length ? catalogueGroupVisibleProducts.map((product) => {
+              {catalogueGroupVisibleProducts.length ? sortCatalogueProducts(catalogueGroupVisibleProducts, masterFilters.sort).map((product) => {
                 const key = catalogueProductSelectionKey(product);
                 const checked = selectedCatalogueItemSet.has(key);
                 const familyItem = familyByKey(product.familyKey);
@@ -3410,10 +2979,10 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
                     <strong>{product.productName || "Unnamed product"}</strong>
                     <span>{product.brand || product.manufacturer || product.supplier || "No brand"}</span>
                     <span>{product.range || product.collection || "No range"}</span>
-                    <span>{[product.model, product.sku, product.productCode].filter(Boolean).join(" / ") || "No model"}</span>
+                    <span>{[product.model, product.sku, product.productCode, ...(product.attributes?.controlledVariants || []).map(v=>v.productCode)].filter(Boolean).join(" / ") || "No model"}</span>
                     <span>{selectedCatalogueSubcategories.find((item) => item.key === catalogueSubcategoryForProduct(product, selectedCatalogueSection.key))?.label || productCategoryLabel(product)}</span>
                     <span>{quotationSectionLabel(product)}</span>
-                    <span>{productPriceLabel(product)}</span>
+                    <span>{isTrimProduct(product) ? <TrimCatalogueRate product={product} onSave={saveTrimRates}/> : productPriceLabel(product)}</span>
                     <span>{productUnitLabel(product)}</span>
                     <span>{product.active === false || product.archived ? "Inactive" : product.enabled === false ? "Disabled" : product.discontinued ? "Discontinued" : "Active"}</span>
                     <span>{productEnabledLabel(product, "clientSelectable")}</span>
@@ -3570,13 +3139,14 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
                 </div>
               ) : (
                 <div className="product-grid" data-testid="product-library-products">
-                  {visibleProducts.map((product) => {
+                  {sortCatalogueProducts(visibleProducts, masterFilters.sort).map((product) => {
                     const enabled = Boolean(builderEnablementForProduct(product, builderEnablements, workspaceId || "")?.enabled);
                     return (
                       <article
                         key={product.productId}
                         className={selectedProduct?.productId === product.productId ? "product-option selected management-card" : "product-option management-card"}
                       >
+                        <label><input type="checkbox" aria-label={`Select ${product.productName} for export`} checked={selectedCatalogueItemSet.has(catalogueProductSelectionKey(product))} onChange={()=>toggleCatalogueItemSelection(product)} /> Select for export</label>
                         <button type="button" className="product-pick" onClick={() => setSelectedProductCode(product.productCode || product.productId)}>
                           <ProductLibraryProductImage product={product} familyItem={selectedFamily} />
                           <strong>{product.productName}</strong>
@@ -3585,7 +3155,7 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
                         <small>Supplier: {product.supplier || "Not set"}</small>
                         <small>Range: {product.range || "Not set"}</small>
                         <small>Colour/variant: {[product.colour, product.finish, product.size].filter(Boolean).join(" / ") || "Not set"}</small>
-                        <span>{productPriceLabel(product)}</span>
+                        <span>{isTrimProduct(product) ? <TrimCatalogueRate product={product} onSave={saveTrimRates}/> : productPriceLabel(product)}</span>
                         <span className={product.active !== false && !product.archived ? "status-pill on" : "status-pill off"}>{product.active !== false && !product.archived ? "Active" : "Archived"}</span>
                         <span className={enabled ? "status-pill on" : "status-pill off"}>{enabled ? "Enabled for builder" : "Disabled for builder"}</span>
                         <div className="card-actions">
@@ -3771,36 +3341,6 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
                 <p className="admin-note">Choose a product family before adding a product manually. Imports can still be previewed from any page.</p>
               )}
 
-              {importPreview ? (
-                <div className="import-preview">
-                  <div className="panel-title">
-                    <FileUp size={18} />
-                    <strong>Import Preview: {importPreview.fileName}</strong>
-                  </div>
-                  <p>
-                    {importPreview.preview.length} rows previewed.{" "}
-                    {importPreview.preview.filter((row) => row.action === "create").length} create,{" "}
-                    {importPreview.preview.filter((row) => row.action === "update").length} update,{" "}
-                    {importPreview.preview.filter((row) => row.action === "skip-unchanged").length} unchanged,{" "}
-                    {importPreview.preview.filter((row) => row.errors.length).length} row-level error(s).
-                  </p>
-                  <div className="preview-list">
-                    {importPreview.preview.slice(0, 12).map((row) => (
-                      <div key={row.rowNumber} className={row.errors.length ? "preview-row error" : "preview-row"}>
-                        {row.imagePreview ? <img src={row.imagePreview} alt={`${row.record.product_name || "Product"} preview`} /> : <span className="preview-image-empty">No image</span>}
-                        <strong>Row {row.rowNumber}</strong>
-                        <span>
-                          {row.record.product_name || "Unnamed product"}
-                          <small>{row.familyMapping ? row.familyMapping.displayName : "No family"} / {row.quoteItemMapping || "No quote item"}</small>
-                        </span>
-                        <small>{row.errors.length ? row.errors.join("; ") : row.action}</small>
-                      </div>
-                    ))}
-                  </div>
-                  <button type="button" onClick={importPreviewRows} disabled={saving || !workspaceId}><Upload size={16} /> Create / Update Valid Rows</button>
-                </div>
-              ) : null}
-
               <div className="entity-model">
                 <strong>Shared Product Entity</strong>
                 {Object.entries(PRODUCT_ENTITY_FIELDS).map(([section, fields]) => (
@@ -3813,6 +3353,10 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
       </main>
 
       <style jsx>{`
+        .plumbing-product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; margin-top: 16px; }
+        .plumbing-product-type-row { margin-top: 10px; }
+        .plumbing-product-type-row label { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: #475569; }
+        .plumbing-product-type-row select { padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; background: #fff; }
         .page {
           min-height: 100vh;
           background: #f5f7fb;
@@ -3952,9 +3496,65 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
           grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
           gap: 14px;
         }
-        .catalogue-section-grid {
+        /* Fixed six-column tracks so every card is exactly the same width;
+           minmax(0, 1fr) stops long room names from widening their own column. */
+        .catalogue-section-grid,
+        .room-grid,
+        .category-grid {
           grid-template-columns: repeat(6, minmax(0, 1fr));
           align-items: stretch;
+        }
+        /* Category cards: one consistent, larger image band. Background-image tiles
+           keep contain/cover from their own classes; <img> tiles use object-fit. */
+        .category-grid .visual-tile {
+          grid-template-rows: auto 1fr;
+          min-height: 0;
+        }
+        .category-grid [data-room-category="shelving"],
+        .category-grid [data-room-category="flooring"],
+        .category-grid [data-room-category="electrical-fixtures"] {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .category-grid :global(.tile-image),
+        .category-grid .bricks-category-image {
+          width: 100%;
+          height: 220px;
+          min-height: 220px;
+          max-height: 220px;
+        }
+        .category-grid :global(img.tile-image) {
+          object-fit: cover;
+          object-position: center;
+        }
+        .category-grid :global(img.tile-image.contain-image) {
+          object-fit: contain;
+        }
+        .category-grid .tile-body {
+          grid-template-rows: auto auto 1fr;
+        }
+        .category-grid .tile-body strong {
+          line-height: 1.2;
+          overflow-wrap: break-word;
+          hyphens: auto;
+        }
+        /* Columns follow the width actually available to the grid (the app sidebar
+           does not collapse on small screens, so viewport breakpoints over-count). */
+        .purpose:has(> .category-grid) {
+          container-type: inline-size;
+        }
+        @container (max-width: 1320px) {
+          .tile-grid.category-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+        }
+        @container (max-width: 900px) {
+          .tile-grid.category-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        }
+        @container (max-width: 640px) {
+          .tile-grid.category-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+          .category-grid :global(.tile-image),
+          .category-grid .bricks-category-image { height: 160px; min-height: 160px; max-height: 160px; }
+        }
+        @container (max-width: 340px) {
+          .tile-grid.category-grid { grid-template-columns: 1fr; }
         }
         .visual-tile {
           display: grid;
@@ -4348,10 +3948,51 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
           display: block;
           margin-top: 4px;
         }
+        .catalogue-view-controls { display:flex; flex-wrap:wrap; align-items:center; gap:12px; padding:12px; background:#f1f5f9; border-radius:10px; }
+        .catalogue-view-controls button, .catalogue-view-controls select { padding:8px 12px; border:1px solid #94a3b8; border-radius:6px; }
+        .catalogue-view-controls button[aria-pressed="true"] { background:#1764d9; color:white; }
+        .trim-catalogue-rate { display:grid; gap:6px; font-size:13px; }
+        .trim-catalogue-rate small { display:block; }
+        .trim-catalogue-rate input { width:120px; padding:6px; margin:4px; }
+        .page[data-product-view="list"] .product-grid { display:flex; flex-direction:column; gap:8px; }
+        .page[data-product-view="list"] .product-grid :global(article) { display:grid; grid-template-columns:110px minmax(150px,1fr) minmax(150px,1fr); align-items:center; gap:10px; padding:12px; text-align:left; }
+        .page[data-product-view="list"] .product-grid :global(img) { max-height:90px; width:90px; object-fit:contain; }
+        .page[data-product-view="list"] .product-grid :global(.product-pick) { display:flex; flex-direction:row; align-items:center; gap:10px; grid-column:1 / 3; text-align:left; }
+        .page[data-product-view="list"] .product-grid :global(.product-card-logo) { grid-column:3; }
+        .page[data-product-view="list"] .room-product-grid .room-product-card { grid-template-columns:30px minmax(210px,2fr) minmax(130px,1fr) minmax(150px,1fr); gap:8px 12px; }
+        .page[data-product-view="list"] .room-product-card > label { grid-column:1; grid-row:1 / 4; font-size:0; }
+        .page[data-product-view="list"] .room-product-card > label input { width:18px; height:18px; }
+        .page[data-product-view="list"] .room-product-card .product-pick { grid-column:2; grid-row:1; padding:0; }
+        .page[data-product-view="list"] .room-product-card .product-card-logo { grid-column:3; grid-row:1; }
+        .page[data-product-view="list"] .room-product-card > small:nth-of-type(1) { grid-column:3; grid-row:2; overflow-wrap:anywhere; }
+        .page[data-product-view="list"] .room-product-card > small:nth-of-type(2) { grid-column:2; grid-row:2; }
+        .page[data-product-view="list"] .room-product-card > span { grid-column:4; grid-row:1 / 4; }
+        .page[data-product-view="list"] .room-product-card > small:nth-of-type(3) { grid-column:3; grid-row:3; }
+        .page[data-product-view="list"] .room-product-card .card-actions { grid-column:2; grid-row:3; display:flex; flex-wrap:wrap; }
+        .page[data-product-view="list"] :global(.canonical-product-media) { width:75px; min-width:75px; }
+        .page[data-product-view="list"] :global(.door-product-media) { --door-frame-height: 90px; width:75px !important; min-width:75px; }
+        .page[data-product-view="list"] :global(.canonical-product-media img), .page[data-product-view="list"] :global(.canonical-product-media [role="img"]) { width:75px !important; height:90px !important; min-height:90px !important; }
+        .page[data-product-view="list"] .product-grid :global(.appliance-visual-card) { grid-template-columns:28px 90px minmax(210px,2fr) minmax(120px,1fr) minmax(130px,1fr); grid-template-rows:auto auto; min-height:0; height:auto; align-content:center; gap:10px; }
+        .page[data-product-view="list"] :global(.appliance-visual-card > label) { grid-column:1; grid-row:1 / 3; font-size:0; }
+        .page[data-product-view="list"] :global(.appliance-visual-card > label input) { width:18px; height:18px; }
+        .page[data-product-view="list"] :global(.appliance-card-media) { grid-column:2; grid-row:1 / 3; width:90px; height:90px; min-height:0; padding:0; border:0; }
+        .page[data-product-view="list"] :global(.appliance-card-media img) { width:90px; height:90px; }
+        .page[data-product-view="list"] :global(.appliance-card-copy) { grid-column:3; grid-row:1 / 3; min-width:0; }
+        .page[data-product-view="list"] :global(.appliance-card-copy strong) { overflow-wrap:anywhere; }
+        .page[data-product-view="list"] :global(.appliance-card-logo) { grid-column:4; grid-row:1; min-height:0; height:auto; }
+        .page[data-product-view="list"] :global(.appliance-card-footer) { grid-column:4; grid-row:2; display:grid; gap:6px; }
+        .page[data-product-view="list"] :global(.appliance-card-actions) { grid-column:5; grid-row:1 / 3; }
+        .page[data-product-view="grid"] .catalogue-items-table { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:12px; }
+        .page[data-product-view="grid"] .catalogue-items-table .catalogue-items-row { display:flex; flex-direction:column; align-items:stretch; gap:8px; border:1px solid #cbd5e1; padding:16px; }
+        .page[data-product-view="grid"] .catalogue-items-table .catalogue-items-head { display:none; }
         .product-grid {
           display: grid;
           grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
           gap: 12px;
+        }
+        /* Door cards carry a 660px-tall door image (DoorProductImage); give them columns wide enough to show it. */
+        .product-grid:has(:global(.door-product-media)) {
+          grid-template-columns: repeat(auto-fill, minmax(min(330px, 100%), 1fr));
         }
         .appliance-catalogue {
           display: grid;
@@ -4480,6 +4121,20 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
         }
         .warning-text {
           font-weight: 800;
+        }
+        .appliance-source-review {
+          display: grid;
+          gap: 6px;
+          padding: 12px;
+          border: 1px solid #f0c36a;
+          border-radius: 8px;
+          background: #fff8e7;
+          color: #713f12;
+        }
+        .appliance-source-review p {
+          margin: 0;
+          color: inherit;
+          line-height: 1.45;
         }
         .product-option {
           display: grid;
@@ -5198,7 +4853,8 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
           text-transform: uppercase;
         }
         @media (max-width: 1400px) {
-          .catalogue-section-grid {
+          .catalogue-section-grid,
+          .room-grid {
             grid-template-columns: repeat(4, minmax(0, 1fr));
           }
         }
@@ -5210,7 +4866,8 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
           .master-row {
             grid-template-columns: 1fr;
           }
-          .catalogue-section-grid {
+          .catalogue-section-grid,
+          .room-grid {
             grid-template-columns: repeat(2, minmax(0, 1fr));
           }
           .banner-meta {
@@ -5400,6 +5057,28 @@ export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = 
         .appliance-detail-layout .family-hero .appliance-image-fallback.large {
           height: 320px;
           min-height: 320px;
+        }
+        /* Category-illustration fallbacks render as real images, so undo the
+           text-tile layout the class carries for the legacy caption markup. */
+        img.appliance-image-fallback,
+        img.product-image-fallback {
+          display: block;
+          box-sizing: border-box;
+          width: 100%;
+          height: 170px;
+          min-height: 0;
+          border: 1px solid #cbd5e1;
+          border-radius: 6px;
+          background-color: #eef2f7;
+          object-fit: contain;
+          padding: 10px;
+        }
+        img.product-image-fallback.large {
+          height: 320px;
+        }
+        .catalogue-thumb img.product-image-fallback {
+          height: 100%;
+          padding: 4px;
         }
         .component-mini-list.visual-components {
           display: grid;

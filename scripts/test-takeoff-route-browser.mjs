@@ -5,7 +5,7 @@ import dotenv from 'dotenv';
 import puppeteer from 'puppeteer';
 
 dotenv.config({ path: '.env.local', quiet: true });
-const out = path.resolve('test-results/takeoff-route');
+const out = path.resolve('artifacts/test-results/takeoff-route');
 fs.mkdirSync(out, { recursive: true });
 const browser = await puppeteer.launch({ headless: true, executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe' });
 try {

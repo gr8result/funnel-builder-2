@@ -1,0 +1,27 @@
+import assert from 'node:assert/strict';
+import { readJob, writeJob } from '../lib/jobFile.ts';
+import { linkTakeoffToMasterJob } from '../lib/construction-estimation/masterJob.js';
+import { applyJobSetupImport, describeProjectMismatch } from '../lib/construction-estimation/jobSetupTakeoffImport.js';
+
+const id = '2c69d44c-5287-4a92-9f6c-19dc65f1f51d';
+const workbook = { jobId: id, projectId: 'commercial-alias', data: { inputDataSheet: { rows: { projectName: { value: 'Michael and Sarah Johnson' } } } }, standardInclusions: { selectedPackageId: 'standard' }, quotation: { slab: { rows: [{ id: 'slab', quantityKey: 'lowerSlabAreaM2' }] } }, projectEstimateBuilder: { pages: [{ id: 'estimate' }] } };
+workbook.aiPlanTakeoffJob = linkTakeoffToMasterJob(workbook, { takeoffId: 'legacy-takeoff', completedFloorplans: [{ id: 'floor' }], plan: { pages: [{ pageNumber: 1, dataUrl: 'data:image/png;base64,cGxhbg==' }] } }, { storedInMaster: true });
+let bytes;
+const handle = { name: 'Michael and Sarah Johnson.gr8job', getFile: async () => new File(bytes ? [bytes] : [], handle.name), createWritable: async () => ({ write: async blob => { bytes = await blob.arrayBuffer(); }, close: async () => {} }) };
+const saved = await writeJob(handle, { jobName: 'Michael and Sarah Johnson', jobId: id, 'job-details': { projectId: 'commercial-alias' }, workbook });
+assert.equal(saved.ok, true);
+handle.name = 'Completely renamed file.gr8job';
+const reopened = await readJob(handle);
+assert.equal(reopened.jobId, id);
+assert.equal(reopened.workbook.jobId, id);
+assert.equal(reopened['job-details'].jobId, id);
+assert.equal(reopened.manifest.project.id, id);
+assert.equal(reopened.workbook.aiPlanTakeoffJob.masterJobId, id);
+assert.deepEqual(reopened.workbook.standardInclusions, workbook.standardInclusions);
+assert.deepEqual(reopened.workbook.quotation, workbook.quotation);
+assert.deepEqual(reopened.workbook.projectEstimateBuilder, workbook.projectEstimateBuilder);
+assert.equal(reopened.workbook.aiPlanTakeoffJob.plan.pages[0].dataUrl, workbook.aiPlanTakeoffJob.plan.pages[0].dataUrl);
+const payload = { provenance: { jobId: 'another-permanent-job', projectId: 'commercial-alias' }, quantities: { lowerFloorAreaM2: 999 } };
+assert.ok(describeProjectMismatch(workbook, payload));
+assert.throws(() => applyJobSetupImport(workbook, payload, ['lowerFloorAreaM2'], { allowProjectMismatch: true }), /different|belongs|match|project/i, 'Legacy override cannot import quantities from another master job');
+console.log('PASS real .gr8job ZIP preserves permanent identity, plans and all module sections after filename changes; foreign quantities are rejected');

@@ -1,0 +1,136 @@
+
+query GetLayeredNavigation(
+$categoryId: [String]!,
+$colours: [String],
+$brand: [String],
+$price_from: String,
+$price_to: String,
+$sku: String,
+$wels_water_rating: [String],
+$energy_rating: [String],
+
+$stock_line_filter: [String],
+$size_mm: [String],
+$size_cooktop: [String],
+$size_litre: [String],
+$size_oven: [String],
+$tvs_size_dd: [String],
+$baths_general_materials: [String],
+$overflow: [String],
+
+$inlet: [String],
+$bowls: [String],
+
+$pageSize: Int!, 
+$currentPage: Int!
+$sort: ProductAttributeSortInput
+) {
+  products(
+    filter: {
+      category_id: { in: $categoryId }
+      colours: { in: $colours }
+      brand: { in: $brand }
+      price_store: { from: $price_from, to: $price_to }
+      sku: { eq: $sku }
+      wels_water_rating: { in: $wels_water_rating }
+      energy_rating: { in: $energy_rating }
+
+      stock_line_filter : { in: $stock_line_filter }
+      size_mm: { in: $size_mm }
+      size_cooktop: { in: $size_cooktop }
+      size_litre: { in: $size_litre }
+      size_oven: { in: $size_oven }
+      tvs_size_dd: { in: $tvs_size_dd }
+      baths_general_materials: { in: $baths_general_materials }
+      overflow: { in: $overflow }
+
+      inlet: { in: $inlet }
+      bowls: { in: $bowls }
+    }
+      sort: $sort
+      pageSize: $pageSize
+      currentPage: $currentPage
+  ) {
+    aggregations {
+      attribute_code
+      label
+      options {
+        label
+        value
+        count
+      }
+    }
+    items {
+      id
+      name
+      sku
+      vendorcode
+      image {
+        url
+      }
+      thumbnail {
+          url
+      }
+      product_images {
+        thumbnail
+        small
+        base
+      }
+      description {
+          html
+      }
+      price_store
+      price_trade
+      stock_line_filter 
+      gp_product_group
+      __typename
+      ... on SimpleProduct {
+          price_range {
+            minimum_price {
+              regular_price {
+                value
+                currency
+              }
+            }
+          }
+      }
+      ... on ConfigurableProduct {
+          configurable_options {
+            attribute_code
+            attribute_id
+            label
+            values {
+              label
+              value_index
+            }
+          }
+          variants {
+                product {
+                    sku
+                    name
+                    price_range {
+                        minimum_price {
+                            regular_price {
+                                value
+                                currency
+                            }
+                            final_price {
+                                value
+                                currency
+                            }
+                        }
+                    }
+                }
+            attributes {
+                code
+                value_index
+            }
+          }
+      }  
+    }
+    page_info {
+      total_pages
+    }  
+    total_count
+  }
+}

@@ -12,7 +12,7 @@ dotenv.config({ path: ".env", quiet: true });
 
 const baseUrl = process.env.PRODUCT_LIBRARY_TEST_URL || "http://localhost:3000/modules/estimate-builder?page=productLibrary";
 const ownerEmail = process.env.PRODUCT_LIBRARY_TEST_EMAIL || "support@gr8result.com";
-const outDir = path.join(process.cwd(), "test-artifacts", "product-library-package-export-live");
+const outDir = path.join(process.cwd(), "artifacts/test-artifacts", "product-library-package-export-live");
 fs.mkdirSync(outDir, { recursive: true });
 
 async function mintSession() {

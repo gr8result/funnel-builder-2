@@ -1,0 +1,2977 @@
+{
+  "data": {
+    "products": {
+      "total_count": 27,
+      "page_info": {
+        "total_pages": 2
+      },
+      "items": [
+        {
+          "id": 25855,
+          "sku": "651-8763-00",
+          "vendorcode": "651-8763-00",
+          "name": "3-Bar Square Heated Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/651-8763-00_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/651-8763-00_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/6/5/651-8763-00_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/6/5/651-8763-00_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/651-8763-00_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/651-8763-00_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Integrated on and off switch<br>• Can be installed vertically or horizontally<br>• Rails cannot be cut down to size<br>• Cable exits through bottom mount</p>"
+          },
+          "short_description": {
+            "html": "<p>3-Bar Square Heated Towel Rail</p>"
+          },
+          "product_dimensions": null,
+          "price_store": 1245,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Phoenix"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "651-8763-00"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 24593,
+          "sku": "651876340",
+          "vendorcode": "651-8763-40",
+          "name": "3-Bar Square Heated Towel Rail ",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/651-8763-40_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/651-8763-40_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/6/5/651-8763-40_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/6/5/651-8763-40_phoenix_tech.jpeg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/651-8763-40_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/651-8763-40_phoenix_tech.jpeg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Can be installed vertically or horizontally<br>• Rails cannot be cut down to size<br>• Suitable for compact living, to hang a towel or robe<br>• Cable exits through bottom mount</p>"
+          },
+          "short_description": {
+            "html": "<p>3-Bar Square Heated Towel Rail </p>"
+          },
+          "product_dimensions": null,
+          "price_store": 1432,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Phoenix"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "651-8763-40"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 24592,
+          "sku": "651876310",
+          "vendorcode": "651-8763-10",
+          "name": "3-Bar Square Heated Towel Rail ",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/651-8763-10_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/651-8763-10_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/6/5/651-8763-10_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/6/5/651-8763-10_phoenix_tech.jpeg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/651-8763-10_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/651-8763-10_phoenix_tech.jpeg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Can be installed vertically or horizontally<br>• Rails cannot be cut down to size<br>• Suitable for compact living, to hang a towel or robe<br>• Cable exits through bottom mount</p>"
+          },
+          "short_description": {
+            "html": "<p>3-Bar Square Heated Towel Rail </p>"
+          },
+          "product_dimensions": null,
+          "price_store": 1320,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Phoenix"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Matte Black",
+                    "value": "940"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "651-8763-10"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Black"
+              }
+            ]
+          }
+        },
+        {
+          "id": 24576,
+          "sku": "144-8750-00",
+          "vendorcode": "144-8750-00",
+          "name": "Wiltern 5-Bar Round Heated Towel Ladder ",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/4/144-8750-00_phoenix_web.jpeg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/4/144-8750-00_phoenix_web.jpeg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/4/144-8750-00_phoenix_web.jpeg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/4/144-8750-00_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/4/144-8750-00_phoenix_web.jpeg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/4/144-8750-00_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Cable exits through bottom right vertical tube<br>• Designed in Australia<br>• Durable, high quality finish<br>• Can be hardwired or plugged in</p>"
+          },
+          "short_description": {
+            "html": "<p>Wiltern 5-Bar Round Heated Towel Ladder </p>"
+          },
+          "product_dimensions": "W575 x D110.50 x H748mm",
+          "price_store": 924,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W575 x D110.50 x H748mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Wiltern"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "144-8750-00"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 21661,
+          "sku": "652875000",
+          "vendorcode": "652-8750-00",
+          "name": "5-Bar Flat Heated Towel Ladder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/652875000_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/652875000_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/6/5/652875000_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/6/5/652875000_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/652875000_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/652875000_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Rated: 240V, 50Hz, 35W<br>• IPX4 rated<br>• Can be hardwired or plugged in<br>• Cable exits through bottom right vertical tube</p>"
+          },
+          "short_description": {
+            "html": "<p>5-Bar Flat Heated Towel Ladder</p>"
+          },
+          "product_dimensions": "W548 x D80 x H740mm",
+          "price_store": 771,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W548 x D80 x H740mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Phoenix"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "652-8750-00"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 21660,
+          "sku": "651876331",
+          "vendorcode": "651-8763-31",
+          "name": "3-Bar Square Heated Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/651876331_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/651876331_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/6/5/651876331_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/6/5/651876331_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/651876331_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/651876331_phoenix_tech.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/651876331_phoenix_insitu.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Brushed Carbon finish<br>• Transformer included<br>• 45˚ +/- 5˚ at room temp of 22˚<br>• Integrated on and off switch<br>• Vertical or horizontal mount<br>• Cable exits through bottom mount</p>"
+          },
+          "short_description": {
+            "html": "<p>3-Bar Square Heated Towel Rail</p>"
+          },
+          "product_dimensions": null,
+          "price_store": 1432,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Phoenix"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Grey",
+                    "value": "939"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "651-8763-31"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Carbon"
+              }
+            ]
+          }
+        },
+        {
+          "id": 21659,
+          "sku": "650876340",
+          "vendorcode": "650-8763-40",
+          "name": "3-Bar Round Heated Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876340_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876340_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/6/5/650876340_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/6/5/650876340_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876340_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876340_phoenix_tech.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876340_phoenix_insitu2.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876340_phoenix_insitu1.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876340_phoenix_insitu.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Transformer included<br>• 45˚ +/- 5˚ at room temp of 22˚<br>• Integrated on and off switch<br>• Cable exits through bottom mount<br>• Vertical or horizontal mount</p>"
+          },
+          "short_description": {
+            "html": "<p>3-Bar Round Heated Towel Rail</p>"
+          },
+          "product_dimensions": null,
+          "price_store": 1370,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Phoenix"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "650-8763-40"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 21658,
+          "sku": "650876331",
+          "vendorcode": "650-8763-31",
+          "name": "3-Bar Round Heated Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876331_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876331_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/6/5/650876331_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/6/5/650876331_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876331_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876331_phoenix_tech.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876331_phoenix_insitu.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Transformer included<br>• Brushed Carbon finish<br>• 45˚ +/- 5˚ at room temp of 22˚<br>• Integrated on and off switch<br>• Cable exits through bottom mount<br>• Vertical or horizontal mount</p>"
+          },
+          "short_description": {
+            "html": "<p>3-Bar Round Heated Towel Rail</p>"
+          },
+          "product_dimensions": null,
+          "price_store": 1370,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Phoenix"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Grey",
+                    "value": "939"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "650-8763-31"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Carbon"
+              }
+            ]
+          }
+        },
+        {
+          "id": 21657,
+          "sku": "650876312",
+          "vendorcode": "650-8763-12",
+          "name": "3-Bar Round Heated Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876312_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876312_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/6/5/650876312_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/6/5/650876312_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876312_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876312_phoenix_tech.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876312_phoenix_insitu3.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876312_phoenix_insitu2.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876312_phoenix_insitu.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Transformer included<br>• 45˚ +/- 5˚ at room temp of 22˚<br>• Integrated on and off switch<br>• Cable exits through bottom mount<br>• Vertical or horizontal mount</p>"
+          },
+          "short_description": {
+            "html": "<p>3-Bar Round Heated Towel Rail</p>"
+          },
+          "product_dimensions": null,
+          "price_store": 1494,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Phoenix"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "650-8763-12"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Gold"
+              }
+            ]
+          }
+        },
+        {
+          "id": 21656,
+          "sku": "650876310",
+          "vendorcode": "650-8763-10",
+          "name": "3-Bar Round Heated Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876310_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876310_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/6/5/650876310_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/6/5/650876310_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876310_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876310_phoenix_tech.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876310_phoenix_insitu.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Transformer included<br>• 45˚ +/- 5˚ at room temp of 22˚<br>• Integrated on and off switch<br>• Cable exits through bottom mount<br>• Vertical or horizontal mount</p>"
+          },
+          "short_description": {
+            "html": "<p>3-Bar Round Heated Towel Rail</p>"
+          },
+          "product_dimensions": null,
+          "price_store": 1257,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Phoenix"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Matte Black",
+                    "value": "940"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "650-8763-10"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Black"
+              }
+            ]
+          }
+        },
+        {
+          "id": 21655,
+          "sku": "650876300",
+          "vendorcode": "650-8763-00",
+          "name": "3-Bar Round Heated Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876300_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876300_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/6/5/650876300_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/6/5/650876300_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876300_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876300_phoenix_tech.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876300_phoenix_insitu.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Transformer included<br>• 45˚ +/- 5˚ at room temp of 22˚<br>• Integrated on and off switch<br>• Cable exits through bottom mount<br>• Vertical or horizontal mount</p>"
+          },
+          "short_description": {
+            "html": "<p>3-Bar Round Heated Towel Rail</p>"
+          },
+          "product_dimensions": null,
+          "price_store": 1183,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Phoenix"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "650-8763-00"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 19679,
+          "sku": "652875040",
+          "vendorcode": "652-8750-40",
+          "name": "5 Bar Flat Heated Towel Ladder ",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/652875040_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/652875040_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/6/5/652875040_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/6/5/652875040_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/652875040_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/652875040_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Rated: 240V, 50Hz, 35W<br>•&nbsp;IPX4 rated – suitable for bathroom installations<br>• Can be hardwired or plugged in<br>• Cable exits through bottom right vertical tube</p>"
+          },
+          "short_description": {
+            "html": "<p>5 Bar Flat Heated Towel Ladder</p>"
+          },
+          "product_dimensions": "W548 x D80 x H740mm",
+          "price_store": 883,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W548 x D80 x H740mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Phoenix"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "652-8750-40"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 19678,
+          "sku": "652875031",
+          "vendorcode": "652-8750-31",
+          "name": "5 Bar Flat Heated Towel Ladder ",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/652875031_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/652875031_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/6/5/652875031_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/6/5/652875031_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/652875031_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/652875031_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Rated: 240V, 50Hz, 35W<br>•&nbsp;IPX4 rated – suitable for bathroom installations<br>• Can be hardwired or plugged in<br>• Cable exits through bottom right vertical tube</p>"
+          },
+          "short_description": {
+            "html": "<p>5 Bar Flat Heated Towel Ladder</p>"
+          },
+          "product_dimensions": "W548 x D80 x H740mm",
+          "price_store": 883,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W548 x D80 x H740mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Phoenix"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Grey",
+                    "value": "939"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "652-8750-31"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Carbon"
+              }
+            ]
+          }
+        },
+        {
+          "id": 19677,
+          "sku": "652875012",
+          "vendorcode": "652-8750-12",
+          "name": "5 Bar Flat Heated Towel Ladder ",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/652875012_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/652875012_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/6/5/652875012_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/6/5/652875012_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/652875012_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/652875012_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Rated: 240V, 50Hz, 35W<br>•&nbsp;IPX4 rated – suitable for bathroom installations<br>• Can be hardwired or plugged in<br>• Cable exits through bottom right vertical tube</p>"
+          },
+          "short_description": {
+            "html": "<p>5 Bar Flat Heated Towel Ladder</p>"
+          },
+          "product_dimensions": "W548 x D80 x H740mm",
+          "price_store": 971,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W548 x D80 x H740mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Phoenix"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "652-8750-12"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Gold"
+              }
+            ]
+          }
+        },
+        {
+          "id": 19676,
+          "sku": "652875010",
+          "vendorcode": "652-8750-10",
+          "name": "5 Bar Flat Heated Towel Ladder ",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/652875010_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/652875010_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/6/5/652875010_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/6/5/652875010_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/652875010_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/652875010_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Rated: 240V, 50Hz, 35W<br>•&nbsp;IPX4 rated – suitable for bathroom installations<br>• Can be hardwired or plugged in<br>• Cable exits through bottom right vertical tube</p>"
+          },
+          "short_description": {
+            "html": "<p>5 Bar Flat Heated Towel Ladder</p>"
+          },
+          "product_dimensions": "W548 x D80 x H740mm",
+          "price_store": 821,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W548 x D80 x H740mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Phoenix"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Matte Black",
+                    "value": "940"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "652-8750-10"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Black"
+              }
+            ]
+          }
+        },
+        {
+          "id": 19670,
+          "sku": "650876140",
+          "vendorcode": "650-8761-40",
+          "name": "800mm Heated Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876140_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876140_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/6/5/650876140_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/6/5/650876140_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876140_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876140_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Transformer included<br>• 45 degrees +/- 5 degrees at room temp of 22 degrees<br>• Integrated on &amp; off switch<br>• Cable exits through bottom mount<br>• Vertical or horizontal installation</p>"
+          },
+          "short_description": {
+            "html": "<p>800mm Heated Single Towel Rail</p>"
+          },
+          "product_dimensions": "W870 x D82 x H32mm",
+          "price_store": 535,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W870 x D82 x H32mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Phoenix"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "650-8761-40"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 19667,
+          "sku": "650876110",
+          "vendorcode": "650-8761-10",
+          "name": "800mm Heated Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876110_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876110_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/6/5/650876110_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/6/5/650876110_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876110_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876110_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Transformer included<br>• 45 degrees +/- 5 degrees at room temp of 22 degrees<br>• Integrated on &amp; off switch<br>• Cable exits through bottom mount<br>• Can be installed vertically or horizontally</p>"
+          },
+          "short_description": {
+            "html": "<p>800mm Heated Single Towel Rail</p>"
+          },
+          "product_dimensions": "W870 x D82 x H32mm",
+          "price_store": 460,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W870 x D82 x H32mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Phoenix"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Matte Black",
+                    "value": "940"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "650-8761-10"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Black"
+              }
+            ]
+          }
+        },
+        {
+          "id": 18529,
+          "sku": "134875040",
+          "vendorcode": "134-8750-40",
+          "name": "Cromford 5-Bar Round Heated Towel Ladder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/3/134875040_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/3/134875040_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/3/134875040_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/3/134875040_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/3/134875040_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/3/134875040_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Can be hardwired or plugged in<br>• Rated: 240V, 50Hz, 35W<br>• Cable exits through bottom right vertical tube<br>• Designed in Australia</p>"
+          },
+          "short_description": {
+            "html": "<p>5-Bar Round Heated Towel Ladder</p>"
+          },
+          "product_dimensions": "W575 x D100 x H765mm",
+          "price_store": 1086,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W575 x D100 x H765mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Cromford"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "134-8750-40"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 18522,
+          "sku": "134875000",
+          "vendorcode": "134-8750-00",
+          "name": "Cromford 5-Bar Round Heated Towel Ladder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/3/134875000_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/3/134875000_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/3/134875000_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/3/134875000_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/3/134875000_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/3/134875000_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Can be hardwired or plugged in<br>• Rated: 240V, 50Hz, 35W<br>• Cable exits through bottom right vertical tube<br>• Designed in Australia</p>"
+          },
+          "short_description": {
+            "html": "<p>5-Bar Round Heated Towel Ladder</p>"
+          },
+          "product_dimensions": "W575 x D100 x H765mm",
+          "price_store": 914,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W575 x D100 x H765mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Cromford"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "134-8750-00"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 18517,
+          "sku": "134875012",
+          "vendorcode": "134-8750-12",
+          "name": "Cromford 5-Bar Round Heated Towel Ladder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/3/134875012_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/3/134875012_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/3/134875012_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/3/134875012_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/3/134875012_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/3/134875012_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Can be hardwired or plugged in<br>• Rated: 240V, 50Hz, 35W<br>• Cable exits through bottom right vertical tube<br>• Designed in Australia</p>"
+          },
+          "short_description": {
+            "html": "<p>5-Bar Round Heated Towel Ladder</p>"
+          },
+          "product_dimensions": "W575 x D100 x H765mm",
+          "price_store": 1179,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W575 x D100 x H765mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Cromford"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "134-8750-12"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Gold"
+              }
+            ]
+          }
+        },
+        {
+          "id": 18516,
+          "sku": "134875010",
+          "vendorcode": "134-8750-10",
+          "name": "Cromford 5-Bar Round Heated Towel Ladder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/3/134875010_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/3/134875010_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/3/134875010_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/3/134875010_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/3/134875010_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/3/134875010_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Can be hardwired or plugged in<br>• Rated: 240V, 50Hz, 35W<br>• Cable exits through bottom right vertical tube<br>• Designed in Australia</p>"
+          },
+          "short_description": {
+            "html": "<p>5-Bar Round Heated Towel Ladder</p>"
+          },
+          "product_dimensions": "W575 x D100 x H765mm",
+          "price_store": 1034,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W575 x D100 x H765mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Cromford"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Matte Black",
+                    "value": "940"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "134-8750-10"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Black"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14607,
+          "sku": "RS8750BN",
+          "vendorcode": "RS8750BN",
+          "name": "Radii 5 Bar Heated Towel Ladder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/s/rs8750bn_pheonix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/s/rs8750bn_pheonix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/r/s/rs8750bn_phoenix_tech.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/r/s/rs8750bn_pheonix_web.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/s/rs8750bn_phoenix_tech.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/s/rs8750bn_pheonix_web.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Heated<br />&bull; Wide, flat surfaces beautifully designed to complement modern trends<br />&bull; Can be hardwired or plug-in<br />&bull; Matching tapware available to complete your bathroom look</p>"
+          },
+          "short_description": {
+            "html": "Radii 5 Bar Heated Towel Ladder"
+          },
+          "product_dimensions": null,
+          "price_store": 1089,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Radii"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "RS8750BN"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14575,
+          "sku": "RS8750MB",
+          "vendorcode": "RS8750MB",
+          "name": "Radii 5 Bar Heated Towel Ladder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/s/rs8750mb_pheonix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/s/rs8750mb_pheonix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/r/s/rs8750mb_pheonix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/r/s/rs8750mb_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/s/rs8750mb_pheonix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/s/rs8750mb_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Heated<br />&bull; Wide, flat surfaces beautifully designed to complement modern trends<br />&bull; Can be hardwired or plug-in<br />&bull; Matching tapware available to complete your bathroom look</p>"
+          },
+          "short_description": {
+            "html": "Radii 5 Bar Heated Towel Ladder"
+          },
+          "product_dimensions": null,
+          "price_store": 1089,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Radii"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "size_mm",
+                "selected_options": [
+                  {
+                    "label": "550",
+                    "value": "769"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Matte Black",
+                    "value": "940"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "RS8750MB"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Black"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14561,
+          "sku": "RS8750CHR",
+          "vendorcode": "RS8750CHR",
+          "name": "Radii 5 Bar Heated Towel Ladder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/s/rs8750chr_pheonix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/s/rs8750chr_pheonix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/r/s/rs8750chr_pheonix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/r/s/rs8750chr_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/s/rs8750chr_pheonix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/s/rs8750chr_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Heated<br />&bull; Wide, flat surfaces beautifully designed to complement modern trends<br />&bull; Can be hardwired or plug-in<br />&bull; Matching tapware available to complete your bathroom look</p>"
+          },
+          "short_description": {
+            "html": "Radii 5 Bar Heated Towel Ladder"
+          },
+          "product_dimensions": null,
+          "price_store": 754,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Radii"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "size_mm",
+                "selected_options": [
+                  {
+                    "label": "550",
+                    "value": "769"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "RS8750CHR"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14541,
+          "sku": "RA8750CHR",
+          "vendorcode": "RA8750CHR",
+          "name": "Radii 5 Bar Heated Towel Ladder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra8750chr_pheonix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra8750chr_pheonix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/r/a/ra8750chr_pheonix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/r/a/ra8750chr_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra8750chr_pheonix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra8750chr_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Heated<br />&bull; Wide, flat surfaces beautifully designed to complement modern trends<br />&bull; Can be hardwired or plug-in<br />&bull; Matching tapware available to complete your bathroom look</p>"
+          },
+          "short_description": {
+            "html": "Radii 5 Bar Heated Towel Ladder"
+          },
+          "product_dimensions": null,
+          "price_store": 754,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Radii"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "size_mm",
+                "selected_options": [
+                  {
+                    "label": "550",
+                    "value": "769"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "RA8750CHR"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

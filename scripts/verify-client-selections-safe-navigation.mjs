@@ -7,7 +7,7 @@ import puppeteer from "puppeteer";
 dotenv.config({ path: ".env.local", quiet: true });
 dotenv.config({ path: ".env", quiet: true });
 const ownerEmail = process.env.PRODUCT_LIBRARY_TEST_EMAIL || "support@gr8result.com";
-const outDir = path.resolve('test-artifacts/client-selections-safe-navigation');
+const outDir = path.resolve('artifacts/test-artifacts/client-selections-safe-navigation');
 fs.mkdirSync(outDir, { recursive: true });
 async function mintSession() {
   const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;

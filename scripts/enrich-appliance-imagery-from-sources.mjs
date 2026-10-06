@@ -4,7 +4,7 @@ import path from "node:path";
 const ROOT = process.cwd();
 const PRODUCTS_PATH = path.join(ROOT, "data/product-library/catalogues/appliances/AU-APPLIANCE-CATALOGUE.json");
 const BRANDS_PATH = path.join(ROOT, "data/product-library/catalogues/appliances/AU-APPLIANCE-BRANDS.json");
-const AUDIT_PATH = path.join(ROOT, "APPLIANCE_IMAGE_AND_SOURCE_AUDIT.csv");
+const AUDIT_PATH = path.join(ROOT, "data/catalogue/reconciliation/APPLIANCE_IMAGE_AND_SOURCE_AUDIT.csv");
 const ASSET_DIR = path.join(ROOT, "public/images/catalogues/appliances");
 const PRODUCT_ASSET_DIR = path.join(ASSET_DIR, "products");
 const BRAND_ASSET_DIR = path.join(ASSET_DIR, "brands");
@@ -47,12 +47,6 @@ console.log(JSON.stringify({
 
 async function updateBrandLogos() {
   const sources = {
-    Ariston: {
-      url: "https://ariston.com.au/media/Ariston-brand-logo.jpg",
-      sourceUrl: "https://ariston.com.au/",
-      sourceOrganisation: "Ariston Australia",
-      extension: ".jpg",
-    },
     Blanco: {
       url: "https://upload.wikimedia.org/wikipedia/commons/7/79/BLANCO-logo.svg",
       sourceUrl: "https://commons.wikimedia.org/wiki/File:BLANCO-logo.svg",
@@ -182,10 +176,6 @@ async function resolveImageSource(product, omegaArchive) {
     const modelSlug = slug(model);
     const segment = product.familyId === "freestanding-cookers" ? "freestanding-ovens" : product.familyId;
     candidates.push({ url: `https://www.westinghouse.com.au/cooking/${segment}/${modelSlug}/`, sourceType: "official-australian-product-page", sourceOrganisation: "Westinghouse Australia" });
-  }
-
-  if (brand === "Ariston") {
-    if (existingPage) candidates.push({ url: existingPage, sourceType: "official-australian-product-page", sourceOrganisation: "Ariston Australia" });
   }
 
   if (brand === "Omega") {

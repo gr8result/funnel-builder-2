@@ -5,22 +5,6 @@
   "assetPolicy": "Brand logos are official supplier/manufacturer assets referenced for Product Library catalogue administration. Product images are model-specific only when an exact model source is verified; otherwise no substitute image is stored.",
   "brands": [
     {
-      "brandId": "brand:ariston",
-      "brandName": "Ariston",
-      "supplierName": "Ariston",
-      "homepageUrl": "https://ariston.com.au/",
-      "logoUrl": "/images/catalogues/appliances/brands/ariston-logo.svg",
-      "logoBackground": "#ffffff",
-      "logoSourceUrl": "https://commons.wikimedia.org/wiki/File:Ariston_Group.svg",
-      "logoSourceOrganisation": "Ariston Group / Wikimedia Commons",
-      "logoStatus": "official-source-local",
-      "logoCheckedAt": "2026-09-04",
-      "logo": "/images/catalogues/appliances/brands/ariston-logo.svg",
-      "logoLocalPath": "/images/catalogues/appliances/brands/ariston-logo.svg",
-      "logoSourceAssetUrl": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Ariston%20Group.svg",
-      "logoAttribution": "Ariston Group / Wikimedia Commons"
-    },
-    {
       "brandId": "brand:blanco",
       "brandName": "Blanco",
       "supplierName": "Blanco",
@@ -34,7 +18,25 @@
       "logo": "/images/catalogues/appliances/brands/blanco-logo.svg",
       "logoLocalPath": "/images/catalogues/appliances/brands/blanco-logo.svg",
       "logoSourceAssetUrl": "https://upload.wikimedia.org/wikipedia/commons/7/79/BLANCO-logo.svg",
-      "logoAttribution": "BLANCO Kommunikation / Wikimedia Commons"
+      "logoAttribution": "BLANCO Kommunikation / Wikimedia Commons",
+      "active": false,
+      "selectable": false
+    },
+    {
+      "brandId": "brand:bosch",
+      "brandName": "Bosch",
+      "supplierName": "Bosch",
+      "homepageUrl": "https://www.bosch-home.com.au/en",
+      "logoUrl": "/images/catalogues/appliances/brands/bosch-logo.svg",
+      "logoBackground": "#ffffff",
+      "logoSourceUrl": "https://www.bosch-home.com.au/en",
+      "logoSourceOrganisation": "Bosch Home Appliances Australia / BSH Home Appliances",
+      "logoStatus": "official-source-local",
+      "logoCheckedAt": "2026-09-11",
+      "logo": "/images/catalogues/appliances/brands/bosch-logo.svg",
+      "logoLocalPath": "/images/catalogues/appliances/brands/bosch-logo.svg",
+      "logoSourceAssetUrl": "https://www.bosch-home.com.au/marketing-app/_next/static/media/bosch.777c3df3.svg",
+      "logoAttribution": "Bosch Home Appliances Australia / BSH Home Appliances"
     },
     {
       "brandId": "brand:euromaid",
@@ -99,6 +101,24 @@
       "logoSourceAssetUrl": "https://www.westinghouse.com.au/contentassets/187af942684545628d9d3bbce68f35b9/westinghouse-logo-full-.svg",
       "logoAttribution": "Westinghouse Australia",
       "logoBackground": "#ffffff"
+    },
+    {
+      "brandId": "brand:whirlpool",
+      "brandName": "Whirlpool",
+      "supplierName": "Whirlpool",
+      "homepageUrl": "https://whirlpool.com.au/",
+      "logoUrl": "/images/catalogues/appliances/brands/whirlpool-official.png",
+      "logoBackground": "#ffffff",
+      "logoSourceUrl": "https://whirlpool.com.au/",
+      "logoSourceOrganisation": "Whirlpool Australia",
+      "logoStatus": "official-source-local",
+      "logoCheckedAt": "2026-09-16",
+      "logo": "/images/catalogues/appliances/brands/whirlpool-official.png",
+      "logoLocalPath": "/images/catalogues/appliances/brands/whirlpool-official.png",
+      "logoSourceAssetUrl": "https://whirlpool.com.au/cdn/shop/files/whirlpool_logo-black-01_200x@2x.png?v=1723438793",
+      "logoAttribution": "Whirlpool Australia",
+      "active": true,
+      "selectable": true
     }
   ],
   "sourceSheet": "Quote Import",

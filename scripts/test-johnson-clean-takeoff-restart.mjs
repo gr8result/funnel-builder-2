@@ -16,7 +16,7 @@ const baseUrl = process.env.JOHNSON_VERIFY_BASE_URL || "http://localhost:3000";
 const workspaceId = "846885cd-25b9-4eca-b9f9-3fd02f5882d8";
 const sourceJobFilePath = "C:\\Users\\grant\\Downloads\\Johnson 123.gr8job";
 const sourcePlanPath = "C:\\Users\\grant\\Downloads\\SAMPLE PLANS.pdf";
-const outDir = path.join(root, "test-results", "johnson-clean-restart");
+const outDir = path.join(root, "artifacts/test-results", "johnson-clean-restart");
 const downloadDir = path.join(outDir, "downloads");
 const finalUrl = `${baseUrl}/modules/estimate-builder?page=aiPlanTakeoff`;
 

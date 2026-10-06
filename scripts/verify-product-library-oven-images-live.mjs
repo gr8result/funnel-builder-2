@@ -18,7 +18,7 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
 const catalogue = JSON.parse(fs.readFileSync(path.join(root, "data/product-library/catalogues/appliances/AU-APPLIANCE-CATALOGUE.json"), "utf8"));
-const outDir = path.join(root, "test-artifacts", "product-library-oven-images-live");
+const outDir = path.join(root, "artifacts/test-artifacts", "product-library-oven-images-live");
 fs.mkdirSync(outDir, { recursive: true });
 for (const file of fs.readdirSync(outDir)) {
   if (/\.png$/i.test(file)) fs.rmSync(path.join(outDir, file), { force: true });
@@ -112,7 +112,7 @@ try {
     imageResponses: Object.fromEntries(imageResponses),
     consoleEntries,
     failedRequests,
-    screenshots: fs.readdirSync(outDir).filter((file) => file.endsWith(".png")).map((file) => path.join("test-artifacts", "product-library-oven-images-live", file)),
+    screenshots: fs.readdirSync(outDir).filter((file) => file.endsWith(".png")).map((file) => path.join("artifacts/test-artifacts", "product-library-oven-images-live", file)),
   }, null, 2));
 } finally {
   await browser.close();

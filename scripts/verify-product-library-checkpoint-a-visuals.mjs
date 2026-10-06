@@ -8,7 +8,7 @@ dotenv.config({ path: ".env.local", quiet: true });
 
 const actualLiveUrl = process.env.PRODUCT_LIBRARY_TEST_URL || "http://localhost:3000/modules/estimate-builder?page=productLibrary";
 const ownerEmail = process.env.PRODUCT_LIBRARY_TEST_EMAIL || "support@gr8result.com";
-const outDir = path.join(process.cwd(), "test-artifacts", "product-library-checkpoint-a");
+const outDir = path.join(process.cwd(), "artifacts/test-artifacts", "product-library-checkpoint-a");
 fs.mkdirSync(outDir, { recursive: true });
 for (const file of fs.readdirSync(outDir)) {
   if (/^\d\d-.*\.png$/i.test(file)) fs.rmSync(path.join(outDir, file), { force: true });

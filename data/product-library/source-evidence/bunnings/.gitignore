@@ -1,0 +1,4 @@
+# Raw Bunnings search captures retained locally for audit; matched prices live in
+# data/product-library/pricing/BUNNINGS-RETAIL-PRICES.json with URL, title and item number.
+*
+!.gitignore

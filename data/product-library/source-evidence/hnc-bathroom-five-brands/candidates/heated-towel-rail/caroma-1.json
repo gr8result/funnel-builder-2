@@ -1,0 +1,2962 @@
+{
+  "data": {
+    "products": {
+      "total_count": 30,
+      "page_info": {
+        "total_pages": 2
+      },
+      "items": [
+        {
+          "id": 22446,
+          "sku": "11225051PSS",
+          "vendorcode": "11225051PSS",
+          "name": "Liano II 8 Bar Round Heated Towel Ladder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225051pss_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225051pss_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/11225051pss_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/11225051pss_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225051pss_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225051pss_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• 40°C +/– 5°C at an ambient temp of 22°C<br>• Concealed or exposed installation<br>• Supplied with a fixing kit<br>• 68 watt output<br>• Flexible wiring through any 4 fixing posts</p>"
+          },
+          "short_description": {
+            "html": "<p>Liano II 8 Bar Round Heated Towel Ladder</p>"
+          },
+          "product_dimensions": "W632 x D116 x H900mm",
+          "price_store": 629,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W632 x D116 x H900mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Liano"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Stainless Steel",
+                    "value": "943"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "11225051PSS"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Stainless Steel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22445,
+          "sku": "11225051GM",
+          "vendorcode": "11225051GM",
+          "name": "Liano II 8 Bar Round Heated Towel Ladder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225051gm_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225051gm_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/11225051gm_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/11225051gm_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225051gm_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225051gm_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• 40°C +/– 5°C at an ambient temp of 22°C<br>• Concealed or exposed installation<br>• Supplied with a fixing kit<br>• 68 watt output<br>• Flexible wiring through any 4 fixing posts</p>"
+          },
+          "short_description": {
+            "html": "<p>Liano II 8 Bar Round Heated Towel Ladder</p>"
+          },
+          "product_dimensions": "W632 x D116 x H900mm",
+          "price_store": 839,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W632 x D116 x H900mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Liano"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Gun Metal",
+                    "value": "947"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "11225051GM"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Gunmetal"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22444,
+          "sku": "11225051BN",
+          "vendorcode": "11225051BN",
+          "name": "Liano II 8 Bar Round Heated Towel Ladder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225051bn_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225051bn_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/11225051bn_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/11225051bn_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225051bn_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225051bn_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• 40°C +/– 5°C at an ambient temp of 22°C<br>• Concealed or exposed installation<br>• Supplied with a fixing kit<br>• 68 watt output<br>• Flexible wiring through any 4 fixing posts</p>"
+          },
+          "short_description": {
+            "html": "<p>Liano II 8 Bar Round Heated Towel Ladder</p>"
+          },
+          "product_dimensions": "W632 x D116 x H900mm",
+          "price_store": 839,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W632 x D116 x H900mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Liano"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "11225051BN"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22443,
+          "sku": "11225051BBZ",
+          "vendorcode": "11225051BBZ",
+          "name": "Liano II 8 Bar Round Heated Towel Ladder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225051bbz_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225051bbz_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/11225051bbz_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/11225051bbz_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225051bbz_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225051bbz_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• 40°C +/– 5°C at an ambient temp of 22°C<br>• Concealed or exposed installation<br>• Supplied with a fixing kit<br>• 68 watt output<br>• Flexible wiring through any 4 fixing posts</p>"
+          },
+          "short_description": {
+            "html": "<p>Liano II 8 Bar Round Heated Towel Ladder</p>"
+          },
+          "product_dimensions": "W632 x D116 x H900mm",
+          "price_store": 839,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W632 x D116 x H900mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Liano"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Bronze",
+                    "value": "935"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "11225051BBZ"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Bronze"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22442,
+          "sku": "11225051BB",
+          "vendorcode": "11225051BB",
+          "name": "Liano II 8 Bar Round Heated Towel Ladder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225051bb_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225051bb_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/11225051bb_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/11225051bb_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225051bb_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225051bb_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• 40°C +/– 5°C at an ambient temp of 22°C<br>• Concealed or exposed installation<br>• Supplied with a fixing kit<br>• 68 watt output<br>• Flexible wiring through any 4 fixing posts</p>"
+          },
+          "short_description": {
+            "html": "<p>Liano II 8 Bar Round Heated Towel Ladder</p>"
+          },
+          "product_dimensions": "W632 x D116 x H900mm",
+          "price_store": 839,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W632 x D116 x H900mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Liano"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "11225051BB"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Brass"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22441,
+          "sku": "11225051B",
+          "vendorcode": "11225051B",
+          "name": "Liano II 8 Bar Round Heated Towel Ladder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225051b_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225051b_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/11225051b_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/11225051b_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225051b_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225051b_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• 40°C +/– 5°C at an ambient temp of 22°C<br>• Concealed or exposed installation<br>• Supplied with a fixing kit<br>• 68 watt output<br>• Flexible wiring through any 4 fixing posts</p>"
+          },
+          "short_description": {
+            "html": "<p>Liano II 8 Bar Round Heated Towel Ladder</p>"
+          },
+          "product_dimensions": "W632 x D116 x H900mm",
+          "price_store": 691,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W632 x D116 x H900mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Liano"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Matte Black",
+                    "value": "940"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "11225051B"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Black"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22440,
+          "sku": "11225050PSS",
+          "vendorcode": "11225050PSS",
+          "name": "Liano II 900mm Heated Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225050pss_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225050pss_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/11225050pss_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/11225050pss_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225050pss_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225050pss_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• 40°C +/– 5°C at an ambient temp of 22°C<br>• Concealed wiring<br>• Transformer required &amp; sold separately<br>• Supplied with a fixing kit<br>• 20 watt output<br>• Includes a removable double towel hook</p>"
+          },
+          "short_description": {
+            "html": "<p>Liano II 900mm Heated Single Towel Rail</p>"
+          },
+          "product_dimensions": "W104 x D75 x H900mm",
+          "price_store": 366,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W104 x D75 x H900mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Liano"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Stainless Steel",
+                    "value": "943"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "11225050PSS"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Stainless Steel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22439,
+          "sku": "11225050GM",
+          "vendorcode": "11225050GM",
+          "name": "Liano II 900mm Heated Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225050gm_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225050gm_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/11225050gm_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/11225050gm_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225050gm_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225050gm_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• 40°C +/– 5°C at an ambient temp of 22°C<br>• Concealed wiring<br>• Transformer required &amp; sold separately<br>• Supplied with a fixing kit<br>• 20 watt output<br>• Includes a removable double towel hook</p>"
+          },
+          "short_description": {
+            "html": "<p>Liano II 900mm Heated Single Towel Rail</p>"
+          },
+          "product_dimensions": "W104 x D75 x H900mm",
+          "price_store": 478,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W104 x D75 x H900mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Liano"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Gun Metal",
+                    "value": "947"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "11225050GM"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Gunmetal"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22438,
+          "sku": "11225050BN",
+          "vendorcode": "11225050BN",
+          "name": "Liano II 900mm Heated Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225050bn_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225050bn_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/11225050bn_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/11225050bn_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225050bn_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225050bn_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• 40°C +/– 5°C at an ambient temp of 22°C<br>• Concealed wiring<br>• Transformer required &amp; sold separately<br>• Supplied with a fixing kit<br>• 20 watt output<br>• Includes a removable double towel hook</p>"
+          },
+          "short_description": {
+            "html": "<p>Liano II 900mm Heated Single Towel Rail</p>"
+          },
+          "product_dimensions": "W104 x D75 x H900mm",
+          "price_store": 478,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W104 x D75 x H900mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Liano"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "11225050BN"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22437,
+          "sku": "11225050BBZ",
+          "vendorcode": "11225050BBZ",
+          "name": "Liano II 900mm Heated Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225050bbz_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225050bbz_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/11225050bbz_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/11225050bbz_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225050bbz_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225050bbz_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• 40°C +/– 5°C at an ambient temp of 22°C<br>• Concealed wiring<br>• Transformer required &amp; sold separately<br>• Supplied with a fixing kit<br>• 20 watt output<br>• Includes a removable double towel hook</p>"
+          },
+          "short_description": {
+            "html": "<p>Liano II 900mm Heated Single Towel Rail</p>"
+          },
+          "product_dimensions": "W104 x D75 x H900mm",
+          "price_store": 478,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W104 x D75 x H900mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Liano"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Bronze",
+                    "value": "935"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "11225050BBZ"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Bronze"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22436,
+          "sku": "11225050BB",
+          "vendorcode": "11225050BB",
+          "name": "Liano II 900mm Heated Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225050bb_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225050bb_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/11225050bb_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/11225050bb_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225050bb_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225050bb_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• 40°C +/– 5°C at an ambient temp of 22°C<br>• Concealed wiring<br>• Transformer required &amp; sold separately<br>• Supplied with a fixing kit<br>• 20 watt output<br>• Includes a removable double towel hook</p>"
+          },
+          "short_description": {
+            "html": "<p>Liano II 900mm Heated Single Towel Rail</p>"
+          },
+          "product_dimensions": "W104 x D75 x H900mm",
+          "price_store": 478,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W104 x D75 x H900mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Liano"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "11225050BB"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Brass"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22435,
+          "sku": "11225050B",
+          "vendorcode": "11225050B",
+          "name": "Liano II 900mm Heated Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225050b_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225050b_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/11225050b_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/11225050b_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225050b_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225050b_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• 40°C +/– 5°C at an ambient temp of 22°C<br>• Concealed wiring<br>• Transformer required &amp; sold separately<br>• Supplied with a fixing kit<br>• 20 watt output<br>• Includes a removable double towel hook</p>"
+          },
+          "short_description": {
+            "html": "<p>Liano II 900mm Heated Single Towel Rail</p>"
+          },
+          "product_dimensions": "W104 x D75 x H900mm",
+          "price_store": 403,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W104 x D75 x H900mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Liano"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Matte Black",
+                    "value": "940"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "11225050B"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Black"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22434,
+          "sku": "11225049PSS",
+          "vendorcode": "11225049PSS",
+          "name": "Liano II 600mm Heated Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225049pss_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225049pss_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/11225049pss_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/11225049pss_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225049pss_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225049pss_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• 40°C +/– 5°C at an ambient temp of 22°C<br>• Concealed wiring<br>• Transformer required &amp; sold separately<br>• Supplied with a fixing kit<br>• 15 watt output</p>"
+          },
+          "short_description": {
+            "html": "<p>Liano II 600mm Heated Single Towel Rail</p>"
+          },
+          "product_dimensions": "W640 x D75 x H25mm",
+          "price_store": 313,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W640 x D75 x H25mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Liano"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Stainless Steel",
+                    "value": "943"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "11225049PSS"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Stainless Steel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22433,
+          "sku": "11225049GM",
+          "vendorcode": "11225049GM",
+          "name": "Liano II 600mm Heated Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225049gm_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225049gm_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/11225049gm_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/11225049gm_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225049gm_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225049gm_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• 40°C +/– 5°C at an ambient temp of 22°C<br>• Concealed wiring<br>• Transformer required &amp; sold separately<br>• Supplied with a fixing kit<br>• 15 watt output</p>"
+          },
+          "short_description": {
+            "html": "<p>Liano II 600mm Heated Single Towel Rail</p>"
+          },
+          "product_dimensions": "W640 x D75 x H25mm",
+          "price_store": 407,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W640 x D75 x H25mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Liano"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Gun Metal",
+                    "value": "947"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "11225049GM"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Gunmetal"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22432,
+          "sku": "11225049BN",
+          "vendorcode": "11225049BN",
+          "name": "Liano II 600mm Heated Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225049bn_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225049bn_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/11225049bn_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/11225049bn_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225049bn_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225049bn_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• 40°C +/– 5°C at an ambient temp of 22°C<br>• Concealed wiring<br>• Transformer required &amp; sold separately<br>• Supplied with a fixing kit<br>• 15 watt output</p>"
+          },
+          "short_description": {
+            "html": "<p>Liano II 600mm Heated Single Towel Rail</p>"
+          },
+          "product_dimensions": "W640 x D75 x H25mm",
+          "price_store": 407,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W640 x D75 x H25mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Liano"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "11225049BN"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22431,
+          "sku": "11225049BBZ",
+          "vendorcode": "11225049BBZ",
+          "name": "Liano II 600mm Heated Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225049bbz_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225049bbz_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/11225049bbz_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/11225049bbz_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225049bbz_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225049bbz_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• 40°C +/– 5°C at an ambient temp of 22°C<br>• Concealed wiring<br>• Transformer required &amp; sold separately<br>• Supplied with a fixing kit<br>• 15 watt output</p>"
+          },
+          "short_description": {
+            "html": "<p>Liano II 600mm Heated Single Towel Rail</p>"
+          },
+          "product_dimensions": "W640 x D75 x H25mm",
+          "price_store": 407,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W640 x D75 x H25mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Liano"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Bronze",
+                    "value": "935"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "11225049BBZ"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Bronze"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22430,
+          "sku": "11225049BB",
+          "vendorcode": "11225049BB",
+          "name": "Liano II 600mm Heated Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225049bb_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225049bb_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/11225049bb_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/11225049bb_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225049bb_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225049bb_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• 40°C +/– 5°C at an ambient temp of 22°C<br>• Concealed wiring<br>• Transformer required &amp; sold separately<br>• Supplied with a fixing kit<br>• 15 watt output</p>"
+          },
+          "short_description": {
+            "html": "<p>Liano II 600mm Heated Single Towel Rail</p>"
+          },
+          "product_dimensions": "W640 x D75 x H25mm",
+          "price_store": 407,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W640 x D75 x H25mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Liano"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "11225049BB"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Brass"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22429,
+          "sku": "11225049B",
+          "vendorcode": "11225049B",
+          "name": "Liano II 600mm Heated Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225049b_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225049b_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/11225049b_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/11225049b_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225049b_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225049b_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• 40°C +/– 5°C at an ambient temp of 22°C<br>• Concealed wiring<br>• Transformer required &amp; sold separately<br>• Supplied with a fixing kit<br>• 15 watt output</p>"
+          },
+          "short_description": {
+            "html": "<p>Liano II 600mm Heated Single Towel Rail</p>"
+          },
+          "product_dimensions": "W640 x D75 x H25mm",
+          "price_store": 345,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W640 x D75 x H25mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Liano"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Matte Black",
+                    "value": "940"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "11225049B"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Black"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22428,
+          "sku": "11202085PSS",
+          "vendorcode": "11202085PSS",
+          "name": "Urbane II 900mm Heated Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11202085pss_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11202085pss_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/11202085pss_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/11202085pss_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11202085pss_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11202085pss_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• 40°C +/– 5°C at an ambient temp of 22°C<br>• Supplied with a fixing kit<br>• 20 watt output<br>• Concealed wiring<br>• Transformer required &amp; sold separately</p>"
+          },
+          "short_description": {
+            "html": "<p>Urbane II 900mm Heated Single Towel Rail</p>"
+          },
+          "product_dimensions": "W40 x D60 x H1000mm",
+          "price_store": 366,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W40 x D60 x H1000mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Urbane"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Stainless Steel",
+                    "value": "943"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "11202085PSS"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Stainless Steel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22427,
+          "sku": "11202085GM",
+          "vendorcode": "11202085GM",
+          "name": "Urbane II 900mm Heated Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11202085gm_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11202085gm_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/11202085gm_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/11202085gm_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11202085gm_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11202085gm_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• 40°C +/– 5°C at an ambient temp of 22°C<br>• Concealed wiring<br>• 20 watt output<br>• Transformer required &amp; sold separately<br>• Supplied with a fixing kit</p>"
+          },
+          "short_description": {
+            "html": "<p>Urbane II 900mm Heated Single Towel Rail</p>"
+          },
+          "product_dimensions": "W40 x D60 x H1000mm",
+          "price_store": 478,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W40 x D60 x H1000mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Urbane"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Gun Metal",
+                    "value": "947"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "11202085GM"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Gunmetal"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22426,
+          "sku": "11202085BN",
+          "vendorcode": "11202085BN",
+          "name": "Urbane II 900mm Heated Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11202085bn_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11202085bn_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/11202085bn_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/11202085bn_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11202085bn_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11202085bn_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• 40°C +/– 5°C at an ambient temp of 22°C<br>• Supplied with a fixing kit<br>• Concealed wiring<br>• 20 watt output<br>• Transformer required &amp; sold separately</p>"
+          },
+          "short_description": {
+            "html": "<p>Urbane II 900mm Heated Single Towel Rail</p>"
+          },
+          "product_dimensions": "W40 x D60 x H1000mm",
+          "price_store": 478,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W40 x D60 x H1000mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Urbane"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "11202085BN"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22425,
+          "sku": "11202085BBZ",
+          "vendorcode": "11202085BBZ",
+          "name": "Urbane II 900mm Heated Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11202085bbz_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11202085bbz_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/11202085bbz_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/11202085bbz_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11202085bbz_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11202085bbz_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• 40°C +/– 5°C at an ambient temp of 22°C<br>• Concealed wiring<br>• Transformer required &amp; sold separately<br>• Supplied with a fixing kit<br>•&nbsp;20 watt output</p>"
+          },
+          "short_description": {
+            "html": "<p>Urbane II 900mm Heated Single Towel Rail</p>"
+          },
+          "product_dimensions": "W40 x D60 x H1000mm",
+          "price_store": 478,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W40 x D60 x H1000mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Urbane"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Bronze",
+                    "value": "935"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "11202085BBZ"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Bronze"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22424,
+          "sku": "11202085BB",
+          "vendorcode": "11202085BB",
+          "name": "Urbane II 900mm Heated Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11202085bb_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11202085bb_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/11202085bb_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/11202085bb_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11202085bb_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11202085bb_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• 40°C +/– 5°C at an ambient temp of 22°C<br>• Concealed wiring<br>• Transformer required &amp; sold separately<br>• Supplied with a fixing kit<br>•&nbsp;20 watt output</p>"
+          },
+          "short_description": {
+            "html": "<p>Urbane II 900mm Heated Single Towel Rail</p>"
+          },
+          "product_dimensions": "W40 x D60 x H1000mm",
+          "price_store": 478,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W40 x D60 x H1000mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Urbane"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "11202085BB"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Brass"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22423,
+          "sku": "11202085B",
+          "vendorcode": "11202085B",
+          "name": "Urbane II 900mm Heated Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11202085b_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11202085b_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/11202085b_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/11202085b_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11202085b_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11202085b_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• 40°C +/– 5°C at an ambient temp of 22°C<br>• Concealed wiring<br>• Transformer required &amp; sold separately<br>• Supplied with a fixing kit<br>•&nbsp;20 watt output</p>"
+          },
+          "short_description": {
+            "html": "<p>Urbane II 900mm Heated Single Towel Rail</p>"
+          },
+          "product_dimensions": "W40 x D60 x H1000mm",
+          "price_store": 403,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W40 x D60 x H1000mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Urbane"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Matte Black",
+                    "value": "940"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "11202085B"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Black"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22422,
+          "sku": "11202084PSS",
+          "vendorcode": "11202084PSS",
+          "name": "Urbane II 600mm Heated Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11202084pss_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11202084pss_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/11202084pss_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/11202084pss_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11202084pss_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11202084pss_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• 40°C +/– 5°C at an ambient temp of 22°C<br>• Concealed wiring<br>• Transformer required &amp; sold separately<br>• Supplied with a fixing kit<br>•&nbsp;15 watt output</p>"
+          },
+          "short_description": {
+            "html": "<p>Urbane II 600mm Heated Single Towel Rail</p>"
+          },
+          "product_dimensions": "W640 x D65 x H40mm",
+          "price_store": 313,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W640 x D65 x H40mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Urbane"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Stainless Steel",
+                    "value": "943"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "11202084PSS"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Stainless Steel"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

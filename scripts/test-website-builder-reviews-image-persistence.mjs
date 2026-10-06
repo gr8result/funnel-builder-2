@@ -10,7 +10,7 @@ dotenv.config({ path: ".env.local", quiet: true });
 const PROJECT_ID = "2208a52a-8175-477e-823c-fc6de7fe4afe";
 const OWNER_EMAIL = "support@gr8result.com";
 const BASE_URL = (process.env.WB_BROWSER_BASE_URL || "http://localhost:3000").replace(/\/+$/, "");
-const OUT_DIR = path.join(process.cwd(), "test-results", "website-builder-reviews-image-persistence");
+const OUT_DIR = path.join(process.cwd(), "artifacts/test-results", "website-builder-reviews-image-persistence");
 const PAGE_NAME = "Pricing";
 const SWITCH_PAGE_NAME = "Home";
 const TEST_MARKER = `WB-REVIEW-TEXT-${Date.now()}`;

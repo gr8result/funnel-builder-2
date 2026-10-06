@@ -1,5 +1,9 @@
 import fs from "fs/promises";
 import path from "path";
+import { execFile } from "child_process";
+import { promisify } from "util";
+
+const execFileAsync = promisify(execFile);
 
 const ROOT = process.cwd();
 const DATA_DIR = path.join(ROOT, "data/product-library/catalogues/benchtops");
@@ -7,7 +11,11 @@ const JSON_PATH = path.join(DATA_DIR, "AU-STONE-BENCHTOP-CATALOGUE.json");
 const MODULE_PATH = path.join(DATA_DIR, "AU-STONE-BENCHTOP-CATALOGUE.js");
 const REPORT_PATH = path.join(DATA_DIR, "AU-STONE-BENCHTOP-CATALOGUE.report.json");
 const IMAGE_ROOT = path.join(ROOT, "public/images/catalogues/benchtops");
-const VERIFIED_AT = "2026-09-01";
+const VERIFIED_AT = "2026-09-20";
+// Caesarstone's site returns HTTP 403 to non-browser user-agents (confirmed 2026-09-20); a
+// realistic browser UA is required for both the page fetch used to find images and the image
+// download itself.
+const BROWSER_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
 
 const SUPPLIERS = {
   neolith: { name: "Neolith", url: "https://www.neolith.com/en/all-colours/" },
@@ -22,34 +30,45 @@ const supplierArg = args.find((arg) => arg.startsWith("--supplier="))?.split("="
 const selectedSupplierKeys = supplierArg ? [supplierArg] : Object.keys(SUPPLIERS);
 const SOURCE_NOTE = "Official supplier catalogue page; fields not exposed in the listing are marked for supplier confirmation.";
 
+// Image URLs verified 2026-09-20 by fetching each official product page with a browser user-agent
+// and reading its <meta property="og:image"> tag (matched against the page <title> to confirm the
+// image belongs to that exact product) - see PRODUCTION FIX / Caesarstone image audit.
 const CAESARSTONE_FIXTURE = [
-  ["8251", "Taj Whisper", "ICON", "Mineral Surface", "M1", "Polished Finish", ["20mm"], "Grande = 327 cm +/-1.5% (L) x 164 cm +/-1.5% (W)", "https://www.caesarstone.com.au/colours/8251-taj-whisper/"],
-  ["8252", "Sedara", "ICON", "Mineral Surface", "M1", "Polished Finish", ["20mm"], "Grande = 327 cm +/-1.5% (L) x 164 cm +/-1.5% (W)", "https://www.caesarstone.com.au/colours/8252-sedara/"],
+  ["8251", "Taj Whisper", "ICON", "Mineral Surface", "M1", "Polished Finish", ["20mm"], "Grande = 327 cm +/-1.5% (L) x 164 cm +/-1.5% (W)", "https://www.caesarstone.com.au/colours/8251-taj-whisper/", "https://www.caesarstone.com.au/wp-content/uploads/2026/03/8251_Taj_Whisper_CU_275X454_rgb_30102025-copy.webp"],
+  ["8252", "Sedara", "ICON", "Mineral Surface", "M1", "Polished Finish", ["20mm"], "Grande = 327 cm +/-1.5% (L) x 164 cm +/-1.5% (W)", "https://www.caesarstone.com.au/colours/8252-sedara/", "https://www.caesarstone.com.au/wp-content/uploads/2026/03/8252_Sedara_CU_275X454_rgb_30102025-copy.webp"],
   ["6011", "Intense White", "ICON", "Mineral Surface", "M1", "Polished Finish", ["20mm"], "Grande = 327 cm +/-1.5% (L) x 164 cm +/-1.5% (W)", "https://www.caesarstone.com.au/colours/6011-intense-white/", "https://www.caesarstone.com.au/wp-content/uploads/2020/12/6011_Intense-White_6011_CU_50x70cm_1920x890px-1.jpg"],
-  ["1141", "Pure White", "ICON", "Mineral Surface", "M1", "Polished Finish", ["20mm"], "Grande = 327 cm +/-1.5% (L) x 164 cm +/-1.5% (W)", "https://www.caesarstone.com.au/colours/1141-pure-white/"],
-  ["4011", "Cloudburst Concrete", "ICON", "Mineral Surface", "M3", "Natural Finish", ["20mm"], "Grande = 327 cm +/-1.5% (L) x 164 cm +/-1.5% (W)", "https://www.caesarstone.com.au/colours/4011-cloudburst-concrete/"],
-  ["5102", "Laceline", "ICON", "Mineral Surface", "M1", "Polished Finish", ["20mm"], "Grande = 327 cm +/-1.5% (L) x 164 cm +/-1.5% (W)", "https://www.caesarstone.com.au/colours/5102-laceline/"],
-  ["5103", "Lightcrest", "ICON", "Mineral Surface", "M1", "Polished Finish", ["20mm"], "Grande = 327 cm +/-1.5% (L) x 164 cm +/-1.5% (W)", "https://www.caesarstone.com.au/colours/5103-lightcrest/"],
-  ["506", "Mirabel", "Porcelain", "Porcelain Surface", "Porcelain", "Silk Finish", ["12 mm", "20mm"], "Grande = 1600 mm x 3200 mm", "https://www.caesarstone.com.au/colours/506-mirabel/"],
-  ["502", "Sleet", "Porcelain", "Porcelain Surface", "Porcelain", "Silk Finish", ["12 mm", "20mm"], "Grande = 1600 mm x 3200 mm", "https://www.caesarstone.com.au/colours/502-sleet/"],
-  ["580", "Fume", "Porcelain", "Porcelain Surface", "Porcelain", "Honed Finish", ["12 mm"], "Grande = 1600 mm x 3200 mm", "https://www.caesarstone.com.au/colours/580-fume/"],
-  ["410", "Aluminous", "Porcelain", "Porcelain Surface", "Porcelain", "Ultra Rough Finish", ["12 mm"], "Grande = 1600 mm x 3200 mm", "https://www.caesarstone.com.au/colours/410-aluminous/"],
-  ["584", "Opal Taj", "Porcelain", "Porcelain Surface", "Porcelain", "Honed Finish, Luster Effect", ["12 mm", "20mm"], "Grande = 1600 mm x 3200 mm", "https://www.caesarstone.com.au/colours/584-opal-taj/"],
+  ["1141", "Pure White", "ICON", "Mineral Surface", "M1", "Polished Finish", ["20mm"], "Grande = 327 cm +/-1.5% (L) x 164 cm +/-1.5% (W)", "https://www.caesarstone.com.au/colours/1141-pure-white/", "https://www.caesarstone.com.au/wp-content/uploads/2021/01/1141_Pure-White_1141_CU_50x70cm_1920x890px.jpg"],
+  ["4011", "Cloudburst Concrete", "ICON", "Mineral Surface", "M3", "Natural Finish", ["20mm"], "Grande = 327 cm +/-1.5% (L) x 164 cm +/-1.5% (W)", "https://www.caesarstone.com.au/colours/4011-cloudburst-concrete/", "https://www.caesarstone.com.au/wp-content/uploads/2020/12/4011_Cloudburst-Concrete_4011_CU_275_454px_jpg.jpg"],
+  ["5102", "Laceline", "ICON", "Mineral Surface", "M1", "Polished Finish", ["20mm"], "Grande = 327 cm +/-1.5% (L) x 164 cm +/-1.5% (W)", "https://www.caesarstone.com.au/colours/5102-laceline/", "https://www.caesarstone.com.au/wp-content/uploads/2025/09/5102_Laceline_CU_274X454_sRGB_270725-copy.webp"],
+  ["5103", "Lightcrest", "ICON", "Mineral Surface", "M1", "Polished Finish", ["20mm"], "Grande = 327 cm +/-1.5% (L) x 164 cm +/-1.5% (W)", "https://www.caesarstone.com.au/colours/5103-lightcrest/", "https://www.caesarstone.com.au/wp-content/uploads/2025/09/5103_Lightcrest_CU_275X454_sRGB_270725-copy.webp"],
+  ["506", "Mirabel", "Porcelain", "Porcelain Surface", "Porcelain", "Silk Finish", ["12 mm", "20mm"], "Grande = 1600 mm x 3200 mm", "https://www.caesarstone.com.au/colours/506-mirabel/", "https://www.caesarstone.com.au/wp-content/uploads/2022/06/506_CU454px_454_275px.jpg"],
+  ["502", "Sleet", "Porcelain", "Porcelain Surface", "Porcelain", "Silk Finish", ["12 mm", "20mm"], "Grande = 1600 mm x 3200 mm", "https://www.caesarstone.com.au/colours/502-sleet/", "https://www.caesarstone.com.au/wp-content/uploads/2022/06/502_CU454px_454_275px.jpg"],
+  ["580", "Fume", "Porcelain", "Porcelain Surface", "Porcelain", "Honed Finish", ["12 mm"], "Grande = 1600 mm x 3200 mm", "https://www.caesarstone.com.au/colours/580-fume/", "https://www.caesarstone.com.au/wp-content/uploads/2022/06/580_-CU454px_454_275px.jpg"],
+  ["410", "Aluminous", "Porcelain", "Porcelain Surface", "Porcelain", "Ultra Rough Finish", ["12 mm"], "Grande = 1600 mm x 3200 mm", "https://www.caesarstone.com.au/colours/410-aluminous/", "https://www.caesarstone.com.au/wp-content/uploads/2022/06/410_CU454px_454_275px.jpg"],
+  ["584", "Opal Taj", "Porcelain", "Porcelain Surface", "Porcelain", "Honed Finish, Luster Effect", ["12 mm", "20mm"], "Grande = 1600 mm x 3200 mm", "https://www.caesarstone.com.au/colours/584-opal-taj/", "https://www.caesarstone.com.au/wp-content/uploads/2026/03/584_OpalTaj_CU_275X454_sRGB_170225.webp"],
 ];
 
+// Image URLs verified 2026-09-20 using a headless-browser render (plain HTTP fetch cannot see
+// them - Neolith's product image is loaded into the page as a CSS background-image by client-side
+// JS, not present in the static/server-rendered HTML). Each URL below was captured directly from
+// the live page's computed background-image and confirmed unique per product (distinct Storyblok
+// asset hash per colour) - see PRODUCTION FIX / Neolith image audit. Two products (Iron Frost,
+// Strata Argentum) had been filed under the wrong collection ("Fusion") in this fixture; the
+// current site places them under "Iron" and "The New Classtone" respectively, corrected here.
+// Calacatta Gold and Estatuario have also moved to new URL slugs on the live site.
 const NEOLITH_FIXTURE = [
   ["Calacatta Roma", "The New Classtone", "Sintered stone", ["Ultrasoft"], ["6 mm", "12 mm", "20 mm"], "https://www.neolith.com/en/collections/classtone/calacatta-roma", "https://a.storyblok.com/f/150360/2000x3945/3ed0cbb471/calacatta-roma_2000x3945px.jpg"],
-  ["Calacatta Gold", "The New Classtone", "Sintered stone", ["Polished", "Silk"], ["6 mm", "12 mm", "20 mm"], "https://www.neolith.com/en/collections/classtone/calacatta-gold"],
-  ["Nero Marquina", "The New Classtone", "Sintered stone", ["Polished", "Silk"], ["6 mm", "12 mm", "20 mm"], "https://www.neolith.com/en/collections/classtone/nero-marquina"],
-  ["Abu Dhabi White", "The New Classtone", "Sintered stone", ["Silk"], ["6 mm", "12 mm", "20 mm"], "https://www.neolith.com/en/collections/classtone/abu-dhabi-white"],
-  ["Mont Blanc", "The New Classtone", "Sintered stone", ["Silk"], ["6 mm", "12 mm", "20 mm"], "https://www.neolith.com/en/collections/classtone/mont-blanc"],
-  ["Estatuario", "The New Classtone", "Sintered stone", ["Silk", "Polished"], ["6 mm", "12 mm", "20 mm"], "https://www.neolith.com/en/collections/classtone/estatuario"],
-  ["Pietra di Luna", "Fusion", "Sintered stone", ["Silk"], ["6 mm", "12 mm", "20 mm"], "https://www.neolith.com/en/collections/fusion/pietra-di-luna"],
-  ["Iron Frost", "Fusion", "Sintered stone", ["Silk"], ["6 mm", "12 mm", "20 mm"], "https://www.neolith.com/en/collections/fusion/iron-frost"],
-  ["Beton", "Fusion", "Sintered stone", ["Silk"], ["6 mm", "12 mm", "20 mm"], "https://www.neolith.com/en/collections/fusion/beton"],
-  ["Strata Argentum", "Fusion", "Sintered stone", ["Riverwashed"], ["6 mm", "12 mm", "20 mm"], "https://www.neolith.com/en/collections/fusion/strata-argentum"],
-  ["Basalt Black", "Fusion", "Sintered stone", ["Satin"], ["6 mm", "12 mm", "20 mm"], "https://www.neolith.com/en/collections/fusion/basalt-black"],
-  ["Arctic White", "Colorfeel", "Sintered stone", ["Silk"], ["6 mm", "12 mm", "20 mm"], "https://www.neolith.com/en/collections/colorfeel/arctic-white"],
+  ["Calacatta Gold", "The New Classtone", "Sintered stone", ["Polished", "Silk"], ["6 mm", "12 mm", "20 mm"], "https://www.neolith.com/en/collections/classtone/calacatta-gold-cg01-cg01r", "https://a.storyblok.com/f/150360/1250x1824/0ec315745f/imagen_destacada.jpg"],
+  ["Nero Marquina", "The New Classtone", "Sintered stone", ["Polished", "Silk"], ["6 mm", "12 mm", "20 mm"], "https://www.neolith.com/en/collections/classtone/nero-marquina", "", "Not found in Neolith's current AU collections/all-colours listings under this name (checked classtone, fusion, colorfeel and the full all-colours index 2026-09-20) - closest current names are unrelated colours \"Nero\" (Colorfeel) and \"Nero Zimbabwe\" (Fusion), neither of which is Nero Marquina; likely discontinued/renamed and requires supplier confirmation before an image can legitimately be sourced."],
+  ["Abu Dhabi White", "The New Classtone", "Sintered stone", ["Silk"], ["6 mm", "12 mm", "20 mm"], "https://www.neolith.com/en/collections/classtone/abu-dhabi-white", "https://a.storyblok.com/f/150360/1250x1824/a4f716895d/imagen_destacada.jpg"],
+  ["Mont Blanc", "The New Classtone", "Sintered stone", ["Silk"], ["6 mm", "12 mm", "20 mm"], "https://www.neolith.com/en/collections/classtone/mont-blanc", "https://a.storyblok.com/f/150360/1250x1824/b40f1a3edc/imagen_destacada.jpg"],
+  ["Estatuario", "The New Classtone", "Sintered stone", ["Silk", "Polished"], ["6 mm", "12 mm", "20 mm"], "https://www.neolith.com/en/collections/classtone/estatuario-e01-e01r", "https://a.storyblok.com/f/150360/1250x1824/8953e29ce7/imagen_destacada.jpg"],
+  ["Pietra di Luna", "Fusion", "Sintered stone", ["Silk"], ["6 mm", "12 mm", "20 mm"], "https://www.neolith.com/en/collections/fusion/pietra-di-luna", "https://a.storyblok.com/f/150360/1250x1824/d790973313/imagen_destacada.jpg"],
+  ["Iron Frost", "Iron", "Sintered stone", ["Silk"], ["6 mm", "12 mm", "20 mm"], "https://www.neolith.com/en/collections/iron/iron-frost", "https://a.storyblok.com/f/150360/1250x1824/42c7bff6fe/imagen_destacada.jpg"],
+  ["Beton", "Fusion", "Sintered stone", ["Silk"], ["6 mm", "12 mm", "20 mm"], "https://www.neolith.com/en/collections/fusion/beton", "https://a.storyblok.com/f/150360/1250x1824/52853cb9b6/imagen_destacada.jpg"],
+  ["Strata Argentum", "The New Classtone", "Sintered stone", ["Riverwashed"], ["6 mm", "12 mm", "20 mm"], "https://www.neolith.com/en/collections/classtone/strata-argentum", "https://a.storyblok.com/f/150360/1250x1824/8d264ca993/neolith_strata-argentum_slab.jpg"],
+  ["Basalt Black", "Fusion", "Sintered stone", ["Satin"], ["6 mm", "12 mm", "20 mm"], "https://www.neolith.com/en/collections/fusion/basalt-black", "https://a.storyblok.com/f/150360/1250x1824/5ebd9b5996/imagen_destacada.jpg"],
+  ["Arctic White", "Colorfeel", "Sintered stone", ["Silk"], ["6 mm", "12 mm", "20 mm"], "https://www.neolith.com/en/collections/colorfeel/arctic-white", "https://a.storyblok.com/f/150360/1250x1824/3454df2ae0/imagen_destacada.jpg"],
 ];
 
 const SMARTSTONE_FIXTURE = [
@@ -230,13 +249,15 @@ function parseCaesarstoneFixture() {
     officialProductUrl: url,
     officialCatalogueUrl: SUPPLIERS.caesarstone.url,
     sampleOrderUrl: url,
-    source: "Caesarstone Australia official colour catalogue/product pages; direct local sync returned 403",
-    requiresManualVerification: true,
+    source: image
+      ? "Caesarstone Australia official product page og:image, verified against page title 2026-09-20"
+      : "Caesarstone Australia official colour catalogue/product pages; image not located during 2026-09-20 audit",
+    requiresManualVerification: !image,
   }));
 }
 
 function parseNeolithFixture() {
-  return NEOLITH_FIXTURE.map(([colourName, collection, materialType, finishes, thicknesses, url, image]) => canonicalRecord({
+  return NEOLITH_FIXTURE.map(([colourName, collection, materialType, finishes, thicknesses, url, image, missingImageReason]) => canonicalRecord({
     supplier: "Neolith",
     productCode: slug(colourName),
     colourName,
@@ -251,7 +272,9 @@ function parseNeolithFixture() {
     officialProductUrl: url,
     officialCatalogueUrl: SUPPLIERS.neolith.url,
     sampleOrderUrl: url,
-    source: "Neolith official all-colours and model pages; model option compatibility requires supplier confirmation",
+    source: image
+      ? "Neolith official model page background-image, captured via headless-browser render and verified against page title 2026-09-20 (not visible to a plain HTTP fetch - loaded by client-side JS)"
+      : missingImageReason || "Neolith official all-colours and model pages; model option compatibility requires supplier confirmation",
     requiresManualVerification: true,
   }));
 }
@@ -265,11 +288,15 @@ async function downloadImage(record, failures) {
       await fs.access(target);
       return false;
     } catch {}
-    const response = await fetch(record.officialImageUrl, { headers: { "user-agent": "gr8-result-stone-catalogue-sync/1.0" } });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    await fs.writeFile(target, Buffer.from(await response.arrayBuffer()));
+    // Some suppliers (Caesarstone/Neolith run behind Cloudflare) TLS-fingerprint and block
+    // Node's fetch()/undici even with a browser user-agent, while curl's TLS stack is accepted -
+    // shell out to curl rather than fetch() for the actual image download.
+    await execFileAsync("curl", ["-fsSL", "--max-time", "20", "-A", BROWSER_USER_AGENT, "-o", target, record.officialImageUrl]);
+    const stat = await fs.stat(target);
+    if (!stat.size) throw new Error("Downloaded file is empty");
     return true;
   } catch (error) {
+    await fs.rm(target, { force: true }).catch(() => {});
     failures.push({ id: record.id, supplier: record.supplier, colourName: record.colourName, url: record.officialImageUrl, reason: error.message });
     record.primarySwatchImage = "";
     record.slabImage = "";

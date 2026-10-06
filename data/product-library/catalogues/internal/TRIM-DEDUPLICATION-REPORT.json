@@ -1,0 +1,112 @@
+{
+  "before": 105,
+  "duplicatesRemoved": 11,
+  "mergedRecords": 22,
+  "mergedGroups": 11,
+  "final": 94,
+  "enabled": 92,
+  "stockLength": 5.4,
+  "verifiedPriceConversions": 0,
+  "builderEstimates": 94,
+  "merges": [
+    {
+      "canonical": "INT-PORTA-200067",
+      "identity": "porta|architraves/skirting|bullnose|41|18|meranti|unfinished",
+      "mergedCodes": [
+        "INT-PORTA-200067",
+        "INT-PORTA-200068"
+      ],
+      "removed": 1
+    },
+    {
+      "canonical": "INT-PORTA-200074",
+      "identity": "porta|architraves/skirting|bullnose|66|18|meranti|unfinished",
+      "mergedCodes": [
+        "INT-PORTA-200074",
+        "INT-PORTA-200075"
+      ],
+      "removed": 1
+    },
+    {
+      "canonical": "INT-PORTA-200201",
+      "identity": "porta|architraves/skirting|colonial|41|18|meranti|unfinished",
+      "mergedCodes": [
+        "INT-PORTA-200201",
+        "INT-PORTA-200202"
+      ],
+      "removed": 1
+    },
+    {
+      "canonical": "INT-PORTA-200213",
+      "identity": "porta|architraves/skirting|colonial|91|18|meranti|unfinished",
+      "mergedCodes": [
+        "INT-PORTA-200213",
+        "INT-PORTA-200214"
+      ],
+      "removed": 1
+    },
+    {
+      "canonical": "INT-PORTA-201181",
+      "identity": "porta|architraves/skirting|half splayed|66|18|meranti|unfinished",
+      "mergedCodes": [
+        "INT-PORTA-201181",
+        "INT-PORTA-201182"
+      ],
+      "removed": 1
+    },
+    {
+      "canonical": "INT-PORTA-201880",
+      "identity": "porta|architraves/skirting|pencil round|41|12|meranti|unfinished",
+      "mergedCodes": [
+        "INT-PORTA-201880",
+        "INT-PORTA-201881"
+      ],
+      "removed": 1
+    },
+    {
+      "canonical": "INT-PORTA-201882",
+      "identity": "porta|architraves/skirting|pencil round|41|18|meranti|unfinished",
+      "mergedCodes": [
+        "INT-PORTA-201882",
+        "INT-PORTA-201883"
+      ],
+      "removed": 1
+    },
+    {
+      "canonical": "INT-PORTA-201888",
+      "identity": "porta|architraves/skirting|pencil round|66|12|meranti|unfinished",
+      "mergedCodes": [
+        "INT-PORTA-201888",
+        "INT-PORTA-201889"
+      ],
+      "removed": 1
+    },
+    {
+      "canonical": "INT-PORTA-201891",
+      "identity": "porta|architraves/skirting|pencil round|66|18|meranti|unfinished",
+      "mergedCodes": [
+        "INT-PORTA-201891",
+        "INT-PORTA-201892"
+      ],
+      "removed": 1
+    },
+    {
+      "canonical": "INT-PORTA-435494",
+      "identity": "porta|architraves/skirting|square dressed|42|12|primed mdf|primed",
+      "mergedCodes": [
+        "INT-PORTA-435494",
+        "INT-PORTA-451601"
+      ],
+      "removed": 1
+    },
+    {
+      "canonical": "INT-PORTA-435495",
+      "identity": "porta|architraves/skirting|square dressed|67|12|primed mdf|primed",
+      "mergedCodes": [
+        "INT-PORTA-435495",
+        "INT-PORTA-451610"
+      ],
+      "removed": 1
+    }
+  ]
+}

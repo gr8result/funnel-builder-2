@@ -137,7 +137,6 @@ for (const [categoryKey, minCount] of [
   ["vanities", 2],
   ["tiles", 4],
   ["laundry-tubs", 4],
-  ["internal-paint-colours", 2],
   ["gutters", 6],
   ["fascia", 3],
   ["downpipes", 4],

@@ -1,0 +1,113 @@
+{
+  "data": {
+    "products": {
+      "items": [
+        {
+          "id": 25100,
+          "sku": "W4OMK381HU0XA",
+          "vendorcode": "W4OMK381HU0XA",
+          "name": "600mm Electric Built-In Oven",
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/w/4/w4omk381hu0xa_whirlpool_web.jpeg"
+          },
+          "product_images": {
+            "thumbnail": "https://backend.harveynormancommercial.com.au/static/version1767508927/frontend/Hnc/Lumachild/en_US/Magento_Catalog/images/product/placeholder/thumbnail.jpg",
+            "small": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/1df791769d8cdc80e3c05129fe5437cf/w/4/w4omk381hu0xa_whirlpool_web.jpeg",
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/w/4/w4omk381hu0xa_whirlpool_web.jpeg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/w/4/w4omk381hu0xa_whirlpool_web.jpeg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/w/4/w4omk381hu0xa_whirlpool_tech.png"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/w/4/w4omk381hu0xa_whirlpool_web.jpeg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/w/4/w4omk381hu0xa_whirlpool_tech.png"
+            }
+          ],
+          "description": {
+            "html": "<p>• 71L capacity<br>• Air Fry &amp; Cook 3 technology, 10 cooking functions<br>• SmartClean hydrolytic cleaning<br>• Fan Forced Air System &amp; Turbo Grill<br>• Full glass cool-touch door</p>"
+          },
+          "product_dimensions": "W640 x D650 x H670mm",
+          "price_promo": 0,
+          "price_store": 890,
+          "wels_reg_number": "",
+          "gp_product_group": "OVENS",
+          "__typename": "SimpleProduct"
+        }
+      ],
+      "aggregations": [
+        {
+          "attribute_code": "category_id",
+          "label": "Category",
+          "options": [
+            {
+              "label": "Kitchen",
+              "value": "16",
+              "count": 1
+            },
+            {
+              "label": "Ovens",
+              "value": "22",
+              "count": 1
+            },
+            {
+              "label": "Single Oven Electric Wall/Undermount ",
+              "value": "99",
+              "count": 1
+            },
+            {
+              "label": "Products",
+              "value": "1036",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "attribute_code": "brand",
+          "label": "Brand",
+          "options": [
+            {
+              "label": "Whirlpool",
+              "value": "1084",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "attribute_code": "colours",
+          "label": "Colour",
+          "options": [
+            {
+              "label": "Stainless Steel",
+              "value": "943",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "attribute_code": "size_oven",
+          "label": "Oven Size",
+          "options": [
+            {
+              "label": "551 - 600mm",
+              "value": "1102",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "attribute_code": "stock_line_filter",
+          "label": "Stock Line",
+          "options": [
+            {
+              "label": "No",
+              "value": "673",
+              "count": 1
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

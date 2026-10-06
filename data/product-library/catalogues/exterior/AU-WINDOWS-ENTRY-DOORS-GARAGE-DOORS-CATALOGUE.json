@@ -38,7 +38,15 @@
     "https://www.bnd.com.au/product-detail/panelift-icon",
     "https://www.bnd.com.au/product-detail/panelift/",
     "https://www.bnd.com.au/product-detail/roll-a-door/",
-    "https://www.bnd.com.au/garage-doors/residential/roller-doors/roll-a-door-neo/"
+    "https://www.bnd.com.au/garage-doors/residential/roller-doors/roll-a-door-neo/",
+    "https://smartdoorsandgates.com.au/",
+    "https://www.cgdoors.com.au/stores/smart-doors-sunshine-coast/",
+    "https://www.cgdoors.com.au/our-range/sectional-garage-doors/",
+    "https://www.cgdoors.com.au/our-range/sectional-garage-doors/colorbond/",
+    "https://www.cgdoors.com.au/our-range/sectional-garage-doors/timber-look-garage-doors/",
+    "https://www.cgdoors.com.au/our-range/sectional-garage-doors/aluminium-composite-garage-doors/",
+    "https://www.cgdoors.com.au/our-range/sectional-garage-doors/translucent-garage-doors/",
+    "https://www.cgdoors.com.au/our-range/garage-roller-doors/"
   ],
   "products": [
     {
@@ -295,12 +303,12 @@
       "finish": "Powder coated aluminium",
       "configuration": "sliding_window",
       "material": "Aluminium",
-      "primary_image_url": "https://www.bradnams.com.au/wp-content/webp-express/webp-images/uploads/2021/09/2-panel-sliding-window.jpg.webp",
-      "thumbnail_url": "https://www.bradnams.com.au/wp-content/webp-express/webp-images/uploads/2021/09/2-panel-sliding-window-300x297.jpg.webp",
+      "primary_image_url": "/images/product-library/windows/bradnams/sliding-windows.webp",
+      "thumbnail_url": "/images/product-library/windows/bradnams/sliding-windows.webp",
       "gallery_image_urls": "https://www.bradnams.com.au/wp-content/webp-express/webp-images/uploads/2021/09/2-panel-sliding-window.jpg.webp;https://www.bradnams.com.au/wp-content/webp-express/webp-images/uploads/2021/03/2-panel-aluminium-sliding-window-with-clear-glass.jpg.webp",
       "image_source_url": "https://www.bradnams.com.au/product/windows/sliding-windows/",
       "image_source_type": "official_manufacturer_page",
-      "image_verified_at": "2026-08-26",
+      "image_verified_at": "2026-09-28",
       "image_status": "verified_exact",
       "official_product_url": "https://www.bradnams.com.au/product/windows/sliding-windows/",
       "specification_url": "https://www.bradnams.com.au/product/windows/sliding-windows/",
@@ -429,7 +437,8 @@
           "Acid Etched",
           "White Translucent"
         ]
-      }
+      },
+      "remote_image_url": "https://www.bradnams.com.au/wp-content/webp-express/webp-images/uploads/2021/09/2-panel-sliding-window.jpg.webp"
     },
     {
       "product_code": "WINDOW-BRADNAMS-AWNING-WINDOWS",
@@ -450,12 +459,12 @@
       "finish": "Powder coated aluminium",
       "configuration": "awning_window",
       "material": "Aluminium",
-      "primary_image_url": "https://www.bradnams.com.au/wp-content/webp-express/webp-images/uploads/2019/09/White-Aluminium-Awning-Windows-in-a-living-room.jpg.webp",
-      "thumbnail_url": "https://www.bradnams.com.au/wp-content/webp-express/webp-images/uploads/2021/03/3-panel-aluminium-awning-window-300x297.jpg.webp",
+      "primary_image_url": "/images/product-library/windows/bradnams/awning-windows.webp",
+      "thumbnail_url": "/images/product-library/windows/bradnams/awning-windows.webp",
       "gallery_image_urls": "https://www.bradnams.com.au/wp-content/webp-express/webp-images/uploads/2019/09/White-Aluminium-Awning-Windows-in-a-living-room.jpg.webp;https://www.bradnams.com.au/wp-content/webp-express/webp-images/uploads/2021/03/3-panel-aluminium-awning-window.jpg.webp",
       "image_source_url": "https://www.bradnams.com.au/product/windows/awning-windows/",
       "image_source_type": "official_manufacturer_page",
-      "image_verified_at": "2026-08-26",
+      "image_verified_at": "2026-09-28",
       "image_status": "verified_exact",
       "official_product_url": "https://www.bradnams.com.au/product/windows/awning-windows/",
       "specification_url": "https://www.bradnams.com.au/product/windows/awning-windows/",
@@ -511,7 +520,8 @@
           "Acid Etched",
           "White Translucent"
         ]
-      }
+      },
+      "remote_image_url": "https://www.bradnams.com.au/wp-content/webp-express/webp-images/uploads/2019/09/White-Aluminium-Awning-Windows-in-a-living-room.jpg.webp"
     },
     {
       "product_code": "WINDOW-BRADNAMS-LOUVRE-WINDOWS",
@@ -532,11 +542,11 @@
       "finish": "Powder coated aluminium",
       "configuration": "louvre_window",
       "material": "Aluminium and glass",
-      "primary_image_url": "https://www.bradnams.com.au/wp-content/webp-express/webp-images/uploads/2024/09/Louvre-Windows-with-white-frame-and-glass-blades.jpg.webp",
-      "thumbnail_url": "https://www.bradnams.com.au/wp-content/webp-express/webp-images/uploads/2024/09/Louvre-Windows-with-white-frame-and-glass-blades.jpg.webp",
+      "primary_image_url": "/images/product-library/windows/bradnams/louvre-windows.webp",
+      "thumbnail_url": "/images/product-library/windows/bradnams/louvre-windows.webp",
       "image_source_url": "https://www.bradnams.com.au/product/windows/louvres-windows/",
       "image_source_type": "official_manufacturer_page",
-      "image_verified_at": "2026-08-26",
+      "image_verified_at": "2026-09-28",
       "image_status": "verified_exact",
       "official_product_url": "https://www.bradnams.com.au/product/windows/louvres-windows/",
       "specification_url": "https://www.bradnams.com.au/product/windows/louvres-windows/",
@@ -585,7 +595,8 @@
         "glassOptions": [
           "Glass louvre blades"
         ]
-      }
+      },
+      "remote_image_url": "https://www.bradnams.com.au/wp-content/webp-express/webp-images/uploads/2024/09/Louvre-Windows-with-white-frame-and-glass-blades.jpg.webp"
     },
     {
       "product_code": "WINDOW-BRADNAMS-FIXED-WINDOWS",
@@ -606,12 +617,12 @@
       "finish": "Powder coated aluminium",
       "configuration": "fixed_window",
       "material": "Aluminium and glass",
-      "primary_image_url": "https://www.bradnams.com.au/wp-content/uploads/2025/02/White-Aluminium-Fixed-Window-Patio.jpg",
-      "thumbnail_url": "https://www.bradnams.com.au/wp-content/uploads/2025/02/White-Aluminium-Fixed-Window-Patio-300x96.jpg",
+      "primary_image_url": "/images/product-library/windows/bradnams/fixed-windows.jpg",
+      "thumbnail_url": "/images/product-library/windows/bradnams/fixed-windows.jpg",
       "gallery_image_urls": "https://www.bradnams.com.au/wp-content/uploads/2025/02/White-Aluminium-Fixed-Window-Patio.jpg",
       "image_source_url": "https://www.bradnams.com.au/product/windows/fixed-windows/",
       "image_source_type": "official_manufacturer_page",
-      "image_verified_at": "2026-08-26",
+      "image_verified_at": "2026-09-28",
       "image_status": "verified_exact",
       "official_product_url": "https://www.bradnams.com.au/product/windows/fixed-windows/",
       "specification_url": "https://www.bradnams.com.au/product/windows/fixed-windows/",
@@ -659,7 +670,8 @@
           "Acid Etched",
           "White Translucent"
         ]
-      }
+      },
+      "remote_image_url": "https://www.bradnams.com.au/wp-content/uploads/2025/02/White-Aluminium-Fixed-Window-Patio.jpg"
     },
     {
       "product_code": "WINDOW-BRADNAMS-DOUBLE-HUNG-SASH-WINDOWS",
@@ -680,12 +692,12 @@
       "finish": "Powder coated aluminium",
       "configuration": "double_hung_window",
       "material": "Aluminium and glass",
-      "primary_image_url": "https://www.bradnams.com.au/wp-content/webp-express/webp-images/uploads/2021/03/Aluminium-Double-Hung-Windows-in-a-bedroom.jpg.webp",
-      "thumbnail_url": "https://www.bradnams.com.au/wp-content/webp-express/webp-images/uploads/2021/03/2-panel-aluminium-double-hung-window-300x297.jpg.webp",
+      "primary_image_url": "/images/product-library/windows/bradnams/double-hung-sash-windows.webp",
+      "thumbnail_url": "/images/product-library/windows/bradnams/double-hung-sash-windows.webp",
       "gallery_image_urls": "https://www.bradnams.com.au/wp-content/webp-express/webp-images/uploads/2021/03/Aluminium-Double-Hung-Windows-in-a-bedroom.jpg.webp;https://www.bradnams.com.au/wp-content/uploads/2019/03/Ultra-Silver-Aluminium-Double-Hung-Windows-in-a-living-room.jpg",
       "image_source_url": "https://www.bradnams.com.au/product/windows/double-hung-sash-windows/",
       "image_source_type": "official_manufacturer_page",
-      "image_verified_at": "2026-08-26",
+      "image_verified_at": "2026-09-28",
       "image_status": "verified_exact",
       "official_product_url": "https://www.bradnams.com.au/product/windows/double-hung-sash-windows/",
       "specification_url": "https://www.bradnams.com.au/product/windows/double-hung-sash-windows/",
@@ -733,7 +745,8 @@
           "Acid Etched",
           "White Translucent"
         ]
-      }
+      },
+      "remote_image_url": "https://www.bradnams.com.au/wp-content/webp-express/webp-images/uploads/2021/03/Aluminium-Double-Hung-Windows-in-a-bedroom.jpg.webp"
     },
     {
       "product_code": "WINDOW-BRADNAMS-CASEMENT-WINDOWS",
@@ -754,12 +767,12 @@
       "finish": "Powder coated aluminium",
       "configuration": "casement_window",
       "material": "Aluminium and glass",
-      "primary_image_url": "https://www.bradnams.com.au/wp-content/webp-express/webp-images/uploads/2019/03/4-panel-White-Aluminium-Casement-Window.jpg.webp",
-      "thumbnail_url": "https://www.bradnams.com.au/wp-content/webp-express/webp-images/uploads/2021/03/close-up-of-white-aluminium-casement-window-300x297.jpg.webp",
+      "primary_image_url": "/images/product-library/windows/bradnams/casement-windows.webp",
+      "thumbnail_url": "/images/product-library/windows/bradnams/casement-windows.webp",
       "gallery_image_urls": "https://www.bradnams.com.au/wp-content/webp-express/webp-images/uploads/2019/03/4-panel-White-Aluminium-Casement-Window.jpg.webp;https://www.bradnams.com.au/wp-content/uploads/2019/03/White-Aluminium-Casement-Windows-with-low-lites.jpg",
       "image_source_url": "https://www.bradnams.com.au/product/windows/casement-windows/",
       "image_source_type": "official_manufacturer_page",
-      "image_verified_at": "2026-08-26",
+      "image_verified_at": "2026-09-28",
       "image_status": "verified_exact",
       "official_product_url": "https://www.bradnams.com.au/product/windows/casement-windows/",
       "specification_url": "https://www.bradnams.com.au/product/windows/casement-windows/",
@@ -807,7 +820,8 @@
           "Acid Etched",
           "White Translucent"
         ]
-      }
+      },
+      "remote_image_url": "https://www.bradnams.com.au/wp-content/webp-express/webp-images/uploads/2019/03/4-panel-White-Aluminium-Casement-Window.jpg.webp"
     },
     {
       "product_code": "GARAGE-BND-PANELIFT-ICON",
@@ -890,7 +904,8 @@
         "operation": "Manual or motorised by quote",
         "sizeOptions": [
           "Project garage opening"
-        ]
+        ],
+        "rangeImage": "/images/product-library/garage-doors/bnd-range-panelift-icon.webp"
       }
     },
     {
@@ -963,7 +978,8 @@
         "operation": "Manual or motorised by quote",
         "sizeOptions": [
           "Project garage opening"
-        ]
+        ],
+        "rangeImage": "/images/product-library/garage-doors/bnd-range-panelift.webp"
       }
     },
     {
@@ -1047,7 +1063,8 @@
         "operation": "Manual or motorised by quote",
         "sizeOptions": [
           "Project garage opening"
-        ]
+        ],
+        "rangeImage": "/images/product-library/garage-doors/bnd-range-roll-a-door.webp"
       }
     },
     {
@@ -1120,7 +1137,8 @@
         "operation": "Manual or motorised by quote",
         "sizeOptions": [
           "Project garage opening"
-        ]
+        ],
+        "rangeImage": "/images/product-library/garage-doors/bnd-range-roll-a-door-neo.webp"
       }
     },
     {
@@ -1182,7 +1200,8 @@
         "operation": "Manual or motorised by quote",
         "sizeOptions": [
           "Project garage opening"
-        ]
+        ],
+        "rangeImage": "/images/product-library/garage-doors/bnd-range-designer.webp"
       }
     },
     {
@@ -3653,7 +3672,9 @@
         "handingOptions": "Not specified by supplier",
         "sizes": [
           "2040 x 820 x 40",
-          "2700 x 1200 x 40"
+          "2040 x 1200 x 40",
+          "2400 x 1200 x 40",
+          "Custom size"
         ],
         "doorThickness": "40mm",
         "materialConstruction": "Merbau veneer",
@@ -16821,6 +16842,438 @@
           "Builder to confirm"
         ]
       }
+    },
+    {
+      "product_code": "GARAGE-SDG-COLORBOND-SECTIONAL",
+      "family_key": "garage-doors",
+      "requirement_keys": "garage-door",
+      "category_key": "Garage Doors",
+      "top_level_area": "exterior",
+      "manufacturer": "Centurion Garage Doors",
+      "brand": "Centurion",
+      "supplier": "Smart Doors & Gates",
+      "range": "Standard COLORBOND",
+      "product_name": "Smart Doors and Gates Standard COLORBOND sectional garage door",
+      "model": "Colorbond Sectional",
+      "description": "Centurion Finger-Safe COLORBOND steel sectional garage door supplied and installed by Smart Doors and Gates, selected by panel profile, COLORBOND colour, size and operation.",
+      "colour": "Woodland Grey shown",
+      "official_colour_name": "Woodland Grey",
+      "colour_group": "COLORBOND steel",
+      "finish": "Genuine BlueScope COLORBOND steel",
+      "size": "Project garage opening",
+      "profile": "Georgian",
+      "configuration": "sectional_garage_door",
+      "material": "COLORBOND steel sectional garage door",
+      "primary_image_url": "/images/product-library/garage-doors/smart-range-colorbond.jpeg",
+      "thumbnail_url": "/images/product-library/garage-doors/smart-range-colorbond.jpeg",
+      "image_source_url": "https://www.cgdoors.com.au/our-range/sectional-garage-doors/colorbond/",
+      "image_source_type": "official_manufacturer_page",
+      "image_verified_at": "2026-09-09",
+      "image_status": "verified_exact",
+      "official_product_url": "https://www.cgdoors.com.au/our-range/sectional-garage-doors/colorbond/",
+      "specification_url": "https://www.cgdoors.com.au/our-range/sectional-garage-doors/colorbond/",
+      "supplier_url": "https://smartdoorsandgates.com.au/",
+      "price_status": "quote_required",
+      "price_unit": "each",
+      "currency": "AUD",
+      "gst_included": "true",
+      "country": "AU",
+      "regions": "AU;QLD",
+      "active": "true",
+      "discontinued": "false",
+      "archived": "false",
+      "source_type": "official_manufacturer_pages",
+      "source_name": "Centurion Garage Doors range page; Smart Doors and Gates is the listed Sunshine Coast dealer",
+      "source_url": "https://www.cgdoors.com.au/our-range/sectional-garage-doors/colorbond/",
+      "source_retrieved_at": "2026-09-09",
+      "source_verified_at": "2026-09-09",
+      "dealer_source_url": "https://www.cgdoors.com.au/stores/smart-doors-sunshine-coast/",
+      "attributes": {
+        "recordType": "garage_door_product",
+        "doorType": "Sectional",
+        "design": "Standard COLORBOND",
+        "profileOptions": [
+          "Georgian",
+          "Regency",
+          "Mediterranean",
+          "Cosmopolitan"
+        ],
+        "profileImages": {
+          "Georgian": "/images/product-library/garage-doors/smart-georgian.png",
+          "Regency": "/images/product-library/garage-doors/smart-regency.jpg",
+          "Mediterranean": "/images/product-library/garage-doors/smart-mediterranean.jpg",
+          "Cosmopolitan": "/images/product-library/garage-doors/smart-cosmopolitan.jpg"
+        },
+        "profilePhotos": {
+          "Georgian": "/images/product-library/garage-doors/smart-georgian.png",
+          "Regency": "/images/product-library/garage-doors/smart-regency.jpg",
+          "Mediterranean": "/images/product-library/garage-doors/smart-mediterranean.jpg",
+          "Cosmopolitan": "/images/product-library/garage-doors/smart-cosmopolitan.jpg"
+        },
+        "profileDescriptions": {
+          "Georgian": "Seamlessly raised rectangular steel panels for timeless elegance.",
+          "Regency": "Square raised steel panels suited to classical and federation homes.",
+          "Mediterranean": "Narrow board V-groove design with clean lines and slim panelling.",
+          "Cosmopolitan": "Wide steel panelling with fine timber-like grooves for an ultra-sleek face."
+        },
+        "profileDetailImages": {
+          "Georgian": "/images/product-library/garage-doors/smart-georgian-panel.jpg",
+          "Regency": "/images/product-library/garage-doors/smart-regency-panel.jpg",
+          "Cosmopolitan": "/images/product-library/garage-doors/smart-cosmopolitan-panel.jpg"
+        },
+        "rangeImage": "/images/product-library/garage-doors/smart-range-colorbond.jpeg",
+        "colourSelectionMode": "visual_variant_inside_garage_doors",
+        "sharedColourCatalogueKey": "colorbond-steel-compatible-colours",
+        "operation": "Manual or motorised by quote",
+        "sizeOptions": [
+          "Project garage opening"
+        ],
+        "automationOptions": [
+          "Manual operation",
+          "Centurion remote control opener - quote required",
+          "Merlin smart opener with smartphone control - quote required"
+        ],
+        "accessoryOptions": [
+          "Two remote controls",
+          "Wireless keypad",
+          "Obstacle detection system",
+          "Garage door windows - quote required",
+          "Cyclone protection - quote required",
+          "Insulation - quote required"
+        ]
+      }
+    },
+    {
+      "product_code": "GARAGE-SDG-TIMBA-LOOK",
+      "family_key": "garage-doors",
+      "requirement_keys": "garage-door",
+      "category_key": "Garage Doors",
+      "top_level_area": "exterior",
+      "manufacturer": "Centurion Garage Doors",
+      "brand": "Centurion",
+      "supplier": "Smart Doors & Gates",
+      "range": "Timba Look",
+      "product_name": "Smart Doors and Gates Timba Look sectional garage door",
+      "model": "Timba Look",
+      "description": "Centurion Timba Look sectional garage door supplied and installed by Smart Doors and Gates, reproducing the texture and grain of natural timber. Final finish confirmed by supplier quote.",
+      "colour": "Timber-look finish shown",
+      "official_colour_name": "",
+      "colour_group": "COLORBOND steel",
+      "finish": "Centurion Timba Look timber-reproduction finish",
+      "size": "Project garage opening",
+      "profile": "Timba Look woodgrain",
+      "configuration": "sectional_garage_door",
+      "material": "Timber-look coated steel sectional garage door",
+      "primary_image_url": "/images/product-library/garage-doors/smart-range-timba-look.jpg",
+      "thumbnail_url": "/images/product-library/garage-doors/smart-range-timba-look.jpg",
+      "image_source_url": "https://www.cgdoors.com.au/our-range/sectional-garage-doors/timber-look-garage-doors/",
+      "image_source_type": "official_manufacturer_page",
+      "image_verified_at": "2026-09-09",
+      "image_status": "verified_exact",
+      "official_product_url": "https://www.cgdoors.com.au/our-range/sectional-garage-doors/timber-look-garage-doors/",
+      "specification_url": "https://www.cgdoors.com.au/our-range/sectional-garage-doors/timber-look-garage-doors/",
+      "supplier_url": "https://smartdoorsandgates.com.au/",
+      "price_status": "quote_required",
+      "price_unit": "each",
+      "currency": "AUD",
+      "gst_included": "true",
+      "country": "AU",
+      "regions": "AU;QLD",
+      "active": "true",
+      "discontinued": "false",
+      "archived": "false",
+      "source_type": "official_manufacturer_pages",
+      "source_name": "Centurion Garage Doors range page; Smart Doors and Gates is the listed Sunshine Coast dealer",
+      "source_url": "https://www.cgdoors.com.au/our-range/sectional-garage-doors/timber-look-garage-doors/",
+      "source_retrieved_at": "2026-09-09",
+      "source_verified_at": "2026-09-09",
+      "dealer_source_url": "https://www.cgdoors.com.au/stores/smart-doors-sunshine-coast/",
+      "attributes": {
+        "recordType": "garage_door_product",
+        "doorType": "Designer/profile range",
+        "design": "Timba Look",
+        "profileOptions": [
+          "Timba Look woodgrain"
+        ],
+        "profileImages": {
+          "Timba Look woodgrain": "/images/product-library/garage-doors/smart-range-timba-look.jpg"
+        },
+        "profilePhotos": {
+          "Timba Look woodgrain": "/images/product-library/garage-doors/smart-range-timba-look.jpg"
+        },
+        "profileDescriptions": {
+          "Timba Look woodgrain": "Timber-reproduction finish over a sectional door for a warm, natural facade."
+        },
+        "rangeImage": "/images/product-library/garage-doors/smart-range-timba-look.jpg",
+        "colourSelectionMode": "visual_variant_inside_garage_doors",
+        "sharedColourCatalogueKey": "colorbond-steel-compatible-colours",
+        "operation": "Manual or motorised by quote",
+        "sizeOptions": [
+          "Project garage opening"
+        ],
+        "automationOptions": [
+          "Manual operation",
+          "Centurion remote control opener - quote required",
+          "Merlin smart opener with smartphone control - quote required"
+        ],
+        "accessoryOptions": [
+          "Two remote controls",
+          "Wireless keypad",
+          "Obstacle detection system",
+          "Garage door windows - quote required",
+          "Cyclone protection - quote required",
+          "Insulation - quote required"
+        ]
+      }
+    },
+    {
+      "product_code": "GARAGE-SDG-ARCHITECTURAL",
+      "family_key": "garage-doors",
+      "requirement_keys": "garage-door",
+      "category_key": "Garage Doors",
+      "top_level_area": "exterior",
+      "manufacturer": "Centurion Garage Doors",
+      "brand": "Centurion",
+      "supplier": "Smart Doors & Gates",
+      "range": "Architectural Series",
+      "product_name": "Smart Doors and Gates Architectural Series sectional garage door",
+      "model": "Architectural Series",
+      "description": "Centurion Architectural Series aluminium composite sectional garage door supplied and installed by Smart Doors and Gates, built around the signature negative-detail frame for architect-specified cladding.",
+      "colour": "Cladding by selection",
+      "official_colour_name": "",
+      "colour_group": "COLORBOND steel",
+      "finish": "Powder-coated aluminium frame with selected composite cladding",
+      "size": "Project garage opening",
+      "profile": "Negative detail frame",
+      "configuration": "designer_garage_door",
+      "material": "Aluminium frame with composite cladding panels",
+      "primary_image_url": "/images/product-library/garage-doors/smart-range-architectural.jpg",
+      "thumbnail_url": "/images/product-library/garage-doors/smart-range-architectural.jpg",
+      "image_source_url": "https://www.cgdoors.com.au/our-range/sectional-garage-doors/aluminium-composite-garage-doors/",
+      "image_source_type": "official_manufacturer_page",
+      "image_verified_at": "2026-09-09",
+      "image_status": "verified_exact",
+      "official_product_url": "https://www.cgdoors.com.au/our-range/sectional-garage-doors/aluminium-composite-garage-doors/",
+      "specification_url": "https://www.cgdoors.com.au/our-range/sectional-garage-doors/aluminium-composite-garage-doors/",
+      "supplier_url": "https://smartdoorsandgates.com.au/",
+      "price_status": "quote_required",
+      "price_unit": "each",
+      "currency": "AUD",
+      "gst_included": "true",
+      "country": "AU",
+      "regions": "AU;QLD",
+      "active": "true",
+      "discontinued": "false",
+      "archived": "false",
+      "source_type": "official_manufacturer_pages",
+      "source_name": "Centurion Garage Doors range page; Smart Doors and Gates is the listed Sunshine Coast dealer",
+      "source_url": "https://www.cgdoors.com.au/our-range/sectional-garage-doors/aluminium-composite-garage-doors/",
+      "source_retrieved_at": "2026-09-09",
+      "source_verified_at": "2026-09-09",
+      "dealer_source_url": "https://www.cgdoors.com.au/stores/smart-doors-sunshine-coast/",
+      "attributes": {
+        "recordType": "garage_door_product",
+        "doorType": "Designer/profile range",
+        "design": "Architectural Series",
+        "profileOptions": [
+          "Negative detail frame"
+        ],
+        "profileImages": {
+          "Negative detail frame": "/images/product-library/garage-doors/smart-range-architectural.jpg"
+        },
+        "profilePhotos": {
+          "Negative detail frame": "/images/product-library/garage-doors/smart-range-architectural.jpg"
+        },
+        "profileDescriptions": {
+          "Negative detail frame": "Signature negative-detail frame that carries architect-selected cladding panels."
+        },
+        "rangeImage": "/images/product-library/garage-doors/smart-range-architectural.jpg",
+        "colourSelectionMode": "visual_variant_inside_garage_doors",
+        "sharedColourCatalogueKey": "colorbond-steel-compatible-colours",
+        "operation": "Manual or motorised by quote",
+        "sizeOptions": [
+          "Project garage opening"
+        ],
+        "automationOptions": [
+          "Manual operation",
+          "Centurion remote control opener - quote required",
+          "Merlin smart opener with smartphone control - quote required"
+        ],
+        "accessoryOptions": [
+          "Two remote controls",
+          "Wireless keypad",
+          "Obstacle detection system",
+          "Garage door windows - quote required",
+          "Cyclone protection - quote required",
+          "Insulation - quote required"
+        ]
+      }
+    },
+    {
+      "product_code": "GARAGE-SDG-SUNSHINE",
+      "family_key": "garage-doors",
+      "requirement_keys": "garage-door",
+      "category_key": "Garage Doors",
+      "top_level_area": "exterior",
+      "manufacturer": "Centurion Garage Doors",
+      "brand": "Centurion",
+      "supplier": "Smart Doors & Gates",
+      "range": "Sunshine Series",
+      "product_name": "Smart Doors and Gates Sunshine Series translucent sectional garage door",
+      "model": "Sunshine Series",
+      "description": "Centurion Sunshine Series translucent sectional garage door supplied and installed by Smart Doors and Gates, admitting natural light to the garage without sacrificing privacy or security.",
+      "colour": "Frame colour by selection",
+      "official_colour_name": "",
+      "colour_group": "COLORBOND steel",
+      "finish": "Powder-coated aluminium frame with translucent panels",
+      "size": "Project garage opening",
+      "profile": "Translucent panel",
+      "configuration": "sectional_garage_door",
+      "material": "Aluminium frame with translucent infill panels",
+      "primary_image_url": "/images/product-library/garage-doors/smart-range-sunshine.jpg",
+      "thumbnail_url": "/images/product-library/garage-doors/smart-range-sunshine.jpg",
+      "image_source_url": "https://www.cgdoors.com.au/our-range/sectional-garage-doors/translucent-garage-doors/",
+      "image_source_type": "official_manufacturer_page",
+      "image_verified_at": "2026-09-09",
+      "image_status": "verified_exact",
+      "official_product_url": "https://www.cgdoors.com.au/our-range/sectional-garage-doors/translucent-garage-doors/",
+      "specification_url": "https://www.cgdoors.com.au/our-range/sectional-garage-doors/translucent-garage-doors/",
+      "supplier_url": "https://smartdoorsandgates.com.au/",
+      "price_status": "quote_required",
+      "price_unit": "each",
+      "currency": "AUD",
+      "gst_included": "true",
+      "country": "AU",
+      "regions": "AU;QLD",
+      "active": "true",
+      "discontinued": "false",
+      "archived": "false",
+      "source_type": "official_manufacturer_pages",
+      "source_name": "Centurion Garage Doors range page; Smart Doors and Gates is the listed Sunshine Coast dealer",
+      "source_url": "https://www.cgdoors.com.au/our-range/sectional-garage-doors/translucent-garage-doors/",
+      "source_retrieved_at": "2026-09-09",
+      "source_verified_at": "2026-09-09",
+      "dealer_source_url": "https://www.cgdoors.com.au/stores/smart-doors-sunshine-coast/",
+      "attributes": {
+        "recordType": "garage_door_product",
+        "doorType": "Sectional",
+        "design": "Sunshine Series",
+        "profileOptions": [
+          "Translucent panel"
+        ],
+        "profileImages": {
+          "Translucent panel": "/images/product-library/garage-doors/smart-range-sunshine.jpg"
+        },
+        "profilePhotos": {
+          "Translucent panel": "/images/product-library/garage-doors/smart-range-sunshine.jpg"
+        },
+        "profileDescriptions": {
+          "Translucent panel": "Translucent infill panels let daylight into the garage while keeping the interior private."
+        },
+        "rangeImage": "/images/product-library/garage-doors/smart-range-sunshine.jpg",
+        "colourSelectionMode": "visual_variant_inside_garage_doors",
+        "sharedColourCatalogueKey": "colorbond-steel-compatible-colours",
+        "operation": "Manual or motorised by quote",
+        "sizeOptions": [
+          "Project garage opening"
+        ],
+        "automationOptions": [
+          "Manual operation",
+          "Centurion remote control opener - quote required",
+          "Merlin smart opener with smartphone control - quote required"
+        ],
+        "accessoryOptions": [
+          "Two remote controls",
+          "Wireless keypad",
+          "Obstacle detection system",
+          "Garage door windows - quote required",
+          "Cyclone protection - quote required",
+          "Insulation - quote required"
+        ]
+      }
+    },
+    {
+      "product_code": "GARAGE-SDG-ROLLER",
+      "family_key": "garage-doors",
+      "requirement_keys": "garage-door",
+      "category_key": "Garage Doors",
+      "top_level_area": "exterior",
+      "manufacturer": "Centurion Garage Doors",
+      "brand": "Centurion",
+      "supplier": "Smart Doors & Gates",
+      "range": "Roller Doors",
+      "product_name": "Smart Doors and Gates residential roller garage door",
+      "model": "Roller Door",
+      "description": "Centurion residential roller garage door supplied and installed by Smart Doors and Gates, with a continuous COLORBOND steel curtain that rolls into a drum above the opening.",
+      "colour": "Classic Cream shown",
+      "official_colour_name": "Classic Cream",
+      "colour_group": "COLORBOND steel",
+      "finish": "Genuine BlueScope COLORBOND steel",
+      "size": "Project garage opening",
+      "profile": "Roller curtain",
+      "configuration": "roller_garage_door",
+      "material": "COLORBOND steel roller door curtain",
+      "primary_image_url": "/images/product-library/garage-doors/smart-range-roller.jpg",
+      "thumbnail_url": "/images/product-library/garage-doors/smart-range-roller.jpg",
+      "image_source_url": "https://www.cgdoors.com.au/our-range/garage-roller-doors/",
+      "image_source_type": "official_manufacturer_page",
+      "image_verified_at": "2026-09-09",
+      "image_status": "verified_exact",
+      "official_product_url": "https://www.cgdoors.com.au/our-range/garage-roller-doors/",
+      "specification_url": "https://www.cgdoors.com.au/our-range/garage-roller-doors/",
+      "supplier_url": "https://smartdoorsandgates.com.au/",
+      "price_status": "quote_required",
+      "price_unit": "each",
+      "currency": "AUD",
+      "gst_included": "true",
+      "country": "AU",
+      "regions": "AU;QLD",
+      "active": "true",
+      "discontinued": "false",
+      "archived": "false",
+      "source_type": "official_manufacturer_pages",
+      "source_name": "Centurion Garage Doors range page; Smart Doors and Gates is the listed Sunshine Coast dealer",
+      "source_url": "https://www.cgdoors.com.au/our-range/garage-roller-doors/",
+      "source_retrieved_at": "2026-09-09",
+      "source_verified_at": "2026-09-09",
+      "dealer_source_url": "https://www.cgdoors.com.au/stores/smart-doors-sunshine-coast/",
+      "attributes": {
+        "recordType": "garage_door_product",
+        "doorType": "Roller",
+        "design": "Roller Doors",
+        "profileOptions": [
+          "Roller curtain"
+        ],
+        "profileImages": {
+          "Roller curtain": "/images/product-library/garage-doors/smart-range-roller.jpg"
+        },
+        "profilePhotos": {
+          "Roller curtain": "/images/product-library/garage-doors/smart-range-roller.jpg"
+        },
+        "profileDescriptions": {
+          "Roller curtain": "A continuous ribbed COLORBOND curtain rolls into a drum above the opening."
+        },
+        "rangeImage": "/images/product-library/garage-doors/smart-range-roller.jpg",
+        "colourSelectionMode": "visual_variant_inside_garage_doors",
+        "sharedColourCatalogueKey": "colorbond-steel-compatible-colours",
+        "operation": "Manual or motorised by quote",
+        "sizeOptions": [
+          "Project garage opening"
+        ],
+        "automationOptions": [
+          "Manual operation",
+          "Centurion remote control opener - quote required",
+          "Merlin smart opener with smartphone control - quote required"
+        ],
+        "accessoryOptions": [
+          "Two remote controls",
+          "Wireless keypad",
+          "Obstacle detection system",
+          "Garage door windows - quote required",
+          "Cyclone protection - quote required",
+          "Insulation - quote required"
+        ]
+      }
     }
   ],
   "sourceUrls": [
@@ -16980,7 +17433,15 @@
     "https://www.humedoors.com.au/ranges/entrance/vaucluse?model=XV32",
     "https://www.humedoors.com.au/ranges/entrance/vaucluse?model=XV4",
     "https://www.humedoors.com.au/ranges/entrance/vaucluse?model=XV7",
-    "https://www.humedoors.com.au/ranges/entrance/vaucluse?model=XV9"
+    "https://www.humedoors.com.au/ranges/entrance/vaucluse?model=XV9",
+    "https://smartdoorsandgates.com.au/",
+    "https://www.cgdoors.com.au/stores/smart-doors-sunshine-coast/",
+    "https://www.cgdoors.com.au/our-range/sectional-garage-doors/",
+    "https://www.cgdoors.com.au/our-range/sectional-garage-doors/colorbond/",
+    "https://www.cgdoors.com.au/our-range/sectional-garage-doors/timber-look-garage-doors/",
+    "https://www.cgdoors.com.au/our-range/sectional-garage-doors/aluminium-composite-garage-doors/",
+    "https://www.cgdoors.com.au/our-range/sectional-garage-doors/translucent-garage-doors/",
+    "https://www.cgdoors.com.au/our-range/garage-roller-doors/"
   ],
   "entryDoorCatalogue": {
     "generatedAt": "2026-08-27",

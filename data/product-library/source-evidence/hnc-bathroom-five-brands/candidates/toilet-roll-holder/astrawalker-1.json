@@ -1,0 +1,586 @@
+{
+  "data": {
+    "products": {
+      "total_count": 5,
+      "page_info": {
+        "total_pages": 1
+      },
+      "items": [
+        {
+          "id": 21732,
+          "sku": "A6861V237",
+          "vendorcode": "A68.61.V2.37",
+          "name": "Icon + Toilet Roll Holder ",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6861v237_astrawalker_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6861v237_astrawalker_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/6/a6861v237_astrawalker_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/6/a6861v237_astrawalker_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6861v237_astrawalker_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6861v237_astrawalker_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Sydney Bronze finish<br>• Holds 1 roll</p>"
+          },
+          "short_description": {
+            "html": "<p>Icon + Toilet Roll Holder</p>"
+          },
+          "product_dimensions": "W132 x D90 x H44.5mm",
+          "price_store": 264,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W132 x D90 x H44.5mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Icon"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Astrawalker",
+                    "value": "355"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Bronze",
+                    "value": "935"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "A68.61.V2.37"
+              }
+            ]
+          }
+        },
+        {
+          "id": 21731,
+          "sku": "A6861V235",
+          "vendorcode": "A68.61.V2.35",
+          "name": "Icon + Toilet Roll Holder ",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6861v235_astrawalker_web_1.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6861v235_astrawalker_web_1.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/6/a6861v235_astrawalker_web_1.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/6/a6861v235_astrawalker_tech_1.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6861v235_astrawalker_web_1.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6861v235_astrawalker_tech_1.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Champagne Brass finish<br>• Holds 1 roll</p>"
+          },
+          "short_description": {
+            "html": "<p>Icon + Toilet Roll Holder</p>"
+          },
+          "product_dimensions": "W132 x D90 x H44.5mm",
+          "price_store": 264,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W132 x D90 x H44.5mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Icon"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Astrawalker",
+                    "value": "355"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "A68.61.V2.35"
+              }
+            ]
+          }
+        },
+        {
+          "id": 21730,
+          "sku": "A6861V210",
+          "vendorcode": "A68.61.V2.10",
+          "name": "Icon + Toilet Roll Holder ",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6861v210_astrawalker_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6861v210_astrawalker_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/6/a6861v210_astrawalker_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/6/a6861v210_astrawalker_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6861v210_astrawalker_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6861v210_astrawalker_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Ice Grey finish<br>• Holds 1 roll</p>"
+          },
+          "short_description": {
+            "html": "<p>Icon + Toilet Roll Holder</p>"
+          },
+          "product_dimensions": "W132 x D90 x H44.5mm",
+          "price_store": 0,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W132 x D90 x H44.5mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Icon"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Astrawalker",
+                    "value": "355"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Grey",
+                    "value": "939"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "A68.61.V2.10"
+              }
+            ]
+          }
+        },
+        {
+          "id": 21729,
+          "sku": "A6861V201",
+          "vendorcode": "A68.61.V2.01",
+          "name": "Icon + Toilet Roll Holder ",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6861v201_astrawalke_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6861v201_astrawalke_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/6/a6861v201_astrawalke_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/6/a6861v201_astrawalker_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6861v201_astrawalke_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6861v201_astrawalker_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Brushed Platinum finish<br>• Holds 1 roll</p>"
+          },
+          "short_description": {
+            "html": "<p>Icon + Toilet Roll Holder</p>"
+          },
+          "product_dimensions": "W132 x D90 x H44.5mm",
+          "price_store": 0,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W132 x D90 x H44.5mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Icon"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Astrawalker",
+                    "value": "355"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Silver",
+                    "value": "942"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "A68.61.V2.01"
+              }
+            ]
+          }
+        },
+        {
+          "id": 10844,
+          "sku": "A516100",
+          "vendorcode": "A51.61.00",
+          "name": "Olde English Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/5/a516100_astrawalker_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/5/a516100_astrawalker_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/5/a516100_astrawalker_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/5/a5161_astrawalker_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/5/a516100_astrawalker_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/5/a5161_astrawalker_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p class=\"p1\">• Classic design<br>• Holds one roll</p>"
+          },
+          "short_description": {
+            "html": "<p>Olde English Toilet Roll Holder</p>"
+          },
+          "product_dimensions": "W166 x D73 x H91mm",
+          "price_store": 136,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W166 x D73 x H91mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Olde"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Astrawalker",
+                    "value": "355"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "A51.61.00"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

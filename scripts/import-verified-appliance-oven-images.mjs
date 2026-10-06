@@ -10,20 +10,6 @@ const assetRoot = path.join(ROOT, "public/images/catalogues/appliances/products"
 
 const VERIFIED = [
   {
-    model: "FA5834HIXAAUS",
-    brand: "ariston",
-    fileBase: "ariston-fa5834hixaaus",
-    productPageUrl: "https://www.lazada.co.id/products/oven-ariston-built-in-electric-oven-fa5834hixaaus-i1257608344.html",
-    imageSourceUrl: "https://img.lazcdn.com/g/p/af06a9456e00d143f7800eb5f591d280.png_720x720q80.png_.webp",
-    additionalSourceUrls: [
-      "https://img.lazcdn.com/g/p/67c01626f26435f501af2883861da261.png_720x720q80.png_.webp",
-    ],
-    sourceType: "authorised-international-retailer-local",
-    sourceOrganisation: "Lazada Indonesia / KitchenArt",
-    attribution: "Product image sourced from Lazada Indonesia product listing for Ariston FA5834HIXAAUS.",
-    note: "Exact FA5834HIXAAUS listing and product image. Australian official/manufacturer page was not found during this pass.",
-  },
-  {
     model: "BOSE65XM",
     brand: "blanco",
     fileBase: "blanco-bose65xm",
@@ -110,15 +96,6 @@ const VERIFIED = [
 ];
 
 const UNRESOLVED = [
-  {
-    model: "FI9 891 SP IX A AUS",
-    reason: "No exact FI9 891 SP IX A AUS product image located. Research found Ariston FI7 891 SP IX A AUS Australian official/manual pages and Hotpoint FI9 891 SP IX HA, but neither is the exact catalogue model.",
-    attempts: [
-      "https://ariston.com.au/inventory/built-in-oven-fi7-891-sp-ix-aus/",
-      "https://www.notice-facile.com/en/manual/1325647/ariston%2Bthermo%2Bfi7-891-sp-ix-a-aus",
-      "https://manuals.plus/hotpoint/hotpoint-fi9-891-sp-ix-ha-multifunction-oven-quick-start-guide",
-    ],
-  },
   {
     model: "BOSE90X",
     reason: "No exact BOSE90X product image located. Research found BOSE902X and BOSE900X product images plus BOSE90X spare-part compatibility pages; similar Blanco 90 cm models were not imported as exact BOSE90X.",

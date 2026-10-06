@@ -1,2 +1,2 @@
-export { default } from "../../../Client Portal/serverProject";
+export { default } from "../../../client-portal/serverProject";
 
