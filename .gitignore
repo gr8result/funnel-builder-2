@@ -88,3 +88,21 @@ website-builder-sites/**/*.tmp
 # local dev runtime locks
 .next-dev.lock.json
 .next-build.lock.json
+
+
+# Local temporary/test files
+status-before-push.txt
+temp_prefix.txt
+test.txt
+whirlpool_brand.html
+sd-designer-sectional-doors.html
+sd-roller-doors.html
+sd-sectional-doors.html
+sd-tilt-doors.html
+components/estimate-builder/JobSetupTakeoffImport.jsx.bak
+pages/modules/builders/client-selections.js.backup
+funnel-builder-clean.code-workspace 1.code-workspace
+lib/construction-estimation/funnel-builder-clean.code-workspace 3.code-workspace
+artifacts/test-artifacts/
+test-artifacts/
+supabase/.temp/
