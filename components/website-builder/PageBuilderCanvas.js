@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { createPortal, flushSync } from "react-dom";
 import { applyAssetToProps, createStoredAsset, getAssetFromLibrary, normalizeSelectedAsset, resolveAssetField } from "../../lib/website-builder/mediaAssets";
@@ -373,7 +373,7 @@ function UniversalDesignPanel({ block, index, onChange, onUploadImage, onSelectA
   );
 }
 
-export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [], activePage = "", currentObjective = "", onSave, onForceSave, onUploadImage, onSelectAsset, onSaveAsGlobal, onSaveBlockDefault, onSaveTemplatePage, onSaveTemplateSite, onUpdateGlobalBlock, onUpdatePageSettings, onUpdateSharedTemplate, onDetachSharedTemplate, onRefreshAssetLibrary, onRegisterPreviewActions, blockDefaults = {}, showHeader = true, canSaveTemplates = false, readOnly = false, lockStatusLabel = "", onUnlockForEditing, onSaveAndLockWebsite, onCancelEditing, unlockBusy = false }) {
+export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [], activePage = "", currentObjective = "", onSave, onForceSave, onUploadImage, onSelectAsset, onSaveAsGlobal, onSaveBlockDefault, onSaveTemplatePage, onSaveTemplateSite, onUpdateGlobalBlock, onUpdatePageSettings, onUpdateSiteSettings, onUpdateSharedTemplate, onDetachSharedTemplate, onRefreshAssetLibrary, onRegisterPreviewActions, blockDefaults = {}, showHeader = true, canSaveTemplates = false, readOnly = false, lockStatusLabel = "", onUnlockForEditing, onSaveAndLockWebsite, onCancelEditing, unlockBusy = false }) {
   const [blocks, setBlocks] = useState(pageBlocks);
   const [selectedIndex, setSelectedIndex] = useState(null);
   const [selectedGlobalRole, setSelectedGlobalRole] = useState(null);
@@ -1805,7 +1805,8 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
 
   const applyGlobalStyles = (patch = {}) => {
     if (Object.prototype.hasOwnProperty.call(patch, "pageWidthMode")) {
-      onUpdatePageSettings?.({ pageWidthMode: normalizePageWidthMode(patch.pageWidthMode) });
+      const pageWidthMode = normalizePageWidthMode(patch.pageWidthMode);
+      onUpdateSiteSettings?.({ pageWidthMode, globalPageWidthMode: pageWidthMode });
     }
 
     setBlocks((prev) => prev.map((block) => {

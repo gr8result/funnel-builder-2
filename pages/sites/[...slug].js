@@ -1,8 +1,8 @@
-﻿// /pages/sites/[...slug].js
-// FULL REPLACEMENT — Render /sites/<slug> from Supabase ONLY (no external builders)
-// ✅ Reads: website_pages.content_json.sections (version 2)
-// ✅ Full-bleed sections with constrained 1440px content
-// ✅ Responsive by default (stacks columns on small screens)
+// /pages/sites/[...slug].js
+// FULL REPLACEMENT â€” Render /sites/<slug> from Supabase ONLY (no external builders)
+// âœ… Reads: website_pages.content_json.sections (version 2)
+// âœ… Full-bleed sections with constrained 1440px content
+// âœ… Responsive by default (stacks columns on small screens)
 
 import Head from "next/head";
 import Link from "next/link";
@@ -16,7 +16,7 @@ import { getPublishedWebsiteByDomain, getPublishedWebsiteBySlug } from "../../li
 import { buildWebsitePath, getPlatformAppUrl, normalizePublishedGlobalFooterBlock, normalizePublishedWebsiteBlocks, normalizeVideoHeroBlocks } from "../../lib/website-builder/publishConfig";
 import { globalFooterToFooterBlock } from "../../lib/website-builder/footerNavigation";
 import { isFullWidthPage, resolvePageWidthMode } from "../../lib/website-builder/pageLayout";
-import { isMobileUserAgent, useResponsiveDevice } from "../../lib/website-builder/responsiveViewport";
+import { isMobileUserAgent } from "../../lib/website-builder/responsiveViewport";
 import { isBlockVisibleOnDevice } from "../../lib/website-builder/responsiveValue";
 import { stickyNavigationFrameStyle } from "../../lib/website-builder/stickyNavigationFrame";
 import { repairProjectTestimonialAvatarUrls } from "../../lib/website-builder/testimonialImages";
@@ -58,6 +58,15 @@ const publishedPageBlockFrame = (background, pageFullWidth, layoutWidth) => ({
   marginLeft: pageFullWidth ? 0 : "auto",
   marginRight: pageFullWidth ? 0 : "auto",
 });
+function publishedGlobalNavFrame(block) {
+  const frame = seamlessPublishedBlockFrame(resolvePublishedBlockBackground(block));
+  const props = block?.props || {};
+  const stickyMode = String(props.stickyMode || props.position || (props.sticky || props.positionSticky ? "sticky" : "normal")).toLowerCase();
+  const sticky = props.sticky !== false && props.positionSticky !== false && stickyMode !== "normal";
+  return sticky
+    ? { ...frame, position: "sticky", top: 0, zIndex: 1000, width: "100%" }
+    : frame;
+}
 const resolvePublishedBlockBackground = (block) => String(block?.props?.backgroundColor || block?.props?.seamlessBackgroundColor || "").trim();
 const resolvePublishedStackBackground = (blocks, index, fallback = "") => (
   resolvePublishedBlockBackground(blocks?.[index])
@@ -406,12 +415,12 @@ export function PublishedWebsiteRenderer({ publication, siteDataHash = "", reque
   // Visit tracking is handled by IconCounterNumber itself (POST on first load, sessionStorage dedup).
   // No page-level POST needed here.
 
-  // The renderer's existing compact-mode rules were never activating for real visitors because
-  // this was hardcoded to false. Best-guess from the request's User-Agent on the server (avoids
-  // a layout flash for the common case), corrected to the real viewport width after hydration.
-  // `device` additionally distinguishes tablet from mobile (see lib/website-builder/responsiveValue.js)
-  // so per-device prop overrides (logo size, section height, ...) resolve correctly for real visitors.
-  const device = useResponsiveDevice(initialCompact ? "mobile" : "desktop");
+  // Resolve a safe device value for published rendering.
+  // SSR starts from the request User-Agent. In the browser we refine from the current viewport
+  // without depending on the responsive hook that was throwing "device is not defined" in production.
+  const device = typeof window === "undefined"
+    ? (initialCompact ? "mobile" : "desktop")
+    : (window.innerWidth < 768 ? "mobile" : window.innerWidth < 1024 ? "tablet" : "desktop");
   const compact = device !== "desktop";
 
   const project = repairProjectTestimonialAvatarUrls(publication?.site_data || {});
@@ -442,7 +451,7 @@ export function PublishedWebsiteRenderer({ publication, siteDataHash = "", reque
   const injectNav = globalNavBlock && !pageBlocks.some((block) => block.id && block.id === globalNavBlock.id);
   const injectFooter = !!globalFooterBlock;
   const blocksWithoutNav = injectNav ? pageBlocks.filter((block) => block.type !== "nav-bar") : pageBlocks;
-  // Strip any per-page footer blocks when a global footer exists — prevents duplicates and
+  // Strip any per-page footer blocks when a global footer exists â€” prevents duplicates and
   // ensures the home page (which may still have the original footer in its pageBlocks) also
   // gets the global footer injected consistently with every other page.
   const blocksToRender = (injectFooter ? blocksWithoutNav.filter((block) => block.type !== "footer") : blocksWithoutNav)

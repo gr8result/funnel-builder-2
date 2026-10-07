@@ -6,7 +6,7 @@ export default function QuoteProposalBuilderRoute() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace("/modules/estimate-builder");
+    router.replace("/modules/page-builder");
   }, [router]);
 
   return (
@@ -24,7 +24,7 @@ export default function QuoteProposalBuilderRoute() {
       }}>
         <div style={{ textAlign: "center" }}>
           <h1 style={{ margin: 0, fontSize: 28 }}>Opening Quote Proposal Builder...</h1>
-          <p style={{ marginTop: 10, color: "#64748b" }}>The production builder is inside the Estimate Builder workbook.</p>
+          <p style={{ marginTop: 10, color: "#64748b" }}>The production builder is now the Page Builder workspace.</p>
         </div>
       </main>
     </>

@@ -1,6 +1,7 @@
 import { withFreedomApi } from "../../../platform-core/api-guards/freedomApiGuard.js";
 
 import { getMarketSnapshot } from "../../../lib/freedom-trader/marketDataService.js";
+import { fetchTraderHistory } from "./history.js";
 import { TRADER_WATCHLIST } from "./watchlist.js";
 import { calculateTraderSignal } from "../../../lib/freedom/signalEngine.js";
 import { classifyPullbackReversal } from "../../../lib/freedom-trader/pullbackReversal.js";

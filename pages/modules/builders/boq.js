@@ -274,8 +274,8 @@ export default function BoqSnapshotViewerPage({ workbook = null } = {}) {
             </p>
           </div>
           <div style={styles.heroActions}>
-            <Link href="/modules/estimate-builder" style={styles.primaryLink}>
-              Back to Estimate Builder
+            <Link href="/modules/page-builder" style={styles.primaryLink}>
+              Back to Page Builder
             </Link>
           </div>
         </header>
