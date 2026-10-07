@@ -26,6 +26,14 @@ const nextConfig = {
   reactStrictMode: true,
   distDir: process.env.NEXT_DIST_DIR || ".next",
 
+  // Keep serverless functions under Vercel's 250 MB unzipped limit.
+  // A path.join(process.cwd(), "<dir>") in an API route makes output file tracing
+  // package that entire directory into the function.
+  outputFileTracingExcludes: {
+    // public/images is ~730 MB of static product imagery served by the CDN. No API
+    // route reads it from disk; fetch those files by URL instead of using fs.
+    "/api/**": ["public/images/**/*"],
+  },
 
   eslint: {
     ignoreDuringBuilds: false,

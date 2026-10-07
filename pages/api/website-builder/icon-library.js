@@ -2,9 +2,12 @@ import fs from "fs";
 import path from "path";
 import { withAuth } from "../../../lib/withWorkspace";
 
-const PUBLIC_ROOT = path.join(process.cwd(), "public");
-const SOCIAL_ROOT = path.join(PUBLIC_ROOT, "email-assets", "social");
-const CUSTOM_ICON_LIBRARY_ROOT = path.join(PUBLIC_ROOT, "vendor", "elementor-icons");
+// Every path below is spelled out in full on purpose. Next.js output file tracing
+// packages whatever directory a path.join(process.cwd(), ...) expression resolves to,
+// so a shared "public" or "vendor/elementor-icons" root constant pulls the whole of
+// public/ (700+ MB) into this serverless function and breaks the Vercel deploy.
+const SOCIAL_ROOT = path.join(process.cwd(), "public", "email-assets", "social");
+const SOCIAL_HREF_BASE = "/email-assets/social";
 const IMAGE_EXTENSIONS = /\.(svg|png|jpe?g|webp|gif|ico)$/i;
 const CUSTOM_LIBRARY_CONFIGS = [
   {
@@ -12,32 +15,23 @@ const CUSTOM_LIBRARY_CONFIGS = [
     label: "Nextech Base Icons",
     fontFamily: "webexbaseicon",
     classPrefix: "base-icon-",
-    cssPath: path.join(CUSTOM_ICON_LIBRARY_ROOT, "webexbaseicon", "style.css"),
+    cssPath: path.join(process.cwd(), "public", "vendor", "elementor-icons", "webexbaseicon", "style.css"),
   },
   {
     slug: "webexthemeicon",
     label: "Nextech Theme Icons",
     fontFamily: "webexthemeicon",
     classPrefix: "webextheme-icon-",
-    cssPath: path.join(CUSTOM_ICON_LIBRARY_ROOT, "webexthemeicon", "style.css"),
+    cssPath: path.join(process.cwd(), "public", "vendor", "elementor-icons", "webexthemeicon", "style.css"),
   },
   {
     slug: "dticon",
     label: "DethemeKit - Icons",
     fontFamily: "dticon",
     classPrefix: "dticon-",
-    cssPath: path.join(CUSTOM_ICON_LIBRARY_ROOT, "dticon", "style.css"),
+    cssPath: path.join(process.cwd(), "public", "vendor", "elementor-icons", "dticon", "style.css"),
   },
 ];
-
-function toPosix(value) {
-  return String(value || "").replace(/\\/g, "/");
-}
-
-function toHref(absolutePath) {
-  const relative = toPosix(path.relative(PUBLIC_ROOT, absolutePath));
-  return relative.startsWith("/") ? relative : `/${relative}`;
-}
 
 function formatLabel(fileName) {
   return String(fileName || "")
@@ -66,16 +60,13 @@ function listSocialIcons() {
 
   return entries
     .filter((entry) => entry.isFile() && IMAGE_EXTENSIONS.test(entry.name))
-    .map((entry) => {
-      const absolutePath = path.join(SOCIAL_ROOT, entry.name);
-      return {
-        key: `social-${entry.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
-        label: formatLabel(entry.name),
-        library: "Social Files",
-        group: "Social Files",
-        src: toHref(absolutePath),
-      };
-    });
+    .map((entry) => ({
+      key: `social-${entry.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+      label: formatLabel(entry.name),
+      library: "Social Files",
+      group: "Social Files",
+      src: `${SOCIAL_HREF_BASE}/${entry.name}`,
+    }));
 }
 
 function listCustomFontIcons() {
