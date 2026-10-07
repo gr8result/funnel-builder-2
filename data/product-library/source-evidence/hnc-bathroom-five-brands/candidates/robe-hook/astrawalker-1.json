@@ -1,0 +1,1038 @@
+{
+  "data": {
+    "products": {
+      "total_count": 9,
+      "page_info": {
+        "total_pages": 1
+      },
+      "items": [
+        {
+          "id": 22560,
+          "sku": "A6763V237",
+          "vendorcode": "A67.63.V2.37",
+          "name": "Icon + Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6763v237_astrawalker_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6763v237_astrawalker_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/6/a6763v237_astrawalker_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/6/a6763v237_astrawalker_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6763v237_astrawalker_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6763v237_astrawalker_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Sydney Bronze finish<br>• Round design<br>• Smaller model</p>"
+          },
+          "short_description": {
+            "html": "<p>Icon + Robe Hook</p>"
+          },
+          "product_dimensions": "W40 x D44.5 x H40mm",
+          "price_store": 0,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W40 x D44.5 x H40mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Icon"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Astrawalker",
+                    "value": "355"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Bronze",
+                    "value": "935"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "A67.63.V2.37"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22559,
+          "sku": "A6763V235",
+          "vendorcode": "A67.63.V2.35",
+          "name": "Icon + Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6763v235_astrawalker_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6763v235_astrawalker_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/6/a6763v235_astrawalker_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/6/a6763v235_astrawalker_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6763v235_astrawalker_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6763v235_astrawalker_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Champagne Brass finish<br>• Round design<br>• Smaller model</p>"
+          },
+          "short_description": {
+            "html": "<p>Icon + Robe Hook</p>"
+          },
+          "product_dimensions": "W40 x D44.5 x H40mm",
+          "price_store": 143,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W40 x D44.5 x H40mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Icon"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Astrawalker",
+                    "value": "355"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "A67.63.V2.35"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22558,
+          "sku": "A6763V210",
+          "vendorcode": "A67.63.V2.10",
+          "name": "Icon + Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6763v210_astrawalker_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6763v210_astrawalker_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/6/a6763v210_astrawalker_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/6/a6763v210_astrawalker_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6763v210_astrawalker_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6763v210_astrawalker_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Ice Grey finish<br>• Round design<br>• Smaller model</p>"
+          },
+          "short_description": {
+            "html": "<p>Icon + Robe Hook</p>"
+          },
+          "product_dimensions": "W40 x D44.5 x H40mm",
+          "price_store": 0,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W40 x D44.5 x H40mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Icon"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Astrawalker",
+                    "value": "355"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Grey",
+                    "value": "939"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "A67.63.V2.10"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22557,
+          "sku": "A6763V201",
+          "vendorcode": "A67.63.V2.01",
+          "name": "Icon + Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6763v201_astrawalker_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6763v201_astrawalker_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/6/a6763v201_astrawalker_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/6/a6763v201_astrawalker_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6763v201_astrawalker_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6763v201_astrawalker_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Brushed Platinum finish<br>• Round design<br>• Smaller model</p>"
+          },
+          "short_description": {
+            "html": "<p>Icon + Robe Hook</p>"
+          },
+          "product_dimensions": "W40 x D44.5 x H40mm",
+          "price_store": 0,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W40 x D44.5 x H40mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Icon"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Astrawalker",
+                    "value": "355"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Silver",
+                    "value": "942"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "A67.63.V2.01"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22556,
+          "sku": "A516300",
+          "vendorcode": "A51.63.00",
+          "name": "Olde English Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/5/a516300_astrawalker_web_1.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/5/a516300_astrawalker_web_1.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/5/a516300_astrawalker_web_1.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/5/a516300_astrawalker_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/5/a516300_astrawalker_web_1.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/5/a516300_astrawalker_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Single hook</p>"
+          },
+          "short_description": {
+            "html": "<p>Olde English Robe Hook</p>"
+          },
+          "product_dimensions": null,
+          "price_store": 86,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Olde"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Astrawalker",
+                    "value": "355"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "A51.63.00"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 21772,
+          "sku": "A696337",
+          "vendorcode": "A69.63.37",
+          "name": "Icon Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a696337_astrawalker_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a696337_astrawalker_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/6/a696337_astrawalker_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/6/a696337_astrawalker_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a696337_astrawalker_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a696337_astrawalker_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Sydney Bronze finish<br>• Round design</p>"
+          },
+          "short_description": {
+            "html": "<p>Icon Robe Hook</p>"
+          },
+          "product_dimensions": "W21 x D45 x H21mm",
+          "price_store": 84,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W21 x D45 x H21mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Icon"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Astrawalker",
+                    "value": "355"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Bronze",
+                    "value": "935"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "A69.63.37"
+              }
+            ]
+          }
+        },
+        {
+          "id": 21771,
+          "sku": "A696335",
+          "vendorcode": "A69.63.35",
+          "name": "Icon Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a696335_astrawalker_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a696335_astrawalker_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/6/a696335_astrawalker_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/6/a696335_astrawalker_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a696335_astrawalker_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a696335_astrawalker_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Champagne Brass finish<br>• Round design</p>"
+          },
+          "short_description": {
+            "html": "<p>Icon Robe Hook</p>"
+          },
+          "product_dimensions": "W21 x D45 x H21mm",
+          "price_store": 84,
+          "price_promo": 42,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W21 x D45 x H21mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Icon"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Astrawalker",
+                    "value": "355"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "A69.63.35"
+              }
+            ]
+          }
+        },
+        {
+          "id": 21770,
+          "sku": "A696310",
+          "vendorcode": "A69.63.10",
+          "name": "Icon Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a696310_astrawalker_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a696310_astrawalker_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/6/a696310_astrawalker_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/6/a696310_astrawalker_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a696310_astrawalker_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a696310_astrawalker_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Ice Grey finish<br>• Round design</p>"
+          },
+          "short_description": {
+            "html": "<p>Icon Robe Hook</p>"
+          },
+          "product_dimensions": "W21 x D45 x H21mm",
+          "price_store": 0,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W21 x D45 x H21mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Icon"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Astrawalker",
+                    "value": "355"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Grey",
+                    "value": "939"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "A69.63.10"
+              }
+            ]
+          }
+        },
+        {
+          "id": 21769,
+          "sku": "A696301",
+          "vendorcode": "A69.63.01",
+          "name": "Icon Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a696301_astrawalker_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a696301_astrawalker_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/6/a696301_astrawalker_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/6/a696301_astrawalker_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a696301_astrawalker_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a696301_astrawalker_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Brushed Platinum finish<br>• Round design</p>"
+          },
+          "short_description": {
+            "html": "<p>Icon Robe Hook</p>"
+          },
+          "product_dimensions": "W21 x D45 x H21mm",
+          "price_store": 0,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W21 x D45 x H21mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Icon"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Astrawalker",
+                    "value": "355"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Silver",
+                    "value": "942"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "A69.63.01"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

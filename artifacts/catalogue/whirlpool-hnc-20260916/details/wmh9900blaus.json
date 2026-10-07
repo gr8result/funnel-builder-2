@@ -1,0 +1,124 @@
+{
+  "data": {
+    "products": {
+      "items": [
+        {
+          "id": 20326,
+          "sku": "WMH9900BLAUS",
+          "vendorcode": "WMH9900BLAUS",
+          "name": "900mm Electric Built-In Oven with Air Fry",
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/w/m/wmh9900blaus_whirlpool_web.jpg"
+          },
+          "product_images": {
+            "thumbnail": "https://backend.harveynormancommercial.com.au/static/version1767508927/frontend/Hnc/Lumachild/en_US/Magento_Catalog/images/product/placeholder/thumbnail.jpg",
+            "small": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/1df791769d8cdc80e3c05129fe5437cf/w/m/wmh9900blaus_whirlpool_web.jpg",
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/w/m/wmh9900blaus_whirlpool_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/w/m/wmh9900blaus_whirlpool_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/w/m/wmh9900blaus_whirlpool_tech_1.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/w/m/wmh9900blaus_whirlpool_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/w/m/wmh9900blaus_whirlpool_tech_1.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Air Fry<br>• Gentle Steam <br>• Smart cleaning <br>• XXL enamelled cavity<br>• 133 litres<br>• Triple glass door <br>• LED digital display</p>"
+          },
+          "product_dimensions": "W894 x D595 x H575mm",
+          "price_promo": 0,
+          "price_store": 1880,
+          "wels_reg_number": "",
+          "gp_product_group": "OVENS",
+          "__typename": "SimpleProduct"
+        }
+      ],
+      "aggregations": [
+        {
+          "attribute_code": "category_id",
+          "label": "Category",
+          "options": [
+            {
+              "label": "Kitchen",
+              "value": "16",
+              "count": 1
+            },
+            {
+              "label": "Ovens",
+              "value": "22",
+              "count": 1
+            },
+            {
+              "label": "Single Oven Electric Wall/Undermount ",
+              "value": "99",
+              "count": 1
+            },
+            {
+              "label": "Products",
+              "value": "1036",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "attribute_code": "brand",
+          "label": "Brand",
+          "options": [
+            {
+              "label": "Whirlpool",
+              "value": "1084",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "attribute_code": "colours",
+          "label": "Colour",
+          "options": [
+            {
+              "label": "Black",
+              "value": "937",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "attribute_code": "size_mm",
+          "label": "Size (mm)",
+          "options": [
+            {
+              "label": "900",
+              "value": "833",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "attribute_code": "size_oven",
+          "label": "Oven Size",
+          "options": [
+            {
+              "label": "851mm +",
+              "value": "1100",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "attribute_code": "stock_line_filter",
+          "label": "Stock Line",
+          "options": [
+            {
+              "label": "No",
+              "value": "673",
+              "count": 1
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

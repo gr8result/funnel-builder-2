@@ -1,32 +1,76 @@
+import { browserTenantKey, builderLocalStorage, builderSessionStorage, scopeBrowserWorkbook, browserWorkspaceId } from '../../lib/builders/browserTenantStorage.js';
+import { CURRENT_BUILDER_WORKSPACE_ID } from '../../lib/builders/currentBuilderSeed.js';
+import { addCabinetryCatalogueItem } from '../../lib/construction-estimation/finalCabinetryQuotation.js';
+import { reconcileCabinetryQuotation } from '../../lib/construction-estimation/finalCabinetryQuotation.js';
+import { applyCabinetryRequirementsToQuotation, setCabinetryRequirements, migrateWorkbookCabinetSchedules } from '../../lib/construction-estimation/cabinetryRequirements.js';
+import { connectTenantSelectionMetadata } from '../../lib/builders/tenantSelectionQuotation.js';
+import { linkInternalPaintColoursToQuotation } from '../../lib/builders/internalPaintColours.js';
+import { connectElectricalScheduleToQuotation } from '../../lib/builders/electricalSchedule.js';
+import { applySelectionProduct, applyInclusionScheduleToQuote } from '../../lib/builders/selectionQuoteEngine.js';
+import { withStableQuoteTargets, preserveQuoteQuantityOwnership } from '../../lib/builders/selectionRegistry.js';
+import { takeoffProcurementDetails, assignPlasterboardSupplier, procurementSupplierKey } from '../../lib/construction-estimation/takeoffProcurement.js';
+import { masterJobId, linkTakeoffToMasterJob, mergeMasterJobSummaries, findMasterJobForProject } from '../../lib/construction-estimation/masterJob.js';
+import { normalizeTakeoffInputSection } from '../../lib/construction-estimation/takeoffInputRows.js';
+import { applyPersistedQuotationOrder, persistedSectionOrder, stampQuotationOrder } from "../../lib/construction-estimation/quotationOrder.js";
+import { withWallLiningMappings } from '../../lib/construction-estimation/quotationWallLinings.js';
+import { acknowledgeQuotationNotification } from '../../lib/construction-estimation/quotationNotifications.js';
+import { persistCompleteJob, jobContentSignature, restoreCompleteWorkbook, normalizeJobForCurrentSchema, isProtectedRecoveryRecord, PROTECTED_RECOVERY_JOB_KEY } from "../../lib/construction-estimation/jobPersistence.js";
+import { externalizeTakeoffPlanPages, materializeTakeoffPlanPages } from "../../components/construction-estimation/ai-plan-takeoff/planBlobStorage.js";
+import { getMasterProducts } from "../../lib/product-library/catalogueService.js";
+
+// Product Library lookup for the tiling connector (tile sizes, box coverage, prices).
+let masterProductIndex = null;
+function masterProductById(id) {
+  if (!masterProductIndex) masterProductIndex = new Map(getMasterProducts().map((product) => [product.productId, product]));
+  return masterProductIndex.get(id) || null;
+}
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { V4_DATA_SECTIONS, V4_WINDOW_TYPES } from "../../lib/construction-estimation/estimateWorksheetV4Schema.js";
 import { createEstimateBuilderWorkbookDefaults, windowDoorSizeCodeForRow } from "../../lib/construction-estimation/estimateBuilderWorkbookDefaults.js";
-import { calculateEstimateBuilderWorkbook, V4_DEFAULT_FORMULAS } from "../../lib/construction-estimation/estimateBuilderWorkbookCalculations.js";
+import { calculateEstimateBuilderWorkbook, ensureInternal90mmWallFrameRow, isInternal90mmWallFrameRow, V4_DEFAULT_FORMULAS } from "../../lib/construction-estimation/estimateBuilderWorkbookCalculations.js";
+import { quoteLineTotal, quoteQuantity, quoteRate, shouldIncludeQuoteRowInFinalBoq } from "../../lib/construction-estimation/finalQuotationBoq.js";
 import { withWindowDoorApproximateRate } from "../../lib/construction-estimation/windowDoorApproximatePricing.js";
 import { doorScheduleRangeOptions, humeEntryDoorRows, humeEntryDoorSize, isDoorScheduleRangeRow, isHumeEntryDoorRow, isLegacyEntryDoorScheduleRow, supplementalEntryDoorRows, withDoorScheduleSelection, withHumeEntryDoorSelection } from "../../lib/construction-estimation/humeEntryDoorPricing.js";
 import { normaliseEstimateInclusions } from "../../lib/builders/estimateInclusions.js";
 import { normaliseStandardInclusions } from "../../lib/builders/standardInclusions.js";
+import { hasRecoverablePlanPages, verifyAiPlanTakeoffSavedJob } from "../../components/construction-estimation/ai-plan-takeoff/jobPersistence.js";
+import { evaluateTakeoffOverwrite } from "../../lib/construction-estimation/takeoffOverwriteGuard.js";
+import { applyJobSetupImport } from "../../lib/construction-estimation/jobSetupTakeoffImport.js";
+import { updateQuoteQuantityField } from "../../lib/construction-estimation/quoteQuantityFormula.js";
+import { supabase } from "../../utils/supabase-client";
+import { withWindowsPriceListQuotation, WINDOW_SCHEDULE_UNPRICED_ROW_PREFIX } from "../../lib/construction-estimation/windowsQuotePriceList.js";
+import { withEntryDoorLibraryQuotation } from "../../lib/construction-estimation/entryDoorLibraryQuotation.js";
 
 const ESTIMATE_BUILDER_PAGES = [
-  { key: "projectDashboard", label: "Project Dashboard" },
+  { key: "dataInput", label: "Job Details" },
   { key: "aiPlanTakeoff", label: "AI Plan Takeoff" },
-  { key: "dataInput", label: "Project Setup" },
-  { key: "windowsDoors", label: "Windows & Doors" },
+  { key: "projectEstimate", label: "Project Estimate" },
+  { key: "clientSelections", label: "Client Selections" },
   { key: "quotation", label: "Quotation Builder" },
+  { key: "gantt", label: "Gantt Chart" },
+  { key: "jobBoard", label: "Job Board" },
+  { key: "boq", label: "BOQ" },
+  { key: "supplierProcurement", label: "Supplier & Procurement" },
+  { key: "variations", label: "Variations" },
+  { key: "documentVault", label: "Document Vault" },
+  { key: "rfis", label: "RFIs & Reports" },
   { key: "standardInclusions", label: "Standard Inclusions" },
   { key: "productLibrary", label: "Product Library" },
-  { key: "projectEstimate", label: "Project Estimate" },
-  { key: "supplierQuotations", label: "Supplier Quotations" },
-  { key: "boq", label: "BOQ" },
-  { key: "clientSelections", label: "Client Selections" },
-  { key: "variations", label: "Variations" },
+  { key: "estimatingCatalogue", label: "Estimating Catalogue" },
+  { key: "budgetVsActual", label: "Budget versus Actual" },
+  { key: "clientPortal", label: "Client Portal" },
+];
+
+const ESTIMATE_BUILDER_HIDDEN_PAGES = [
+  { key: "projectDashboard", label: "Project Workspace" },
+  { key: "windowSchedule", label: "Window Schedule" },
+  { key: "windowsDoors", label: "Windows & Doors" },
+  { key: "formulaSheet", label: "Calculations" },
+  { key: "supplierQuotations", label: "Supplier Quotes" },
   { key: "purchaseOrders", label: "Purchase Orders" },
   { key: "procurement", label: "Procurement" },
   { key: "supplierInvoices", label: "Supplier Invoices" },
-  { key: "budgetVsActual", label: "Budget vs Actual" },
   { key: "quoteApprovals", label: "Quote Approvals" },
-  { key: "documentVault", label: "Document Vault" },
-  { key: "rfis", label: "RFIs" },
   { key: "cashflowSummary", label: "Cashflow Summary" },
   { key: "summary", label: "Summary" },
 ];
@@ -40,11 +84,11 @@ const QUOTE_ROWS_WITHOUT_IMPORTED_DATA = new Set([1272, 1373, 1374, 1380, 1381, 
 const STANDARD_THREE_DOOR_ROBE_SECTION = "STANDARD 3 DOOR ROBE UP TO 3.6M WIDE";
 const STANDARD_TWO_DOOR_LINEN_SECTION = "STANDARD 2 DOOR LINEN UP TO 2.4M WIDE";
   const STANDARD_THREE_DOOR_LINEN_SECTION = "STANDARD 3 DOOR LINEN UP TO 3.6M WIDE";
-const CABINET_MAKER_SECTION = "CABINET MAKER";
-const CABINET_MAKER_BUTLERS_PANTRY_SECTION = "BUTLERS PANTRY";
-const CABINET_MAKER_LAUNDRY_SECTION = "LAUNDRY";
-const CABINET_MAKER_BATHROOMS_SECTION = "BATHROOMS";
-const CABINET_MAKER_WARDROBES_SECTION = "WARDROBES";
+
+
+
+
+
 const ROUGH_INS_SECTION = "ROUGH-INS";
 const OLD_LINEN_AND_ROBE_DOOR_SECTIONS = new Set([
   "space saver sling robe doors",
@@ -54,19 +98,7 @@ const OLD_LINEN_AND_ROBE_DOOR_SECTIONS = new Set([
   "1800 wide 2 door x 2400 high",
   "3000 wide 3 door x 2400 high",
 ]);
-const OLD_CABINET_MAKER_SECTIONS = new Set([
-  "cabinet maker",
-  "misc cabinetry",
-  "whitegoods",
-  "arc",
-  "euromaid",
-  "ariston",
-  "omega",
-  "blanco",
-  "blanco upgrade options",
-  "smeg",
-  "smeg upgrade options",
-]);
+
 const BLANK_INPUT_QUOTE_SECTION_NAMES = new Set(["roof framing"]);
 const BLANK_QTY_QUOTE_SECTION_NAMES = new Set(["demolition works", "base brickwork", "face brickwork", "bricklayers labour", "entry doors", "double entry doors", "windows", "couplings", "misc", "materials", "roofing materials", "roofing labour", "renderers labour", "misc rendering"]);
 const BLANK_VALUE_QUOTE_SECTION_NAMES = new Set(["hourly rate"]);
@@ -164,7 +196,7 @@ function takeoffPersistenceCounts(workbook = {}) {
       if (typeof window === "undefined") return null;
       try {
         const jobId = workbook?.openedFileName || workbook?.id || "";
-        const projects = JSON.parse(window.localStorage.getItem("gr8:takeoff:v1") || "[]");
+        const projects = JSON.parse(builderLocalStorage.getItem("gr8:takeoff:v1") || "[]");
         const project = Array.isArray(projects) ? projects.find((item) => item?.jobId === jobId) : null;
         return Array.isArray(project?.pages) ? project.pages.length : 0;
       } catch {
@@ -178,28 +210,95 @@ function takeoffPersistenceCounts(workbook = {}) {
 
 export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
   const previewMode = Boolean(options.previewMode);
-  const [workbook, setWorkbook] = useState(() => initialWorkbook(initialValues, { previewMode }));
-  const [activeWorkbookPage, setActiveWorkbookPage] = useState(() => resolveLastActiveWorkbookPage(initialWorkbook(initialValues, { previewMode })));
+  // Build the startup workbook once per mount; both initial states derive from the same object.
+  const [startupState] = useState(() => {
+    const startupWorkbook = initialWorkbook(initialValues, { previewMode });
+    return { workbook: startupWorkbook, page: resolveLastActiveWorkbookPage(startupWorkbook) };
+  });
+  const [workbook, setWorkbook] = useState(startupState.workbook);
+  const [activeWorkbookPage, setActiveWorkbookPage] = useState(startupState.page);
   const [lineSearch, setLineSearch] = useState("");
   const [hideUnused, setHideUnused] = useState(false);
   const [activeDataTab, setActiveDataTab] = useState("inputs");
   const [lastSavedAt, setLastSavedAt] = useState("");
+  const [persistenceStatus, setPersistenceStatus] = useState({ state: "idle", label: "", detail: "" });
+  // null = not yet known; true = the browser has agreed never to discard this site's saved jobs;
+  // false = "best effort" storage, which the browser may wipe when the disk runs low.
+  const [storagePersisted, setStoragePersisted] = useState(null);
+  useEffect(() => {
+    if (previewMode || typeof navigator === "undefined" || !navigator.storage?.persist) return;
+    let cancelled = false;
+    // Saved jobs and the Master Template live in this browser's IndexedDB. Without persistent
+    // storage the browser may delete all of it under disk pressure, with no warning.
+    Promise.resolve(navigator.storage.persisted?.())
+      .then((already) => already || navigator.storage.persist())
+      .then((granted) => { if (!cancelled) setStoragePersisted(Boolean(granted)); })
+      .catch(() => { if (!cancelled) setStoragePersisted(false); });
+    return () => { cancelled = true; };
+  }, [previewMode]);
+  const [savedContentSignature, setSavedContentSignature] = useState("");
+  // Large legacy jobs embed plan/document images. Status/menu renders must not
+  // serialize the entire workbook again just to display the dirty indicator.
+  const contentSignature = useMemo(() => jobContentSignature(workbook), [workbook]);
   const [templateSummaries, setTemplateSummaries] = useState([]);
   const [savedJobSummaries, setSavedJobSummaries] = useState([]);
+  const [savedJobSummariesStatus, setSavedJobSummariesStatus] = useState({ state: "idle", message: "" });
   const [recentJobs, setRecentJobs] = useState(() => loadRecentEstimateJobs());
+  const [recentEstimateFiles, setRecentEstimateFiles] = useState(() => loadRecentEstimateFiles());
   const [renumberReport, setRenumberReport] = useState(null);
+  const [hydrated, setHydrated] = useState(previewMode);
   const autosaveTimerRef = useRef(null);
   const autosaveIdleRef = useRef(null);
+  const workbookLoadOperationRef = useRef(0);
+  const completedJobLoadVersionRef = useRef(0);
+  const autosavePausedRef = useRef(false);
+  const autosaveInFlightRef = useRef(false);
+  const lastAutosaveSignatureRef = useRef("");
   const lastLinkedTemplateRef = useRef(loadLastLinkedTemplateReference());
   const allowUnlinkedJobSaveRef = useRef(loadAllowUnlinkedJobSave());
   const workbookRef = useRef(workbook);
   workbookRef.current = workbook;
+  const clientSelectionsSavePendingRef = useRef(null);
+  const clientSelectionsSaveRunningRef = useRef(false);
+  const saveClientSelectionsBookRef = useRef(null);
+  // Also migrate a job already open when this code is loaded, without resetting it.
+  useEffect(() => {
+    const owner = workbook.workspaceId || browserWorkspaceId();
+    if (reconcileCabinetryQuotation(workbook, owner) !== workbook) {
+      setWorkbook(current => reconcileCabinetryQuotation(current, owner));
+      return;
+    }
+    // Takeoff / Job Setup own cabinetry Qty and the selected finish owns the row: any change to
+    // either (import, edit, selection save, baseline, open, reload) lands here.
+    if (applyCabinetryRequirementsToQuotation(workbook, owner) !== workbook) {
+      setWorkbook(current => applyCabinetryRequirementsToQuotation(current, owner));
+    }
+  }, [workbook]);
+  function updateWorkbookState(updater) {
+    setWorkbook((current) => {
+      const next = typeof updater === "function" ? updater(current) : updater;
+      workbookRef.current = next;
+      return next;
+    });
+  }
   const deferredWorkbook = useDeferredValue(workbook);
   const displayWorkbook = useMemo(() => ({
     ...workbook,
     page: ESTIMATE_BUILDER_PAGE_KEYS.has(activeWorkbookPage) ? activeWorkbookPage : "projectDashboard",
   }), [workbook, activeWorkbookPage]);
-  const preview = useMemo(() => calculateEstimateBuilderWorkbook(deferredWorkbook), [deferredWorkbook]);
+  // The startup workbook is only a placeholder until the real job hydrates (the UI shows
+  // "Loading complete job..." meanwhile), so it is never quoted before hydration. On the
+  // render where hydration replaces it, the deferred value still lags on the placeholder;
+  // calculate the loaded workbook directly so the placeholder is never quoted then either
+  // and the deferred follow-up render reuses this same result.
+  const calculationWorkbook = deferredWorkbook === startupState.workbook && workbook !== startupState.workbook
+    ? workbook
+    : deferredWorkbook;
+  const rawPreview = useMemo(
+    () => (hydrated ? calculateEstimateBuilderWorkbook(calculationWorkbook) : null),
+    [calculationWorkbook, hydrated],
+  );
+  const preview = useMemo(() => normaliseEstimatePreview(rawPreview), [rawPreview]);
   const quoteSections = useMemo(
     () => orderedQuoteSections(workbook.quotation || {}, workbook.quotationSectionOrder || []),
     [workbook.quotation, workbook.quotationSectionOrder],
@@ -228,73 +327,118 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
 
   useEffect(() => {
     if (previewMode) return;
+    // No calculation exists for the startup placeholder; syncing starts from the first real one.
+    if (!rawPreview) return;
     if (deferredWorkbook !== workbookRef.current) return;
-    setWorkbook((current) => syncEditableLinkedQuoteQuantities(syncWindowDoorApproximateRates(current), preview));
-  }, [deferredWorkbook, preview, previewMode]);
+    updateWorkbookState((current) => current === deferredWorkbook
+      ? syncEditableLinkedQuoteQuantities(syncWindowDoorApproximateRates(current), preview)
+      : current);
+  }, [deferredWorkbook, preview, previewMode, rawPreview]);
 
   useEffect(() => {
-    if (previewMode) return;
+    // Fast Refresh can re-run mount effects while an edited job is already open.
+    // Keep that live workbook; hydration is only for a fresh application mount.
+    if (previewMode || hydrated) return;
     if (typeof window === "undefined") return;
     let cancelled = false;
-    purgeCorruptEstimateJobLocalStorage();
-    const activeRegisteredJob = loadActiveRegisteredEstimateJob();
-    if (activeRegisteredJob) {
-      const savedAt = new Date().toISOString();
-      resolveMasterTemplate().then(async (template) => {
-        if (cancelled || !template) return;
-        const registeredWorkbook = applyRegisteredJobToWorkbook(createCleanJobFromMasterTemplate(template, savedAt), activeRegisteredJob, savedAt);
-        const draft = prepareWorkbookForJobSave(registeredWorkbook, savedAt);
-        await saveStoredJob(draft, savedAt).catch(() => {});
-        rememberRecentJob(draft, savedAt);
-        clearActiveRegisteredEstimateJob();
-        if (cancelled) return;
-        estimateBuilderLog("loading registered job", {
-          source: "localStorage registered-job pointer + IndexedDB master template",
-          jobName: activeRegisteredJob.jobName || "",
-          jobId: activeRegisteredJob.jobId || "",
-          templateKey: MASTER_TEMPLATE_KEY,
-          templateName: MASTER_TEMPLATE_NAME,
-          mode: "job",
-        });
-        const nextWorkbook = normalizeWorkbook(registeredWorkbook);
+    const startupLoadOperationId = workbookLoadOperationRef.current;
+    (async () => {
+      clearActiveRegisteredEstimateJob();
+      const explicitJobKey = loadExplicitActiveJobSessionKey();
+      let explicitLoadFailed = false;
+      if (explicitJobKey) {
+        let explicitRecord;
+        try { explicitRecord = await loadStoredJob(explicitJobKey); }
+        catch (error) {
+          // A read failure can be transient, so keep the pointer for a reload retry.
+          explicitLoadFailed = true;
+          if (!cancelled) setPersistenceStatus({ state: "error", label: `Load failed: ${error.message}`, detail: "Saved job data has not been changed. Reload to retry." });
+        }
+        if (!explicitLoadFailed && !explicitRecord?.workbook) {
+          // The pointer outlived its record, so drop it instead of blocking every later mount.
+          explicitLoadFailed = true;
+          if (!cancelled) {
+            // The pointer says a job was saved here but its record is gone: the browser has cleared
+            // this site's storage. Say so plainly rather than quietly opening something older.
+            setPersistenceStatus({ state: "error", label: "The job saved in this browser is missing - the browser has cleared this site's storage. Open your most recent job file from the computer (File > Open Job File from Computer). Nothing has been overwritten.", detail: "No template has replaced it." });
+            clearExplicitActiveJobSessionKey();
+          }
+        }
+        if (
+          !explicitLoadFailed
+          && !cancelled
+          && workbookLoadOperationRef.current === startupLoadOperationId
+          && explicitRecord?.type === "job"
+          && explicitRecord?.workbook
+          && workbookHasExplicitJobIdentity(explicitRecord.workbook)
+        ) {
+          const recovered = explicitRecord; // Automatic recovery is disabled.
+          if (cancelled || workbookLoadOperationRef.current !== startupLoadOperationId) return;
+          const nextWorkbook = normalizeWorkbook(recovered.workbook);
+          workbookRef.current = nextWorkbook;
+          setWorkbook(nextWorkbook);
+          setActiveWorkbookPage(resolveLastActiveWorkbookPage(nextWorkbook));
+          setLastSavedAt(recovered.savedAt || recovered.workbook?.savedAt || "");
+          const signature = jobContentSignature(nextWorkbook);
+          setSavedContentSignature(signature);
+          if (!recovered.recoveredFromBackupKey) lastAutosaveSignatureRef.current = signature;
+          setRecentJobs(loadRecentEstimateJobs());
+          setRecentEstimateFiles(loadRecentEstimateFiles());
+          setHydrated(true);
+          estimateBuilderLog("loading workbook", {
+            source: "explicit-session-active-job",
+            destination: "builder-workspace",
+            key: explicitJobKey,
+            mode: "job",
+          });
+          return;
+        }
+        if (cancelled || workbookLoadOperationRef.current !== startupLoadOperationId) return;
+        if (!explicitLoadFailed) clearExplicitActiveJobSessionKey();
+      }
+      if (cancelled || workbookLoadOperationRef.current !== startupLoadOperationId) return;
+
+      // The session-key pointer above is only a fast hint. It can go missing (a
+      // fresh tab restore after an OOM crash, a browser evicting localStorage
+      // under memory pressure) or point at a stale record, even while the job
+      // itself is still safely persisted in IndexedDB. Before declaring "no job
+      // open" - which also wipes the durable active-job pointer - fall back to
+      // the durable record so a still-existing job is never abandoned.
+      const fallbackRecovered = await loadLastActiveOrRecentStoredJob().catch(() => null);
+      if (cancelled || workbookLoadOperationRef.current !== startupLoadOperationId) return;
+      if (fallbackRecovered?.workbook && workbookHasExplicitJobIdentity(fallbackRecovered.workbook)) {
+        const nextWorkbook = normalizeWorkbook(fallbackRecovered.workbook);
+        workbookRef.current = nextWorkbook;
         setWorkbook(nextWorkbook);
         setActiveWorkbookPage(resolveLastActiveWorkbookPage(nextWorkbook));
-        setLastSavedAt(savedAt);
+        setLastSavedAt(fallbackRecovered.savedAt || nextWorkbook.savedAt || "");
+        const signature = jobContentSignature(nextWorkbook);
+        setSavedContentSignature(signature);
+        if (!fallbackRecovered.recoveredFromBackupKey) lastAutosaveSignatureRef.current = signature;
+        saveExplicitActiveJobSessionKey(workbookJobKey(nextWorkbook));
         setRecentJobs(loadRecentEstimateJobs());
-      }).catch(() => {});
-      return () => {
-        cancelled = true;
-      };
-    }
-    loadLastActiveOrRecentStoredJob().then(async (storedJob) => {
-      if (cancelled) return;
-      if (!storedJob?.workbook) {
+        setRecentEstimateFiles(loadRecentEstimateFiles());
+        setHydrated(true);
         estimateBuilderLog("loading workbook", {
-          source: "no-active-job",
-          destination: "builder-dashboard",
-          mode: "none",
+          source: "durable-active-job-pointer",
+          destination: "builder-workspace",
+          key: workbookJobKey(nextWorkbook),
+          mode: "job",
         });
         return;
       }
+
+      await clearActiveStoredJob().catch(() => {});
+      if (cancelled || workbookLoadOperationRef.current !== startupLoadOperationId) return;
       estimateBuilderLog("loading workbook", {
-        source: "IndexedDB stored job",
-        jobName: storedJob.name || storedJob.workbook?.openedFileName || storedJob.workbook?.sourceFileName || "",
-        templateKey: storedJob.workbook?.templateKey || "",
-        templateName: storedJob.workbook?.templateName || "",
-        mode: "job",
-        ...takeoffPersistenceCounts(storedJob.workbook),
+        source: explicitLoadFailed ? "explicit-session-active-job-unavailable" : "no-active-job",
+        destination: "builder-dashboard",
+        mode: "none",
       });
-      const storedSavedAt = String(storedJob.savedAt || storedJob.workbook?.savedAt || "");
-      if (needsMasterTemplateMigration(storedJob.workbook)) {
-        await saveJobBackup(storedJob.workbook, new Date().toISOString()).catch(() => {});
-      }
-      const workbookWithTemplateDefaults = await applyTemplateDefaultsToJob(migrateWorkbookToMasterTemplate(storedJob.workbook));
-      if (cancelled) return;
-      const nextWorkbook = normalizeWorkbook(workbookWithTemplateDefaults);
-      setWorkbook(nextWorkbook);
-      setActiveWorkbookPage(resolveLastActiveWorkbookPage(nextWorkbook));
-      setLastSavedAt(storedSavedAt);
-    }).catch(() => {});
+      setRecentJobs(loadRecentEstimateJobs());
+      setRecentEstimateFiles(loadRecentEstimateFiles());
+      setHydrated(true);
+    })();
     return () => {
       cancelled = true;
     };
@@ -309,26 +453,47 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
   useEffect(() => {
     if (previewMode) return undefined;
     if (typeof window === "undefined") return undefined;
+    if (!hydrated) return undefined;
+    if (isProtectedRecoveryRecord({ key: workbookJobKey(workbook) })) return undefined;
+    if (autosavePausedRef.current) return undefined;
     if (autosaveTimerRef.current) window.clearTimeout(autosaveTimerRef.current);
     if (autosaveIdleRef.current && typeof window.cancelIdleCallback === "function") {
       window.cancelIdleCallback(autosaveIdleRef.current);
       autosaveIdleRef.current = null;
     }
     autosaveTimerRef.current = window.setTimeout(() => {
-      const savedAt = new Date().toISOString();
+      if (!workbookHasExplicitJobIdentity(workbook)) return;
+      if (autosaveInFlightRef.current) return;
+      const signature = contentSignature;
+      if (!signature || signature === lastAutosaveSignatureRef.current) return;
       const saveDraftWhenIdle = () => {
-        const draft = prepareWorkbookForJobSave(workbook, savedAt);
-        saveLocalDraftMetadata(draft, savedAt);
-        setLastSavedAt(savedAt);
-        if ((draft.templateKey || draft.templateName) && (!workbook.templateKey && !workbook.templateName)) {
-          setWorkbook((current) => ({
-            ...current,
-            templateKey: draft.templateKey,
-            templateName: draft.templateName,
-            savedAt,
-          }));
-        }
-        saveStoredJob(draft, savedAt).catch(() => {});
+        if (isProtectedRecoveryRecord({ key: workbookJobKey(workbookRef.current) })) return;
+        autosaveInFlightRef.current = true;
+        const snapshot = workbookRef.current;
+        const savingSignature = snapshot === workbook ? signature : jobContentSignature(snapshot);
+        // Use the same stored shape as Save Job. A manual/recovery save adds
+        // template metadata to disk without replacing live edits; saving the
+        // raw live workbook afterwards fails complete-record validation.
+        const savedAt = new Date().toISOString();
+        const draft = prepareWorkbookForJobSave(snapshot, savedAt);
+        setPersistenceStatus({ state: "saving", label: "Saving\u2026", detail: "" });
+        saveVerifiedStoredJob(draft, { savedAt, source: "autosave", updateActivePointer: true })
+          .then((result) => {
+            if (!result?.ok) return;
+            if (workbookJobKey(workbookRef.current) !== result.key) return;
+            lastAutosaveSignatureRef.current = savingSignature;
+            setSavedContentSignature(savingSignature);
+            setLastSavedAt(result.savedAt);
+            // Keep the fast-path restore pointer aligned with every verified save,
+            // not just explicit open/create actions, so a reload never has to fall
+            // back to the slower durable-pointer scan for an already-open job.
+            saveExplicitActiveJobSessionKey(result.key);
+            setPersistenceStatus({ state: "saved", label: `Saved at ${new Date(result.savedAt).toLocaleTimeString()}`, detail: `Application storage ? revision ${result.revision}` });
+          })
+          .catch((error) => setPersistenceStatus({ state: "error", label: `Save failed: ${error.message}`, detail: "Previous successful revision retained." }))
+          .finally(() => {
+            autosaveInFlightRef.current = false;
+          });
       };
       if (typeof window.requestIdleCallback === "function") {
         autosaveIdleRef.current = window.requestIdleCallback(saveDraftWhenIdle, { timeout: 1500 });
@@ -343,7 +508,7 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
         autosaveIdleRef.current = null;
       }
     };
-  }, [workbook, previewMode]);
+  }, [workbook, contentSignature, previewMode, hydrated]);
 
   function setPage(page) {
     if (!ESTIMATE_BUILDER_PAGE_KEYS.has(page)) return;
@@ -381,6 +546,152 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     }));
   }
 
+  function ensureAiPlanTakeoffWorkspace() {
+    const current = workbookRef.current;
+    const existing = workbookAiPlanTakeoffJob(current) || {};
+    if (existing.masterJobId === masterJobId(current) && existing.takeoffId) return existing;
+    const linked = linkTakeoffToMasterJob(current, existing, { storedInMaster: true });
+    const next = { ...current, aiPlanTakeoffJob: linked, takeoffEngine: { ...current.takeoffEngine, aiPlanTakeoffJob: linked } };
+    workbookRef.current = next;
+    setWorkbook(next);
+    return linked;
+  }
+
+  function updateAiPlanTakeoffDraft(jobData = {}) {
+    const current = workbookRef.current;
+    const linked = linkTakeoffToMasterJob(current, jobData);
+    const overwrite = evaluateTakeoffOverwrite(current, linked);
+    if (overwrite.refuse) return { ok: false, message: overwrite.message };
+    const owner = masterJobId(current);
+    updateWorkbookState(latest => {
+      if (masterJobId(latest) !== owner) return latest;
+      if (latest.aiPlanTakeoffJob?.contentChecksum === linked.contentChecksum && linked.contentChecksum) return latest;
+      return { ...latest, aiPlanTakeoffJob: linked, takeoffEngine: { ...latest.takeoffEngine, aiPlanTakeoffJob: linked } };
+    });
+    return { ok: true, jobId: owner };
+  }
+
+  async function saveAiPlanTakeoffJob(jobData = {}) {
+    const savedAt = new Date().toISOString();
+    const previousWorkbook = workbookRef.current;
+    const canonicalJob = linkTakeoffToMasterJob(previousWorkbook, jobData);
+
+    // Refuse a save that would empty the takeoff, before the workbook is replaced or
+    // anything is persisted. Without this the empty job is written first and only
+    // found to be wrong afterwards - by which point the tracing is already gone.
+    const overwrite = evaluateTakeoffOverwrite(previousWorkbook, canonicalJob);
+    if (overwrite.refuse) {
+      return {
+        ok: false,
+        refused: true,
+        reason: overwrite.reason,
+        message: overwrite.message,
+        previousCounts: overwrite.previousCounts,
+        incomingCounts: overwrite.incomingCounts,
+      };
+    }
+
+    await saveStoredJobSnapshotOnly(previousWorkbook, `${savedAt}:pre-ai-plan-takeoff-overwrite`).catch(() => {});
+    if (masterJobId(workbookRef.current) !== canonicalJob.masterJobId) {
+      return { ok: false, message: "A different master job is now open; its takeoff was not changed." };
+    }
+    const nextWorkbook = {
+      ...workbookRef.current,
+      aiPlanTakeoffJob: canonicalJob,
+      takeoffEngine: {
+        ...(workbookRef.current.takeoffEngine || {}),
+        aiPlanTakeoffJob: canonicalJob,
+        updatedAt: savedAt,
+      },
+      savedAt,
+    };
+    workbookRef.current = nextWorkbook;
+    setWorkbook(nextWorkbook);
+    let saveResult = null;
+    let verification = null;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      saveResult = await saveDraft(nextWorkbook);
+      if (saveResult?.ok && saveResult?.key) {
+        const savedRecord = await loadStoredJob(saveResult.key).catch(() => null);
+        const savedWorkbook = savedRecord?.workbook
+          ? await materializeTakeoffPlanPages(savedRecord.workbook).catch(() => savedRecord.workbook)
+          : {};
+        const savedCanonicalJob = savedWorkbook.aiPlanTakeoffJob || savedWorkbook.takeoffEngine?.aiPlanTakeoffJob || null;
+        verification = verifyAiPlanTakeoffSavedJob(canonicalJob, savedCanonicalJob || {});
+        if (verification.ok) break;
+      }
+      if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 250 * (attempt + 1)));
+    }
+    if (!saveResult?.ok || !saveResult?.key || !verification?.ok) {
+      return {
+        ok: false,
+        message: verification
+          ? "Save verification could not confirm the latest plan changes. The active takeoff remains open and unchanged."
+          : "Save failed before verification. The active takeoff remains open and unchanged.",
+        verification,
+        key: saveResult?.key || "",
+      };
+    }
+
+    return {
+      ok: true,
+      message: `Saved - Revision ${verification.revision}`,
+      revision: verification.revision,
+      savedAt: verification.updatedAt || savedAt,
+      verification,
+      key: saveResult.key,
+    };
+  }
+
+  async function attachCurrentWorkbookToProject(project = {}, options = {}) {
+    const currentWorkbook = workbookRef.current || workbook;
+    const projectName = String(project.projectName || workbookJobName(currentWorkbook) || "Untitled job").trim();
+    const projectId = String(project.projectId || project.id || masterJobId(currentWorkbook) || crypto.randomUUID()).trim();
+    const savedAt = new Date().toISOString();
+    const registeredJob = {
+      ...(currentWorkbook.registeredJob || {}),
+      jobId: projectId,
+      jobName: projectName,
+      jobNumber: project.jobNumber || projectName,
+      clientName: project.clientName || currentWorkbook.registeredJob?.clientName || "",
+      siteAddress: project.siteAddress || project.projectAddress || currentWorkbook.registeredJob?.siteAddress || "",
+      workspaceId: project.workspaceId || currentWorkbook.registeredJob?.workspaceId || "",
+    };
+    const nextWorkbook = {
+      ...currentWorkbook,
+      commercialProjectId: projectId,
+      projectId,
+      registeredJobId: projectId,
+      registeredJob,
+      jobFileMeta: {
+        ...(currentWorkbook.jobFileMeta || {}),
+        projectId,
+        jobName: projectName,
+        jobNumber: registeredJob.jobNumber,
+        clientName: registeredJob.clientName,
+        address: registeredJob.siteAddress,
+        localFileOnly: false,
+      },
+      projectName,
+      savedAt,
+    };
+    workbookRef.current = nextWorkbook;
+    setWorkbook(nextWorkbook);
+    if (!options.skipSave) {
+      await saveStoredJob(nextWorkbook, savedAt);
+      saveExplicitActiveJobSessionKey(workbookJobKey(nextWorkbook));
+      setLastSavedAt(savedAt);
+    }
+    return {
+      projectId,
+      projectName,
+      jobNumber: registeredJob.jobNumber,
+      clientName: registeredJob.clientName,
+      siteAddress: registeredJob.siteAddress,
+      workspaceId: registeredJob.workspaceId,
+    };
+  }
+
   function toggleDataSection(section) {
     setWorkbook((current) => ({
       ...current,
@@ -408,6 +719,18 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
         },
       };
     });
+  }
+
+  function importJobSetupTakeoff(payload, selectedKeys, options = {}) {
+    if (previewMode || !hydrated) return { ok: false, message: "Open an editable job before importing takeoff quantities." };
+    try {
+      const nextWorkbook = applyJobSetupImport(workbookRef.current, payload, selectedKeys, options);
+      workbookRef.current = nextWorkbook;
+      setWorkbook(nextWorkbook);
+      return { ok: true, count: selectedKeys.length };
+    } catch (error) {
+      return { ok: false, message: error.message };
+    }
   }
 
   function updateSubcontractorQuote(contractorKey, field, value) {
@@ -732,7 +1055,7 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
   }
 
   function toggleQuoteSection(section) {
-    setWorkbook((current) => ({
+    updateWorkbookState((current) => ({
       ...current,
       quotation: {
         ...current.quotation,
@@ -744,7 +1067,7 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
   }
 
   function collapseAllQuoteSections() {
-    setWorkbook((current) => ({
+    updateWorkbookState((current) => ({
       ...current,
       quotation: Object.fromEntries(Object.entries(current.quotation || {}).map(([section, data]) => [
         section,
@@ -753,37 +1076,51 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     }));
   }
 
+  // Applies a full quotation object (e.g. from windowQuotationSync.js's syncWindowQuotationFromTakeoff,
+  // which merges new/updated rows into the WINDOWS subsections without touching any other section
+  // or any manually-overridden row) in one go - the same updateWorkbookState path every other quote
+  // mutation already goes through, just accepting a whole `quotation` object instead of a single
+  // field edit, since a sync can touch several sections at once.
+  function replaceQuotation(nextQuotation) {
+    updateWorkbookState((current) => ({ ...current, quotation: nextQuotation }));
+  }
+
+  async function applySelectionBaseline(snapshot, foundation) {
+    const owner = browserWorkspaceId();
+    if (!owner || foundation.workspace_id !== owner) throw new Error('Builder workspace changed.');
+    const next = applyCabinetryRequirementsToQuotation(applyInclusionScheduleToQuote(workbookRef.current, snapshot, foundation), owner);
+    const savedAt = new Date().toISOString();
+    const draft = prepareWorkbookForJobSave(next, savedAt);
+    await saveStoredJob(draft, savedAt);
+    if (browserWorkspaceId() !== owner) throw new Error('Builder workspace changed during save.');
+    setWorkbook(normalizeWorkbook(draft));
+    setLastSavedAt(savedAt);
+    return next.selectionMappingReport || [];
+  }
+
   function updateQuote(section, id, key, value) {
     const nextValue = isCurrencyQuoteField(key) ? currencyInputValue(value) : value;
-    setWorkbook((current) => ({
+    // An unpriced Window Schedule line is generated per calculation, so its first edit (the rate
+    // it needs) saves the line itself; the calculation keeps that edit on the regenerated line.
+    const previewRow = String(id || "").startsWith(WINDOW_SCHEDULE_UNPRICED_ROW_PREFIX)
+      ? (preview?.quotation?.[section]?.rows || []).find((row) => row.id === id && !row.windowScheduleUnpricedHeading)
+      : null;
+    const generatedRow = previewRow
+      ? { id, section, item: previewRow.item, unit: previewRow.unit, quantity: "", quantityKey: previewRow.quantityKey, windowScheduleUnpricedRow: true, active: true, formulas: {} }
+      : null;
+    updateWorkbookState((current) => ({
       ...current,
       quotation: {
         ...current.quotation,
         [section]: {
           ...current.quotation[section],
-          rows: current.quotation[section].rows.map((row) => {
+          rows: [
+            ...current.quotation[section].rows,
+            ...(generatedRow && !current.quotation[section].rows.some((row) => row.id === id) ? [generatedRow] : []),
+          ].map((row) => {
             if (row.id !== id) return row;
-            if (key === "quantity" && String(value || "").trim().startsWith("=")) {
-              const formula = String(value || "").trim().slice(1).trim();
-              return {
-                ...row,
-                quantity: "",
-                importedQuantity: "",
-                quantityKey: "",
-                autoQuantity: false,
-                quantityManualOverride: false,
-                formulas: {
-                  ...(row.formulas || {}),
-                  B: formula,
-                  G: row.formulas?.G || `B${quoteRowSourceNumber(row)}*F${quoteRowSourceNumber(row)}`,
-                },
-              };
-            }
-            return {
-              ...row,
-              [key]: nextValue,
-              ...(key === "quantity" ? { autoQuantity: false, quantityManualOverride: true } : {}),
-            };
+            if (key === 'manualRate' && row.selectionSlotId) return { ...applySelectionProduct(row, { source: 'MANUAL_OVERRIDE', productId: row.activeProductId, productName: row.activeProductName, unitPrice: nextValue }), manualRate: nextValue };
+            return updateQuoteQuantityField(row, key, nextValue);
           }),
         },
       },
@@ -795,7 +1132,7 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
 
   function updateQuoteSectionMeta(section, key, value) {
     if (!section || !key) return;
-    setWorkbook((current) => ({
+    updateWorkbookState((current) => ({
       ...current,
       quotation: {
         ...(current.quotation || {}),
@@ -822,6 +1159,7 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     if (!key) return;
     setWorkbook((current) => ({
       ...current,
+      ...(key === "proposalBuilder" ? { projectEstimateBuilder: value } : {}),
       clientPage: {
         ...(current.clientPage || {}),
         [key]: value,
@@ -829,17 +1167,28 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     }));
   }
 
+  function updateProjectEstimateBuilder(value) {
+    setWorkbook((current) => ({
+      ...current,
+      projectEstimateBuilder: value,
+      clientPage: {
+        ...(current.clientPage || {}),
+        proposalBuilder: value,
+      },
+    }));
+  }
+
   function updateEstimateInclusions(nextInclusions) {
     setWorkbook((current) => ({
       ...current,
-      estimateInclusions: normaliseEstimateInclusions(nextInclusions, current.builderId || "local-builder"),
+      estimateInclusions: normaliseEstimateInclusions(nextInclusions, current.workspaceId || browserWorkspaceId() || current.builderId || "local-builder"),
     }));
   }
 
   function updateEstimateInclusionPackage(packageId, key, value) {
     if (!packageId || !key) return;
     setWorkbook((current) => {
-      const estimateInclusions = normaliseEstimateInclusions(current.estimateInclusions, current.builderId || "local-builder");
+      const estimateInclusions = normaliseEstimateInclusions(current.estimateInclusions, current.workspaceId || browserWorkspaceId() || current.builderId || "local-builder");
       return {
         ...current,
         estimateInclusions: {
@@ -853,7 +1202,7 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
   function updateEstimateInclusionSection(sectionId, key, value) {
     if (!sectionId || !key) return;
     setWorkbook((current) => {
-      const estimateInclusions = normaliseEstimateInclusions(current.estimateInclusions, current.builderId || "local-builder");
+      const estimateInclusions = normaliseEstimateInclusions(current.estimateInclusions, current.workspaceId || browserWorkspaceId() || current.builderId || "local-builder");
       return {
         ...current,
         estimateInclusions: {
@@ -867,7 +1216,7 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
   function updateEstimateInclusionSupplier(supplierId, key, value) {
     if (!supplierId || !key) return;
     setWorkbook((current) => {
-      const estimateInclusions = normaliseEstimateInclusions(current.estimateInclusions, current.builderId || "local-builder");
+      const estimateInclusions = normaliseEstimateInclusions(current.estimateInclusions, current.workspaceId || browserWorkspaceId() || current.builderId || "local-builder");
       return {
         ...current,
         estimateInclusions: {
@@ -880,7 +1229,7 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
 
   async function updateStandardInclusions(nextInclusions, options = {}) {
     const currentWorkbook = workbookRef.current || workbook;
-    const standardInclusions = normaliseStandardInclusions(nextInclusions, currentWorkbook.builderId || "local-builder");
+    const standardInclusions = normaliseStandardInclusions(nextInclusions, currentWorkbook.workspaceId || browserWorkspaceId() || currentWorkbook.builderId || "local-builder");
     const nextWorkbook = {
       ...currentWorkbook,
       standardInclusions,
@@ -893,18 +1242,30 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     const savedAt = new Date().toISOString();
     const draft = prepareWorkbookForJobSave(nextWorkbook, savedAt);
     saveLocalDraftMetadata(draft, savedAt);
-    await saveStoredJob(draft, savedAt);
+    await saveVerifiedStoredJob(draft, { savedAt });
+    saveExplicitActiveJobSessionKey(workbookJobKey(draft));
+    if (standardInclusions.documentBuilder?.metadata?.documentType === "standardInclusions") {
+      await saveStoredTemplate(currentWorkbook.templateName || MASTER_TEMPLATE_NAME, {
+        ...nextWorkbook,
+        savedAt,
+      }, {
+        key: currentWorkbook.templateKey || MASTER_TEMPLATE_KEY,
+        templateType: currentWorkbook.templateType || "job",
+      }).catch(() => {});
+    }
     rememberRecentJob(draft, savedAt);
+    rememberRecentEstimateFile(draft, savedAt);
     setRecentJobs(loadRecentEstimateJobs());
+    setRecentEstimateFiles(loadRecentEstimateFiles());
     setLastSavedAt(savedAt);
     const savedRecord = await loadStoredJob(workbookJobKey(draft));
-    return normaliseStandardInclusions(savedRecord?.workbook?.standardInclusions || standardInclusions, currentWorkbook.builderId || "local-builder");
+    return normaliseStandardInclusions(savedRecord?.workbook?.standardInclusions || standardInclusions, currentWorkbook.workspaceId || browserWorkspaceId() || currentWorkbook.builderId || "local-builder");
   }
 
   function updateStandardInclusionPackage(packageId, key, value) {
     if (!packageId || !key) return;
-    setWorkbook((current) => {
-      const standardInclusions = normaliseStandardInclusions(current.standardInclusions, current.builderId || "local-builder");
+    updateWorkbookState((current) => {
+      const standardInclusions = normaliseStandardInclusions(current.standardInclusions, current.workspaceId || browserWorkspaceId() || current.builderId || "local-builder");
       return {
         ...current,
         standardInclusions: {
@@ -917,8 +1278,8 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
 
   function updateStandardInclusionSection(sectionId, key, value) {
     if (!sectionId || !key) return;
-    setWorkbook((current) => {
-      const standardInclusions = normaliseStandardInclusions(current.standardInclusions, current.builderId || "local-builder");
+    updateWorkbookState((current) => {
+      const standardInclusions = normaliseStandardInclusions(current.standardInclusions, current.workspaceId || browserWorkspaceId() || current.builderId || "local-builder");
       return {
         ...current,
         standardInclusions: {
@@ -931,18 +1292,18 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
 
   function selectStandardInclusionsPackage(packageId) {
     if (!packageId) return;
-    setWorkbook((current) => ({
+    updateWorkbookState((current) => ({
       ...current,
       selected_standard_inclusions_package_id: packageId,
       standardInclusions: {
-        ...normaliseStandardInclusions(current.standardInclusions, current.builderId || "local-builder"),
+        ...normaliseStandardInclusions(current.standardInclusions, current.workspaceId || browserWorkspaceId() || current.builderId || "local-builder"),
         selectedPackageId: packageId,
       },
     }));
   }
 
   function updateProductLibrary(nextLibrary) {
-    setWorkbook((current) => ({
+    updateWorkbookState((current) => ({
       ...current,
       productLibrary: normalizeProductLibrary(nextLibrary),
     }));
@@ -1036,11 +1397,11 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
   }
 
   function createPurchaseOrdersFromProcurement() {
-    const items = (workbookRef.current?.procurement?.items || []).filter((item) => !item.removedFromQuote);
+    const items = assignPlasterboardSupplier((workbookRef.current?.procurement?.items || []).filter((item) => !item.removedFromQuote));
     const createdAt = new Date().toISOString();
     const ordersBySupplier = new Map();
     items.forEach((item) => {
-      const supplier = String(item.supplier || "Unassigned Supplier").trim();
+      const supplier = procurementSupplierKey(item);
       if (!ordersBySupplier.has(supplier)) {
         ordersBySupplier.set(supplier, {
           id: `po:${slug(supplier)}:${Date.now().toString(36)}`,
@@ -1109,7 +1470,7 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     if (!section || !preview || preview.errors?.length) return { ok: false, message: "Import preview has errors." };
     const timestamp = new Date().toISOString();
     const backupKey = `section-backup:${section}:${timestamp}`;
-    setWorkbook((current) => {
+    updateWorkbookState((current) => {
       const currentSection = current.quotation?.[section];
       if (!currentSection) return current;
       const updatesById = new Map((preview.updates || []).map((entry) => [entry.id, entry.payload]));
@@ -1146,7 +1507,7 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
 
   function restoreSectionBackup(backupKey = "") {
     if (!backupKey) return { ok: false, message: "Choose a section backup first." };
-    setWorkbook((current) => {
+    updateWorkbookState((current) => {
       const backup = current.sectionBackups?.[backupKey];
       if (!backup?.section || !backup?.sectionData) return current;
       return {
@@ -1178,7 +1539,7 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
       discontinuedWarning: false,
       notes: "",
     };
-    setWorkbook((current) => {
+    updateWorkbookState((current) => {
       const rows = current.quotation[section].rows;
       const anchorIndex = anchorId ? rows.findIndex((row) => row.id === anchorId) : -1;
       const index = anchorIndex >= 0 ? anchorIndex + (position === "before" ? 0 : 1) : rows.length;
@@ -1196,7 +1557,7 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
   }
 
   function duplicateQuoteLine(section, id) {
-    setWorkbook((current) => {
+    updateWorkbookState((current) => {
       const rows = current.quotation[section]?.rows || [];
       const index = rows.findIndex((row) => row.id === id);
       if (index < 0) return current;
@@ -1222,7 +1583,7 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
   function moveQuoteLine(fromSection, id, toSection, targetId = null, position = "after") {
     if (!fromSection || !id || !toSection) return;
     if (fromSection === toSection && id === targetId) return;
-    setWorkbook((current) => {
+    updateWorkbookState((current) => {
       const fromRows = current.quotation[fromSection]?.rows || [];
       const movingRow = fromRows.find((row) => row.id === id);
       if (!movingRow) return current;
@@ -1246,7 +1607,9 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
 
       return {
         ...current,
-        quotation: nextQuotation,
+        // The new position is written onto the lines (sortOrder) as part of the move itself, so
+        // the saved job, the Master Template and an exported .gr8job all carry it.
+        quotation: stampQuotationOrder(nextQuotation, orderedQuoteSections(nextQuotation, current.quotationSectionOrder || [])),
         quoteHistory: appendQuoteHistory(current.quoteHistory, {
           section: toSection,
           id,
@@ -1259,7 +1622,7 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
   }
 
   function deleteQuoteLine(section, id) {
-    setWorkbook((current) => ({
+    updateWorkbookState((current) => ({
       ...current,
       quotation: {
         ...current.quotation,
@@ -1279,7 +1642,7 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
   }
 
   function deleteQuoteSection(section) {
-    setWorkbook((current) => {
+    updateWorkbookState((current) => {
       const { [section]: removed, ...quotation } = current.quotation || {};
       return {
         ...current,
@@ -1292,13 +1655,13 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
   function addQuoteSection() {
     const section = window.prompt("New section name");
     if (!section) return;
-    setWorkbook((current) => {
+    updateWorkbookState((current) => {
       if (current.quotation[section]) return current;
       return {
         ...current,
         quotation: {
           ...current.quotation,
-          [section]: { collapsed: true, rows: [] },
+          [section]: { id: crypto.randomUUID(), collapsed: true, rows: [] },
         },
         quotationSectionOrder: normalizeQuoteSectionOrder([...(current.quotationSectionOrder || []), section], {
           ...current.quotation,
@@ -1309,10 +1672,14 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
   }
 
   function saveQuoteSectionOrder(nextOrder = []) {
-    setWorkbook((current) => ({
-      ...current,
-      quotationSectionOrder: normalizeQuoteSectionOrder(nextOrder, current.quotation || {}),
-    }));
+    updateWorkbookState((current) => {
+      const quotationSectionOrder = normalizeQuoteSectionOrder(nextOrder, current.quotation || {});
+      return {
+        ...current,
+        quotationSectionOrder,
+        quotation: stampQuotationOrder(current.quotation || {}, quotationSectionOrder),
+      };
+    });
   }
 
   function renumberQuoteDisplay() {
@@ -1320,7 +1687,7 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     const result = renumberWorkbookQuoteDisplay(current);
     setRenumberReport(result.report);
     if (!result.ok) return result.report;
-    setWorkbook(result.workbook);
+    updateWorkbookState(result.workbook);
     return result.report;
   }
 
@@ -1339,7 +1706,7 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
   }
 
   function requestPromoteRate(section, id) {
-    setWorkbook((current) => {
+    updateWorkbookState((current) => {
       const row = current.quotation[section]?.rows.find((item) => item.id === id);
       if (!row) return current;
       return {
@@ -1362,8 +1729,13 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
   async function saveDraft(sourceWorkbook = null) {
     if (typeof window === "undefined") return { ok: false, message: "Jobs are not available here." };
     const savedAt = new Date().toISOString();
-    const workbookToSave = sourceWorkbook || workbook;
+    const workbookToSave = sourceWorkbook || workbookRef.current;
+    // Compare later edits with the live snapshot, before storage-only metadata changes.
+    const savingSignature = workbookToSave === workbook ? contentSignature : jobContentSignature(workbookToSave);
     const draft = prepareWorkbookForJobSave(workbookToSave, savedAt);
+    if (!workbookHasExplicitJobIdentity(draft)) {
+      return { ok: false, message: "Create or open a job before saving." };
+    }
     estimateBuilderLog("saving job", {
       source: "current workbook",
       destination: "IndexedDB job store + localStorage metadata",
@@ -1372,26 +1744,90 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
       templateName: draft.templateName,
       mode: "job",
     });
-    saveLocalDraftMetadata(draft, savedAt);
-    await saveStoredJob(draft, savedAt);
-    rememberRecentJob(draft, savedAt);
-    setRecentJobs(loadRecentEstimateJobs());
-    if (sourceWorkbook) {
-      setWorkbook((current) => ({
-        ...current,
-        clientPage: sourceWorkbook.clientPage || current.clientPage,
-        savedAt,
-      }));
-    } else if (draft.templateKey || draft.templateName) {
-      setWorkbook((current) => ({ ...current, templateKey: draft.templateKey, templateName: draft.templateName, savedAt }));
+    setPersistenceStatus({ state: "saving", label: "Saving\u2026", detail: "" });
+    let verification;
+    try {
+      verification = await saveVerifiedStoredJob(draft, { savedAt, source: "manual" });
+    } catch (error) {
+      setPersistenceStatus({ state: "error", label: `Save failed: ${error.message}`, detail: "Previous successful revision retained." });
+      return { ok: false, message: error.message };
     }
+    if (!verification?.ok) return verification;
+    setSavedContentSignature(savingSignature);
+    setPersistenceStatus({ state: "saved", label: `Saved at ${new Date(savedAt).toLocaleTimeString()}`, detail: `Application storage ? ${verification.jobId} ? revision ${verification.revision}` });
+    saveLocalDraftMetadata(draft, savedAt);
+    saveExplicitActiveJobSessionKey(workbookJobKey(draft));
+    rememberRecentJob(draft, savedAt);
+    rememberRecentEstimateFile(draft, savedAt);
+    setRecentJobs(loadRecentEstimateJobs());
+    setRecentEstimateFiles(loadRecentEstimateFiles());
     setLastSavedAt(savedAt);
-    return { ok: true, message: "Job saved.", key: workbookJobKey(draft) };
+    lastAutosaveSignatureRef.current = savingSignature;
+    return { ...verification, ok: true, message: `Saved at ${new Date(savedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`, key: workbookJobKey(draft), payloadBytes: verification.payloadBytes, quotationRows: verification.quotationRows };
+  }
+
+  async function restorePreviousJobRevision() {
+    const key = workbookJobKey(workbookRef.current);
+    const db = await openTemplateDb();
+    const records = await new Promise((resolve, reject) => {
+      const request = db.transaction(JOB_STORE_NAME, "readonly").objectStore(JOB_STORE_NAME).getAll();
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    }).finally(() => db.close());
+    const current = records.find((record) => record.key === key);
+    const previous = records.filter((record) => record.key.startsWith(`${key}:snapshot:`)
+      && Number(record.revision || 0) < Number(current?.revision || 0))
+      .sort((a, b) => Number(b.revision || 0) - Number(a.revision || 0))[0];
+    if (!previous?.workbook && !previous?.originalRecord?.workbook) return { ok: false, message: "No earlier successful revision is available." };
+    const restored = normalizeWorkbook(await materializeTakeoffPlanPages(previous.originalRecord?.workbook || previous.workbook));
+    completedJobLoadVersionRef.current += 1;
+    updateWorkbookState(restored);
+    return saveDraft(restored);
+  }
+
+  async function closeCurrentJob() {
+    workbookLoadOperationRef.current += 1;
+    autosavePausedRef.current = false;
+    const nextWorkbook = initialWorkbook({}, { previewMode: false });
+    workbookRef.current = nextWorkbook;
+    setWorkbook(nextWorkbook);
+    setActiveWorkbookPage("projectDashboard");
+    setLastSavedAt("");
+    clearActiveRegisteredEstimateJob();
+    clearExplicitActiveJobSessionKey();
+    await clearActiveStoredJob().catch(() => {});
+    setRecentJobs(loadRecentEstimateJobs());
+    setRecentEstimateFiles(loadRecentEstimateFiles());
+    return { ok: true, message: "Job closed." };
+  }
+
+  async function restoreExplicitActiveJob() {
+    const startingWorkbook = workbookRef.current;
+    const operation = workbookLoadOperationRef.current;
+    const explicitJobKey = loadExplicitActiveJobSessionKey();
+    if (!explicitJobKey) return { ok: false, message: "No explicit active job is recorded for this browser session." };
+    const record = await loadStoredJob(explicitJobKey).catch(() => null);
+    if (!record?.workbook || record.type !== "job" || isCorruptEstimateJobRecord(record) || isBlockedEstimateBuilderActiveJob(record)) {
+      clearExplicitActiveJobSessionKey();
+      return { ok: false, message: "The explicit active job could not be restored." };
+    }
+    const preservedJobPackage = collectSavedJobPackageSections(record.workbook);
+    const nextWorkbook = normalizeWorkbook(restoreSavedJobPackageSections(
+      await applyTemplateDefaultsToJob(migrateWorkbookToMasterTemplate(record.workbook)),
+      preservedJobPackage
+    ));
+    if (startingWorkbook !== workbookRef.current || operation !== workbookLoadOperationRef.current) return { ok: false, message: "Current edits or a newer job open superseded restoration." };
+    workbookRef.current = nextWorkbook;
+    setWorkbook(nextWorkbook);
+    setLastSavedAt(record.savedAt || nextWorkbook.savedAt || "");
+    setRecentJobs(loadRecentEstimateJobs());
+    setRecentEstimateFiles(loadRecentEstimateFiles());
+    return { ok: true, key: explicitJobKey, workbook: nextWorkbook };
   }
 
   function prepareWorkbookForJobSave(sourceWorkbook = workbookRef.current, savedAt = new Date().toISOString()) {
     return compactWorkbookForStorage({
-      ...sourceWorkbook,
+      ...withPersistedQuotationOrder(sourceWorkbook),
       templateKey: MASTER_TEMPLATE_KEY,
       templateName: MASTER_TEMPLATE_NAME,
       templateType: "job",
@@ -1413,12 +1849,18 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     if (needsMasterTemplateMigration(storedJob.workbook)) {
       await saveJobBackup(storedJob.workbook, new Date().toISOString()).catch(() => {});
     }
-    const nextWorkbook = normalizeWorkbook(await applyTemplateDefaultsToJob(migrateWorkbookToMasterTemplate(storedJob.workbook)));
+    const preservedJobPackage = collectSavedJobPackageSections(storedJob.workbook);
+    const nextWorkbook = normalizeWorkbook(restoreSavedJobPackageSections(
+      await applyTemplateDefaultsToJob(migrateWorkbookToMasterTemplate(storedJob.workbook)),
+      preservedJobPackage
+    ));
     setWorkbook(nextWorkbook);
     setActiveWorkbookPage(resolveLastActiveWorkbookPage(nextWorkbook));
     setLastSavedAt(storedJob.savedAt || storedJob.workbook?.savedAt || "");
     rememberRecentJob(storedJob.workbook, storedJob.savedAt || storedJob.workbook?.savedAt || "");
+    rememberRecentEstimateFile(storedJob.workbook, storedJob.savedAt || storedJob.workbook?.savedAt || "");
     setRecentJobs(loadRecentEstimateJobs());
+    setRecentEstimateFiles(loadRecentEstimateFiles());
   }
 
   async function saveTemplateAs(name, options = {}) {
@@ -1582,15 +2024,21 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     if (!template) return { ok: false, message: "Template could not be found." };
     const savedAt = new Date().toISOString();
     const jobWorkbook = applyJobDetailsToWorkbook(createCleanJobFromMasterTemplate(template, savedAt), jobDetails);
+    jobWorkbook.jobId = crypto.randomUUID();
+    jobWorkbook.jobFileMeta = { ...jobWorkbook.jobFileMeta, localFileOnly: true };
     jobWorkbook.createdFromMasterTemplateAt = savedAt;
     const draft = prepareWorkbookForJobSave(jobWorkbook, savedAt);
     saveLocalDraftMetadata(draft, savedAt);
-    await saveStoredJob(draft, savedAt);
+    await saveVerifiedStoredJob(draft, { savedAt });
+    saveExplicitActiveJobSessionKey(workbookJobKey(draft));
     rememberRecentJob(draft, savedAt);
+    rememberRecentEstimateFile(draft, savedAt);
     setRecentJobs(loadRecentEstimateJobs());
+    setRecentEstimateFiles(loadRecentEstimateFiles());
     setWorkbook(jobWorkbook);
     setActiveWorkbookPage(resolveLastActiveWorkbookPage(jobWorkbook));
     setLastSavedAt(savedAt);
+    setSavedContentSignature(jobContentSignature(jobWorkbook));
     await refreshTemplateSummaries();
     return { ok: true, message: "New job created from master template.", key: MASTER_TEMPLATE_KEY, workbook: jobWorkbook };
   }
@@ -1728,21 +2176,58 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     }
   }
 
-  async function refreshSavedJobSummaries() {
+  async function refreshSavedJobSummaries(options = {}) {
+    const workspaceId = String(options.workspaceId || options.workspace_id || "").trim();
+    setSavedJobSummariesStatus({ state: "loading", message: "Loading jobs..." });
     try {
-      const jobs = await listStoredJobs();
+      const localJobs = await listStoredJobs();
+      // A computer-saved master job exists independently of a cloud workspace.
+      // Cloud registration enriches the shared list; it never gates local jobs.
+      let platformJobs = [];
+      let platformError = "";
+      if (workspaceId) {
+        try { platformJobs = await listWorkspaceProjectJobs(workspaceId, workbookRef.current, localJobs); }
+        catch (error) { platformError = error.message || "Platform jobs could not be loaded."; }
+      }
+      const jobs = mergeMasterJobSummaries(localJobs, platformJobs);
       setSavedJobSummaries(jobs);
       setRecentJobs(loadRecentEstimateJobs());
+      setRecentEstimateFiles(loadRecentEstimateFiles());
+      setSavedJobSummariesStatus({
+        state: "ready",
+        message: platformError || (jobs.length ? "Jobs found" : "No saved jobs yet"),
+      });
       return jobs;
-    } catch {
+    } catch (error) {
       setSavedJobSummaries([]);
+      setSavedJobSummariesStatus({ state: "error", message: error?.message || "Unable to load jobs" });
       return [];
     }
   }
 
+  function removeRecentJob(key = "") {
+    const next = loadRecentEstimateJobs().filter((item) => item.key !== key);
+    saveRecentEstimateJobs(next);
+    setRecentJobs(next);
+  }
+
+  function removeRecentEstimateFile(key = "") {
+    const next = loadRecentEstimateFiles().filter((item) => item.key !== key);
+    saveRecentEstimateFiles(next);
+    setRecentEstimateFiles(next);
+  }
+
   async function openSavedJob(jobKey) {
+    const operationId = ++workbookLoadOperationRef.current;
     if (typeof window === "undefined" || !jobKey) return { ok: false, message: "Choose a saved job first." };
-    const record = await loadStoredJob(jobKey).catch(() => null);
+    const platformJob = savedJobSummaries.find((job) => job.key === jobKey && job.source === "builder_commercial_projects");
+    if (String(jobKey).startsWith("project:") && !platformJob) {
+      return openProjectJobFailure({ operation: "open project job", projectId: String(jobKey).replace(/^project:/, ""), status: "not_scoped", message: "This job is not in the current builder workspace list and was not opened." });
+    }
+    if (platformJob?.projectId) {
+      return openWorkspaceProjectJob(platformJob);
+    }
+    const record = await loadStoredJob(jobKey);
     if (!record?.workbook) return { ok: false, message: "Saved job could not be found." };
     if (isCorruptEstimateJobRecord(record) || isBlockedEstimateBuilderJobKey(record.key)) {
       return { ok: false, message: "This saved job is blocked and cannot be opened." };
@@ -1750,49 +2235,388 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     if (needsMasterTemplateMigration(record.workbook)) {
       await saveJobBackup(record.workbook, new Date().toISOString()).catch(() => {});
     }
-    const nextWorkbook = normalizeWorkbook(await applyTemplateDefaultsToJob(migrateWorkbookToMasterTemplate(record.workbook)));
+    const preservedJobPackage = collectSavedJobPackageSections(record.workbook);
+    const nextWorkbook = normalizeWorkbook(restoreSavedJobPackageSections(
+      await applyTemplateDefaultsToJob(migrateWorkbookToMasterTemplate(record.workbook)),
+      preservedJobPackage
+    ));
+    if (operationId !== workbookLoadOperationRef.current) return { ok: false, message: "A newer job was opened." };
     const savedAt = record.savedAt || nextWorkbook.savedAt || "";
     await setActiveStoredJob(record).catch(() => {});
+    saveExplicitActiveJobSessionKey(record.key);
     rememberRecentJob(nextWorkbook, savedAt);
+    rememberRecentEstimateFile(nextWorkbook, savedAt);
     setRecentJobs(loadRecentEstimateJobs());
-    setWorkbook(nextWorkbook);
+    setRecentEstimateFiles(loadRecentEstimateFiles());
+    completedJobLoadVersionRef.current += 1;
+    updateWorkbookState(nextWorkbook);
+    setSavedContentSignature(jobContentSignature(nextWorkbook));
+    setPersistenceStatus({ state: "idle", label: "", detail: "" });
     setActiveWorkbookPage(resolveLastActiveWorkbookPage(nextWorkbook));
     setLastSavedAt(savedAt);
-    return { ok: true, message: "Saved job opened.", key: record.key };
+    return { ok: true, message: "Saved job opened.", key: record.key, workbook: nextWorkbook };
   }
 
-  async function loadJobFileText(text, fileName = "") {
+  async function openWorkspaceProjectJob(projectSummary = {}) {
+    const projectId = String(projectSummary.projectId || projectSummary.id || "").trim();
+    const workspaceId = String(projectSummary.workspaceId || "").trim();
+    if (!projectId) return openProjectJobFailure({ operation: "open project job", projectId, status: "missing_project_id", message: "Choose a project job first." });
+    try {
+      const project = projectSummary.rawProject || await loadWorkspaceProjectJob(projectId, workspaceId);
+      if (!project?.id) {
+        return openProjectJobFailure({ operation: "load project record", projectId, status: "not_found", message: "Project job could not be found." });
+      }
+
+      const localRecord = projectSummary.localJobKey ? await loadStoredJob(projectSummary.localJobKey).catch((error) => {
+        console.error("[Estimate Builder] failed to load local project workbook", { projectId, localJobKey: projectSummary.localJobKey, error });
+        throw error;
+      }) : null;
+      const snapshotRecord = localRecord?.workbook ? null : await loadLatestWorkspaceProjectWorkbookSnapshot(project.id, project.workspace_id || workspaceId);
+      const sourceWorkbook = localRecord?.workbook || workbookFromEstimateSnapshot(snapshotRecord) || project.source_metadata?.workbook || null;
+      if (!sourceWorkbook) {
+        return openProjectJobFailure({
+          operation: "load saved estimate workbook",
+          projectId: project.id,
+          status: "not_found",
+          message: "This project says an Estimate Builder workbook exists, but no saved workbook payload could be loaded.",
+        });
+      }
+      if (isCorruptEstimateJobWorkbook(sourceWorkbook)) {
+        return openProjectJobFailure({
+          operation: "deserialize saved estimate workbook",
+          projectId: project.id,
+          status: "blocked_workbook",
+          message: "The saved Estimate Builder workbook is blocked or corrupt and cannot be opened safely.",
+        });
+      }
+
+      const savedAt = snapshotRecord?.workbook_metadata?.savedAt || snapshotRecord?.created_at || localRecord?.savedAt || sourceWorkbook.savedAt || new Date().toISOString();
+      const currentPage = ESTIMATE_BUILDER_PAGE_KEYS.has(workbookRef.current?.page) ? workbookRef.current.page : activeWorkbookPage;
+      const preservedJobPackage = collectSavedJobPackageSections(sourceWorkbook);
+      const migratedWorkbook = restoreSavedJobPackageSections(
+        await applyTemplateDefaultsToJob(migrateWorkbookToMasterTemplate(sourceWorkbook)),
+        preservedJobPackage
+      );
+      const nextWorkbook = normalizeWorkbook({
+        ...applyWorkspaceProjectToWorkbook(migratedWorkbook, project, savedAt),
+        page: ESTIMATE_BUILDER_PAGE_KEYS.has(currentPage) ? currentPage : "projectDashboard",
+      });
+      const draft = prepareWorkbookForJobSave(nextWorkbook, savedAt);
+      const record = { type: "job", key: workbookJobKey(draft), name: workbookJobName(draft), savedAt, workbook: draft };
+      // Opening a local revision must not replace its verified payload or revision metadata.
+      if (!localRecord?.workbook) await saveStoredJob(draft, savedAt);
+      await setActiveStoredJob(localRecord?.workbook ? localRecord : record);
+      saveExplicitActiveJobSessionKey(record.key);
+      rememberRecentJob(draft, savedAt);
+      rememberRecentEstimateFile(draft, savedAt);
+      setRecentJobs(loadRecentEstimateJobs());
+      setRecentEstimateFiles(loadRecentEstimateFiles());
+      completedJobLoadVersionRef.current += 1;
+      setWorkbook(nextWorkbook);
+      setActiveWorkbookPage(ESTIMATE_BUILDER_PAGE_KEYS.has(currentPage) ? currentPage : resolveLastActiveWorkbookPage(nextWorkbook));
+      setLastSavedAt(savedAt);
+      saveActiveWorkspaceProjectPointer(project.workspace_id || workspaceId, project.id);
+      return {
+        ok: true,
+        message: localRecord?.workbook ? "Project job opened from local saved workbook." : "Project job opened from saved Estimate Builder snapshot.",
+        key: record.key,
+        projectId: project.id,
+        workspaceId: project.workspace_id || workspaceId,
+        snapshotId: snapshotRecord?.id || "",
+        source: localRecord?.workbook ? "indexeddb" : "builder_estimate_snapshots",
+      };
+    } catch (error) {
+      return openProjectJobFailure({
+        operation: "open project job",
+        projectId,
+        status: error?.status || error?.statusCode || error?.code || "error",
+        message: error?.message || "Project job could not be opened.",
+        error,
+      });
+    }
+  }
+
+  async function loadJobFileData(parsed, fileName = "", options = {}) {
     if (isCorruptEstimateJobFileName(fileName)) {
       throw new Error("estimate-job.json is blocked and cannot be opened.");
     }
-    const parsed = JSON.parse(text);
-    const workbookFromFile = parsed?.workbook || parsed;
-    estimateBuilderLog("loading workbook", {
-      source: "job file",
+    if (!parsed || typeof parsed !== "object") {
+      throw new Error("Invalid or unsupported GR8 job file.");
+    }
+    const loadOperationId = workbookLoadOperationRef.current + 1;
+    workbookLoadOperationRef.current = loadOperationId;
+    autosavePausedRef.current = true;
+    const sourceFileMeta = options?.sourceFileMeta || {};
+    const beforeIdentity = describeWorkbookIdentity(workbookRef.current);
+    try {
+    const workbookPayload = parsed?.workbook || parsed;
+    const packagedTakeoff = parsed?.takeoff && typeof parsed.takeoff === "object"
+      ? parsed.takeoff
+      : parsed?.moduleData?.takeoff && typeof parsed.moduleData.takeoff === "object"
+        ? parsed.moduleData.takeoff
+        : {};
+    const parsedIdentity = describeJobFileIdentity(parsed, workbookPayload || {});
+      const protectedProjectId = PROTECTED_RECOVERY_JOB_KEY.replace(/^job:/, "");
+      // One stable working copy per protected job. A timestamped id used to be minted on
+      // every open, which silently orphaned every downstream record keyed by project id -
+      // Client Selections drafts most visibly - so each re-open looked like lost work.
+      // Any id already carried by the file wins, so a reopened copy keeps its own identity.
+      const recoveredProjectId = parsedIdentity.projectId === protectedProjectId
+        ? recoveredWorkingCopyProjectId(parsed, workbookPayload, protectedProjectId)
+        : "";
+      const effectiveProjectId = recoveredProjectId || parsedIdentity.projectId;
+    const workbookFromFile = {
+      ...(workbookPayload || {}),
+        jobId: recoveredProjectId || workbookPayload?.jobId || parsed?.jobId || effectiveProjectId || crypto.randomUUID(),
+        projectId: effectiveProjectId || workbookPayload?.projectId || "",
+        commercialProjectId: effectiveProjectId || workbookPayload?.commercialProjectId || workbookPayload?.projectId || "",
+        registeredJobId: effectiveProjectId || workbookPayload?.registeredJobId || "",
+      registeredJob: {
+        ...(workbookPayload?.registeredJob || {}),
+          jobId: effectiveProjectId || workbookPayload?.registeredJob?.jobId || workbookPayload?.registeredJobId || "",
+        jobName: parsedIdentity.projectName || workbookPayload?.registeredJob?.jobName || "",
+        jobNumber: parsedIdentity.jobNumber || workbookPayload?.registeredJob?.jobNumber || "",
+        clientName: parsedIdentity.clientName || workbookPayload?.registeredJob?.clientName || "",
+        siteAddress: parsedIdentity.address || workbookPayload?.registeredJob?.siteAddress || "",
+      },
+      jobFileMeta: {
+        ...(workbookPayload?.jobFileMeta || {}),
+        projectId: effectiveProjectId || workbookPayload?.jobFileMeta?.projectId || "",
+        sourceProjectId: recoveredProjectId ? parsedIdentity.projectId : workbookPayload?.jobFileMeta?.sourceProjectId || "",
+        recoveredFromProtectedJob: Boolean(recoveredProjectId),
+        jobName: parsedIdentity.projectName || workbookPayload?.jobFileMeta?.jobName || "",
+        clientName: parsedIdentity.clientName || workbookPayload?.jobFileMeta?.clientName || "",
+        jobNumber: parsedIdentity.jobNumber || workbookPayload?.jobFileMeta?.jobNumber || "",
+        address: parsedIdentity.address || workbookPayload?.jobFileMeta?.address || "",
+        lastModified: parsed?.lastModified || workbookPayload?.jobFileMeta?.lastModified || "",
+        localFileOnly: workbookPayload?.jobFileMeta?.localFileOnly ?? !workbookAttachedProjectId(workbookPayload || {}),
+      },
+      aiPlanTakeoffJob: workbookPayload?.aiPlanTakeoffJob || packagedTakeoff.aiPlanTakeoffJob || null,
+      takeoffEngine: workbookPayload?.takeoffEngine || packagedTakeoff.takeoffEngine || {},
+      aiTakeoffProject: workbookPayload?.aiTakeoffProject || packagedTakeoff.aiTakeoffProject || null,
+      plans: workbookPayload?.plans || packagedTakeoff.plans || [],
+      ...(parsed?.projectEstimate && !workbookPayload?.projectEstimateBuilder && !workbookPayload?.clientPage?.proposalBuilder
+        ? { projectEstimateBuilder: parsed.projectEstimate } : {}),
+      ...(parsed?.selectionSchedule && !workbookPayload?.clientSelectionsBook ? { clientSelectionsBook: parsed.selectionSchedule } : {}),
+      ...(parsed?.schedule && !workbookPayload?.gantt && !workbookPayload?.projectSchedule ? { projectSchedule: parsed.schedule } : {}),
+    };
+    estimateBuilderLog("local job file selected", {
+      source: "local job file",
       fileName,
+      fileSize: sourceFileMeta.size ?? null,
+      fileLastModified: sourceFileMeta.lastModified ?? "",
+      detectedFormat: parsed?.type || parsed?.manifest?.type || "legacy-json-workbook",
+      detectedVersion: parsed?.schemaVersion || parsed?.manifest?.schemaVersion || parsed?.manifest?.version || "",
+      parsed: describeJobFileIdentity(parsed, workbookFromFile),
+      currentProjectIdBeforeImport: beforeIdentity.projectId,
       ...takeoffPersistenceCounts(workbookFromFile),
     });
     if (isCorruptEstimateJobWorkbook(workbookFromFile)) {
+      if (workbookLoadOperationRef.current === loadOperationId) autosavePausedRef.current = false;
       throw new Error("estimate-job.json is blocked and cannot be opened.");
     }
     const savedAt = new Date().toISOString();
-    await saveJobBackup(workbookFromFile, savedAt).catch(() => {});
+    const preservedJobPackage = collectSavedJobPackageSections(workbookFromFile);
     let nextWorkbook = migrateWorkbookToMasterTemplate({
       ...workbookFromFile,
       openedFileName: fileName || workbookFromFile?.openedFileName || workbookFromFile?.sourceFileName || "",
       sourceFileName: fileName || workbookFromFile?.sourceFileName || workbookFromFile?.openedFileName || "",
     });
     nextWorkbook = await applyTemplateDefaultsToJob(nextWorkbook);
+    nextWorkbook = restoreSavedJobPackageSections(nextWorkbook, preservedJobPackage);
+    if (workbookLoadOperationRef.current !== loadOperationId) {
+      return { ok: false, message: "A newer job file open operation replaced this one." };
+    }
     const draft = prepareWorkbookForJobSave(nextWorkbook, savedAt);
+    await saveJobBackup(workbookFromFile, savedAt).catch(() => {});
     saveLocalDraftMetadata(draft, savedAt);
-    await saveStoredJob(draft, savedAt);
+    await saveVerifiedStoredJob(draft, { savedAt });
+    saveExplicitActiveJobSessionKey(workbookJobKey(draft));
     const normalisedWorkbook = normalizeWorkbook(nextWorkbook);
+    if (workbookLoadOperationRef.current !== loadOperationId) {
+      return { ok: false, message: "A newer job file open operation replaced this one." };
+    }
+    completedJobLoadVersionRef.current += 1;
     setWorkbook(normalisedWorkbook);
     setActiveWorkbookPage(resolveLastActiveWorkbookPage(normalisedWorkbook));
     setLastSavedAt(parsed?.savedAt || nextWorkbook?.savedAt || savedAt);
     rememberRecentJob(nextWorkbook, parsed?.savedAt || nextWorkbook?.savedAt || savedAt);
+    rememberRecentEstimateFile(nextWorkbook, parsed?.savedAt || nextWorkbook?.savedAt || savedAt);
     setRecentJobs(loadRecentEstimateJobs());
+    setRecentEstimateFiles(loadRecentEstimateFiles());
+    estimateBuilderLog("local job file opened", {
+      source: "local job file",
+      fileName,
+      projectIdAfterImport: describeWorkbookIdentity(normalisedWorkbook).projectId,
+      storageKey: workbookJobKey(draft),
+      bannerIdentity: describeWorkbookIdentity(normalisedWorkbook),
+      writeTiming: "after parse, validation and user confirmation",
+    });
+    if (workbookLoadOperationRef.current === loadOperationId) autosavePausedRef.current = false;
+    return { ok: true, key: workbookJobKey(draft) };
+    } catch (error) {
+      if (workbookLoadOperationRef.current === loadOperationId) autosavePausedRef.current = false;
+      throw error;
+    }
   }
+
+  async function loadJobFileText(text, fileName = "") {
+    if (isCorruptEstimateJobFileName(fileName)) {
+      throw new Error("estimate-job.json is blocked and cannot be opened.");
+    }
+    if (!String(text || "").trim()) {
+      throw new Error("Selected job file is empty.");
+    }
+    return loadJobFileData(JSON.parse(text), fileName);
+  }
+
+  // Client Selections saves run one at a time, newest book last. Each one waits on a network
+  // request before it writes, so two started together used to finish in either order and the
+  // older book could be the one left in the job. A save still waiting when a newer one arrives
+  // is superseded by it: every book is the complete selection state, so only the newest matters.
+  function updateClientSelectionsBook(bookForSave = {}, options = {}) {
+    return new Promise((resolve, reject) => {
+      const waiters = [...(clientSelectionsSavePendingRef.current?.waiters || []), { resolve, reject }];
+      clientSelectionsSavePendingRef.current = { bookForSave, options, waiters };
+      drainClientSelectionsSaves();
+    });
+  }
+
+  async function drainClientSelectionsSaves() {
+    if (clientSelectionsSaveRunningRef.current) return;
+    clientSelectionsSaveRunningRef.current = true;
+    try {
+      while (clientSelectionsSavePendingRef.current) {
+        const { bookForSave, options, waiters } = clientSelectionsSavePendingRef.current;
+        clientSelectionsSavePendingRef.current = null;
+        try {
+          const result = await saveClientSelectionsBookRef.current(bookForSave, options);
+          waiters.forEach((waiter) => waiter.resolve(result));
+        } catch (error) {
+          waiters.forEach((waiter) => waiter.reject(error));
+        }
+      }
+    } finally {
+      clientSelectionsSaveRunningRef.current = false;
+    }
+  }
+
+  async function saveClientSelectionsBook(bookForSave = {}, options = {}) {
+    const identity = describeWorkbookIdentity(workbookRef.current);
+    if (!identity.projectId) {
+      return { ok: false, message: "Open or create a job before saving client selections." };
+    }
+    const owner = browserWorkspaceId();
+    if (!owner) throw new Error('Choose a builder workspace before saving selections.');
+    const { data: auth } = await supabase.auth.getSession();
+    // The builder's selection configuration only maps selections onto configured quote targets.
+    // The selections themselves are the user's work and belong to this job whether or not that
+    // lookup answers: when it fails (expired sign-in, offline, server error) the save used to be
+    // abandoned without a word, so nothing chosen in Client Selections - cabinetry quantities
+    // included - ever reached the job or the Quotation Builder. Now the selections are saved and
+    // the cabinetry quote sync runs; only the configured-target mapping waits for the next save.
+    let foundation = null;
+    try {
+      const response = await fetch('/api/builders/selection-foundation', { headers: { Authorization: `Bearer ${auth?.session?.access_token || ''}`, 'x-workspace-id': owner } });
+      if (!response.ok) throw new Error(`status ${response.status}`);
+      foundation = await response.json();
+    } catch (error) {
+      console.warn('[Client Selections] builder selection configuration unavailable; selections saved without configured quote-target mapping.', error?.message || error);
+    }
+    if ((foundation && foundation.workspace_id !== owner) || browserWorkspaceId() !== owner) throw new Error('Builder workspace changed during save.');
+    if (describeWorkbookIdentity(workbookRef.current).projectId !== identity.projectId) {
+      return { ok: false, message: "A different job was opened before these client selections were saved." };
+    }
+    const savedAt = new Date().toISOString();
+    const revision = `client-selections:${savedAt}`;
+    const nextBook = {
+      ...(bookForSave || {}),
+      projectInfo: {
+        ...(bookForSave?.projectInfo || {}),
+        projectId: identity.projectId,
+        projectName: identity.projectName,
+        jobNumber: identity.jobNumber,
+        clientName: identity.clientName,
+        siteAddress: identity.address,
+      },
+      metadata: {
+        ...(bookForSave?.metadata || {}),
+        projectId: identity.projectId,
+        selectionRevision: revision,
+        savedAt,
+        source: "active-master-job",
+      },
+      updatedAt: savedAt,
+    };
+    // The selections and the quotation lines linked to them, written onto a job. Pure, so the
+    // same change can be put onto the live job if that moved on while this save was being stored.
+    const withSelections = (source) => {
+      const nextWorkbook = {
+        ...source,
+        clientSelectionsBook: nextBook,
+        selectionsBook: nextBook,
+        selectionSchedule: nextBook,
+        selectionSchedules: nextBook,
+        // The project's room corrections travel with the job, not only inside the Selections Book.
+        ...(nextBook.projectRoomModel ? { projectRoomModel: nextBook.projectRoomModel } : {}),
+        savedAt,
+        jobFileMeta: {
+          ...(source?.jobFileMeta || {}),
+          projectId: identity.projectId,
+          jobName: identity.projectName,
+          clientName: identity.clientName,
+          jobNumber: identity.jobNumber,
+          address: identity.address,
+          lastModified: savedAt,
+        },
+      };
+      const connected = foundation ? connectTenantSelectionMetadata(nextWorkbook, nextBook, foundation, { productById: masterProductById }) : nextWorkbook;
+      // Paint colours are a specification on the estimate's own painting lines: no rows, quantities or rates change.
+      const withColours = linkInternalPaintColoursToQuotation(applyCabinetryRequirementsToQuotation(preserveQuoteQuantityOwnership(nextWorkbook, connected), owner), nextBook);
+      // Electrical point quantities: one quotation row per room and point (stable ids), priced from the estimate's own electrical rates.
+      return prepareWorkbookForJobSave(connectElectricalScheduleToQuotation(withColours, nextBook), savedAt);
+    };
+    // Taken after the network wait, immediately before the write: the job as it is now.
+    const savedFrom = workbookRef.current;
+    const draft = withSelections(savedFrom);
+    const jobKey = workbookJobKey(draft);
+    await saveStoredJob(draft, savedAt);
+    const verification = await loadStoredJob(jobKey).catch(() => null);
+    const verifiedBook = verification?.workbook?.clientSelectionsBook;
+    const verifiedRevision = verifiedBook?.metadata?.selectionRevision;
+    const verifiedProjectId = workbookAttachedProjectId(verification?.workbook || {});
+    if (verifiedProjectId !== identity.projectId || verifiedRevision !== revision) {
+      return { ok: false, message: "Client Selections save verification failed." };
+    }
+    // Saving is not opening a job. The stored copy is never put back over the job on screen:
+    // only this save's own change is applied, onto whatever the live job is by now. If another
+    // job has been opened in the meantime the stored job is correct and the screen is left alone.
+    const live = workbookRef.current;
+    if (workbookJobKey(live) === jobKey) {
+      const applied = normalizeWorkbook(live === savedFrom ? draft : withSelections(live));
+      workbookRef.current = applied;
+      setWorkbook((current) => {
+        if (current === live) return applied;
+        if (workbookJobKey(current) !== jobKey) return current;
+        return normalizeWorkbook(withSelections(current));
+      });
+      setLastSavedAt(savedAt);
+      // Client Selections saves go straight through saveStoredJob and used to skip
+      // this, so a reload after confirming a selection could fall back to the
+      // slower durable-pointer scan (or, before that existed, show "No job open").
+      saveExplicitActiveJobSessionKey(jobKey);
+    }
+    rememberRecentJob(draft, savedAt);
+    setRecentJobs(loadRecentEstimateJobs());
+    return {
+      ok: true,
+      message: options.successMessage || `Client Selections saved to ${identity.jobNumber || identity.projectName}.`,
+      book: nextBook,
+      selectionRevision: revision,
+      projectId: identity.projectId,
+    };
+  }
+  saveClientSelectionsBookRef.current = saveClientSelectionsBook;
 
   const formulaRows = Array.isArray(workbook.formulaRows)
     ? workbook.formulaRows
@@ -1804,6 +2628,7 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     quoteSections,
     windowTypes: V4_WINDOW_TYPES,
     workbook: displayWorkbook,
+    hydrated,
     previewMode,
     preview,
     lineSearch,
@@ -1812,7 +2637,17 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     lastSavedAt,
     templateSummaries,
     savedJobSummaries,
+    savedJobSummariesStatus,
     recentJobs,
+    recentEstimateFiles,
+    persistenceStatus,
+    storagePersisted,
+    dirty: workbookHasExplicitJobIdentity(workbook) && contentSignature !== savedContentSignature,
+    getCurrentWorkbook: () => workbookRef.current,
+    ensureAiPlanTakeoffWorkspace,
+    jobLoadVersion: completedJobLoadVersionRef.current,
+    updateAiPlanTakeoffDraft,
+    restorePreviousJobRevision,
     renumberReport,
     setLineSearch,
     setHideUnused,
@@ -1821,8 +2656,11 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     updatePlans,
     updateTakeoffProject,
     updateTakeoffEngineState,
+    saveAiPlanTakeoffJob,
+    attachCurrentWorkbookToProject,
     toggleDataSection,
     updateData,
+    importJobSetupTakeoff,
     updateSubcontractorQuote,
     updateDataRowMeta,
     addDataRow,
@@ -1842,6 +2680,7 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     resetWindowsDoorsFromExcel,
     toggleQuoteSection,
     collapseAllQuoteSections,
+    replaceQuotation,
     updateQuote,
     updateQuoteSectionMeta,
     updateSummaryAdjustment,
@@ -1865,16 +2704,21 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     applySectionCsvImport,
     restoreSectionBackup,
     addQuoteLine,
+    addCabinetryCatalogueItem: importKey => updateWorkbookState(current => addCabinetryCatalogueItem(current, importKey, browserWorkspaceId())),
+    setCabinetryRequirements: items => updateWorkbookState(current => applyCabinetryRequirementsToQuotation(setCabinetryRequirements(current, items), current.workspaceId || browserWorkspaceId())),
     duplicateQuoteLine,
     moveQuoteLine,
     deleteQuoteLine,
     deleteQuoteSection,
     addQuoteSection,
     saveQuoteSectionOrder,
+    acknowledgeNotification: (notification) => updateWorkbookState((current) => acknowledgeQuotationNotification(current, notification)),
     renumberQuoteDisplay,
     requestPromoteFormula,
     requestPromoteRate,
     saveDraft,
+    closeCurrentJob,
+    restoreExplicitActiveJob,
     loadDraft,
     saveTemplate,
     saveTemplateChanges,
@@ -1890,9 +2734,15 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     refreshTemplateSummaries,
     refreshSavedJobSummaries,
     openSavedJob,
+    removeRecentJob,
+    removeRecentEstimateFile,
     loadTemplate,
     relinkCurrentJobToExistingTemplate,
+    loadJobFileData,
     loadJobFileText,
+    updateClientSelectionsBook,
+    applySelectionBaseline,
+    updateProjectEstimateBuilder,
   };
 }
 
@@ -1904,6 +2754,16 @@ function initialWorkbook(initialValues = {}, options = {}) {
     return normalizeWorkbook(createEstimateBuilderWorkbookDefaults(initialValues));
   }
   return normalizeWorkbook(createEstimateBuilderWorkbookDefaults(initialValues));
+}
+
+function normaliseEstimatePreview(preview = {}) {
+  const safePreview = preview && typeof preview === "object" ? preview : {};
+  return {
+    ...safePreview,
+    summary: safePreview.summary && typeof safePreview.summary === "object" ? safePreview.summary : {},
+    quotation: safePreview.quotation && typeof safePreview.quotation === "object" ? safePreview.quotation : {},
+    missingRequired: Array.isArray(safePreview.missingRequired) ? safePreview.missingRequired : [],
+  };
 }
 
 function applyJobDetailsToWorkbook(workbook = {}, jobDetails = {}) {
@@ -1957,6 +2817,76 @@ function applyJobDetailsToWorkbook(workbook = {}, jobDetails = {}) {
   }
 
   return next;
+}
+
+function applyWorkspaceProjectToWorkbook(workbook = {}, project = {}, savedAt = new Date().toISOString()) {
+  // Project listings can predate the saved workbook. The saved inputs, including
+  // deliberately empty values, remain authoritative when opening that workbook.
+  const projectDetails = workspaceProjectJobDetails(project);
+  const rows = workbook.data?.inputDataSheet?.rows || {};
+  const jobDetails = {
+    ...projectDetails,
+    jobName: rows.projectName?.value ?? rows.jobName?.value ?? workbook.jobFileMeta?.jobName ?? projectDetails.jobName,
+    clientName: rows.clientName?.value ?? rows.customerName?.value ?? workbook.jobFileMeta?.clientName ?? projectDetails.clientName,
+    jobNumber: rows.jobNumber?.value ?? rows.quoteNumber?.value ?? workbook.jobFileMeta?.jobNumber ?? projectDetails.jobNumber,
+    address: rows.projectAddress?.value ?? rows.siteAddress?.value ?? rows.address?.value ?? workbook.jobFileMeta?.address ?? projectDetails.address,
+  };
+  const next = workbook;
+  const projectId = String(project.id || "").trim();
+  const workspaceId = String(project.workspace_id || project.workspaceId || "").trim();
+  return normalizeWorkbook({
+    ...next,
+    id: next.id || projectId,
+    jobId: next.jobId || project.source_workbook_job_id || projectId,
+    projectId,
+    commercialProjectId: projectId,
+    registeredJobId: project.source_registered_job_id || projectId,
+    savedAt,
+    openedFileName: next.openedFileName || `${jobDetails.jobName || projectId}.json`,
+    sourceFileName: next.sourceFileName || `${jobDetails.jobName || projectId}.json`,
+    registeredJob: {
+      ...(next.registeredJob || {}),
+      jobId: projectId,
+      workspaceId,
+      jobName: jobDetails.jobName,
+      clientName: jobDetails.clientName,
+      jobNumber: jobDetails.jobNumber,
+      siteAddress: jobDetails.address,
+      status: jobDetails.status,
+      sourceRegisteredJobId: project.source_registered_job_id || "",
+    },
+    jobFileMeta: {
+      ...(next.jobFileMeta || {}),
+      projectId,
+      workspaceId,
+      jobName: jobDetails.jobName,
+      clientName: jobDetails.clientName,
+      jobNumber: jobDetails.jobNumber,
+      address: jobDetails.address,
+      status: jobDetails.status,
+      lastModified: project.updated_at || project.created_at || savedAt,
+    },
+    clientPage: {
+      ...(next.clientPage || {}),
+      clientName: next.clientPage?.clientName ?? jobDetails.clientName ?? "",
+      projectAddress: next.clientPage?.projectAddress ?? jobDetails.address ?? "",
+      quoteNumber: next.clientPage?.quoteNumber ?? jobDetails.jobNumber ?? "",
+    },
+  });
+}
+
+function workspaceProjectJobDetails(project = {}) {
+  const metadata = project.source_metadata || {};
+  const sourceWorkbook = metadata.workbook || {};
+  const registered = sourceWorkbook.registeredJob || {};
+  return {
+    jobName: String(project.project_name || metadata.project?.projectName || registered.jobName || project.id || "Project job"),
+    clientName: String(project.client_name || registered.clientName || ""),
+    jobNumber: String(project.source_quote_number || registered.jobNumber || ""),
+    address: String(project.site_address || registered.siteAddress || ""),
+    notes: String(project.notes || ""),
+    status: String(project.status || "active"),
+  };
 }
 
 function createBlankPreviewWorkbook(initialValues = {}) {
@@ -2017,33 +2947,84 @@ function createBlankPreviewWorkbook(initialValues = {}) {
 }
 
 function normalizeWorkbook(workbook = {}) {
-  const defaults = createEstimateBuilderWorkbookDefaults();
-  const migratedFormulaRows = normalizeFramedWallFormulaRows(workbook.formulaRows || [], workbook.formulas || {});
-  const formulaRows = Array.isArray(workbook.formulaRows)
-    ? ensureRequiredFormulaRows(migratedFormulaRows.rows, defaults.formulaRows || [])
-    : defaults.formulaRows || [];
-  const quotation = normalizeQuotation(workbook.quotation, defaults.quotation);
-  const selectedStandardInclusionsPackageId = workbook.selected_standard_inclusions_package_id || workbook.standardInclusions?.selectedPackageId || defaults.selected_standard_inclusions_package_id || "std-mid-range-standard-inclusions";
-  const standardInclusions = normaliseStandardInclusions({
-    ...(workbook.standardInclusions || defaults.standardInclusions),
-    selectedPackageId: selectedStandardInclusionsPackageId,
-  }, workbook.builderId || defaults.builderId || "local-builder");
-  return {
-    ...defaults,
-    ...workbook,
-    data: normalizeDataSections(workbook.data, defaults.data),
-    windowsDoors: normalizeWindowsDoors(workbook.windowsDoors, defaults.windowsDoors),
-    quotation,
-    quotationSectionOrder: normalizeQuoteSectionOrder(workbook.quotationSectionOrder || defaults.quotationSectionOrder || [], quotation),
-    cashflowPayments: normalizeCashflowPayments(workbook.cashflowPayments, defaults.cashflowPayments),
-    estimateInclusions: normaliseEstimateInclusions(workbook.estimateInclusions || defaults.estimateInclusions, workbook.builderId || defaults.builderId || "local-builder"),
-    standardInclusions,
-    selected_standard_inclusions_package_id: standardInclusions.selectedPackageId,
-    productLibrary: normalizeProductLibrary(workbook.productLibrary || defaults.productLibrary),
-    formulas: normalizeFormulas(defaults.formulas || {}, migratedFormulaRows.formulas),
-    formulaNotes: { ...(defaults.formulaNotes || {}), ...(workbook.formulaNotes || {}) },
-    formulaRows,
-  };
+  if (typeof window !== "undefined") workbook = scopeBrowserWorkbook(workbook);
+  const owner = workbook.workspaceId || browserWorkspaceId();
+  const defaults = createEstimateBuilderWorkbookDefaults({}, { workspaceId: owner });
+  // Every load path (browser storage, .gr8job, recovery) brings the job to the current schema here:
+  // retired sections go, and sections the job never had come from the current defaults below.
+  // Old Cabinet Schedule lines are moved onto the canonical cabinet items in the same pass.
+  workbook = migrateWorkbookCabinetSchedules(normalizeJobForCurrentSchema(workbook));
+  const restored = restoreCompleteWorkbook(defaults, workbook);
+  // A targeted selection save owns its existing quote structure, including on file reopen.
+  if (workbook.selectionQuoteEngineVersion === 1 && workbook.quotation) {
+    return applyCabinetryRequirementsToQuotation(reconcileCabinetryQuotation({ ...restored, quotation: workbook.quotation }, owner), owner);
+  }
+  if (!owner || owner === CURRENT_BUILDER_WORKSPACE_ID) {
+    restored.quotation = withEntryDoorLibraryQuotation(restored.quotation);
+    restored.quotation = withLinea180PlankQuoteRow(restored.quotation, defaults.quotation);
+    restored.quotation = withWallLiningMappings(withWindowsPriceListQuotation(restored.quotation));
+  }
+  if (restored.data?.inputDataSheet) restored.data = { ...restored.data, inputDataSheet: normalizeTakeoffInputSection(restored.data.inputDataSheet, V4_DATA_SECTIONS.find((section) => section.key === "inputDataSheet").rows) };
+  // Section 53 WINDOWS carries the full windows / glass sliding doors / flyscreens price list,
+  // quantities linked to the takeoff Window Schedule (see windowsQuotePriceList.js).
+  if (workbookHasExplicitJobIdentity(workbook) || workbook.templateType === "job") {
+    restored.jobId = workbook.jobId || workbookAttachedProjectId(workbook) || crypto.randomUUID();
+    return withPersistedQuotationOrder(applyCabinetryRequirementsToQuotation(reconcileCabinetryQuotation(restored, owner), owner));
+  }
+  return withPersistedQuotationOrder(applyCabinetryRequirementsToQuotation(reconcileCabinetryQuotation(restored, owner), owner));
+}
+
+// Quotation order is saved data (quotationOrder.js): every section and line carries its position.
+// Restoring a workbook puts lines back in their saved positions - whatever a migration, a required
+// row insert or a regenerated section did to the arrays above - and then records the resulting
+// order, so a job saved before these fields existed gains them the first time it is opened.
+function withPersistedQuotationOrder(workbook = {}) {
+  if (!workbook?.quotation || typeof workbook.quotation !== "object") return workbook;
+  const restoredQuotation = applyPersistedQuotationOrder(withStableQuoteTargets(workbook.quotation));
+  const listedOrder = Array.isArray(workbook.quotationSectionOrder) ? workbook.quotationSectionOrder : [];
+  // section.sortOrder is the saved position; the name list only places sections that have none yet.
+  const savedSectionOrder = Object.values(restoredQuotation).some((section) => Number.isFinite(Number(section?.sortOrder)))
+    ? persistedSectionOrder(restoredQuotation, listedOrder)
+    : listedOrder;
+  const sectionOrder = orderedQuoteSections(restoredQuotation, savedSectionOrder);
+  const quotation = stampQuotationOrder(restoredQuotation, sectionOrder);
+  const quotationSectionOrder = savedSectionOrder.length ? normalizeQuoteSectionOrder(savedSectionOrder, quotation) : workbook.quotationSectionOrder;
+  if (quotation === workbook.quotation && quotationSectionOrder === workbook.quotationSectionOrder) return workbook;
+  return { ...workbook, quotation, ...(quotationSectionOrder ? { quotationSectionOrder } : {}) };
+}
+
+// Saved quotations are authoritative in restoreCompleteWorkbook, so a job saved before the
+// 180mm Linea plank row existed never receives it from defaults. Place exactly one plank row
+// (stable id quote-1036) directly after the 180mm LINEA BOARD row, keeping any saved edits.
+const LINEA_180_PLANK_ROW_ID = "quote-1036";
+const LINEA_180_M2_ROW_ID = "quote-1027";
+
+function isLinea180PlankQuoteRow(row = {}) {
+  return row?.id === LINEA_180_PLANK_ROW_ID
+    || String(row?.item || row?.values?.[0] || "").toLowerCase().includes("180mm jh linea board planks");
+}
+
+function isLinea180M2QuoteRow(row = {}) {
+  return row?.id === LINEA_180_M2_ROW_ID
+    || String(row?.item || row?.values?.[0] || "").trim().toLowerCase() === "180mm linea board";
+}
+
+function withLinea180PlankQuoteRow(quotation = {}, defaultQuotation = {}) {
+  if (!quotation || typeof quotation !== "object") return quotation;
+  const sectionName = Object.keys(quotation).find((name) => quoteSectionBaseName(name) === "external cladding");
+  if (!sectionName) return quotation;
+  const section = quotation[sectionName] || {};
+  const rows = section.rows || [];
+  const savedPlankRow = rows.find(isLinea180PlankQuoteRow);
+  const defaultPlankRow = (defaultQuoteSectionByBaseName(defaultQuotation, sectionName)?.rows || []).find(isLinea180PlankQuoteRow);
+  const plankRow = savedPlankRow || (defaultPlankRow && { ...defaultPlankRow, section: rows[0]?.section || defaultPlankRow.section });
+  if (!plankRow) return quotation;
+  const otherRows = rows.filter((row) => !isLinea180PlankQuoteRow(row));
+  const anchorIndex = otherRows.findIndex(isLinea180M2QuoteRow);
+  const insertAt = anchorIndex >= 0 ? anchorIndex + 1 : otherRows.length;
+  const nextRows = [...otherRows.slice(0, insertAt), plankRow, ...otherRows.slice(insertAt)];
+  if (nextRows.length === rows.length && nextRows.every((row, index) => row === rows[index])) return quotation;
+  return { ...quotation, [sectionName]: { ...section, rows: nextRows } };
 }
 
 function normalizeProductLibrary(library = {}) {
@@ -2054,6 +3035,7 @@ function normalizeProductLibrary(library = {}) {
       product_code: String(item.product_code || item.productCode || "").trim(),
       category: String(item.category || "").trim(),
       subcategory: String(item.subcategory || "").trim(),
+      image_url: String(item.image_url || item.imageUrl || item.productImageUrl || item.primaryImageUrl || item.thumbnailUrl || item.primary_image_url || item.thumbnail_url || "").trim(),
       product_name: String(item.product_name || item.productName || item.name || "").trim(),
       description: String(item.description || "").trim(),
       unit: String(item.unit || "").trim(),
@@ -2388,7 +3370,7 @@ function normalizeQuotation(savedQuotation = {}, defaultQuotation = {}) {
   const renamedEntries = renameRoofingMaterialsSection(Object.entries(savedQuotation));
   const mergedEntries = mergeJobSetOutLabourRows(mergeQuickRenderRowsIntoRendering(renameRoofingLabourSection(renamedEntries)));
   const orderedEntries = orderSavedQuotationSections(mergedEntries);
-  const entries = insertManualLinenSections(insertCabinetMakerSection(insertStandardThreeDoorRobeSection(movePlastererQuoteRowToSupplyInstall(orderedEntries), defaultQuotation), defaultQuotation), defaultQuotation);
+  const entries = insertManualLinenSections(movePlastererQuoteRowToSupplyInstall(orderedEntries), defaultQuotation);
   const normalized = Object.fromEntries(mergeRenamedQuoteSections(entries
     .filter(([sectionName]) => !isRemovedQuoteSection(sectionName))
     .map(([sectionName, section]) => [normalizeSavedQuoteSectionName(sectionName), section]))
@@ -2687,7 +3669,20 @@ function normalizeSavedQuoteRow(row, defaultRowsById = {}) {
   next = normalizePainterQuoteRow(next);
   next = normalizeCleaningQuoteRow(next);
   next = normalizeAppliancePackageRow(next, defaultRowsById[row.id]);
-  return normalizeFloorFramingQuoteRow(next);
+  next = normalizeFloorFramingQuoteRow(next);
+  // Template migrations supply defaults, but must never erase an estimator's
+  // quantity/formula choice when saving or reopening a job.
+  if (row.quantityManualOverride === true || row.quantityFormulaOverride === true) {
+    return {
+      ...next,
+      quantity: row.quantity, importedQuantity: row.importedQuantity,
+      quantityKey: row.quantityKey, autoQuantity: row.autoQuantity,
+      quantityManualOverride: row.quantityManualOverride,
+      quantityFormulaOverride: row.quantityFormulaOverride,
+      formulas: { ...next.formulas, B: row.formulas?.B || '' },
+    };
+  }
+  return next;
 }
 
 function normalizeAppliancePackageRow(row, defaultRow = null) {
@@ -2722,47 +3717,23 @@ function normalizeSavedQuoteSectionRows(sectionName, rows = []) {
   if (quoteSectionBaseName(sectionName) === "waterproofing") {
     return rows.map(normalizeQuoteRowWithoutImportedData);
   }
-  if (quoteSectionBaseName(sectionName) === "standard wardrobes complete (2.4m wide)") {
-    return standardWardrobesCompleteRows(rows, sectionName);
-  }
-  if (quoteSectionBaseName(sectionName) === quoteSectionBaseName(STANDARD_THREE_DOOR_ROBE_SECTION)) {
-    return standardThreeDoorRobeRows(rows, sectionName);
-  }
+  
+  
   if (quoteSectionBaseName(sectionName) === quoteSectionBaseName(STANDARD_TWO_DOOR_LINEN_SECTION)) {
     return standardTwoDoorLinenRows(rows, sectionName);
   }
   if (quoteSectionBaseName(sectionName) === quoteSectionBaseName(STANDARD_THREE_DOOR_LINEN_SECTION)) {
     return standardThreeDoorLinenRows(rows, sectionName);
   }
-  if (quoteSectionBaseName(sectionName) === quoteSectionBaseName(CABINET_MAKER_SECTION)) {
-    return cabinetMakerRows(rows, sectionName);
-  }
-  if (quoteSectionBaseName(sectionName) === quoteSectionBaseName(CABINET_MAKER_BUTLERS_PANTRY_SECTION)) {
-    return cabinetMakerButlersPantryRows(rows, sectionName);
-  }
-  if (quoteSectionBaseName(sectionName) === quoteSectionBaseName(CABINET_MAKER_LAUNDRY_SECTION)) {
-    return cabinetMakerLaundryRows(rows, sectionName);
-  }
-  if (quoteSectionBaseName(sectionName) === quoteSectionBaseName(CABINET_MAKER_BATHROOMS_SECTION)) {
-    return cabinetMakerBathroomRows(rows, sectionName);
-  }
-  if (quoteSectionBaseName(sectionName) === quoteSectionBaseName(CABINET_MAKER_WARDROBES_SECTION)) {
-    return cabinetMakerWardrobeRows(rows, sectionName);
-  }
+  
+  
+  
+  
+  
   return rows;
 }
 
-function insertStandardThreeDoorRobeSection(entries = [], defaultQuotation = {}) {
-  if (entries.some(([sectionName]) => quoteSectionBaseName(sectionName) === quoteSectionBaseName(STANDARD_THREE_DOOR_ROBE_SECTION))) return entries;
-  const defaultSection = closedQuoteSection(defaultQuoteSectionByBaseName(defaultQuotation, STANDARD_THREE_DOOR_ROBE_SECTION) || {
-    collapsed: true,
-    rows: standardThreeDoorRobeRows(),
-  });
-  const section = [STANDARD_THREE_DOOR_ROBE_SECTION, defaultSection];
-  const wardrobeIndex = entries.findIndex(([sectionName]) => quoteSectionBaseName(sectionName) === "standard wardrobes complete (2.4m wide)");
-  if (wardrobeIndex < 0) return [...entries, section];
-  return [...entries.slice(0, wardrobeIndex + 1), section, ...entries.slice(wardrobeIndex + 1)];
-}
+
 
 function insertManualLinenSections(entries = [], defaultQuotation = {}) {
   const filtered = entries.filter(([sectionName]) => !OLD_LINEN_AND_ROBE_DOOR_SECTIONS.has(quoteSectionBaseName(sectionName)));
@@ -2789,57 +3760,9 @@ function insertManualLinenSections(entries = [], defaultQuotation = {}) {
   return [...withoutNew, ...sections];
 }
 
-function insertCabinetMakerSection(entries = [], defaultQuotation = {}) {
-  const childBaseNames = [
-    quoteSectionBaseName(CABINET_MAKER_BUTLERS_PANTRY_SECTION),
-    quoteSectionBaseName(CABINET_MAKER_LAUNDRY_SECTION),
-    quoteSectionBaseName(CABINET_MAKER_BATHROOMS_SECTION),
-    quoteSectionBaseName(CABINET_MAKER_WARDROBES_SECTION),
-  ];
-  const existingCabinet = entries.find(([sectionName, section]) => quoteSectionBaseName(sectionName) === "cabinet maker" && isNewCabinetMakerSection(section));
-  const existingButlersPantry = entries.find(([sectionName]) => quoteSectionBaseName(sectionName) === quoteSectionBaseName(CABINET_MAKER_BUTLERS_PANTRY_SECTION));
-  const existingLaundry = entries.find(([sectionName]) => quoteSectionBaseName(sectionName) === quoteSectionBaseName(CABINET_MAKER_LAUNDRY_SECTION));
-  const existingBathrooms = entries.find(([sectionName]) => quoteSectionBaseName(sectionName) === quoteSectionBaseName(CABINET_MAKER_BATHROOMS_SECTION));
-  const existingWardrobes = entries.find(([sectionName]) => quoteSectionBaseName(sectionName) === quoteSectionBaseName(CABINET_MAKER_WARDROBES_SECTION));
-  const filtered = entries.filter(([sectionName]) => {
-    const baseName = quoteSectionBaseName(sectionName);
-    if (baseName === "cabinet maker" || childBaseNames.includes(baseName)) return false;
-    return !OLD_CABINET_MAKER_SECTIONS.has(baseName);
-  });
-  const defaultCabinetSection = defaultQuoteSectionByBaseName(defaultQuotation, CABINET_MAKER_SECTION);
-  const defaultSection = existingCabinet?.[1]
-    ? { ...existingCabinet[1], rows: cabinetMakerRows(existingCabinet[1].rows || [], CABINET_MAKER_SECTION) }
-    : defaultCabinetSection
-      ? closedQuoteSection({ ...defaultCabinetSection, rows: cabinetMakerRows(defaultCabinetSection.rows || [], CABINET_MAKER_SECTION) })
-      : {
-          collapsed: true,
-          rows: cabinetMakerRows(),
-        };
-  const sections = [
-    [CABINET_MAKER_SECTION, defaultSection],
-    [CABINET_MAKER_BUTLERS_PANTRY_SECTION, existingButlersPantry?.[1] || closedQuoteSection(defaultQuoteSectionByBaseName(defaultQuotation, CABINET_MAKER_BUTLERS_PANTRY_SECTION) || { collapsed: true, rows: cabinetMakerButlersPantryRows() })],
-    [CABINET_MAKER_LAUNDRY_SECTION, existingLaundry?.[1] || closedQuoteSection(defaultQuoteSectionByBaseName(defaultQuotation, CABINET_MAKER_LAUNDRY_SECTION) || { collapsed: true, rows: cabinetMakerLaundryRows() })],
-    [CABINET_MAKER_BATHROOMS_SECTION, existingBathrooms?.[1] || closedQuoteSection(defaultQuoteSectionByBaseName(defaultQuotation, CABINET_MAKER_BATHROOMS_SECTION) || { collapsed: true, rows: cabinetMakerBathroomRows() })],
-    [CABINET_MAKER_WARDROBES_SECTION, existingWardrobes?.[1] || closedQuoteSection(defaultQuoteSectionByBaseName(defaultQuotation, CABINET_MAKER_WARDROBES_SECTION) || { collapsed: true, rows: cabinetMakerWardrobeRows() })],
-  ];
-  const groupEndIndex = filtered.findLastIndex(([sectionName]) => [
-    "fix out materials",
-    "shelving",
-    "standard wardrobes complete (2.4m wide)",
-    "standard 3 door robe up to 3.6m wide",
-    "standard 2 door linen up to 2.4m wide",
-    "standard 3 door linen up to 3.6m wide",
-  ].includes(quoteSectionBaseName(sectionName)));
-  if (groupEndIndex >= 0) return [...filtered.slice(0, groupEndIndex + 1), ...sections, ...filtered.slice(groupEndIndex + 1)];
-  return [...sections, ...filtered];
-}
 
-function isNewCabinetMakerSection(section) {
-  return (section?.rows || []).some((row) => {
-    const rowNumber = quoteRowSourceNumber(row);
-    return rowNumber >= 1424 && rowNumber < 1425;
-  });
-}
+
+
 
 function movePlastererQuoteRowToSupplyInstall(entries = []) {
   const corniceRowsToMove = [];
@@ -2957,173 +3880,21 @@ function plasterSupplyInstallQuoteRow() {
   };
 }
 
-function standardWardrobesCompleteRows(existingRows = [], sectionName = "STANDARD WARDROBES COMPLETE (2.4M WIDE)") {
-  const rows = [
-    { sourceRow: 1371, item: "COMPLETE ROBE UP TO 2.4 WIDE", quantity: "", unit: "EACH", rate: "$723.47" },
-    { sourceRow: 1372, item: "JAMB", quantity: "", unit: "LM", rate: "$8.98" },
-    { sourceRow: 1373, item: "ARCHITRAVES", quantity: "", unit: "LM", rate: "$1.98" },
-    { sourceRow: 1374, item: "1 SHELF @ 1700 WITH HANGING RAIL", quantity: "", unit: "EACH", rate: "$89.10" },
-    { sourceRow: 1375, item: "2 DOORS SPACE SAVER MIRROR DOORS", quantity: "", unit: "EACH", rate: "$389.00" },
-    { sourceRow: 1376, item: "UPGRADE TO MIRROR DOORS", quantity: "", unit: "EACH", rate: "$199.00" },
-    { sourceRow: 1377, item: "UPGRADE TO FRAMELESS SUPERWHITE GLASS", quantity: "", unit: "EACH", rate: "$247.00" },
-    { sourceRow: 1378, item: "1 X BANK OF SHELVES", quantity: "", unit: "EACH", rate: "$127.00" },
-  ];
-  return rows.map((row) => standardWardrobesCompleteRow(existingRows, sectionName, row));
-}
 
-function standardWardrobesCompleteRow(existingRows, sectionName, row) {
-  return manualReplacementQuoteRow(existingRows, sectionName, row);
-}
 
-function cabinetMakerRows(existingRows = [], sectionName = CABINET_MAKER_SECTION) {
-  const rows = [
-    { sourceRow: 1424.01, item: "KITCHEN", heading: true },
-    { sourceRow: 1424.02, item: "KITCHEN CABINETS BASE - STD COLOUR BOARD - LAMINATED TOPS", unit: "LM", rate: "$1,500.00" },
-    { sourceRow: 1424.03, item: "1200mm SINK CUPBOARD - STD COLOUR BOARD", unit: "LM", rate: "$1,800.00" },
-    { sourceRow: 1424.04, item: "600mm UB OVEN & COOKTOP CUPBOARD - STD COLOUR BOARD", unit: "ITEM", rate: "$800.00" },
-    { sourceRow: 1424.05, item: "900mm UB OVEN & COOKTOP CUPBOARD - STD COLOUR BOARD", unit: "ITEM", rate: "$1,000.00" },
-    { sourceRow: 1424.06, item: "ISLAND CUPBOARDS - STD COLOUR BOARD", unit: "LM", rate: "$1,700.00" },
-    { sourceRow: 1424.07, item: "CORNER BASE CUPBOARD - STD COLOUR BOARD", unit: "ITEM", rate: "$2,000.00" },
-    { sourceRow: 1424.08, item: "OVERHEAD CUPBOARDS - STD COLOUR BOARD", unit: "LM", rate: "$1,000.00" },
-    { sourceRow: 1424.09, item: "OVERHEAD CORNER CUPBOARDS -STD COLOUR BOARD", unit: "ITEM", rate: "$1,500.00" },
-    { sourceRow: 1424.091, item: "STANDARD 600mm RANGEHOOD CUPBOARD", unit: "ITEM", rate: "$800.00" },
-    { sourceRow: 1424.092, item: "STANDARD 900mm RANGEHOOD CUPBOARD", unit: "ITEM", rate: "$1,200.00" },
-    { sourceRow: 1424.093, item: "SPECIALTY CANOPY RANGEHOOD CUPBOARD", unit: "ITEM", rate: "" },
-    { sourceRow: 1424.094, item: "UPGRADE TO EXTRA HEIGHT OVERHEADS", unit: "LM", rate: "" },
-    { sourceRow: 1424.095, item: "ADD FOR 300mm CRAFTWOOD BULKHEADS", unit: "LM", rate: "" },
-    { sourceRow: 1424.096, item: "ADD EXTRA HEIGHT BULKHEADS", unit: "LM", rate: "" },
-    { sourceRow: 1424.1, item: "KITCHEN OVEN TOWER", unit: "ITEM", rate: "$1,700.00" },
-    { sourceRow: 1424.11, item: "MICROWAVE UNDERBENCH CUPBOARD - STD COLOUR BOARD", unit: "ITEM", rate: "$1,300.00" },
-    { sourceRow: 1424.12, item: "POT DRAWS SET OF 2 - STD COLOURBOARD", unit: "ITEM", rate: "$1,500.00" },
-    { sourceRow: 1424.13, item: "900mm 3 DRAWER CUPBOARD 2 LGE & 1 SML - STD COLOUR BRD", unit: "ITEM", rate: "$1,800.00" },
-    { sourceRow: 1424.14, item: "4 DRAWER CUTLERY CUPBOARD - STD COLOURBOARD", unit: "ITEM", rate: "$2,000.00" },
-    { sourceRow: 1424.15, item: "600mm WIDE UPRIGHT PANTRY CUPBOARD - STD COLOUR BOARD", unit: "ITEM", rate: "$1,800.00" },
-    { sourceRow: 1424.16, item: "900mm WIDE UPRIGHT PANTRY CUPBOARD - STD COLOUR BOARD", unit: "ITEM", rate: "$2,000.00" },
-    { sourceRow: 1424.17, item: "1200mm WIDE UPRIGHT PANTRY CUPBOARD - STD COLOUR BOARD", unit: "ITEM", rate: "$2,200.00" },
-    { sourceRow: 1424.18, item: "1200mm CORNER WALK IN PANTRY - STD COLOURBOARD", unit: "ITEM", rate: "$2,500.00" },
-    { sourceRow: 1424.19, item: "1500mm HIDE AWAY PANTRY - STD COLOURBOARD", unit: "ITEM", rate: "$2,500.00" },
-    { sourceRow: 1424.2, item: "FRIDGE OVERHEAD CUPBOARD INC SIDE PANELS - STD COLOUR BRD", unit: "ITEM", rate: "$900.00" },
-    { sourceRow: 1424.21, item: "RAISED SERVERY BACK PANEL AND TOP - STD COLOUR BOARD", unit: "LM", rate: "$200.00" },
-    { sourceRow: 1424.22, item: "BASE CUPBOARD END PANELS", unit: "ITEM", rate: "$80.00" },
-    { sourceRow: 1424.23, item: "TALL END PANELS", unit: "ITEM", rate: "$160.00" },
-    { sourceRow: 1424.24, item: "UPGRADE TO SOFT CLOSE DRAWERS", unit: "EACH", rate: "$100.00" },
-    { sourceRow: 1424.25, item: "UPGRADE TO 20mm STONE TOPS", unit: "ITEM", rate: "$120.00" },
-    { sourceRow: 1424.26, item: "UPGRADE TO 40mm STONE TOPS", unit: "ITEM", rate: "$200.00" },
-    { sourceRow: 1424.27, item: "UPGRADE TO SPECIALTY STONE FEATURE", unit: "ITEM", rate: "" },
-    { sourceRow: 1424.28, item: "20mm WATERFALL ENDS", unit: "ITEM", rate: "$800.00" },
-    { sourceRow: 1424.29, item: "40mm WATERFALL ENDS", unit: "ITEM", rate: "$1,200.00" },
-    { sourceRow: 1424.3, item: "SPECIALTY ISLAND CUPBOARD FEATURES", unit: "ITEM", rate: "" },
-    { sourceRow: 1424.31, item: "300mm DEEP 900mm BACK OF ISLAND BENCH CUPBOARDS", unit: "ITEM", rate: "$700.00" },
-    { sourceRow: 1424.32, item: "UPGRADE TO PREMIUM COLOUR BOARD DOORS AND PANELS", unit: "M2", rate: "$30.00" },
-    { sourceRow: 1424.33, item: "UPGRADE TO CREATEC DOORS AND PANELS", unit: "M2", rate: "$50.00" },
-    { sourceRow: 1424.34, item: "UPGRADE TO 2 PACK DOORS AND PANELS", unit: "M2", rate: "$120.00" },
-    { sourceRow: 1424.35, item: "MISC CABINETRY", unit: "ITEM", rate: "" },
-    { sourceRow: 1424.48, item: "BATHROOMS", heading: true }, { sourceRow: 1424.49, item: "VANITY UNITS 900mm - STD COLOUR BOARD", unit: "EACH", rate: "$1,000.00" }, { sourceRow: 1424.5, item: "VANITY UNITS 1200mm - STD COLOUR BOARD", unit: "EACH", rate: "$1,200.00" }, { sourceRow: 1424.51, item: "VANITY UNITS 1500mm - STD COLOUR BOARD", unit: "EACH", rate: "$1,500.00" }, { sourceRow: 1424.52, item: "DOUBLE VANITY UNITS 1500mm - STD COLOUR BOARD", unit: "EACH", rate: "$1,800.00" }, { sourceRow: 1424.53, item: "DOUBLE VANITY UNITS 1800mm - STD COLOUR BOARD", unit: "EACH", rate: "$2,000.00" }, { sourceRow: 1424.54, item: "DOUBLE VANITY UNITS 2100mm - STD COLOUR BOARD", unit: "EACH", rate: "$2,100.00" }, { sourceRow: 1424.55, item: "DOUBLE VANITY UNITS 2400mm - STD COLOUR BOARD", unit: "EACH", rate: "$2,400.00" }, { sourceRow: 1424.56, item: "EXTEND VANITY TOP OVER BATH", unit: "ITEM", rate: "$80.00" }, { sourceRow: 1424.57, item: "UPGRADE TO PREMIUM COLOUR BOARD DOORS AND PANELS", unit: "M2", rate: "$30.00" }, { sourceRow: 1424.58, item: "UPGRADE TO CREATEC DOORS AND PANELS", unit: "M2", rate: "$50.00" }, { sourceRow: 1424.59, item: "UPGRADE TO 2 PACK DOORS AND PANELS", unit: "M2", rate: "$120.00" }, { sourceRow: 1424.6, item: "MISC CABINETRY", unit: "ITEM", rate: "" }, { sourceRow: 1424.61, item: "TOTAL BATHOOM COSTS", total: true },
-    { sourceRow: 1424.62, item: "WARDROBES", heading: true }, { sourceRow: 1424.63, item: "MELAMINE TOP SHELF WITH HANGING RAIL", unit: "LM", rate: "$120.00" }, { sourceRow: 1424.64, item: "BANK OF 3 DRAWERS AND 3 SHELVES", unit: "ITEM", rate: "$800.00" }, { sourceRow: 1424.65, item: "WIR STD DOUBLE HANGING RAIL CUPBOAD (NO KICK)", unit: "LM", rate: "$150.00" }, { sourceRow: 1424.66, item: "WIR DOUBLE HANGING RAIL CUPBOAD w KICK AND BOTTOM SHELF", unit: "LM", rate: "$320.00" }, { sourceRow: 1424.67, item: "1700mm HIGH SHOE RACK 800mm WIDE", unit: "ITEM", rate: "$1,500.00" }, { sourceRow: 1424.68, item: "2000mm HIGH SHOE RACK 800mm WIDE", unit: "ITEM", rate: "$2,000.00" }, { sourceRow: 1424.69, item: "CORNER ROBE CUPBOARD", unit: "ITEM", rate: "$1,200.00" }, { sourceRow: 1424.7, item: "STAND ALONE DISPLAY CABINET - SOLID TOPS", unit: "ITEM", rate: "$2,500.00" }, { sourceRow: 1424.71, item: "STAND ALONE DISPLAY CABINET - GLASS CUT-OUT TOPS", unit: "ITEM", rate: "$3,000.00" }, { sourceRow: 1424.72, item: "ALLOWANCE FOR LED LIGHTING", unit: "LM", rate: "$90.00" }, { sourceRow: 1424.73, item: "MISC EXTRAS", unit: "ITEM", rate: "" }, { sourceRow: 1424.74, item: "TOTAL WARDROBES COSTS", total: true }, { sourceRow: 1424.75, item: "MISCELLANEOUS CABINETRY", heading: true }, { sourceRow: 1424.76, item: "EXTRA MISC CABINETRY - ALLOWANCE", unit: "ITEM", rate: "" }, { sourceRow: 1424.77, item: "TOTAL CABINET MAKER COSTS", total: true },
-  ];
-  const kitchenRows = rows.filter((row) => row.sourceRow < 1424.37 || row.sourceRow >= 1424.75);
-  return kitchenRows.map((row) => cabinetMakerRow(existingRows, sectionName, row));
-}
 
-function cabinetMakerButlersPantryRows(existingRows = [], sectionName = CABINET_MAKER_BUTLERS_PANTRY_SECTION) {
-  const rows = [
-    { sourceRow: 1424.36, item: "BUTLERS PANTRY", heading: true },
-    { sourceRow: 1424.361, item: "KITCHEN CABINETS BASE - STD COLOUR BOARD - LAMINATED TOPS", unit: "LM", rate: "$1,500.00" },
-    { sourceRow: 1424.362, item: "1200mm SINK CUPBOARD - STD COLOUR BOARD", unit: "LM", rate: "$1,800.00" },
-    { sourceRow: 1424.363, item: "600mm UB OVEN & COOKTOP CUPBOARD - STD COLOUR BOARD", unit: "ITEM", rate: "$800.00" },
-    { sourceRow: 1424.364, item: "900mm UB OVEN & COOKTOP CUPBOARD - STD COLOUR BOARD", unit: "ITEM", rate: "$1,000.00" },
-    { sourceRow: 1424.365, item: "CORNER BASE CUPBOARD - STD COLOUR BOARD", unit: "ITEM", rate: "$2,000.00" },
-    { sourceRow: 1424.366, item: "OVERHEAD CUPBOARDS - STD COLOUR BOARD", unit: "LM", rate: "$1,000.00" },
-    { sourceRow: 1424.367, item: "OVERHEAD CORNER CUPBOARDS -STD COLOUR BOARD", unit: "ITEM", rate: "$1,500.00" },
-    { sourceRow: 1424.368, item: "STANDARD 600mm RANGEHOOD CUPBOARD", unit: "ITEM", rate: "$800.00" },
-    { sourceRow: 1424.369, item: "STANDARD 900mm RANGEHOOD CUPBOARD", unit: "ITEM", rate: "$1,200.00" },
-    { sourceRow: 1424.3701, item: "UPGRADE TO EXTRA HEIGHT OVERHEADS", unit: "LM", rate: "" },
-    { sourceRow: 1424.371, item: "ADD FOR 300mm CRAFTWOOD BULKHEADS", unit: "LM", rate: "" },
-    { sourceRow: 1424.372, item: "ADD EXTRA HEIGHT BULKHEADS", unit: "LM", rate: "" },
-    { sourceRow: 1424.373, item: "MICROWAVE UNDERBENCH CUPBOARD - STD COLOUR BOARD", unit: "ITEM", rate: "$1,300.00" },
-    { sourceRow: 1424.374, item: "POT DRAWS SET OF 2 - STD COLOURBOARD", unit: "ITEM", rate: "$1,500.00" },
-    { sourceRow: 1424.375, item: "900mm 3 DRAWER CUPBOARD 2 LGE & 1 SML - STD COLOUR BRD", unit: "ITEM", rate: "$1,800.00" },
-    { sourceRow: 1424.376, item: "4 DRAWER CUTLERY CUPBOARD - STD COLOURBOARD", unit: "ITEM", rate: "$2,000.00" },
-    { sourceRow: 1424.377, item: "600mm WIDE UPRIGHT PANTRY CUPBOARD - STD COLOUR BOARD", unit: "ITEM", rate: "$1,800.00" },
-    { sourceRow: 1424.378, item: "900mm WIDE UPRIGHT PANTRY CUPBOARD - STD COLOUR BOARD", unit: "ITEM", rate: "$2,000.00" },
-    { sourceRow: 1424.379, item: "1200mm WIDE UPRIGHT PANTRY CUPBOARD - STD COLOUR BOARD", unit: "ITEM", rate: "$2,200.00" },
-    { sourceRow: 1424.3801, item: "5 SHELF OPEN SHELVES CABIENTRY", unit: "ITEM", rate: "" },
-    { sourceRow: 1424.381, item: "5 SHELF MELAMINE OPEN SHELVES CLEATED", unit: "ITEM", rate: "" },
-    { sourceRow: 1424.382, item: "UPGRADE TO SOFT CLOSE DRAWERS", unit: "EACH", rate: "$100.00" },
-    { sourceRow: 1424.383, item: "UPGRADE TO 20mm STONE TOPS", unit: "ITEM", rate: "$120.00" },
-    { sourceRow: 1424.384, item: "UPGRADE TO 40mm STONE TOPS", unit: "ITEM", rate: "$200.00" },
-    { sourceRow: 1424.385, item: "UPGRADE TO SPECIALTY STONE FEATURE", unit: "ITEM", rate: "" },
-    { sourceRow: 1424.386, item: "UPGRADE TO PREMIUM COLOUR BOARD DOORS AND PANELS", unit: "M2", rate: "$30.00" },
-    { sourceRow: 1424.387, item: "UPGRADE TO CREATEC DOORS AND PANELS", unit: "M2", rate: "$50.00" },
-    { sourceRow: 1424.388, item: "UPGRADE TO 2 PACK DOORS AND PANELS", unit: "M2", rate: "$120.00" },
-    { sourceRow: 1424.389, item: "MISC CABINETRY", unit: "ITEM", rate: "" },
-  ];
-  return rows.map((row) => cabinetMakerRow(existingRows, sectionName, row));
-}
 
-function cabinetMakerLaundryRows(existingRows = [], sectionName = CABINET_MAKER_LAUNDRY_SECTION) {
-  const rows = [
-    { sourceRow: 1424.37, item: "LAUNDRY", heading: true },
-    { sourceRow: 1424.38, item: "LAUNDRY CABINETS BASE - STD COLOUR BOARD", unit: "LM", rate: "$1,500.00" },
-    { sourceRow: 1424.39, item: "1000mm TUB CUPBOARD - STD COLOUR BOARD", unit: "ITEM", rate: "$1,800.00" },
-    { sourceRow: 1424.4, item: "LAUNDRY BROOM CLOSET 900mm - STD COLOUR BOARD", unit: "ITEM", rate: "$1,800.00" },
-    { sourceRow: 1424.41, item: "LAUNDRY BROOM CLOSET 1200mm - STD COLOUR BOARD", unit: "ITEM", rate: "$2,200.00" },
-    { sourceRow: 1424.42, item: "TOPS OVER UB WASHER AND DRYER", unit: "LM", rate: "$80.00" },
-    { sourceRow: 1424.43, item: "OVERHEAD CUPBOARDS - STD COLOUR BOARD", unit: "LM", rate: "$1,000.00" },
-    { sourceRow: 1424.44, item: "OVERHEAD CORNER CUPBOARDS -STD COLOUR BOARD", unit: "ITEM", rate: "$1,500.00" },
-    { sourceRow: 1424.45, item: "UPGRADE TO EXTRA HEIGHT OVERHEADS", unit: "LM", rate: "" },
-    { sourceRow: 1424.46, item: "ADD FOR 300mm CRAFTWOOD BULKHEADS", unit: "LM", rate: "" },
-    { sourceRow: 1424.47, item: "ADD EXTRA HEIGHT BULKHEADS", unit: "LM", rate: "" },
-    { sourceRow: 1424.471, item: "UPGRADE TO PREMIUM COLOUR BOARD DOORS AND PANELS", unit: "M2", rate: "$30.00" },
-    { sourceRow: 1424.472, item: "UPGRADE TO CREATEC DOORS AND PANELS", unit: "M2", rate: "$50.00" },
-    { sourceRow: 1424.473, item: "UPGRADE TO 2 PACK DOORS AND PANELS", unit: "M2", rate: "$120.00" },
-    { sourceRow: 1424.474, item: "MISC CABINETRY", unit: "ITEM", rate: "" },
-  ];
-  return rows.map((row) => cabinetMakerRow(existingRows, sectionName, row));
-}
 
-function cabinetMakerBathroomRows(existingRows = [], sectionName = CABINET_MAKER_BATHROOMS_SECTION) {
-  const rows = [
-    { sourceRow: 1424.48, item: "BATHROOMS", heading: true },
-    { sourceRow: 1424.49, item: "VANITY UNITS 900mm - STD COLOUR BOARD", unit: "EACH", rate: "$1,000.00" },
-    { sourceRow: 1424.5, item: "VANITY UNITS 1200mm - STD COLOUR BOARD", unit: "EACH", rate: "$1,200.00" },
-    { sourceRow: 1424.51, item: "VANITY UNITS 1500mm - STD COLOUR BOARD", unit: "EACH", rate: "$1,500.00" },
-    { sourceRow: 1424.52, item: "DOUBLE VANITY UNITS 1500mm - STD COLOUR BOARD", unit: "EACH", rate: "$1,800.00" },
-    { sourceRow: 1424.53, item: "DOUBLE VANITY UNITS 1800mm - STD COLOUR BOARD", unit: "EACH", rate: "$2,000.00" },
-    { sourceRow: 1424.54, item: "DOUBLE VANITY UNITS 2100mm - STD COLOUR BOARD", unit: "EACH", rate: "$2,100.00" },
-    { sourceRow: 1424.55, item: "DOUBLE VANITY UNITS 2400mm - STD COLOUR BOARD", unit: "EACH", rate: "$2,400.00" },
-    { sourceRow: 1424.56, item: "EXTEND VANITY TOP OVER BATH", unit: "ITEM", rate: "$80.00" },
-    { sourceRow: 1424.57, item: "UPGRADE TO PREMIUM COLOUR BOARD DOORS AND PANELS", unit: "M2", rate: "$30.00" },
-    { sourceRow: 1424.58, item: "UPGRADE TO CREATEC DOORS AND PANELS", unit: "M2", rate: "$50.00" },
-    { sourceRow: 1424.59, item: "UPGRADE TO 2 PACK DOORS AND PANELS", unit: "M2", rate: "$120.00" },
-    { sourceRow: 1424.6, item: "MISC CABINETRY", unit: "ITEM", rate: "" },
-    { sourceRow: 1424.61, item: "TOTAL BATHOOM COSTS", total: true },
-  ];
-  return rows.map((row) => cabinetMakerRow(existingRows, sectionName, row));
-}
 
-function cabinetMakerWardrobeRows(existingRows = [], sectionName = CABINET_MAKER_WARDROBES_SECTION) {
-  const rows = [
-    { sourceRow: 1424.62, item: "WARDROBES", heading: true },
-    { sourceRow: 1424.63, item: "MELAMINE TOP SHELF WITH HANGING RAIL", unit: "LM", rate: "$120.00" },
-    { sourceRow: 1424.64, item: "BANK OF 3 DRAWERS AND 3 SHELVES", unit: "ITEM", rate: "$800.00" },
-    { sourceRow: 1424.65, item: "WIR STD DOUBLE HANGING RAIL CUPBOAD (NO KICK)", unit: "LM", rate: "$150.00" },
-    { sourceRow: 1424.66, item: "WIR DOUBLE HANGING RAIL CUPBOAD w KICK AND BOTTOM SHELF", unit: "LM", rate: "$320.00" },
-    { sourceRow: 1424.67, item: "1700mm HIGH SHOE RACK 800mm WIDE", unit: "ITEM", rate: "$1,500.00" },
-    { sourceRow: 1424.68, item: "2000mm HIGH SHOE RACK 800mm WIDE", unit: "ITEM", rate: "$2,000.00" },
-    { sourceRow: 1424.69, item: "CORNER ROBE CUPBOARD", unit: "ITEM", rate: "$1,200.00" },
-    { sourceRow: 1424.7, item: "STAND ALONE DISPLAY CABINET - SOLID TOPS", unit: "ITEM", rate: "$2,500.00" },
-    { sourceRow: 1424.71, item: "STAND ALONE DISPLAY CABINET - GLASS CUT-OUT TOPS", unit: "ITEM", rate: "$3,000.00" },
-    { sourceRow: 1424.72, item: "ALLOWANCE FOR LED LIGHTING", unit: "LM", rate: "$90.00" },
-    { sourceRow: 1424.73, item: "MISC EXTRAS", unit: "ITEM", rate: "" },
-    { sourceRow: 1424.74, item: "TOTAL WARDROBES COSTS", total: true },
-  ];
-  return rows.map((row) => cabinetMakerRow(existingRows, sectionName, row));
-}
 
-function cabinetMakerRow(existingRows, sectionName, row) {
-  return manualReplacementQuoteRow(existingRows, sectionName, { ...row, quantity: "", unit: row.heading || row.total ? "" : row.unit, rate: row.heading || row.total ? "" : row.rate, forceItem: true, cabinetMakerTotalRow: Boolean(row.total) });
-}
+
+
+
+
+
+
+
+
 
 function standardTwoDoorLinenRows(existingRows = [], sectionName = STANDARD_TWO_DOOR_LINEN_SECTION) {
   const rows = [
@@ -3205,23 +3976,9 @@ function canPreserveManualReplacement(existing) {
   );
 }
 
-function standardThreeDoorRobeRows(existingRows = [], sectionName = STANDARD_THREE_DOOR_ROBE_SECTION) {
-  const rows = [
-    { sourceRow: 1378.1, item: "COMPLETE ROBE UP TO 3.6M WIDE", quantity: "", unit: "EACH", rate: "$943.55" },
-    { sourceRow: 1378.2, item: "JAMB", quantity: "", unit: "LM", rate: "$8.98" },
-    { sourceRow: 1378.3, item: "ARCHITRAVES", quantity: "", unit: "LM", rate: "$1.98" },
-    { sourceRow: 1378.4, item: "1 SHELF @ 1700 WITH HANGING RAIL", quantity: "", unit: "EACH", rate: "$114.60" },
-    { sourceRow: 1378.5, item: "3 DOORS SPACE SAVER MIRROR DOORS", quantity: "", unit: "EACH", rate: "$562.20" },
-    { sourceRow: 1378.6, item: "UPGRADE TO MIRROR DOORS", quantity: "", unit: "EACH", rate: "$298.50" },
-    { sourceRow: 1378.7, item: "UPGRADE TO FRAMELESS SUPERWHITE GLASS", quantity: "", unit: "EACH", rate: "$370.50" },
-    { sourceRow: 1378.8, item: "1 X BANK OF SHELVES", quantity: "", unit: "EACH", rate: "$127.00" },
-  ];
-  return rows.map((row) => standardThreeDoorRobeRow(existingRows, sectionName, row));
-}
 
-function standardThreeDoorRobeRow(existingRows, sectionName, row) {
-  return manualReplacementQuoteRow(existingRows, sectionName, row);
-}
+
+
 
 function normalizeFloorFramingQuoteRow(row) {
   const specs = {
@@ -3429,7 +4186,7 @@ function normalizePlasterSupplyInstallRow(row) {
   if (quoteSectionBaseName(row?.section) !== "plasterer - supply and install") return row;
   if (String(row?.id || "") === "quote-1269") {
     return {
-      ...normalizeLinkedQuoteRowItem(row, "GYPROCK SUPPLY & FIX - EXTERIOR WALLS", "lowerExternalPlasterboardWallM2"),
+      ...normalizeLinkedQuoteRowItem(row, "GYPROCK SUPPLY & FIX - EXTERIOR WALLS", "totalExternalPlasterboardWallM2"),
       unit: "M2",
       sourceOfRate: "workbook",
       notes: "IMPORTED DATA",
@@ -3438,7 +4195,7 @@ function normalizePlasterSupplyInstallRow(row) {
   }
   if (String(row?.id || "") === "quote-1270") {
     return {
-      ...normalizeLinkedQuoteRowItem(row, "GYPROCK SUPPLY & FIX - INTERNAL WALLS", "lowerInternalPlasterboardWallM2"),
+      ...normalizeLinkedQuoteRowItem(row, "GYPROCK SUPPLY & FIX - INTERNAL WALLS", "totalInternalPlasterboardWallM2"),
       unit: "M2",
       sourceOfRate: "workbook",
       notes: "IMPORTED DATA",
@@ -3787,10 +4544,19 @@ function uniqueQuoteRowsByIdentity(rows = []) {
   });
 }
 
+// The default window/door rows come from static template data, so they are built once.
+// Restored rows are inserted straight into workbook state, so every caller still gets its
+// own copy and the cached rows themselves are never handed out or mutated.
+let cachedDefaultWindowDoorRows = null;
+function defaultWindowDoorRows() {
+  if (!cachedDefaultWindowDoorRows) cachedDefaultWindowDoorRows = createEstimateBuilderWorkbookDefaults().windowsDoors || [];
+  return structuredClone(cachedDefaultWindowDoorRows);
+}
+
 function syncWindowDoorApproximateRates(workbook) {
   if (!Array.isArray(workbook?.windowsDoors)) return workbook;
   let changed = false;
-  const defaults = createEstimateBuilderWorkbookDefaults().windowsDoors || [];
+  const defaults = defaultWindowDoorRows();
   const restoredRows = normalizeHumeEntryDoorRows(restoreMissingEntryDoorDefaults(workbook.windowsDoors, defaults));
   const orderedRows = orderWindowDoorRows(restoredRows);
   if (restoredRows.length !== workbook.windowsDoors.length || !sameWindowDoorOrder(orderedRows, workbook.windowsDoors)) changed = true;
@@ -3819,60 +4585,91 @@ function sameWindowDoorOrder(a = [], b = []) {
 
 function syncEditableLinkedQuoteQuantities(workbook, preview) {
   if (!preview?.quotation || !workbook?.quotation) return workbook;
+  // The hard-coded 90mm INTERNAL WALL FRAMES row is written into the job itself (not only shown),
+  // so it is saved, exported and editable like any other line.
+  const ensuredQuotation = ensureInternal90mmWallFrameRow(workbook.quotation, preview.quantities || {});
+  if (ensuredQuotation !== workbook.quotation) workbook = { ...workbook, quotation: stampQuotationOrder(ensuredQuotation, orderedQuoteSections(ensuredQuotation, workbook.quotationSectionOrder || [])) };
+  const ensured = workbook;
   let changed = false;
   const quotation = Object.fromEntries(Object.entries(workbook.quotation).map(([sectionName, section]) => {
     const previewRowsById = Object.fromEntries((preview.quotation?.[sectionName]?.rows || []).map((row) => [row.id, row]));
-    const rows = (section.rows || []).map((row) => {
-      const previewRow = previewRowsById[row.id];
-      const quantityKey = previewRow?.quantityKey || row.quantityKey || "";
-      if (!EDITABLE_LINKED_QUOTE_KEYS.has(quantityKey)) {
-        if (row.autoQuantity) {
-          changed = true;
-          return { ...row, autoQuantity: false };
-        }
-        return row;
-      }
-      const linkedQuantity = previewRow?.qty ? String(previewRow.qty) : "";
-      if (FORCED_LINKED_QUOTE_KEYS.has(quantityKey)) {
-        if (String(row.quantity || "") === linkedQuantity && row.autoQuantity === Boolean(linkedQuantity) && row.quantityKey === quantityKey && row.quantityManualOverride === false) return row;
-        changed = true;
-        return {
-          ...row,
-          quantity: linkedQuantity,
-          importedQuantity: "",
-          quantityKey,
-          autoQuantity: Boolean(linkedQuantity),
-          quantityManualOverride: false,
-        };
-      }
-      if (String(quantityKey || "").startsWith("quoteFloorSystem")) {
-        if (String(row.quantity || "") === linkedQuantity && row.autoQuantity === Boolean(linkedQuantity) && row.quantityKey === quantityKey && row.quantityManualOverride === false) return row;
-        changed = true;
-        return {
-          ...row,
-          quantity: linkedQuantity,
-          importedQuantity: "",
-          quantityKey,
-          autoQuantity: Boolean(linkedQuantity),
-          quantityManualOverride: false,
-        };
-      }
-      if (row.quantityManualOverride) return row;
-      if (row.autoQuantity === false && String(row.quantity || "") !== "") return row;
-      if (String(row.quantity || "") === linkedQuantity && row.autoQuantity === Boolean(linkedQuantity) && row.quantityKey === quantityKey) return row;
-      changed = true;
-      return {
-        ...row,
-        quantity: linkedQuantity,
-        importedQuantity: "",
-        quantityKey,
-        autoQuantity: Boolean(linkedQuantity),
-        quantityManualOverride: false,
-      };
-    });
+     const rows = (section.rows || []).map((row) => {
+       const previewRow = previewRowsById[row.id];
+       const quantityKey = previewRow?.quantityKey || row.quantityKey || "";
+       // Handle 19mm YELLOW TONGUE SHEET FLOORING (quote-626)
+       if (row.id === "quote-626") {
+         const upperFloorDepthRow = workbook.data?.inputDataSheet?.rows?.upperFloorDepthMm;
+         const upperFloorDepthValue = upperFloorDepthRow?.value;
+         const isTimber = upperFloorDepthValue === "319mm Timber Floor System (300mm I Beams & 19mm Sheet Flooring)" ||
+                          upperFloorDepthValue === "379mm Timber Floor System (360mm I Beams & 19mm Sheet Flooring)";
+         let calculatedQty = "";
+         if (isTimber) {
+           const upperFloorAreaRow = workbook.data?.inputDataSheet?.rows?.upperFloorAreaM2;
+           const upperFloorArea = parseFloat(upperFloorAreaRow?.value) || 0;
+           const sheets = Math.ceil(upperFloorArea / 3.24);
+           calculatedQty = String(sheets);
+         }
+         if (String(row.quantity || "") === calculatedQty && row.autoQuantity === (calculatedQty !== "") && row.quantityKey === "" && row.quantityManualOverride === false) {
+           return row;
+         }
+         changed = true;
+         return {
+           ...row,
+           quantity: calculatedQty,
+           importedQuantity: "",
+           quantityKey: "",
+           autoQuantity: calculatedQty !== "",
+           quantityManualOverride: false,
+         };
+       }
+       if (!EDITABLE_LINKED_QUOTE_KEYS.has(quantityKey)) {
+         if (row.autoQuantity) {
+           changed = true;
+           return { ...row, autoQuantity: false };
+         }
+         return row;
+       }
+       const linkedQuantity = previewRow?.qty ? String(previewRow.qty) : "";
+       if (FORCED_LINKED_QUOTE_KEYS.has(quantityKey)) {
+         if (String(row.quantity || "") === linkedQuantity && row.autoQuantity === Boolean(linkedQuantity) && row.quantityKey === quantityKey && row.quantityManualOverride === false) return row;
+         changed = true;
+         return {
+           ...row,
+           quantity: linkedQuantity,
+           importedQuantity: "",
+           quantityKey,
+           autoQuantity: Boolean(linkedQuantity),
+           quantityManualOverride: false,
+         };
+       }
+       if (String(quantityKey || "").startsWith("quoteFloorSystem")) {
+         if (String(row.quantity || "") === linkedQuantity && row.autoQuantity === Boolean(linkedQuantity) && row.quantityKey === quantityKey && row.quantityManualOverride === false) return row;
+         changed = true;
+         return {
+           ...row,
+           quantity: linkedQuantity,
+           importedQuantity: "",
+           quantityKey,
+           autoQuantity: Boolean(linkedQuantity),
+           quantityManualOverride: false,
+         };
+       }
+       if (row.quantityManualOverride) return row;
+       if (row.autoQuantity === false && String(row.quantity || "") !== "") return row;
+       if (String(row.quantity || "") === linkedQuantity && row.autoQuantity === Boolean(linkedQuantity) && row.quantityKey === quantityKey) return row;
+       changed = true;
+       return {
+         ...row,
+         quantity: linkedQuantity,
+         importedQuantity: "",
+         quantityKey,
+         autoQuantity: Boolean(linkedQuantity),
+         quantityManualOverride: false,
+       };
+     });
     return [sectionName, { ...section, rows }];
   }));
-  return changed ? { ...workbook, quotation } : workbook;
+  return changed ? { ...workbook, quotation } : ensured;
 }
 
 function renumberWorkbookQuoteDisplay(workbook = {}) {
@@ -3989,7 +4786,8 @@ function buildProcurementItemsFromQuote(workbook = {}, preview = {}, existingIte
       const quoteRowId = String(row.id || `quote-row:${sectionName}:${quoteRowSourceNumber(row) || row.item || items.length}`);
       activeQuoteRowIds.add(quoteRowId);
       const existing = existingByQuoteRowId.get(quoteRowId) || {};
-      const estimatedRate = procurementEstimatedRate(row);
+      const material = takeoffProcurementDetails({ ...row, section: sectionName }, preview.quantities);
+      const estimatedRate = procurementEstimatedRate(row) / (material.rateDivisor || 1);
       const estimatedTotal = procurementEstimatedTotal(row);
       items.push({
         id: existing.id || `procurement:${quoteRowId}`,
@@ -3999,11 +4797,13 @@ function buildProcurementItemsFromQuote(workbook = {}, preview = {}, existingIte
         sectionNumber,
         sectionName,
         itemDescription: row.item || row.values?.[0] || "",
-        qty: procurementQuantity(row),
-        unit: row.unit || row.values?.[3] || "",
+        qty: material.qty ?? procurementQuantity(row),
+        canonicalQuantityKey: material.canonicalQuantityKey,
+        supplierGroup: material.supplierGroup,
+        unit: material.unit || row.unit || row.values?.[3] || "",
         estimatedRate,
         estimatedTotal,
-        supplier: existing.supplier || "",
+        supplier: existing.supplier || row.supplier || "",
         supplierQuoteNumber: existing.supplierQuoteNumber || "",
         procurementCategory: existing.procurementCategory || procurementCategoryForRow(sectionName, row),
         requiredByDate: existing.requiredByDate || "",
@@ -4016,6 +4816,17 @@ function buildProcurementItemsFromQuote(workbook = {}, preview = {}, existingIte
         supplierNetIncludedAmount: existing.supplierNetIncludedAmount || "",
         supplierQuoteMode: existing.supplierQuoteMode || "Included In Quote",
         removedFromQuote: false,
+        // Takeoff-driven product rows (doorTakeoffQuotation.js) carry what the order needs: the
+        // canonical product, its size / wall thickness and the Takeoff openings it came from.
+        ...(row.purchasingDetails ? {
+          productId: row.productId || "",
+          productCode: row.productCode || "",
+          manufacturer: row.manufacturer || "",
+          sku: row.sku || "",
+          productImageUrl: row.productImageUrl || "",
+          purchasingDetails: row.purchasingDetails,
+          takeoffSources: row.takeoffSources || [],
+        } : {}),
       });
     });
   });
@@ -4027,31 +4838,23 @@ function buildProcurementItemsFromQuote(workbook = {}, preview = {}, existingIte
       orderStatus: item.orderStatus === "Removed From Quote" ? item.orderStatus : "Removed From Quote",
     });
   });
-  return items;
+  return assignPlasterboardSupplier(items);
 }
 
 function isProcurementQuoteRow(row = {}) {
-  if (!row) return false;
-  if (isApplianceHeadingQuoteRow(row)) return false;
-  if (quoteFeeType(row)) return false;
-  if (isHiddenQuoteRow(row)) return false;
-  const text = `${row.item || ""} ${row.lineType || ""} ${row.rawText || ""}`.toLowerCase();
-  if (text.includes("subtotal") || text.includes("total ") || text.includes("margin") || text.includes("gst") || text.includes("profit") || text.includes("overhead") || text.includes("sales commission") || text.includes("qbcc") || text.includes("qbsa") || text.includes("q leave")) return false;
-  return procurementQuantity(row) > 0 || procurementEstimatedTotal(row) > 0;
+  return shouldIncludeQuoteRowInFinalBoq(row);
 }
 
 function procurementQuantity(row = {}) {
-  return numberFromInput(row.qty ?? row.quantity ?? row.importedQuantity ?? row.values?.[1]);
+  return quoteQuantity(row);
 }
 
 function procurementEstimatedRate(row = {}) {
-  return numberFromInput(row.finalRateUsed ?? row.manualRate ?? row.excelRate ?? row.values?.[5]);
+  return quoteRate(row);
 }
 
 function procurementEstimatedTotal(row = {}) {
-  const direct = numberFromInput(row.cost ?? row.importedCost ?? row.total ?? row.values?.[6]);
-  if (direct > 0) return direct;
-  return procurementQuantity(row) * procurementEstimatedRate(row);
+  return quoteLineTotal(row);
 }
 
 function procurementStageNumber(workbook = {}, sectionName = "") {
@@ -4099,8 +4902,13 @@ function isVisibleQuoteRowForRenumber(row, workbook, floorCount) {
   if (quoteFeeType(row)) return false;
   if (isHiddenQuoteRow(row)) return false;
   if (!isQuoteRowRelevantForFloorCount(row, floorCount)) return false;
-  if (!hasSelectedWallThickness(workbook, "90") && is90mmWallFrameQuoteRow(row)) return false;
+  if (!hasSelectedWallThickness(workbook, "90") && is90mmWallFrameQuoteRow(row) && !(isInternal90mmWallFrameRow(row) && internal90mmWallsLmEntered(workbook))) return false;
   return true;
+}
+
+// Job Setup holds 90mm internal wall lengths for this job (the inputs behind totalInternal90mmWallsLm).
+function internal90mmWallsLmEntered(workbook = {}) {
+  return ["lowerInternal90mmWallsLm", "upperInternal90mmWallsLm", "thirdInternal90mmWallsLm"].some((key) => numberFromInput(dataValue(workbook, key)) > 0);
 }
 
 function isApplianceHeadingQuoteRow(row) {
@@ -4220,7 +5028,7 @@ function ensureRequiredDefaultQuoteRows(sectionName, savedRows = [], defaultRows
   const sectionBaseName = quoteSectionBaseName(sectionName);
   const requiredIds = new Set(
     sectionBaseName === "external cladding"
-      ? ["quote-1026", "quote-1027"]
+      ? ["quote-1026", "quote-1027", "quote-1036"]
       : sectionBaseName === "rendering"
         ? ["quote-1126", "quote-1127"]
       : sectionBaseName === "insulation"
@@ -4256,6 +5064,11 @@ function ensureRequiredDefaultQuoteRows(sectionName, savedRows = [], defaultRows
     const exteriorRows = missingRows.filter((row) => row.id === "quote-30019");
     const interiorRows = missingRows.filter((row) => row.id === "quote-30022");
     return insertRowsAfter(insertRowsAfter(insertRowsAfter(insertRowsAfter(insertRowsAfter(insertRowsAfter(insertRowsAfter(savedRows, thirdStoreyWindowRows, "quote-74"), thirdStoreyTrussRows, "quote-78"), ceilingBattenRows, "quote-80"), tieDownRows, "quote-88"), exteriorRows, "quote-91"), interiorRows, "quote-93"), thirdFloorRows, "quote-99");
+  }
+  if (sectionBaseName === "external cladding") {
+    const linea180PlankRows = missingRows.filter((row) => row.id === "quote-1036");
+    const otherRows = missingRows.filter((row) => row.id !== "quote-1036");
+    return insertRowsAfter([...otherRows, ...savedRows], linea180PlankRows, "quote-1027");
   }
   if (sectionBaseName === "painter") {
     const interiorRows = missingRows.filter((row) => row.id === "quote-1963.1");
@@ -4710,8 +5523,8 @@ function normalizedQuoteQuantityKey(row) {
   if (quoteSectionBaseName(row?.section) === "bricklayers labour" && text.includes("bricklayer")) return "quoteBricklayerFaceBricks";
   if (quoteSectionBaseName(row?.section) === "rendering" && String(row?.item || "").trim().toLowerCase() === "item") return "quoteRenderingNetWallAreaM2";
   if (quoteSectionBaseName(row?.section) === "rendering" && text.includes("add for sills")) return "quoteRenderingSillsLm";
-  if (quoteSectionBaseName(row?.section) === "plasterer - supply and install" && (String(row?.id || "") === "quote-1269" || quoteRowSourceNumber(row) === 1269 || text.includes("gyprock supply & fix - exterior walls"))) return "lowerExternalPlasterboardWallM2";
-  if (quoteSectionBaseName(row?.section) === "plasterer - supply and install" && (String(row?.id || "") === "quote-1270" || quoteRowSourceNumber(row) === 1270 || text.includes("gyprock supply & fix - internal walls"))) return "lowerInternalPlasterboardWallM2";
+  if (quoteSectionBaseName(row?.section) === "plasterer - supply and install" && (String(row?.id || "") === "quote-1269" || quoteRowSourceNumber(row) === 1269 || text.includes("gyprock supply & fix - exterior walls"))) return "totalExternalPlasterboardWallM2";
+  if (quoteSectionBaseName(row?.section) === "plasterer - supply and install" && (String(row?.id || "") === "quote-1270" || quoteRowSourceNumber(row) === 1270 || text.includes("gyprock supply & fix - internal walls"))) return "totalInternalPlasterboardWallM2";
   if (quoteSectionBaseName(row?.section) === "frame stage labour" && text.includes("install windows")) return "quoteFrameInstallWindows";
   if (quoteSectionBaseName(row?.section) === "frame stage labour" && text.includes("second storey windows")) return "quoteFrameSecondStoreyWindows";
   if (quoteSectionBaseName(row?.section) === "frame stage labour" && text.includes("third storey windows")) return "quoteFrameThirdStoreyWindows";
@@ -4985,14 +5798,14 @@ function isAppliancePackageSectionName(section) {
 function quoteSectionBaseName(section) {
   return String(section || "")
     .toLowerCase()
-    .replace(/['’]/g, "")
+    .replace(/['â€™]/g, "")
     .replace(/\s*\(\d+\)\s*$/, "")
     .replace(/\s+/g, " ")
     .trim();
 }
 
 function normalizeSectionName(section) {
-  return String(section || "").toLowerCase().replace(/['’]/g, "").replace(/\s+/g, " ").trim();
+  return String(section || "").toLowerCase().replace(/['â€™]/g, "").replace(/\s+/g, " ").trim();
 }
 
 function collectSavedRows(savedData = {}) {
@@ -5045,8 +5858,48 @@ function orderBetween(previous, next) {
 
 function isRelevantForDataInput(row, workbook) {
   if (HIDDEN_DATA_INPUT_ROW_KEYS.has(String(row?.key || ""))) return false;
+  // The Takeoff Mappings section is the raw set of canonical fields AI Plan Takeoff import
+  // writes onto (withTakeoffInputRows in takeoffInputRows.js) - a real, required destination
+  // for that import, never removed here, just not a user-facing input row: the same
+  // quantities already surface on their own dedicated rows elsewhere on this sheet (wall
+  // system + frame thickness, window/door schedule, brick sills, architraves). A section
+  // predicate (rather than a growing per-key list) keeps every row that loop generates now
+  // or later out of the visible sheet without this filter needing to be kept in sync with it.
+  // The row objects this filter actually receives have already been through templateRow()
+  // (estimateWorksheetV4Schema.js), which renames the template's own `section` field to
+  // `sectionLabel` - checking `row.section` here silently matched nothing at all, which is
+  // exactly why the entire Takeoff Mappings section kept rendering regardless of this rule.
+  if (String(row?.sectionLabel || "").trim().toLowerCase() === "takeoff mappings") return false;
   if (!isRelevantForWallThicknessSelection(row, workbook)) return false;
+  if (!isRelevantForNonZeroJambStock(row, workbook)) return false;
   return isRelevantForFloorCount(row, dataValue(workbook, "floorCount") || "Single storey");
+}
+
+// 110x19 jamb stock is only ever needed for a genuine 90mm-framed door that draws separate jamb
+// material (see the jamb rule in takeoffMaterialFields/internalDoorJambTrace: cavity sliders never
+// draw from it regardless of wall thickness, and most projects have no 90mm-framed internal doors
+// at all). A project with a calculated requirement of zero has nothing to show on this row, so it
+// stays out of the visible sheet rather than displaying a confusing, un-orderable "0 lengths" line
+// - the same principle as never inventing a zero-quantity procurement row for a size that does not
+// exist in the Takeoff. This is purely a display rule keyed off the already-calculated (and, per
+// ALWAYS_TRUST_TAKEOFF_KEYS in jobSetupTakeoffImport.js, always-reapplied) quantity: a project that
+// genuinely has 90mm-framed doors needing separate jamb stock still shows this row with its real,
+// non-zero quantity, so the underlying calculation stays untouched and unconditional.
+//
+// totalCavitySliderCagesEach is NOT handled here, deliberately: it has a live-computed breakdown
+// (cavitySliderSize_* rows, spliced in by withCavitySliderSizeRows in EstimateBuilderWorkbook.js)
+// that can and must be trusted over this field's own persisted value, which only updates when Apply
+// Takeoff runs. Hiding it here, upstream of that splice, would repeat the exact regression already
+// fixed once for internalDoors: the splice finds its anchor by key in this filtered array, so hiding
+// the anchor first makes the anchor unfindable and silently drops the live breakdown rows too - even
+// on the rare occasion a live cage genuinely exists. withCavitySliderSizeRows instead removes/keeps
+// this row based on its own freshly computed sizeRows.length, which can never be stale the way a
+// persisted field can.
+function isRelevantForNonZeroJambStock(row, workbook) {
+  if (String(row?.key || "") !== "jamb110x19StockLengthsEach") return true;
+  const raw = dataValue(workbook, "jamb110x19StockLengthsEach");
+  const value = parseFloat(String(raw ?? "").replace(/,/g, ""));
+  return Number(value) > 0;
 }
 
 function isRelevantForWallThicknessSelection(row, workbook) {
@@ -5104,11 +5957,12 @@ const PLASTERBOARD_FORMULA_KEYS = new Set(Object.values(PLASTERBOARD_FORMULA_LAB
 
 function hasSelectedThicknessForRows(workbook, thickness, pairs) {
   return pairs.some(([thicknessKey, wallLmKey]) => (
-    String(dataValue(workbook, thicknessKey) || "").replace(/\D/g, "") === thickness
+    Number(dataValue(workbook, wallLmKey.replace("WallsLm", `${thickness}mmWallsLm`))) > 0 || String(dataValue(workbook, thicknessKey) || "").replace(/\D/g, "") === thickness
   ));
 }
 
 function hasSelectedWallThickness(workbook, thickness) {
+  if (["lower", "upper", "third"].some((prefix) => ["Internal", "External"].some((type) => Number(dataValue(workbook, `${prefix}${type}${thickness}mmWallsLm`)) > 0))) return true;
   return [
     "lowerWallThicknessMm",
     "upperWallThicknessMm",
@@ -5120,6 +5974,7 @@ function hasSelectedWallThickness(workbook, thickness) {
 }
 
 function hasSelectedWallLengthThickness(workbook, wallType, thickness) {
+  if (["lower", "upper", "third"].some((prefix) => Number(dataValue(workbook, `${prefix}${wallType === "external" ? "External" : "Internal"}${thickness}mmWallsLm`)) > 0)) return true;
   const levels = floorCountToLevels(dataValue(workbook, "floorCount") || "Single storey");
   const keys = wallType === "external"
     ? [["lowerWallThicknessMm", 1], ["upperWallThicknessMm", 2], ["thirdWallThicknessMm", 3]]
@@ -5177,7 +6032,8 @@ function withDynamicDataRowLabel(row, section, workbook) {
   };
   const thicknessLabel = thicknessLabels[row.key];
   if (thicknessLabel) {
-    const thickness = String(dataValue(workbook, thicknessLabel[1]) || "").trim();
+    const measured = [70, 90].filter((mm) => Number(dataValue(workbook, row.key.replace("WallsLm", `${mm}mmWallsLm`))) > 0);
+    const thickness = measured.length ? measured.join("/") : String(dataValue(workbook, thicknessLabel[1]) || "").trim();
     return { ...row, label: thickness ? `${thicknessLabel[0]} ${thickness}mm` : thicknessLabel[0] };
   }
   const wallRows = workbook.data?.inputDataSheet?.rows || workbook.data?.walls?.rows || {};
@@ -5204,6 +6060,7 @@ function shouldTrackQuoteChange(key) {
   return [
     "active",
     "quantity",
+    "quantityFormula",
     "unit",
     "manualRate",
     "supplierQuote",
@@ -5369,10 +6226,46 @@ const WALL_THICKNESS_SPECIFIC_RESULT_ROWS = {
 
 const HIDDEN_DATA_INPUT_ROW_KEYS = new Set([
   "ceilingAreaM2",
-  "totalExternalWallsLm",
   "totalInternalWallsLm",
   "total70mmWallsLm",
   "total90mmWallsLm",
+  // WALL FRAMES (Item 60's replacement section) shows only: External Wall Frames 70mm/90mm +
+  // level total, Internal Walls 70mm/90mm frame, per level, then TOTAL WALL FRAMES at the end -
+  // see the per-level and cross-level total rows built in takeoffInputRows.js. Full per-
+  // construction-system detail (Brick Veneer / Lightweight Cladding / Core-filled Blockwork /
+  // Double Brick, each split by frame thickness) still carries the authoritative measured LM
+  // every downstream calculation reads (framing materials, brick/cladding order quantities) -
+  // hiding it here only removes the detailed permutation view from this quick input sheet.
+  // totalInternalWallsLm and the per-level lower/upper/thirdInternalWallsLm (all-thickness
+  // internal totals) have no row in the required Wall Frames layout - only the 70mm/90mm split
+  // does - so they stay hidden alongside these.
+  "lowerInternalWallsLm", "upperInternalWallsLm", "thirdInternalWallsLm",
+  // The old Section 64 manual single-figure external-wall-LM entry per level. Still a live, valid
+  // Job Setup import destination in its own right (untouched, still editable) - just not shown on
+  // this sheet, since lower/upper/thirdExteriorWallFramesLm now shows this level's total, computed
+  // from the measured 70mm/90mm breakdown instead of typed by hand.
+  "lowerExternalWallsLm", "upperExternalWallsLm", "thirdExternalWallsLm",
+  "lowerBrickVeneer70mmWallsLm", "lowerBrickVeneer90mmWallsLm",
+  "lowerLightweightCladding70mmWallsLm", "lowerLightweightCladding90mmWallsLm",
+  "lowerCoreFilledBlockworkLm", "lowerDoubleBrickLm",
+  "upperBrickVeneer70mmWallsLm", "upperBrickVeneer90mmWallsLm",
+  "upperLightweightCladding70mmWallsLm", "upperLightweightCladding90mmWallsLm",
+  "upperCoreFilledBlockworkLm", "upperDoubleBrickLm",
+  "thirdBrickVeneer70mmWallsLm", "thirdBrickVeneer90mmWallsLm",
+  "thirdLightweightCladding70mmWallsLm", "thirdLightweightCladding90mmWallsLm",
+  "thirdCoreFilledBlockworkLm", "thirdDoubleBrickLm",
+  // Diagnostic/review-only buckets for a wall Takeoff could not cleanly classify into a known
+  // construction system (Custom or fully Unclassified), for every level and both external and
+  // internal. They exist so an estimator reviewing the Takeoff itself sees a nonzero warning
+  // total; they add nothing to a quick Job Setup input sheet and Takeoff's own review-warning
+  // logic (createJobSetupPayload's unclassified-wall warnings) does not read them back from
+  // here, so hiding them is display-only.
+  "lowerCustomExternalLm", "lowerUnclassifiedExternalLm",
+  "lowerCustomInternalLm", "lowerUnclassifiedInternalLm",
+  "upperCustomExternalLm", "upperUnclassifiedExternalLm",
+  "upperCustomInternalLm", "upperUnclassifiedInternalLm",
+  "thirdCustomExternalLm", "thirdUnclassifiedExternalLm",
+  "thirdCustomInternalLm", "thirdUnclassifiedInternalLm",
   "externalFramedWallLm",
   "internalFramedWallLm",
   "studsEach",
@@ -5387,6 +6280,15 @@ const HIDDEN_DATA_INPUT_ROW_KEYS = new Set([
   "totalTimberFramingLm",
   "totalTimberLengthsEach",
 ]);
+// The combined "Internal doors" count (119) is NOT listed in HIDDEN_DATA_INPUT_ROW_KEYS above,
+// on purpose: this filter runs upstream of EstimateBuilderWorkbook.js's own row splicing
+// (withInternalDoorSizeRows), which finds this exact row by key and replaces it in place with the
+// size-specific standard-door and robe/sliding-door rows it derives from the Takeoff. Hiding it
+// here first would delete it from the array before that splice ever runs, so the splice's own
+// `rows.findIndex((row) => row.key === "internalDoors")` would find nothing (index -1), silently
+// skip the splice, and the replacement size rows would never appear at all - this is exactly the
+// regression that shipped once. internalDoors must reach EstimateBuilderWorkbook.js intact so it
+// has a real row to replace; removal happens there, not here.
 
 const TEMPLATE_SETUP_DATA_KEYS = new Set([
   "floorCount",
@@ -5448,6 +6350,7 @@ function sanitizeWorkbookForTemplate(sourceWorkbook = {}, options = {}) {
     jobId: "",
     projectId: "",
     data: sanitizeTemplateData(workbook.data),
+    quotationNotificationAcknowledgements: {},
     windowsDoors: sanitizeTemplateWindows(workbook.windowsDoors),
     quotation: sanitizeTemplateQuotation(workbook.quotation),
     quotationSectionOrder: normalizeQuoteSectionOrder(workbook.quotationSectionOrder || [], workbook.quotation || {}),
@@ -5464,19 +6367,205 @@ function sanitizeWorkbookForTemplate(sourceWorkbook = {}, options = {}) {
 }
 
 function compactWorkbookForStorage(workbook = {}) {
+  return { ...workbook };
+}
+
+function legacyCompactWorkbookForStorage(workbook = {}) {
   const {
     importedWorkbook,
     importedSheets,
     importReport,
     ...compact
   } = workbook;
+  return {
+    ...compact,
+    quotation: compactQuotationForStorage(compact.quotation || {}),
+    productLibrary: compactProductLibraryForStorage(compact.productLibrary || {}),
+    projectEstimateBuilder: stripPdfDataFromProjectEstimateBuilder(compact.projectEstimateBuilder || {}),
+    // Preserve pixels until externalizeTakeoffPlanPages commits their assets.
+    aiPlanTakeoffJob: compact.aiPlanTakeoffJob,
+    quoteHistory: Array.isArray(compact.quoteHistory) ? compact.quoteHistory.slice(-200) : [],
+    formulaHistory: Array.isArray(compact.formulaHistory) ? compact.formulaHistory.slice(-200) : [],
+    ratePromotions: Array.isArray(compact.ratePromotions) ? compact.ratePromotions.slice(-100) : [],
+  };
+}
+
+function stripPdfDataFromProjectEstimateBuilder(builder = {}) {
+  if (!builder || typeof builder !== "object") return builder;
+  return {
+    ...builder,
+    pages: Array.isArray(builder.pages)
+      ? builder.pages.map((page) => ({
+        ...page,
+        blocks: Array.isArray(page?.blocks)
+          ? page.blocks.map((block) => ({
+            ...block,
+            dataUrl: undefined, // Remove base64 canvas data
+            imageData: undefined,
+          }))
+          : page?.blocks,
+      }))
+      : builder.pages,
+    importedDocuments: builder.importedDocuments
+      ? {
+        ...builder.importedDocuments,
+        pricedPlans: builder.importedDocuments.pricedPlans
+          ? {
+            ...builder.importedDocuments.pricedPlans,
+            pages: Array.isArray(builder.importedDocuments.pricedPlans.pages)
+              ? builder.importedDocuments.pricedPlans.pages.map((page) => ({
+                ...page,
+                dataUrl: undefined,
+                imageData: undefined,
+                base64: undefined,
+              }))
+              : builder.importedDocuments.pricedPlans.pages,
+          }
+          : builder.importedDocuments.pricedPlans,
+      }
+      : builder.importedDocuments,
+  };
+}
+
+
+function compactQuotationForStorage(quotation = {}) {
+  return Object.fromEntries(Object.entries(quotation || {}).map(([sectionName, section]) => [
+    sectionName,
+    {
+      ...(section || {}),
+      rows: Array.isArray(section?.rows) ? section.rows.map(compactQuoteRowForStorage) : [],
+    },
+  ]));
+}
+
+function compactQuoteRowForStorage(row = {}) {
+  return {
+    ...row,
+    productImageUrl: stableImageReference(row.productImageUrl),
+    thumbnailUrl: stableImageReference(row.thumbnailUrl),
+    imageReference: stableImageReference(row.imageReference),
+    imageUrl: stableImageReference(row.imageUrl),
+    selectionImageUrl: stableImageReference(row.selectionImageUrl),
+    productImages: Array.isArray(row.productImages) ? row.productImages.map(stableImageReference).filter(Boolean) : row.productImages,
+    selectionImages: Array.isArray(row.selectionImages) ? row.selectionImages.map(stableImageReference).filter(Boolean) : row.selectionImages,
+    productLibrarySnapshot: compactProductLibrarySnapshot(row.productLibrarySnapshot),
+    selectedDetails: compactProductLibrarySnapshot(row.selectedDetails),
+  };
+}
+
+function compactProductLibrarySnapshot(snapshot = null) {
+  if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) return snapshot || null;
+  const compact = { ...snapshot };
+  ["imageReference", "productImageUrl", "thumbnailUrl", "primaryImageUrl", "imageUrl", "image_url", "product_image_url"].forEach((key) => {
+    if (compact[key]) compact[key] = stableImageReference(compact[key]);
+  });
+  ["images", "productImages", "selectionImages", "galleryImageUrls"].forEach((key) => {
+    if (Array.isArray(compact[key])) compact[key] = compact[key].map(stableImageReference).filter(Boolean);
+  });
+  delete compact.products;
+  delete compact.catalogue;
   return compact;
 }
 
+function compactProductLibraryForStorage(library = {}) {
+  return {
+    ...(library || {}),
+    products: Array.isArray(library.products)
+      ? library.products.map((product) => ({
+        ...product,
+        image_url: stableImageReference(product.image_url),
+        imageUrl: stableImageReference(product.imageUrl),
+        productImageUrl: stableImageReference(product.productImageUrl),
+        primaryImageUrl: stableImageReference(product.primaryImageUrl),
+        thumbnailUrl: stableImageReference(product.thumbnailUrl),
+      }))
+      : [],
+  };
+}
+
+function stableImageReference(value) {
+  const text = String(value || "").trim();
+  if (!text) return "";
+  if (/^data:/i.test(text)) return "";
+  return text;
+}
+
+const SAVED_JOB_PACKAGE_SECTION_KEYS = [
+  "takeoffSchedule",
+  "entryDoorFurnitureSchedule",
+  "quotationSchedule",
+  "procurementSchedule",
+  "supplierPurchaseOrderSchedule",
+  "clientSelectionsBook",
+  "selectionSchedule",
+  "selectionSchedules",
+  "aiPlanTakeoffJob",
+  "aiTakeoffProject",
+  "takeoffEngine",
+  "takeoffProject",
+  "takeoff",
+  "plans",
+  "gantt",
+  "ganttChart",
+  "ganttTasks",
+  "projectSchedule",
+  "jobBoardTasks",
+  "windowsDoors",
+  "standardInclusions",
+  "estimateInclusions",
+  "productLibrary",
+  "procurement",
+  "purchaseOrders",
+];
+
+function hasOwnJobPackageValue(source = {}, key = "") {
+  return Boolean(source && typeof source === "object" && Object.prototype.hasOwnProperty.call(source, key));
+}
+
+function collectSavedJobPackageSections(workbook = {}) {
+  const source = workbook && typeof workbook === "object" ? workbook : {};
+  // Migration and normalization return new objects. Retain the saved section
+  // references while they run; JSON cloning duplicated large embedded documents
+  // twice during open, even when no content was being changed.
+  return {
+    ...(hasOwnJobPackageValue(source, "projectEstimateBuilder")
+      ? { projectEstimateBuilder: source.projectEstimateBuilder } : {}),
+    ...(hasOwnJobPackageValue(source.clientPage, "proposalBuilder")
+      ? { proposalBuilder: source.clientPage.proposalBuilder } : {}),
+    sections: SAVED_JOB_PACKAGE_SECTION_KEYS.reduce((sections, key) => {
+      if (hasOwnJobPackageValue(source, key)) sections[key] = source[key];
+      return sections;
+    }, {}),
+    selectedStandardInclusionsPackageId: source.selected_standard_inclusions_package_id,
+  };
+}
+
+function restoreSavedJobPackageSections(workbook = {}, preserved = {}) {
+  const restored = {
+    ...workbook,
+    ...(preserved.sections || {}),
+  };
+  // Both locations are supported by the editor. Restore only the saved locations:
+  // mirroring an imported document into the other location can double a large job.
+  if (hasOwnJobPackageValue(preserved, "projectEstimateBuilder")) {
+    restored.projectEstimateBuilder = preserved.projectEstimateBuilder;
+  }
+  if (hasOwnJobPackageValue(preserved, "proposalBuilder")) {
+    restored.clientPage = {
+      ...(restored.clientPage || {}),
+      proposalBuilder: preserved.proposalBuilder,
+    };
+  }
+  if (preserved.selectedStandardInclusionsPackageId) {
+    restored.selected_standard_inclusions_package_id = preserved.selectedStandardInclusionsPackageId;
+  }
+  return restored;
+}
+
 async function applyTemplateDefaultsToJob(workbook = {}) {
-  const migratedWorkbook = migrateWorkbookToMasterTemplate(workbook);
-  const template = await resolveMasterTemplate().catch(() => null);
-  return mergeMissingQuoteSectionTemplateMeta(migratedWorkbook, template);
+  // Existing jobs own their saved rows, formulas and ordering. Templates are
+  // consulted only by createJobFromTemplate, never during restoration.
+  return normalizeWorkbook(workbook);
 }
 
 async function resolveMasterTemplate() {
@@ -5599,7 +6688,7 @@ function clearJobSpecificData(data = {}) {
         rowKey,
         {
           ...row,
-          value: configKeys.has(rowKey) ? row?.value ?? "" : "",
+          value: /^(lower|upper|third)(ExternalWallLining|InternalWallSystem)$/.test(rowKey) ? "Plasterboard to framed walls" : configKeys.has(rowKey) ? row?.value ?? "" : "",
           notes: "",
         },
       ])),
@@ -5740,7 +6829,7 @@ function sanitizeTemplateData(data = {}) {
         const keepValue = shouldKeepTemplateDataValue(rowKey, definition);
         return [rowKey, {
           ...row,
-          value: keepValue ? row?.value ?? "" : "",
+          value: /^(lower|upper|third)(ExternalWallLining|InternalWallSystem)$/.test(rowKey) ? "Plasterboard to framed walls" : keepValue ? row?.value ?? "" : "",
           notes: "",
         }];
       })),
@@ -5843,6 +6932,12 @@ function normalizeSectionCsvRow(row = {}) {
     rate: get("rate"),
     notes: get("notes"),
     brandPackage: get("brand/package", "brand package", "brand", "package"),
+    productImageUrl: get("product image", "image", "image url", "thumbnail", "thumbnail url", "primary image url"),
+    productName: get("product name", "product"),
+    manufacturer: get("manufacturer", "brand/manufacturer"),
+    supplier: get("supplier"),
+    sku: get("sku", "model", "sku/model", "product code"),
+    description: get("description", "product description"),
   };
 }
 
@@ -5863,6 +6958,12 @@ function editableQuotePayloadFromCsv(row = {}) {
     notes: String(row.notes || "").trim(),
     applianceBrand: brandFromCsv(row.brandPackage),
     appliancePackage: packageFromCsv(row.brandPackage),
+    productImageUrl: String(row.productImageUrl || "").trim(),
+    productName: String(row.productName || row.itemName || "").trim(),
+    manufacturer: String(row.manufacturer || "").trim(),
+    supplier: String(row.supplier || "").trim(),
+    sku: String(row.sku || "").trim(),
+    productDescription: String(row.description || "").trim(),
   };
 }
 
@@ -5874,6 +6975,12 @@ function mergeEditableQuotePayload(row = {}, payload = {}) {
     unit: payload.unit || row.unit || "",
     manualRate: payload.manualRate,
     notes: payload.notes,
+    ...(payload.productImageUrl ? { productImageUrl: payload.productImageUrl, thumbnailUrl: payload.productImageUrl } : {}),
+    ...(payload.productName ? { productName: payload.productName } : {}),
+    ...(payload.manufacturer ? { manufacturer: payload.manufacturer, brand: payload.manufacturer } : {}),
+    ...(payload.supplier ? { supplier: payload.supplier } : {}),
+    ...(payload.sku ? { sku: payload.sku, model: payload.sku } : {}),
+    ...(payload.productDescription ? { productDescription: payload.productDescription, description: payload.productDescription } : {}),
     ...(payload.applianceBrand ? { applianceBrand: payload.applianceBrand } : {}),
     ...(payload.appliancePackage ? { appliancePackage: payload.appliancePackage } : {}),
     quantityManualOverride: true,
@@ -5908,6 +7015,16 @@ function newClientQuoteRow(section, payload = {}, index = 0) {
     notes: payload.notes || "",
     applianceBrand: payload.applianceBrand || "",
     appliancePackage: payload.appliancePackage || "",
+    productImageUrl: payload.productImageUrl || "",
+    thumbnailUrl: payload.productImageUrl || "",
+    productName: payload.productName || payload.item || "",
+    productDescription: payload.productDescription || "",
+    description: payload.productDescription || "",
+    supplier: payload.supplier || "",
+    brand: payload.manufacturer || "",
+    manufacturer: payload.manufacturer || "",
+    sku: payload.sku || "",
+    model: payload.sku || "",
     autoQuantity: false,
     quantityManualOverride: true,
   };
@@ -5930,14 +7047,38 @@ function parseTags(value) {
     .filter(Boolean);
 }
 
+export const __quotationPersistenceTestUtils = {
+  withPersistedQuotationOrder,
+  orderedQuoteSections,
+  sanitizeWorkbookForTemplate,
+  compactWorkbookForStorage,
+  normalizeWorkbook,
+  workbookAutosaveSignature,
+  workbookPersistenceFingerprint,
+  countQuotationRows,
+  jsonByteLength,
+  stableImageReference,
+  appendQuoteHistory,
+  workbookJobKey,
+};
+
+// Exposes the actual visibility filter DataInputSheet applies, so a regression test exercises the
+// real predicate (and the real HIDDEN_DATA_INPUT_ROW_KEYS list it reads) rather than a
+// reimplementation of it that could silently drift from - or misreport the health of - the code
+// that is genuinely running.
+export const __dataInputVisibilityTestUtils = {
+  isRelevantForDataInput,
+  HIDDEN_DATA_INPUT_ROW_KEYS,
+};
+
 function currentTemplateOwnerId() {
   if (typeof window === "undefined") return "server";
   const storageKey = "estimate-builder-template-owner-id";
   try {
-    const existing = window.localStorage.getItem(storageKey);
+    const existing = builderLocalStorage.getItem(storageKey);
     if (existing) return existing;
     const created = `local:${Date.now().toString(36)}:${Math.random().toString(36).slice(2, 10)}`;
-    window.localStorage.setItem(storageKey, created);
+    builderLocalStorage.setItem(storageKey, created);
     return created;
   } catch {
     return "local:unavailable";
@@ -5951,7 +7092,9 @@ const TEMPLATE_POINTER_KEY = "active-template-key";
 const JOB_STORE_NAME = "jobs";
 const ACTIVE_JOB_KEY = "active-job";
 const RECENT_JOBS_STORAGE_KEY = "estimate-builder-recent-jobs";
+const RECENT_ESTIMATE_FILES_STORAGE_KEY = "estimate-builder-recent-estimate-files";
 const ACTIVE_WORKBOOK_PAGE_STORAGE_KEY = "estimate-builder-active-workbook-pages";
+const EXPLICIT_ACTIVE_JOB_SESSION_KEY = "estimate-builder-explicit-active-job-key";
 const CORRUPT_ESTIMATE_JOB_FILE_NAME = "estimate-job.json";
 const LAST_LINKED_TEMPLATE_STORAGE_KEY = "estimate-builder-last-linked-template";
 const ALLOW_UNLINKED_JOB_SAVE_STORAGE_KEY = "estimate-builder-allow-unlinked-job-save";
@@ -5959,16 +7102,16 @@ const MASTER_TEMPLATE_KEY = "template:master-estimate-template";
 const MASTER_TEMPLATE_NAME = "Master Estimate Template";
 const LEGACY_MASTER_TEMPLATE_KEY = "template:single-storey-dwelling-rendered-bv-waffle-pod-slab";
 const REPAIR_TEMPLATE_KEY = MASTER_TEMPLATE_KEY;
-const ESTIMATE_BUILDER_PAGE_KEYS = new Set(ESTIMATE_BUILDER_PAGES.map((page) => page.key));
+const ESTIMATE_BUILDER_PAGE_KEYS = new Set([...ESTIMATE_BUILDER_PAGES, ...ESTIMATE_BUILDER_HIDDEN_PAGES].map((page) => page.key));
 const REPAIR_TEMPLATE_NAME = MASTER_TEMPLATE_NAME;
 
-function openTemplateDb() {
+function openTemplateDb(storageWorkspaceId = browserWorkspaceId()) {
   return new Promise((resolve, reject) => {
     if (typeof window === "undefined" || !window.indexedDB) {
       reject(new Error("IndexedDB is not available"));
       return;
     }
-    const request = window.indexedDB.open(TEMPLATE_DB_NAME, 2);
+    const request = window.indexedDB.open(browserTenantKey(TEMPLATE_DB_NAME, storageWorkspaceId), 2);
     request.onupgradeneeded = () => {
       const db = request.result;
       if (!db.objectStoreNames.contains(TEMPLATE_STORE_NAME)) {
@@ -5985,11 +7128,11 @@ function openTemplateDb() {
 
 function loadLocalDraft() {
   try {
-    const raw = window.localStorage.getItem("estimate-builder-active-draft");
+    const raw = builderLocalStorage.getItem("estimate-builder-active-draft");
     const parsed = raw ? JSON.parse(raw) : null;
     if (parsed?.storageMode !== "indexeddb") return null;
     if (isCorruptEstimateJobText(raw)) {
-      window.localStorage.removeItem("estimate-builder-active-draft");
+      builderLocalStorage.removeItem("estimate-builder-active-draft");
       return null;
     }
     return parsed;
@@ -6001,7 +7144,7 @@ function loadLocalDraft() {
 function loadActiveRegisteredEstimateJob() {
   if (typeof window === "undefined") return null;
   try {
-    const raw = window.localStorage.getItem("estimate-builder-active-registered-job");
+    const raw = builderLocalStorage.getItem("estimate-builder-active-registered-job");
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
@@ -6011,16 +7154,16 @@ function loadActiveRegisteredEstimateJob() {
 function clearActiveRegisteredEstimateJob() {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.removeItem("estimate-builder-active-registered-job");
-    const raw = window.localStorage.getItem("estimate-builder-active-draft");
+    builderLocalStorage.removeItem("estimate-builder-active-registered-job");
+    const raw = builderLocalStorage.getItem("estimate-builder-active-draft");
     if (!raw) return;
     const parsed = JSON.parse(raw);
     if (parsed?.storageMode === "registered-job") {
-      window.localStorage.removeItem("estimate-builder-active-draft");
+      builderLocalStorage.removeItem("estimate-builder-active-draft");
     }
   } catch {
     try {
-      window.localStorage.removeItem("estimate-builder-active-registered-job");
+      builderLocalStorage.removeItem("estimate-builder-active-registered-job");
     } catch {}
   }
 }
@@ -6028,9 +7171,9 @@ function clearActiveRegisteredEstimateJob() {
 function saveLocalDraftMetadata(workbook = {}, savedAt = "") {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.removeItem("estimate-builder-active-draft");
+    builderLocalStorage.removeItem("estimate-builder-active-draft");
     if (isCorruptEstimateJobWorkbook(workbook)) return;
-    window.localStorage.setItem("estimate-builder-active-draft", JSON.stringify({
+    builderLocalStorage.setItem("estimate-builder-active-draft", JSON.stringify({
       storageMode: "indexeddb",
       savedAt,
       templateKey: workbook.templateKey || "",
@@ -6039,7 +7182,7 @@ function saveLocalDraftMetadata(workbook = {}, savedAt = "") {
     }));
   } catch {
     try {
-      window.localStorage.removeItem("estimate-builder-active-draft");
+      builderLocalStorage.removeItem("estimate-builder-active-draft");
     } catch {
       // IndexedDB remains the durable save path.
     }
@@ -6049,7 +7192,7 @@ function saveLocalDraftMetadata(workbook = {}, savedAt = "") {
 function loadLastLinkedTemplateReference() {
   if (typeof window === "undefined") return { templateKey: "", templateName: "", templateSavedAt: "" };
   try {
-    const raw = window.localStorage.getItem(LAST_LINKED_TEMPLATE_STORAGE_KEY);
+    const raw = builderLocalStorage.getItem(LAST_LINKED_TEMPLATE_STORAGE_KEY);
     if (!raw) return { templateKey: "", templateName: "", templateSavedAt: "" };
     const parsed = JSON.parse(raw);
     return {
@@ -6065,7 +7208,7 @@ function loadLastLinkedTemplateReference() {
 function saveLastLinkedTemplateReference(reference = {}) {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(LAST_LINKED_TEMPLATE_STORAGE_KEY, JSON.stringify({
+    builderLocalStorage.setItem(LAST_LINKED_TEMPLATE_STORAGE_KEY, JSON.stringify({
       templateKey: reference.templateKey || "",
       templateName: reference.templateName || "",
       templateSavedAt: reference.templateSavedAt || "",
@@ -6076,7 +7219,7 @@ function saveLastLinkedTemplateReference(reference = {}) {
 function loadAllowUnlinkedJobSave() {
   if (typeof window === "undefined") return false;
   try {
-    return window.localStorage.getItem(ALLOW_UNLINKED_JOB_SAVE_STORAGE_KEY) === "true";
+    return builderLocalStorage.getItem(ALLOW_UNLINKED_JOB_SAVE_STORAGE_KEY) === "true";
   } catch {
     return false;
   }
@@ -6085,23 +7228,92 @@ function loadAllowUnlinkedJobSave() {
 function saveAllowUnlinkedJobSave(value) {
   if (typeof window === "undefined") return;
   try {
-    if (value) window.localStorage.setItem(ALLOW_UNLINKED_JOB_SAVE_STORAGE_KEY, "true");
-    else window.localStorage.removeItem(ALLOW_UNLINKED_JOB_SAVE_STORAGE_KEY);
+    if (value) builderLocalStorage.setItem(ALLOW_UNLINKED_JOB_SAVE_STORAGE_KEY, "true");
+    else builderLocalStorage.removeItem(ALLOW_UNLINKED_JOB_SAVE_STORAGE_KEY);
   } catch {}
 }
 
 function workbookJobKey(workbook = {}) {
+  if (workbook.jobId) return `job:${workbook.jobId}`;
   const registeredId = String(workbook?.registeredJob?.jobId || "").trim();
   if (registeredId) return `job:${registeredId}`;
-  const projectName = dataValue(workbook, "projectName") || workbook?.registeredJob?.jobName || workbook?.templateName || "new-job";
-  const slugged = slug(projectName) || "new-job";
-  return `job:${slugged}`;
+  const attachedProjectId = workbookAttachedProjectId(workbook);
+  if (attachedProjectId) return `job:${attachedProjectId}`;
+  return "";
+}
+
+function workbookAttachedProjectId(workbook = {}) {
+  return String(
+    workbook?.registeredJob?.jobId
+    || workbook?.registeredJobId
+    || workbook?.commercialProjectId
+    || workbook?.projectId
+    || workbook?.jobFileMeta?.projectId
+    || ""
+  ).trim();
+}
+
+function workbookEstimateFileKey(workbook = {}) {
+  const fileName = String(workbook?.openedFileName || workbook?.sourceFileName || "").trim();
+  if (fileName) return `estimate-file:${slug(fileName) || "estimate"}`;
+  return `estimate-file:${workbookJobKey(workbook).replace(/^job:/, "")}`;
+}
+
+function workbookRecentMetadata(workbook = {}, savedAt = "") {
+  const meta = workbook?.jobFileMeta || {};
+  const registeredJob = workbook?.registeredJob || {};
+  const clientPage = workbook?.clientPage || {};
+  const attachedProjectId = workbookAttachedProjectId(workbook);
+  const fileName = String(workbook?.openedFileName || workbook?.sourceFileName || "").trim();
+  return {
+    savedAt: savedAt || workbook.savedAt || new Date().toISOString(),
+    lastOpenedAt: new Date().toISOString(),
+    jobId: workbook.jobId || attachedProjectId,
+    projectId: attachedProjectId,
+    attachedProjectId,
+    attachedProjectName: dataValue(workbook || {}, "projectName") || meta.jobName || registeredJob.jobName || workbook?.projectName || "",
+    projectName: dataValue(workbook || {}, "projectName") || meta.jobName || registeredJob.jobName || workbook?.projectName || "",
+    clientName: dataValue(workbook || {}, "clientName") || dataValue(workbook || {}, "customerName") || meta.clientName || registeredJob.clientName || clientPage.clientName || "",
+    jobNumber: dataValue(workbook || {}, "jobNumber") || dataValue(workbook || {}, "quoteNumber") || meta.jobNumber || registeredJob.jobNumber || clientPage.quoteNumber || "",
+    siteAddress: dataValue(workbook || {}, "projectAddress") || dataValue(workbook || {}, "siteAddress") || dataValue(workbook || {}, "address") || meta.address || registeredJob.siteAddress || clientPage.projectAddress || "",
+    openedFileName: fileName,
+    fileName,
+    isAttached: Boolean(attachedProjectId),
+    kind: workbook.jobId || attachedProjectId ? "job" : "estimate-file",
+  };
+}
+
+function describeWorkbookIdentity(workbook = {}) {
+  const meta = workbook?.jobFileMeta || {};
+  const registeredJob = workbook?.registeredJob || {};
+  const clientPage = workbook?.clientPage || {};
+  return {
+    projectId: workbookAttachedProjectId(workbook) || workbook.jobId || "",
+    projectName: dataValue(workbook, "projectName") || meta.jobName || registeredJob.jobName || workbook?.projectName || "",
+    jobNumber: dataValue(workbook, "jobNumber") || dataValue(workbook, "quoteNumber") || meta.jobNumber || registeredJob.jobNumber || clientPage.quoteNumber || "",
+    clientName: dataValue(workbook, "clientName") || dataValue(workbook, "customerName") || meta.clientName || registeredJob.clientName || clientPage.clientName || "",
+    address: dataValue(workbook, "projectAddress") || dataValue(workbook, "siteAddress") || dataValue(workbook, "address") || meta.address || registeredJob.siteAddress || clientPage.projectAddress || "",
+    fileName: workbook?.openedFileName || workbook?.sourceFileName || "",
+  };
+}
+
+function describeJobFileIdentity(job = {}, workbook = {}) {
+  const manifestProject = job?.manifest?.project && typeof job.manifest.project === "object" ? job.manifest.project : {};
+  const jobDetails = job?.["job-details"] && typeof job["job-details"] === "object" ? job["job-details"] : {};
+  const workbookIdentity = describeWorkbookIdentity(workbook);
+  return {
+    projectId: String(jobDetails.projectId || manifestProject.id || job.projectId || workbookIdentity.projectId || "").trim(),
+    projectName: String(job.jobName || jobDetails.projectName || manifestProject.name || workbookIdentity.projectName || "").trim(),
+    jobNumber: String(job.jobNumber || jobDetails.jobNumber || manifestProject.jobNumber || workbookIdentity.jobNumber || "").trim(),
+    clientName: String(job.clientName || jobDetails.clientName || manifestProject.clientName || workbookIdentity.clientName || "").trim(),
+    address: String(job.address || jobDetails.address || jobDetails.siteAddress || manifestProject.address || workbookIdentity.address || "").trim(),
+  };
 }
 
 function loadActiveWorkbookPageMap() {
   if (typeof window === "undefined") return {};
   try {
-    const parsed = JSON.parse(window.sessionStorage.getItem(ACTIVE_WORKBOOK_PAGE_STORAGE_KEY) || "{}");
+    const parsed = JSON.parse(builderSessionStorage.getItem(ACTIVE_WORKBOOK_PAGE_STORAGE_KEY) || "{}");
     return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
   } catch {
     return {};
@@ -6115,7 +7327,7 @@ function saveLastActiveWorkbookPage(workbook = {}, page = "") {
   if (!key || isBlockedEstimateBuilderJobKey(key) || isSnapshotJobKey(key)) return;
   try {
     const pageMap = loadActiveWorkbookPageMap();
-    window.sessionStorage.setItem(ACTIVE_WORKBOOK_PAGE_STORAGE_KEY, JSON.stringify({
+    builderSessionStorage.setItem(ACTIVE_WORKBOOK_PAGE_STORAGE_KEY, JSON.stringify({
       ...pageMap,
       [key]: page,
     }));
@@ -6131,8 +7343,42 @@ function resolveLastActiveWorkbookPage(workbook = {}) {
   return ESTIMATE_BUILDER_PAGE_KEYS.has(page) ? page : fallbackPage;
 }
 
+function loadExplicitActiveJobSessionKey() {
+  if (typeof window === "undefined") return "";
+  try {
+    return String(
+      builderSessionStorage.getItem(EXPLICIT_ACTIVE_JOB_SESSION_KEY)
+        || builderLocalStorage.getItem(EXPLICIT_ACTIVE_JOB_SESSION_KEY)
+        || ""
+    ).trim();
+  } catch {
+    return "";
+  }
+}
+
+function saveExplicitActiveJobSessionKey(key = "") {
+  if (typeof window === "undefined") return;
+  try {
+    const safeKey = String(key || "").trim();
+    if (safeKey) {
+      builderSessionStorage.setItem(EXPLICIT_ACTIVE_JOB_SESSION_KEY, safeKey);
+      builderLocalStorage.setItem(EXPLICIT_ACTIVE_JOB_SESSION_KEY, safeKey);
+    } else {
+      builderSessionStorage.removeItem(EXPLICIT_ACTIVE_JOB_SESSION_KEY);
+      builderLocalStorage.removeItem(EXPLICIT_ACTIVE_JOB_SESSION_KEY);
+    }
+  } catch {}
+}
+
+function clearExplicitActiveJobSessionKey() {
+  saveExplicitActiveJobSessionKey("");
+}
+
 function workbookJobName(workbook = {}) {
-  return dataValue(workbook, "projectName") || workbook?.registeredJob?.jobName || workbook?.templateName || "New estimate job";
+  const standardDocumentName = workbook.standardInclusions?.documentBuilder?.metadata?.documentSource === "pdf-import"
+    ? workbook.standardInclusions?.activeDocumentName || workbook.standardInclusions?.documentBuilder?.name || ""
+    : "";
+  return dataValue(workbook, "projectName") || workbook?.registeredJob?.jobName || standardDocumentName || workbook?.templateName || "New estimate job";
 }
 
 function slug(input) {
@@ -6143,38 +7389,175 @@ function slug(input) {
     .slice(0, 80);
 }
 
-async function saveStoredJob(workbook, savedAt = new Date().toISOString()) {
-  if (isCorruptEstimateJobWorkbook(workbook)) {
-    purgeCorruptEstimateJobLocalStorage();
-    return;
+// The recovered working copy of a protected job keeps one identity for its whole life.
+// A copy that has already been opened carries its own recovered id somewhere in the file;
+// reuse that so re-opening never strands the selections, takeoff or estimate data keyed to it.
+function recoveredWorkingCopyProjectId(parsed = {}, workbookPayload = {}, protectedProjectId = "") {
+  const meta = workbookPayload?.jobFileMeta || {};
+  const existing = [
+    meta.projectId,
+    workbookPayload?.commercialProjectId,
+    workbookPayload?.projectId,
+    workbookPayload?.registeredJobId,
+    workbookPayload?.registeredJob?.jobId,
+    workbookPayload?.jobId,
+    parsed?.jobId,
+  ]
+    .map((value) => String(value || "").trim())
+    .find((value) => value.startsWith("recovered-"));
+  return existing || `recovered-${slug(protectedProjectId)}`;
+}
+
+function workbookHasExplicitJobIdentity(workbook = {}) {
+  const meta = workbook?.jobFileMeta || {};
+  const registeredJob = workbook?.registeredJob || {};
+  return Boolean(
+    String(workbook.jobId || registeredJob.jobId || workbook?.registeredJobId || workbook?.commercialProjectId || workbook?.projectId || meta.projectId || "").trim()
+    || String(meta.localFileOnly ? meta.jobName || workbook?.openedFileName || workbook?.sourceFileName : "").trim()
+  );
+}
+
+async function saveStoredJob(workbook, savedAt = new Date().toISOString(), options = {}) {
+  workbook = scopeBrowserWorkbook(workbook);
+  const storageWorkspaceId = browserWorkspaceId();
+  const openWorkspaceDatabase = () => openTemplateDb(storageWorkspaceId);
+  if (!workbookHasExplicitJobIdentity(workbook)) throw new Error("Create or open a job before saving.");
+  const key = workbookJobKey(workbook);
+  const savedWorkbook = { ...workbook, jobId: workbook.jobId || key.slice(4), savedAt };
+  // persistCompleteJob already serializes writes to this exact key internally via
+  // navigator.locks.request(`estimate-builder-save:${key}`, ...) - wrapping this
+  // call in another lock of the *same name* self-deadlocks every save: the outer
+  // lock is held while the inner request waits forever for that same name to free.
+  return persistCompleteJob({ openDatabase: openWorkspaceDatabase, storeName: JOB_STORE_NAME, key, workbook: savedWorkbook,
+    name: workbookJobName(savedWorkbook), savedAt, externalize: externalizeTakeoffPlanPages,
+    activePointer: createActiveJobPointer, initializeRecovery: options.initializeRecovery === true, normalizeRecovery: normalizeWorkbook });
+}
+
+async function saveVerifiedStoredJob(workbook, options = {}) {
+  const savedAt = options.savedAt || new Date().toISOString();
+  const record = await saveStoredJob(workbook, savedAt, options);
+  return { ok: true, key: record.key, jobId: record.jobId, revision: record.revision,
+    checksum: record.checksum, savedAt, payloadBytes: jsonByteLength(record.workbook),
+    quotationRows: countQuotationRows(record.workbook.quotation), source: options.source || "manual" };
+}
+
+function workbookAutosaveSignature(workbook = {}) {
+  if (!workbookHasExplicitJobIdentity(workbook)) return "";
+  return workbookPersistenceFingerprint(compactWorkbookForStorage({
+    ...workbook,
+    savedAt: "",
+  }));
+}
+
+function workbookPersistenceFingerprint(workbook = {}) {
+  return jobContentSignature(workbook);
+}
+
+function quotationPersistenceFingerprint(quotation = {}) {
+  return Object.fromEntries(Object.entries(quotation || {}).map(([sectionName, section]) => [
+    sectionName,
+    {
+      collapsed: Boolean(section?.collapsed),
+      groupNumber: section?.groupNumber || "",
+      stageNumber: section?.stageNumber || "",
+      displayName: section?.displayName || "",
+      rows: (section?.rows || []).map((row) => ({
+        id: row.id || "",
+        item: row.item || "",
+        quantity: row.quantity || "",
+        importedQuantity: row.importedQuantity || "",
+        quantityKey: row.quantityKey || "",
+        unit: row.unit || "",
+        excelRate: row.excelRate || "",
+        manualRate: row.manualRate || "",
+        supplierQuote: row.supplierQuote || "",
+        sourceOfRate: row.sourceOfRate || "",
+        description: row.description || "",
+        productDescription: row.productDescription || "",
+        selectionSpec: row.selectionSpec || "",
+        selectedProductName: row.selectedProductName || "",
+        selectedBrand: row.selectedBrand || "",
+        selectedModel: row.selectedModel || "",
+        selectedColour: row.selectedColour || "",
+        selectedSupplier: row.selectedSupplier || "",
+        productImageUrl: stableImageReference(row.productImageUrl),
+        thumbnailUrl: stableImageReference(row.thumbnailUrl),
+        selectionImageUrl: stableImageReference(row.selectionImageUrl),
+        productName: row.productName || "",
+        brand: row.brand || "",
+        manufacturer: row.manufacturer || "",
+        supplier: row.supplier || "",
+        sku: row.sku || "",
+        model: row.model || "",
+        notes: row.notes || "",
+        values: Array.isArray(row.values) ? row.values : [],
+        formulas: row.formulas || {},
+      })),
+    },
+  ]));
+}
+
+function countQuotationRows(quotation = {}) {
+  return Object.values(quotation || {}).reduce((total, section) => total + (Array.isArray(section?.rows) ? section.rows.length : 0), 0);
+}
+
+function jsonByteLength(value) {
+  try {
+    return new Blob([JSON.stringify(value || {})]).size;
+  } catch {
+    return JSON.stringify(value || {}).length;
   }
+}
+
+
+async function saveStoredJobSnapshotOnly(workbook, savedAt = new Date().toISOString()) {
+  if (!workbook || isCorruptEstimateJobWorkbook(workbook)) return;
   const savedWorkbook = compactWorkbookForStorage({ ...workbook, savedAt });
-  estimateBuilderLog("Saving workbook", {
-    source: "IndexedDB stored job",
-    ...takeoffPersistenceCounts(savedWorkbook),
-  });
   const key = workbookJobKey(savedWorkbook);
+  if (!key) return;
   const record = {
     type: "job",
-    key,
+    key: `${key}:snapshot:${savedAt}`,
     name: workbookJobName(savedWorkbook),
     savedAt,
     workbook: savedWorkbook,
   };
-  const activePointer = createActiveJobPointer(record);
+  record.workbook = await externalizeTakeoffPlanPages(record.workbook);
+  const db = await openTemplateDb();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(JOB_STORE_NAME, "readwrite");
+    transaction.objectStore(JOB_STORE_NAME).put(record, record.key);
+    transaction.oncomplete = () => {
+      db.close();
+      resolve(record);
+    };
+    transaction.onerror = () => {
+      const error = transaction.error || new Error("Could not save estimate job recovery snapshot");
+      db.close();
+      reject(error);
+    };
+  });
+}
+
+async function putStoredJobRecord(record = {}) {
+  if (!record?.key || !record?.workbook) return null;
+  if (isProtectedRecoveryRecord(record)) {
+    return saveStoredJob(normalizeWorkbook({ ...record.workbook, jobId: record.jobId || record.workbook.jobId || record.key.slice(4) }));
+  }
+  if (isSnapshotJobKey(record.key)) throw new Error("Recovery backups are immutable; open the working job to save edits.");
+  record = { ...record, workbook: await externalizeTakeoffPlanPages(record.workbook) };
   const db = await openTemplateDb();
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(JOB_STORE_NAME, "readwrite");
     const store = transaction.objectStore(JOB_STORE_NAME);
-    store.put(record, key);
-    store.put(activePointer, ACTIVE_JOB_KEY);
-    store.put({ ...record, key: `${key}:snapshot:${savedAt}` }, `${key}:snapshot:${savedAt}`);
+    store.put(record, record.key);
+    store.put(createActiveJobPointer(record), ACTIVE_JOB_KEY);
     transaction.oncomplete = () => {
       db.close();
-      resolve();
+      resolve(record);
     };
     transaction.onerror = () => {
-      const error = transaction.error || new Error("Could not save estimate job");
+      const error = transaction.error || new Error("Could not store opened estimate job");
       db.close();
       reject(error);
     };
@@ -6200,13 +7583,61 @@ async function setActiveStoredJob(record = {}) {
   });
 }
 
-async function loadStoredJob(key = "") {
+async function clearActiveStoredJob() {
+  if (typeof window === "undefined") return null;
+  const db = await openTemplateDb();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(JOB_STORE_NAME, "readwrite");
+    transaction.objectStore(JOB_STORE_NAME).delete(ACTIVE_JOB_KEY);
+    transaction.oncomplete = () => {
+      db.close();
+      resolve(null);
+    };
+    transaction.onerror = () => {
+      const error = transaction.error || new Error("Could not clear active estimate job");
+      db.close();
+      reject(error);
+    };
+  });
+}
+
+async function loadStoredJob(key = "", options = {}) {
+  if (!key) return null;
+  // Reads must never block on the save lock: the app-mount hydration path (and
+  // Product Library, which shares this shell) calls this before anything can
+  // render. Serializing reads behind the same exclusive lock as saves meant a
+  // large job's mount-time load could contend with itself (e.g. a Fast Refresh
+  // remount re-issuing the same read) and, after up to 30s, surface "Another
+  // tab is still saving or signing in" even though no tab was saving anything.
+  // The lock still protects actual writes - see saveStoredJob below.
+  return loadStoredJobUnlocked(key, options);
+}
+
+async function loadStoredJobUnlocked(key = "", { hydrateTakeoff = true } = {}) {
   if (!key) return null;
   const db = await openTemplateDb();
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(JOB_STORE_NAME, "readonly");
     const request = transaction.objectStore(JOB_STORE_NAME).get(key);
-    request.onsuccess = () => resolve(request.result || null);
+    request.onsuccess = async () => {
+      try {
+        // Reading a saved record must never initialize or overwrite a working job.
+        let record = request.result || await loadLatestStoredJobBackup(key);
+        // Adopt an existing legacy record's explicit storage identity once;
+        // renaming that job must never mint a new identity on a later open.
+        if (record?.workbook && !record.workbook.jobId && String(record.key || key).startsWith("job:")) {
+          const jobId = record.jobId || String(record.key || key).slice(4);
+          record = { ...record, jobId, workbook: { ...record.workbook, jobId } };
+        }
+        if (record?.workbook && !hydrateTakeoff) {
+          const { aiPlanTakeoffJob, takeoffEngine, ...workbook } = record.workbook;
+          const { aiPlanTakeoffJob: compatibilityJob, ...engine } = takeoffEngine || {};
+          resolve({ ...record, workbook: { ...workbook, takeoffEngine: engine } });
+          return;
+        }
+        resolve(record?.workbook ? { ...record, workbook: await materializeTakeoffPlanPages(record.workbook) } : record);
+      } catch (error) { reject(error); }
+    };
     request.onerror = () => reject(request.error || new Error("Could not load saved estimate job"));
     transaction.oncomplete = () => db.close();
     transaction.onerror = () => {
@@ -6216,35 +7647,122 @@ async function loadStoredJob(key = "") {
   });
 }
 
-async function listStoredJobs() {
-  purgeCorruptEstimateJobLocalStorage();
+function jobRecordFromLegacyBackup(record = {}) {
+  // A backup's saved ID is authoritative. Never derive a replacement identity
+  // from its display name, filename, or the timestamp in its storage key.
+  if (record.type !== "job-backup" || !String(record.key || "").startsWith("job-backup:")) return null;
+  const jobId = record.workbook?.jobId;
+  if (typeof jobId !== "string" || !jobId.trim() || jobId !== jobId.trim()) return null;
+  const key = `job:${jobId}`;
+  if (isSnapshotJobKey(key) || isBlockedEstimateBuilderJobKey(key) || isProtectedRecoveryRecord({ key })) return null;
+  if (isCorruptEstimateJobRecord(record)) return null;
+  return { ...record, type: "job", key, jobId, recoveredFromBackupKey: record.key };
+}
+
+async function loadLatestStoredJobBackup(key = "") {
+  if (!String(key).startsWith("job:") || isSnapshotJobKey(key) || isBlockedEstimateBuilderJobKey(key)) return null;
   const db = await openTemplateDb();
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction(JOB_STORE_NAME, "readwrite");
+    const transaction = db.transaction(JOB_STORE_NAME, "readonly");
     const store = transaction.objectStore(JOB_STORE_NAME);
-    const request = store.getAll();
+    const request = store.openKeyCursor(IDBKeyRange.bound("job-backup:", "job-backup:\uffff"));
+    const keys = [];
+    const readNext = () => {
+      const backupKey = keys.shift();
+      if (!backupKey) { resolve(null); return; }
+      const read = store.get(backupKey);
+      read.onsuccess = () => {
+        const candidate = jobRecordFromLegacyBackup(read.result);
+        if (candidate?.key === key) resolve(candidate);
+        else readNext();
+      };
+      read.onerror = () => reject(read.error || new Error("Could not read saved job backup"));
+    };
     request.onsuccess = () => {
-      const byKey = new Map();
-      (request.result || []).forEach((record) => {
+      const cursor = request.result;
+      if (!cursor) {
+        // Backups may contain hundreds of MB. Sort only their lightweight keys,
+        // then stop as soon as the newest exact-ID workbook is found.
+        keys.sort((a, b) => jobBackupTimestamp(b).localeCompare(jobBackupTimestamp(a)) || b.localeCompare(a));
+        readNext();
+        return;
+      }
+      keys.push(String(cursor.key));
+      cursor.continue();
+    };
+    request.onerror = () => reject(request.error || new Error("Could not read saved job backups"));
+    transaction.oncomplete = () => db.close();
+    transaction.onerror = transaction.onabort = () => {
+      db.close();
+      reject(transaction.error || new Error("Could not read saved job backups"));
+    };
+  });
+}
+
+function jobBackupTimestamp(key = "") {
+  return String(key).match(/:(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z)$/)?.[1] || "";
+}
+
+async function listStoredJobs() {
+  const db = await openTemplateDb();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(JOB_STORE_NAME, "readonly");
+    const store = transaction.objectStore(JOB_STORE_NAME);
+    const byKey = new Map();
+    const canonicalKeys = new Set();
+    // Reverse key order visits canonical records first. Read backup payloads
+    // sequentially: a shared saved name does not establish a shared job ID.
+    // Retain only metadata, deduplicated by the exact stored job ID.
+    const request = store.openKeyCursor(undefined, "prev");
+    const addMetadata = (record) => {
+        if (record?.type === "job-backup") record = jobRecordFromLegacyBackup(record);
         if (!record?.key) return;
         if (isActiveJobPointer(record)) return;
         if (isCorruptEstimateJobRecord(record) || isBlockedEstimateBuilderActiveJob(record) || isBlockedEstimateBuilderJobKey(record.key) || isSnapshotJobKey(record.key)) {
-          if (isCorruptEstimateJobRecord(record) || isBlockedEstimateBuilderJobKey(record.key)) store.delete(record.key);
           return;
         }
         if (record.type !== "job" || !record.workbook) return;
+        const metadata = workbookRecentMetadata(record.workbook || {}, record.savedAt || record.workbook?.savedAt || "");
+        const existing = byKey.get(record.key);
+        if (record.recoveredFromBackupKey && canonicalKeys.has(record.key)) return;
+        if (record.recoveredFromBackupKey && existing && (!existing.recoveredFromBackupKey || String(existing.savedAt || "") >= String(metadata.savedAt || ""))) return;
         byKey.set(record.key, {
           key: record.key,
+          jobId: masterJobId(record.workbook) || record.jobId || String(record.key).slice(4),
+          source: "local-master-job",
+          hasEstimateWorkbook: true,
+          hasProjectEstimate: Boolean(record.workbook.projectEstimateBuilder || record.workbook.clientPage?.proposalBuilder),
           id: record.key,
-          name: record.name || workbookJobName(record.workbook),
-          savedAt: record.savedAt || record.workbook?.savedAt || "",
-          openedFileName: record.workbook?.openedFileName || record.workbook?.sourceFileName || "",
-          projectName: dataValue(record.workbook || {}, "projectName") || record.workbook?.registeredJob?.jobName || "",
+          name: metadata.projectName || record.name || workbookJobName(record.workbook),
+          savedAt: metadata.savedAt,
+          openedFileName: metadata.openedFileName,
+          projectName: metadata.projectName,
+          clientName: metadata.clientName,
+          jobNumber: metadata.jobNumber,
+          siteAddress: metadata.siteAddress,
+          projectId: metadata.projectId,
+          kind: metadata.kind,
+          isAttached: metadata.isAttached,
           templateKey: record.workbook?.templateKey || "",
           templateName: record.workbook?.templateName || "",
+          ...(record.recoveredFromBackupKey ? { recoveredFromBackupKey: record.recoveredFromBackupKey } : {}),
         });
-      });
-      resolve(Array.from(byKey.values()).sort((a, b) => String(b.savedAt || "").localeCompare(String(a.savedAt || ""))));
+    };
+    request.onsuccess = () => {
+      const cursor = request.result;
+      if (!cursor) { resolve(Array.from(byKey.values()).sort((a, b) => String(b.savedAt || "").localeCompare(String(a.savedAt || "")))); return; }
+      const isCanonicalKey = String(cursor.key).startsWith("job:");
+      if (isSnapshotJobKey(cursor.key) || (!isCanonicalKey && !String(cursor.key).startsWith("job-backup:"))) { cursor.continue(); return; }
+      // Any canonical record takes precedence, including one that fails validation.
+      // An old backup must never conceal corruption or replace newer saved data.
+      if (isCanonicalKey) { canonicalKeys.add(cursor.key); byKey.delete(cursor.key); }
+      const read = store.get(cursor.key);
+      read.onsuccess = () => {
+        const record = isCanonicalKey ? read.result : jobRecordFromLegacyBackup(read.result);
+        addMetadata(record);
+        cursor.continue();
+      };
+      read.onerror = () => reject(read.error);
     };
     request.onerror = () => reject(request.error || new Error("Could not list saved estimate jobs"));
     transaction.oncomplete = () => db.close();
@@ -6253,6 +7771,149 @@ async function listStoredJobs() {
       reject(transaction.error || new Error("Could not list saved estimate jobs"));
     };
   });
+}
+
+async function listWorkspaceProjectJobs(workspaceId = "", currentWorkbook = {}, localJobs = null) {
+  const [projectResult, instanceResult, snapshotResult, storedJobs] = await Promise.all([
+    supabase
+      .from("builder_commercial_projects")
+      .select("id, workspace_id, project_name, client_name, site_address, status, source_quote_number, source_workbook_job_id, source_workbook_file_name, source_registered_job_id, source_metadata, notes, updated_at, created_at")
+      .eq("workspace_id", workspaceId)
+      .order("updated_at", { ascending: false }),
+    supabase
+      .from("project_estimate_instances")
+      .select("id, project_id, status, updated_at, created_at")
+      .eq("workspace_id", workspaceId)
+      .order("updated_at", { ascending: false }),
+    supabase
+      .from("builder_estimate_snapshots")
+      .select("id, project_id, source_workbook_file_name, created_at")
+      .eq("workspace_id", workspaceId)
+      .order("created_at", { ascending: false }),
+    localJobs || listStoredJobs().catch(() => []),
+  ]);
+
+  if (projectResult.error) throw new Error(projectResult.error.message || "Unable to load jobs");
+  const instancesByProject = new Map((instanceResult.data || []).filter((row) => row?.project_id).map((row) => [row.project_id, row]));
+  const snapshotsByProject = new Map();
+  for (const snapshot of snapshotResult.data || []) {
+    if (snapshot?.project_id && !snapshotsByProject.has(snapshot.project_id)) snapshotsByProject.set(snapshot.project_id, snapshot);
+  }
+  const currentProjectId = workbookAttachedProjectId(currentWorkbook);
+
+  return (projectResult.data || [])
+    .map((project) => {
+      const details = workspaceProjectJobDetails(project);
+      const instance = instancesByProject.get(project.id) || null;
+      const snapshot = snapshotsByProject.get(project.id) || null;
+      const local = findMasterJobForProject(project, storedJobs);
+      const modifiedAt = latestIso(project.updated_at, instance?.updated_at, snapshot?.created_at, local?.savedAt, project.created_at);
+      return {
+        key: `project:${project.id}`,
+        jobId: local?.jobId || project.source_workbook_job_id || project.source_metadata?.jobId || project.source_registered_job_id || project.id,
+        id: project.id,
+        source: "builder_commercial_projects",
+        name: details.jobName,
+        projectName: details.jobName,
+        projectId: project.id,
+        workspaceId: project.workspace_id || workspaceId,
+        clientName: details.clientName,
+        jobNumber: details.jobNumber,
+        siteAddress: details.address,
+        status: details.status,
+        savedAt: modifiedAt,
+        updatedAt: modifiedAt,
+        lastModified: modifiedAt,
+        openedFileName: local?.openedFileName || snapshot?.source_workbook_file_name || project.source_workbook_file_name || "",
+        hasProjectEstimate: Boolean(instance?.id),
+        projectEstimateStatus: instance?.status || "",
+        hasEstimateWorkbook: Boolean(local?.key || snapshot?.id || project.source_workbook_file_name),
+        localJobKey: local?.key || "",
+        isAttached: true,
+        isArchived: String(project.status || "").toLowerCase() === "archived",
+        currentlyOpen: currentProjectId === project.id,
+        rawProject: project,
+      };
+    })
+    .sort((a, b) => {
+      if (a.currentlyOpen !== b.currentlyOpen) return a.currentlyOpen ? -1 : 1;
+      if (a.isArchived !== b.isArchived) return a.isArchived ? 1 : -1;
+      return String(b.lastModified || "").localeCompare(String(a.lastModified || ""));
+    });
+}
+
+async function loadWorkspaceProjectJob(projectId = "", workspaceId = "") {
+  let query = supabase
+    .from("builder_commercial_projects")
+    .select("id, workspace_id, project_name, client_name, site_address, status, source_quote_number, source_workbook_job_id, source_workbook_file_name, source_registered_job_id, source_metadata, notes, updated_at, created_at")
+    .eq("id", projectId);
+  if (!workspaceId) throw new Error("A builder workspace is required.");
+  query = query.eq("workspace_id", workspaceId);
+  const { data, error } = await query.maybeSingle();
+  if (error) throw new Error(error.message || "Unable to load project job");
+  return data || null;
+}
+
+async function loadLatestWorkspaceProjectWorkbookSnapshot(projectId = "", workspaceId = "") {
+  let query = supabase
+    .from("builder_estimate_snapshots")
+    .select("id, workspace_id, project_id, snapshot_number, status, source_workbook_file_name, source_registered_job_id, source_quote_number, source_template_key, source_template_name, workbook_metadata, workbook_snapshot, created_at, updated_at")
+    .eq("project_id", projectId)
+    .order("created_at", { ascending: false })
+    .limit(1);
+  if (!workspaceId) throw new Error("A builder workspace is required.");
+  query = query.eq("workspace_id", workspaceId);
+  const { data, error, status } = await query.maybeSingle();
+  if (error) {
+    const nextError = new Error(error.message || "Unable to load saved Estimate Builder workbook snapshot.");
+    nextError.status = status || error.status || error.code || "";
+    nextError.details = error;
+    throw nextError;
+  }
+  return data || null;
+}
+
+function workbookFromEstimateSnapshot(snapshot = null) {
+  if (!snapshot?.workbook_snapshot || typeof snapshot.workbook_snapshot !== "object") return null;
+  const metadata = snapshot.workbook_metadata && typeof snapshot.workbook_metadata === "object" ? snapshot.workbook_metadata : {};
+  return {
+    ...snapshot.workbook_snapshot,
+    savedAt: metadata.savedAt || snapshot.updated_at || snapshot.created_at || snapshot.workbook_snapshot.savedAt || "",
+    templateKey: snapshot.source_template_key || metadata.templateKey || snapshot.workbook_snapshot.templateKey || "",
+    templateName: snapshot.source_template_name || metadata.templateName || snapshot.workbook_snapshot.templateName || "",
+    registeredJob: metadata.registeredJob || snapshot.workbook_snapshot.registeredJob || {},
+    jobFileMeta: metadata.jobFileMeta || snapshot.workbook_snapshot.jobFileMeta || {},
+    clientPage: metadata.clientPage || snapshot.workbook_snapshot.clientPage || {},
+    openedFileName: metadata.openedFileName || snapshot.source_workbook_file_name || snapshot.workbook_snapshot.openedFileName || "",
+    sourceFileName: metadata.sourceFileName || snapshot.source_workbook_file_name || snapshot.workbook_snapshot.sourceFileName || "",
+  };
+}
+
+function openProjectJobFailure({ operation = "open project job", projectId = "", status = "", message = "", error = null } = {}) {
+  const safeMessage = message || "Project job could not be opened.";
+  const details = {
+    operation,
+    projectId,
+    status: status || "unknown",
+    message: safeMessage,
+  };
+  console.error("[Estimate Builder] Open Project Job failed", { ...details, error });
+  return {
+    ok: false,
+    message: safeMessage,
+    errorDetails: details,
+  };
+}
+
+function latestIso(...values) {
+  return values.filter(Boolean).sort().pop() || "";
+}
+
+function saveActiveWorkspaceProjectPointer(workspaceId = "", projectId = "") {
+  if (typeof window === "undefined" || !workspaceId || !projectId) return;
+  try {
+    builderLocalStorage.setItem("builder-active-workspace-project", JSON.stringify({ workspaceId, projectId, updatedAt: new Date().toISOString() }));
+  } catch {}
 }
 
 async function saveJobBackup(workbook, savedAt = new Date().toISOString()) {
@@ -6316,11 +7977,11 @@ async function loadActiveStoredJob() {
         return;
       }
       const jobRequest = store.get(activeJobKey);
-      jobRequest.onsuccess = () => {
+      jobRequest.onsuccess = async () => {
         let storedJob = jobRequest.result || null;
         if (!storedJob && activeRecord?.type === "job" && activeRecord?.workbook && activeRecord.key === activeJobKey) {
           storedJob = activeRecord;
-          store.put(storedJob, activeJobKey);
+          // Do not rewrite a legacy active record during recovery.
         }
         if (!storedJob?.workbook || storedJob.type !== "job" || isCorruptEstimateJobRecord(storedJob) || isBlockedEstimateBuilderActiveJob(storedJob)) {
           store.delete(ACTIVE_JOB_KEY);
@@ -6347,7 +8008,7 @@ async function loadActiveStoredJob() {
 
 async function loadLastActiveOrRecentStoredJob() {
   const activeJob = await loadActiveStoredJob().catch(() => null);
-  if (activeJob?.workbook) return activeJob;
+  if (activeJob?.workbook) return recoverStoredJobTakeoffIfNeeded(activeJob);
   const recentJobs = loadRecentEstimateJobs();
   for (const recent of recentJobs) {
     const key = String(recent?.key || "").trim();
@@ -6355,8 +8016,9 @@ async function loadLastActiveOrRecentStoredJob() {
     const record = await loadStoredJob(key).catch(() => null);
     if (!record?.workbook || record.type !== "job") continue;
     if (isCorruptEstimateJobRecord(record) || isBlockedEstimateBuilderActiveJob(record)) continue;
-    await setActiveStoredJob(record).catch(() => {});
-    return record;
+    const recovered = await recoverStoredJobTakeoffIfNeeded(record);
+    await setActiveStoredJob(recovered).catch(() => {});
+    return recovered;
   }
   const storedJobs = await listStoredJobs().catch(() => []);
   for (const job of storedJobs) {
@@ -6365,10 +8027,55 @@ async function loadLastActiveOrRecentStoredJob() {
     const record = await loadStoredJob(key).catch(() => null);
     if (!record?.workbook || record.type !== "job") continue;
     if (isCorruptEstimateJobRecord(record) || isBlockedEstimateBuilderActiveJob(record)) continue;
-    await setActiveStoredJob(record).catch(() => {});
-    rememberRecentJob(record.workbook, record.savedAt || record.workbook?.savedAt || "");
-    return record;
+    const recovered = await recoverStoredJobTakeoffIfNeeded(record);
+    await setActiveStoredJob(recovered).catch(() => {});
+    rememberRecentJob(recovered.workbook, recovered.savedAt || recovered.workbook?.savedAt || "");
+    rememberRecentEstimateFile(recovered.workbook, recovered.savedAt || recovered.workbook?.savedAt || "");
+    return recovered;
   }
+  return null;
+}
+
+async function recoverStoredJobTakeoffIfNeeded(storedJob = {}) {
+  return storedJob; // Emergency: never scan or write recovery during hydration.
+}
+
+function workbookAiPlanTakeoffJob(workbook = {}) {
+  const canonical = workbook?.aiPlanTakeoffJob && typeof workbook.aiPlanTakeoffJob === "object" ? workbook.aiPlanTakeoffJob : null;
+  const compatibility = workbook?.takeoffEngine?.aiPlanTakeoffJob && typeof workbook.takeoffEngine.aiPlanTakeoffJob === "object" ? workbook.takeoffEngine.aiPlanTakeoffJob : null;
+  if (canonical && hasRecoverablePlanPages(canonical)) return canonical;
+  if (compatibility && hasRecoverablePlanPages(compatibility)) return compatibility;
+  return canonical || compatibility || null;
+}
+
+function workbookHasRecoverableAiPlanTakeoffJob(workbook = {}) {
+  return hasRecoverablePlanPages(workbookAiPlanTakeoffJob(workbook));
+}
+
+function mergeRecoveredAiPlanTakeoffIntoStoredJob(activeJob = {}, recoveredJob = {}) {
+  const recoveredTakeoff = workbookAiPlanTakeoffJob(recoveredJob.workbook || {});
+  if (!recoveredTakeoff) return activeJob;
+  const savedAt = new Date().toISOString();
+  const workbook = {
+    ...(activeJob.workbook || {}),
+    aiPlanTakeoffJob: recoveredTakeoff,
+    takeoffEngine: {
+      ...(activeJob.workbook?.takeoffEngine || {}),
+      ...(recoveredJob.workbook?.takeoffEngine || {}),
+      aiPlanTakeoffJob: recoveredTakeoff,
+      recoveredFromSnapshotAt: savedAt,
+    },
+    savedAt,
+  };
+  return {
+    ...activeJob,
+    savedAt,
+    workbook,
+  };
+}
+
+async function loadLatestRecoverableAiPlanTakeoffSnapshot(jobKey = "") {
+  // Automatic snapshot recovery is disabled until the emergency is resolved.
   return null;
 }
 
@@ -6405,20 +8112,8 @@ function isCorruptEstimateJobRecord(record = {}) {
 }
 
 function purgeCorruptEstimateJobLocalStorage() {
-  if (typeof window === "undefined") return;
-  try {
-    const keysToRemove = [];
-    for (let index = 0; index < window.localStorage.length; index += 1) {
-      const key = window.localStorage.key(index);
-      if (!key) continue;
-      if (!key.startsWith("estimate-builder")) continue;
-      const value = window.localStorage.getItem(key) || "";
-      if (isCorruptEstimateJobText(key) || isCorruptEstimateJobText(value)) {
-        keysToRemove.push(key);
-      }
-    }
-    keysToRemove.forEach((key) => window.localStorage.removeItem(key));
-  } catch {}
+  // Preserve legacy/corrupt records for explicit recovery. Opening an application
+  // must never delete job data or templates based on a text-name heuristic.
 }
 
 function isBlockedEstimateBuilderActiveJob(record = {}) {
@@ -6449,8 +8144,8 @@ function isSnapshotJobKey(key = "") {
 function loadRecentEstimateJobs() {
   if (typeof window === "undefined") return [];
   try {
-    const parsed = JSON.parse(window.localStorage.getItem(RECENT_JOBS_STORAGE_KEY) || "[]");
-    return Array.isArray(parsed) ? parsed.filter((item) => item?.key && !isSnapshotJobKey(item.key)).slice(0, 4) : [];
+    const parsed = JSON.parse(builderLocalStorage.getItem(RECENT_JOBS_STORAGE_KEY) || "[]");
+    return Array.isArray(parsed) ? parsed.filter(isGenuineRecentEstimateJob).slice(0, 3) : [];
   } catch {
     return [];
   }
@@ -6459,23 +8154,83 @@ function loadRecentEstimateJobs() {
 function saveRecentEstimateJobs(jobs = []) {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(RECENT_JOBS_STORAGE_KEY, JSON.stringify(jobs.slice(0, 4)));
+    builderLocalStorage.setItem(RECENT_JOBS_STORAGE_KEY, JSON.stringify(jobs.filter(isGenuineRecentEstimateJob).slice(0, 3)));
   } catch {}
 }
 
 function rememberRecentJob(workbook = {}, savedAt = "") {
   if (typeof window === "undefined") return;
+  if (!workbook.jobId && !workbookAttachedProjectId(workbook)) return;
   const key = workbookJobKey(workbook);
   if (!key || isBlockedEstimateBuilderJobKey(key) || isSnapshotJobKey(key)) return;
+  const metadata = workbookRecentMetadata(workbook, savedAt);
   const item = {
     key,
-    name: workbookJobName(workbook),
-    savedAt: savedAt || workbook.savedAt || new Date().toISOString(),
-    openedFileName: workbook.openedFileName || workbook.sourceFileName || "",
-    projectName: dataValue(workbook || {}, "projectName") || workbook.registeredJob?.jobName || "",
+    id: key,
+    name: metadata.projectName || workbookJobName(workbook),
+    ...metadata,
+    type: "job",
+    kind: "job",
   };
+  if (!isGenuineRecentEstimateJob(item)) return;
   const existing = loadRecentEstimateJobs().filter((recent) => recent.key !== key);
-  saveRecentEstimateJobs([item, ...existing].slice(0, 4));
+  saveRecentEstimateJobs([item, ...existing].slice(0, 3));
+}
+
+function isTemplateLikeRecentEstimateJob(item = {}) {
+  const text = [item.key, item.id, item.name, item.projectName, item.templateName, item.openedFileName, item.fileName].join(" ").toLowerCase();
+  return text.includes("template")
+    || text.includes("master estimate")
+    || text.includes("premier inclusions")
+    || text.includes("estimate-file:")
+    || text.includes("draft")
+    || text.includes("default");
+}
+
+function isGenuineRecentEstimateJob(item = {}) {
+  if (!item?.key || isSnapshotJobKey(item.key) || isBlockedEstimateBuilderJobKey(item.key)) return false;
+  if (item.kind && item.kind !== "job") return false;
+  if (item.type && item.type !== "job") return false;
+  if (!String(item.jobId || item.projectId || item.attachedProjectId || "").trim()) return false;
+  if (!String(item.jobNumber || item.projectName || item.name || "").trim()) return false;
+  if (!String(item.lastOpenedAt || item.savedAt || item.updatedAt || "").trim()) return false;
+  return !isTemplateLikeRecentEstimateJob(item);
+}
+
+function loadRecentEstimateFiles() {
+  if (typeof window === "undefined") return [];
+  try {
+    const parsed = JSON.parse(builderLocalStorage.getItem(RECENT_ESTIMATE_FILES_STORAGE_KEY) || "[]");
+    return Array.isArray(parsed) ? parsed.filter((item) => item?.key && !isSnapshotJobKey(item.key)).slice(0, 8) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveRecentEstimateFiles(files = []) {
+  if (typeof window === "undefined") return;
+  try {
+    builderLocalStorage.setItem(RECENT_ESTIMATE_FILES_STORAGE_KEY, JSON.stringify(files.slice(0, 8)));
+  } catch {}
+}
+
+function rememberRecentEstimateFile(workbook = {}, savedAt = "") {
+  if (typeof window === "undefined") return;
+  const fileName = String(workbook?.openedFileName || workbook?.sourceFileName || "").trim();
+  if (!fileName) return;
+  const key = workbookEstimateFileKey(workbook);
+  const metadata = workbookRecentMetadata(workbook, savedAt);
+  const item = {
+    key,
+    id: key,
+    jobKey: workbookJobKey(workbook),
+    name: fileName,
+    ...metadata,
+    kind: "estimate-file",
+    attachmentLabel: metadata.isAttached ? metadata.attachedProjectName || metadata.attachedProjectId : "Unattached estimate",
+  };
+  const existing = loadRecentEstimateFiles().filter((recent) => recent.key !== key);
+  saveRecentEstimateFiles([item, ...existing].slice(0, 8));
 }
 
 async function saveStoredTemplate(name, workbook, options = {}) {
@@ -6639,9 +8394,19 @@ async function listStoredTemplates() {
   const ownerId = currentTemplateOwnerId();
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(TEMPLATE_STORE_NAME, "readonly");
-    const request = transaction.objectStore(TEMPLATE_STORE_NAME).getAll();
+    // Template backups contain full workbooks. Collect metadata a record at a
+    // time so opening Data Input does not retain every historical payload.
+    const request = transaction.objectStore(TEMPLATE_STORE_NAME).openCursor();
+    const summaries = [];
     request.onsuccess = () => {
-      const templates = (request.result || [])
+      const cursor = request.result;
+      if (!cursor) {
+        resolve(summaries
+          .filter((template, index, all) => all.findIndex((item) => item.key === template.key) === index)
+          .sort((a, b) => String(b.modifiedAt || b.savedAt || "").localeCompare(String(a.modifiedAt || a.savedAt || ""))));
+        return;
+      }
+      const templates = [cursor.value]
         .filter((record) => record?.type === "template" && record?.key && record?.name)
         .filter((record) => !record.owner_id || record.owner_id === ownerId)
         .filter((record) => record.key === MASTER_TEMPLATE_KEY || record.key === LEGACY_MASTER_TEMPLATE_KEY || String(record.name || "").trim().toLowerCase() === MASTER_TEMPLATE_NAME.toLowerCase())
@@ -6662,10 +8427,9 @@ async function listStoredTemplates() {
             savedAt: version.savedAt || "",
             name: version.name || record.name,
           })) : [],
-        }))
-        .filter((template, index, all) => all.findIndex((item) => item.key === template.key) === index)
-        .sort((a, b) => String(b.modifiedAt || b.savedAt || "").localeCompare(String(a.modifiedAt || a.savedAt || "")));
-      resolve(templates);
+        }));
+      summaries.push(...templates);
+      cursor.continue();
     };
     request.onerror = () => reject(request.error || new Error("Could not list templates"));
     transaction.oncomplete = () => db.close();
@@ -6749,7 +8513,7 @@ function confirmMasterTemplateUpdate() {
 
 function confirmMasterTemplateDelete() {
   if (typeof window === "undefined") return false;
-  if (window.localStorage.getItem("estimate-builder-permission-mode") !== "admin") {
+  if (builderLocalStorage.getItem("estimate-builder-permission-mode") !== "admin") {
     window.alert("Admin mode is required to delete the Master Base Template.");
     return false;
   }
@@ -6758,3 +8522,8 @@ function confirmMasterTemplateDelete() {
   const second = window.prompt("Type DELETE MASTER to confirm deleting the Master Base Template.");
   return String(second || "").trim() === "DELETE MASTER";
 }
+
+export const __doorTakeoffTestUtils = {
+  normalizeWorkbook,
+  buildProcurementItemsFromQuote,
+};

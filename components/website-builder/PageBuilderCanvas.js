@@ -1,10 +1,15 @@
-﻿import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { createPortal, flushSync } from "react-dom";
 import { applyAssetToProps, createStoredAsset, getAssetFromLibrary, normalizeSelectedAsset, resolveAssetField } from "../../lib/website-builder/mediaAssets";
 import { saveWebsiteBuilderAssets } from "../../lib/website-builder/projectStore";
 import { globalFooterToFooterBlock } from "../../lib/website-builder/footerNavigation";
 import { primaryNavigationSharedComponentId } from "../../lib/website-builder/sharedNavigation";
+import {
+  detachSharedBlockInstance,
+  getSharedTemplateId,
+  resolveSharedBlockInstance,
+} from "../../lib/website-builder/sharedBlockTemplates";
 import { resolveResponsiveLayoutWidth } from "../../lib/website-builder/responsiveValue";
 import { normalizePageWidthMode, resolvePageWidthMode } from "../../lib/website-builder/pageLayout";
 import { isVideoHeroMediaFieldKey, mergeVideoHeroProps, resolveVideoHeroUrl } from "../../lib/website-builder/videoHero";
@@ -13,7 +18,12 @@ import { BlockTypes, BlockDefinitions, COMPETITOR_COMPARISON_TEMPLATE_PROPS } fr
 import { openSharedMediaPicker } from "../../lib/openSharedMediaPicker";
 import { renderWebsiteBlock, websiteBlockKeyframes } from "./WebsiteBlockRenderer";
 import { GRID_ICON_LIBRARY, renderGridLibraryIcon } from "./gridIconLibrary";
-import RichText from "../RichText";
+import {
+  applyStylePatchToElement,
+  isTextSectionEditableNode,
+  replaceSelectionBlockTag,
+  resolveSelectionBlockElement,
+} from "../../lib/website-builder/textSectionEditorDom";
 import {
   ImageEditModal,
   formatLabel, isImageField, isColorField, isLongTextField, getSelectOptions,
@@ -363,7 +373,7 @@ function UniversalDesignPanel({ block, index, onChange, onUploadImage, onSelectA
   );
 }
 
-export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [], activePage = "", currentObjective = "", onSave, onForceSave, onUploadImage, onSelectAsset, onSaveAsGlobal, onSaveBlockDefault, onSaveTemplatePage, onSaveTemplateSite, onUpdateGlobalBlock, onUpdatePageSettings, onUpdateSiteSettings, onRefreshAssetLibrary, onRegisterPreviewActions, blockDefaults = {}, showHeader = true, canSaveTemplates = false }) {
+export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [], activePage = "", currentObjective = "", onSave, onForceSave, onUploadImage, onSelectAsset, onSaveAsGlobal, onSaveBlockDefault, onSaveTemplatePage, onSaveTemplateSite, onUpdateGlobalBlock, onUpdatePageSettings, onUpdateSiteSettings, onUpdateSharedTemplate, onDetachSharedTemplate, onRefreshAssetLibrary, onRegisterPreviewActions, blockDefaults = {}, showHeader = true, canSaveTemplates = false, readOnly = false, lockStatusLabel = "", onUnlockForEditing, onSaveAndLockWebsite, onCancelEditing, unlockBusy = false }) {
   const [blocks, setBlocks] = useState(pageBlocks);
   const [selectedIndex, setSelectedIndex] = useState(null);
   const [selectedGlobalRole, setSelectedGlobalRole] = useState(null);
@@ -747,10 +757,13 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     }
 
     const styleSource = getSelectionStyleSource(editable, selection) || editable;
+    const selectionBlock = resolveSelectionBlockElement(editable, selection);
     const computed = window.getComputedStyle(styleSource);
+    const alignSource = selectionBlock || styleSource || editable;
+    const alignComputed = window.getComputedStyle(alignSource);
     const backgroundTarget = getEditableBackgroundTarget(editable) || editable;
     const backgroundComputed = window.getComputedStyle(backgroundTarget);
-    const tagName = String(editable.tagName || "P").toUpperCase();
+    const tagName = String(selectionBlock?.tagName || editable.tagName || "P").toUpperCase();
     const fontFamilyRaw = String(computed.fontFamily || "Arial")
       .split(",")[0]
       .replace(/["']/g, "")
@@ -771,7 +784,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       fontWeight: String(computed.fontWeight || "400"),
       fontStyle: String(computed.fontStyle || "normal"),
       textDecoration: String(computed.textDecorationLine || computed.textDecoration || "none"),
-      textAlign: String(computed.textAlign || currentBlock?.props?.textAlign || currentBlock?.props?.alignment || "left"),
+      textAlign: String(alignComputed.textAlign || computed.textAlign || currentBlock?.props?.textAlign || currentBlock?.props?.alignment || "left"),
       blockType: ["H1", "H2", "H3", "P"].includes(tagName) ? tagName : "P",
       canStyleBox: editable.hasAttribute?.("data-layer-editor"),
       boxBackgroundColor: normalizeToolbarBackgroundColor(backgroundComputed.backgroundColor),
@@ -1188,6 +1201,10 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   };
 
   const handleInsertAt = (insertIndex, dataTransfer) => {
+    if (readOnly) {
+      showSavePopup("Website protected - click Unlock for Editing.", "error");
+      return;
+    }
     const safeIndex = Math.max(0, Math.min(insertIndex, blocks.length));
     const newBlockType = dataTransfer.getData("newBlockType");
 
@@ -1223,12 +1240,14 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   };
 
   const handleCanvasDragOver = (e) => {
+    if (readOnly) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = "copy";
     if (dropIndex !== blocks.length) setDropIndex(blocks.length);
   };
 
   const handleCanvasDrop = (e) => {
+    if (readOnly) return;
     e.preventDefault();
     handleInsertAt(blocks.length, e.dataTransfer);
     setDropIndex(null);
@@ -1385,6 +1404,15 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     const updated = [...latestBlocksRef.current];
     const previousBlock = updated[index];
     if (!previousBlock) return;
+    const sharedTemplateId = getSharedTemplateId(previousBlock);
+    if (sharedTemplateId && typeof onUpdateSharedTemplate === "function") {
+      const resolvedBlock = resolveSharedBlockInstance(previousBlock, project);
+      onUpdateSharedTemplate(sharedTemplateId, {
+        ...resolvedBlock,
+        props: newProps,
+      });
+      return;
+    }
     if (previousBlock.type === BlockTypes.NAV_BAR) {
       const sharedComponentId = project?.globalNavBlock?.sharedComponentId || project?.globalNavBlock?.props?.sharedComponentId || primaryNavigationSharedComponentId(project);
       const nextGlobalBlock = normalizeCanvasBlockUpdate(project?.globalNavBlock || previousBlock, {
@@ -1407,6 +1435,21 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       return;
     }
     updated[index] = normalizeCanvasBlockUpdate(previousBlock, { ...previousBlock, props: newProps });
+    commitBlocks(updated, { history: false });
+  };
+
+  const handleDetachSharedTemplate = (index) => {
+    const currentBlock = latestBlocksRef.current[index];
+    const sharedTemplateId = getSharedTemplateId(currentBlock);
+    if (!currentBlock || !sharedTemplateId) return;
+    const detachedBlock = normalizeCanvasBlockUpdate(currentBlock, detachSharedBlockInstance(currentBlock, project));
+    if (typeof onDetachSharedTemplate === "function") {
+      onDetachSharedTemplate(index, detachedBlock);
+      return;
+    }
+    const updated = [...latestBlocksRef.current];
+    updated[index] = detachedBlock;
+    pushHistory(latestBlocksRef.current.slice());
     commitBlocks(updated, { history: false });
   };
 
@@ -1651,7 +1694,12 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
         enableParallax: nextEnabled,
         ...(nextEnabled ? {
           backgroundStyle: selectedBlock?.props?.backgroundStyle || "image",
-          backgroundImage: selectedBlock?.props?.backgroundImage || "https://placehold.co/1600x900/0f172a/1e293b?text=%20",
+          // Never persist a fallback placeholder into saved block data. Keep whatever
+          // image the block already has; an empty background stays empty so the user
+          // can pick a real Media Library asset.
+          ...(selectedBlock?.props?.backgroundImage
+            ? { backgroundImage: selectedBlock.props.backgroundImage }
+            : {}),
         } : {}),
       });
       return;
@@ -1668,6 +1716,10 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   };
 
   const insertPresetBlock = (blockType, patch = {}) => {
+    if (readOnly) {
+      showSavePopup("Website protected - click Unlock for Editing.", "error");
+      return;
+    }
     if (!BlockDefinitions[blockType]) return;
     const newBlock = createNewBlock(blockType);
     newBlock.props = { ...newBlock.props, ...patch };
@@ -2143,11 +2195,11 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       return;
     }
     previewWindow.document.write("<title>Opening preview...</title><body style=\"font-family:system-ui;padding:24px;color:#0f172a\">Opening preview...</body>");
-    const committedBlocks = await commitPendingInlineEdits();
+    const committedBlocks = readOnly ? blocks : await commitPendingInlineEdits();
     // Use forceSave so the server copy is up-to-date before the preview tab fetches it
-    let saved = null;
+    let saved = readOnly ? project : null;
     try {
-      saved = await Promise.resolve((onForceSave || onSave)?.(committedBlocks, { saveSource: "preview-autosave" }));
+      if (!readOnly) saved = await Promise.resolve((onForceSave || onSave)?.(committedBlocks, { saveSource: "preview-autosave" }));
     } catch (error) {
       console.error("Could not save before preview", error);
       saved = { _saveError: true, _saveErrorMessage: error?.message || "Could not save before preview" };
@@ -2191,11 +2243,11 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       return;
     }
     previewWindow.document.write("<title>Opening preview...</title><body style=\"font-family:system-ui;padding:24px;color:#0f172a\">Opening preview...</body>");
-    const committedBlocks = await commitPendingInlineEdits();
+    const committedBlocks = readOnly ? blocks : await commitPendingInlineEdits();
     // Use forceSave so the server copy is up-to-date before the preview tab fetches it
-    let saved = null;
+    let saved = readOnly ? project : null;
     try {
-      saved = await Promise.resolve((onForceSave || onSave)?.(committedBlocks, { saveSource: "preview-autosave" }));
+      if (!readOnly) saved = await Promise.resolve((onForceSave || onSave)?.(committedBlocks, { saveSource: "preview-autosave" }));
     } catch (error) {
       console.error("Could not save before preview", error);
       saved = { _saveError: true, _saveErrorMessage: error?.message || "Could not save before preview" };
@@ -2546,8 +2598,11 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     const editable = activeEditableRef.current;
     if (!editable) return;
     const selection = window.getSelection?.();
+    const selectionBlock = resolveSelectionBlockElement(editable, selection);
     const styleSource = getSelectionStyleSource(editable, selection) || editable;
     const computed = window.getComputedStyle(styleSource);
+    const alignSource = selectionBlock || styleSource || editable;
+    const alignComputed = window.getComputedStyle(alignSource);
     // Read font-size using the computed style of the element directly containing the
     // cursor/selection. This correctly reflects inherited sizes from CSS classes (e.g.
     // h1 font-size) and inline spans, regardless of whether a colour-only span was just
@@ -2556,7 +2611,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     const editableComputed = window.getComputedStyle(editable);
     const backgroundTarget = getEditableBackgroundTarget(editable) || editable;
     const backgroundComputed = window.getComputedStyle(backgroundTarget);
-    const tagName = String(editable.tagName || "P").toUpperCase();
+    const tagName = String(selectionBlock?.tagName || editable.tagName || "P").toUpperCase();
     const fontFamilyRaw = String(computed.fontFamily || "Arial")
       .split(",")[0]
       .replace(/["']/g, "")
@@ -2589,6 +2644,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       fontWeight: String(computed.fontWeight || "400"),
       fontStyle: String(computed.fontStyle || "normal"),
       textDecoration: String(computed.textDecorationLine || computed.textDecoration || "none"),
+      textAlign: String(alignComputed.textAlign || computed.textAlign || prev.textAlign || "left"),
       blockType: ["H1", "H2", "H3", "P"].includes(tagName) ? tagName : prev.blockType || "P",
       canStyleBox: editable.hasAttribute?.("data-layer-editor"),
       boxBackgroundColor: normalizeToolbarBackgroundColor(backgroundComputed.backgroundColor),
@@ -2937,9 +2993,23 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     }
 
     if (Object.keys(inlineStylePatch).length) {
-      const nextHtml = wrapEditableHtmlWithStyles(editable, inlineStylePatch);
-      nextProps = applyInlinePropPatch(nextProps, propPath, nextHtml);
-      editable.innerHTML = nextHtml;
+      const liveSelection = typeof window !== "undefined" ? window.getSelection?.() : null;
+      const activeSelectionRange = liveSelection?.rangeCount ? liveSelection.getRangeAt(0) : null;
+      const collapsedSelection = !activeSelectionRange || activeSelectionRange.collapsed;
+      const selectedBlockElement = resolveSelectionBlockElement(editable, liveSelection);
+      const applyToCurrentTextBlockOnly = isTextSectionEditableNode(editable)
+        && collapsedSelection
+        && selectedBlockElement
+        && selectedBlockElement !== editable;
+
+      if (applyToCurrentTextBlockOnly) {
+        applyStylePatchToElement(selectedBlockElement, inlineStylePatch);
+        nextProps = applyInlinePropPatch(nextProps, propPath, stripEditorArtifacts(editable.innerHTML));
+      } else {
+        const nextHtml = wrapEditableHtmlWithStyles(editable, inlineStylePatch);
+        nextProps = applyInlinePropPatch(nextProps, propPath, nextHtml);
+        editable.innerHTML = nextHtml;
+      }
 
       if (isFeatureTextBlock && Object.keys(textBlockStylePatch).length) {
         const itemIndex = Number(featureTextBlockMatch[1]);
@@ -2964,7 +3034,8 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
 
       const selection = window.getSelection?.();
       const nextRange = document.createRange();
-      nextRange.selectNodeContents(editable);
+      const rangeTarget = applyToCurrentTextBlockOnly && selectedBlockElement ? selectedBlockElement : editable;
+      nextRange.selectNodeContents(rangeTarget);
       selection?.removeAllRanges();
       selection?.addRange(nextRange);
       selectionRangeRef.current = nextRange.cloneRange();
@@ -3071,6 +3142,49 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     if (command === "formatBlock") {
       const blockKey = String(nextValue || "P").toUpperCase();
       const stylePreset = BLOCK_TYPE_STYLE_PRESETS[blockKey] || BLOCK_TYPE_STYLE_PRESETS.P;
+      const targetTag = blockKey === "P" ? "p" : blockKey.toLowerCase();
+
+      if (isTextSectionEditableNode(editable)) {
+        const selection = window.getSelection?.();
+        const range = getActiveSelectionRange();
+        let appliedSemanticTag = false;
+
+        if (range && !range.collapsed) {
+          try {
+            document.execCommand("formatBlock", false, blockKey === "P" ? "p" : `<${targetTag}>`);
+            appliedSemanticTag = true;
+          } catch {
+            appliedSemanticTag = false;
+          }
+        } else {
+          const currentBlockElement = resolveSelectionBlockElement(editable, selection);
+          if (currentBlockElement && currentBlockElement !== editable) {
+            const nextBlockElement = replaceSelectionBlockTag(currentBlockElement, targetTag);
+            if (nextBlockElement) {
+              applyStylePatchToElement(nextBlockElement, stylePreset);
+              const nextRange = document.createRange();
+              nextRange.selectNodeContents(nextBlockElement);
+              selection?.removeAllRanges();
+              selection?.addRange(nextRange);
+              selectionRangeRef.current = nextRange.cloneRange();
+              appliedSemanticTag = true;
+            }
+          }
+        }
+
+        if (appliedSemanticTag) {
+          syncActiveEditableToBlock(latestBlocksRef.current);
+          finishTextCommand();
+          setTextToolbarState((prev) => ({
+            ...prev,
+            blockType: blockKey,
+            fontSize: Number.parseInt(stylePreset.fontSize, 10) || prev.fontSize,
+            lineHeight: Number.parseFloat(stylePreset.lineHeight) || prev.lineHeight,
+          }));
+          return;
+        }
+      }
+
       applyStyleCommand(stylePreset);
       setTextToolbarState((prev) => ({
         ...prev,
@@ -3289,6 +3403,60 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     saveNoticeTimerRef.current = setTimeout(() => setSaveNotice(null), 2400);
   };
 
+  const handleOpenAiAssistant = async (assistantName = "Codex") => {
+    if (typeof window === "undefined") return;
+
+    const userPrompt = window.prompt(
+      `What should ${assistantName} help with on this page?`,
+      "Rewrite this hero section for more leads and stronger conversion copy."
+    );
+
+    if (!userPrompt || !String(userPrompt).trim()) return;
+
+    showSavePopup(`${assistantName} is drafting…`, "info");
+
+    try {
+      const res = await fetch("/api/website/assistant-chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [
+            { role: "user", content: String(userPrompt).trim() },
+          ],
+          context: {
+            projectName: project?.name || project?.title || "Website project",
+            activePage: activePage || "Home",
+            currentObjective: currentObjective || "",
+            brief: {
+              businessName: project?.brandName || project?.businessName || "",
+              offer: project?.offer || "",
+              targetAudience: project?.targetAudience || "",
+              goal: project?.goal || "",
+              notes: project?.notes || "",
+            },
+          },
+          assistant: assistantName,
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error || `${assistantName} request failed`);
+
+      const reply = String(json?.reply || "").trim();
+      if (!reply) throw new Error(`${assistantName} returned no response`);
+
+      showSavePopup(`${assistantName} suggestion ready`, "success");
+      window.alert(reply);
+    } catch (error) {
+      console.error(`[handleOpenAiAssistant:${assistantName}]`, error);
+      showSavePopup(error?.message || `${assistantName} failed to respond`, "error");
+    }
+  };
+
+  const handleOpenCodex = () => handleOpenAiAssistant("Codex");
+  const handleOpenChat = () => handleOpenAiAssistant("Chat");
+  const handleOpenClaude = () => handleOpenAiAssistant("Claude");
+
   const preserveCurrentSelection = () => {
     if (typeof window === "undefined") return;
     const selection = window.getSelection?.();
@@ -3304,6 +3472,10 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   };
 
   const handleSave = async () => {
+    if (readOnly) {
+      showSavePopup("Website protected - click Unlock for Editing.", "error");
+      return;
+    }
     showSavePopup("Saving...", "info");
     try {
       const committedBlocks = await commitPendingInlineEdits();
@@ -3489,6 +3661,27 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
             </button>
             <button
               type="button"
+              style={{ ...styles.panelToggleBtn, borderColor: "#22c55e", color: "#dcfce7" }}
+              onClick={handleOpenCodex}
+            >
+              Codex
+            </button>
+            <button
+              type="button"
+              style={{ ...styles.panelToggleBtn, borderColor: "#60a5fa", color: "#dbeafe" }}
+              onClick={handleOpenChat}
+            >
+              Chat
+            </button>
+            <button
+              type="button"
+              style={{ ...styles.panelToggleBtn, borderColor: "#f59e0b", color: "#fef3c7" }}
+              onClick={handleOpenClaude}
+            >
+              Claude
+            </button>
+            <button
+              type="button"
               style={styles.panelToggleBtn}
               onClick={() => onRefreshAssetLibrary?.()}
             >
@@ -3551,12 +3744,36 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
             ) : null}
           </div>
           <div style={{ ...styles.primaryActionGroup, flexShrink: 0 }}>
+            {lockStatusLabel ? (
+              <span style={{ ...styles.panelToggleBtn, cursor: "default", borderColor: readOnly ? "#f59e0b" : "#22c55e", color: readOnly ? "#fef3c7" : "#dcfce7" }}>
+                {lockStatusLabel}
+              </span>
+            ) : null}
+            {readOnly && onUnlockForEditing ? (
+              <button type="button" style={{ ...styles.saveBtn, opacity: unlockBusy ? 0.65 : 1 }} onClick={onUnlockForEditing} disabled={unlockBusy}>
+                {unlockBusy ? "Unlocking..." : "Unlock for Editing"}
+              </button>
+            ) : null}
+            {!readOnly && lockStatusLabel ? (
+              <>
+                {onSaveAndLockWebsite ? (
+                  <button type="button" style={styles.panelToggleBtn} onClick={onSaveAndLockWebsite}>
+                    Save and Lock Website
+                  </button>
+                ) : null}
+                {onCancelEditing ? (
+                  <button type="button" style={styles.panelToggleBtn} onClick={onCancelEditing}>
+                    Cancel Editing
+                  </button>
+                ) : null}
+              </>
+            ) : null}
             {project?.id ? (
               <button type="button" style={styles.previewBtn} onClick={handlePreviewPage}>
                 👁 Preview Page
               </button>
             ) : null}
-            <button style={styles.saveBtn} onClick={handleSave}>
+            <button style={{ ...styles.saveBtn, opacity: readOnly ? 0.45 : 1, cursor: readOnly ? "not-allowed" : "pointer" }} onClick={handleSave} disabled={readOnly}>
               💾 Save  {lastSavedAt ? <span style={{ fontSize: 16, opacity: 0.7, marginLeft: 4 }}>· ✓ {formatSavedAgo(lastSavedAt)}</span> : null}
             </button>
           </div>
@@ -3724,24 +3941,27 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
                 </div>
               ) : (
                 <>
-                  {canvasBlockEntries.map(({ block, index: blockIndex }, idx) => (
+                  {canvasBlockEntries.map(({ block, index: blockIndex }, idx) => {
+                    const displayBlock = resolveSharedBlockInstance(block, project);
+                    return (
                     <React.Fragment key={block.id || `${block.type}-${blockIndex}`}>
                       <DropInsertZone
-                        active={dropIndex === blockIndex}
-                        onDragOver={(e) => {
+                        active={!readOnly && dropIndex === blockIndex}
+                        onDragOver={readOnly ? null : (e) => {
                           e.preventDefault();
                           e.dataTransfer.dropEffect = "copy";
                           if (dropIndex !== blockIndex) setDropIndex(blockIndex);
                         }}
-                        onDrop={(e) => {
+                        onDrop={readOnly ? null : (e) => {
                           e.preventDefault();
                           handleInsertAt(blockIndex, e.dataTransfer);
                           setDropIndex(null);
                         }}
                       />
                       <CanvasBlock
-                        block={block}
+                        block={displayBlock}
                         index={blockIndex}
+                        activePage={activePage}
                         pageCanvasWidth={responsiveCanvasLayoutWidth}
                         pageFullWidth={pageIsFullWidth}
                         frameBackground={resolveCanvasFrameBackground(canvasBlockEntries, idx)}
@@ -3753,7 +3973,8 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
                         selected={selectedIndex === blockIndex}
                         hovered={hoveredIndex === blockIndex}
                         allowHoverOverlay={!selectedGlobalRole && typeof selectedIndex !== "number"}
-                        onSelect={selectCanvasBlock}
+                        readOnly={readOnly}
+                        onSelect={readOnly ? null : selectCanvasBlock}
                         onHover={(value) => setHoveredIndex(value)}
                         onDelete={handleDelete}
                         onDuplicate={handleDuplicate}
@@ -3776,15 +3997,16 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
                         onSaveBlockDefault={canSaveTemplates ? onSaveBlockDefault : null}
                       />
                     </React.Fragment>
-                  ))}
+                    );
+                  })}
                   <DropInsertZone
-                    active={dropIndex === blocks.length}
-                    onDragOver={(e) => {
+                    active={!readOnly && dropIndex === blocks.length}
+                    onDragOver={readOnly ? null : (e) => {
                       e.preventDefault();
                       e.dataTransfer.dropEffect = "copy";
                       if (dropIndex !== blocks.length) setDropIndex(blocks.length);
                     }}
-                    onDrop={(e) => {
+                    onDrop={readOnly ? null : (e) => {
                       e.preventDefault();
                       handleInsertAt(blocks.length, e.dataTransfer);
                       setDropIndex(null);
@@ -3800,8 +4022,8 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
                       device={previewMode}
                       layoutWidth={responsiveCanvasLayoutWidth}
                       selected={selectedGlobalRole === "footer"}
-                      onSelect={() => selectGlobalBlock("footer")}
-                      onChange={(nextBlock) => onUpdateGlobalBlock?.("footer", nextBlock)}
+                      onSelect={readOnly ? null : () => selectGlobalBlock("footer")}
+                      onChange={readOnly ? null : (nextBlock) => onUpdateGlobalBlock?.("footer", nextBlock)}
                       onSaveAsGlobal={onSaveAsGlobal}
                       onDelete={() => onUpdateGlobalBlock?.("footer", null)}
                     />
@@ -3817,12 +4039,12 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
         {showProperties ? (
           <div data-builder-sidepanel="true" style={{ ...styles.sidePanelShell, ...(isNarrowLayout ? { alignSelf: "stretch" } : {}) }}>
             {rightPanelMode === "global" ? (
-              <GlobalStylePanel blocks={blocks} pageWidthMode={pageWidthMode} onApplyGlobal={applyGlobalStyles} />
+              readOnly ? <div style={styles.emptyState}>Website protected - unlock to edit styles.</div> : <GlobalStylePanel blocks={blocks} pageWidthMode={pageWidthMode} onApplyGlobal={applyGlobalStyles} />
             ) : rightPanelMode === "sections" ? (
-              <PageSectionsPanel blocks={blocks} selectedIndex={selectedIndex} onSelect={selectCanvasBlock} onMove={moveBlockByStep} />
+              <PageSectionsPanel blocks={blocks} selectedIndex={selectedIndex} onSelect={readOnly ? null : selectCanvasBlock} onMove={readOnly ? null : moveBlockByStep} />
             ) : (
-              <PropertiesPanel
-                block={selectedGlobalBlock || blocks[selectedIndex] || null}
+              readOnly ? <div style={styles.emptyState}>Website protected - unlock to edit blocks.</div> : <PropertiesPanel
+                block={selectedGlobalBlock || (blocks[selectedIndex] ? resolveSharedBlockInstance(blocks[selectedIndex], project) : null)}
                 index={selectedGlobalBlock ? -1 : selectedIndex}
                 device={previewMode}
                 onChange={selectedGlobalBlock
@@ -3847,6 +4069,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
                 project={project}
                 activePage={activePage}
                 currentObjective={currentObjective}
+                onDetachSharedTemplate={selectedGlobalBlock ? null : handleDetachSharedTemplate}
               />
             )}
           </div>

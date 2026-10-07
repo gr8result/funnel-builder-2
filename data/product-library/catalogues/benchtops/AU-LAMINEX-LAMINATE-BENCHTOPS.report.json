@@ -1,0 +1,1183 @@
+{
+  "verifiedAt": "2026-09-11",
+  "sourceListingUrl": "https://www.laminex.com.au/browse/product-application/benchtops",
+  "publicListingTiles": 200,
+  "verifiedHplProductPages": 28,
+  "rawProducts": 25,
+  "manufacturerSheetVariants": 113,
+  "duplicateSkuAppearancesRemoved": 0,
+  "uniqueColourNames": 25,
+  "uniqueFinishes": [
+    "AbsoluteMatte",
+    "Natural",
+    "DiamondGloss"
+  ],
+  "pricePolicy": "No verified trade sheet prices published. All prices null, quote_required. Sample/cart zeroes ignored.",
+  "thicknessPolicy": "Manufacturer dimensions are HPL sheet thickness; fabricated top thickness remains a separate specification.",
+  "availabilityPolicy": "Active means present in the verified manufacturer catalogue, not confirmed warehouse stock.",
+  "scope": "Verified subset of manufacturer HPL product pages exposed by the public benchtop listing, plus Carrara Bianco; not an exhaustive national stock catalogue.",
+  "sourceEvidence": [
+    {
+      "url": "https://www.laminex.com.au/Application/Desktops-%26-Tabletops/Platypus/p/AU1007176",
+      "sha256": "5b2ac1d4de762c23bdb9cc528e009ee138707b567392b4b1c9759074634547c5"
+    },
+    {
+      "url": "https://www.laminex.com.au/Brand/Laminex/Calacatta-Majore/p/AU1005257",
+      "sha256": "f36ad2c3b7d861eae6efed0fba626c148f50378a4f44f5633bf8d86a9d4ddd8d"
+    },
+    {
+      "url": "https://www.laminex.com.au/Brand/Laminex/Hushed-Pine/p/AU1005030",
+      "sha256": "898484b86e898459ce4711ac15e993b49a7e6ed247696ca3df184196c3eb1caf"
+    },
+    {
+      "url": "https://www.laminex.com.au/Brand/Laminex/Marmo-Grigio/p/AU1005283",
+      "sha256": "551f0b43feb1063104aac3e5b262d630c09bb1c78e36973fbad1641a97d7fd08"
+    },
+    {
+      "url": "https://www.laminex.com.au/Brand/Laminex/Moroccan-Clay/p/AU1004800",
+      "sha256": "639d3f935cfd705eeca3b5c0dddbe58874fd2def93690b1d4dbf1565dfa386c0"
+    },
+    {
+      "url": "https://www.laminex.com.au/Brand/Laminex/Otway/p/AU1005249",
+      "sha256": "71c26edc4f042399ee3641914592d39e33de67fc2d6987c9833366c396afdbf3"
+    },
+    {
+      "url": "https://www.laminex.com.au/Brand/Laminex/Terrazzino-Perlato/p/AU1005039",
+      "sha256": "31235e58009d606495c205c1e898822ab3e1b74adaf336ddd0de88bbd6a09b4a"
+    },
+    {
+      "url": "https://www.laminex.com.au/Brand/Laminex/White/p/AU1004844",
+      "sha256": "d42c1c173877db4c1a4f2910505f2221c076bda7b1df110922f1067bfdc83a9f"
+    },
+    {
+      "url": "https://www.laminex.com.au/browse/product-application/benchtops",
+      "sha256": "b8d809389aae226208ae4a94daac62942c88eb95764a254b7c1df93ea12fb884"
+    },
+    {
+      "url": "https://www.laminex.com.au/Colour/Carrara-Delicata/Carrara-Delicata/p/AU1005040",
+      "sha256": "7f538a1f456e7ab2c9dc4407532993648477db341f48a5c510b07ba183a1debb"
+    },
+    {
+      "url": "https://www.laminex.com.au/Colour/Kalamata/Kalamata/p/AU1005031",
+      "sha256": "207504dafb6c4b08aab4df6e4cfe6c8c0ccdd2e53f2d9fa9d8b82b970216554a"
+    },
+    {
+      "url": "https://www.laminex.com.au/Colour/Limed-Concrete/Limed-Concrete/p/AU1004852",
+      "sha256": "ff013b9746f6eb5e75f5fdf4b54c63b13814c1e83ec49aa058882739d3e09767"
+    },
+    {
+      "url": "https://www.laminex.com.au/Colour/Marmor-Torino/Marmor-Torino/p/AU1005037",
+      "sha256": "570ef0a1de37b23126454aefa892f7cc44e6b68b62f52435c11c2b1d8a4b17bb"
+    },
+    {
+      "url": "https://www.laminex.com.au/Colour/Pearl-Concrete/Pearl-Concrete/p/AU1005038",
+      "sha256": "574b2121237e34bb89e80aa2ca43d0a182f14d3e3b81dd8fdda8cb55b3feb4e7"
+    },
+    {
+      "url": "https://www.laminex.com.au/Colour/Tumbled-Terrazzo/Tumbled-Terrazzo/p/AU1005043",
+      "sha256": "3a1c5e39db7cbeacd0682c1ca3b8302eca923855760aa97f6fc8398718fcc546"
+    },
+    {
+      "url": "https://www.laminex.com.au/Decor-Sub-Group/Veins/Luxe-Elba/p/AU1005281",
+      "sha256": "898f00647e08b96a63c057ef9a50e886a33091eece31b0d33b7aa78a8d553959"
+    },
+    {
+      "url": "https://www.laminex.com.au/Decor-Sub-Group/Veins/Premio-Carrara/p/AU1005282",
+      "sha256": "40f49787addf24eab27a920de485ec3d502183b44b49436908a93efbb8075e15"
+    },
+    {
+      "url": "https://www.laminex.com.au/Finish/Natural/Coastal-Sunrise/p/AU1005235",
+      "sha256": "86642b4b0c1901adedc1acf848985d879d5311e61bb5c65f78411df2354a9a50"
+    },
+    {
+      "url": "https://www.laminex.com.au/Finish/Natural/Figured-Limestone/p/AU1005041",
+      "sha256": "5282f8a54ea4ed82c554433fd817edd72c5f484e34455016eb465544b0cb3c21"
+    },
+    {
+      "url": "https://www.laminex.com.au/Finish/Natural/Golden-Wattle/p/AU1005236",
+      "sha256": "ca47f79dfd2bbba7d83bb18420b6f283290ef8b00e85fcef3915c29db0632f2f"
+    },
+    {
+      "url": "https://www.laminex.com.au/Finish/Natural/Otway/p/AU1005238",
+      "sha256": "4bf95a941f3e08d9da69af8281d01ac0a5d4952ff236b9ee4ca731de09a40910"
+    },
+    {
+      "url": "https://www.laminex.com.au/Finish/Natural/Pietra-Cloud/p/AU1005042",
+      "sha256": "8b921171e4be28ae45c527f3bef2f3df3ae6c66b7a15565b9b2ce784bf26e89e"
+    },
+    {
+      "url": "https://www.laminex.com.au/Finish/Natural/Portsea/p/AU1005240",
+      "sha256": "d531c6100b78a58bf7636f7e9c341481fbb824cee077a6adeb533bf51661fa7a"
+    },
+    {
+      "url": "https://www.laminex.com.au/Product-Group/Laminate-Non-Postforming-Grade/Aries/p/AU1005246",
+      "sha256": "418171096481f67bd6dab38f930c55231b6be795a41393e53d8ce50b7bba33e2"
+    },
+    {
+      "url": "https://www.laminex.com.au/Product-Group/Laminate-Non-Postforming-Grade/Kalamata/p/AU1005247",
+      "sha256": "24e44b93bf1aac416987e3404f248eb16123611706c5766c3c33f6d749baa656"
+    },
+    {
+      "url": "https://www.laminex.com.au/Product-Group/Laminate-Non-Postforming-Grade/Moroccan-Clay/p/AU1005248",
+      "sha256": "ed4cb172ee739b687e038de6059e4c5369292aaa88f6fe3f05153bcd0fcee782"
+    },
+    {
+      "url": "https://www.laminex.com.au/Product-Group/Laminate-Non-Postforming-Grade/Paper-Bark/p/AU1005250",
+      "sha256": "0d15d2e155f11ad8ee3cbf86506d096f55f698109cdec0e4d3adc1a947268a90"
+    },
+    {
+      "url": "https://www.laminex.com.au/Product-Group/Laminate-Non-Postforming-Grade/Spinifex/p/AU1005251",
+      "sha256": "c8114cfa60dd2e56db994106570c46c65c456acd539f3df74b3f2ca3ea4661f2"
+    },
+    {
+      "url": "https://www.laminex.com.au/products/carrara-bianco/Natural/p/AU1001548",
+      "sha256": "7fceb12140aa9a446c916632d84c650a52a018d007c6f4b80d93c48a787f668b"
+    }
+  ],
+  "products": [
+    {
+      "id": "LAMINEX-LAMINATE-BENCHTOP-ARIES",
+      "colourName": "Aries",
+      "colourCode": "079",
+      "finishes": [
+        "AbsoluteMatte"
+      ],
+      "variants": [
+        {
+          "sku": "401001",
+          "finish": "AbsoluteMatte",
+          "size": "3600mm x 1500mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/aries/AbsoluteMatte/p/AU1005246"
+        },
+        {
+          "sku": "401141",
+          "finish": "AbsoluteMatte",
+          "size": "3600mm x 750mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/aries/AbsoluteMatte/p/AU1005246"
+        }
+      ]
+    },
+    {
+      "id": "LAMINEX-LAMINATE-BENCHTOP-CALACATTA-MAJORE-TRUESCALE",
+      "colourName": "Calacatta Majore TrueScale",
+      "colourCode": "3001",
+      "finishes": [
+        "Natural"
+      ],
+      "variants": [
+        {
+          "sku": "401153",
+          "finish": "Natural",
+          "size": "1800mm x 1200mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/calacatta-majore/Natural/p/AU1005257"
+        },
+        {
+          "sku": "401158",
+          "finish": "Natural",
+          "size": "1800mm x 1500mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/calacatta-majore/Natural/p/AU1005257"
+        },
+        {
+          "sku": "401147",
+          "finish": "Natural",
+          "size": "1800mm x 750mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/calacatta-majore/Natural/p/AU1005257"
+        },
+        {
+          "sku": "401012",
+          "finish": "Natural",
+          "size": "3600mm x 1200mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/calacatta-majore/Natural/p/AU1005257"
+        },
+        {
+          "sku": "401017",
+          "finish": "Natural",
+          "size": "3600mm x 1500mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/calacatta-majore/Natural/p/AU1005257"
+        },
+        {
+          "sku": "401007",
+          "finish": "Natural",
+          "size": "3600mm x 750mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/calacatta-majore/Natural/p/AU1005257"
+        }
+      ]
+    },
+    {
+      "id": "LAMINEX-LAMINATE-BENCHTOP-CARRARA-BIANCO",
+      "colourName": "Carrara Bianco",
+      "colourCode": "087",
+      "finishes": [
+        "Natural"
+      ],
+      "variants": [
+        {
+          "sku": "976534",
+          "finish": "Natural",
+          "size": "1800mm x 1200mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/carrara-bianco/Natural/p/AU1001548"
+        },
+        {
+          "sku": "982813",
+          "finish": "Natural",
+          "size": "1800mm x 1500mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/carrara-bianco/Natural/p/AU1001548"
+        },
+        {
+          "sku": "976513",
+          "finish": "Natural",
+          "size": "1800mm x 750mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/carrara-bianco/Natural/p/AU1001548"
+        },
+        {
+          "sku": "976402",
+          "finish": "Natural",
+          "size": "3600mm x 1200mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/carrara-bianco/Natural/p/AU1001548"
+        },
+        {
+          "sku": "976422",
+          "finish": "Natural",
+          "size": "3600mm x 1500mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/carrara-bianco/Natural/p/AU1001548"
+        },
+        {
+          "sku": "976382",
+          "finish": "Natural",
+          "size": "3600mm x 750mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/carrara-bianco/Natural/p/AU1001548"
+        }
+      ]
+    },
+    {
+      "id": "LAMINEX-LAMINATE-BENCHTOP-CARRARA-DELICATA",
+      "colourName": "Carrara Delicata",
+      "colourCode": "624",
+      "finishes": [
+        "Natural"
+      ],
+      "variants": [
+        {
+          "sku": "994130",
+          "finish": "Natural",
+          "size": "1800mm x 1200mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/carrara-delicata/Natural/p/AU1005040"
+        },
+        {
+          "sku": "994149",
+          "finish": "Natural",
+          "size": "1800mm x 1500mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/carrara-delicata/Natural/p/AU1005040"
+        },
+        {
+          "sku": "994113",
+          "finish": "Natural",
+          "size": "1800mm x 750mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/carrara-delicata/Natural/p/AU1005040"
+        },
+        {
+          "sku": "994041",
+          "finish": "Natural",
+          "size": "3600mm x 1200mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/carrara-delicata/Natural/p/AU1005040"
+        },
+        {
+          "sku": "994024",
+          "finish": "Natural",
+          "size": "3600mm x 750mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/carrara-delicata/Natural/p/AU1005040"
+        }
+      ]
+    },
+    {
+      "id": "LAMINEX-LAMINATE-BENCHTOP-COASTAL-SUNRISE",
+      "colourName": "Coastal Sunrise",
+      "colourCode": "1034",
+      "finishes": [
+        "Natural"
+      ],
+      "variants": [
+        {
+          "sku": "400990",
+          "finish": "Natural",
+          "size": "3600mm x 1200mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/coastal-sunrise/Natural/p/AU1005235"
+        },
+        {
+          "sku": "400981",
+          "finish": "Natural",
+          "size": "3600mm x 750mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/coastal-sunrise/Natural/p/AU1005235"
+        }
+      ]
+    },
+    {
+      "id": "LAMINEX-LAMINATE-BENCHTOP-FIGURED-LIMESTONE",
+      "colourName": "Figured Limestone",
+      "colourCode": "625",
+      "finishes": [
+        "Natural"
+      ],
+      "variants": [
+        {
+          "sku": "994131",
+          "finish": "Natural",
+          "size": "1800mm x 1200mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/figured-limestone/Natural/p/AU1005041"
+        },
+        {
+          "sku": "994150",
+          "finish": "Natural",
+          "size": "1800mm x 1500mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/figured-limestone/Natural/p/AU1005041"
+        },
+        {
+          "sku": "994114",
+          "finish": "Natural",
+          "size": "1800mm x 750mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/figured-limestone/Natural/p/AU1005041"
+        },
+        {
+          "sku": "994042",
+          "finish": "Natural",
+          "size": "3600mm x 1200mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/figured-limestone/Natural/p/AU1005041"
+        },
+        {
+          "sku": "994025",
+          "finish": "Natural",
+          "size": "3600mm x 750mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/figured-limestone/Natural/p/AU1005041"
+        }
+      ]
+    },
+    {
+      "id": "LAMINEX-LAMINATE-BENCHTOP-GOLDEN-WATTLE",
+      "colourName": "Golden Wattle",
+      "colourCode": "1033",
+      "finishes": [
+        "Natural"
+      ],
+      "variants": [
+        {
+          "sku": "400991",
+          "finish": "Natural",
+          "size": "3600mm x 1200mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/golden-wattle/Natural/p/AU1005236"
+        },
+        {
+          "sku": "400982",
+          "finish": "Natural",
+          "size": "3600mm x 750mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/golden-wattle/Natural/p/AU1005236"
+        }
+      ]
+    },
+    {
+      "id": "LAMINEX-LAMINATE-BENCHTOP-HUSHED-PINE",
+      "colourName": "Hushed Pine",
+      "colourCode": "159",
+      "finishes": [
+        "Natural"
+      ],
+      "variants": [
+        {
+          "sku": "994120",
+          "finish": "Natural",
+          "size": "1800mm x 1200mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/hushed-pine/Natural/p/AU1005030"
+        },
+        {
+          "sku": "994139",
+          "finish": "Natural",
+          "size": "1800mm x 1500mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/hushed-pine/Natural/p/AU1005030"
+        },
+        {
+          "sku": "994103",
+          "finish": "Natural",
+          "size": "1800mm x 750mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/hushed-pine/Natural/p/AU1005030"
+        },
+        {
+          "sku": "994031",
+          "finish": "Natural",
+          "size": "3600mm x 1200mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/hushed-pine/Natural/p/AU1005030"
+        },
+        {
+          "sku": "994014",
+          "finish": "Natural",
+          "size": "3600mm x 750mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/hushed-pine/Natural/p/AU1005030"
+        }
+      ]
+    },
+    {
+      "id": "LAMINEX-LAMINATE-BENCHTOP-KALAMATA",
+      "colourName": "Kalamata",
+      "colourCode": "160",
+      "finishes": [
+        "AbsoluteMatte",
+        "Natural"
+      ],
+      "variants": [
+        {
+          "sku": "401002",
+          "finish": "AbsoluteMatte",
+          "size": "3600mm x 1500mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/kalamata/AbsoluteMatte/p/AU1005247"
+        },
+        {
+          "sku": "401142",
+          "finish": "AbsoluteMatte",
+          "size": "3600mm x 750mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/kalamata/AbsoluteMatte/p/AU1005247"
+        },
+        {
+          "sku": "994121",
+          "finish": "Natural",
+          "size": "1800mm x 1200mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/kalamata/Natural/p/AU1005031"
+        },
+        {
+          "sku": "994140",
+          "finish": "Natural",
+          "size": "1800mm x 1500mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/kalamata/Natural/p/AU1005031"
+        },
+        {
+          "sku": "994104",
+          "finish": "Natural",
+          "size": "1800mm x 750mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/kalamata/Natural/p/AU1005031"
+        },
+        {
+          "sku": "994032",
+          "finish": "Natural",
+          "size": "3600mm x 1200mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/kalamata/Natural/p/AU1005031"
+        },
+        {
+          "sku": "994015",
+          "finish": "Natural",
+          "size": "3600mm x 750mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/kalamata/Natural/p/AU1005031"
+        }
+      ]
+    },
+    {
+      "id": "LAMINEX-LAMINATE-BENCHTOP-LIMED-CONCRETE",
+      "colourName": "Limed Concrete",
+      "colourCode": "8534",
+      "finishes": [
+        "DiamondGloss"
+      ],
+      "variants": [
+        {
+          "sku": "989125",
+          "finish": "DiamondGloss",
+          "size": "1795mm x 1395mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/limed-concrete/DiamondGloss/p/AU1004852"
+        },
+        {
+          "sku": "989127",
+          "finish": "DiamondGloss",
+          "size": "1795mm x 695mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/limed-concrete/DiamondGloss/p/AU1004852"
+        },
+        {
+          "sku": "985602",
+          "finish": "DiamondGloss",
+          "size": "3595mm x 1395mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/limed-concrete/DiamondGloss/p/AU1004852"
+        },
+        {
+          "sku": "989126",
+          "finish": "DiamondGloss",
+          "size": "3595mm x 695mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/limed-concrete/DiamondGloss/p/AU1004852"
+        }
+      ]
+    },
+    {
+      "id": "LAMINEX-LAMINATE-BENCHTOP-LUXE-ELBA-TRUESCALE",
+      "colourName": "Luxe Elba TrueScale",
+      "colourCode": "3003",
+      "finishes": [
+        "Natural"
+      ],
+      "variants": [
+        {
+          "sku": "401154",
+          "finish": "Natural",
+          "size": "1800mm x 1200mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/luxe-elba/Natural/p/AU1005281"
+        },
+        {
+          "sku": "401159",
+          "finish": "Natural",
+          "size": "1800mm x 1500mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/luxe-elba/Natural/p/AU1005281"
+        },
+        {
+          "sku": "401148",
+          "finish": "Natural",
+          "size": "1800mm x 750mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/luxe-elba/Natural/p/AU1005281"
+        },
+        {
+          "sku": "401013",
+          "finish": "Natural",
+          "size": "3600mm x 1200mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/luxe-elba/Natural/p/AU1005281"
+        },
+        {
+          "sku": "401018",
+          "finish": "Natural",
+          "size": "3600mm x 1500mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/luxe-elba/Natural/p/AU1005281"
+        },
+        {
+          "sku": "401008",
+          "finish": "Natural",
+          "size": "3600mm x 750mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/luxe-elba/Natural/p/AU1005281"
+        }
+      ]
+    },
+    {
+      "id": "LAMINEX-LAMINATE-BENCHTOP-MARMO-GRIGIO-TRUESCALE",
+      "colourName": "Marmo Grigio TrueScale",
+      "colourCode": "3005",
+      "finishes": [
+        "Natural"
+      ],
+      "variants": [
+        {
+          "sku": "401155",
+          "finish": "Natural",
+          "size": "1800mm x 1200mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/marmo-grigio/Natural/p/AU1005283"
+        },
+        {
+          "sku": "401160",
+          "finish": "Natural",
+          "size": "1800mm x 1500mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/marmo-grigio/Natural/p/AU1005283"
+        },
+        {
+          "sku": "401150",
+          "finish": "Natural",
+          "size": "1800mm x 750mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/marmo-grigio/Natural/p/AU1005283"
+        },
+        {
+          "sku": "401014",
+          "finish": "Natural",
+          "size": "3600mm x 1200mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/marmo-grigio/Natural/p/AU1005283"
+        },
+        {
+          "sku": "401019",
+          "finish": "Natural",
+          "size": "3600mm x 1500mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/marmo-grigio/Natural/p/AU1005283"
+        },
+        {
+          "sku": "401009",
+          "finish": "Natural",
+          "size": "3600mm x 750mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/marmo-grigio/Natural/p/AU1005283"
+        }
+      ]
+    },
+    {
+      "id": "LAMINEX-LAMINATE-BENCHTOP-MARMOR-TORINO",
+      "colourName": "Marmor Torino",
+      "colourCode": "629",
+      "finishes": [
+        "Natural"
+      ],
+      "variants": [
+        {
+          "sku": "994127",
+          "finish": "Natural",
+          "size": "1800mm x 1200mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/marmor-torino/Natural/p/AU1005037"
+        },
+        {
+          "sku": "994146",
+          "finish": "Natural",
+          "size": "1800mm x 1500mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/marmor-torino/Natural/p/AU1005037"
+        },
+        {
+          "sku": "994110",
+          "finish": "Natural",
+          "size": "1800mm x 750mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/marmor-torino/Natural/p/AU1005037"
+        },
+        {
+          "sku": "994038",
+          "finish": "Natural",
+          "size": "3600mm x 1200mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/marmor-torino/Natural/p/AU1005037"
+        },
+        {
+          "sku": "994021",
+          "finish": "Natural",
+          "size": "3600mm x 750mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/marmor-torino/Natural/p/AU1005037"
+        }
+      ]
+    },
+    {
+      "id": "LAMINEX-LAMINATE-BENCHTOP-MOROCCAN-CLAY",
+      "colourName": "Moroccan Clay",
+      "colourCode": "150",
+      "finishes": [
+        "AbsoluteMatte",
+        "Natural"
+      ],
+      "variants": [
+        {
+          "sku": "401003",
+          "finish": "AbsoluteMatte",
+          "size": "3600mm x 1500mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/moroccan-clay/AbsoluteMatte/p/AU1005248"
+        },
+        {
+          "sku": "401143",
+          "finish": "AbsoluteMatte",
+          "size": "3600mm x 750mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/moroccan-clay/AbsoluteMatte/p/AU1005248"
+        },
+        {
+          "sku": "994119",
+          "finish": "Natural",
+          "size": "1800mm x 1200mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/moroccan-clay/Natural/p/AU1004800"
+        },
+        {
+          "sku": "994138",
+          "finish": "Natural",
+          "size": "1800mm x 1500mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/moroccan-clay/Natural/p/AU1004800"
+        },
+        {
+          "sku": "994102",
+          "finish": "Natural",
+          "size": "1800mm x 750mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/moroccan-clay/Natural/p/AU1004800"
+        },
+        {
+          "sku": "994030",
+          "finish": "Natural",
+          "size": "3600mm x 1200mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/moroccan-clay/Natural/p/AU1004800"
+        },
+        {
+          "sku": "994013",
+          "finish": "Natural",
+          "size": "3600mm x 750mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/moroccan-clay/Natural/p/AU1004800"
+        }
+      ]
+    },
+    {
+      "id": "LAMINEX-LAMINATE-BENCHTOP-OTWAY",
+      "colourName": "Otway",
+      "colourCode": "1035",
+      "finishes": [
+        "AbsoluteMatte",
+        "Natural"
+      ],
+      "variants": [
+        {
+          "sku": "401004",
+          "finish": "AbsoluteMatte",
+          "size": "3600mm x 1500mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/otway/AbsoluteMatte/p/AU1005249"
+        },
+        {
+          "sku": "401144",
+          "finish": "AbsoluteMatte",
+          "size": "3600mm x 750mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/otway/AbsoluteMatte/p/AU1005249"
+        },
+        {
+          "sku": "400993",
+          "finish": "Natural",
+          "size": "3600mm x 1200mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/otway/Natural/p/AU1005238"
+        },
+        {
+          "sku": "400984",
+          "finish": "Natural",
+          "size": "3600mm x 750mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/otway/Natural/p/AU1005238"
+        }
+      ]
+    },
+    {
+      "id": "LAMINEX-LAMINATE-BENCHTOP-PAPER-BARK",
+      "colourName": "Paper Bark",
+      "colourCode": "449",
+      "finishes": [
+        "AbsoluteMatte"
+      ],
+      "variants": [
+        {
+          "sku": "401005",
+          "finish": "AbsoluteMatte",
+          "size": "3600mm x 1500mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/paper-bark/AbsoluteMatte/p/AU1005250"
+        },
+        {
+          "sku": "401145",
+          "finish": "AbsoluteMatte",
+          "size": "3600mm x 750mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/paper-bark/AbsoluteMatte/p/AU1005250"
+        }
+      ]
+    },
+    {
+      "id": "LAMINEX-LAMINATE-BENCHTOP-PEARL-CONCRETE",
+      "colourName": "Pearl Concrete",
+      "colourCode": "636",
+      "finishes": [
+        "Natural"
+      ],
+      "variants": [
+        {
+          "sku": "994128",
+          "finish": "Natural",
+          "size": "1800mm x 1200mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/pearl-concrete/Natural/p/AU1005038"
+        },
+        {
+          "sku": "994147",
+          "finish": "Natural",
+          "size": "1800mm x 1500mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/pearl-concrete/Natural/p/AU1005038"
+        },
+        {
+          "sku": "994111",
+          "finish": "Natural",
+          "size": "1800mm x 750mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/pearl-concrete/Natural/p/AU1005038"
+        },
+        {
+          "sku": "994039",
+          "finish": "Natural",
+          "size": "3600mm x 1200mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/pearl-concrete/Natural/p/AU1005038"
+        },
+        {
+          "sku": "994022",
+          "finish": "Natural",
+          "size": "3600mm x 750mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/pearl-concrete/Natural/p/AU1005038"
+        }
+      ]
+    },
+    {
+      "id": "LAMINEX-LAMINATE-BENCHTOP-PIETRA-CLOUD",
+      "colourName": "Pietra Cloud",
+      "colourCode": "628",
+      "finishes": [
+        "Natural"
+      ],
+      "variants": [
+        {
+          "sku": "994132",
+          "finish": "Natural",
+          "size": "1800mm x 1200mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/pietra-cloud/Natural/p/AU1005042"
+        },
+        {
+          "sku": "994151",
+          "finish": "Natural",
+          "size": "1800mm x 1500mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/pietra-cloud/Natural/p/AU1005042"
+        },
+        {
+          "sku": "994115",
+          "finish": "Natural",
+          "size": "1800mm x 750mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/pietra-cloud/Natural/p/AU1005042"
+        },
+        {
+          "sku": "994043",
+          "finish": "Natural",
+          "size": "3600mm x 1200mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/pietra-cloud/Natural/p/AU1005042"
+        },
+        {
+          "sku": "994026",
+          "finish": "Natural",
+          "size": "3600mm x 750mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/pietra-cloud/Natural/p/AU1005042"
+        }
+      ]
+    },
+    {
+      "id": "LAMINEX-LAMINATE-BENCHTOP-PLATYPUS",
+      "colourName": "Platypus",
+      "colourCode": "2607",
+      "finishes": [
+        "Natural"
+      ],
+      "variants": [
+        {
+          "sku": "410184",
+          "finish": "Natural",
+          "size": "1800mm x 1200mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/platypus/Natural/p/AU1007176"
+        },
+        {
+          "sku": "410193",
+          "finish": "Natural",
+          "size": "1800mm x 750mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/platypus/Natural/p/AU1007176"
+        },
+        {
+          "sku": "410107",
+          "finish": "Natural",
+          "size": "3600mm x 1200mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/platypus/Natural/p/AU1007176"
+        },
+        {
+          "sku": "410116",
+          "finish": "Natural",
+          "size": "3600mm x 1500mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/platypus/Natural/p/AU1007176"
+        },
+        {
+          "sku": "410125",
+          "finish": "Natural",
+          "size": "3600mm x 750mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/platypus/Natural/p/AU1007176"
+        }
+      ]
+    },
+    {
+      "id": "LAMINEX-LAMINATE-BENCHTOP-PORTSEA",
+      "colourName": "Portsea",
+      "colourCode": "1031",
+      "finishes": [
+        "Natural"
+      ],
+      "variants": [
+        {
+          "sku": "400995",
+          "finish": "Natural",
+          "size": "3600mm x 1200mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/portsea/Natural/p/AU1005240"
+        },
+        {
+          "sku": "400986",
+          "finish": "Natural",
+          "size": "3600mm x 750mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/portsea/Natural/p/AU1005240"
+        }
+      ]
+    },
+    {
+      "id": "LAMINEX-LAMINATE-BENCHTOP-PREMIO-CARRARA-TRUESCALE",
+      "colourName": "Premio Carrara TrueScale",
+      "colourCode": "3002",
+      "finishes": [
+        "Natural"
+      ],
+      "variants": [
+        {
+          "sku": "401152",
+          "finish": "Natural",
+          "size": "1800mm x 1200mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/premio-carrara/Natural/p/AU1005282"
+        },
+        {
+          "sku": "401157",
+          "finish": "Natural",
+          "size": "1800mm x 1500mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/premio-carrara/Natural/p/AU1005282"
+        },
+        {
+          "sku": "401149",
+          "finish": "Natural",
+          "size": "1800mm x 750mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/premio-carrara/Natural/p/AU1005282"
+        },
+        {
+          "sku": "401016",
+          "finish": "Natural",
+          "size": "3600mm x 1200mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/premio-carrara/Natural/p/AU1005282"
+        },
+        {
+          "sku": "401021",
+          "finish": "Natural",
+          "size": "3600mm x 1500mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/premio-carrara/Natural/p/AU1005282"
+        },
+        {
+          "sku": "401011",
+          "finish": "Natural",
+          "size": "3600mm x 750mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/premio-carrara/Natural/p/AU1005282"
+        }
+      ]
+    },
+    {
+      "id": "LAMINEX-LAMINATE-BENCHTOP-SPINIFEX",
+      "colourName": "Spinifex",
+      "colourCode": "8539",
+      "finishes": [
+        "AbsoluteMatte"
+      ],
+      "variants": [
+        {
+          "sku": "401006",
+          "finish": "AbsoluteMatte",
+          "size": "3600mm x 1500mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/spinifex/AbsoluteMatte/p/AU1005251"
+        },
+        {
+          "sku": "401146",
+          "finish": "AbsoluteMatte",
+          "size": "3600mm x 750mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/spinifex/AbsoluteMatte/p/AU1005251"
+        }
+      ]
+    },
+    {
+      "id": "LAMINEX-LAMINATE-BENCHTOP-TERRAZZINO-PERLATO",
+      "colourName": "Terrazzino Perlato",
+      "colourCode": "633",
+      "finishes": [
+        "Natural"
+      ],
+      "variants": [
+        {
+          "sku": "994129",
+          "finish": "Natural",
+          "size": "1800mm x 1200mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/terrazzino-perlato/Natural/p/AU1005039"
+        },
+        {
+          "sku": "994148",
+          "finish": "Natural",
+          "size": "1800mm x 1500mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/terrazzino-perlato/Natural/p/AU1005039"
+        },
+        {
+          "sku": "994112",
+          "finish": "Natural",
+          "size": "1800mm x 750mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/terrazzino-perlato/Natural/p/AU1005039"
+        },
+        {
+          "sku": "994040",
+          "finish": "Natural",
+          "size": "3600mm x 1200mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/terrazzino-perlato/Natural/p/AU1005039"
+        },
+        {
+          "sku": "994023",
+          "finish": "Natural",
+          "size": "3600mm x 750mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/terrazzino-perlato/Natural/p/AU1005039"
+        }
+      ]
+    },
+    {
+      "id": "LAMINEX-LAMINATE-BENCHTOP-TUMBLED-TERRAZZO",
+      "colourName": "Tumbled Terrazzo",
+      "colourCode": "641",
+      "finishes": [
+        "Natural"
+      ],
+      "variants": [
+        {
+          "sku": "994133",
+          "finish": "Natural",
+          "size": "1800mm x 1200mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/tumbled-terrazzo/Natural/p/AU1005043"
+        },
+        {
+          "sku": "994152",
+          "finish": "Natural",
+          "size": "1800mm x 1500mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/tumbled-terrazzo/Natural/p/AU1005043"
+        },
+        {
+          "sku": "994116",
+          "finish": "Natural",
+          "size": "1800mm x 750mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/tumbled-terrazzo/Natural/p/AU1005043"
+        },
+        {
+          "sku": "994044",
+          "finish": "Natural",
+          "size": "3600mm x 1200mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/tumbled-terrazzo/Natural/p/AU1005043"
+        },
+        {
+          "sku": "994027",
+          "finish": "Natural",
+          "size": "3600mm x 750mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/tumbled-terrazzo/Natural/p/AU1005043"
+        }
+      ]
+    },
+    {
+      "id": "LAMINEX-LAMINATE-BENCHTOP-WHITE",
+      "colourName": "White",
+      "colourCode": "200",
+      "finishes": [
+        "AbsoluteMatte"
+      ],
+      "variants": [
+        {
+          "sku": "991374",
+          "finish": "AbsoluteMatte",
+          "size": "1800mm x 1500mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/white/AbsoluteMatte/p/AU1004844"
+        },
+        {
+          "sku": "991384",
+          "finish": "AbsoluteMatte",
+          "size": "1800mm x 750mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/white/AbsoluteMatte/p/AU1004844"
+        },
+        {
+          "sku": "991349",
+          "finish": "AbsoluteMatte",
+          "size": "3600mm x 1500mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/white/AbsoluteMatte/p/AU1004844"
+        },
+        {
+          "sku": "991359",
+          "finish": "AbsoluteMatte",
+          "size": "3600mm x 750mm",
+          "thickness": "0.7 mm",
+          "sourceUrl": "https://www.laminex.com.au/products/white/AbsoluteMatte/p/AU1004844"
+        }
+      ]
+    }
+  ]
+}

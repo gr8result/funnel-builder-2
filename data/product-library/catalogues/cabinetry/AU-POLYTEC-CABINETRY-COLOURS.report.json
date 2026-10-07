@@ -1,0 +1,46 @@
+{
+  "dryRun": false,
+  "sourceUrls": {
+    "colours": "https://www.polytec.com.au/colours/",
+    "products": "https://www.polytec.com.au/products/",
+    "decorative18mmDoorsAndPanels": "https://www.polytec.com.au/products/decorative-18mm-doors-and-panels/",
+    "downloadColours": "https://www.polytec.com.au/download-colours/"
+  },
+  "officialClaims": {
+    "coloursPageMentionsMoreThan300Colours": true,
+    "decorative18mmDescriptionMentionsDoorFinishes": true,
+    "downloadColoursPageFetched": true,
+    "productsPageFetched": true
+  },
+  "verifiedAt": "2026-08-31",
+  "colourPagesDiscovered": 244,
+  "colourPagesFetched": 244,
+  "importedColours": 170,
+  "importedColourFinishVariants": 306,
+  "recordsExcluded": 74,
+  "exclusionReason": "Colours with no official 16mm decorative, 18mm decorative, or thermolaminated door/panel matrix availability were not imported as cabinetry door/panel choices.",
+  "variantsByProductRange": {
+    "Decorative 16mm doors and panels": 138,
+    "Decorative 18mm doors and panels": 97,
+    "Thermolaminated doors and panels": 71
+  },
+  "variantsByFinish": {
+    "Smooth": 44,
+    "Venette": 17,
+    "Matt": 79,
+    "Sheen": 12,
+    "ULTRAGLAZE": 29,
+    "Woodmatt": 69,
+    "Ravine": 23,
+    "Legato": 14,
+    "Texture": 5,
+    "ULTRAMATT": 11,
+    "Natura": 2,
+    "Ashgrain": 1
+  },
+  "duplicatesDetected": 0,
+  "duplicateIds": [],
+  "imageFailures": [],
+  "fetchFailures": [],
+  "imagesStored": 244
+}

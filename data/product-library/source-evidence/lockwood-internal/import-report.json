@@ -1,0 +1,282 @@
+{
+  "importedProducts": 33,
+  "controlledVariants": 228,
+  "imagesVerified": 33,
+  "packagingDuplicatesPrevented": 36,
+  "rerunDuplicatesPrevented": 33,
+  "legacyRecordsPreserved": 20,
+  "unresolvedLegacyImages": [
+    "Symmetry District",
+    "Symmetry Element",
+    "Symmetry Imperial",
+    "Symmetry Manor",
+    "Symmetry Vicinity"
+  ],
+  "skipped": [],
+  "images": [
+    {
+      "local": "/images/product-library/internal-areas/lockwood/b00693df9592aa046d8f.jpg",
+      "sourceUrl": "https://gw-assets.assaabloy.com/is/image/assaabloy/5d26d-130506061851359",
+      "width": 1280,
+      "height": 1280,
+      "copyright": "ASSA ABLOY / Lockwood; manufacturer product illustration, copyright retained",
+      "verification": "Official product gallery mapping; exact design, finish may differ"
+    },
+    {
+      "local": "/images/product-library/internal-areas/lockwood/e8a3495c04bac616ced9.jpg",
+      "sourceUrl": "https://gw-assets.assaabloy.com/is/image/assaabloy/5e359-130506062102778",
+      "width": 1280,
+      "height": 1280,
+      "copyright": "ASSA ABLOY / Lockwood; manufacturer product illustration, copyright retained",
+      "verification": "Official product gallery mapping; exact design, finish may differ"
+    },
+    {
+      "local": "/images/product-library/internal-areas/lockwood/3fa94882ac251e66aa14.jpg",
+      "sourceUrl": "https://gw-assets.assaabloy.com/is/image/assaabloy/08354-130506062032310",
+      "width": 1280,
+      "height": 1280,
+      "copyright": "ASSA ABLOY / Lockwood; manufacturer product illustration, copyright retained",
+      "verification": "Official product gallery mapping; exact design, finish may differ"
+    },
+    {
+      "local": "/images/product-library/internal-areas/lockwood/9eb9382942108debf888.jpg",
+      "sourceUrl": "https://gw-assets.assaabloy.com/is/image/assaabloy/0a5ed-130506062130656-1",
+      "width": 1280,
+      "height": 1280,
+      "copyright": "ASSA ABLOY / Lockwood; manufacturer product illustration, copyright retained",
+      "verification": "Official product gallery mapping; exact design, finish may differ"
+    },
+    {
+      "local": "/images/product-library/internal-areas/lockwood/a3d2e4823eac09f682f5.jpg",
+      "sourceUrl": "https://gw-assets.assaabloy.com/is/image/assaabloy/fc1be-130506061823294",
+      "width": 1280,
+      "height": 1280,
+      "copyright": "ASSA ABLOY / Lockwood; manufacturer product illustration, copyright retained",
+      "verification": "Official product gallery mapping; exact design, finish may differ"
+    },
+    {
+      "local": "/images/product-library/internal-areas/lockwood/85ca38ab5427cc6cd564.jpg",
+      "sourceUrl": "https://gw-assets.assaabloy.com/is/image/assaabloy/cfb91-130506061922748",
+      "width": 1280,
+      "height": 1280,
+      "copyright": "ASSA ABLOY / Lockwood; manufacturer product illustration, copyright retained",
+      "verification": "Official product gallery mapping; exact design, finish may differ"
+    },
+    {
+      "local": "/images/product-library/internal-areas/lockwood/b54419fe12f9d538aff3.jpg",
+      "sourceUrl": "https://gw-assets.assaabloy.com/is/image/assaabloy/7b0e3-130506061715915",
+      "width": 1280,
+      "height": 1280,
+      "copyright": "ASSA ABLOY / Lockwood; manufacturer product illustration, copyright retained",
+      "verification": "Official product gallery mapping; exact design, finish may differ"
+    },
+    {
+      "local": "/images/product-library/internal-areas/lockwood/b4bbfa539f1f17ce0966.jpg",
+      "sourceUrl": "https://gw-assets.assaabloy.com/is/image/assaabloy/f9718-55mm-velocity-l8-round",
+      "width": 1280,
+      "height": 1280,
+      "copyright": "ASSA ABLOY / Lockwood; manufacturer product illustration, copyright retained",
+      "verification": "Official product gallery mapping; exact design, finish may differ"
+    },
+    {
+      "local": "/images/product-library/internal-areas/lockwood/bffd86f9246d68139afd.jpg",
+      "sourceUrl": "https://gw-assets.assaabloy.com/is/image/assaabloy/a9963-130506061956554",
+      "width": 1280,
+      "height": 1280,
+      "copyright": "ASSA ABLOY / Lockwood; manufacturer product illustration, copyright retained",
+      "verification": "Official product gallery mapping; exact design, finish may differ"
+    },
+    {
+      "local": "/images/product-library/internal-areas/lockwood/40a1eceb495e6678776e.jpg",
+      "sourceUrl": "https://gw-assets.assaabloy.com/is/image/assaabloy/09d4f-130403071907283",
+      "width": 1280,
+      "height": 1280,
+      "copyright": "ASSA ABLOY / Lockwood; manufacturer product illustration, copyright retained",
+      "verification": "Official product gallery mapping; exact design, finish may differ"
+    },
+    {
+      "local": "/images/product-library/internal-areas/lockwood/5f2add5dc4f57eb652b3.jpg",
+      "sourceUrl": "https://gw-assets.assaabloy.com/is/image/assaabloy/2344c-130403071048023",
+      "width": 1280,
+      "height": 1280,
+      "copyright": "ASSA ABLOY / Lockwood; manufacturer product illustration, copyright retained",
+      "verification": "Official product gallery mapping; exact design, finish may differ"
+    },
+    {
+      "local": "/images/product-library/internal-areas/lockwood/021daefbfd382e881895.jpg",
+      "sourceUrl": "https://gw-assets.assaabloy.com/is/image/assaabloy/e0c01-130403070826278",
+      "width": 1280,
+      "height": 1280,
+      "copyright": "ASSA ABLOY / Lockwood; manufacturer product illustration, copyright retained",
+      "verification": "Official product gallery mapping; exact design, finish may differ"
+    },
+    {
+      "local": "/images/product-library/internal-areas/lockwood/a8809724ca32f4e5c250.jpg",
+      "sourceUrl": "https://gw-assets.assaabloy.com/is/image/assaabloy/4c04d-130403071815162",
+      "width": 1280,
+      "height": 1280,
+      "copyright": "ASSA ABLOY / Lockwood; manufacturer product illustration, copyright retained",
+      "verification": "Official product gallery mapping; exact design, finish may differ"
+    },
+    {
+      "local": "/images/product-library/internal-areas/lockwood/b937b16fcfd6839fdf94.jpg",
+      "sourceUrl": "https://gw-assets.assaabloy.com/is/image/assaabloy/e6b21-130403072005660",
+      "width": 1280,
+      "height": 1280,
+      "copyright": "ASSA ABLOY / Lockwood; manufacturer product illustration, copyright retained",
+      "verification": "Official product gallery mapping; exact design, finish may differ"
+    },
+    {
+      "local": "/images/product-library/internal-areas/lockwood/589b216e61c0d5e166f4.jpg",
+      "sourceUrl": "https://gw-assets.assaabloy.com/is/image/assaabloy/Lever%201-1",
+      "width": 1280,
+      "height": 1280,
+      "copyright": "ASSA ABLOY / Lockwood; manufacturer product illustration, copyright retained",
+      "verification": "Official product gallery mapping; exact design, finish may differ"
+    },
+    {
+      "local": "/images/product-library/internal-areas/lockwood/5becfc40f61d2140916b.jpg",
+      "sourceUrl": "https://gw-assets.assaabloy.com/is/image/assaabloy/22489-vsr5",
+      "width": 976,
+      "height": 968,
+      "copyright": "ASSA ABLOY / Lockwood; manufacturer product illustration, copyright retained",
+      "verification": "Official product gallery mapping; exact design, finish may differ"
+    },
+    {
+      "local": "/images/product-library/internal-areas/lockwood/519776cd93c2bf35eeb2.jpg",
+      "sourceUrl": "https://gw-assets.assaabloy.com/is/image/assaabloy/b02ef-vsr6",
+      "width": 905,
+      "height": 905,
+      "copyright": "ASSA ABLOY / Lockwood; manufacturer product illustration, copyright retained",
+      "verification": "Official product gallery mapping; exact design, finish may differ"
+    },
+    {
+      "local": "/images/product-library/internal-areas/lockwood/9771f321aff408eba294.jpg",
+      "sourceUrl": "https://gw-assets.assaabloy.com/is/image/assaabloy/c3eba-vss9",
+      "width": 988,
+      "height": 1162,
+      "copyright": "ASSA ABLOY / Lockwood; manufacturer product illustration, copyright retained",
+      "verification": "Official product gallery mapping; exact design, finish may differ"
+    },
+    {
+      "local": "/images/product-library/internal-areas/lockwood/9b1be6c7b793a7ab829b.jpg",
+      "sourceUrl": "https://gw-assets.assaabloy.com/is/image/assaabloy/9ab29-vss1-trim",
+      "width": 1067,
+      "height": 1050,
+      "copyright": "ASSA ABLOY / Lockwood; manufacturer product illustration, copyright retained",
+      "verification": "Official product gallery mapping; exact design, finish may differ"
+    },
+    {
+      "local": "/images/product-library/internal-areas/lockwood/6a2f815b27d7f11483e3.jpg",
+      "sourceUrl": "https://gw-assets.assaabloy.com/is/image/assaabloy/b72d5-vsr7",
+      "width": 980,
+      "height": 952,
+      "copyright": "ASSA ABLOY / Lockwood; manufacturer product illustration, copyright retained",
+      "verification": "Official product gallery mapping; exact design, finish may differ"
+    },
+    {
+      "local": "/images/product-library/internal-areas/lockwood/21f8c0101d5b82177504.jpg",
+      "sourceUrl": "https://gw-assets.assaabloy.com/is/image/assaabloy/7b50c-vsr8",
+      "width": 954,
+      "height": 944,
+      "copyright": "ASSA ABLOY / Lockwood; manufacturer product illustration, copyright retained",
+      "verification": "Official product gallery mapping; exact design, finish may differ"
+    },
+    {
+      "local": "/images/product-library/internal-areas/lockwood/55cf728ac76d6b111b58.jpg",
+      "sourceUrl": "https://gw-assets.assaabloy.com/is/image/assaabloy/e5e02-vsr9",
+      "width": 1010,
+      "height": 1184,
+      "copyright": "ASSA ABLOY / Lockwood; manufacturer product illustration, copyright retained",
+      "verification": "Official product gallery mapping; exact design, finish may differ"
+    },
+    {
+      "local": "/images/product-library/internal-areas/lockwood/e2743a2dfd8e90404b70.jpg",
+      "sourceUrl": "https://gw-assets.assaabloy.com/is/image/assaabloy/ff73c-vsr1-trim",
+      "width": 962,
+      "height": 930,
+      "copyright": "ASSA ABLOY / Lockwood; manufacturer product illustration, copyright retained",
+      "verification": "Official product gallery mapping; exact design, finish may differ"
+    },
+    {
+      "local": "/images/product-library/internal-areas/lockwood/5c41f32942d49a83013f.jpg",
+      "sourceUrl": "https://gw-assets.assaabloy.com/is/image/assaabloy/5576a-vss5",
+      "width": 1101,
+      "height": 1060,
+      "copyright": "ASSA ABLOY / Lockwood; manufacturer product illustration, copyright retained",
+      "verification": "Official product gallery mapping; exact design, finish may differ"
+    },
+    {
+      "local": "/images/product-library/internal-areas/lockwood/96d0a76e000f17e79084.jpg",
+      "sourceUrl": "https://gw-assets.assaabloy.com/is/image/assaabloy/5a6c8-vss6",
+      "width": 1028,
+      "height": 1016,
+      "copyright": "ASSA ABLOY / Lockwood; manufacturer product illustration, copyright retained",
+      "verification": "Official product gallery mapping; exact design, finish may differ"
+    },
+    {
+      "local": "/images/product-library/internal-areas/lockwood/5287f32ca5e3c6ec13d4.jpg",
+      "sourceUrl": "https://gw-assets.assaabloy.com/is/image/assaabloy/d578e-vss7",
+      "width": 975,
+      "height": 962,
+      "copyright": "ASSA ABLOY / Lockwood; manufacturer product illustration, copyright retained",
+      "verification": "Official product gallery mapping; exact design, finish may differ"
+    },
+    {
+      "local": "/images/product-library/internal-areas/lockwood/7b8ca118f693678e54c9.jpg",
+      "sourceUrl": "https://gw-assets.assaabloy.com/is/image/assaabloy/a7806-vss8",
+      "width": 1001,
+      "height": 988,
+      "copyright": "ASSA ABLOY / Lockwood; manufacturer product illustration, copyright retained",
+      "verification": "Official product gallery mapping; exact design, finish may differ"
+    },
+    {
+      "local": "/images/product-library/internal-areas/lockwood/69a10b8081bf68c6fbc3.jpg",
+      "sourceUrl": "https://gw-assets.assaabloy.com/is/image/assaabloy/262aa-fp1-120",
+      "width": 1280,
+      "height": 1280,
+      "copyright": "ASSA ABLOY / Lockwood; manufacturer product illustration, copyright retained",
+      "verification": "Official product gallery mapping; exact design, finish may differ"
+    },
+    {
+      "local": "/images/product-library/internal-areas/lockwood/dd971a6c16113b39a9d8.jpg",
+      "sourceUrl": "https://gw-assets.assaabloy.com/is/image/assaabloy/4709d-fp1-150",
+      "width": 1280,
+      "height": 1280,
+      "copyright": "ASSA ABLOY / Lockwood; manufacturer product illustration, copyright retained",
+      "verification": "Official product gallery mapping; exact design, finish may differ"
+    },
+    {
+      "local": "/images/product-library/internal-areas/lockwood/920a94d438f61acb5877.jpg",
+      "sourceUrl": "https://gw-assets.assaabloy.com/is/image/assaabloy/a5d3a-fp2-120",
+      "width": 1280,
+      "height": 1280,
+      "copyright": "ASSA ABLOY / Lockwood; manufacturer product illustration, copyright retained",
+      "verification": "Official product gallery mapping; exact design, finish may differ"
+    },
+    {
+      "local": "/images/product-library/internal-areas/lockwood/ce9ca691e5aab8eed2aa.jpg",
+      "sourceUrl": "https://gw-assets.assaabloy.com/is/image/assaabloy/3647e-fp2-150",
+      "width": 1280,
+      "height": 1280,
+      "copyright": "ASSA ABLOY / Lockwood; manufacturer product illustration, copyright retained",
+      "verification": "Official product gallery mapping; exact design, finish may differ"
+    },
+    {
+      "local": "/images/product-library/internal-areas/lockwood/0f743db0d29a91dd386d.jpg",
+      "sourceUrl": "https://gw-assets.assaabloy.com/is/image/assaabloy/52fff-1360-1361-20sc_lwenc1",
+      "width": 1280,
+      "height": 1280,
+      "copyright": "ASSA ABLOY / Lockwood; manufacturer product illustration, copyright retained",
+      "verification": "Official product gallery mapping; exact design, finish may differ"
+    },
+    {
+      "local": "/images/product-library/internal-areas/lockwood/5260-tubular-latch.jpeg",
+      "sourceUrl": "https://www.lockweb.com.au/au/en/documents/catalogues/general-hardware/Lockwood%20General%20Hardware%20Catalogue.pdf#page=34",
+      "width": 265,
+      "height": 212,
+      "copyright": "ASSA ABLOY / Lockwood; original embedded catalogue image",
+      "verification": "5260 latch photo on catalogue page 34"
+    }
+  ]
+}

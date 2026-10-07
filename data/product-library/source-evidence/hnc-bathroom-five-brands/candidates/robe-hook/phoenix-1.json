@@ -1,0 +1,2778 @@
+{
+  "data": {
+    "products": {
+      "total_count": 24,
+      "page_info": {
+        "total_pages": 1
+      },
+      "items": [
+        {
+          "id": 24571,
+          "sku": "144-8400-40",
+          "vendorcode": "144-8400-40",
+          "name": "Wiltern Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/4/144-8400-40_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/4/144-8400-40_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/4/144-8400-40_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/4/144-8400-40_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/4/144-8400-40_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/4/144-8400-40_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Suitable for compact living, to hang a towel or robe<br>• Twin screw mounting plate<br>• Designed in Australia<br>• Durable, high quality finish</p>"
+          },
+          "short_description": {
+            "html": "<p>Wiltern Robe Hook</p>"
+          },
+          "product_dimensions": null,
+          "price_store": 82,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Wiltern"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "144-8400-40"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 24568,
+          "sku": "144-8400-00",
+          "vendorcode": "144-8400-00",
+          "name": "Wiltern Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/4/144-8400-00_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/4/144-8400-00_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/4/144-8400-00_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/4/144-8400-00_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/4/144-8400-00_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/4/144-8400-00_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Suitable for compact living, to hang a towel or robe<br>• Twin screw mounting plate<br>• Designed in Australia<br>• Durable, high quality finish</p>"
+          },
+          "short_description": {
+            "html": "<p>Wiltern Robe Hook</p>"
+          },
+          "product_dimensions": null,
+          "price_store": 55,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Wiltern"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "144-8400-00"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 24466,
+          "sku": "129840040",
+          "vendorcode": "129-8400-40",
+          "name": "Nuage Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8400-40_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8400-40_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/2/129-8400-40_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/2/129-8400-40_phoenix_tech.jpeg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8400-40_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8400-40_phoenix_tech.jpeg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Suitable for compact living, to hang a towel or robe<br>• Twin screw mounting plate<br>• Designed in Australia<br>• Durable, high quality finish<br>• Unique, organic design</p>"
+          },
+          "short_description": {
+            "html": "<p>Nuage Robe Hook</p>"
+          },
+          "product_dimensions": null,
+          "price_store": 69,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Nuage"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "129-8400-40"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 24464,
+          "sku": "129840000",
+          "vendorcode": "129-8400-00",
+          "name": "Nuage Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8400-00_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8400-00_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/2/129-8400-00_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/2/129-8400-00_phoenix_tech.jpeg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8400-00_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8400-00_phoenix_tech.jpeg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Suitable for compact living, to hang a towel or robe<br>• Twin screw mounting plate<br>• Designed in Australia<br>• Durable, high quality finish<br>• Unique, organic design</p>"
+          },
+          "short_description": {
+            "html": "<p>Nuage Robe Hook</p>"
+          },
+          "product_dimensions": null,
+          "price_store": 55,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Nuage"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "129-8400-00"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 19687,
+          "sku": "RA89731",
+          "vendorcode": "RA897-31",
+          "name": "Radii Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra89731_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra89731_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/r/a/ra89731_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/r/a/ra89731_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra89731_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra89731_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Round backplate <br>• Suitable for compact living<br>• Twin screw mounting plate<br>• Versatile design</p>"
+          },
+          "short_description": {
+            "html": "<p>Radii Robe Hook</p>"
+          },
+          "product_dimensions": "W54 x D57 x H54mm",
+          "price_store": 49,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W54 x D57 x H54mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Radii"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Grey",
+                    "value": "939"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "RA897-31"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Carbon"
+              }
+            ]
+          }
+        },
+        {
+          "id": 18559,
+          "sku": "GS89731",
+          "vendorcode": "GS897-31",
+          "name": "Gloss Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs89731_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs89731_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/g/s/gs89731_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/g/s/gs89731_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs89731_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs89731_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Suitable for compact living, to hang a towel or robe<br>• Twin screw mounting plate for a stable<br>• Designed in Australia<br>• Durable, high quality finish</p>"
+          },
+          "short_description": {
+            "html": "<p>Gloss Robe Hook</p>"
+          },
+          "product_dimensions": "W19 x D33 x H53mm",
+          "price_store": 68,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W19 x D33 x H53mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Gloss"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Grey",
+                    "value": "939"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "GS897-31"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Carbon"
+              }
+            ]
+          }
+        },
+        {
+          "id": 18544,
+          "sku": "134840000",
+          "vendorcode": "134-8400-00",
+          "name": "Cromford Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/3/134840000_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/3/134840000_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/3/134840000_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/3/134840000_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/3/134840000_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/3/134840000_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Suitable for compact living, to hang a towel or robe<br>• Twin screw mounting plate for a stable installation<br>• Designed in Australia<br>• Durable, high quality finish</p>"
+          },
+          "short_description": {
+            "html": "<p>Cromford Robe Hook</p>"
+          },
+          "product_dimensions": "W47 x D48 x H47mm",
+          "price_store": 52,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W47 x D48 x H47mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Cromford"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "134-8400-00"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 18515,
+          "sku": "134840040",
+          "vendorcode": "134-8400-40",
+          "name": "Cromford Robe Hook ",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/3/134840040_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/3/134840040_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/3/134840040_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/3/134840040_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/3/134840040_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/3/134840040_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Suitable for compact living, to hang a towel or robe<br>• Twin screw mounting plate for a stable installation<br>• Designed in Australia</p>"
+          },
+          "short_description": {
+            "html": "<p>Cromford Robe Hook</p>"
+          },
+          "product_dimensions": null,
+          "price_store": 79,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Cromford"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "134-8400-40"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 18514,
+          "sku": "134840012",
+          "vendorcode": "134-8400-12",
+          "name": "Cromford Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/3/134840012_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/3/134840012_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/3/134840012_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/3/134840012_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/3/134840012_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/3/134840012_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Suitable for compact living, to hang a towel or robe<br>• Twin screw mounting plate for a stable installation<br>• Designed in Australia</p>"
+          },
+          "short_description": {
+            "html": "<p>Cromford Robe Hook</p>"
+          },
+          "product_dimensions": null,
+          "price_store": 100,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Cromford"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "134-8400-12"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Gold"
+              }
+            ]
+          }
+        },
+        {
+          "id": 18511,
+          "sku": "134840010",
+          "vendorcode": "134-8400-10",
+          "name": "Cromford Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/3/134840010_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/3/134840010_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/3/134840010_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/3/134840010_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/3/134840010_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/3/134840010_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Suitable for compact living, to hang a towel or robe<br>• Twin screw mounting plate for a stable installation<br>• Designed in Australia</p>"
+          },
+          "short_description": {
+            "html": "<p>Cromford Robe Hook</p>"
+          },
+          "product_dimensions": null,
+          "price_store": 59,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Cromford"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Matte Black",
+                    "value": "940"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "134-8400-10"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Black"
+              }
+            ]
+          }
+        },
+        {
+          "id": 15887,
+          "sku": "111840012",
+          "vendorcode": "111-8400-12",
+          "name": "Vivid Slimline Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/111840012_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/111840012_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/111840012_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/111840012_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/111840012_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/111840012_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Unique fixing mechanism allows for quick level adjustment during installation<br />&bull; Matching tapware available<br />&bull; Concealed fixing<br />&bull; Quality electroplated finish<br />&bull; Available in other finishes</p>"
+          },
+          "short_description": {
+            "html": "<p>Vivid Slimline Robe Hook</p>"
+          },
+          "product_dimensions": "W26 x D35 x H26mm",
+          "price_store": 49,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W26 x D35 x H26mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Vivid"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "111-8400-12"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Gold"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14614,
+          "sku": "RA89712",
+          "vendorcode": "RA897-12",
+          "name": "Radii Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra89712_pheonix_hr.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra89712_pheonix_hr.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/r/a/ra89712_pheonix_hr.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/r/a/ra89712_phoenix_tech_1.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra89712_pheonix_hr.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra89712_phoenix_tech_1.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Australian designed<br />&bull; Will suit any contemporary bathroom<br />&bull; Solid brass construction with a quality chrome finish<br />&bull; Wide, flat surfaces beautifully designed to complement modern trends</p>"
+          },
+          "short_description": {
+            "html": "Radii Robe Hook"
+          },
+          "product_dimensions": null,
+          "price_store": 66,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Radii"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "RA897-12"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Gold"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14603,
+          "sku": "RS897BN",
+          "vendorcode": "RS897BN",
+          "name": "Radii Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/s/rs897bn_pheonix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/s/rs897bn_pheonix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/r/s/rs897bn_pheonix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/r/s/rs897bn_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/s/rs897bn_pheonix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/s/rs897bn_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Australian designed<br />&bull; Will suit any contemporary bathroom<br />&bull; Wide, flat surfaces beautifully designed to complement modern trends</p>"
+          },
+          "short_description": {
+            "html": "Radii Robe Hook"
+          },
+          "product_dimensions": null,
+          "price_store": 49,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Radii"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "RS897BN"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14573,
+          "sku": "RA897BN",
+          "vendorcode": "RA897BN",
+          "name": "Radii Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra897bn_pheonix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra897bn_pheonix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/r/a/ra897bn_pheonix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/r/a/ra897bn_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra897bn_pheonix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra897bn_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Australian designed<br />&bull; Will suit any contemporary bathroom<br />&bull; Solid brass construction with a quality chrome finish<br />&bull; Wide, flat surfaces beautifully designed to complement modern trends</p>"
+          },
+          "short_description": {
+            "html": "Radii Robe Hook"
+          },
+          "product_dimensions": null,
+          "price_store": 49,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Radii"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "RA897BN"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14520,
+          "sku": "GS89740",
+          "vendorcode": "GS897-40",
+          "name": "Gloss Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs89740_pheonix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs89740_pheonix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/g/s/gs89740_pheonix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/g/s/gs89740_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs89740_pheonix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs89740_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Single hook <br />&bull; Luminous body and style<br />&bull; Modern functional design</p>"
+          },
+          "short_description": {
+            "html": "Gloss Robe Hook"
+          },
+          "product_dimensions": null,
+          "price_store": 68,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Gloss"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "GS897-40"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14504,
+          "sku": "GS89712",
+          "vendorcode": "GS897-12",
+          "name": "Gloss Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs89712_pheonix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs89712_pheonix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/g/s/gs89712_pheonix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/g/s/gs89712_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs89712_pheonix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs89712_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Single hook <br />&bull; Luminous body and style<br />&bull; Modern functional design</p>"
+          },
+          "short_description": {
+            "html": "Gloss Robe Hook"
+          },
+          "product_dimensions": null,
+          "price_store": 86,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Gloss"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "GS897-12"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Gold"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14472,
+          "sku": "111840000",
+          "vendorcode": "111-8400-00",
+          "name": "Vivid Slimline Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/111840000_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/111840000_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/111840000_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/111840000_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/111840000_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/111840000_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Unique fixing mechanism allows for quick level adjustment during installation<br />&bull; Matching tapware available<br />&bull; Concealed fixing<br />&bull; Quality electroplated finish<br />&bull; Available in chrome or brushed nickel or matte black</p>"
+          },
+          "short_description": {
+            "html": "Vivid Slimline Robe Hook"
+          },
+          "product_dimensions": null,
+          "price_store": 27,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Vivid"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "111-8400-00"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14460,
+          "sku": "GS897MB",
+          "vendorcode": "GS897MB",
+          "name": "Gloss Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs897mb_pheonix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs897mb_pheonix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/g/s/gs897mb_pheonix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/g/s/gs897mb_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs897mb_pheonix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs897mb_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Single hook <br />&bull; Luminous body and style<br />&bull; Modern functional design</p>"
+          },
+          "short_description": {
+            "html": "Gloss Robe Hook"
+          },
+          "product_dimensions": null,
+          "price_store": 68,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Gloss"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Matte Black",
+                    "value": "940"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "GS897MB"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Black"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14427,
+          "sku": "111840010",
+          "vendorcode": "111-8400-10",
+          "name": "Vivid Slimline Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/111840010_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/111840010_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/111840010_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/1/1/111840010_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/111840010_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/111840010_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Unique fixing mechanism allows for quick level adjustment during installation<br />&bull; Matching tapware available<br />&bull; Concealed fixing<br />&bull; Quality electroplated finish<br />&bull; Available in chrome or brushed nickel or matte black</p>"
+          },
+          "short_description": {
+            "html": "Vivid Slimline Robe Hook"
+          },
+          "product_dimensions": null,
+          "price_store": 35,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Vivid"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Matte Black",
+                    "value": "940"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "111-8400-10"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Black"
+              }
+            ]
+          }
+        },
+        {
+          "id": 11745,
+          "sku": "RS897MB",
+          "vendorcode": "RS897MB",
+          "name": "Radii Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/s/rs897mb_phoenix_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/s/rs897mb_phoenix_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/r/s/rs897mb_phoenix_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/r/s/rs897mb_phoenix_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/s/rs897mb_phoenix_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/s/rs897mb_phoenix_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Australian designed <br />&bull; Wide, flat surfaces compliment modern trends</p>"
+          },
+          "short_description": {
+            "html": "<p>Radii Robe Hook</p>"
+          },
+          "product_dimensions": null,
+          "price_store": 45,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Radii"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Matte Black",
+                    "value": "940"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "RS897MB"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Black"
+              }
+            ]
+          }
+        },
+        {
+          "id": 10919,
+          "sku": "RA897MB",
+          "vendorcode": "RA897MB",
+          "name": "Radii Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra897mb_phoenix_web_2.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra897mb_phoenix_web_2.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/r/a/ra897mb_phoenix_web_2.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/r/a/ra897mb_phoenix_techweb_2.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra897mb_phoenix_web_2.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra897mb_phoenix_techweb_2.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Australian designed<br />&bull; Supported by a 7 year warranty<br />&bull; Matching tapware available to complete your bathroom look<br />&bull; Wide, flat surfaces beautifully designed to complement modern trends</p>"
+          },
+          "short_description": {
+            "html": "<p>Radii Robe Hook</p>"
+          },
+          "product_dimensions": null,
+          "price_store": 45,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Radii"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Matte Black",
+                    "value": "940"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "RA897MB"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Black"
+              }
+            ]
+          }
+        },
+        {
+          "id": 2789,
+          "sku": "RA897CHR",
+          "vendorcode": "RA897CHR",
+          "name": "Radii Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra897chr_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra897chr_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/r/a/ra897chr_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/r/a/ra897chr_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra897chr_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra897chr_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Australian designed<br>• Solid brass construction<br>• Will suit any contemporary bathroom<br>• Wide, flat surfaces beautifully designed to complement modern trends</p>"
+          },
+          "short_description": {
+            "html": "<p>Radii Robe Hook</p>"
+          },
+          "product_dimensions": null,
+          "price_store": 29,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Radii"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "RA897CHR"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 2384,
+          "sku": "RS897CHR",
+          "vendorcode": "RS897CHR",
+          "name": "Radii Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/s/rs897chr_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/s/rs897chr_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/r/s/rs897chr_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/r/s/rs897chr_web_1.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/s/rs897chr_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/s/rs897chr_web_1.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/s/rs897chr_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Australian designed<br />&bull; Will suit any contemporary bathroom<br />&bull;&nbsp;Solid brass construction with a quality chrome finish<br />&bull; Wide, flat surfaces beautifully designed to complement modern trends</p>"
+          },
+          "short_description": {
+            "html": "<p>Radii Robe Hook </p>"
+          },
+          "product_dimensions": "W50 x D57 x H50",
+          "price_store": 29,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W50 x D57 x H50"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Radii"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "RS897CHR"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 2356,
+          "sku": "GS897CHR",
+          "vendorcode": "GS897",
+          "name": "Gloss Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 191,
+              "name": "Robe Hooks ",
+              "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs897chr_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs897chr_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/g/s/gs897chr_web_1.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/g/s/gs897chr_web.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs897chr_web_1.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs897chr_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/s/gs897chr_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Single hook <br />&bull; Luminous body and style<br />&bull; Modern functional design</p>"
+          },
+          "short_description": {
+            "html": "<p>Gloss Robe Hook</p>"
+          },
+          "product_dimensions": "W19 x D33 x H53",
+          "price_store": 48,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W19 x D33 x H53"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "ROBE HOOK"
+              },
+              {
+                "code": "range",
+                "value": "Gloss"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Phoenix",
+                    "value": "50"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "GS897"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

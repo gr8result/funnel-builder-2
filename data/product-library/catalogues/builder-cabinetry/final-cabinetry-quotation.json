@@ -1,0 +1,7085 @@
+{
+  "workspaceId": "846885cd-25b9-4eca-b9f9-3fd02f5882d8",
+  "sourceFile": "cabinetry-quotation-final-review.csv",
+  "sourceSha256": "7442690ef4b44676c3cc3349a76ff9cfa3656e8db003ed4ff5cb1d62508fe550",
+  "datasetRevision": "d17ad56b64c3e675baeef7bea5037b23c62ecfe92c181686411f1ce6cacbbe46",
+  "approvedAdditionsFile": "approved-kitchen-panels.json",
+  "rows": [
+    {
+      "sourceRow": 3,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 4,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 5,
+      "description": "KITCHEN CABINETRY",
+      "type": "heading",
+      "level": 1
+    },
+    {
+      "sourceRow": 6,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 7,
+      "description": "STANDARD COLOURBOARD",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 8,
+      "description": "1 door base unit - 600mm",
+      "type": "product",
+      "price": 850,
+      "room": "KITCHEN CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 9,
+      "description": "2 door base unit - 1200mm",
+      "type": "product",
+      "price": 1150,
+      "room": "KITCHEN CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 10,
+      "description": "Sink base cabinet",
+      "type": "product",
+      "price": 1250,
+      "room": "KITCHEN CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 11,
+      "description": "Underbench oven cabinet",
+      "type": "product",
+      "price": 1050,
+      "room": "KITCHEN CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 12,
+      "description": "Corner base cabinet",
+      "type": "product",
+      "price": 1500,
+      "room": "KITCHEN CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 13,
+      "description": "Dishwasher cabinet",
+      "type": "product",
+      "price": 750,
+      "room": "KITCHEN CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 14,
+      "description": "Microwave cabinet",
+      "type": "product",
+      "price": 950,
+      "room": "KITCHEN CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 15,
+      "description": "Pull-out bin cabinet",
+      "type": "product",
+      "price": 1350,
+      "room": "KITCHEN CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 16,
+      "description": "2 drawer pot drawer base",
+      "type": "product",
+      "price": 1650,
+      "room": "KITCHEN CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 17,
+      "description": "3 drawer pot drawer base - 1 small + 2 large",
+      "type": "product",
+      "price": 1850,
+      "room": "KITCHEN CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 18,
+      "description": "4 drawer base unit",
+      "type": "product",
+      "price": 1900,
+      "room": "KITCHEN CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 19,
+      "description": "5 drawer base unit",
+      "type": "product",
+      "price": 2100,
+      "room": "KITCHEN CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 20,
+      "description": "Hidden internal drawer",
+      "type": "product",
+      "price": 250,
+      "room": "KITCHEN CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 21,
+      "description": "Overhead cabinet - 1 door - standard height",
+      "type": "product",
+      "price": 750,
+      "room": "KITCHEN CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 22,
+      "description": "Overhead cabinet - 2 door - standard height",
+      "type": "product",
+      "price": 950,
+      "room": "KITCHEN CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 23,
+      "description": "Overhead cabinet - 1 door - extended height",
+      "type": "product",
+      "price": 850,
+      "room": "KITCHEN CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 24,
+      "description": "Overhead cabinet - 2 door - extended height",
+      "type": "product",
+      "price": 1050,
+      "room": "KITCHEN CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 25,
+      "description": "Rangehood cabinet",
+      "type": "product",
+      "price": 1050,
+      "room": "KITCHEN CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 26,
+      "description": "Tall pantry cabinet - 1 door - 600mm - 5 shelves",
+      "type": "product",
+      "price": 1800,
+      "room": "KITCHEN CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 27,
+      "description": "Tall pantry cabinet - 2 door - 1200mm - 5 shelves",
+      "type": "product",
+      "price": 2300,
+      "room": "KITCHEN CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 28,
+      "description": "Tall oven tower cabinet - 600mm",
+      "type": "product",
+      "price": 1800,
+      "room": "KITCHEN CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 29,
+      "description": "MDF bulkhead - 300mm - LM",
+      "type": "product",
+      "price": 220,
+      "room": "KITCHEN CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 30,
+      "description": "MDF bulkhead - 450mm - LM",
+      "type": "product",
+      "price": 290,
+      "room": "KITCHEN CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 31,
+      "description": "Sharkfin handle upgrade - per unit",
+      "type": "product",
+      "price": 30,
+      "room": "KITCHEN CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 32,
+      "description": "Recessed rail upgrade - per unit",
+      "type": "product",
+      "price": 45,
+      "room": "KITCHEN CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 33,
+      "description": "Wine rack cabinet",
+      "type": "product",
+      "price": 1100,
+      "room": "KITCHEN CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 34,
+      "description": "Cleated shelving module",
+      "type": "product",
+      "price": 475,
+      "room": "KITCHEN CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 35,
+      "description": "Floating shelf module",
+      "type": "product",
+      "price": 700,
+      "room": "KITCHEN CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 36,
+      "description": "Open shelving module",
+      "type": "product",
+      "price": 550,
+      "room": "KITCHEN CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "key": "kitchen-panel-standard-colourboard-short",
+      "description": "Short end panel - Standard Colourboard",
+      "price": 250,
+      "room": "KITCHEN CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "EACH",
+      "type": "product",
+      "approvedAddition": true
+    },
+    {
+      "key": "kitchen-panel-standard-colourboard-tall",
+      "description": "Tall end panel - Standard Colourboard",
+      "price": 450,
+      "room": "KITCHEN CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "EACH",
+      "type": "product",
+      "approvedAddition": true
+    },
+    {
+      "sourceRow": 37,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 38,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 39,
+      "description": "PREMIUM LAMINATE",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 40,
+      "description": "1 door base unit - 600mm",
+      "type": "product",
+      "price": 975,
+      "room": "KITCHEN CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 41,
+      "description": "2 door base unit - 1200mm",
+      "type": "product",
+      "price": 1320,
+      "room": "KITCHEN CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 42,
+      "description": "Sink base cabinet",
+      "type": "product",
+      "price": 1440,
+      "room": "KITCHEN CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 43,
+      "description": "Underbench oven cabinet",
+      "type": "product",
+      "price": 1210,
+      "room": "KITCHEN CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 44,
+      "description": "Corner base cabinet",
+      "type": "product",
+      "price": 1725,
+      "room": "KITCHEN CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 45,
+      "description": "Dishwasher cabinet",
+      "type": "product",
+      "price": 860,
+      "room": "KITCHEN CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 46,
+      "description": "Microwave cabinet",
+      "type": "product",
+      "price": 1090,
+      "room": "KITCHEN CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 47,
+      "description": "Pull-out bin cabinet",
+      "type": "product",
+      "price": 1550,
+      "room": "KITCHEN CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 48,
+      "description": "2 drawer pot drawer base",
+      "type": "product",
+      "price": 1895,
+      "room": "KITCHEN CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 49,
+      "description": "3 drawer pot drawer base - 1 small + 2 large",
+      "type": "product",
+      "price": 2130,
+      "room": "KITCHEN CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 50,
+      "description": "4 drawer base unit",
+      "type": "product",
+      "price": 2185,
+      "room": "KITCHEN CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 51,
+      "description": "5 drawer base unit",
+      "type": "product",
+      "price": 2415,
+      "room": "KITCHEN CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 52,
+      "description": "Hidden internal drawer",
+      "type": "product",
+      "price": 290,
+      "room": "KITCHEN CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 53,
+      "description": "Overhead cabinet - 1 door - standard height",
+      "type": "product",
+      "price": 860,
+      "room": "KITCHEN CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 54,
+      "description": "Overhead cabinet - 2 door - standard height",
+      "type": "product",
+      "price": 1090,
+      "room": "KITCHEN CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 55,
+      "description": "Overhead cabinet - 1 door - extended height",
+      "type": "product",
+      "price": 975,
+      "room": "KITCHEN CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 56,
+      "description": "Overhead cabinet - 2 door - extended height",
+      "type": "product",
+      "price": 1210,
+      "room": "KITCHEN CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 57,
+      "description": "Rangehood cabinet",
+      "type": "product",
+      "price": 1210,
+      "room": "KITCHEN CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 58,
+      "description": "Tall pantry cabinet - 1 door - 600mm - 5 shelves",
+      "type": "product",
+      "price": 2070,
+      "room": "KITCHEN CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 59,
+      "description": "Tall pantry cabinet - 2 door - 1200mm - 5 shelves",
+      "type": "product",
+      "price": 2645,
+      "room": "KITCHEN CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 60,
+      "description": "Tall oven tower cabinet - 600mm",
+      "type": "product",
+      "price": 2070,
+      "room": "KITCHEN CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 61,
+      "description": "MDF bulkhead - 300mm - LM",
+      "type": "product",
+      "price": 255,
+      "room": "KITCHEN CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 62,
+      "description": "MDF bulkhead - 450mm - LM",
+      "type": "product",
+      "price": 335,
+      "room": "KITCHEN CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 63,
+      "description": "Sharkfin handle upgrade - per unit",
+      "type": "product",
+      "price": 34.5,
+      "room": "KITCHEN CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 64,
+      "description": "Recessed rail upgrade - per unit",
+      "type": "product",
+      "price": 51.75,
+      "room": "KITCHEN CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 65,
+      "description": "Wine rack cabinet",
+      "type": "product",
+      "price": 1265,
+      "room": "KITCHEN CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 66,
+      "description": "Cleated shelving module",
+      "type": "product",
+      "price": 545,
+      "room": "KITCHEN CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 67,
+      "description": "Floating shelf module",
+      "type": "product",
+      "price": 805,
+      "room": "KITCHEN CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 68,
+      "description": "Open shelving module",
+      "type": "product",
+      "price": 630,
+      "room": "KITCHEN CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "key": "kitchen-panel-premium-laminate-short",
+      "description": "Short end panel - Premium Laminate",
+      "price": 325,
+      "room": "KITCHEN CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "EACH",
+      "type": "product",
+      "approvedAddition": true
+    },
+    {
+      "key": "kitchen-panel-premium-laminate-tall",
+      "description": "Tall end panel - Premium Laminate",
+      "price": 575,
+      "room": "KITCHEN CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "EACH",
+      "type": "product",
+      "approvedAddition": true
+    },
+    {
+      "sourceRow": 69,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 70,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 71,
+      "description": "2 PACK",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 72,
+      "description": "1 door base unit - 600mm",
+      "type": "product",
+      "price": 1150,
+      "room": "KITCHEN CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 73,
+      "description": "2 door base unit - 1200mm",
+      "type": "product",
+      "price": 1550,
+      "room": "KITCHEN CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 74,
+      "description": "Sink base cabinet",
+      "type": "product",
+      "price": 1690,
+      "room": "KITCHEN CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 75,
+      "description": "Underbench oven cabinet",
+      "type": "product",
+      "price": 1420,
+      "room": "KITCHEN CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 76,
+      "description": "Corner base cabinet",
+      "type": "product",
+      "price": 2025,
+      "room": "KITCHEN CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 77,
+      "description": "Dishwasher cabinet",
+      "type": "product",
+      "price": 1015,
+      "room": "KITCHEN CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 78,
+      "description": "Microwave cabinet",
+      "type": "product",
+      "price": 1280,
+      "room": "KITCHEN CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 79,
+      "description": "Pull-out bin cabinet",
+      "type": "product",
+      "price": 1825,
+      "room": "KITCHEN CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 80,
+      "description": "2 drawer pot drawer base",
+      "type": "product",
+      "price": 2230,
+      "room": "KITCHEN CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 81,
+      "description": "3 drawer pot drawer base - 1 small + 2 large",
+      "type": "product",
+      "price": 2500,
+      "room": "KITCHEN CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 82,
+      "description": "4 drawer base unit",
+      "type": "product",
+      "price": 2565,
+      "room": "KITCHEN CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 83,
+      "description": "5 drawer base unit",
+      "type": "product",
+      "price": 2835,
+      "room": "KITCHEN CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 84,
+      "description": "Hidden internal drawer",
+      "type": "product",
+      "price": 340,
+      "room": "KITCHEN CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 85,
+      "description": "Overhead cabinet - 1 door - standard height",
+      "type": "product",
+      "price": 1015,
+      "room": "KITCHEN CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 86,
+      "description": "Overhead cabinet - 2 door - standard height",
+      "type": "product",
+      "price": 1280,
+      "room": "KITCHEN CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 87,
+      "description": "Overhead cabinet - 1 door - extended height",
+      "type": "product",
+      "price": 1150,
+      "room": "KITCHEN CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 88,
+      "description": "Overhead cabinet - 2 door - extended height",
+      "type": "product",
+      "price": 1420,
+      "room": "KITCHEN CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 89,
+      "description": "Rangehood cabinet",
+      "type": "product",
+      "price": 1420,
+      "room": "KITCHEN CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 90,
+      "description": "Tall pantry cabinet - 1 door - 600mm - 5 shelves",
+      "type": "product",
+      "price": 2430,
+      "room": "KITCHEN CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 91,
+      "description": "Tall pantry cabinet - 2 door - 1200mm - 5 shelves",
+      "type": "product",
+      "price": 3105,
+      "room": "KITCHEN CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 92,
+      "description": "Tall oven tower cabinet - 600mm",
+      "type": "product",
+      "price": 2430,
+      "room": "KITCHEN CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 93,
+      "description": "MDF bulkhead - 300mm - LM",
+      "type": "product",
+      "price": 295,
+      "room": "KITCHEN CABINETRY",
+      "range": "2 PACK",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 94,
+      "description": "MDF bulkhead - 450mm - LM",
+      "type": "product",
+      "price": 390,
+      "room": "KITCHEN CABINETRY",
+      "range": "2 PACK",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 95,
+      "description": "Sharkfin handle upgrade - per unit",
+      "type": "product",
+      "price": 40.5,
+      "room": "KITCHEN CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 96,
+      "description": "Recessed rail upgrade - per unit",
+      "type": "product",
+      "price": 60.75,
+      "room": "KITCHEN CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 97,
+      "description": "Wine rack cabinet",
+      "type": "product",
+      "price": 1485,
+      "room": "KITCHEN CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 98,
+      "description": "Cleated shelving module",
+      "type": "product",
+      "price": 640,
+      "room": "KITCHEN CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 99,
+      "description": "Floating shelf module",
+      "type": "product",
+      "price": 945,
+      "room": "KITCHEN CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 100,
+      "description": "Open shelving module",
+      "type": "product",
+      "price": 740,
+      "room": "KITCHEN CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "key": "kitchen-panel-2-pack-short",
+      "description": "Short end panel - 2 Pack",
+      "price": 400,
+      "room": "KITCHEN CABINETRY",
+      "range": "2 PACK",
+      "unit": "EACH",
+      "type": "product",
+      "approvedAddition": true
+    },
+    {
+      "key": "kitchen-panel-2-pack-tall",
+      "description": "Tall end panel - 2 Pack",
+      "price": 700,
+      "room": "KITCHEN CABINETRY",
+      "range": "2 PACK",
+      "unit": "EACH",
+      "type": "product",
+      "approvedAddition": true
+    },
+    {
+      "sourceRow": 101,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 102,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 103,
+      "description": "SHAKER STYLE",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 104,
+      "description": "1 door base unit - 600mm",
+      "type": "product",
+      "price": 1275,
+      "room": "KITCHEN CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 105,
+      "description": "2 door base unit - 1200mm",
+      "type": "product",
+      "price": 1725,
+      "room": "KITCHEN CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 106,
+      "description": "Sink base cabinet",
+      "type": "product",
+      "price": 1875,
+      "room": "KITCHEN CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 107,
+      "description": "Underbench oven cabinet",
+      "type": "product",
+      "price": 1575,
+      "room": "KITCHEN CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 108,
+      "description": "Corner base cabinet",
+      "type": "product",
+      "price": 2250,
+      "room": "KITCHEN CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 109,
+      "description": "Dishwasher cabinet",
+      "type": "product",
+      "price": 1125,
+      "room": "KITCHEN CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 110,
+      "description": "Microwave cabinet",
+      "type": "product",
+      "price": 1425,
+      "room": "KITCHEN CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 111,
+      "description": "Pull-out bin cabinet",
+      "type": "product",
+      "price": 2025,
+      "room": "KITCHEN CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 112,
+      "description": "2 drawer pot drawer base",
+      "type": "product",
+      "price": 2475,
+      "room": "KITCHEN CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 113,
+      "description": "3 drawer pot drawer base - 1 small + 2 large",
+      "type": "product",
+      "price": 2775,
+      "room": "KITCHEN CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 114,
+      "description": "4 drawer base unit",
+      "type": "product",
+      "price": 2850,
+      "room": "KITCHEN CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 115,
+      "description": "5 drawer base unit",
+      "type": "product",
+      "price": 3150,
+      "room": "KITCHEN CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 116,
+      "description": "Hidden internal drawer",
+      "type": "product",
+      "price": 375,
+      "room": "KITCHEN CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 117,
+      "description": "Overhead cabinet - 1 door - standard height",
+      "type": "product",
+      "price": 1125,
+      "room": "KITCHEN CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 118,
+      "description": "Overhead cabinet - 2 door - standard height",
+      "type": "product",
+      "price": 1425,
+      "room": "KITCHEN CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 119,
+      "description": "Overhead cabinet - 1 door - extended height",
+      "type": "product",
+      "price": 1275,
+      "room": "KITCHEN CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 120,
+      "description": "Overhead cabinet - 2 door - extended height",
+      "type": "product",
+      "price": 1575,
+      "room": "KITCHEN CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 121,
+      "description": "Rangehood cabinet",
+      "type": "product",
+      "price": 1575,
+      "room": "KITCHEN CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 122,
+      "description": "Tall pantry cabinet - 1 door - 600mm - 5 shelves",
+      "type": "product",
+      "price": 2700,
+      "room": "KITCHEN CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 123,
+      "description": "Tall pantry cabinet - 2 door - 1200mm - 5 shelves",
+      "type": "product",
+      "price": 3450,
+      "room": "KITCHEN CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 124,
+      "description": "Tall oven tower cabinet - 600mm",
+      "type": "product",
+      "price": 2700,
+      "room": "KITCHEN CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 125,
+      "description": "MDF bulkhead - 300mm - LM",
+      "type": "product",
+      "price": 330,
+      "room": "KITCHEN CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 126,
+      "description": "MDF bulkhead - 450mm - LM",
+      "type": "product",
+      "price": 435,
+      "room": "KITCHEN CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 127,
+      "description": "Sharkfin handle upgrade - per unit",
+      "type": "product",
+      "price": 45,
+      "room": "KITCHEN CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 128,
+      "description": "Recessed rail upgrade - per unit",
+      "type": "product",
+      "price": 67.5,
+      "room": "KITCHEN CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 129,
+      "description": "Wine rack cabinet",
+      "type": "product",
+      "price": 1650,
+      "room": "KITCHEN CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 130,
+      "description": "Cleated shelving module",
+      "type": "product",
+      "price": 710,
+      "room": "KITCHEN CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 131,
+      "description": "Floating shelf module",
+      "type": "product",
+      "price": 1050,
+      "room": "KITCHEN CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 132,
+      "description": "Open shelving module",
+      "type": "product",
+      "price": 825,
+      "room": "KITCHEN CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "key": "kitchen-panel-shaker-style-short",
+      "description": "Short end panel - Shaker Style",
+      "price": 450,
+      "room": "KITCHEN CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "EACH",
+      "type": "product",
+      "approvedAddition": true
+    },
+    {
+      "key": "kitchen-panel-shaker-style-tall",
+      "description": "Tall end panel - Shaker Style",
+      "price": 800,
+      "room": "KITCHEN CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "EACH",
+      "type": "product",
+      "approvedAddition": true
+    },
+    {
+      "sourceRow": 133,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 134,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 135,
+      "description": "VINYL WRAP",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 136,
+      "description": "1 door base unit - 600mm",
+      "type": "product",
+      "price": 1005,
+      "room": "KITCHEN CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 137,
+      "description": "2 door base unit - 1200mm",
+      "type": "product",
+      "price": 1355,
+      "room": "KITCHEN CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 138,
+      "description": "Sink base cabinet",
+      "type": "product",
+      "price": 1475,
+      "room": "KITCHEN CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 139,
+      "description": "Underbench oven cabinet",
+      "type": "product",
+      "price": 1240,
+      "room": "KITCHEN CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 140,
+      "description": "Corner base cabinet",
+      "type": "product",
+      "price": 1770,
+      "room": "KITCHEN CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 141,
+      "description": "Dishwasher cabinet",
+      "type": "product",
+      "price": 885,
+      "room": "KITCHEN CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 142,
+      "description": "Microwave cabinet",
+      "type": "product",
+      "price": 1120,
+      "room": "KITCHEN CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 143,
+      "description": "Pull-out bin cabinet",
+      "type": "product",
+      "price": 1595,
+      "room": "KITCHEN CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 144,
+      "description": "2 drawer pot drawer base",
+      "type": "product",
+      "price": 1945,
+      "room": "KITCHEN CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 145,
+      "description": "3 drawer pot drawer base - 1 small + 2 large",
+      "type": "product",
+      "price": 2185,
+      "room": "KITCHEN CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 146,
+      "description": "4 drawer base unit",
+      "type": "product",
+      "price": 2240,
+      "room": "KITCHEN CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 147,
+      "description": "5 drawer base unit",
+      "type": "product",
+      "price": 2480,
+      "room": "KITCHEN CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 148,
+      "description": "Hidden internal drawer",
+      "type": "product",
+      "price": 295,
+      "room": "KITCHEN CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 149,
+      "description": "Overhead cabinet - 1 door - standard height",
+      "type": "product",
+      "price": 885,
+      "room": "KITCHEN CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 150,
+      "description": "Overhead cabinet - 2 door - standard height",
+      "type": "product",
+      "price": 1120,
+      "room": "KITCHEN CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 151,
+      "description": "Overhead cabinet - 1 door - extended height",
+      "type": "product",
+      "price": 1005,
+      "room": "KITCHEN CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 152,
+      "description": "Overhead cabinet - 2 door - extended height",
+      "type": "product",
+      "price": 1240,
+      "room": "KITCHEN CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 153,
+      "description": "Rangehood cabinet",
+      "type": "product",
+      "price": 1240,
+      "room": "KITCHEN CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 154,
+      "description": "Tall pantry cabinet - 1 door - 600mm - 5 shelves",
+      "type": "product",
+      "price": 2125,
+      "room": "KITCHEN CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 155,
+      "description": "Tall pantry cabinet - 2 door - 1200mm - 5 shelves",
+      "type": "product",
+      "price": 2715,
+      "room": "KITCHEN CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 156,
+      "description": "Tall oven tower cabinet - 600mm",
+      "type": "product",
+      "price": 2125,
+      "room": "KITCHEN CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 157,
+      "description": "MDF bulkhead - 300mm - LM",
+      "type": "product",
+      "price": 260,
+      "room": "KITCHEN CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 158,
+      "description": "MDF bulkhead - 450mm - LM",
+      "type": "product",
+      "price": 340,
+      "room": "KITCHEN CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 159,
+      "description": "Sharkfin handle upgrade - per unit",
+      "type": "product",
+      "price": 35.4,
+      "room": "KITCHEN CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 160,
+      "description": "Recessed rail upgrade - per unit",
+      "type": "product",
+      "price": 53.1,
+      "room": "KITCHEN CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 161,
+      "description": "Wine rack cabinet",
+      "type": "product",
+      "price": 1300,
+      "room": "KITCHEN CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 162,
+      "description": "Cleated shelving module",
+      "type": "product",
+      "price": 560,
+      "room": "KITCHEN CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 163,
+      "description": "Floating shelf module",
+      "type": "product",
+      "price": 825,
+      "room": "KITCHEN CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 164,
+      "description": "Open shelving module",
+      "type": "product",
+      "price": 650,
+      "room": "KITCHEN CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "key": "kitchen-panel-vinyl-wrap-short",
+      "description": "Short end panel - Vinyl Wrap",
+      "price": 350,
+      "room": "KITCHEN CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "EACH",
+      "type": "product",
+      "approvedAddition": true
+    },
+    {
+      "key": "kitchen-panel-vinyl-wrap-tall",
+      "description": "Tall end panel - Vinyl Wrap",
+      "price": 625,
+      "room": "KITCHEN CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "EACH",
+      "type": "product",
+      "approvedAddition": true
+    },
+    {
+      "sourceRow": 165,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 166,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 167,
+      "description": "BUTLER'S PANTRY CABINETRY",
+      "type": "heading",
+      "level": 1
+    },
+    {
+      "sourceRow": 168,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 169,
+      "description": "STANDARD COLOURBOARD",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 170,
+      "description": "1 door base unit - 600mm",
+      "type": "product",
+      "price": 850,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 171,
+      "description": "2 door base unit - 1200mm",
+      "type": "product",
+      "price": 1150,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 172,
+      "description": "Sink base cabinet",
+      "type": "product",
+      "price": 1250,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 173,
+      "description": "Corner base cabinet",
+      "type": "product",
+      "price": 1500,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 174,
+      "description": "Dishwasher cabinet",
+      "type": "product",
+      "price": 750,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 175,
+      "description": "Microwave cabinet",
+      "type": "product",
+      "price": 950,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 176,
+      "description": "Pull-out bin cabinet",
+      "type": "product",
+      "price": 1350,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 177,
+      "description": "2 drawer pot drawer base",
+      "type": "product",
+      "price": 1650,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 178,
+      "description": "3 drawer pot drawer base - 1 small + 2 large",
+      "type": "product",
+      "price": 1850,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 179,
+      "description": "4 drawer base unit",
+      "type": "product",
+      "price": 1900,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 180,
+      "description": "5 drawer base unit",
+      "type": "product",
+      "price": 2100,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 181,
+      "description": "Hidden internal drawer",
+      "type": "product",
+      "price": 250,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 182,
+      "description": "Overhead cabinet - 1 door - standard height",
+      "type": "product",
+      "price": 750,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 183,
+      "description": "Overhead cabinet - 2 door - standard height",
+      "type": "product",
+      "price": 950,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 184,
+      "description": "Overhead cabinet - 1 door - extended height",
+      "type": "product",
+      "price": 850,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 185,
+      "description": "Overhead cabinet - 2 door - extended height",
+      "type": "product",
+      "price": 1050,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 186,
+      "description": "Rangehood cabinet",
+      "type": "product",
+      "price": 1050,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 187,
+      "description": "Tall pantry cabinet - 1 door - 600mm - 5 shelves",
+      "type": "product",
+      "price": 1800,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 188,
+      "description": "Tall pantry cabinet - 2 door - 1200mm - 5 shelves",
+      "type": "product",
+      "price": 2300,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 189,
+      "description": "MDF bulkhead - 300mm - LM",
+      "type": "product",
+      "price": 220,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 190,
+      "description": "MDF bulkhead - 450mm - LM",
+      "type": "product",
+      "price": 290,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 191,
+      "description": "Sharkfin handle upgrade - per unit",
+      "type": "product",
+      "price": 30,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 192,
+      "description": "Recessed rail upgrade - per unit",
+      "type": "product",
+      "price": 45,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 193,
+      "description": "Wine rack cabinet",
+      "type": "product",
+      "price": 1100,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 194,
+      "description": "Cleated shelving module",
+      "type": "product",
+      "price": 475,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 195,
+      "description": "Floating shelf module",
+      "type": "product",
+      "price": 700,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 196,
+      "description": "Open shelving module",
+      "type": "product",
+      "price": 550,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 197,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 198,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 199,
+      "description": "PREMIUM LAMINATE",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 200,
+      "description": "1 door base unit - 600mm",
+      "type": "product",
+      "price": 975,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 201,
+      "description": "2 door base unit - 1200mm",
+      "type": "product",
+      "price": 1320,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 202,
+      "description": "Sink base cabinet",
+      "type": "product",
+      "price": 1440,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 203,
+      "description": "Corner base cabinet",
+      "type": "product",
+      "price": 1725,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 204,
+      "description": "Dishwasher cabinet",
+      "type": "product",
+      "price": 860,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 205,
+      "description": "Microwave cabinet",
+      "type": "product",
+      "price": 1090,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 206,
+      "description": "Pull-out bin cabinet",
+      "type": "product",
+      "price": 1550,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 207,
+      "description": "2 drawer pot drawer base",
+      "type": "product",
+      "price": 1895,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 208,
+      "description": "3 drawer pot drawer base - 1 small + 2 large",
+      "type": "product",
+      "price": 2130,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 209,
+      "description": "4 drawer base unit",
+      "type": "product",
+      "price": 2185,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 210,
+      "description": "5 drawer base unit",
+      "type": "product",
+      "price": 2415,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 211,
+      "description": "Hidden internal drawer",
+      "type": "product",
+      "price": 290,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 212,
+      "description": "Overhead cabinet - 1 door - standard height",
+      "type": "product",
+      "price": 860,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 213,
+      "description": "Overhead cabinet - 2 door - standard height",
+      "type": "product",
+      "price": 1090,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 214,
+      "description": "Overhead cabinet - 1 door - extended height",
+      "type": "product",
+      "price": 975,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 215,
+      "description": "Overhead cabinet - 2 door - extended height",
+      "type": "product",
+      "price": 1210,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 216,
+      "description": "Rangehood cabinet",
+      "type": "product",
+      "price": 1210,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 217,
+      "description": "Tall pantry cabinet - 1 door - 600mm - 5 shelves",
+      "type": "product",
+      "price": 2070,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 218,
+      "description": "Tall pantry cabinet - 2 door - 1200mm - 5 shelves",
+      "type": "product",
+      "price": 2645,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 219,
+      "description": "MDF bulkhead - 300mm - LM",
+      "type": "product",
+      "price": 255,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 220,
+      "description": "MDF bulkhead - 450mm - LM",
+      "type": "product",
+      "price": 335,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 221,
+      "description": "Sharkfin handle upgrade - per unit",
+      "type": "product",
+      "price": 34.5,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 222,
+      "description": "Recessed rail upgrade - per unit",
+      "type": "product",
+      "price": 51.75,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 223,
+      "description": "Wine rack cabinet",
+      "type": "product",
+      "price": 1265,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 224,
+      "description": "Cleated shelving module",
+      "type": "product",
+      "price": 545,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 225,
+      "description": "Floating shelf module",
+      "type": "product",
+      "price": 805,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 226,
+      "description": "Open shelving module",
+      "type": "product",
+      "price": 630,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 227,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 228,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 229,
+      "description": "2 PACK",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 230,
+      "description": "1 door base unit - 600mm",
+      "type": "product",
+      "price": 1150,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 231,
+      "description": "2 door base unit - 1200mm",
+      "type": "product",
+      "price": 1550,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 232,
+      "description": "Sink base cabinet",
+      "type": "product",
+      "price": 1690,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 233,
+      "description": "Corner base cabinet",
+      "type": "product",
+      "price": 2025,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 234,
+      "description": "Dishwasher cabinet",
+      "type": "product",
+      "price": 1015,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 235,
+      "description": "Microwave cabinet",
+      "type": "product",
+      "price": 1280,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 236,
+      "description": "Pull-out bin cabinet",
+      "type": "product",
+      "price": 1825,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 237,
+      "description": "2 drawer pot drawer base",
+      "type": "product",
+      "price": 2230,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 238,
+      "description": "3 drawer pot drawer base - 1 small + 2 large",
+      "type": "product",
+      "price": 2500,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 239,
+      "description": "4 drawer base unit",
+      "type": "product",
+      "price": 2565,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 240,
+      "description": "5 drawer base unit",
+      "type": "product",
+      "price": 2835,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 241,
+      "description": "Hidden internal drawer",
+      "type": "product",
+      "price": 340,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 242,
+      "description": "Overhead cabinet - 1 door - standard height",
+      "type": "product",
+      "price": 1015,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 243,
+      "description": "Overhead cabinet - 2 door - standard height",
+      "type": "product",
+      "price": 1280,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 244,
+      "description": "Overhead cabinet - 1 door - extended height",
+      "type": "product",
+      "price": 1150,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 245,
+      "description": "Overhead cabinet - 2 door - extended height",
+      "type": "product",
+      "price": 1420,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 246,
+      "description": "Rangehood cabinet",
+      "type": "product",
+      "price": 1420,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 247,
+      "description": "Tall pantry cabinet - 1 door - 600mm - 5 shelves",
+      "type": "product",
+      "price": 2430,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 248,
+      "description": "Tall pantry cabinet - 2 door - 1200mm - 5 shelves",
+      "type": "product",
+      "price": 3105,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 249,
+      "description": "MDF bulkhead - 300mm - LM",
+      "type": "product",
+      "price": 295,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "2 PACK",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 250,
+      "description": "MDF bulkhead - 450mm - LM",
+      "type": "product",
+      "price": 390,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "2 PACK",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 251,
+      "description": "Sharkfin handle upgrade - per unit",
+      "type": "product",
+      "price": 40.5,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 252,
+      "description": "Recessed rail upgrade - per unit",
+      "type": "product",
+      "price": 60.75,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 253,
+      "description": "Wine rack cabinet",
+      "type": "product",
+      "price": 1485,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 254,
+      "description": "Cleated shelving module",
+      "type": "product",
+      "price": 640,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 255,
+      "description": "Floating shelf module",
+      "type": "product",
+      "price": 945,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 256,
+      "description": "Open shelving module",
+      "type": "product",
+      "price": 740,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 257,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 258,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 259,
+      "description": "SHAKER STYLE",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 260,
+      "description": "1 door base unit - 600mm",
+      "type": "product",
+      "price": 1275,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 261,
+      "description": "2 door base unit - 1200mm",
+      "type": "product",
+      "price": 1725,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 262,
+      "description": "Sink base cabinet",
+      "type": "product",
+      "price": 1875,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 263,
+      "description": "Corner base cabinet",
+      "type": "product",
+      "price": 2250,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 264,
+      "description": "Dishwasher cabinet",
+      "type": "product",
+      "price": 1125,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 265,
+      "description": "Microwave cabinet",
+      "type": "product",
+      "price": 1425,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 266,
+      "description": "Pull-out bin cabinet",
+      "type": "product",
+      "price": 2025,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 267,
+      "description": "2 drawer pot drawer base",
+      "type": "product",
+      "price": 2475,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 268,
+      "description": "3 drawer pot drawer base - 1 small + 2 large",
+      "type": "product",
+      "price": 2775,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 269,
+      "description": "4 drawer base unit",
+      "type": "product",
+      "price": 2850,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 270,
+      "description": "5 drawer base unit",
+      "type": "product",
+      "price": 3150,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 271,
+      "description": "Hidden internal drawer",
+      "type": "product",
+      "price": 375,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 272,
+      "description": "Overhead cabinet - 1 door - standard height",
+      "type": "product",
+      "price": 1125,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 273,
+      "description": "Overhead cabinet - 2 door - standard height",
+      "type": "product",
+      "price": 1425,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 274,
+      "description": "Overhead cabinet - 1 door - extended height",
+      "type": "product",
+      "price": 1275,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 275,
+      "description": "Overhead cabinet - 2 door - extended height",
+      "type": "product",
+      "price": 1575,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 276,
+      "description": "Rangehood cabinet",
+      "type": "product",
+      "price": 1575,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 277,
+      "description": "Tall pantry cabinet - 1 door - 600mm - 5 shelves",
+      "type": "product",
+      "price": 2700,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 278,
+      "description": "Tall pantry cabinet - 2 door - 1200mm - 5 shelves",
+      "type": "product",
+      "price": 3450,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 279,
+      "description": "MDF bulkhead - 300mm - LM",
+      "type": "product",
+      "price": 330,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 280,
+      "description": "MDF bulkhead - 450mm - LM",
+      "type": "product",
+      "price": 435,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 281,
+      "description": "Sharkfin handle upgrade - per unit",
+      "type": "product",
+      "price": 45,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 282,
+      "description": "Recessed rail upgrade - per unit",
+      "type": "product",
+      "price": 67.5,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 283,
+      "description": "Wine rack cabinet",
+      "type": "product",
+      "price": 1650,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 284,
+      "description": "Cleated shelving module",
+      "type": "product",
+      "price": 710,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 285,
+      "description": "Floating shelf module",
+      "type": "product",
+      "price": 1050,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 286,
+      "description": "Open shelving module",
+      "type": "product",
+      "price": 825,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 287,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 288,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 289,
+      "description": "VINYL WRAP",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 290,
+      "description": "1 door base unit - 600mm",
+      "type": "product",
+      "price": 1005,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 291,
+      "description": "2 door base unit - 1200mm",
+      "type": "product",
+      "price": 1355,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 292,
+      "description": "Sink base cabinet",
+      "type": "product",
+      "price": 1475,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 293,
+      "description": "Corner base cabinet",
+      "type": "product",
+      "price": 1770,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 294,
+      "description": "Dishwasher cabinet",
+      "type": "product",
+      "price": 885,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 295,
+      "description": "Microwave cabinet",
+      "type": "product",
+      "price": 1120,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 296,
+      "description": "Pull-out bin cabinet",
+      "type": "product",
+      "price": 1595,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 297,
+      "description": "2 drawer pot drawer base",
+      "type": "product",
+      "price": 1945,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 298,
+      "description": "3 drawer pot drawer base - 1 small + 2 large",
+      "type": "product",
+      "price": 2185,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 299,
+      "description": "4 drawer base unit",
+      "type": "product",
+      "price": 2240,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 300,
+      "description": "5 drawer base unit",
+      "type": "product",
+      "price": 2480,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 301,
+      "description": "Hidden internal drawer",
+      "type": "product",
+      "price": 295,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 302,
+      "description": "Overhead cabinet - 1 door - standard height",
+      "type": "product",
+      "price": 885,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 303,
+      "description": "Overhead cabinet - 2 door - standard height",
+      "type": "product",
+      "price": 1120,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 304,
+      "description": "Overhead cabinet - 1 door - extended height",
+      "type": "product",
+      "price": 1005,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 305,
+      "description": "Overhead cabinet - 2 door - extended height",
+      "type": "product",
+      "price": 1240,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 306,
+      "description": "Rangehood cabinet",
+      "type": "product",
+      "price": 1240,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 307,
+      "description": "Tall pantry cabinet - 1 door - 600mm - 5 shelves",
+      "type": "product",
+      "price": 2125,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 308,
+      "description": "Tall pantry cabinet - 2 door - 1200mm - 5 shelves",
+      "type": "product",
+      "price": 2715,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 309,
+      "description": "MDF bulkhead - 300mm - LM",
+      "type": "product",
+      "price": 260,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 310,
+      "description": "MDF bulkhead - 450mm - LM",
+      "type": "product",
+      "price": 340,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 311,
+      "description": "Sharkfin handle upgrade - per unit",
+      "type": "product",
+      "price": 35.4,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 312,
+      "description": "Recessed rail upgrade - per unit",
+      "type": "product",
+      "price": 53.1,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 313,
+      "description": "Wine rack cabinet",
+      "type": "product",
+      "price": 1300,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 314,
+      "description": "Cleated shelving module",
+      "type": "product",
+      "price": 560,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 315,
+      "description": "Floating shelf module",
+      "type": "product",
+      "price": 825,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 316,
+      "description": "Open shelving module",
+      "type": "product",
+      "price": 650,
+      "room": "BUTLER'S PANTRY CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 317,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 318,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 319,
+      "description": "LAUNDRY CABINETRY",
+      "type": "heading",
+      "level": 1
+    },
+    {
+      "sourceRow": 320,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 321,
+      "description": "STANDARD COLOURBOARD",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 322,
+      "description": "1 door base unit - 600mm",
+      "type": "product",
+      "price": 850,
+      "room": "LAUNDRY CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 323,
+      "description": "2 door base unit - 1200mm",
+      "type": "product",
+      "price": 1150,
+      "room": "LAUNDRY CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 324,
+      "description": "Laundry sink cabinet",
+      "type": "product",
+      "price": 1250,
+      "room": "LAUNDRY CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 325,
+      "description": "Corner base cabinet",
+      "type": "product",
+      "price": 1500,
+      "room": "LAUNDRY CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 326,
+      "description": "Pull-out bin cabinet",
+      "type": "product",
+      "price": 1350,
+      "room": "LAUNDRY CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 327,
+      "description": "Washer / dryer opening with end panels",
+      "type": "product",
+      "price": 475,
+      "room": "LAUNDRY CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 328,
+      "description": "Overhead cabinet - 1 door - standard height",
+      "type": "product",
+      "price": 750,
+      "room": "LAUNDRY CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 329,
+      "description": "Overhead cabinet - 2 door - standard height",
+      "type": "product",
+      "price": 950,
+      "room": "LAUNDRY CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 330,
+      "description": "Overhead cabinet - 1 door - extended height",
+      "type": "product",
+      "price": 850,
+      "room": "LAUNDRY CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 331,
+      "description": "Overhead cabinet - 2 door - extended height",
+      "type": "product",
+      "price": 1050,
+      "room": "LAUNDRY CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 332,
+      "description": "Tall linen cabinet - 1 door - 600mm",
+      "type": "product",
+      "price": 1800,
+      "room": "LAUNDRY CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 333,
+      "description": "Tall linen cabinet - 2 door - 1200mm",
+      "type": "product",
+      "price": 2300,
+      "room": "LAUNDRY CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 334,
+      "description": "MDF bulkhead - 300mm - LM",
+      "type": "product",
+      "price": 220,
+      "room": "LAUNDRY CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 335,
+      "description": "MDF bulkhead - 450mm - LM",
+      "type": "product",
+      "price": 290,
+      "room": "LAUNDRY CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 336,
+      "description": "Cleated shelving module",
+      "type": "product",
+      "price": 475,
+      "room": "LAUNDRY CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 337,
+      "description": "Floating shelf module",
+      "type": "product",
+      "price": 700,
+      "room": "LAUNDRY CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 338,
+      "description": "Open shelving module",
+      "type": "product",
+      "price": 550,
+      "room": "LAUNDRY CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 339,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 340,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 341,
+      "description": "PREMIUM LAMINATE",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 342,
+      "description": "1 door base unit - 600mm",
+      "type": "product",
+      "price": 975,
+      "room": "LAUNDRY CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 343,
+      "description": "2 door base unit - 1200mm",
+      "type": "product",
+      "price": 1320,
+      "room": "LAUNDRY CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 344,
+      "description": "Laundry sink cabinet",
+      "type": "product",
+      "price": 1440,
+      "room": "LAUNDRY CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 345,
+      "description": "Corner base cabinet",
+      "type": "product",
+      "price": 1725,
+      "room": "LAUNDRY CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 346,
+      "description": "Pull-out bin cabinet",
+      "type": "product",
+      "price": 1550,
+      "room": "LAUNDRY CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 347,
+      "description": "Washer / dryer opening with end panels",
+      "type": "product",
+      "price": 545,
+      "room": "LAUNDRY CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 348,
+      "description": "Overhead cabinet - 1 door - standard height",
+      "type": "product",
+      "price": 860,
+      "room": "LAUNDRY CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 349,
+      "description": "Overhead cabinet - 2 door - standard height",
+      "type": "product",
+      "price": 1090,
+      "room": "LAUNDRY CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 350,
+      "description": "Overhead cabinet - 1 door - extended height",
+      "type": "product",
+      "price": 975,
+      "room": "LAUNDRY CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 351,
+      "description": "Overhead cabinet - 2 door - extended height",
+      "type": "product",
+      "price": 1210,
+      "room": "LAUNDRY CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 352,
+      "description": "Tall linen cabinet - 1 door - 600mm",
+      "type": "product",
+      "price": 2070,
+      "room": "LAUNDRY CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 353,
+      "description": "Tall linen cabinet - 2 door - 1200mm",
+      "type": "product",
+      "price": 2645,
+      "room": "LAUNDRY CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 354,
+      "description": "MDF bulkhead - 300mm - LM",
+      "type": "product",
+      "price": 255,
+      "room": "LAUNDRY CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 355,
+      "description": "MDF bulkhead - 450mm - LM",
+      "type": "product",
+      "price": 335,
+      "room": "LAUNDRY CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 356,
+      "description": "Cleated shelving module",
+      "type": "product",
+      "price": 545,
+      "room": "LAUNDRY CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 357,
+      "description": "Floating shelf module",
+      "type": "product",
+      "price": 805,
+      "room": "LAUNDRY CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 358,
+      "description": "Open shelving module",
+      "type": "product",
+      "price": 630,
+      "room": "LAUNDRY CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 359,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 360,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 361,
+      "description": "2 PACK",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 362,
+      "description": "1 door base unit - 600mm",
+      "type": "product",
+      "price": 1150,
+      "room": "LAUNDRY CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 363,
+      "description": "2 door base unit - 1200mm",
+      "type": "product",
+      "price": 1550,
+      "room": "LAUNDRY CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 364,
+      "description": "Laundry sink cabinet",
+      "type": "product",
+      "price": 1690,
+      "room": "LAUNDRY CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 365,
+      "description": "Corner base cabinet",
+      "type": "product",
+      "price": 2025,
+      "room": "LAUNDRY CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 366,
+      "description": "Pull-out bin cabinet",
+      "type": "product",
+      "price": 1825,
+      "room": "LAUNDRY CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 367,
+      "description": "Washer / dryer opening with end panels",
+      "type": "product",
+      "price": 640,
+      "room": "LAUNDRY CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 368,
+      "description": "Overhead cabinet - 1 door - standard height",
+      "type": "product",
+      "price": 1015,
+      "room": "LAUNDRY CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 369,
+      "description": "Overhead cabinet - 2 door - standard height",
+      "type": "product",
+      "price": 1280,
+      "room": "LAUNDRY CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 370,
+      "description": "Overhead cabinet - 1 door - extended height",
+      "type": "product",
+      "price": 1150,
+      "room": "LAUNDRY CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 371,
+      "description": "Overhead cabinet - 2 door - extended height",
+      "type": "product",
+      "price": 1420,
+      "room": "LAUNDRY CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 372,
+      "description": "Tall linen cabinet - 1 door - 600mm",
+      "type": "product",
+      "price": 2430,
+      "room": "LAUNDRY CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 373,
+      "description": "Tall linen cabinet - 2 door - 1200mm",
+      "type": "product",
+      "price": 3105,
+      "room": "LAUNDRY CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 374,
+      "description": "MDF bulkhead - 300mm - LM",
+      "type": "product",
+      "price": 295,
+      "room": "LAUNDRY CABINETRY",
+      "range": "2 PACK",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 375,
+      "description": "MDF bulkhead - 450mm - LM",
+      "type": "product",
+      "price": 390,
+      "room": "LAUNDRY CABINETRY",
+      "range": "2 PACK",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 376,
+      "description": "Cleated shelving module",
+      "type": "product",
+      "price": 640,
+      "room": "LAUNDRY CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 377,
+      "description": "Floating shelf module",
+      "type": "product",
+      "price": 945,
+      "room": "LAUNDRY CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 378,
+      "description": "Open shelving module",
+      "type": "product",
+      "price": 740,
+      "room": "LAUNDRY CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 379,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 380,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 381,
+      "description": "SHAKER STYLE",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 382,
+      "description": "1 door base unit - 600mm",
+      "type": "product",
+      "price": 1275,
+      "room": "LAUNDRY CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 383,
+      "description": "2 door base unit - 1200mm",
+      "type": "product",
+      "price": 1725,
+      "room": "LAUNDRY CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 384,
+      "description": "Laundry sink cabinet",
+      "type": "product",
+      "price": 1875,
+      "room": "LAUNDRY CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 385,
+      "description": "Corner base cabinet",
+      "type": "product",
+      "price": 2250,
+      "room": "LAUNDRY CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 386,
+      "description": "Pull-out bin cabinet",
+      "type": "product",
+      "price": 2025,
+      "room": "LAUNDRY CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 387,
+      "description": "Washer / dryer opening with end panels",
+      "type": "product",
+      "price": 710,
+      "room": "LAUNDRY CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 388,
+      "description": "Overhead cabinet - 1 door - standard height",
+      "type": "product",
+      "price": 1125,
+      "room": "LAUNDRY CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 389,
+      "description": "Overhead cabinet - 2 door - standard height",
+      "type": "product",
+      "price": 1425,
+      "room": "LAUNDRY CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 390,
+      "description": "Overhead cabinet - 1 door - extended height",
+      "type": "product",
+      "price": 1275,
+      "room": "LAUNDRY CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 391,
+      "description": "Overhead cabinet - 2 door - extended height",
+      "type": "product",
+      "price": 1575,
+      "room": "LAUNDRY CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 392,
+      "description": "Tall linen cabinet - 1 door - 600mm",
+      "type": "product",
+      "price": 2700,
+      "room": "LAUNDRY CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 393,
+      "description": "Tall linen cabinet - 2 door - 1200mm",
+      "type": "product",
+      "price": 3450,
+      "room": "LAUNDRY CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 394,
+      "description": "MDF bulkhead - 300mm - LM",
+      "type": "product",
+      "price": 330,
+      "room": "LAUNDRY CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 395,
+      "description": "MDF bulkhead - 450mm - LM",
+      "type": "product",
+      "price": 435,
+      "room": "LAUNDRY CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 396,
+      "description": "Cleated shelving module",
+      "type": "product",
+      "price": 710,
+      "room": "LAUNDRY CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 397,
+      "description": "Floating shelf module",
+      "type": "product",
+      "price": 1050,
+      "room": "LAUNDRY CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 398,
+      "description": "Open shelving module",
+      "type": "product",
+      "price": 825,
+      "room": "LAUNDRY CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 399,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 400,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 401,
+      "description": "VINYL WRAP",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 402,
+      "description": "1 door base unit - 600mm",
+      "type": "product",
+      "price": 1005,
+      "room": "LAUNDRY CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 403,
+      "description": "2 door base unit - 1200mm",
+      "type": "product",
+      "price": 1355,
+      "room": "LAUNDRY CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 404,
+      "description": "Laundry sink cabinet",
+      "type": "product",
+      "price": 1475,
+      "room": "LAUNDRY CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 405,
+      "description": "Corner base cabinet",
+      "type": "product",
+      "price": 1770,
+      "room": "LAUNDRY CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 406,
+      "description": "Pull-out bin cabinet",
+      "type": "product",
+      "price": 1595,
+      "room": "LAUNDRY CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 407,
+      "description": "Washer / dryer opening with end panels",
+      "type": "product",
+      "price": 560,
+      "room": "LAUNDRY CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 408,
+      "description": "Overhead cabinet - 1 door - standard height",
+      "type": "product",
+      "price": 885,
+      "room": "LAUNDRY CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 409,
+      "description": "Overhead cabinet - 2 door - standard height",
+      "type": "product",
+      "price": 1120,
+      "room": "LAUNDRY CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 410,
+      "description": "Overhead cabinet - 1 door - extended height",
+      "type": "product",
+      "price": 1005,
+      "room": "LAUNDRY CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 411,
+      "description": "Overhead cabinet - 2 door - extended height",
+      "type": "product",
+      "price": 1240,
+      "room": "LAUNDRY CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 412,
+      "description": "Tall linen cabinet - 1 door - 600mm",
+      "type": "product",
+      "price": 2125,
+      "room": "LAUNDRY CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 413,
+      "description": "Tall linen cabinet - 2 door - 1200mm",
+      "type": "product",
+      "price": 2715,
+      "room": "LAUNDRY CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 414,
+      "description": "MDF bulkhead - 300mm - LM",
+      "type": "product",
+      "price": 260,
+      "room": "LAUNDRY CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 415,
+      "description": "MDF bulkhead - 450mm - LM",
+      "type": "product",
+      "price": 340,
+      "room": "LAUNDRY CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 416,
+      "description": "Cleated shelving module",
+      "type": "product",
+      "price": 560,
+      "room": "LAUNDRY CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 417,
+      "description": "Floating shelf module",
+      "type": "product",
+      "price": 825,
+      "room": "LAUNDRY CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 418,
+      "description": "Open shelving module",
+      "type": "product",
+      "price": 650,
+      "room": "LAUNDRY CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 419,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 420,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 421,
+      "description": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "type": "heading",
+      "level": 1
+    },
+    {
+      "sourceRow": 422,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 423,
+      "description": "STANDARD COLOURBOARD",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 424,
+      "description": "Floor mounted vanity - 1 door - 600mm",
+      "type": "product",
+      "price": 950,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 425,
+      "description": "Floor mounted vanity - 2 door - 1200mm",
+      "type": "product",
+      "price": 1450,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 426,
+      "description": "Floor mounted vanity - 2 drawer - 600mm",
+      "type": "product",
+      "price": 1350,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 427,
+      "description": "Floor mounted vanity - 2 drawer - 750mm",
+      "type": "product",
+      "price": 1450,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 428,
+      "description": "Floor mounted vanity - 3 drawer - 900mm",
+      "type": "product",
+      "price": 1750,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 429,
+      "description": "Floor mounted vanity - 3 drawer - 1200mm",
+      "type": "product",
+      "price": 1950,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 430,
+      "description": "Wall hung vanity - 1 door - 600mm",
+      "type": "product",
+      "price": 1100,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 431,
+      "description": "Wall hung vanity - 2 door - 1200mm",
+      "type": "product",
+      "price": 1600,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 432,
+      "description": "Wall hung vanity - 2 drawer - 750mm",
+      "type": "product",
+      "price": 1550,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 433,
+      "description": "Wall hung vanity - 3 drawer - 900mm",
+      "type": "product",
+      "price": 1850,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 434,
+      "description": "Wall hung vanity - 3 drawer - 1200mm",
+      "type": "product",
+      "price": 2100,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 435,
+      "description": "Wall hung vanity with open towel shelf - 1200mm",
+      "type": "product",
+      "price": 2250,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 436,
+      "description": "Mirrored shaving cabinet - 1 door - 600mm",
+      "type": "product",
+      "price": 850,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 437,
+      "description": "Mirrored shaving cabinet - 2 door - 1200mm",
+      "type": "product",
+      "price": 1350,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 438,
+      "description": "Tall linen cabinet - 1 door - 600mm",
+      "type": "product",
+      "price": 1800,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 439,
+      "description": "Tall linen cabinet - 2 door - 1200mm",
+      "type": "product",
+      "price": 2300,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 440,
+      "description": "Open towel shelf / module",
+      "type": "product",
+      "price": 650,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 441,
+      "description": "MDF bulkhead - 300mm - LM",
+      "type": "product",
+      "price": 220,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 442,
+      "description": "MDF bulkhead - 450mm - LM",
+      "type": "product",
+      "price": 290,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "STANDARD COLOURBOARD",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 443,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 444,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 445,
+      "description": "PREMIUM LAMINATE",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 446,
+      "description": "Floor mounted vanity - 1 door - 600mm",
+      "type": "product",
+      "price": 1090,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 447,
+      "description": "Floor mounted vanity - 2 door - 1200mm",
+      "type": "product",
+      "price": 1665,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 448,
+      "description": "Floor mounted vanity - 2 drawer - 600mm",
+      "type": "product",
+      "price": 1550,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 449,
+      "description": "Floor mounted vanity - 2 drawer - 750mm",
+      "type": "product",
+      "price": 1665,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 450,
+      "description": "Floor mounted vanity - 3 drawer - 900mm",
+      "type": "product",
+      "price": 2010,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 451,
+      "description": "Floor mounted vanity - 3 drawer - 1200mm",
+      "type": "product",
+      "price": 2240,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 452,
+      "description": "Wall hung vanity - 1 door - 600mm",
+      "type": "product",
+      "price": 1265,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 453,
+      "description": "Wall hung vanity - 2 door - 1200mm",
+      "type": "product",
+      "price": 1840,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 454,
+      "description": "Wall hung vanity - 2 drawer - 750mm",
+      "type": "product",
+      "price": 1780,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 455,
+      "description": "Wall hung vanity - 3 drawer - 900mm",
+      "type": "product",
+      "price": 2130,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 456,
+      "description": "Wall hung vanity - 3 drawer - 1200mm",
+      "type": "product",
+      "price": 2415,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 457,
+      "description": "Wall hung vanity with open towel shelf - 1200mm",
+      "type": "product",
+      "price": 2590,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 458,
+      "description": "Mirrored shaving cabinet - 1 door - 600mm",
+      "type": "product",
+      "price": 975,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 459,
+      "description": "Mirrored shaving cabinet - 2 door - 1200mm",
+      "type": "product",
+      "price": 1550,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 460,
+      "description": "Tall linen cabinet - 1 door - 600mm",
+      "type": "product",
+      "price": 2070,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 461,
+      "description": "Tall linen cabinet - 2 door - 1200mm",
+      "type": "product",
+      "price": 2645,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 462,
+      "description": "Open towel shelf / module",
+      "type": "product",
+      "price": 745,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 463,
+      "description": "MDF bulkhead - 300mm - LM",
+      "type": "product",
+      "price": 255,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 464,
+      "description": "MDF bulkhead - 450mm - LM",
+      "type": "product",
+      "price": 335,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "PREMIUM LAMINATE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 465,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 466,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 467,
+      "description": "2 PACK",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 468,
+      "description": "Floor mounted vanity - 1 door - 600mm",
+      "type": "product",
+      "price": 1280,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 469,
+      "description": "Floor mounted vanity - 2 door - 1200mm",
+      "type": "product",
+      "price": 1960,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 470,
+      "description": "Floor mounted vanity - 2 drawer - 600mm",
+      "type": "product",
+      "price": 1825,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 471,
+      "description": "Floor mounted vanity - 2 drawer - 750mm",
+      "type": "product",
+      "price": 1960,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 472,
+      "description": "Floor mounted vanity - 3 drawer - 900mm",
+      "type": "product",
+      "price": 2360,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 473,
+      "description": "Floor mounted vanity - 3 drawer - 1200mm",
+      "type": "product",
+      "price": 2630,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 474,
+      "description": "Wall hung vanity - 1 door - 600mm",
+      "type": "product",
+      "price": 1485,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 475,
+      "description": "Wall hung vanity - 2 door - 1200mm",
+      "type": "product",
+      "price": 2160,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 476,
+      "description": "Wall hung vanity - 2 drawer - 750mm",
+      "type": "product",
+      "price": 2090,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 477,
+      "description": "Wall hung vanity - 3 drawer - 900mm",
+      "type": "product",
+      "price": 2500,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 478,
+      "description": "Wall hung vanity - 3 drawer - 1200mm",
+      "type": "product",
+      "price": 2835,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 479,
+      "description": "Wall hung vanity with open towel shelf - 1200mm",
+      "type": "product",
+      "price": 3040,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 480,
+      "description": "Mirrored shaving cabinet - 1 door - 600mm",
+      "type": "product",
+      "price": 1150,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 481,
+      "description": "Mirrored shaving cabinet - 2 door - 1200mm",
+      "type": "product",
+      "price": 1825,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 482,
+      "description": "Tall linen cabinet - 1 door - 600mm",
+      "type": "product",
+      "price": 2430,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 483,
+      "description": "Tall linen cabinet - 2 door - 1200mm",
+      "type": "product",
+      "price": 3105,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 484,
+      "description": "Open towel shelf / module",
+      "type": "product",
+      "price": 880,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 485,
+      "description": "MDF bulkhead - 300mm - LM",
+      "type": "product",
+      "price": 295,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "2 PACK",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 486,
+      "description": "MDF bulkhead - 450mm - LM",
+      "type": "product",
+      "price": 390,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "2 PACK",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 487,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 488,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 489,
+      "description": "SHAKER STYLE",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 490,
+      "description": "Floor mounted vanity - 1 door - 600mm",
+      "type": "product",
+      "price": 1425,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 491,
+      "description": "Floor mounted vanity - 2 door - 1200mm",
+      "type": "product",
+      "price": 2175,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 492,
+      "description": "Floor mounted vanity - 2 drawer - 600mm",
+      "type": "product",
+      "price": 2025,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 493,
+      "description": "Floor mounted vanity - 2 drawer - 750mm",
+      "type": "product",
+      "price": 2175,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 494,
+      "description": "Floor mounted vanity - 3 drawer - 900mm",
+      "type": "product",
+      "price": 2625,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 495,
+      "description": "Floor mounted vanity - 3 drawer - 1200mm",
+      "type": "product",
+      "price": 2925,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 496,
+      "description": "Wall hung vanity - 1 door - 600mm",
+      "type": "product",
+      "price": 1650,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 497,
+      "description": "Wall hung vanity - 2 door - 1200mm",
+      "type": "product",
+      "price": 2400,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 498,
+      "description": "Wall hung vanity - 2 drawer - 750mm",
+      "type": "product",
+      "price": 2325,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 499,
+      "description": "Wall hung vanity - 3 drawer - 900mm",
+      "type": "product",
+      "price": 2775,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 500,
+      "description": "Wall hung vanity - 3 drawer - 1200mm",
+      "type": "product",
+      "price": 3150,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 501,
+      "description": "Wall hung vanity with open towel shelf - 1200mm",
+      "type": "product",
+      "price": 3375,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 502,
+      "description": "Mirrored shaving cabinet - 1 door - 600mm",
+      "type": "product",
+      "price": 1275,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 503,
+      "description": "Mirrored shaving cabinet - 2 door - 1200mm",
+      "type": "product",
+      "price": 2025,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 504,
+      "description": "Tall linen cabinet - 1 door - 600mm",
+      "type": "product",
+      "price": 2700,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 505,
+      "description": "Tall linen cabinet - 2 door - 1200mm",
+      "type": "product",
+      "price": 3450,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 506,
+      "description": "Open towel shelf / module",
+      "type": "product",
+      "price": 975,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 507,
+      "description": "MDF bulkhead - 300mm - LM",
+      "type": "product",
+      "price": 330,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 508,
+      "description": "MDF bulkhead - 450mm - LM",
+      "type": "product",
+      "price": 435,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "SHAKER STYLE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 509,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 510,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 511,
+      "description": "VINYL WRAP",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 512,
+      "description": "Floor mounted vanity - 1 door - 600mm",
+      "type": "product",
+      "price": 1120,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 513,
+      "description": "Floor mounted vanity - 2 door - 1200mm",
+      "type": "product",
+      "price": 1710,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 514,
+      "description": "Floor mounted vanity - 2 drawer - 600mm",
+      "type": "product",
+      "price": 1595,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 515,
+      "description": "Floor mounted vanity - 2 drawer - 750mm",
+      "type": "product",
+      "price": 1710,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 516,
+      "description": "Floor mounted vanity - 3 drawer - 900mm",
+      "type": "product",
+      "price": 2065,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 517,
+      "description": "Floor mounted vanity - 3 drawer - 1200mm",
+      "type": "product",
+      "price": 2300,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 518,
+      "description": "Wall hung vanity - 1 door - 600mm",
+      "type": "product",
+      "price": 1300,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 519,
+      "description": "Wall hung vanity - 2 door - 1200mm",
+      "type": "product",
+      "price": 1890,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 520,
+      "description": "Wall hung vanity - 2 drawer - 750mm",
+      "type": "product",
+      "price": 1830,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 521,
+      "description": "Wall hung vanity - 3 drawer - 900mm",
+      "type": "product",
+      "price": 2185,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 522,
+      "description": "Wall hung vanity - 3 drawer - 1200mm",
+      "type": "product",
+      "price": 2480,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 523,
+      "description": "Wall hung vanity with open towel shelf - 1200mm",
+      "type": "product",
+      "price": 2655,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 524,
+      "description": "Mirrored shaving cabinet - 1 door - 600mm",
+      "type": "product",
+      "price": 1005,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 525,
+      "description": "Mirrored shaving cabinet - 2 door - 1200mm",
+      "type": "product",
+      "price": 1595,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 526,
+      "description": "Tall linen cabinet - 1 door - 600mm",
+      "type": "product",
+      "price": 2125,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 527,
+      "description": "Tall linen cabinet - 2 door - 1200mm",
+      "type": "product",
+      "price": 2715,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 528,
+      "description": "Open towel shelf / module",
+      "type": "product",
+      "price": 765,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 529,
+      "description": "MDF bulkhead - 300mm - LM",
+      "type": "product",
+      "price": 260,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 530,
+      "description": "MDF bulkhead - 450mm - LM",
+      "type": "product",
+      "price": 340,
+      "room": "BATHROOM / ENSUITE / POWDER ROOM CABINETRY",
+      "range": "VINYL WRAP",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 531,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 532,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 533,
+      "description": "WARDROBES",
+      "type": "heading",
+      "level": 1
+    },
+    {
+      "sourceRow": 534,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 535,
+      "description": "WARDROBE INTERNAL FITOUT - STANDARD COLOURBOARD",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 536,
+      "description": "Single hanging bay - 600-900mm - shelf + rail",
+      "type": "product",
+      "price": 800,
+      "room": "WARDROBES",
+      "range": "WARDROBE INTERNAL FITOUT - STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 537,
+      "description": "Single hanging bay - 900-1200mm - shelf + rail",
+      "type": "product",
+      "price": 950,
+      "room": "WARDROBES",
+      "range": "WARDROBE INTERNAL FITOUT - STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 538,
+      "description": "Double hanging bay - 900-1200mm",
+      "type": "product",
+      "price": 1250,
+      "room": "WARDROBES",
+      "range": "WARDROBE INTERNAL FITOUT - STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 539,
+      "description": "Tall shelving tower - 450-600mm",
+      "type": "product",
+      "price": 1150,
+      "room": "WARDROBES",
+      "range": "WARDROBE INTERNAL FITOUT - STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 540,
+      "description": "Adjustable shelving bay - 900-1200mm",
+      "type": "product",
+      "price": 1250,
+      "room": "WARDROBES",
+      "range": "WARDROBE INTERNAL FITOUT - STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 541,
+      "description": "Drawer / shelf tower - 450-600mm",
+      "type": "product",
+      "price": 1500,
+      "room": "WARDROBES",
+      "range": "WARDROBE INTERNAL FITOUT - STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 542,
+      "description": "4 drawer soft-close bank",
+      "type": "product",
+      "price": 1200,
+      "room": "WARDROBES",
+      "range": "WARDROBE INTERNAL FITOUT - STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 543,
+      "description": "5 drawer soft-close bank",
+      "type": "product",
+      "price": 1450,
+      "room": "WARDROBES",
+      "range": "WARDROBE INTERNAL FITOUT - STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 544,
+      "description": "Overhead storage cabinet - 900-1200mm",
+      "type": "product",
+      "price": 900,
+      "room": "WARDROBES",
+      "range": "WARDROBE INTERNAL FITOUT - STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 545,
+      "description": "Shoe shelving bay - 900-1200mm",
+      "type": "product",
+      "price": 1000,
+      "room": "WARDROBES",
+      "range": "WARDROBE INTERNAL FITOUT - STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 546,
+      "description": "Wardrobe island - 4 drawer",
+      "type": "product",
+      "price": 3200,
+      "room": "WARDROBES",
+      "range": "WARDROBE INTERNAL FITOUT - STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 547,
+      "description": "Wardrobe island - 8 drawer",
+      "type": "product",
+      "price": 4800,
+      "room": "WARDROBES",
+      "range": "WARDROBE INTERNAL FITOUT - STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 548,
+      "description": "Jewellery drawer",
+      "type": "product",
+      "price": 450,
+      "room": "WARDROBES",
+      "range": "WARDROBE INTERNAL FITOUT - STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 549,
+      "description": "Pull-out hamper",
+      "type": "product",
+      "price": 450,
+      "room": "WARDROBES",
+      "range": "WARDROBE INTERNAL FITOUT - STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 550,
+      "description": "Tie / belt rack",
+      "type": "product",
+      "price": 180,
+      "room": "WARDROBES",
+      "range": "WARDROBE INTERNAL FITOUT - STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 551,
+      "description": "Valet rail",
+      "type": "product",
+      "price": 160,
+      "room": "WARDROBES",
+      "range": "WARDROBE INTERNAL FITOUT - STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 552,
+      "description": "LED wardrobe lighting allowance",
+      "type": "product",
+      "price": 450,
+      "room": "WARDROBES",
+      "range": "WARDROBE INTERNAL FITOUT - STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 553,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 554,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 555,
+      "description": "WARDROBE DOORS - STANDARD COLOURBOARD",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 556,
+      "description": "Hinged wardrobe door - up to 600mm wide",
+      "type": "product",
+      "price": 650,
+      "room": "WARDROBES",
+      "range": "WARDROBE DOORS - STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 557,
+      "description": "Sliding wardrobe door - per panel",
+      "type": "product",
+      "price": 800,
+      "room": "WARDROBES",
+      "range": "WARDROBE DOORS - STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 558,
+      "description": "Mirror sliding wardrobe door - per panel",
+      "type": "product",
+      "price": 950,
+      "room": "WARDROBES",
+      "range": "WARDROBE DOORS - STANDARD COLOURBOARD",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 559,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 560,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 561,
+      "description": "WARDROBE DOORS - PREMIUM LAMINATE",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 562,
+      "description": "Hinged wardrobe door - up to 600mm wide",
+      "type": "product",
+      "price": 745,
+      "room": "WARDROBES",
+      "range": "WARDROBE DOORS - PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 563,
+      "description": "Sliding wardrobe door - per panel",
+      "type": "product",
+      "price": 920,
+      "room": "WARDROBES",
+      "range": "WARDROBE DOORS - PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 564,
+      "description": "Mirror sliding wardrobe door - per panel",
+      "type": "product",
+      "price": 1090,
+      "room": "WARDROBES",
+      "range": "WARDROBE DOORS - PREMIUM LAMINATE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 565,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 566,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 567,
+      "description": "WARDROBE DOORS - 2 PACK",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 568,
+      "description": "Hinged wardrobe door - up to 600mm wide",
+      "type": "product",
+      "price": 880,
+      "room": "WARDROBES",
+      "range": "WARDROBE DOORS - 2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 569,
+      "description": "Sliding wardrobe door - per panel",
+      "type": "product",
+      "price": 1080,
+      "room": "WARDROBES",
+      "range": "WARDROBE DOORS - 2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 570,
+      "description": "Mirror sliding wardrobe door - per panel",
+      "type": "product",
+      "price": 1280,
+      "room": "WARDROBES",
+      "range": "WARDROBE DOORS - 2 PACK",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 571,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 572,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 573,
+      "description": "WARDROBE DOORS - SHAKER STYLE",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 574,
+      "description": "Hinged wardrobe door - up to 600mm wide",
+      "type": "product",
+      "price": 975,
+      "room": "WARDROBES",
+      "range": "WARDROBE DOORS - SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 575,
+      "description": "Sliding wardrobe door - per panel",
+      "type": "product",
+      "price": 1200,
+      "room": "WARDROBES",
+      "range": "WARDROBE DOORS - SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 576,
+      "description": "Mirror sliding wardrobe door - per panel",
+      "type": "product",
+      "price": 1425,
+      "room": "WARDROBES",
+      "range": "WARDROBE DOORS - SHAKER STYLE",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 577,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 578,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 579,
+      "description": "WARDROBE DOORS - VINYL WRAP",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 580,
+      "description": "Hinged wardrobe door - up to 600mm wide",
+      "type": "product",
+      "price": 765,
+      "room": "WARDROBES",
+      "range": "WARDROBE DOORS - VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 581,
+      "description": "Sliding wardrobe door - per panel",
+      "type": "product",
+      "price": 945,
+      "room": "WARDROBES",
+      "range": "WARDROBE DOORS - VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 582,
+      "description": "Mirror sliding wardrobe door - per panel",
+      "type": "product",
+      "price": 1120,
+      "room": "WARDROBES",
+      "range": "WARDROBE DOORS - VINYL WRAP",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 583,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 584,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 585,
+      "description": "BENCHTOPS",
+      "type": "heading",
+      "level": 1
+    },
+    {
+      "sourceRow": 586,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 587,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 588,
+      "description": "KITCHEN BENCHTOPS",
+      "type": "heading",
+      "level": 1
+    },
+    {
+      "sourceRow": 589,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 590,
+      "description": "STANDARD LAMINATE",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 591,
+      "description": "Standard Laminate - 600mm wide - LM",
+      "type": "product",
+      "price": 350,
+      "room": "KITCHEN BENCHTOPS",
+      "range": "STANDARD LAMINATE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 592,
+      "description": "Standard Laminate - 900mm wide - LM",
+      "type": "product",
+      "price": 525,
+      "room": "KITCHEN BENCHTOPS",
+      "range": "STANDARD LAMINATE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 593,
+      "description": "Standard Laminate - 1200mm wide - LM",
+      "type": "product",
+      "price": 700,
+      "room": "KITCHEN BENCHTOPS",
+      "range": "STANDARD LAMINATE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 594,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 595,
+      "description": "PREMIUM LAMINATE",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 596,
+      "description": "Premium Laminate - 600mm wide - LM",
+      "type": "product",
+      "price": 500,
+      "room": "KITCHEN BENCHTOPS",
+      "range": "PREMIUM LAMINATE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 597,
+      "description": "Premium Laminate - 900mm wide - LM",
+      "type": "product",
+      "price": 750,
+      "room": "KITCHEN BENCHTOPS",
+      "range": "PREMIUM LAMINATE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 598,
+      "description": "Premium Laminate - 1200mm wide - LM",
+      "type": "product",
+      "price": 1000,
+      "room": "KITCHEN BENCHTOPS",
+      "range": "PREMIUM LAMINATE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 599,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 600,
+      "description": "BASE RANGE STONE - 20MM",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 601,
+      "description": "Base Range Stone - 20Mm - 600mm wide - LM",
+      "type": "product",
+      "price": 500,
+      "room": "KITCHEN BENCHTOPS",
+      "range": "BASE RANGE STONE - 20MM",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 602,
+      "description": "Base Range Stone - 20Mm - 900mm wide - LM",
+      "type": "product",
+      "price": 750,
+      "room": "KITCHEN BENCHTOPS",
+      "range": "BASE RANGE STONE - 20MM",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 603,
+      "description": "Base Range Stone - 20Mm - 1200mm wide - LM",
+      "type": "product",
+      "price": 1000,
+      "room": "KITCHEN BENCHTOPS",
+      "range": "BASE RANGE STONE - 20MM",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 604,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 605,
+      "description": "MID RANGE STONE - 20MM",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 606,
+      "description": "Mid Range Stone - 20Mm - 600mm wide - LM",
+      "type": "product",
+      "price": 650,
+      "room": "KITCHEN BENCHTOPS",
+      "range": "MID RANGE STONE - 20MM",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 607,
+      "description": "Mid Range Stone - 20Mm - 900mm wide - LM",
+      "type": "product",
+      "price": 975,
+      "room": "KITCHEN BENCHTOPS",
+      "range": "MID RANGE STONE - 20MM",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 608,
+      "description": "Mid Range Stone - 20Mm - 1200mm wide - LM",
+      "type": "product",
+      "price": 1300,
+      "room": "KITCHEN BENCHTOPS",
+      "range": "MID RANGE STONE - 20MM",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 609,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 610,
+      "description": "HIGH END STONE - 20MM",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 611,
+      "description": "High End Stone - 20Mm - 600mm wide - LM",
+      "type": "product",
+      "price": 800,
+      "room": "KITCHEN BENCHTOPS",
+      "range": "HIGH END STONE - 20MM",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 612,
+      "description": "High End Stone - 20Mm - 900mm wide - LM",
+      "type": "product",
+      "price": 1200,
+      "room": "KITCHEN BENCHTOPS",
+      "range": "HIGH END STONE - 20MM",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 613,
+      "description": "High End Stone - 20Mm - 1200mm wide - LM",
+      "type": "product",
+      "price": 1600,
+      "room": "KITCHEN BENCHTOPS",
+      "range": "HIGH END STONE - 20MM",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 614,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 615,
+      "description": "SOLID SURFACE / ACRYLIC",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 616,
+      "description": "Solid Surface / Acrylic - 600mm wide - LM",
+      "type": "product",
+      "price": 650,
+      "room": "KITCHEN BENCHTOPS",
+      "range": "SOLID SURFACE / ACRYLIC",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 617,
+      "description": "Solid Surface / Acrylic - 900mm wide - LM",
+      "type": "product",
+      "price": 975,
+      "room": "KITCHEN BENCHTOPS",
+      "range": "SOLID SURFACE / ACRYLIC",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 618,
+      "description": "Solid Surface / Acrylic - 1200mm wide - LM",
+      "type": "product",
+      "price": 1300,
+      "room": "KITCHEN BENCHTOPS",
+      "range": "SOLID SURFACE / ACRYLIC",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 619,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 620,
+      "description": "PORCELAIN / SINTERED STONE",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 621,
+      "description": "Porcelain / Sintered Stone - 600mm wide - LM",
+      "type": "product",
+      "price": 900,
+      "room": "KITCHEN BENCHTOPS",
+      "range": "PORCELAIN / SINTERED STONE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 622,
+      "description": "Porcelain / Sintered Stone - 900mm wide - LM",
+      "type": "product",
+      "price": 1350,
+      "room": "KITCHEN BENCHTOPS",
+      "range": "PORCELAIN / SINTERED STONE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 623,
+      "description": "Porcelain / Sintered Stone - 1200mm wide - LM",
+      "type": "product",
+      "price": 1800,
+      "room": "KITCHEN BENCHTOPS",
+      "range": "PORCELAIN / SINTERED STONE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 624,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 625,
+      "description": "SOLID TIMBER - STANDARD RANGE",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 626,
+      "description": "Solid Timber - Standard Range - 600mm wide - LM",
+      "type": "product",
+      "price": 750,
+      "room": "KITCHEN BENCHTOPS",
+      "range": "SOLID TIMBER - STANDARD RANGE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 627,
+      "description": "Solid Timber - Standard Range - 900mm wide - LM",
+      "type": "product",
+      "price": 1125,
+      "room": "KITCHEN BENCHTOPS",
+      "range": "SOLID TIMBER - STANDARD RANGE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 628,
+      "description": "Solid Timber - Standard Range - 1200mm wide - LM",
+      "type": "product",
+      "price": 1500,
+      "room": "KITCHEN BENCHTOPS",
+      "range": "SOLID TIMBER - STANDARD RANGE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 629,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 630,
+      "description": "SOLID TIMBER - PREMIUM RANGE",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 631,
+      "description": "Solid Timber - Premium Range - 600mm wide - LM",
+      "type": "product",
+      "price": 950,
+      "room": "KITCHEN BENCHTOPS",
+      "range": "SOLID TIMBER - PREMIUM RANGE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 632,
+      "description": "Solid Timber - Premium Range - 900mm wide - LM",
+      "type": "product",
+      "price": 1425,
+      "room": "KITCHEN BENCHTOPS",
+      "range": "SOLID TIMBER - PREMIUM RANGE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 633,
+      "description": "Solid Timber - Premium Range - 1200mm wide - LM",
+      "type": "product",
+      "price": 1900,
+      "room": "KITCHEN BENCHTOPS",
+      "range": "SOLID TIMBER - PREMIUM RANGE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 634,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 635,
+      "description": "NATURAL STONE - STANDARD RANGE",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 636,
+      "description": "Natural Stone - Standard Range - 600mm wide - LM",
+      "type": "product",
+      "price": 900,
+      "room": "KITCHEN BENCHTOPS",
+      "range": "NATURAL STONE - STANDARD RANGE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 637,
+      "description": "Natural Stone - Standard Range - 900mm wide - LM",
+      "type": "product",
+      "price": 1350,
+      "room": "KITCHEN BENCHTOPS",
+      "range": "NATURAL STONE - STANDARD RANGE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 638,
+      "description": "Natural Stone - Standard Range - 1200mm wide - LM",
+      "type": "product",
+      "price": 1800,
+      "room": "KITCHEN BENCHTOPS",
+      "range": "NATURAL STONE - STANDARD RANGE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 639,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 640,
+      "description": "NATURAL STONE - PREMIUM RANGE",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 641,
+      "description": "Natural Stone - Premium Range - 600mm wide - LM",
+      "type": "product",
+      "price": 1200,
+      "room": "KITCHEN BENCHTOPS",
+      "range": "NATURAL STONE - PREMIUM RANGE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 642,
+      "description": "Natural Stone - Premium Range - 900mm wide - LM",
+      "type": "product",
+      "price": 1800,
+      "room": "KITCHEN BENCHTOPS",
+      "range": "NATURAL STONE - PREMIUM RANGE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 643,
+      "description": "Natural Stone - Premium Range - 1200mm wide - LM",
+      "type": "product",
+      "price": 2400,
+      "room": "KITCHEN BENCHTOPS",
+      "range": "NATURAL STONE - PREMIUM RANGE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 644,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 645,
+      "description": "EXOTIC MARBLE / QUARTZITE",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 646,
+      "description": "Exotic Marble / Quartzite - 600mm wide - LM",
+      "type": "product",
+      "price": 1500,
+      "room": "KITCHEN BENCHTOPS",
+      "range": "EXOTIC MARBLE / QUARTZITE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 647,
+      "description": "Exotic Marble / Quartzite - 900mm wide - LM",
+      "type": "product",
+      "price": 2250,
+      "room": "KITCHEN BENCHTOPS",
+      "range": "EXOTIC MARBLE / QUARTZITE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 648,
+      "description": "Exotic Marble / Quartzite - 1200mm wide - LM",
+      "type": "product",
+      "price": 3000,
+      "room": "KITCHEN BENCHTOPS",
+      "range": "EXOTIC MARBLE / QUARTZITE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 649,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 650,
+      "description": "BENCHTOP EXTRAS",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 651,
+      "description": "Standard sink cutout",
+      "type": "product",
+      "price": 180,
+      "room": "KITCHEN BENCHTOPS",
+      "range": "BENCHTOP EXTRAS",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 652,
+      "description": "Undermount sink cutout & polish",
+      "type": "product",
+      "price": 300,
+      "room": "KITCHEN BENCHTOPS",
+      "range": "BENCHTOP EXTRAS",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 653,
+      "description": "Standard cooktop cutout",
+      "type": "product",
+      "price": 180,
+      "room": "KITCHEN BENCHTOPS",
+      "range": "BENCHTOP EXTRAS",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 654,
+      "description": "Flush cooktop cutout",
+      "type": "product",
+      "price": 300,
+      "room": "KITCHEN BENCHTOPS",
+      "range": "BENCHTOP EXTRAS",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 655,
+      "description": "Tap hole",
+      "type": "product",
+      "price": 60,
+      "room": "KITCHEN BENCHTOPS",
+      "range": "BENCHTOP EXTRAS",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 656,
+      "description": "Drainer grooves - set",
+      "type": "product",
+      "price": 300,
+      "room": "KITCHEN BENCHTOPS",
+      "range": "BENCHTOP EXTRAS",
+      "unit": "SET"
+    },
+    {
+      "sourceRow": 657,
+      "description": "40mm mitred edge upgrade - LM",
+      "type": "product",
+      "price": 350,
+      "room": "KITCHEN BENCHTOPS",
+      "range": "BENCHTOP EXTRAS",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 658,
+      "description": "60mm mitred edge upgrade - LM",
+      "type": "product",
+      "price": 475,
+      "room": "KITCHEN BENCHTOPS",
+      "range": "BENCHTOP EXTRAS",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 659,
+      "description": "Standard waterfall end",
+      "type": "product",
+      "price": 1100,
+      "room": "KITCHEN BENCHTOPS",
+      "range": "BENCHTOP EXTRAS",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 660,
+      "description": "Premium waterfall end",
+      "type": "product",
+      "price": 1500,
+      "room": "KITCHEN BENCHTOPS",
+      "range": "BENCHTOP EXTRAS",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 661,
+      "description": "Porcelain / sintered waterfall end",
+      "type": "product",
+      "price": 1600,
+      "room": "KITCHEN BENCHTOPS",
+      "range": "BENCHTOP EXTRAS",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 662,
+      "description": "Stone upstand - LM",
+      "type": "product",
+      "price": 180,
+      "room": "KITCHEN BENCHTOPS",
+      "range": "BENCHTOP EXTRAS",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 663,
+      "description": "Full-height stone splashback - m2",
+      "type": "product",
+      "price": 850,
+      "room": "KITCHEN BENCHTOPS",
+      "range": "BENCHTOP EXTRAS",
+      "unit": "M2"
+    },
+    {
+      "sourceRow": 664,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 665,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 666,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 667,
+      "description": "BUTLER'S PANTRY BENCHTOPS",
+      "type": "heading",
+      "level": 1
+    },
+    {
+      "sourceRow": 668,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 669,
+      "description": "STANDARD LAMINATE",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 670,
+      "description": "Standard Laminate - 600mm wide - LM",
+      "type": "product",
+      "price": 350,
+      "room": "BUTLER'S PANTRY BENCHTOPS",
+      "range": "STANDARD LAMINATE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 671,
+      "description": "Standard Laminate - 900mm wide - LM",
+      "type": "product",
+      "price": 525,
+      "room": "BUTLER'S PANTRY BENCHTOPS",
+      "range": "STANDARD LAMINATE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 672,
+      "description": "Standard Laminate - 1200mm wide - LM",
+      "type": "product",
+      "price": 700,
+      "room": "BUTLER'S PANTRY BENCHTOPS",
+      "range": "STANDARD LAMINATE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 673,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 674,
+      "description": "PREMIUM LAMINATE",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 675,
+      "description": "Premium Laminate - 600mm wide - LM",
+      "type": "product",
+      "price": 500,
+      "room": "BUTLER'S PANTRY BENCHTOPS",
+      "range": "PREMIUM LAMINATE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 676,
+      "description": "Premium Laminate - 900mm wide - LM",
+      "type": "product",
+      "price": 750,
+      "room": "BUTLER'S PANTRY BENCHTOPS",
+      "range": "PREMIUM LAMINATE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 677,
+      "description": "Premium Laminate - 1200mm wide - LM",
+      "type": "product",
+      "price": 1000,
+      "room": "BUTLER'S PANTRY BENCHTOPS",
+      "range": "PREMIUM LAMINATE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 678,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 679,
+      "description": "BASE RANGE STONE - 20MM",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 680,
+      "description": "Base Range Stone - 20Mm - 600mm wide - LM",
+      "type": "product",
+      "price": 500,
+      "room": "BUTLER'S PANTRY BENCHTOPS",
+      "range": "BASE RANGE STONE - 20MM",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 681,
+      "description": "Base Range Stone - 20Mm - 900mm wide - LM",
+      "type": "product",
+      "price": 750,
+      "room": "BUTLER'S PANTRY BENCHTOPS",
+      "range": "BASE RANGE STONE - 20MM",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 682,
+      "description": "Base Range Stone - 20Mm - 1200mm wide - LM",
+      "type": "product",
+      "price": 1000,
+      "room": "BUTLER'S PANTRY BENCHTOPS",
+      "range": "BASE RANGE STONE - 20MM",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 683,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 684,
+      "description": "MID RANGE STONE - 20MM",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 685,
+      "description": "Mid Range Stone - 20Mm - 600mm wide - LM",
+      "type": "product",
+      "price": 650,
+      "room": "BUTLER'S PANTRY BENCHTOPS",
+      "range": "MID RANGE STONE - 20MM",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 686,
+      "description": "Mid Range Stone - 20Mm - 900mm wide - LM",
+      "type": "product",
+      "price": 975,
+      "room": "BUTLER'S PANTRY BENCHTOPS",
+      "range": "MID RANGE STONE - 20MM",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 687,
+      "description": "Mid Range Stone - 20Mm - 1200mm wide - LM",
+      "type": "product",
+      "price": 1300,
+      "room": "BUTLER'S PANTRY BENCHTOPS",
+      "range": "MID RANGE STONE - 20MM",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 688,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 689,
+      "description": "HIGH END STONE - 20MM",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 690,
+      "description": "High End Stone - 20Mm - 600mm wide - LM",
+      "type": "product",
+      "price": 800,
+      "room": "BUTLER'S PANTRY BENCHTOPS",
+      "range": "HIGH END STONE - 20MM",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 691,
+      "description": "High End Stone - 20Mm - 900mm wide - LM",
+      "type": "product",
+      "price": 1200,
+      "room": "BUTLER'S PANTRY BENCHTOPS",
+      "range": "HIGH END STONE - 20MM",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 692,
+      "description": "High End Stone - 20Mm - 1200mm wide - LM",
+      "type": "product",
+      "price": 1600,
+      "room": "BUTLER'S PANTRY BENCHTOPS",
+      "range": "HIGH END STONE - 20MM",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 693,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 694,
+      "description": "SOLID SURFACE / ACRYLIC",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 695,
+      "description": "Solid Surface / Acrylic - 600mm wide - LM",
+      "type": "product",
+      "price": 650,
+      "room": "BUTLER'S PANTRY BENCHTOPS",
+      "range": "SOLID SURFACE / ACRYLIC",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 696,
+      "description": "Solid Surface / Acrylic - 900mm wide - LM",
+      "type": "product",
+      "price": 975,
+      "room": "BUTLER'S PANTRY BENCHTOPS",
+      "range": "SOLID SURFACE / ACRYLIC",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 697,
+      "description": "Solid Surface / Acrylic - 1200mm wide - LM",
+      "type": "product",
+      "price": 1300,
+      "room": "BUTLER'S PANTRY BENCHTOPS",
+      "range": "SOLID SURFACE / ACRYLIC",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 698,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 699,
+      "description": "PORCELAIN / SINTERED STONE",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 700,
+      "description": "Porcelain / Sintered Stone - 600mm wide - LM",
+      "type": "product",
+      "price": 900,
+      "room": "BUTLER'S PANTRY BENCHTOPS",
+      "range": "PORCELAIN / SINTERED STONE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 701,
+      "description": "Porcelain / Sintered Stone - 900mm wide - LM",
+      "type": "product",
+      "price": 1350,
+      "room": "BUTLER'S PANTRY BENCHTOPS",
+      "range": "PORCELAIN / SINTERED STONE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 702,
+      "description": "Porcelain / Sintered Stone - 1200mm wide - LM",
+      "type": "product",
+      "price": 1800,
+      "room": "BUTLER'S PANTRY BENCHTOPS",
+      "range": "PORCELAIN / SINTERED STONE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 703,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 704,
+      "description": "SOLID TIMBER - STANDARD RANGE",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 705,
+      "description": "Solid Timber - Standard Range - 600mm wide - LM",
+      "type": "product",
+      "price": 750,
+      "room": "BUTLER'S PANTRY BENCHTOPS",
+      "range": "SOLID TIMBER - STANDARD RANGE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 706,
+      "description": "Solid Timber - Standard Range - 900mm wide - LM",
+      "type": "product",
+      "price": 1125,
+      "room": "BUTLER'S PANTRY BENCHTOPS",
+      "range": "SOLID TIMBER - STANDARD RANGE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 707,
+      "description": "Solid Timber - Standard Range - 1200mm wide - LM",
+      "type": "product",
+      "price": 1500,
+      "room": "BUTLER'S PANTRY BENCHTOPS",
+      "range": "SOLID TIMBER - STANDARD RANGE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 708,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 709,
+      "description": "SOLID TIMBER - PREMIUM RANGE",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 710,
+      "description": "Solid Timber - Premium Range - 600mm wide - LM",
+      "type": "product",
+      "price": 950,
+      "room": "BUTLER'S PANTRY BENCHTOPS",
+      "range": "SOLID TIMBER - PREMIUM RANGE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 711,
+      "description": "Solid Timber - Premium Range - 900mm wide - LM",
+      "type": "product",
+      "price": 1425,
+      "room": "BUTLER'S PANTRY BENCHTOPS",
+      "range": "SOLID TIMBER - PREMIUM RANGE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 712,
+      "description": "Solid Timber - Premium Range - 1200mm wide - LM",
+      "type": "product",
+      "price": 1900,
+      "room": "BUTLER'S PANTRY BENCHTOPS",
+      "range": "SOLID TIMBER - PREMIUM RANGE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 713,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 714,
+      "description": "NATURAL STONE - STANDARD RANGE",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 715,
+      "description": "Natural Stone - Standard Range - 600mm wide - LM",
+      "type": "product",
+      "price": 900,
+      "room": "BUTLER'S PANTRY BENCHTOPS",
+      "range": "NATURAL STONE - STANDARD RANGE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 716,
+      "description": "Natural Stone - Standard Range - 900mm wide - LM",
+      "type": "product",
+      "price": 1350,
+      "room": "BUTLER'S PANTRY BENCHTOPS",
+      "range": "NATURAL STONE - STANDARD RANGE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 717,
+      "description": "Natural Stone - Standard Range - 1200mm wide - LM",
+      "type": "product",
+      "price": 1800,
+      "room": "BUTLER'S PANTRY BENCHTOPS",
+      "range": "NATURAL STONE - STANDARD RANGE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 718,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 719,
+      "description": "NATURAL STONE - PREMIUM RANGE",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 720,
+      "description": "Natural Stone - Premium Range - 600mm wide - LM",
+      "type": "product",
+      "price": 1200,
+      "room": "BUTLER'S PANTRY BENCHTOPS",
+      "range": "NATURAL STONE - PREMIUM RANGE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 721,
+      "description": "Natural Stone - Premium Range - 900mm wide - LM",
+      "type": "product",
+      "price": 1800,
+      "room": "BUTLER'S PANTRY BENCHTOPS",
+      "range": "NATURAL STONE - PREMIUM RANGE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 722,
+      "description": "Natural Stone - Premium Range - 1200mm wide - LM",
+      "type": "product",
+      "price": 2400,
+      "room": "BUTLER'S PANTRY BENCHTOPS",
+      "range": "NATURAL STONE - PREMIUM RANGE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 723,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 724,
+      "description": "EXOTIC MARBLE / QUARTZITE",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 725,
+      "description": "Exotic Marble / Quartzite - 600mm wide - LM",
+      "type": "product",
+      "price": 1500,
+      "room": "BUTLER'S PANTRY BENCHTOPS",
+      "range": "EXOTIC MARBLE / QUARTZITE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 726,
+      "description": "Exotic Marble / Quartzite - 900mm wide - LM",
+      "type": "product",
+      "price": 2250,
+      "room": "BUTLER'S PANTRY BENCHTOPS",
+      "range": "EXOTIC MARBLE / QUARTZITE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 727,
+      "description": "Exotic Marble / Quartzite - 1200mm wide - LM",
+      "type": "product",
+      "price": 3000,
+      "room": "BUTLER'S PANTRY BENCHTOPS",
+      "range": "EXOTIC MARBLE / QUARTZITE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 728,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 729,
+      "description": "BENCHTOP EXTRAS",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 730,
+      "description": "Standard sink cutout",
+      "type": "product",
+      "price": 180,
+      "room": "BUTLER'S PANTRY BENCHTOPS",
+      "range": "BENCHTOP EXTRAS",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 731,
+      "description": "Undermount sink cutout & polish",
+      "type": "product",
+      "price": 300,
+      "room": "BUTLER'S PANTRY BENCHTOPS",
+      "range": "BENCHTOP EXTRAS",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 732,
+      "description": "Standard cooktop cutout",
+      "type": "product",
+      "price": 180,
+      "room": "BUTLER'S PANTRY BENCHTOPS",
+      "range": "BENCHTOP EXTRAS",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 733,
+      "description": "Flush cooktop cutout",
+      "type": "product",
+      "price": 300,
+      "room": "BUTLER'S PANTRY BENCHTOPS",
+      "range": "BENCHTOP EXTRAS",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 734,
+      "description": "Tap hole",
+      "type": "product",
+      "price": 60,
+      "room": "BUTLER'S PANTRY BENCHTOPS",
+      "range": "BENCHTOP EXTRAS",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 735,
+      "description": "Drainer grooves - set",
+      "type": "product",
+      "price": 300,
+      "room": "BUTLER'S PANTRY BENCHTOPS",
+      "range": "BENCHTOP EXTRAS",
+      "unit": "SET"
+    },
+    {
+      "sourceRow": 736,
+      "description": "40mm mitred edge upgrade - LM",
+      "type": "product",
+      "price": 350,
+      "room": "BUTLER'S PANTRY BENCHTOPS",
+      "range": "BENCHTOP EXTRAS",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 737,
+      "description": "60mm mitred edge upgrade - LM",
+      "type": "product",
+      "price": 475,
+      "room": "BUTLER'S PANTRY BENCHTOPS",
+      "range": "BENCHTOP EXTRAS",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 738,
+      "description": "Standard waterfall end",
+      "type": "product",
+      "price": 1100,
+      "room": "BUTLER'S PANTRY BENCHTOPS",
+      "range": "BENCHTOP EXTRAS",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 739,
+      "description": "Premium waterfall end",
+      "type": "product",
+      "price": 1500,
+      "room": "BUTLER'S PANTRY BENCHTOPS",
+      "range": "BENCHTOP EXTRAS",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 740,
+      "description": "Porcelain / sintered waterfall end",
+      "type": "product",
+      "price": 1600,
+      "room": "BUTLER'S PANTRY BENCHTOPS",
+      "range": "BENCHTOP EXTRAS",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 741,
+      "description": "Stone upstand - LM",
+      "type": "product",
+      "price": 180,
+      "room": "BUTLER'S PANTRY BENCHTOPS",
+      "range": "BENCHTOP EXTRAS",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 742,
+      "description": "Full-height stone splashback - m2",
+      "type": "product",
+      "price": 850,
+      "room": "BUTLER'S PANTRY BENCHTOPS",
+      "range": "BENCHTOP EXTRAS",
+      "unit": "M2"
+    },
+    {
+      "sourceRow": 743,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 744,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 745,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 746,
+      "description": "LAUNDRY BENCHTOPS",
+      "type": "heading",
+      "level": 1
+    },
+    {
+      "sourceRow": 747,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 748,
+      "description": "STANDARD LAMINATE",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 749,
+      "description": "Standard Laminate - 600mm wide - LM",
+      "type": "product",
+      "price": 350,
+      "room": "LAUNDRY BENCHTOPS",
+      "range": "STANDARD LAMINATE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 750,
+      "description": "Standard Laminate - 900mm wide - LM",
+      "type": "product",
+      "price": 525,
+      "room": "LAUNDRY BENCHTOPS",
+      "range": "STANDARD LAMINATE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 751,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 752,
+      "description": "PREMIUM LAMINATE",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 753,
+      "description": "Premium Laminate - 600mm wide - LM",
+      "type": "product",
+      "price": 500,
+      "room": "LAUNDRY BENCHTOPS",
+      "range": "PREMIUM LAMINATE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 754,
+      "description": "Premium Laminate - 900mm wide - LM",
+      "type": "product",
+      "price": 750,
+      "room": "LAUNDRY BENCHTOPS",
+      "range": "PREMIUM LAMINATE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 755,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 756,
+      "description": "BASE RANGE STONE - 20MM",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 757,
+      "description": "Base Range Stone - 20Mm - 600mm wide - LM",
+      "type": "product",
+      "price": 500,
+      "room": "LAUNDRY BENCHTOPS",
+      "range": "BASE RANGE STONE - 20MM",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 758,
+      "description": "Base Range Stone - 20Mm - 900mm wide - LM",
+      "type": "product",
+      "price": 750,
+      "room": "LAUNDRY BENCHTOPS",
+      "range": "BASE RANGE STONE - 20MM",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 759,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 760,
+      "description": "MID RANGE STONE - 20MM",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 761,
+      "description": "Mid Range Stone - 20Mm - 600mm wide - LM",
+      "type": "product",
+      "price": 650,
+      "room": "LAUNDRY BENCHTOPS",
+      "range": "MID RANGE STONE - 20MM",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 762,
+      "description": "Mid Range Stone - 20Mm - 900mm wide - LM",
+      "type": "product",
+      "price": 975,
+      "room": "LAUNDRY BENCHTOPS",
+      "range": "MID RANGE STONE - 20MM",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 763,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 764,
+      "description": "HIGH END STONE - 20MM",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 765,
+      "description": "High End Stone - 20Mm - 600mm wide - LM",
+      "type": "product",
+      "price": 800,
+      "room": "LAUNDRY BENCHTOPS",
+      "range": "HIGH END STONE - 20MM",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 766,
+      "description": "High End Stone - 20Mm - 900mm wide - LM",
+      "type": "product",
+      "price": 1200,
+      "room": "LAUNDRY BENCHTOPS",
+      "range": "HIGH END STONE - 20MM",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 767,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 768,
+      "description": "SOLID SURFACE / ACRYLIC",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 769,
+      "description": "Solid Surface / Acrylic - 600mm wide - LM",
+      "type": "product",
+      "price": 650,
+      "room": "LAUNDRY BENCHTOPS",
+      "range": "SOLID SURFACE / ACRYLIC",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 770,
+      "description": "Solid Surface / Acrylic - 900mm wide - LM",
+      "type": "product",
+      "price": 975,
+      "room": "LAUNDRY BENCHTOPS",
+      "range": "SOLID SURFACE / ACRYLIC",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 771,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 772,
+      "description": "PORCELAIN / SINTERED STONE",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 773,
+      "description": "Porcelain / Sintered Stone - 600mm wide - LM",
+      "type": "product",
+      "price": 900,
+      "room": "LAUNDRY BENCHTOPS",
+      "range": "PORCELAIN / SINTERED STONE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 774,
+      "description": "Porcelain / Sintered Stone - 900mm wide - LM",
+      "type": "product",
+      "price": 1350,
+      "room": "LAUNDRY BENCHTOPS",
+      "range": "PORCELAIN / SINTERED STONE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 775,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 776,
+      "description": "SOLID TIMBER - STANDARD RANGE",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 777,
+      "description": "Solid Timber - Standard Range - 600mm wide - LM",
+      "type": "product",
+      "price": 750,
+      "room": "LAUNDRY BENCHTOPS",
+      "range": "SOLID TIMBER - STANDARD RANGE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 778,
+      "description": "Solid Timber - Standard Range - 900mm wide - LM",
+      "type": "product",
+      "price": 1125,
+      "room": "LAUNDRY BENCHTOPS",
+      "range": "SOLID TIMBER - STANDARD RANGE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 779,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 780,
+      "description": "SOLID TIMBER - PREMIUM RANGE",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 781,
+      "description": "Solid Timber - Premium Range - 600mm wide - LM",
+      "type": "product",
+      "price": 950,
+      "room": "LAUNDRY BENCHTOPS",
+      "range": "SOLID TIMBER - PREMIUM RANGE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 782,
+      "description": "Solid Timber - Premium Range - 900mm wide - LM",
+      "type": "product",
+      "price": 1425,
+      "room": "LAUNDRY BENCHTOPS",
+      "range": "SOLID TIMBER - PREMIUM RANGE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 783,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 784,
+      "description": "NATURAL STONE - STANDARD RANGE",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 785,
+      "description": "Natural Stone - Standard Range - 600mm wide - LM",
+      "type": "product",
+      "price": 900,
+      "room": "LAUNDRY BENCHTOPS",
+      "range": "NATURAL STONE - STANDARD RANGE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 786,
+      "description": "Natural Stone - Standard Range - 900mm wide - LM",
+      "type": "product",
+      "price": 1350,
+      "room": "LAUNDRY BENCHTOPS",
+      "range": "NATURAL STONE - STANDARD RANGE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 787,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 788,
+      "description": "NATURAL STONE - PREMIUM RANGE",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 789,
+      "description": "Natural Stone - Premium Range - 600mm wide - LM",
+      "type": "product",
+      "price": 1200,
+      "room": "LAUNDRY BENCHTOPS",
+      "range": "NATURAL STONE - PREMIUM RANGE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 790,
+      "description": "Natural Stone - Premium Range - 900mm wide - LM",
+      "type": "product",
+      "price": 1800,
+      "room": "LAUNDRY BENCHTOPS",
+      "range": "NATURAL STONE - PREMIUM RANGE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 791,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 792,
+      "description": "EXOTIC MARBLE / QUARTZITE",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 793,
+      "description": "Exotic Marble / Quartzite - 600mm wide - LM",
+      "type": "product",
+      "price": 1500,
+      "room": "LAUNDRY BENCHTOPS",
+      "range": "EXOTIC MARBLE / QUARTZITE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 794,
+      "description": "Exotic Marble / Quartzite - 900mm wide - LM",
+      "type": "product",
+      "price": 2250,
+      "room": "LAUNDRY BENCHTOPS",
+      "range": "EXOTIC MARBLE / QUARTZITE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 795,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 796,
+      "description": "BENCHTOP EXTRAS",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 797,
+      "description": "Standard sink cutout",
+      "type": "product",
+      "price": 180,
+      "room": "LAUNDRY BENCHTOPS",
+      "range": "BENCHTOP EXTRAS",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 798,
+      "description": "Undermount sink cutout & polish",
+      "type": "product",
+      "price": 300,
+      "room": "LAUNDRY BENCHTOPS",
+      "range": "BENCHTOP EXTRAS",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 799,
+      "description": "Tap hole",
+      "type": "product",
+      "price": 60,
+      "room": "LAUNDRY BENCHTOPS",
+      "range": "BENCHTOP EXTRAS",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 800,
+      "description": "Drainer grooves - set",
+      "type": "product",
+      "price": 300,
+      "room": "LAUNDRY BENCHTOPS",
+      "range": "BENCHTOP EXTRAS",
+      "unit": "SET"
+    },
+    {
+      "sourceRow": 801,
+      "description": "40mm mitred edge upgrade - LM",
+      "type": "product",
+      "price": 350,
+      "room": "LAUNDRY BENCHTOPS",
+      "range": "BENCHTOP EXTRAS",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 802,
+      "description": "60mm mitred edge upgrade - LM",
+      "type": "product",
+      "price": 475,
+      "room": "LAUNDRY BENCHTOPS",
+      "range": "BENCHTOP EXTRAS",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 803,
+      "description": "Standard waterfall end",
+      "type": "product",
+      "price": 1100,
+      "room": "LAUNDRY BENCHTOPS",
+      "range": "BENCHTOP EXTRAS",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 804,
+      "description": "Premium waterfall end",
+      "type": "product",
+      "price": 1500,
+      "room": "LAUNDRY BENCHTOPS",
+      "range": "BENCHTOP EXTRAS",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 805,
+      "description": "Porcelain / sintered waterfall end",
+      "type": "product",
+      "price": 1600,
+      "room": "LAUNDRY BENCHTOPS",
+      "range": "BENCHTOP EXTRAS",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 806,
+      "description": "Stone upstand - LM",
+      "type": "product",
+      "price": 180,
+      "room": "LAUNDRY BENCHTOPS",
+      "range": "BENCHTOP EXTRAS",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 807,
+      "description": "Full-height stone splashback - m2",
+      "type": "product",
+      "price": 850,
+      "room": "LAUNDRY BENCHTOPS",
+      "range": "BENCHTOP EXTRAS",
+      "unit": "M2"
+    },
+    {
+      "sourceRow": 808,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 809,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 810,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 811,
+      "description": "BATHROOM BENCHTOPS",
+      "type": "heading",
+      "level": 1
+    },
+    {
+      "sourceRow": 812,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 813,
+      "description": "STANDARD LAMINATE",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 814,
+      "description": "Standard Laminate - 600mm wide - LM",
+      "type": "product",
+      "price": 350,
+      "room": "BATHROOM BENCHTOPS",
+      "range": "STANDARD LAMINATE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 815,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 816,
+      "description": "PREMIUM LAMINATE",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 817,
+      "description": "Premium Laminate - 600mm wide - LM",
+      "type": "product",
+      "price": 500,
+      "room": "BATHROOM BENCHTOPS",
+      "range": "PREMIUM LAMINATE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 818,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 819,
+      "description": "BASE RANGE STONE - 20MM",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 820,
+      "description": "Base Range Stone - 20Mm - 600mm wide - LM",
+      "type": "product",
+      "price": 500,
+      "room": "BATHROOM BENCHTOPS",
+      "range": "BASE RANGE STONE - 20MM",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 821,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 822,
+      "description": "MID RANGE STONE - 20MM",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 823,
+      "description": "Mid Range Stone - 20Mm - 600mm wide - LM",
+      "type": "product",
+      "price": 650,
+      "room": "BATHROOM BENCHTOPS",
+      "range": "MID RANGE STONE - 20MM",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 824,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 825,
+      "description": "HIGH END STONE - 20MM",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 826,
+      "description": "High End Stone - 20Mm - 600mm wide - LM",
+      "type": "product",
+      "price": 800,
+      "room": "BATHROOM BENCHTOPS",
+      "range": "HIGH END STONE - 20MM",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 827,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 828,
+      "description": "SOLID SURFACE / ACRYLIC",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 829,
+      "description": "Solid Surface / Acrylic - 600mm wide - LM",
+      "type": "product",
+      "price": 650,
+      "room": "BATHROOM BENCHTOPS",
+      "range": "SOLID SURFACE / ACRYLIC",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 830,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 831,
+      "description": "PORCELAIN / SINTERED STONE",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 832,
+      "description": "Porcelain / Sintered Stone - 600mm wide - LM",
+      "type": "product",
+      "price": 900,
+      "room": "BATHROOM BENCHTOPS",
+      "range": "PORCELAIN / SINTERED STONE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 833,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 834,
+      "description": "SOLID TIMBER - STANDARD RANGE",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 835,
+      "description": "Solid Timber - Standard Range - 600mm wide - LM",
+      "type": "product",
+      "price": 750,
+      "room": "BATHROOM BENCHTOPS",
+      "range": "SOLID TIMBER - STANDARD RANGE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 836,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 837,
+      "description": "SOLID TIMBER - PREMIUM RANGE",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 838,
+      "description": "Solid Timber - Premium Range - 600mm wide - LM",
+      "type": "product",
+      "price": 950,
+      "room": "BATHROOM BENCHTOPS",
+      "range": "SOLID TIMBER - PREMIUM RANGE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 839,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 840,
+      "description": "NATURAL STONE - STANDARD RANGE",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 841,
+      "description": "Natural Stone - Standard Range - 600mm wide - LM",
+      "type": "product",
+      "price": 900,
+      "room": "BATHROOM BENCHTOPS",
+      "range": "NATURAL STONE - STANDARD RANGE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 842,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 843,
+      "description": "NATURAL STONE - PREMIUM RANGE",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 844,
+      "description": "Natural Stone - Premium Range - 600mm wide - LM",
+      "type": "product",
+      "price": 1200,
+      "room": "BATHROOM BENCHTOPS",
+      "range": "NATURAL STONE - PREMIUM RANGE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 845,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 846,
+      "description": "EXOTIC MARBLE / QUARTZITE",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 847,
+      "description": "Exotic Marble / Quartzite - 600mm wide - LM",
+      "type": "product",
+      "price": 1500,
+      "room": "BATHROOM BENCHTOPS",
+      "range": "EXOTIC MARBLE / QUARTZITE",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 848,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 849,
+      "description": "BENCHTOP EXTRAS",
+      "type": "heading",
+      "level": 2
+    },
+    {
+      "sourceRow": 850,
+      "description": "Standard sink cutout",
+      "type": "product",
+      "price": 180,
+      "room": "BATHROOM BENCHTOPS",
+      "range": "BENCHTOP EXTRAS",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 851,
+      "description": "Undermount sink cutout & polish",
+      "type": "product",
+      "price": 300,
+      "room": "BATHROOM BENCHTOPS",
+      "range": "BENCHTOP EXTRAS",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 852,
+      "description": "Tap hole",
+      "type": "product",
+      "price": 60,
+      "room": "BATHROOM BENCHTOPS",
+      "range": "BENCHTOP EXTRAS",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 853,
+      "description": "40mm mitred edge upgrade - LM",
+      "type": "product",
+      "price": 350,
+      "room": "BATHROOM BENCHTOPS",
+      "range": "BENCHTOP EXTRAS",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 854,
+      "description": "60mm mitred edge upgrade - LM",
+      "type": "product",
+      "price": 475,
+      "room": "BATHROOM BENCHTOPS",
+      "range": "BENCHTOP EXTRAS",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 855,
+      "description": "Standard waterfall end",
+      "type": "product",
+      "price": 1100,
+      "room": "BATHROOM BENCHTOPS",
+      "range": "BENCHTOP EXTRAS",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 856,
+      "description": "Premium waterfall end",
+      "type": "product",
+      "price": 1500,
+      "room": "BATHROOM BENCHTOPS",
+      "range": "BENCHTOP EXTRAS",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 857,
+      "description": "Porcelain / sintered waterfall end",
+      "type": "product",
+      "price": 1600,
+      "room": "BATHROOM BENCHTOPS",
+      "range": "BENCHTOP EXTRAS",
+      "unit": "ITEM"
+    },
+    {
+      "sourceRow": 858,
+      "description": "Stone upstand - LM",
+      "type": "product",
+      "price": 180,
+      "room": "BATHROOM BENCHTOPS",
+      "range": "BENCHTOP EXTRAS",
+      "unit": "LM"
+    },
+    {
+      "sourceRow": 859,
+      "description": "Full-height stone splashback - m2",
+      "type": "product",
+      "price": 850,
+      "room": "BATHROOM BENCHTOPS",
+      "range": "BENCHTOP EXTRAS",
+      "unit": "M2"
+    },
+    {
+      "sourceRow": 860,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 861,
+      "description": "",
+      "type": "spacer"
+    },
+    {
+      "sourceRow": 862,
+      "description": "",
+      "type": "spacer"
+    }
+  ]
+}

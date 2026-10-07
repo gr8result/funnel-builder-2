@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { supabase } from "../../../../utils/supabase-client";
 import LeadDetailsModal from "../../../../components/crm/LeadDetailsModal";
+import { useWorkspace } from "../../../../hooks/useWorkspace";
 
 const TEAM_STORAGE_KEY_PREFIX = "crm:pipeline:teams:";
 const LEAD_META_KEY_PREFIX = "crm:pipeline:leadMeta:";
@@ -128,6 +129,7 @@ function StatusPill({ value }) {
 }
 
 export default function CRMDealsPage() {
+  const { workspaceId } = useWorkspace();
   const [userId, setUserId] = useState("");
   const [leads, setLeads] = useState([]);
   const [teams, setTeams] = useState([]);
@@ -155,7 +157,7 @@ export default function CRMDealsPage() {
       const uid = authData?.user?.id || "";
       setUserId(uid);
 
-      if (!uid) {
+      if (!uid || !workspaceId) {
         setLeads([]);
         setTeams([]);
         setLeadMetaMap({});
@@ -166,7 +168,7 @@ export default function CRMDealsPage() {
       const { data: leadRows, error: leadError } = await supabase
         .from("leads")
         .select("*")
-        .eq("user_id", uid)
+        .eq("workspace_id", workspaceId)
         .order("created_at", { ascending: false });
 
       if (leadError) {
@@ -176,8 +178,8 @@ export default function CRMDealsPage() {
         setLeads(leadRows || []);
       }
 
-      setTeams(readStoredJson(`${TEAM_STORAGE_KEY_PREFIX}${uid}`, []));
-      setLeadMetaMap(readStoredJson(`${LEAD_META_KEY_PREFIX}${uid}`, {}));
+      setTeams(readStoredJson(`${TEAM_STORAGE_KEY_PREFIX}${workspaceId}`, readStoredJson(`${TEAM_STORAGE_KEY_PREFIX}${uid}`, [])));
+      setLeadMetaMap(readStoredJson(`${LEAD_META_KEY_PREFIX}${workspaceId}`, readStoredJson(`${LEAD_META_KEY_PREFIX}${uid}`, {})));
     } catch (err) {
       console.error("CRM deals load exception:", err);
       setLeads([]);
@@ -188,7 +190,7 @@ export default function CRMDealsPage() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [workspaceId]);
 
   const enrichedLeads = useMemo(
     () =>
@@ -299,7 +301,7 @@ export default function CRMDealsPage() {
   function handleLeadCrmMetaSave(leadId, meta) {
     setLeadMetaMap((prev) => {
       const next = { ...prev, [leadId]: meta || {} };
-      if (userId) writeStoredJson(`${LEAD_META_KEY_PREFIX}${userId}`, next);
+      if (workspaceId) writeStoredJson(`${LEAD_META_KEY_PREFIX}${workspaceId}`, next);
       return next;
     });
 

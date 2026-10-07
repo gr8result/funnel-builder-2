@@ -5,10 +5,35 @@ import { fileURLToPath } from "url";
 
 const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const nextSwcLoaderPath = require.resolve("next/dist/build/webpack/loaders/next-swc-loader");
+
+function pinNextSwcLoader(rule) {
+  if (!rule || typeof rule !== "object") return;
+  if (rule.loader === "next-swc-loader") {
+    rule.loader = nextSwcLoaderPath;
+  }
+  if (Array.isArray(rule.use)) {
+    rule.use.forEach((entry) => {
+      if (typeof entry === "string") return;
+      pinNextSwcLoader(entry);
+    });
+  }
+  if (Array.isArray(rule.oneOf)) rule.oneOf.forEach(pinNextSwcLoader);
+  if (Array.isArray(rule.rules)) rule.rules.forEach(pinNextSwcLoader);
+}
 
 const nextConfig = {
   reactStrictMode: true,
   distDir: process.env.NEXT_DIST_DIR || ".next",
+
+  // Keep serverless functions under Vercel's 250 MB unzipped limit.
+  // A path.join(process.cwd(), "<dir>") in an API route makes output file tracing
+  // package that entire directory into the function.
+  outputFileTracingExcludes: {
+    // public/images is ~730 MB of static product imagery served by the CDN. No API
+    // route reads it from disk; fetch those files by URL instead of using fs.
+    "/api/**": ["public/images/**/*"],
+  },
 
   eslint: {
     ignoreDuringBuilds: false,
@@ -57,20 +82,31 @@ const nextConfig = {
     };
 
     config.resolve = config.resolve || {};
+    const pagesDir = path.resolve(__dirname, "pages");
     const aliases = {
       ...(config.resolve.alias || {}),
       immer: require.resolve("immer"),
+      "private-next-pages": pagesDir,
+      "private-next-pages/_app": path.resolve(pagesDir, "_app.js"),
+      "private-next-pages/_app.js": path.resolve(pagesDir, "_app.js"),
+      "private-next-pages/_error": path.resolve(pagesDir, "_error.js"),
+      "private-next-pages/_error.js": path.resolve(pagesDir, "_error.js"),
+      "private-next-pages/_document": path.resolve(pagesDir, "_document.js"),
+      "private-next-pages/_document.js": path.resolve(pagesDir, "_document.js"),
     };
-
-    if (dev && nextRuntime !== "edge") {
-      aliases["private-next-pages/_app"] = path.join(__dirname, "pages", "_app.js");
-      aliases["private-next-pages/_error"] = path.join(__dirname, "pages", "_error.js");
-      aliases["private-next-pages/_document"] = path.join(__dirname, "pages", "_document.js");
-    }
+    const loaderAliases = {
+      ...(config.resolveLoader?.alias || {}),
+      "next-swc-loader": nextSwcLoaderPath,
+    };
 
     config.resolve.alias = {
       ...aliases,
     };
+    config.resolveLoader = {
+      ...(config.resolveLoader || {}),
+      alias: loaderAliases,
+    };
+    config.module?.rules?.forEach(pinNextSwcLoader);
     return config;
   },
 };

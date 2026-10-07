@@ -1,0 +1,369 @@
+{
+  "checkedAt": "2026-09-30",
+  "supplier": "Harvey Norman Commercial",
+  "endpoint": "https://www.harveynormancommercial.com.au/api/magento-proxy",
+  "batch": "hnc-bathroom-five-brands-v1",
+  "requestedBrands": [
+    "Caroma",
+    "Phoenix",
+    "Parisi",
+    "Astrawalker",
+    "Forme"
+  ],
+  "perBrandType": 2,
+  "coverage": [
+    {
+      "type": "towel-rail",
+      "brand": "Caroma",
+      "supplierCount": 96,
+      "selected": [
+        "849036C",
+        "849036B"
+      ]
+    },
+    {
+      "type": "towel-rail",
+      "brand": "Phoenix",
+      "supplierCount": 109,
+      "selected": [
+        "111-8030-31",
+        "129-8010-00"
+      ]
+    },
+    {
+      "type": "towel-rail",
+      "brand": "Parisi",
+      "supplierCount": 88,
+      "selected": [
+        "TO.TR30.48",
+        "NE03812.02"
+      ]
+    },
+    {
+      "type": "towel-rail",
+      "brand": "Astrawalker",
+      "supplierCount": 9,
+      "selected": [
+        "A51.55.6.00",
+        "A69.55.6.35"
+      ]
+    },
+    {
+      "type": "towel-rail",
+      "brand": "Forme",
+      "supplierCount": 2,
+      "selected": []
+    },
+    {
+      "type": "toilet-roll-holder",
+      "brand": "Caroma",
+      "supplierCount": 19,
+      "selected": [
+        "303128C",
+        "99607BL"
+      ]
+    },
+    {
+      "type": "toilet-roll-holder",
+      "brand": "Phoenix",
+      "supplierCount": 30,
+      "selected": [
+        "111-8200-00",
+        "RA892MB"
+      ]
+    },
+    {
+      "type": "toilet-roll-holder",
+      "brand": "Parisi",
+      "supplierCount": 41,
+      "selected": [
+        "NE016",
+        "NE036.02"
+      ]
+    },
+    {
+      "type": "toilet-roll-holder",
+      "brand": "Astrawalker",
+      "supplierCount": 5,
+      "selected": [
+        "A51.61.00"
+      ]
+    },
+    {
+      "type": "toilet-roll-holder",
+      "brand": "Forme",
+      "supplierCount": 0,
+      "selected": []
+    },
+    {
+      "type": "hand-towel",
+      "brand": "Caroma",
+      "supplierCount": 6,
+      "selected": [
+        "305102C",
+        "520032BB"
+      ]
+    },
+    {
+      "type": "hand-towel",
+      "brand": "Phoenix",
+      "supplierCount": 13,
+      "selected": [
+        "RA893CHR",
+        "134-8500-10"
+      ]
+    },
+    {
+      "type": "hand-towel",
+      "brand": "Parisi",
+      "supplierCount": 25,
+      "selected": [
+        "NE015",
+        "NE035.02"
+      ]
+    },
+    {
+      "type": "hand-towel",
+      "brand": "Astrawalker",
+      "supplierCount": 0,
+      "selected": []
+    },
+    {
+      "type": "hand-towel",
+      "brand": "Forme",
+      "supplierCount": 0,
+      "selected": []
+    },
+    {
+      "type": "heated-towel-rail",
+      "brand": "Caroma",
+      "supplierCount": 30,
+      "selected": [
+        "11202084PSS",
+        "11225049B"
+      ]
+    },
+    {
+      "type": "heated-towel-rail",
+      "brand": "Phoenix",
+      "supplierCount": 27,
+      "selected": [
+        "650-8761-10",
+        "650-8763-00"
+      ]
+    },
+    {
+      "type": "heated-towel-rail",
+      "brand": "Parisi",
+      "supplierCount": 24,
+      "selected": [
+        "TO.HTR60-A2",
+        "PV.HTR.02"
+      ]
+    },
+    {
+      "type": "heated-towel-rail",
+      "brand": "Astrawalker",
+      "supplierCount": 4,
+      "selected": [
+        "A69.58.V2.H.600.10",
+        "A69.58.V2.H.600.35"
+      ]
+    },
+    {
+      "type": "heated-towel-rail",
+      "brand": "Forme",
+      "supplierCount": 46,
+      "selected": [
+        "HLF6011R-BL",
+        "HTR-VERTSNGGMG"
+      ]
+    },
+    {
+      "type": "robe-hook",
+      "brand": "Caroma",
+      "supplierCount": 25,
+      "selected": [
+        "309128C",
+        "99608BB"
+      ]
+    },
+    {
+      "type": "robe-hook",
+      "brand": "Phoenix",
+      "supplierCount": 24,
+      "selected": [
+        "111-8400-00",
+        "RA897MB"
+      ]
+    },
+    {
+      "type": "robe-hook",
+      "brand": "Parisi",
+      "supplierCount": 35,
+      "selected": [
+        "NE021.02",
+        "NE021.41"
+      ]
+    },
+    {
+      "type": "robe-hook",
+      "brand": "Astrawalker",
+      "supplierCount": 9,
+      "selected": [
+        "A69.63.35",
+        "A69.63.37"
+      ]
+    },
+    {
+      "type": "robe-hook",
+      "brand": "Forme",
+      "supplierCount": 0,
+      "selected": []
+    }
+  ],
+  "dryRun": true,
+  "imported": 0,
+  "updated": 39,
+  "duplicateSupplierCodes": [],
+  "rejected": [],
+  "images": [],
+  "categories": [
+    {
+      "key": "towel-rail",
+      "label": "Towel Rails",
+      "count": 8,
+      "brands": [
+        "Astrawalker",
+        "Caroma",
+        "Parisi",
+        "Phoenix"
+      ]
+    },
+    {
+      "key": "heated-towel-rail",
+      "label": "Heated Towel Rails",
+      "count": 10,
+      "brands": [
+        "Astrawalker",
+        "Caroma",
+        "Forme",
+        "Parisi",
+        "Phoenix"
+      ]
+    },
+    {
+      "key": "hand-towel",
+      "label": "Hand Towel Rings / Rails",
+      "count": 6,
+      "brands": [
+        "Caroma",
+        "Parisi",
+        "Phoenix"
+      ]
+    },
+    {
+      "key": "robe-hook",
+      "label": "Robe Hooks",
+      "count": 8,
+      "brands": [
+        "Astrawalker",
+        "Caroma",
+        "Parisi",
+        "Phoenix"
+      ]
+    },
+    {
+      "key": "toilet-roll-holder",
+      "label": "Toilet Roll Holders",
+      "count": 7,
+      "brands": [
+        "Astrawalker",
+        "Caroma",
+        "Parisi",
+        "Phoenix"
+      ]
+    }
+  ],
+  "brands": {
+    "Phoenix": 10,
+    "Caroma": 10,
+    "Astrawalker": 7,
+    "Forme": 2,
+    "Parisi": 10
+  },
+  "finishes": {
+    "Brushed Carbon": 1,
+    "Chrome": 14,
+    "Stainless Steel": 1,
+    "Matte Black": 11,
+    "Brushed Brass": 5,
+    "Satin Black": 1,
+    "Grey": 1,
+    "Bronze": 1,
+    "Black": 1,
+    "Gun Metal Grey PVD": 1,
+    "Brushed Nickel": 1,
+    "Matte Bronze": 1
+  },
+  "before": {
+    "count": 176,
+    "categories": [
+      {
+        "key": "towel-rail",
+        "count": 36
+      },
+      {
+        "key": "heated-towel-rail",
+        "count": 10
+      },
+      {
+        "key": "hand-towel",
+        "count": 26
+      },
+      {
+        "key": "robe-hook",
+        "count": 24
+      },
+      {
+        "key": "toilet-roll-holder",
+        "count": 23
+      },
+      {
+        "key": "toilet-brush",
+        "count": 9
+      },
+      {
+        "key": "soap-dish",
+        "count": 9
+      },
+      {
+        "key": "soap-dispenser",
+        "count": 3
+      },
+      {
+        "key": "shower-shelf",
+        "count": 1
+      },
+      {
+        "key": "bathroom-shelf",
+        "count": 4
+      },
+      {
+        "key": "bathroom-floor-waste",
+        "count": 30
+      },
+      {
+        "key": "toilet-seat-accessory",
+        "count": 1
+      }
+    ]
+  },
+  "stagedProducts": 39,
+  "prices": {
+    "min": 27,
+    "max": 1183,
+    "published": 39,
+    "quoteRequired": 0
+  }
+}

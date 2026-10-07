@@ -21,7 +21,7 @@ function parseStoragePath(value = "") {
 }
 
 function isInclusionsSourceType(sourceType = "") {
-  return ["standard_inclusions", "modified_inclusions"].includes(String(sourceType || ""));
+  return ["standard_inclusions", "modified_inclusions", "project_specific_inclusions"].includes(String(sourceType || ""));
 }
 
 function isQuoteProposalInclusionsRow(row = {}) {
@@ -79,7 +79,7 @@ export default async function handler(req, res) {
     if (rowIds.length) {
       const { error } = await supabaseAdmin
         .from("builder_project_documents")
-        .update({ status: "removed", updated_at: new Date().toISOString() })
+        .update({ status: "deleted", updated_at: new Date().toISOString() })
         .in("id", rowIds);
       if (error) throw error;
     }

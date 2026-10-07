@@ -1,0 +1,464 @@
+{
+  "data": {
+    "__type": {
+      "fields": [
+        {
+          "name": "brand_label",
+          "type": {
+            "kind": "SCALAR",
+            "name": "String",
+            "ofType": null
+          }
+        },
+        {
+          "name": "canonical_url",
+          "type": {
+            "kind": "SCALAR",
+            "name": "String",
+            "ofType": null
+          }
+        },
+        {
+          "name": "categories",
+          "type": {
+            "kind": "LIST",
+            "name": null,
+            "ofType": {
+              "kind": "INTERFACE",
+              "name": "CategoryInterface"
+            }
+          }
+        },
+        {
+          "name": "color",
+          "type": {
+            "kind": "SCALAR",
+            "name": "String",
+            "ofType": null
+          }
+        },
+        {
+          "name": "country_of_manufacture",
+          "type": {
+            "kind": "SCALAR",
+            "name": "String",
+            "ofType": null
+          }
+        },
+        {
+          "name": "crosssell_products",
+          "type": {
+            "kind": "LIST",
+            "name": null,
+            "ofType": {
+              "kind": "INTERFACE",
+              "name": "ProductInterface"
+            }
+          }
+        },
+        {
+          "name": "custom_attributesV2",
+          "type": {
+            "kind": "OBJECT",
+            "name": "ProductCustomAttributes",
+            "ofType": null
+          }
+        },
+        {
+          "name": "description",
+          "type": {
+            "kind": "OBJECT",
+            "name": "ComplexTextValue",
+            "ofType": null
+          }
+        },
+        {
+          "name": "dimension",
+          "type": {
+            "kind": "SCALAR",
+            "name": "String",
+            "ofType": null
+          }
+        },
+        {
+          "name": "gift_message_available",
+          "type": {
+            "kind": "SCALAR",
+            "name": "String",
+            "ofType": null
+          }
+        },
+        {
+          "name": "image",
+          "type": {
+            "kind": "OBJECT",
+            "name": "ProductImage",
+            "ofType": null
+          }
+        },
+        {
+          "name": "media_gallery",
+          "type": {
+            "kind": "LIST",
+            "name": null,
+            "ofType": {
+              "kind": "INTERFACE",
+              "name": "MediaGalleryInterface"
+            }
+          }
+        },
+        {
+          "name": "meta_description",
+          "type": {
+            "kind": "SCALAR",
+            "name": "String",
+            "ofType": null
+          }
+        },
+        {
+          "name": "meta_keyword",
+          "type": {
+            "kind": "SCALAR",
+            "name": "String",
+            "ofType": null
+          }
+        },
+        {
+          "name": "meta_title",
+          "type": {
+            "kind": "SCALAR",
+            "name": "String",
+            "ofType": null
+          }
+        },
+        {
+          "name": "name",
+          "type": {
+            "kind": "SCALAR",
+            "name": "String",
+            "ofType": null
+          }
+        },
+        {
+          "name": "new_from_date",
+          "type": {
+            "kind": "SCALAR",
+            "name": "String",
+            "ofType": null
+          }
+        },
+        {
+          "name": "new_to_date",
+          "type": {
+            "kind": "SCALAR",
+            "name": "String",
+            "ofType": null
+          }
+        },
+        {
+          "name": "only_x_left_in_stock",
+          "type": {
+            "kind": "SCALAR",
+            "name": "Float",
+            "ofType": null
+          }
+        },
+        {
+          "name": "options",
+          "type": {
+            "kind": "LIST",
+            "name": null,
+            "ofType": {
+              "kind": "INTERFACE",
+              "name": "CustomizableOptionInterface"
+            }
+          }
+        },
+        {
+          "name": "options_container",
+          "type": {
+            "kind": "SCALAR",
+            "name": "String",
+            "ofType": null
+          }
+        },
+        {
+          "name": "price_range",
+          "type": {
+            "kind": "NON_NULL",
+            "name": null,
+            "ofType": {
+              "kind": "OBJECT",
+              "name": "PriceRange"
+            }
+          }
+        },
+        {
+          "name": "price_tiers",
+          "type": {
+            "kind": "LIST",
+            "name": null,
+            "ofType": {
+              "kind": "OBJECT",
+              "name": "TierPrice"
+            }
+          }
+        },
+        {
+          "name": "price_trade",
+          "type": {
+            "kind": "SCALAR",
+            "name": "String",
+            "ofType": null
+          }
+        },
+        {
+          "name": "pro_brand_label",
+          "type": {
+            "kind": "SCALAR",
+            "name": "String",
+            "ofType": null
+          }
+        },
+        {
+          "name": "pro_colour_label",
+          "type": {
+            "kind": "SCALAR",
+            "name": "String",
+            "ofType": null
+          }
+        },
+        {
+          "name": "product_images",
+          "type": {
+            "kind": "OBJECT",
+            "name": "ProductImages",
+            "ofType": null
+          }
+        },
+        {
+          "name": "product_links",
+          "type": {
+            "kind": "LIST",
+            "name": null,
+            "ofType": {
+              "kind": "INTERFACE",
+              "name": "ProductLinksInterface"
+            }
+          }
+        },
+        {
+          "name": "rating_summary",
+          "type": {
+            "kind": "NON_NULL",
+            "name": null,
+            "ofType": {
+              "kind": "SCALAR",
+              "name": "Float"
+            }
+          }
+        },
+        {
+          "name": "redirect_code",
+          "type": {
+            "kind": "NON_NULL",
+            "name": null,
+            "ofType": {
+              "kind": "SCALAR",
+              "name": "Int"
+            }
+          }
+        },
+        {
+          "name": "related_products",
+          "type": {
+            "kind": "LIST",
+            "name": null,
+            "ofType": {
+              "kind": "INTERFACE",
+              "name": "ProductInterface"
+            }
+          }
+        },
+        {
+          "name": "relative_url",
+          "type": {
+            "kind": "SCALAR",
+            "name": "String",
+            "ofType": null
+          }
+        },
+        {
+          "name": "review_count",
+          "type": {
+            "kind": "NON_NULL",
+            "name": null,
+            "ofType": {
+              "kind": "SCALAR",
+              "name": "Int"
+            }
+          }
+        },
+        {
+          "name": "reviews",
+          "type": {
+            "kind": "NON_NULL",
+            "name": null,
+            "ofType": {
+              "kind": "OBJECT",
+              "name": "ProductReviews"
+            }
+          }
+        },
+        {
+          "name": "short_description",
+          "type": {
+            "kind": "OBJECT",
+            "name": "ComplexTextValue",
+            "ofType": null
+          }
+        },
+        {
+          "name": "sku",
+          "type": {
+            "kind": "SCALAR",
+            "name": "String",
+            "ofType": null
+          }
+        },
+        {
+          "name": "small_image",
+          "type": {
+            "kind": "OBJECT",
+            "name": "ProductImage",
+            "ofType": null
+          }
+        },
+        {
+          "name": "special_price",
+          "type": {
+            "kind": "SCALAR",
+            "name": "Float",
+            "ofType": null
+          }
+        },
+        {
+          "name": "special_to_date",
+          "type": {
+            "kind": "SCALAR",
+            "name": "String",
+            "ofType": null
+          }
+        },
+        {
+          "name": "stock_status",
+          "type": {
+            "kind": "ENUM",
+            "name": "ProductStockStatus",
+            "ofType": null
+          }
+        },
+        {
+          "name": "swatch_image",
+          "type": {
+            "kind": "SCALAR",
+            "name": "String",
+            "ofType": null
+          }
+        },
+        {
+          "name": "thumbnail",
+          "type": {
+            "kind": "OBJECT",
+            "name": "ProductImage",
+            "ofType": null
+          }
+        },
+        {
+          "name": "type",
+          "type": {
+            "kind": "ENUM",
+            "name": "UrlRewriteEntityTypeEnum",
+            "ofType": null
+          }
+        },
+        {
+          "name": "uid",
+          "type": {
+            "kind": "NON_NULL",
+            "name": null,
+            "ofType": {
+              "kind": "SCALAR",
+              "name": "ID"
+            }
+          }
+        },
+        {
+          "name": "upc",
+          "type": {
+            "kind": "SCALAR",
+            "name": "String",
+            "ofType": null
+          }
+        },
+        {
+          "name": "upsell_products",
+          "type": {
+            "kind": "LIST",
+            "name": null,
+            "ofType": {
+              "kind": "INTERFACE",
+              "name": "ProductInterface"
+            }
+          }
+        },
+        {
+          "name": "url_key",
+          "type": {
+            "kind": "SCALAR",
+            "name": "String",
+            "ofType": null
+          }
+        },
+        {
+          "name": "url_rewrites",
+          "type": {
+            "kind": "LIST",
+            "name": null,
+            "ofType": {
+              "kind": "OBJECT",
+              "name": "UrlRewrite"
+            }
+          }
+        },
+        {
+          "name": "url_suffix",
+          "type": {
+            "kind": "SCALAR",
+            "name": "String",
+            "ofType": null
+          }
+        },
+        {
+          "name": "variants",
+          "type": {
+            "kind": "LIST",
+            "name": null,
+            "ofType": {
+              "kind": "OBJECT",
+              "name": "ConfigurableVariant"
+            }
+          }
+        },
+        {
+          "name": "weight",
+          "type": {
+            "kind": "SCALAR",
+            "name": "Float",
+            "ofType": null
+          }
+        }
+      ]
+    }
+  }
+}

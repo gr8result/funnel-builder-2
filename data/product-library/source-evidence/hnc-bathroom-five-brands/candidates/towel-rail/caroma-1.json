@@ -1,0 +1,3079 @@
+{
+  "data": {
+    "products": {
+      "total_count": 96,
+      "page_info": {
+        "total_pages": 4
+      },
+      "items": [
+        {
+          "id": 26173,
+          "sku": "520037C",
+          "vendorcode": "520037C",
+          "name": "Riviere 800mm Double Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520037C_Caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520037C_Caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520037C_Caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520037C_Caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520037C_Caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520037C_Caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "• High quality metal construction ensures durability\n• 3 point fixing for added strength\n• Australian designed & engineered\n• PVD finish"
+          },
+          "short_description": {
+            "html": "Riviere 800mm Double Towel Rail"
+          },
+          "product_dimensions": "W844 x D123 x H44mm",
+          "price_store": 203,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W844 x D123 x H44mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL DOUBLE"
+              },
+              {
+                "code": "range",
+                "value": "Riviere"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "size_mm",
+                "selected_options": [
+                  {
+                    "label": "800",
+                    "value": "850"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "520037C"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 26172,
+          "sku": "520037BN",
+          "vendorcode": "520037BN",
+          "name": "Riviere 800mm Double Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520037bn_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520037bn_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520037bn_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520037bn_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520037bn_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520037bn_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• High quality metal construction ensures durability<br>• 3 point fixing for added strength<br>• Australian designed &amp; engineered<br>• PVD finish</p>"
+          },
+          "short_description": {
+            "html": "<p>Riviere 800mm Double Towel Rail</p>"
+          },
+          "product_dimensions": "W844 x D123 x H44mm",
+          "price_store": 256,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W844 x D123 x H44mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL DOUBLE"
+              },
+              {
+                "code": "range",
+                "value": "Riviere"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "520037BN"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 26171,
+          "sku": "520037BBZ",
+          "vendorcode": "520037BBZ",
+          "name": "Riviere 800mm Double Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520037BBZ_Caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520037BBZ_Caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520037BBZ_Caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520037BBZ_Caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520037BBZ_Caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520037BBZ_Caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "• High quality metal construction ensures durability\n• 3 point fixing for added strength\n• Australian designed & engineered\n• PVD finish"
+          },
+          "short_description": {
+            "html": "Riviere 800mm Double Towel Rail"
+          },
+          "product_dimensions": "W844 x D123 x H44mm",
+          "price_store": 256,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W844 x D123 x H44mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL DOUBLE"
+              },
+              {
+                "code": "range",
+                "value": "Riviere"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "size_mm",
+                "selected_options": [
+                  {
+                    "label": "800",
+                    "value": "850"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Bronze",
+                    "value": "935"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "520037BBZ"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Bronze"
+              }
+            ]
+          }
+        },
+        {
+          "id": 26170,
+          "sku": "520037BB",
+          "vendorcode": "520037BB",
+          "name": "Riviere 800mm Double Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520037BB_Caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520037BB_Caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520037BB_Caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520037BB_Caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520037BB_Caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520037BB_Caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "• High quality metal construction ensures durability\n• 3 point fixing for added strength\n• Australian designed & engineered\n• PVD finish"
+          },
+          "short_description": {
+            "html": "Riviere 800mm Double Towel Rail"
+          },
+          "product_dimensions": "W844 x D123 x H44mm",
+          "price_store": 256,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W844 x D123 x H44mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL DOUBLE"
+              },
+              {
+                "code": "range",
+                "value": "Riviere"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "size_mm",
+                "selected_options": [
+                  {
+                    "label": "800",
+                    "value": "850"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "520037BB"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Brass"
+              }
+            ]
+          }
+        },
+        {
+          "id": 26169,
+          "sku": "520036C",
+          "vendorcode": "520036C",
+          "name": "Riviere 800mm Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520036C_Caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520036C_Caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520036C_Caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520036C_Caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520036C_Caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520036C_Caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "• High quality metal construction ensures durability\n• 3 point fixing for added strength\n• Australian designed & engineered\n• PVD finish"
+          },
+          "short_description": {
+            "html": "Riviere 800mm Single Towel Rail"
+          },
+          "product_dimensions": "W844 x D75 x H44mm",
+          "price_store": 161,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W844 x D75 x H44mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL SINGLE"
+              },
+              {
+                "code": "range",
+                "value": "Riviere"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "size_mm",
+                "selected_options": [
+                  {
+                    "label": "800",
+                    "value": "850"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "520036C"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 26168,
+          "sku": "520036BN",
+          "vendorcode": "520036BN",
+          "name": "Riviere 800mm Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520036BN_Caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520036BN_Caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520036BN_Caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520036BN_Caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520036BN_Caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520036BN_Caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "• High quality metal construction ensures durability\n• 3 point fixing for added strength\n• Australian designed & engineered\n• PVD finish"
+          },
+          "short_description": {
+            "html": "Riviere 800mm Single Towel Rail"
+          },
+          "product_dimensions": "W844 x D75 x H44mm",
+          "price_store": 210,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W844 x D75 x H44mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL SINGLE"
+              },
+              {
+                "code": "range",
+                "value": "Riviere"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "size_mm",
+                "selected_options": [
+                  {
+                    "label": "800",
+                    "value": "850"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "520036BN"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 26167,
+          "sku": "520036BBZ",
+          "vendorcode": "520036BBZ",
+          "name": "Riviere 800mm Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520036BBZ_Caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520036BBZ_Caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520036BBZ_Caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520036BBZ_Caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520036BBZ_Caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520036BBZ_Caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "• High quality metal construction ensures durability\n• 3 point fixing for added strength\n• Australian designed & engineered\n• PVD finish"
+          },
+          "short_description": {
+            "html": "Riviere 800mm Single Towel Rail"
+          },
+          "product_dimensions": "W844 x D75 x H44mm",
+          "price_store": 210,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W844 x D75 x H44mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL SINGLE"
+              },
+              {
+                "code": "range",
+                "value": "Riviere"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "size_mm",
+                "selected_options": [
+                  {
+                    "label": "800",
+                    "value": "850"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Bronze",
+                    "value": "935"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "520036BBZ"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Bronze"
+              }
+            ]
+          }
+        },
+        {
+          "id": 26166,
+          "sku": "520036BB",
+          "vendorcode": "520036BB",
+          "name": "Riviere 800mm Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520036BB_Caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520036BB_Caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520036BB_Caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520036BB_Caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520036BB_Caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520036BB_Caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "• High quality metal construction ensures durability\n• 3 point fixing for added strength\n• Australian designed & engineered\n• PVD finish"
+          },
+          "short_description": {
+            "html": "Riviere 800mm Single Towel Rail"
+          },
+          "product_dimensions": "W844 x D75 x H44mm",
+          "price_store": 210,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W844 x D75 x H44mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL SINGLE"
+              },
+              {
+                "code": "range",
+                "value": "Riviere"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "size_mm",
+                "selected_options": [
+                  {
+                    "label": "800",
+                    "value": "850"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "520036BB"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Brass"
+              }
+            ]
+          }
+        },
+        {
+          "id": 26165,
+          "sku": "520035C",
+          "vendorcode": "520035C",
+          "name": "Riviere 600mm Double Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520035C_Caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520035C_Caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520035C_Caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520035C_Caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520035C_Caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520035C_Caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "• High quality metal construction ensures durability\n• 3 point fixing for added strength\n• Australian designed & engineered\n• PVD finish"
+          },
+          "short_description": {
+            "html": "Riviere 600mm Double Towel Rail"
+          },
+          "product_dimensions": "W644 x D123 x H44mm",
+          "price_store": 181,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W644 x D123 x H44mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL DOUBLE"
+              },
+              {
+                "code": "range",
+                "value": "Riviere"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "size_mm",
+                "selected_options": [
+                  {
+                    "label": "600",
+                    "value": "746"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "520035C"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 26164,
+          "sku": "520035BN",
+          "vendorcode": "520035BN",
+          "name": "Riviere 600mm Double Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520035bn_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520035bn_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520035bn_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520035bn_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520035bn_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520035bn_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• High quality metal construction ensures durability<br>• 3 point fixing for added strength<br>• Australian designed &amp; engineered<br>• PVD finish</p>"
+          },
+          "short_description": {
+            "html": "<p>Riviere 600mm Double Towel Rail</p>"
+          },
+          "product_dimensions": "W644 x D123 x H44mm",
+          "price_store": 239,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W644 x D123 x H44mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL DOUBLE"
+              },
+              {
+                "code": "range",
+                "value": "Riviere"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "520035BN"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 26163,
+          "sku": "520035BBZ",
+          "vendorcode": "520035BBZ",
+          "name": "Riviere 600mm Double Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520035BBZ_Caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520035BBZ_Caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520035BBZ_Caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520035BBZ_Caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520035BBZ_Caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520035BBZ_Caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "• High quality metal construction ensures durability\n• 3 point fixing for added strength\n• Australian designed & engineered\n• PVD finish"
+          },
+          "short_description": {
+            "html": "Riviere 600mm Double Towel Rail"
+          },
+          "product_dimensions": "W644 x D123 x H44mm",
+          "price_store": 239,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W644 x D123 x H44mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL DOUBLE"
+              },
+              {
+                "code": "range",
+                "value": "Riviere"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "size_mm",
+                "selected_options": [
+                  {
+                    "label": "600",
+                    "value": "746"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Bronze",
+                    "value": "935"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "520035BBZ"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Bronze"
+              }
+            ]
+          }
+        },
+        {
+          "id": 26162,
+          "sku": "520035BB",
+          "vendorcode": "520035BB",
+          "name": "Riviere 600mm Double Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520035BB_Caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520035BB_Caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520035BB_Caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520035BB_Caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520035BB_Caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520035BB_Caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "• High quality metal construction ensures durability\n• 3 point fixing for added strength\n• Australian designed & engineered\n• PVD finish"
+          },
+          "short_description": {
+            "html": "Riviere 600mm Double Towel Rail"
+          },
+          "product_dimensions": "W644 x D123 x H44mm",
+          "price_store": 239,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W644 x D123 x H44mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL DOUBLE"
+              },
+              {
+                "code": "range",
+                "value": "Riviere"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "size_mm",
+                "selected_options": [
+                  {
+                    "label": "600",
+                    "value": "746"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "520035BB"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Brass"
+              }
+            ]
+          }
+        },
+        {
+          "id": 26161,
+          "sku": "520034C",
+          "vendorcode": "520034C",
+          "name": "Riviere 600mm Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520034C_Caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520034C_Caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520034C_Caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520034C_Caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520034C_Caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520034C_Caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "• High quality metal construction ensures durability\n• 3 point fixing for added strength\n• Australian designed & engineered\n• PVD finish"
+          },
+          "short_description": {
+            "html": "Riviere 600mm Single Towel Rail"
+          },
+          "product_dimensions": "W644 x D75 x H44mm",
+          "price_store": 148,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W644 x D75 x H44mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL SINGLE"
+              },
+              {
+                "code": "range",
+                "value": "Riviere"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "size_mm",
+                "selected_options": [
+                  {
+                    "label": "600",
+                    "value": "746"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "520034C"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 26160,
+          "sku": "520034BN",
+          "vendorcode": "520034BN",
+          "name": "Riviere 600mm Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520034bn_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520034bn_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520034bn_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520034bn_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520034bn_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520034bn_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• High quality metal construction ensures durability<br>• 3 point fixing for added strength<br>• Australian designed &amp; engineered<br>• PVD finish</p>"
+          },
+          "short_description": {
+            "html": "<p>Riviere 600mm Single Towel Rail</p>"
+          },
+          "product_dimensions": "W644 x D75 x H44mm",
+          "price_store": 194,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W644 x D75 x H44mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL SINGLE"
+              },
+              {
+                "code": "range",
+                "value": "Riviere"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "520034BN"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 26159,
+          "sku": "520034BBZ",
+          "vendorcode": "520034BBZ",
+          "name": "Riviere 600mm Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520034BBZ_Caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520034BBZ_Caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520034BBZ_Caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520034BBZ_Caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520034BBZ_Caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520034BBZ_Caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "• High quality metal construction ensures durability\n• 3 point fixing for added strength\n• Australian designed & engineered\n• PVD finish"
+          },
+          "short_description": {
+            "html": "Riviere 600mm Single Towel Rail"
+          },
+          "product_dimensions": "W644 x D75 x H44mm",
+          "price_store": 194,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W644 x D75 x H44mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL SINGLE"
+              },
+              {
+                "code": "range",
+                "value": "Riviere"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "size_mm",
+                "selected_options": [
+                  {
+                    "label": "600",
+                    "value": "746"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Bronze",
+                    "value": "935"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "520034BBZ"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Bronze"
+              }
+            ]
+          }
+        },
+        {
+          "id": 26158,
+          "sku": "520034BB",
+          "vendorcode": "520034BB",
+          "name": "Riviere 600mm Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520034BB_Caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520034BB_Caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520034BB_Caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520034BB_Caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520034BB_Caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520034BB_Caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "• High quality metal construction ensures durability\n• 3 point fixing for added strength\n• Australian designed & engineered\n• PVD finish"
+          },
+          "short_description": {
+            "html": "Riviere 600mm Single Towel Rail"
+          },
+          "product_dimensions": "W644 x D75 x H44mm",
+          "price_store": 194,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W644 x D75 x H44mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL SINGLE"
+              },
+              {
+                "code": "range",
+                "value": "Riviere"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "size_mm",
+                "selected_options": [
+                  {
+                    "label": "600",
+                    "value": "746"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "520034BB"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Brass"
+              }
+            ]
+          }
+        },
+        {
+          "id": 26157,
+          "sku": "520033C",
+          "vendorcode": "520033C",
+          "name": "Riviere Hand Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520033C_Caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520033C_Caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520033C_Caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520033C_Caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520033C_Caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520033C_Caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "• High quality metal construction ensures durability\n• 3 point fixing for added strength\n• Australian designed & engineered\n• PVD finish"
+          },
+          "short_description": {
+            "html": "Riviere Hand Towel Rail"
+          },
+          "product_dimensions": "W294 x D75 x H44mm",
+          "price_store": 119,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W294 x D75 x H44mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL SINGLE"
+              },
+              {
+                "code": "range",
+                "value": "Riviere"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "520033C"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 26156,
+          "sku": "520033BN",
+          "vendorcode": "520033BN",
+          "name": "Riviere Hand Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520033bn_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520033bn_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520033bn_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520033bn_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520033bn_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520033bn_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• High quality metal construction ensures durability<br>• 3 point fixing for added strength<br>• Australian designed &amp; engineered<br>• PVD finish</p>"
+          },
+          "short_description": {
+            "html": "<p>Riviere Hand Towel Rail</p>"
+          },
+          "product_dimensions": "W294 x D75 x H44mm",
+          "price_store": 156,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W294 x D75 x H44mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL SINGLE"
+              },
+              {
+                "code": "range",
+                "value": "Riviere"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "520033BN"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 26155,
+          "sku": "520033BBZ",
+          "vendorcode": "520033BBZ",
+          "name": "Riviere Hand Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520033BBZ_Caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520033BBZ_Caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520033BBZ_Caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520033BBZ_Caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520033BBZ_Caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520033BBZ_Caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "• High quality metal construction ensures durability\n• 3 point fixing for added strength\n• Australian designed & engineered\n• PVD finish"
+          },
+          "short_description": {
+            "html": "Riviere Hand Towel Rail"
+          },
+          "product_dimensions": "W294 x D75 x H44mm",
+          "price_store": 156,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W294 x D75 x H44mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL SINGLE"
+              },
+              {
+                "code": "range",
+                "value": "Riviere"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Bronze",
+                    "value": "935"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "520033BBZ"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Bronze"
+              }
+            ]
+          }
+        },
+        {
+          "id": 26154,
+          "sku": "520033BB",
+          "vendorcode": "520033BB",
+          "name": "Riviere Hand Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520033BB_Caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520033BB_Caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520033BB_Caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520033BB_Caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520033BB_Caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520033BB_Caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "• High quality metal construction ensures durability\n• 3 point fixing for added strength\n• Australian designed & engineered\n• PVD finish"
+          },
+          "short_description": {
+            "html": "Riviere Hand Towel Rail"
+          },
+          "product_dimensions": "W294 x D75 x H44mm",
+          "price_store": 156,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W294 x D75 x H44mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL SINGLE"
+              },
+              {
+                "code": "range",
+                "value": "Riviere"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "520033BB"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Brass"
+              }
+            ]
+          }
+        },
+        {
+          "id": 20659,
+          "sku": "849036C",
+          "vendorcode": "849036C",
+          "name": "Contura II 820mm Double Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849036c_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849036c_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/8/4/849036c_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/8/4/849036c_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849036c_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849036c_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• High quality metal construction<br>• Dual fixings</p>"
+          },
+          "short_description": {
+            "html": "<p>Contura II 820mm Double Towel Rail</p>"
+          },
+          "product_dimensions": "W820 x D123 x H17mm",
+          "price_store": 224,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W820 x D123 x H17mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL DOUBLE"
+              },
+              {
+                "code": "range",
+                "value": "Contura"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "849036C"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 20658,
+          "sku": "849036BN",
+          "vendorcode": "849036BN",
+          "name": "Contura II 820mm Double Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849036bn_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849036bn_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/8/4/849036bn_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/8/4/849036bn_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849036bn_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849036bn_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• High quality metal construction<br>• Dual fixings</p>"
+          },
+          "short_description": {
+            "html": "<p>Contura II 820mm Double Towel Rail</p>"
+          },
+          "product_dimensions": "W820 x D123 x H17mm",
+          "price_store": 282,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W820 x D123 x H17mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL DOUBLE"
+              },
+              {
+                "code": "range",
+                "value": "Contura"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "849036BN"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 20657,
+          "sku": "849036BBZ",
+          "vendorcode": "849036BBZ",
+          "name": "Contura II 820mm Double Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849036bbz_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849036bbz_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/8/4/849036bbz_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/8/4/849036bbz_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849036bbz_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849036bbz_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• High quality metal construction<br>• Dual fixings<br>• Brushed bronze finish</p>"
+          },
+          "short_description": {
+            "html": "<p>Contura II 820mm Double Towel Rail</p>"
+          },
+          "product_dimensions": "W820 x D123 x H17mm",
+          "price_store": 282,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W820 x D123 x H17mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL DOUBLE"
+              },
+              {
+                "code": "range",
+                "value": "Contura"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Bronze",
+                    "value": "935"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "849036BBZ"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Bronze"
+              }
+            ]
+          }
+        },
+        {
+          "id": 20656,
+          "sku": "849036BB",
+          "vendorcode": "849036BB",
+          "name": "Contura II 820mm Double Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849036bb_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849036bb_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/8/4/849036bb_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/8/4/849036bb_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849036bb_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849036bb_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• High quality metal construction<br>• Dual fixings</p>"
+          },
+          "short_description": {
+            "html": "<p>Contura II 820mm Double Towel Rail</p>"
+          },
+          "product_dimensions": "W820 x D123 x H17mm",
+          "price_store": 282,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W820 x D123 x H17mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL DOUBLE"
+              },
+              {
+                "code": "range",
+                "value": "Contura"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "849036BB"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Brass"
+              }
+            ]
+          }
+        },
+        {
+          "id": 20655,
+          "sku": "849036B",
+          "vendorcode": "849036B",
+          "name": "Contura II 820mm Double Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849036b_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849036b_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/8/4/849036b_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/8/4/849036b_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849036b_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849036b_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• High quality metal construction<br>• Dual fixings</p>"
+          },
+          "short_description": {
+            "html": "<p>Contura II 820mm Double Towel Rail</p>"
+          },
+          "product_dimensions": "W820 x D123 x H17mm",
+          "price_store": 237,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W820 x D123 x H17mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL DOUBLE"
+              },
+              {
+                "code": "range",
+                "value": "Contura"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Matte Black",
+                    "value": "940"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "849036B"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Black"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

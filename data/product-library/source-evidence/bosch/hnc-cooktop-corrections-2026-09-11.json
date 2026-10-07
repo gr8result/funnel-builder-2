@@ -1,0 +1,1638 @@
+{
+  "schemaVersion": "appliance-hnc-cooktop-corrections.v1",
+  "checkedAt": "2026-09-11",
+  "scope": "Only the 14 Bosch cooktops active and selectable in the current on-disk catalogue. No Bosch oven or other-brand changes.",
+  "sourceOrganisation": "Harvey Norman Commercial",
+  "verification": {
+    "modelsChecked": 14,
+    "method": "Fresh exact-SKU supplier pages, browser-visible product code and SRP price checks, per-image visual inspection, original source byte comparisons.",
+    "existingPhotoFilesRetainedUnchanged": 13,
+    "replacedTechnicalDrawings": [
+      "PUG611AA5H"
+    ],
+    "newAssets": [
+      "public/images/catalogues/appliances/products/bosch/pug611aa5h-hnc.png"
+    ]
+  },
+  "summary": {
+    "validExactModelImages": [
+      "PBH6B5K90A",
+      "PKE611CA2A",
+      "PKE611BA2A",
+      "PUG611AA5H",
+      "PNK6B6K40A",
+      "PUE611BB5H",
+      "PPH6A6I10A",
+      "PIX631HC1H",
+      "PXX695HC1E",
+      "PKM875DP1A",
+      "PCR9A5I90A",
+      "PIV931HC1E",
+      "PRS9A6H40A",
+      "PXV975DV1E"
+    ],
+    "missingExactModelImages": [],
+    "modelsWithHncPrices": [
+      "PBH6B5K90A",
+      "PKE611CA2A",
+      "PKE611BA2A",
+      "PUG611AA5H",
+      "PNK6B6K40A",
+      "PUE611BB5H",
+      "PPH6A6I10A",
+      "PIX631HC1H",
+      "PXX695HC1E",
+      "PKM875DP1A",
+      "PCR9A5I90A",
+      "PIV931HC1E",
+      "PRS9A6H40A",
+      "PXV975DV1E"
+    ],
+    "modelsPricePending": []
+  },
+  "corrections": [
+    {
+      "model": "PBH6B5K90A",
+      "productId": "product:cooktops:bosch:pbh6b5k90a",
+      "updates": {
+        "costPrice": 798,
+        "sourceCostPrice": 798,
+        "sellPrice": 798,
+        "tenantSellPrice": 798,
+        "currentRetailReference": 798,
+        "currentRetailReferenceSourceUrl": "https://www.harveynormancommercial.com.au/products/PBH6B5K90A",
+        "priceStatus": "fixed",
+        "gstStatus": "inclusive",
+        "priceSourceUrl": "https://www.harveynormancommercial.com.au/products/PBH6B5K90A",
+        "priceVerifiedAt": "2026-09-11",
+        "primaryImage": "/images/catalogues/appliances/products/bosch/pbh6b5k90a.jpg",
+        "imageStatus": "verified-authorised-supplier-local",
+        "imageSourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/p/b/pbh6b5k90a_bosch_web.jpg",
+        "imageSourcePageUrl": "https://www.harveynormancommercial.com.au/products/PBH6B5K90A",
+        "imageSourceType": "authorised-supplier-product-page",
+        "imageSourceOrganisation": "Harvey Norman Commercial",
+        "imageAttribution": "Harvey Norman Commercial",
+        "imageVerificationStatus": "verified-authorised-exact-model",
+        "imageVerifiedAt": "2026-09-11",
+        "imageCheckedAt": "2026-09-11",
+        "productPageUrl": "https://www.harveynormancommercial.com.au/products/PBH6B5K90A",
+        "productPageStatus": "verified-exact-model",
+        "modelVerificationNote": "Exact model confirmed by HNC product page SKU and visible product code; local product photo visually verified and SHA-256 identical to the exact-model HNC gallery source.",
+        "sourceCheckedAt": "2026-09-11",
+        "source": {
+          "type": "authorised_supplier_product_page",
+          "file": "data/product-library/catalogues/appliances/AU-BOSCH-APPLIANCE-RANGE.json",
+          "sourceName": "Harvey Norman Commercial exact product page",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/PBH6B5K90A",
+          "sourceVerifiedAt": "2026-09-11"
+        },
+        "research": {
+          "verificationStatus": "verified-basic",
+          "sourceType": "authorised_supplier_product_page",
+          "sourceOrganisation": "Harvey Norman Commercial",
+          "checkedAt": "2026-09-11"
+        },
+        "evidence": {
+          "sourceOrganisation": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/PBH6B5K90A",
+          "sourceCheckedAt": "2026-09-11",
+          "evidenceStatus": "verified-exact-model-image-and-price",
+          "evidenceFile": "data/product-library/source-evidence/bosch/hnc-cooktop-corrections-2026-09-11.json"
+        }
+      },
+      "evidence": {
+        "retrievedAt": "2026-09-11T05:04:11.185Z",
+        "sourceUrl": "https://www.harveynormancommercial.com.au/products/PBH6B5K90A",
+        "finalUrl": "https://www.harveynormancommercial.com.au/products/PBH6B5K90A",
+        "httpStatus": 200,
+        "htmlSha256": "01de55adb93a068b668d3a410ec6d1c2bf62dd8f53a26fda814bae397bddcefb",
+        "extraction": "Exact-SKU ApolloSSRDataTransport product payload from Harvey Norman Commercial product page",
+        "exactModelEvidence": {
+          "sku": "PBH6B5K90A",
+          "vendorcode": "PBH6B5K90A",
+          "brand": [
+            "Bosch"
+          ],
+          "visibleProductCodeVerified": true
+        },
+        "supplierProduct": {
+          "title": "Series 2 600mm Gas Cooktop",
+          "dimensions": "W580 x D510 x H51.8mm",
+          "descriptionHtml": "<p>• 4 cooking zones<br>• Cast iron pan supports with rubber feet<br>• Sword knobs<br>• Dishwasher-suitable pan supports<br>• Safety gas cut-off</p>"
+        },
+        "price": {
+          "listedPrice": 798,
+          "currency": "AUD",
+          "label": "SRP (INC. GST)",
+          "gstStatus": "inclusive",
+          "price_store": 798,
+          "price_promo": 0,
+          "regularPrice": {
+            "__typename": "Money",
+            "value": 0,
+            "currency": "AUD"
+          },
+          "verification": "Visible exact-model product page price matches structured price_store; zero regular_price is not used."
+        },
+        "visibleProductText": "SRP (INC. GST):\n$798\nCOLOUR: Stainless Steel\nPRODUCT CODE: PBH6B5K90A\nSIZE: W580 x D510 x H51.8mm\nFEATURES:\n4 cooking zones\nCast iron pan supports with rubber feet\nSword knobs\nDishwasher-suitable pan supports\nSafety gas cut-off\n",
+        "image": {
+          "sourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/p/b/pbh6b5k90a_bosch_web.jpg",
+          "galleryUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/b/pbh6b5k90a_bosch_web.jpg",
+          "httpStatus": 200,
+          "mimeType": "image/jpeg",
+          "sha256": "23269feeec867092b592c6fdb5cfee181fda2d1c67eefd7aece7e3b83accaf5b",
+          "width": 1968,
+          "height": 1528,
+          "format": "jpeg",
+          "localPath": "/images/catalogues/appliances/products/bosch/pbh6b5k90a.jpg",
+          "visualInspection": "Product photograph or photorealistic manufacturer product rendering; no technical drawing, placeholder or unrelated model.",
+          "verifiedVia": "Image is listed in media_gallery for this exact-SKU product payload; visual inspection of local bytes.",
+          "supplierGallery": [
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/b/pbh6b5k90a_bosch_web.jpg",
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/b/pbh6b5k90a_bosch_tech.jpg",
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/b/pbh6b5k90a_bosch_insitu.jpg"
+          ]
+        },
+        "previousImage": {
+          "localPath": "/images/catalogues/appliances/products/bosch/pbh6b5k90a.jpg",
+          "sourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/p/b/pbh6b5k90a_bosch_web.jpg",
+          "sha256": "23269feeec867092b592c6fdb5cfee181fda2d1c67eefd7aece7e3b83accaf5b",
+          "width": 1968,
+          "height": 1528,
+          "identicalToSource": true,
+          "inspection": "Exact product image: retained unchanged."
+        }
+      }
+    },
+    {
+      "model": "PKE611CA2A",
+      "productId": "product:cooktops:bosch:pke611ca2a",
+      "updates": {
+        "costPrice": 798,
+        "sourceCostPrice": 798,
+        "sellPrice": 798,
+        "tenantSellPrice": 798,
+        "currentRetailReference": 798,
+        "currentRetailReferenceSourceUrl": "https://www.harveynormancommercial.com.au/products/PKE611CA2A",
+        "priceStatus": "fixed",
+        "gstStatus": "inclusive",
+        "priceSourceUrl": "https://www.harveynormancommercial.com.au/products/PKE611CA2A",
+        "priceVerifiedAt": "2026-09-11",
+        "primaryImage": "/images/catalogues/appliances/products/bosch/pke611ca2a.jpg",
+        "imageStatus": "verified-authorised-supplier-local",
+        "imageSourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/p/k/pke611ca2a_bosch_web.jpg",
+        "imageSourcePageUrl": "https://www.harveynormancommercial.com.au/products/PKE611CA2A",
+        "imageSourceType": "authorised-supplier-product-page",
+        "imageSourceOrganisation": "Harvey Norman Commercial",
+        "imageAttribution": "Harvey Norman Commercial",
+        "imageVerificationStatus": "verified-authorised-exact-model",
+        "imageVerifiedAt": "2026-09-11",
+        "imageCheckedAt": "2026-09-11",
+        "productPageUrl": "https://www.harveynormancommercial.com.au/products/PKE611CA2A",
+        "productPageStatus": "verified-exact-model",
+        "modelVerificationNote": "Exact model confirmed by HNC product page SKU and visible product code; local product photo visually verified and SHA-256 identical to the exact-model HNC gallery source.",
+        "sourceCheckedAt": "2026-09-11",
+        "source": {
+          "type": "authorised_supplier_product_page",
+          "file": "data/product-library/catalogues/appliances/AU-BOSCH-APPLIANCE-RANGE.json",
+          "sourceName": "Harvey Norman Commercial exact product page",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/PKE611CA2A",
+          "sourceVerifiedAt": "2026-09-11"
+        },
+        "research": {
+          "verificationStatus": "verified-basic",
+          "sourceType": "authorised_supplier_product_page",
+          "sourceOrganisation": "Harvey Norman Commercial",
+          "checkedAt": "2026-09-11"
+        },
+        "evidence": {
+          "sourceOrganisation": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/PKE611CA2A",
+          "sourceCheckedAt": "2026-09-11",
+          "evidenceStatus": "verified-exact-model-image-and-price",
+          "evidenceFile": "data/product-library/source-evidence/bosch/hnc-cooktop-corrections-2026-09-11.json"
+        }
+      },
+      "evidence": {
+        "retrievedAt": "2026-09-11T05:04:11.157Z",
+        "sourceUrl": "https://www.harveynormancommercial.com.au/products/PKE611CA2A",
+        "finalUrl": "https://www.harveynormancommercial.com.au/products/PKE611CA2A",
+        "httpStatus": 200,
+        "htmlSha256": "9b5fff853a4457367e18e3d688edf253ad3888eb71fef27a38317b5ada451252",
+        "extraction": "Exact-SKU ApolloSSRDataTransport product payload from Harvey Norman Commercial product page",
+        "exactModelEvidence": {
+          "sku": "PKE611CA2A",
+          "vendorcode": "PKE611CA2A",
+          "brand": [
+            "Bosch"
+          ],
+          "visibleProductCodeVerified": true
+        },
+        "supplierProduct": {
+          "title": "Series 2 600mm Ceramic Cooktop",
+          "dimensions": "W592 x D522 x H 46mm",
+          "descriptionHtml": "<p>• 4 zones<br>• Surface mounted knobs with 9 power levels<br>• Schott Ceran glass<br>• Frameless design<br>• Residual heat indicator</p>"
+        },
+        "price": {
+          "listedPrice": 798,
+          "currency": "AUD",
+          "label": "SRP (INC. GST)",
+          "gstStatus": "inclusive",
+          "price_store": 798,
+          "price_promo": 0,
+          "regularPrice": {
+            "__typename": "Money",
+            "value": 0,
+            "currency": "AUD"
+          },
+          "verification": "Visible exact-model product page price matches structured price_store; zero regular_price is not used."
+        },
+        "visibleProductText": "SRP (INC. GST):\n$798\nCOLOUR: Black\nPRODUCT CODE: PKE611CA2A\nSIZE: W592 x D522 x H 46mm\nFEATURES:\n4 zones\nSurface mounted knobs with 9 power levels\nSchott Ceran glass\nFrameless design\nResidual heat indicator\n",
+        "image": {
+          "sourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/p/k/pke611ca2a_bosch_web.jpg",
+          "galleryUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/k/pke611ca2a_bosch_web.jpg",
+          "httpStatus": 200,
+          "mimeType": "image/jpeg",
+          "sha256": "607a23b36c6fcc5b125cb4fa3cb156a9bd0890ddc11f7d1eddd0ba645e55cde6",
+          "width": 1362,
+          "height": 1200,
+          "format": "jpeg",
+          "localPath": "/images/catalogues/appliances/products/bosch/pke611ca2a.jpg",
+          "visualInspection": "Product photograph or photorealistic manufacturer product rendering; no technical drawing, placeholder or unrelated model.",
+          "verifiedVia": "Image is listed in media_gallery for this exact-SKU product payload; visual inspection of local bytes.",
+          "supplierGallery": [
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/k/pke611ca2a_bosch_web.jpg",
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/k/pke611ca2a_bosch_tech.jpg"
+          ]
+        },
+        "previousImage": {
+          "localPath": "/images/catalogues/appliances/products/bosch/pke611ca2a.jpg",
+          "sourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/p/k/pke611ca2a_bosch_web.jpg",
+          "sha256": "607a23b36c6fcc5b125cb4fa3cb156a9bd0890ddc11f7d1eddd0ba645e55cde6",
+          "width": 1362,
+          "height": 1200,
+          "identicalToSource": true,
+          "inspection": "Exact product image: retained unchanged."
+        }
+      }
+    },
+    {
+      "model": "PKE611BA2A",
+      "productId": "product:cooktops:bosch:pke611ba2a",
+      "updates": {
+        "costPrice": 849,
+        "sourceCostPrice": 849,
+        "sellPrice": 849,
+        "tenantSellPrice": 849,
+        "currentRetailReference": 849,
+        "currentRetailReferenceSourceUrl": "https://www.harveynormancommercial.com.au/products/PKE611BA2A",
+        "priceStatus": "fixed",
+        "gstStatus": "inclusive",
+        "priceSourceUrl": "https://www.harveynormancommercial.com.au/products/PKE611BA2A",
+        "priceVerifiedAt": "2026-09-11",
+        "primaryImage": "/images/catalogues/appliances/products/bosch/pke611ba2a.jpg",
+        "imageStatus": "verified-authorised-supplier-local",
+        "imageSourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/p/k/pke611ba2a_bosch_web_1.jpg",
+        "imageSourcePageUrl": "https://www.harveynormancommercial.com.au/products/PKE611BA2A",
+        "imageSourceType": "authorised-supplier-product-page",
+        "imageSourceOrganisation": "Harvey Norman Commercial",
+        "imageAttribution": "Harvey Norman Commercial",
+        "imageVerificationStatus": "verified-authorised-exact-model",
+        "imageVerifiedAt": "2026-09-11",
+        "imageCheckedAt": "2026-09-11",
+        "productPageUrl": "https://www.harveynormancommercial.com.au/products/PKE611BA2A",
+        "productPageStatus": "verified-exact-model",
+        "modelVerificationNote": "Exact model confirmed by HNC product page SKU and visible product code; local product photo visually verified and SHA-256 identical to the exact-model HNC gallery source.",
+        "sourceCheckedAt": "2026-09-11",
+        "source": {
+          "type": "authorised_supplier_product_page",
+          "file": "data/product-library/catalogues/appliances/AU-BOSCH-APPLIANCE-RANGE.json",
+          "sourceName": "Harvey Norman Commercial exact product page",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/PKE611BA2A",
+          "sourceVerifiedAt": "2026-09-11"
+        },
+        "research": {
+          "verificationStatus": "verified-basic",
+          "sourceType": "authorised_supplier_product_page",
+          "sourceOrganisation": "Harvey Norman Commercial",
+          "checkedAt": "2026-09-11"
+        },
+        "evidence": {
+          "sourceOrganisation": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/PKE611BA2A",
+          "sourceCheckedAt": "2026-09-11",
+          "evidenceStatus": "verified-exact-model-image-and-price",
+          "evidenceFile": "data/product-library/source-evidence/bosch/hnc-cooktop-corrections-2026-09-11.json"
+        }
+      },
+      "evidence": {
+        "retrievedAt": "2026-09-11T05:04:11.172Z",
+        "sourceUrl": "https://www.harveynormancommercial.com.au/products/PKE611BA2A",
+        "finalUrl": "https://www.harveynormancommercial.com.au/products/PKE611BA2A",
+        "httpStatus": 200,
+        "htmlSha256": "2af686e5d0cce284180373aa0e32a7f724c275ecf4e145a8de06c0f796cfd3b0",
+        "extraction": "Exact-SKU ApolloSSRDataTransport product payload from Harvey Norman Commercial product page",
+        "exactModelEvidence": {
+          "sku": "PKE611BA2A",
+          "vendorcode": "PKE611BA2A",
+          "brand": [
+            "Bosch"
+          ],
+          "visibleProductCodeVerified": true
+        },
+        "supplierProduct": {
+          "title": "Series 4 600mm Ceramic Cooktop ",
+          "dimensions": "W592 x D522 x H45mm",
+          "descriptionHtml": "<p>• 4 cook zones <br>• Touch controls<br>• Residual heat indicator<br>• Auto switch off &amp; child lock<br>• 17 power levels</p>"
+        },
+        "price": {
+          "listedPrice": 849,
+          "currency": "AUD",
+          "label": "SRP (INC. GST)",
+          "gstStatus": "inclusive",
+          "price_store": 849,
+          "price_promo": 0,
+          "regularPrice": {
+            "__typename": "Money",
+            "value": 0,
+            "currency": "AUD"
+          },
+          "verification": "Visible exact-model product page price matches structured price_store; zero regular_price is not used."
+        },
+        "visibleProductText": "SRP (INC. GST):\n$849\nCOLOUR: Black\nPRODUCT CODE: PKE611BA2A\nSIZE: W592 x D522 x H45mm\nFEATURES:\n4 cook zones\nTouch controls\nResidual heat indicator\nAuto switch off & child lock\n17 power levels\n",
+        "image": {
+          "sourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/p/k/pke611ba2a_bosch_web_1.jpg",
+          "galleryUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/k/pke611ba2a_bosch_web_1.jpg",
+          "httpStatus": 200,
+          "mimeType": "image/jpeg",
+          "sha256": "98eb2fb25d97e5620602a80d122180fb1225c8d34aff3a880cdfb35501d47f26",
+          "width": 1150,
+          "height": 1012,
+          "format": "jpeg",
+          "localPath": "/images/catalogues/appliances/products/bosch/pke611ba2a.jpg",
+          "visualInspection": "Product photograph or photorealistic manufacturer product rendering; no technical drawing, placeholder or unrelated model.",
+          "verifiedVia": "Image is listed in media_gallery for this exact-SKU product payload; visual inspection of local bytes.",
+          "supplierGallery": [
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/k/pke611ba2a_bosch_web_1.jpg",
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/k/pke611ba2a_bosch_tech_1.jpg"
+          ]
+        },
+        "previousImage": {
+          "localPath": "/images/catalogues/appliances/products/bosch/pke611ba2a.jpg",
+          "sourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/p/k/pke611ba2a_bosch_web_1.jpg",
+          "sha256": "98eb2fb25d97e5620602a80d122180fb1225c8d34aff3a880cdfb35501d47f26",
+          "width": 1150,
+          "height": 1012,
+          "identicalToSource": true,
+          "inspection": "Exact product image: retained unchanged."
+        }
+      }
+    },
+    {
+      "model": "PUG611AA5H",
+      "productId": "product:cooktops:bosch:pug611aa5h",
+      "updates": {
+        "costPrice": 1199,
+        "sourceCostPrice": 1199,
+        "sellPrice": 1199,
+        "tenantSellPrice": 1199,
+        "currentRetailReference": 1199,
+        "currentRetailReferenceSourceUrl": "https://www.harveynormancommercial.com.au/products/PUG611AA5H",
+        "priceStatus": "fixed",
+        "gstStatus": "inclusive",
+        "priceSourceUrl": "https://www.harveynormancommercial.com.au/products/PUG611AA5H",
+        "priceVerifiedAt": "2026-09-11",
+        "primaryImage": "/images/catalogues/appliances/products/bosch/pug611aa5h-hnc.png",
+        "imageStatus": "verified-authorised-supplier-local",
+        "imageSourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/s/c/screenshot_2026-06-10_at_4.56.17_pm.png",
+        "imageSourcePageUrl": "https://www.harveynormancommercial.com.au/products/PUG611AA5H",
+        "imageSourceType": "authorised-supplier-product-page",
+        "imageSourceOrganisation": "Harvey Norman Commercial",
+        "imageAttribution": "Harvey Norman Commercial",
+        "imageVerificationStatus": "verified-authorised-exact-model",
+        "imageVerifiedAt": "2026-09-11",
+        "imageCheckedAt": "2026-09-11",
+        "productPageUrl": "https://www.harveynormancommercial.com.au/products/PUG611AA5H",
+        "productPageStatus": "verified-exact-model",
+        "modelVerificationNote": "Exact PUG611AA5H SKU and model confirmed on the HNC product page; primary gallery product photo visually verified and downloaded unchanged. Replaces the previous technical drawing.",
+        "sourceCheckedAt": "2026-09-11",
+        "source": {
+          "type": "authorised_supplier_product_page",
+          "file": "data/product-library/catalogues/appliances/AU-BOSCH-APPLIANCE-RANGE.json",
+          "sourceName": "Harvey Norman Commercial exact product page",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/PUG611AA5H",
+          "sourceVerifiedAt": "2026-09-11"
+        },
+        "research": {
+          "verificationStatus": "verified-basic",
+          "sourceType": "authorised_supplier_product_page",
+          "sourceOrganisation": "Harvey Norman Commercial",
+          "checkedAt": "2026-09-11"
+        },
+        "evidence": {
+          "sourceOrganisation": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/PUG611AA5H",
+          "sourceCheckedAt": "2026-09-11",
+          "evidenceStatus": "verified-exact-model-image-and-price",
+          "evidenceFile": "data/product-library/source-evidence/bosch/hnc-cooktop-corrections-2026-09-11.json"
+        }
+      },
+      "evidence": {
+        "retrievedAt": "2026-09-11T05:04:20.000Z",
+        "sourceUrl": "https://www.harveynormancommercial.com.au/products/PUG611AA5H",
+        "finalUrl": "https://www.harveynormancommercial.com.au/products/PUG611AA5H",
+        "httpStatus": 200,
+        "htmlSha256": "1fee5fdc716d69dd0dddc297b6bbb1ca3db19d12da1c21293190bdd31b16ed20",
+        "extraction": "Exact-SKU ApolloSSRDataTransport product payload from Harvey Norman Commercial product page",
+        "exactModelEvidence": {
+          "sku": "PUG611AA5H",
+          "vendorcode": "PUG611AA5H",
+          "brand": [
+            "Bosch"
+          ],
+          "visibleProductCodeVerified": true
+        },
+        "supplierProduct": {
+          "title": "Series 2 600mm Induction Cooktop",
+          "dimensions": "W592 x D522 x H51 mm",
+          "descriptionHtml": "<p>• 4 zone induction cooktop<br>• 9 power levels<br>• Childproof lock<br>• TouchSelect Basic</p>"
+        },
+        "price": {
+          "listedPrice": 1199,
+          "currency": "AUD",
+          "label": "SRP (INC. GST)",
+          "gstStatus": "inclusive",
+          "price_store": 1199,
+          "price_promo": 0,
+          "regularPrice": {
+            "__typename": "Money",
+            "value": 0,
+            "currency": "AUD"
+          },
+          "verification": "Visible exact-model product page price matches structured price_store; zero regular_price is not used."
+        },
+        "visibleProductText": "SRP (INC. GST):\n$1199\nCOLOUR: Black\nPRODUCT CODE: PUG611AA5H\nSIZE: W592 x D522 x H51 mm\nFEATURES:\n4 zone induction cooktop\n9 power levels\nChildproof lock\nTouchSelect Basic\n",
+        "image": {
+          "sourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/s/c/screenshot_2026-06-10_at_4.56.17_pm.png",
+          "galleryUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/s/c/screenshot_2026-06-10_at_4.56.17_pm.png",
+          "httpStatus": 200,
+          "mimeType": "image/png",
+          "sha256": "9ec52f1057a95ca97afe1a22b5d5fc5dc566a90feea8d9a6ccac4be9e86fe02e",
+          "width": 412,
+          "height": 349,
+          "format": "png",
+          "localPath": "/images/catalogues/appliances/products/bosch/pug611aa5h-hnc.png",
+          "visualInspection": "Product photograph or photorealistic manufacturer product rendering; no technical drawing, placeholder or unrelated model.",
+          "verifiedVia": "Image is listed in media_gallery for this exact-SKU product payload; visual inspection of local bytes.",
+          "supplierGallery": [
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/s/c/screenshot_2026-06-10_at_4.56.17_pm.png",
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/u/pug611aa5h_bosch_tech.jpg"
+          ]
+        },
+        "previousImage": {
+          "localPath": "/images/catalogues/appliances/products/bosch/pug611aa5h.jpg",
+          "sourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/p/u/pug611aa5h_bosch_tech.jpg",
+          "sha256": "dc3d33dacf406d14146104b457d567a50df988ea15df3c040332a3cf2a1cf33b",
+          "width": 328,
+          "height": 306,
+          "identicalToSource": false,
+          "inspection": "Technical dimension drawing: replacement required."
+        }
+      }
+    },
+    {
+      "model": "PNK6B6K40A",
+      "productId": "product:cooktops:bosch:pnk6b6k40a",
+      "updates": {
+        "costPrice": 1248,
+        "sourceCostPrice": 1248,
+        "sellPrice": 1248,
+        "tenantSellPrice": 1248,
+        "currentRetailReference": 1248,
+        "currentRetailReferenceSourceUrl": "https://www.harveynormancommercial.com.au/products/PNK6B6K40A",
+        "priceStatus": "fixed",
+        "gstStatus": "inclusive",
+        "priceSourceUrl": "https://www.harveynormancommercial.com.au/products/PNK6B6K40A",
+        "priceVerifiedAt": "2026-09-11",
+        "primaryImage": "/images/catalogues/appliances/products/bosch/pnk6b6k40a.jpg",
+        "imageStatus": "verified-authorised-supplier-local",
+        "imageSourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/p/n/pnk6b6k40a_bosch_web.jpeg",
+        "imageSourcePageUrl": "https://www.harveynormancommercial.com.au/products/PNK6B6K40A",
+        "imageSourceType": "authorised-supplier-product-page",
+        "imageSourceOrganisation": "Harvey Norman Commercial",
+        "imageAttribution": "Harvey Norman Commercial",
+        "imageVerificationStatus": "verified-authorised-exact-model",
+        "imageVerifiedAt": "2026-09-11",
+        "imageCheckedAt": "2026-09-11",
+        "productPageUrl": "https://www.harveynormancommercial.com.au/products/PNK6B6K40A",
+        "productPageStatus": "verified-exact-model",
+        "modelVerificationNote": "Exact model confirmed by HNC product page SKU and visible product code; local product photo visually verified and SHA-256 identical to the exact-model HNC gallery source.",
+        "sourceCheckedAt": "2026-09-11",
+        "source": {
+          "type": "authorised_supplier_product_page",
+          "file": "data/product-library/catalogues/appliances/AU-BOSCH-APPLIANCE-RANGE.json",
+          "sourceName": "Harvey Norman Commercial exact product page",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/PNK6B6K40A",
+          "sourceVerifiedAt": "2026-09-11"
+        },
+        "research": {
+          "verificationStatus": "verified-basic",
+          "sourceType": "authorised_supplier_product_page",
+          "sourceOrganisation": "Harvey Norman Commercial",
+          "checkedAt": "2026-09-11"
+        },
+        "evidence": {
+          "sourceOrganisation": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/PNK6B6K40A",
+          "sourceCheckedAt": "2026-09-11",
+          "evidenceStatus": "verified-exact-model-image-and-price",
+          "evidenceFile": "data/product-library/source-evidence/bosch/hnc-cooktop-corrections-2026-09-11.json"
+        }
+      },
+      "evidence": {
+        "retrievedAt": "2026-09-11T05:04:20.462Z",
+        "sourceUrl": "https://www.harveynormancommercial.com.au/products/PNK6B6K40A",
+        "finalUrl": "https://www.harveynormancommercial.com.au/products/PNK6B6K40A",
+        "httpStatus": 200,
+        "htmlSha256": "250e3456549a951131f644e8f62dbd9ac5a161ca4ebaad404369c51f35813597",
+        "extraction": "Exact-SKU ApolloSSRDataTransport product payload from Harvey Norman Commercial product page",
+        "exactModelEvidence": {
+          "sku": "PNK6B6K40A",
+          "vendorcode": "PNK6B6K40A",
+          "brand": [
+            "Bosch"
+          ],
+          "visibleProductCodeVerified": true
+        },
+        "supplierProduct": {
+          "title": "Series 4 600m Gas Cooktop",
+          "dimensions": "W590 x D520 x H45mm",
+          "descriptionHtml": "<p>• 4 burners<br>• Flame failure safety <br>• Semi–continuous pan supports<br>• Knob ignition<br>• Dishwasher–suitable pan supports</p>"
+        },
+        "price": {
+          "listedPrice": 1248,
+          "currency": "AUD",
+          "label": "SRP (INC. GST)",
+          "gstStatus": "inclusive",
+          "price_store": 1248,
+          "price_promo": 0,
+          "regularPrice": {
+            "__typename": "Money",
+            "value": 0,
+            "currency": "AUD"
+          },
+          "verification": "Visible exact-model product page price matches structured price_store; zero regular_price is not used."
+        },
+        "visibleProductText": "SRP (INC. GST):\n$1248\nCOLOUR: Black\nPRODUCT CODE: PNK6B6K40A\nSIZE: W590 x D520 x H45mm\nFEATURES:\n4 burners\nFlame failure safety\nSemi–continuous pan supports\nKnob ignition\nDishwasher–suitable pan supports\n",
+        "image": {
+          "sourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/p/n/pnk6b6k40a_bosch_web.jpeg",
+          "galleryUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/n/pnk6b6k40a_bosch_web.jpeg",
+          "httpStatus": 200,
+          "mimeType": "image/jpeg",
+          "sha256": "872a8afe1c2448a8289ad090942c122533a56a4feef2725f17f46374ac683759",
+          "width": 1361,
+          "height": 1200,
+          "format": "jpeg",
+          "localPath": "/images/catalogues/appliances/products/bosch/pnk6b6k40a.jpg",
+          "visualInspection": "Product photograph or photorealistic manufacturer product rendering; no technical drawing, placeholder or unrelated model.",
+          "verifiedVia": "Image is listed in media_gallery for this exact-SKU product payload; visual inspection of local bytes.",
+          "supplierGallery": [
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/n/pnk6b6k40a_bosch_web.jpeg",
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/n/pnk6b6k40a_bosch_tech.jpeg",
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/n/pnk6b6k40a_bosch_web2.jpeg",
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/n/pnk6b6k40a_bosch_web3.jpeg"
+          ]
+        },
+        "previousImage": {
+          "localPath": "/images/catalogues/appliances/products/bosch/pnk6b6k40a.jpg",
+          "sourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/p/n/pnk6b6k40a_bosch_web.jpeg",
+          "sha256": "872a8afe1c2448a8289ad090942c122533a56a4feef2725f17f46374ac683759",
+          "width": 1361,
+          "height": 1200,
+          "identicalToSource": true,
+          "inspection": "Exact product image: retained unchanged."
+        }
+      }
+    },
+    {
+      "model": "PUE611BB5H",
+      "productId": "product:cooktops:bosch:pue611bb5h",
+      "updates": {
+        "costPrice": 1299,
+        "sourceCostPrice": 1299,
+        "sellPrice": 1299,
+        "tenantSellPrice": 1299,
+        "currentRetailReference": 1299,
+        "currentRetailReferenceSourceUrl": "https://www.harveynormancommercial.com.au/products/PUE611BB5H",
+        "priceStatus": "fixed",
+        "gstStatus": "inclusive",
+        "priceSourceUrl": "https://www.harveynormancommercial.com.au/products/PUE611BB5H",
+        "priceVerifiedAt": "2026-09-11",
+        "primaryImage": "/images/catalogues/appliances/products/bosch/pue611bb5h.jpg",
+        "imageStatus": "verified-authorised-supplier-local",
+        "imageSourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/p/u/pue611bb5h_bosch_web.jpg",
+        "imageSourcePageUrl": "https://www.harveynormancommercial.com.au/products/PUE611BB5H",
+        "imageSourceType": "authorised-supplier-product-page",
+        "imageSourceOrganisation": "Harvey Norman Commercial",
+        "imageAttribution": "Harvey Norman Commercial",
+        "imageVerificationStatus": "verified-authorised-exact-model",
+        "imageVerifiedAt": "2026-09-11",
+        "imageCheckedAt": "2026-09-11",
+        "productPageUrl": "https://www.harveynormancommercial.com.au/products/PUE611BB5H",
+        "productPageStatus": "verified-exact-model",
+        "modelVerificationNote": "Exact model confirmed by HNC product page SKU and visible product code; local product photo visually verified and SHA-256 identical to the exact-model HNC gallery source.",
+        "sourceCheckedAt": "2026-09-11",
+        "source": {
+          "type": "authorised_supplier_product_page",
+          "file": "data/product-library/catalogues/appliances/AU-BOSCH-APPLIANCE-RANGE.json",
+          "sourceName": "Harvey Norman Commercial exact product page",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/PUE611BB5H",
+          "sourceVerifiedAt": "2026-09-11"
+        },
+        "research": {
+          "verificationStatus": "verified-basic",
+          "sourceType": "authorised_supplier_product_page",
+          "sourceOrganisation": "Harvey Norman Commercial",
+          "checkedAt": "2026-09-11"
+        },
+        "evidence": {
+          "sourceOrganisation": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/PUE611BB5H",
+          "sourceCheckedAt": "2026-09-11",
+          "evidenceStatus": "verified-exact-model-image-and-price",
+          "evidenceFile": "data/product-library/source-evidence/bosch/hnc-cooktop-corrections-2026-09-11.json"
+        }
+      },
+      "evidence": {
+        "retrievedAt": "2026-09-11T05:04:20.469Z",
+        "sourceUrl": "https://www.harveynormancommercial.com.au/products/PUE611BB5H",
+        "finalUrl": "https://www.harveynormancommercial.com.au/products/PUE611BB5H",
+        "httpStatus": 200,
+        "htmlSha256": "0f2432885d2c59e5206974a952546452f3950d4e1b7be15a3c85ec4a60c11151",
+        "extraction": "Exact-SKU ApolloSSRDataTransport product payload from Harvey Norman Commercial product page",
+        "exactModelEvidence": {
+          "sku": "PUE611BB5H",
+          "vendorcode": "PUE611BB5H",
+          "brand": [
+            "Bosch"
+          ],
+          "visibleProductCodeVerified": true
+        },
+        "supplierProduct": {
+          "title": "Series 4 600mm Induction Cooktop",
+          "dimensions": "W592 x D522 x H51mm",
+          "descriptionHtml": "<p>• Touch select<br>• Frameless design<br>• Power boost, up to 35% faster heating <br>• Quick Start<br>• Induction technology</p>"
+        },
+        "price": {
+          "listedPrice": 1299,
+          "currency": "AUD",
+          "label": "SRP (INC. GST)",
+          "gstStatus": "inclusive",
+          "price_store": 1299,
+          "price_promo": 0,
+          "regularPrice": {
+            "__typename": "Money",
+            "value": 0,
+            "currency": "AUD"
+          },
+          "verification": "Visible exact-model product page price matches structured price_store; zero regular_price is not used."
+        },
+        "visibleProductText": "SRP (INC. GST):\n$1299\nCOLOUR: Black\nPRODUCT CODE: PUE611BB5H\nSIZE: W592 x D522 x H51mm\nFEATURES:\nTouch select\nFrameless design\nPower boost, up to 35% faster heating\nQuick Start\nInduction technology\n",
+        "image": {
+          "sourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/p/u/pue611bb5h_bosch_web.jpg",
+          "galleryUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/u/pue611bb5h_bosch_web.jpg",
+          "httpStatus": 200,
+          "mimeType": "image/jpeg",
+          "sha256": "19d5343b6bf20f83956f59e8ce71243394a4d44615773315401fe0e3b001899e",
+          "width": 1853,
+          "height": 1617,
+          "format": "jpeg",
+          "localPath": "/images/catalogues/appliances/products/bosch/pue611bb5h.jpg",
+          "visualInspection": "Product photograph or photorealistic manufacturer product rendering; no technical drawing, placeholder or unrelated model.",
+          "verifiedVia": "Image is listed in media_gallery for this exact-SKU product payload; visual inspection of local bytes.",
+          "supplierGallery": [
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/u/pue611bb5h_bosch_web.jpg",
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/u/pue611bb5h_bosch_tech.jpg",
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/u/pue611bb5h_bosch_insitu.jpg"
+          ]
+        },
+        "previousImage": {
+          "localPath": "/images/catalogues/appliances/products/bosch/pue611bb5h.jpg",
+          "sourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/p/u/pue611bb5h_bosch_web.jpg",
+          "sha256": "19d5343b6bf20f83956f59e8ce71243394a4d44615773315401fe0e3b001899e",
+          "width": 1853,
+          "height": 1617,
+          "identicalToSource": true,
+          "inspection": "Exact product image: retained unchanged."
+        }
+      }
+    },
+    {
+      "model": "PPH6A6I10A",
+      "productId": "product:cooktops:bosch:pph6a6i10a",
+      "updates": {
+        "costPrice": 1599,
+        "sourceCostPrice": 1599,
+        "sellPrice": 1599,
+        "tenantSellPrice": 1599,
+        "currentRetailReference": 1599,
+        "currentRetailReferenceSourceUrl": "https://www.harveynormancommercial.com.au/products/PPH6A6I10A",
+        "priceStatus": "fixed",
+        "gstStatus": "inclusive",
+        "priceSourceUrl": "https://www.harveynormancommercial.com.au/products/PPH6A6I10A",
+        "priceVerifiedAt": "2026-09-11",
+        "primaryImage": "/images/catalogues/appliances/products/bosch/pph6a6i10a.jpg",
+        "imageStatus": "verified-authorised-supplier-local",
+        "imageSourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/p/p/pph6a6i10a_bosch_web_1.jpeg",
+        "imageSourcePageUrl": "https://www.harveynormancommercial.com.au/products/PPH6A6I10A",
+        "imageSourceType": "authorised-supplier-product-page",
+        "imageSourceOrganisation": "Harvey Norman Commercial",
+        "imageAttribution": "Harvey Norman Commercial",
+        "imageVerificationStatus": "verified-authorised-exact-model",
+        "imageVerifiedAt": "2026-09-11",
+        "imageCheckedAt": "2026-09-11",
+        "productPageUrl": "https://www.harveynormancommercial.com.au/products/PPH6A6I10A",
+        "productPageStatus": "verified-exact-model",
+        "modelVerificationNote": "Exact model confirmed by HNC product page SKU and visible product code; local product photo visually verified and SHA-256 identical to the exact-model HNC gallery source.",
+        "sourceCheckedAt": "2026-09-11",
+        "source": {
+          "type": "authorised_supplier_product_page",
+          "file": "data/product-library/catalogues/appliances/AU-BOSCH-APPLIANCE-RANGE.json",
+          "sourceName": "Harvey Norman Commercial exact product page",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/PPH6A6I10A",
+          "sourceVerifiedAt": "2026-09-11"
+        },
+        "research": {
+          "verificationStatus": "verified-basic",
+          "sourceType": "authorised_supplier_product_page",
+          "sourceOrganisation": "Harvey Norman Commercial",
+          "checkedAt": "2026-09-11"
+        },
+        "evidence": {
+          "sourceOrganisation": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/PPH6A6I10A",
+          "sourceCheckedAt": "2026-09-11",
+          "evidenceStatus": "verified-exact-model-image-and-price",
+          "evidenceFile": "data/product-library/source-evidence/bosch/hnc-cooktop-corrections-2026-09-11.json"
+        }
+      },
+      "evidence": {
+        "retrievedAt": "2026-09-11T05:04:21.052Z",
+        "sourceUrl": "https://www.harveynormancommercial.com.au/products/PPH6A6I10A",
+        "finalUrl": "https://www.harveynormancommercial.com.au/products/PPH6A6I10A",
+        "httpStatus": 200,
+        "htmlSha256": "fd69a966044d5d1645f75d70e5b82ba2b0288c885b3b5a5e36a76461b6d45ab1",
+        "extraction": "Exact-SKU ApolloSSRDataTransport product payload from Harvey Norman Commercial product page",
+        "exactModelEvidence": {
+          "sku": "PPH6A6I10A",
+          "vendorcode": "PPH6A6I10A",
+          "brand": [
+            "Bosch"
+          ],
+          "visibleProductCodeVerified": true
+        },
+        "supplierProduct": {
+          "title": "Series 6 600mm Gas Cooktop",
+          "dimensions": "W590 x D520 x H45mm",
+          "descriptionHtml": "<p>• 4 burners<br>• Flame failure safety <br>• 9 FlameSelect levels<br>• Single cast iron pan supports with rubber feet<br>• Knob ignition</p>"
+        },
+        "price": {
+          "listedPrice": 1599,
+          "currency": "AUD",
+          "label": "SRP (INC. GST)",
+          "gstStatus": "inclusive",
+          "price_store": 1599,
+          "price_promo": 0,
+          "regularPrice": {
+            "__typename": "Money",
+            "value": 0,
+            "currency": "AUD"
+          },
+          "verification": "Visible exact-model product page price matches structured price_store; zero regular_price is not used."
+        },
+        "visibleProductText": "SRP (INC. GST):\n$1599\nCOLOUR: Black\nPRODUCT CODE: PPH6A6I10A\nSIZE: W590 x D520 x H45mm\nFEATURES:\n4 burners\nFlame failure safety\n9 FlameSelect levels\nSingle cast iron pan supports with rubber feet\nKnob ignition\n",
+        "image": {
+          "sourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/p/p/pph6a6i10a_bosch_web_1.jpeg",
+          "galleryUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/p/pph6a6i10a_bosch_web_1.jpeg",
+          "httpStatus": 200,
+          "mimeType": "image/jpeg",
+          "sha256": "f70f9c7df9e4c4bd5b7d9015354ac54509f4462d17f15d305c200b88f40c0dec",
+          "width": 1361,
+          "height": 1200,
+          "format": "jpeg",
+          "localPath": "/images/catalogues/appliances/products/bosch/pph6a6i10a.jpg",
+          "visualInspection": "Product photograph or photorealistic manufacturer product rendering; no technical drawing, placeholder or unrelated model.",
+          "verifiedVia": "Image is listed in media_gallery for this exact-SKU product payload; visual inspection of local bytes.",
+          "supplierGallery": [
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/p/pph6a6i10a_bosch_web_1.jpeg",
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/p/pph6a6i10a_bosch_tech.png",
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/p/pph6a6i10a_bosch_web2_1.jpeg",
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/p/pph6a6i10a_bosch_web3_1.jpeg"
+          ]
+        },
+        "previousImage": {
+          "localPath": "/images/catalogues/appliances/products/bosch/pph6a6i10a.jpg",
+          "sourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/p/p/pph6a6i10a_bosch_web_1.jpeg",
+          "sha256": "f70f9c7df9e4c4bd5b7d9015354ac54509f4462d17f15d305c200b88f40c0dec",
+          "width": 1361,
+          "height": 1200,
+          "identicalToSource": true,
+          "inspection": "Exact product image: retained unchanged."
+        }
+      }
+    },
+    {
+      "model": "PIX631HC1H",
+      "productId": "product:cooktops:bosch:pix631hc1h",
+      "updates": {
+        "costPrice": 2348,
+        "sourceCostPrice": 2348,
+        "sellPrice": 2348,
+        "tenantSellPrice": 2348,
+        "currentRetailReference": 2348,
+        "currentRetailReferenceSourceUrl": "https://www.harveynormancommercial.com.au/products/PIX631HC1H",
+        "priceStatus": "fixed",
+        "gstStatus": "inclusive",
+        "priceSourceUrl": "https://www.harveynormancommercial.com.au/products/PIX631HC1H",
+        "priceVerifiedAt": "2026-09-11",
+        "primaryImage": "/images/catalogues/appliances/products/bosch/pix631hc1h.jpg",
+        "imageStatus": "verified-authorised-supplier-local",
+        "imageSourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/p/i/pix631hc1h_bosch_web.jpeg",
+        "imageSourcePageUrl": "https://www.harveynormancommercial.com.au/products/PIX631HC1H",
+        "imageSourceType": "authorised-supplier-product-page",
+        "imageSourceOrganisation": "Harvey Norman Commercial",
+        "imageAttribution": "Harvey Norman Commercial",
+        "imageVerificationStatus": "verified-authorised-exact-model",
+        "imageVerifiedAt": "2026-09-11",
+        "imageCheckedAt": "2026-09-11",
+        "productPageUrl": "https://www.harveynormancommercial.com.au/products/PIX631HC1H",
+        "productPageStatus": "verified-exact-model",
+        "modelVerificationNote": "Exact model confirmed by HNC product page SKU and visible product code; local product photo visually verified and SHA-256 identical to the exact-model HNC gallery source.",
+        "sourceCheckedAt": "2026-09-11",
+        "source": {
+          "type": "authorised_supplier_product_page",
+          "file": "data/product-library/catalogues/appliances/AU-BOSCH-APPLIANCE-RANGE.json",
+          "sourceName": "Harvey Norman Commercial exact product page",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/PIX631HC1H",
+          "sourceVerifiedAt": "2026-09-11"
+        },
+        "research": {
+          "verificationStatus": "verified-basic",
+          "sourceType": "authorised_supplier_product_page",
+          "sourceOrganisation": "Harvey Norman Commercial",
+          "checkedAt": "2026-09-11"
+        },
+        "evidence": {
+          "sourceOrganisation": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/PIX631HC1H",
+          "sourceCheckedAt": "2026-09-11",
+          "evidenceStatus": "verified-exact-model-image-and-price",
+          "evidenceFile": "data/product-library/source-evidence/bosch/hnc-cooktop-corrections-2026-09-11.json"
+        }
+      },
+      "evidence": {
+        "retrievedAt": "2026-09-11T05:04:21.283Z",
+        "sourceUrl": "https://www.harveynormancommercial.com.au/products/PIX631HC1H",
+        "finalUrl": "https://www.harveynormancommercial.com.au/products/PIX631HC1H",
+        "httpStatus": 200,
+        "htmlSha256": "0b9e0b836668ac01b1aa244793ee50aa420c608d92016fbb57625cd84079d1dd",
+        "extraction": "Exact-SKU ApolloSSRDataTransport product payload from Harvey Norman Commercial product page",
+        "exactModelEvidence": {
+          "sku": "PIX631HC1H",
+          "vendorcode": "PIX631HC1H",
+          "brand": [
+            "Bosch"
+          ],
+          "visibleProductCodeVerified": true
+        },
+        "supplierProduct": {
+          "title": "Series 6 600mm Induction Cooktop ",
+          "dimensions": "W592 x D522 x H51mm",
+          "descriptionHtml": "<p>• 4 zone induction cooktop with Flex Induction<br>• 17 power levels for each cooking zone<br>• Switch–off timer<br>• Favourite button<br>• PerfectFry Plus</p>"
+        },
+        "price": {
+          "listedPrice": 2348,
+          "currency": "AUD",
+          "label": "SRP (INC. GST)",
+          "gstStatus": "inclusive",
+          "price_store": 2348,
+          "price_promo": 0,
+          "regularPrice": {
+            "__typename": "Money",
+            "value": 0,
+            "currency": "AUD"
+          },
+          "verification": "Visible exact-model product page price matches structured price_store; zero regular_price is not used."
+        },
+        "visibleProductText": "SRP (INC. GST):\n$2348\nCOLOUR: Black\nPRODUCT CODE: PIX631HC1H\nSIZE: W592 x D522 x H51mm\nFEATURES:\n4 zone induction cooktop with Flex Induction\n17 power levels for each cooking zone\nSwitch–off timer\nFavourite button\nPerfectFry Plus\n",
+        "image": {
+          "sourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/p/i/pix631hc1h_bosch_web.jpeg",
+          "galleryUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/i/pix631hc1h_bosch_web.jpeg",
+          "httpStatus": 200,
+          "mimeType": "image/jpeg",
+          "sha256": "c36a9456dca95574e239142146aeafd38b37b73437ed1da449bf25288210eff8",
+          "width": 1361,
+          "height": 1200,
+          "format": "jpeg",
+          "localPath": "/images/catalogues/appliances/products/bosch/pix631hc1h.jpg",
+          "visualInspection": "Product photograph or photorealistic manufacturer product rendering; no technical drawing, placeholder or unrelated model.",
+          "verifiedVia": "Image is listed in media_gallery for this exact-SKU product payload; visual inspection of local bytes.",
+          "supplierGallery": [
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/i/pix631hc1h_bosch_web.jpeg",
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/i/pix631hc1h_bosch_tech_1.jpeg",
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/i/pix631hc1h_bosch_web2.jpeg",
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/i/pix631hc1h_bosch_web3.jpeg",
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/i/pix631hc1h_bosch_web4.jpeg"
+          ]
+        },
+        "previousImage": {
+          "localPath": "/images/catalogues/appliances/products/bosch/pix631hc1h.jpg",
+          "sourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/p/i/pix631hc1h_bosch_web.jpeg",
+          "sha256": "c36a9456dca95574e239142146aeafd38b37b73437ed1da449bf25288210eff8",
+          "width": 1361,
+          "height": 1200,
+          "identicalToSource": true,
+          "inspection": "Exact product image: retained unchanged."
+        }
+      }
+    },
+    {
+      "model": "PXX695HC1E",
+      "productId": "product:cooktops:bosch:pxx695hc1e",
+      "updates": {
+        "costPrice": 2748,
+        "sourceCostPrice": 2748,
+        "sellPrice": 2748,
+        "tenantSellPrice": 2748,
+        "currentRetailReference": 2748,
+        "currentRetailReferenceSourceUrl": "https://www.harveynormancommercial.com.au/products/PXX695HC1E",
+        "priceStatus": "fixed",
+        "gstStatus": "inclusive",
+        "priceSourceUrl": "https://www.harveynormancommercial.com.au/products/PXX695HC1E",
+        "priceVerifiedAt": "2026-09-11",
+        "primaryImage": "/images/catalogues/appliances/products/bosch/pxx695hc1e.jpg",
+        "imageStatus": "verified-authorised-supplier-local",
+        "imageSourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/p/x/pxx695hc1e_bosch_web_1.jpeg",
+        "imageSourcePageUrl": "https://www.harveynormancommercial.com.au/products/PXX695HC1E",
+        "imageSourceType": "authorised-supplier-product-page",
+        "imageSourceOrganisation": "Harvey Norman Commercial",
+        "imageAttribution": "Harvey Norman Commercial",
+        "imageVerificationStatus": "verified-authorised-exact-model",
+        "imageVerifiedAt": "2026-09-11",
+        "imageCheckedAt": "2026-09-11",
+        "productPageUrl": "https://www.harveynormancommercial.com.au/products/PXX695HC1E",
+        "productPageStatus": "verified-exact-model",
+        "modelVerificationNote": "Exact model confirmed by HNC product page SKU and visible product code; local product photo visually verified and SHA-256 identical to the exact-model HNC gallery source.",
+        "sourceCheckedAt": "2026-09-11",
+        "source": {
+          "type": "authorised_supplier_product_page",
+          "file": "data/product-library/catalogues/appliances/AU-BOSCH-APPLIANCE-RANGE.json",
+          "sourceName": "Harvey Norman Commercial exact product page",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/PXX695HC1E",
+          "sourceVerifiedAt": "2026-09-11"
+        },
+        "research": {
+          "verificationStatus": "verified-basic",
+          "sourceType": "authorised_supplier_product_page",
+          "sourceOrganisation": "Harvey Norman Commercial",
+          "checkedAt": "2026-09-11"
+        },
+        "evidence": {
+          "sourceOrganisation": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/PXX695HC1E",
+          "sourceCheckedAt": "2026-09-11",
+          "evidenceStatus": "verified-exact-model-image-and-price",
+          "evidenceFile": "data/product-library/source-evidence/bosch/hnc-cooktop-corrections-2026-09-11.json"
+        }
+      },
+      "evidence": {
+        "retrievedAt": "2026-09-11T05:04:21.855Z",
+        "sourceUrl": "https://www.harveynormancommercial.com.au/products/PXX695HC1E",
+        "finalUrl": "https://www.harveynormancommercial.com.au/products/PXX695HC1E",
+        "httpStatus": 200,
+        "htmlSha256": "785ada93653780e8b27f9504748cf1fefc38ae037e39e867bd6b24d4738d63ad",
+        "extraction": "Exact-SKU ApolloSSRDataTransport product payload from Harvey Norman Commercial product page",
+        "exactModelEvidence": {
+          "sku": "PXX695HC1E",
+          "vendorcode": "PXX695HC1E",
+          "brand": [
+            "Bosch"
+          ],
+          "visibleProductCodeVerified": true
+        },
+        "supplierProduct": {
+          "title": "Series 6 600mm Induction Cooktop ",
+          "dimensions": "W606 x D527 x H51mm",
+          "descriptionHtml": "<p>• 4 zone induction cooktop with Flex Induction<br>• 17 power levels for each cooking zone<br>• Favourite button<br>• Switch–off timer<br>• PerfectFry Plus</p>"
+        },
+        "price": {
+          "listedPrice": 2748,
+          "currency": "AUD",
+          "label": "SRP (INC. GST)",
+          "gstStatus": "inclusive",
+          "price_store": 2748,
+          "price_promo": 0,
+          "regularPrice": {
+            "__typename": "Money",
+            "value": 0,
+            "currency": "AUD"
+          },
+          "verification": "Visible exact-model product page price matches structured price_store; zero regular_price is not used."
+        },
+        "visibleProductText": "SRP (INC. GST):\n$2748\nCOLOUR: Black\nPRODUCT CODE: PXX695HC1E\nSIZE: W606 x D527 x H51mm\nFEATURES:\n4 zone induction cooktop with Flex Induction\n17 power levels for each cooking zone\nFavourite button\nSwitch–off timer\nPerfectFry Plus\n",
+        "image": {
+          "sourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/p/x/pxx695hc1e_bosch_web_1.jpeg",
+          "galleryUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/x/pxx695hc1e_bosch_web_1.jpeg",
+          "httpStatus": 200,
+          "mimeType": "image/jpeg",
+          "sha256": "aeb72408936a60e4215ad2eaa3c15f1e411b2d8e562add49e98bc2fe626f884f",
+          "width": 1360,
+          "height": 1200,
+          "format": "jpeg",
+          "localPath": "/images/catalogues/appliances/products/bosch/pxx695hc1e.jpg",
+          "visualInspection": "Product photograph or photorealistic manufacturer product rendering; no technical drawing, placeholder or unrelated model.",
+          "verifiedVia": "Image is listed in media_gallery for this exact-SKU product payload; visual inspection of local bytes.",
+          "supplierGallery": [
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/x/pxx695hc1e_bosch_web_1.jpeg",
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/x/pxx695hc1e_bosch_tech_1.jpg",
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/x/pxx695hc1e_bosch_web4_1.jpeg",
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/x/pxx695hc1e_bosch_web2_1.jpeg",
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/x/pxx695hc1e_bosch_web3_1.jpeg"
+          ]
+        },
+        "previousImage": {
+          "localPath": "/images/catalogues/appliances/products/bosch/pxx695hc1e.jpg",
+          "sourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/p/x/pxx695hc1e_bosch_web_1.jpeg",
+          "sha256": "aeb72408936a60e4215ad2eaa3c15f1e411b2d8e562add49e98bc2fe626f884f",
+          "width": 1360,
+          "height": 1200,
+          "identicalToSource": true,
+          "inspection": "Exact product image: retained unchanged."
+        }
+      }
+    },
+    {
+      "model": "PKM875DP1A",
+      "productId": "product:cooktops:bosch:pkm875dp1a",
+      "updates": {
+        "costPrice": 2049,
+        "sourceCostPrice": 2049,
+        "sellPrice": 2049,
+        "tenantSellPrice": 2049,
+        "currentRetailReference": 2049,
+        "currentRetailReferenceSourceUrl": "https://www.harveynormancommercial.com.au/products/PKM875DP1A",
+        "priceStatus": "fixed",
+        "gstStatus": "inclusive",
+        "priceSourceUrl": "https://www.harveynormancommercial.com.au/products/PKM875DP1A",
+        "priceVerifiedAt": "2026-09-11",
+        "primaryImage": "/images/catalogues/appliances/products/bosch/pkm875dp1a.jpg",
+        "imageStatus": "verified-authorised-supplier-local",
+        "imageSourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/p/k/pkm875dp1a_bosch_web.jpg",
+        "imageSourcePageUrl": "https://www.harveynormancommercial.com.au/products/PKM875DP1A",
+        "imageSourceType": "authorised-supplier-product-page",
+        "imageSourceOrganisation": "Harvey Norman Commercial",
+        "imageAttribution": "Harvey Norman Commercial",
+        "imageVerificationStatus": "verified-authorised-exact-model",
+        "imageVerifiedAt": "2026-09-11",
+        "imageCheckedAt": "2026-09-11",
+        "productPageUrl": "https://www.harveynormancommercial.com.au/products/PKM875DP1A",
+        "productPageStatus": "verified-exact-model",
+        "modelVerificationNote": "Exact model confirmed by HNC product page SKU and visible product code; local product photo visually verified and SHA-256 identical to the exact-model HNC gallery source.",
+        "sourceCheckedAt": "2026-09-11",
+        "source": {
+          "type": "authorised_supplier_product_page",
+          "file": "data/product-library/catalogues/appliances/AU-BOSCH-APPLIANCE-RANGE.json",
+          "sourceName": "Harvey Norman Commercial exact product page",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/PKM875DP1A",
+          "sourceVerifiedAt": "2026-09-11"
+        },
+        "research": {
+          "verificationStatus": "verified-basic",
+          "sourceType": "authorised_supplier_product_page",
+          "sourceOrganisation": "Harvey Norman Commercial",
+          "checkedAt": "2026-09-11"
+        },
+        "evidence": {
+          "sourceOrganisation": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/PKM875DP1A",
+          "sourceCheckedAt": "2026-09-11",
+          "evidenceStatus": "verified-exact-model-image-and-price",
+          "evidenceFile": "data/product-library/source-evidence/bosch/hnc-cooktop-corrections-2026-09-11.json"
+        }
+      },
+      "evidence": {
+        "retrievedAt": "2026-09-11T05:04:22.059Z",
+        "sourceUrl": "https://www.harveynormancommercial.com.au/products/PKM875DP1A",
+        "finalUrl": "https://www.harveynormancommercial.com.au/products/PKM875DP1A",
+        "httpStatus": 200,
+        "htmlSha256": "ac39260d75e8b2ab22181549a0489bd798026eeca63a9d323c81ab90f9758869",
+        "extraction": "Exact-SKU ApolloSSRDataTransport product payload from Harvey Norman Commercial product page",
+        "exactModelEvidence": {
+          "sku": "PKM875DP1A",
+          "vendorcode": "PKM875DP1A",
+          "brand": [
+            "Bosch"
+          ],
+          "visibleProductCodeVerified": true
+        },
+        "supplierProduct": {
+          "title": "Series 8 800mm Ceramic Cooktop",
+          "dimensions": "W816 x D527mm",
+          "descriptionHtml": "<p>&bull; 2 dual circuit cooking zones<br />&bull; 1 CombiZone<br />&bull; 17 power levels for each cooking zone<br />&bull; 5 electric cooking zones</p>"
+        },
+        "price": {
+          "listedPrice": 2049,
+          "currency": "AUD",
+          "label": "SRP (INC. GST)",
+          "gstStatus": "inclusive",
+          "price_store": 2049,
+          "price_promo": 0,
+          "regularPrice": {
+            "__typename": "Money",
+            "value": 0,
+            "currency": "AUD"
+          },
+          "verification": "Visible exact-model product page price matches structured price_store; zero regular_price is not used."
+        },
+        "visibleProductText": "SRP (INC. GST):\n$2049\nCOLOUR: Black\nPRODUCT CODE: PKM875DP1A\nSIZE: W816 x D527mm\nFEATURES:\n2 dual circuit cooking zones\n1 CombiZone\n17 power levels for each cooking zone\n5 electric cooking zones\n",
+        "image": {
+          "sourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/p/k/pkm875dp1a_bosch_web.jpg",
+          "galleryUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/k/pkm875dp1a_bosch_web.jpg",
+          "httpStatus": 200,
+          "mimeType": "image/jpeg",
+          "sha256": "2d634f0c7e97326d9d6715f7ba3dc87a0627412e1c01b1998e42084b47f4672a",
+          "width": 1500,
+          "height": 978,
+          "format": "jpeg",
+          "localPath": "/images/catalogues/appliances/products/bosch/pkm875dp1a.jpg",
+          "visualInspection": "Product photograph or photorealistic manufacturer product rendering; no technical drawing, placeholder or unrelated model.",
+          "verifiedVia": "Image is listed in media_gallery for this exact-SKU product payload; visual inspection of local bytes.",
+          "supplierGallery": [
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/k/pkm875dp1a_bosch_web.jpg",
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/k/pkm875dp1a__bosch_tech_1.jpg"
+          ]
+        },
+        "previousImage": {
+          "localPath": "/images/catalogues/appliances/products/bosch/pkm875dp1a.jpg",
+          "sourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/p/k/pkm875dp1a_bosch_web.jpg",
+          "sha256": "2d634f0c7e97326d9d6715f7ba3dc87a0627412e1c01b1998e42084b47f4672a",
+          "width": 1500,
+          "height": 978,
+          "identicalToSource": true,
+          "inspection": "Exact product image: retained unchanged."
+        }
+      }
+    },
+    {
+      "model": "PCR9A5I90A",
+      "productId": "product:cooktops:bosch:pcr9a5i90a",
+      "updates": {
+        "costPrice": 2098,
+        "sourceCostPrice": 2098,
+        "sellPrice": 2098,
+        "tenantSellPrice": 2098,
+        "currentRetailReference": 2098,
+        "currentRetailReferenceSourceUrl": "https://www.harveynormancommercial.com.au/products/PCR9A5I90A",
+        "priceStatus": "fixed",
+        "gstStatus": "inclusive",
+        "priceSourceUrl": "https://www.harveynormancommercial.com.au/products/PCR9A5I90A",
+        "priceVerifiedAt": "2026-09-11",
+        "primaryImage": "/images/catalogues/appliances/products/bosch/pcr9a5i90a.jpg",
+        "imageStatus": "verified-authorised-supplier-local",
+        "imageSourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/p/c/pcr9a5i90a_bosch_web.jpg",
+        "imageSourcePageUrl": "https://www.harveynormancommercial.com.au/products/PCR9A5I90A",
+        "imageSourceType": "authorised-supplier-product-page",
+        "imageSourceOrganisation": "Harvey Norman Commercial",
+        "imageAttribution": "Harvey Norman Commercial",
+        "imageVerificationStatus": "verified-authorised-exact-model",
+        "imageVerifiedAt": "2026-09-11",
+        "imageCheckedAt": "2026-09-11",
+        "productPageUrl": "https://www.harveynormancommercial.com.au/products/PCR9A5I90A",
+        "productPageStatus": "verified-exact-model",
+        "modelVerificationNote": "Exact model confirmed by HNC product page SKU and visible product code; local product photo visually verified and SHA-256 identical to the exact-model HNC gallery source.",
+        "sourceCheckedAt": "2026-09-11",
+        "source": {
+          "type": "authorised_supplier_product_page",
+          "file": "data/product-library/catalogues/appliances/AU-BOSCH-APPLIANCE-RANGE.json",
+          "sourceName": "Harvey Norman Commercial exact product page",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/PCR9A5I90A",
+          "sourceVerifiedAt": "2026-09-11"
+        },
+        "research": {
+          "verificationStatus": "verified-basic",
+          "sourceType": "authorised_supplier_product_page",
+          "sourceOrganisation": "Harvey Norman Commercial",
+          "checkedAt": "2026-09-11"
+        },
+        "evidence": {
+          "sourceOrganisation": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/PCR9A5I90A",
+          "sourceCheckedAt": "2026-09-11",
+          "evidenceStatus": "verified-exact-model-image-and-price",
+          "evidenceFile": "data/product-library/source-evidence/bosch/hnc-cooktop-corrections-2026-09-11.json"
+        }
+      },
+      "evidence": {
+        "retrievedAt": "2026-09-11T05:04:23.031Z",
+        "sourceUrl": "https://www.harveynormancommercial.com.au/products/PCR9A5I90A",
+        "finalUrl": "https://www.harveynormancommercial.com.au/products/PCR9A5I90A",
+        "httpStatus": 200,
+        "htmlSha256": "fdd15c83df99b5d051b946ed568464682d948019cd908a6da4a35aebf5c13af6",
+        "extraction": "Exact-SKU ApolloSSRDataTransport product payload from Harvey Norman Commercial product page",
+        "exactModelEvidence": {
+          "sku": "PCR9A5I90A",
+          "vendorcode": "PCR9A5I90A",
+          "brand": [
+            "Bosch"
+          ],
+          "visibleProductCodeVerified": true
+        },
+        "supplierProduct": {
+          "title": "Series 6 900mm Gas Cooktop",
+          "dimensions": "W915 x D520 x H51.5mm",
+          "descriptionHtml": "<p>• 5 cooking zones<br>• Cast iron pan supports with rubber feet<br>• Dual flame power burner<br>• Dishwasher-suitable pan supports<br>• 9 defined gas flame levels</p>"
+        },
+        "price": {
+          "listedPrice": 2098,
+          "currency": "AUD",
+          "label": "SRP (INC. GST)",
+          "gstStatus": "inclusive",
+          "price_store": 2098,
+          "price_promo": 0,
+          "regularPrice": {
+            "__typename": "Money",
+            "value": 0,
+            "currency": "AUD"
+          },
+          "verification": "Visible exact-model product page price matches structured price_store; zero regular_price is not used."
+        },
+        "visibleProductText": "SRP (INC. GST):\n$2098\nCOLOUR: Stainless Steel\nPRODUCT CODE: PCR9A5I90A\nSIZE: W915 x D520 x H51.5mm\nFEATURES:\n5 cooking zones\nCast iron pan supports with rubber feet\nDual flame power burner\nDishwasher-suitable pan supports\n9 defined gas flame levels\n",
+        "image": {
+          "sourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/p/c/pcr9a5i90a_bosch_web.jpg",
+          "galleryUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/c/pcr9a5i90a_bosch_web.jpg",
+          "httpStatus": 200,
+          "mimeType": "image/jpeg",
+          "sha256": "893cfb7edcfcf4a8c4aaf8c7e539a1916f96fea66dadd973ddc6a16965346800",
+          "width": 2000,
+          "height": 1030,
+          "format": "jpeg",
+          "localPath": "/images/catalogues/appliances/products/bosch/pcr9a5i90a.jpg",
+          "visualInspection": "Product photograph or photorealistic manufacturer product rendering; no technical drawing, placeholder or unrelated model.",
+          "verifiedVia": "Image is listed in media_gallery for this exact-SKU product payload; visual inspection of local bytes.",
+          "supplierGallery": [
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/c/pcr9a5i90a_bosch_web.jpg",
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/c/pcr9a5i90a_bosch_tech.jpg",
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/c/pcr9a5i90a_bosch_insitu.jpg"
+          ]
+        },
+        "previousImage": {
+          "localPath": "/images/catalogues/appliances/products/bosch/pcr9a5i90a.jpg",
+          "sourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/p/c/pcr9a5i90a_bosch_web.jpg",
+          "sha256": "893cfb7edcfcf4a8c4aaf8c7e539a1916f96fea66dadd973ddc6a16965346800",
+          "width": 2000,
+          "height": 1030,
+          "identicalToSource": true,
+          "inspection": "Exact product image: retained unchanged."
+        }
+      }
+    },
+    {
+      "model": "PIV931HC1E",
+      "productId": "product:cooktops:bosch:piv931hc1e",
+      "updates": {
+        "costPrice": 2799,
+        "sourceCostPrice": 2799,
+        "sellPrice": 2799,
+        "tenantSellPrice": 2799,
+        "currentRetailReference": 2799,
+        "currentRetailReferenceSourceUrl": "https://www.harveynormancommercial.com.au/products/PIV931HC1E",
+        "priceStatus": "fixed",
+        "gstStatus": "inclusive",
+        "priceSourceUrl": "https://www.harveynormancommercial.com.au/products/PIV931HC1E",
+        "priceVerifiedAt": "2026-09-11",
+        "primaryImage": "/images/catalogues/appliances/products/bosch/piv931hc1e.jpg",
+        "imageStatus": "verified-authorised-supplier-local",
+        "imageSourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/p/i/piv931hc1e_bosch_web.jpg",
+        "imageSourcePageUrl": "https://www.harveynormancommercial.com.au/products/PIV931HC1E",
+        "imageSourceType": "authorised-supplier-product-page",
+        "imageSourceOrganisation": "Harvey Norman Commercial",
+        "imageAttribution": "Harvey Norman Commercial",
+        "imageVerificationStatus": "verified-authorised-exact-model",
+        "imageVerifiedAt": "2026-09-11",
+        "imageCheckedAt": "2026-09-11",
+        "productPageUrl": "https://www.harveynormancommercial.com.au/products/PIV931HC1E",
+        "productPageStatus": "verified-exact-model",
+        "modelVerificationNote": "Exact model confirmed by HNC product page SKU and visible product code; local product photo visually verified and SHA-256 identical to the exact-model HNC gallery source.",
+        "sourceCheckedAt": "2026-09-11",
+        "source": {
+          "type": "authorised_supplier_product_page",
+          "file": "data/product-library/catalogues/appliances/AU-BOSCH-APPLIANCE-RANGE.json",
+          "sourceName": "Harvey Norman Commercial exact product page",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/PIV931HC1E",
+          "sourceVerifiedAt": "2026-09-11"
+        },
+        "research": {
+          "verificationStatus": "verified-basic",
+          "sourceType": "authorised_supplier_product_page",
+          "sourceOrganisation": "Harvey Norman Commercial",
+          "checkedAt": "2026-09-11"
+        },
+        "evidence": {
+          "sourceOrganisation": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/PIV931HC1E",
+          "sourceCheckedAt": "2026-09-11",
+          "evidenceStatus": "verified-exact-model-image-and-price",
+          "evidenceFile": "data/product-library/source-evidence/bosch/hnc-cooktop-corrections-2026-09-11.json"
+        }
+      },
+      "evidence": {
+        "retrievedAt": "2026-09-11T05:04:22.628Z",
+        "sourceUrl": "https://www.harveynormancommercial.com.au/products/PIV931HC1E",
+        "finalUrl": "https://www.harveynormancommercial.com.au/products/PIV931HC1E",
+        "httpStatus": 200,
+        "htmlSha256": "4ac217c206ecb3fff5c22cb7182cd4cbb79308c8ce74548cf63217af310a10bc",
+        "extraction": "Exact-SKU ApolloSSRDataTransport product payload from Harvey Norman Commercial product page",
+        "exactModelEvidence": {
+          "sku": "PIV931HC1E",
+          "vendorcode": "PIV931HC1E",
+          "brand": [
+            "Bosch"
+          ],
+          "visibleProductCodeVerified": true
+        },
+        "supplierProduct": {
+          "title": "Series 6 900mm Induction Cooktop ",
+          "dimensions": "W918 x D522 x H51mm",
+          "descriptionHtml": "<p>• 5 cook zones<br>• Touch controls <br>• Power Boost level<br>• Quick start function</p>"
+        },
+        "price": {
+          "listedPrice": 2799,
+          "currency": "AUD",
+          "label": "SRP (INC. GST)",
+          "gstStatus": "inclusive",
+          "price_store": 2799,
+          "price_promo": 0,
+          "regularPrice": {
+            "__typename": "Money",
+            "value": 0,
+            "currency": "AUD"
+          },
+          "verification": "Visible exact-model product page price matches structured price_store; zero regular_price is not used."
+        },
+        "visibleProductText": "SRP (INC. GST):\n$2799\nCOLOUR: Black\nPRODUCT CODE: PIV931HC1E\nSIZE: W918 x D522 x H51mm\nFEATURES:\n5 cook zones\nTouch controls\nPower Boost level\nQuick start function\n",
+        "image": {
+          "sourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/p/i/piv931hc1e_bosch_web.jpg",
+          "galleryUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/i/piv931hc1e_bosch_web.jpg",
+          "httpStatus": 200,
+          "mimeType": "image/jpeg",
+          "sha256": "a7213932de479a782cfc00ba240259f16d29ecf0ffeffd0473b6284f1025dd36",
+          "width": 1717,
+          "height": 1012,
+          "format": "jpeg",
+          "localPath": "/images/catalogues/appliances/products/bosch/piv931hc1e.jpg",
+          "visualInspection": "Product photograph or photorealistic manufacturer product rendering; no technical drawing, placeholder or unrelated model.",
+          "verifiedVia": "Image is listed in media_gallery for this exact-SKU product payload; visual inspection of local bytes.",
+          "supplierGallery": [
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/i/piv931hc1e_bosch_web.jpg",
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/i/piv931hc1e_bosch_tech.jpg"
+          ]
+        },
+        "previousImage": {
+          "localPath": "/images/catalogues/appliances/products/bosch/piv931hc1e.jpg",
+          "sourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/p/i/piv931hc1e_bosch_web.jpg",
+          "sha256": "a7213932de479a782cfc00ba240259f16d29ecf0ffeffd0473b6284f1025dd36",
+          "width": 1717,
+          "height": 1012,
+          "identicalToSource": true,
+          "inspection": "Exact product image: retained unchanged."
+        }
+      }
+    },
+    {
+      "model": "PRS9A6H40A",
+      "productId": "product:cooktops:bosch:prs9a6h40a",
+      "updates": {
+        "costPrice": 2998,
+        "sourceCostPrice": 2998,
+        "sellPrice": 2998,
+        "tenantSellPrice": 2998,
+        "currentRetailReference": 2998,
+        "currentRetailReferenceSourceUrl": "https://www.harveynormancommercial.com.au/products/PRS9A6H40A",
+        "priceStatus": "fixed",
+        "gstStatus": "inclusive",
+        "priceSourceUrl": "https://www.harveynormancommercial.com.au/products/PRS9A6H40A",
+        "priceVerifiedAt": "2026-09-11",
+        "primaryImage": "/images/catalogues/appliances/products/bosch/prs9a6h40a.jpg",
+        "imageStatus": "verified-authorised-supplier-local",
+        "imageSourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/p/r/prs9a6h40a_bosch_web_1.jpeg",
+        "imageSourcePageUrl": "https://www.harveynormancommercial.com.au/products/PRS9A6H40A",
+        "imageSourceType": "authorised-supplier-product-page",
+        "imageSourceOrganisation": "Harvey Norman Commercial",
+        "imageAttribution": "Harvey Norman Commercial",
+        "imageVerificationStatus": "verified-authorised-exact-model",
+        "imageVerifiedAt": "2026-09-11",
+        "imageCheckedAt": "2026-09-11",
+        "productPageUrl": "https://www.harveynormancommercial.com.au/products/PRS9A6H40A",
+        "productPageStatus": "verified-exact-model",
+        "modelVerificationNote": "Exact model confirmed by HNC product page SKU and visible product code; local product photo visually verified and SHA-256 identical to the exact-model HNC gallery source.",
+        "sourceCheckedAt": "2026-09-11",
+        "source": {
+          "type": "authorised_supplier_product_page",
+          "file": "data/product-library/catalogues/appliances/AU-BOSCH-APPLIANCE-RANGE.json",
+          "sourceName": "Harvey Norman Commercial exact product page",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/PRS9A6H40A",
+          "sourceVerifiedAt": "2026-09-11"
+        },
+        "research": {
+          "verificationStatus": "verified-basic",
+          "sourceType": "authorised_supplier_product_page",
+          "sourceOrganisation": "Harvey Norman Commercial",
+          "checkedAt": "2026-09-11"
+        },
+        "evidence": {
+          "sourceOrganisation": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/PRS9A6H40A",
+          "sourceCheckedAt": "2026-09-11",
+          "evidenceStatus": "verified-exact-model-image-and-price",
+          "evidenceFile": "data/product-library/source-evidence/bosch/hnc-cooktop-corrections-2026-09-11.json"
+        }
+      },
+      "evidence": {
+        "retrievedAt": "2026-09-11T05:04:23.103Z",
+        "sourceUrl": "https://www.harveynormancommercial.com.au/products/PRS9A6H40A",
+        "finalUrl": "https://www.harveynormancommercial.com.au/products/PRS9A6H40A",
+        "httpStatus": 200,
+        "htmlSha256": "b348e2ee6450d84ed7a06babf52f04bce81db4c8d60d385921b5788b5f1798ff",
+        "extraction": "Exact-SKU ApolloSSRDataTransport product payload from Harvey Norman Commercial product page",
+        "exactModelEvidence": {
+          "sku": "PRS9A6H40A",
+          "vendorcode": "PRS9A6H40A",
+          "brand": [
+            "Bosch"
+          ],
+          "visibleProductCodeVerified": true
+        },
+        "supplierProduct": {
+          "title": "Series 8 900mm Gas Cooktop ",
+          "dimensions": "W915 x D520 x H45mm",
+          "descriptionHtml": "<p>• 5 gas burners with flame failure safety <br>• 9 FlameSelect levels<br>• Semi–continuous pan supports<br>• Knob ignition and illuminated <br>• Detachable controls, dishwasher suitable pan supports</p>"
+        },
+        "price": {
+          "listedPrice": 2998,
+          "currency": "AUD",
+          "label": "SRP (INC. GST)",
+          "gstStatus": "inclusive",
+          "price_store": 2998,
+          "price_promo": 0,
+          "regularPrice": {
+            "__typename": "Money",
+            "value": 0,
+            "currency": "AUD"
+          },
+          "verification": "Visible exact-model product page price matches structured price_store; zero regular_price is not used."
+        },
+        "visibleProductText": "SRP (INC. GST):\n$2998\nCOLOUR: Black\nPRODUCT CODE: PRS9A6H40A\nSIZE: W915 x D520 x H45mm\nFEATURES:\n5 gas burners with flame failure safety\n9 FlameSelect levels\nSemi–continuous pan supports\nKnob ignition and illuminated\nDetachable controls, dishwasher suitable pan supports\n",
+        "image": {
+          "sourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/p/r/prs9a6h40a_bosch_web_1.jpeg",
+          "galleryUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/r/prs9a6h40a_bosch_web_1.jpeg",
+          "httpStatus": 200,
+          "mimeType": "image/jpeg",
+          "sha256": "8ddca04da587d395e61a7bea9edb4f2072d7f4652feb6f3ba0eb07bd0c381c50",
+          "width": 1701,
+          "height": 967,
+          "format": "jpeg",
+          "localPath": "/images/catalogues/appliances/products/bosch/prs9a6h40a.jpg",
+          "visualInspection": "Product photograph or photorealistic manufacturer product rendering; no technical drawing, placeholder or unrelated model.",
+          "verifiedVia": "Image is listed in media_gallery for this exact-SKU product payload; visual inspection of local bytes.",
+          "supplierGallery": [
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/r/prs9a6h40a_bosch_web_1.jpeg",
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/r/prs9a6h40a_bosch_tech.png",
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/r/prs9a6h40a_bosch_web2_1.jpeg",
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/r/prs9a6h40a_bosch_web3_1.jpeg"
+          ]
+        },
+        "previousImage": {
+          "localPath": "/images/catalogues/appliances/products/bosch/prs9a6h40a.jpg",
+          "sourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/p/r/prs9a6h40a_bosch_web_1.jpeg",
+          "sha256": "8ddca04da587d395e61a7bea9edb4f2072d7f4652feb6f3ba0eb07bd0c381c50",
+          "width": 1701,
+          "height": 967,
+          "identicalToSource": true,
+          "inspection": "Exact product image: retained unchanged."
+        }
+      }
+    },
+    {
+      "model": "PXV975DV1E",
+      "productId": "product:cooktops:bosch:pxv975dv1e",
+      "updates": {
+        "costPrice": 4548,
+        "sourceCostPrice": 4548,
+        "sellPrice": 4548,
+        "tenantSellPrice": 4548,
+        "currentRetailReference": 4548,
+        "currentRetailReferenceSourceUrl": "https://www.harveynormancommercial.com.au/products/PXV975DV1E",
+        "priceStatus": "fixed",
+        "gstStatus": "inclusive",
+        "priceSourceUrl": "https://www.harveynormancommercial.com.au/products/PXV975DV1E",
+        "priceVerifiedAt": "2026-09-11",
+        "primaryImage": "/images/catalogues/appliances/products/bosch/pxv975dv1e.jpg",
+        "imageStatus": "verified-authorised-supplier-local",
+        "imageSourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/p/x/pxv975dv1e_bosch_web.jpg",
+        "imageSourcePageUrl": "https://www.harveynormancommercial.com.au/products/PXV975DV1E",
+        "imageSourceType": "authorised-supplier-product-page",
+        "imageSourceOrganisation": "Harvey Norman Commercial",
+        "imageAttribution": "Harvey Norman Commercial",
+        "imageVerificationStatus": "verified-authorised-exact-model",
+        "imageVerifiedAt": "2026-09-11",
+        "imageCheckedAt": "2026-09-11",
+        "productPageUrl": "https://www.harveynormancommercial.com.au/products/PXV975DV1E",
+        "productPageStatus": "verified-exact-model",
+        "modelVerificationNote": "Exact model confirmed by HNC product page SKU and visible product code; local product photo visually verified and SHA-256 identical to the exact-model HNC gallery source.",
+        "sourceCheckedAt": "2026-09-11",
+        "source": {
+          "type": "authorised_supplier_product_page",
+          "file": "data/product-library/catalogues/appliances/AU-BOSCH-APPLIANCE-RANGE.json",
+          "sourceName": "Harvey Norman Commercial exact product page",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/PXV975DV1E",
+          "sourceVerifiedAt": "2026-09-11"
+        },
+        "research": {
+          "verificationStatus": "verified-basic",
+          "sourceType": "authorised_supplier_product_page",
+          "sourceOrganisation": "Harvey Norman Commercial",
+          "checkedAt": "2026-09-11"
+        },
+        "evidence": {
+          "sourceOrganisation": "Harvey Norman Commercial",
+          "sourceUrl": "https://www.harveynormancommercial.com.au/products/PXV975DV1E",
+          "sourceCheckedAt": "2026-09-11",
+          "evidenceStatus": "verified-exact-model-image-and-price",
+          "evidenceFile": "data/product-library/source-evidence/bosch/hnc-cooktop-corrections-2026-09-11.json"
+        }
+      },
+      "evidence": {
+        "retrievedAt": "2026-09-11T05:04:23.492Z",
+        "sourceUrl": "https://www.harveynormancommercial.com.au/products/PXV975DV1E",
+        "finalUrl": "https://www.harveynormancommercial.com.au/products/PXV975DV1E",
+        "httpStatus": 200,
+        "htmlSha256": "f9e636a2f6a9f62ae7426a07acd1f01d779fce234481272ccc353ac295111624",
+        "extraction": "Exact-SKU ApolloSSRDataTransport product payload from Harvey Norman Commercial product page",
+        "exactModelEvidence": {
+          "sku": "PXV975DV1E",
+          "vendorcode": "PXV975DV1E",
+          "brand": [
+            "Bosch"
+          ],
+          "visibleProductCodeVerified": true
+        },
+        "supplierProduct": {
+          "title": "Series 8 900mm Induction Cooktop",
+          "dimensions": "W916 x D527 x H51mm",
+          "descriptionHtml": "<p>• Maximum 5 cooking zones <br>• 2 FlexZones<br>• 17 power levels <br>• Residual heat indicator<br>• Remote monitoring and control</p>"
+        },
+        "price": {
+          "listedPrice": 4548,
+          "currency": "AUD",
+          "label": "SRP (INC. GST)",
+          "gstStatus": "inclusive",
+          "price_store": 4548,
+          "price_promo": 0,
+          "regularPrice": {
+            "__typename": "Money",
+            "value": 0,
+            "currency": "AUD"
+          },
+          "verification": "Visible exact-model product page price matches structured price_store; zero regular_price is not used."
+        },
+        "visibleProductText": "SRP (INC. GST):\n$4548\nCOLOUR: Black\nPRODUCT CODE: PXV975DV1E\nSIZE: W916 x D527 x H51mm\nFEATURES:\nMaximum 5 cooking zones\n2 FlexZones\n17 power levels\nResidual heat indicator\nRemote monitoring and control\n",
+        "image": {
+          "sourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/p/x/pxv975dv1e_bosch_web.jpg",
+          "galleryUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/x/pxv975dv1e_bosch_web.jpg",
+          "httpStatus": 200,
+          "mimeType": "image/jpeg",
+          "sha256": "ca8313482ec5ff0ac11f740aa1862aafa95c81a7ecb80d7de8aa8aa8010cd354",
+          "width": 1740,
+          "height": 1012,
+          "format": "jpeg",
+          "localPath": "/images/catalogues/appliances/products/bosch/pxv975dv1e.jpg",
+          "visualInspection": "Product photograph or photorealistic manufacturer product rendering; no technical drawing, placeholder or unrelated model.",
+          "verifiedVia": "Image is listed in media_gallery for this exact-SKU product payload; visual inspection of local bytes.",
+          "supplierGallery": [
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/x/pxv975dv1e_bosch_web.jpg",
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/x/pxv975dv1e_bosch_tech.jpg"
+          ]
+        },
+        "previousImage": {
+          "localPath": "/images/catalogues/appliances/products/bosch/pxv975dv1e.jpg",
+          "sourceUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/p/x/pxv975dv1e_bosch_web.jpg",
+          "sha256": "ca8313482ec5ff0ac11f740aa1862aafa95c81a7ecb80d7de8aa8aa8010cd354",
+          "width": 1740,
+          "height": 1012,
+          "identicalToSource": true,
+          "inspection": "Exact product image: retained unchanged."
+        }
+      }
+    }
+  ]
+}

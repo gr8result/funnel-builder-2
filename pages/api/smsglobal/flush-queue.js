@@ -6,6 +6,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { sendSmsGlobal } from "../../../lib/smsglobal";
+import { isDemoWorkspace, recordDemoAction } from "../../../lib/demoWorkspace";
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SERVICE_KEY =
@@ -155,6 +156,32 @@ export default async function handler(req, res) {
         
         await updateRow(row.id, { status: "pending", last_error: null });
 
+        if (row.workspace_id && await isDemoWorkspace(row.workspace_id)) {
+          const providerId = `demo_sms_${row.id}`;
+          await recordDemoAction({
+            workspaceId: row.workspace_id,
+            userId: row.user_id,
+            actionType: "sms",
+            provider: "smsglobal",
+            target: row.to_phone,
+            payload: { queueId: row.id, body: row.body, origin: row.origin },
+            simulatedResult: { ok: true, demo: true, provider_message_id: providerId, message: "Demo SMS simulated - no external SMS sent." },
+          });
+          await supabaseAdmin.from("sms_sent_history").insert({
+            user_id: row.user_id,
+            workspace_id: row.workspace_id,
+            to_phone: row.to_phone,
+            body: row.body,
+            origin: row.origin || DEFAULT_SMS_ORIGIN,
+            status: "demo_simulated",
+            provider_message_id: providerId,
+            sent_at: nowIso(),
+          });
+          await supabaseAdmin.from("sms_queue").delete().eq("id", row.id);
+          sent++;
+          continue;
+        }
+
         const settings = await getUserSettings(row.user_id);
 
         if (!settings.sms_api_key || !settings.sms_api_secret) {
@@ -211,6 +238,8 @@ export default async function handler(req, res) {
           origin,
           toPhone: row.to_phone,
           message: row.body,
+          workspaceId: row.workspace_id || null,
+          userId: row.user_id || null,
         });
         
         if (!result.ok) {
@@ -232,6 +261,7 @@ export default async function handler(req, res) {
           .from("sms_sent_history")
           .insert({
             user_id: row.user_id,
+            workspace_id: row.workspace_id || null,
             to_phone: row.to_phone,
             body: row.body,
             origin: origin,

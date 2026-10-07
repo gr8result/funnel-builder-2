@@ -1,0 +1,1055 @@
+{
+  "data": {
+    "products": {
+      "total_count": 9,
+      "page_info": {
+        "total_pages": 1
+      },
+      "items": [
+        {
+          "id": 22636,
+          "sku": "A69.57.6.37",
+          "vendorcode": "A69.57.6.37",
+          "name": "Icon 600mm Double Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a69.57.6.37_astrawalker_web_1.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a69.57.6.37_astrawalker_web_1.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/6/a69.57.6.37_astrawalker_web_1.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/6/a69.57.6.37_astrawalker_tech_1.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a69.57.6.37_astrawalker_web_1.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a69.57.6.37_astrawalker_tech_1.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Sydney Bronze finish<br>• Round bar</p>"
+          },
+          "short_description": {
+            "html": "<p>Icon 600mm Double Towel Rail</p>"
+          },
+          "product_dimensions": "W600 x D106 x H21mm",
+          "price_store": 0,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W600 x D106 x H21mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL DOUBLE"
+              },
+              {
+                "code": "range",
+                "value": "Icon"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Astrawalker",
+                    "value": "355"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Bronze",
+                    "value": "935"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "A69.57.6.37"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22635,
+          "sku": "A69.57.6.35",
+          "vendorcode": "A69.57.6.35",
+          "name": "Icon 600mm Double Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a69.57.6.35_astrawalker_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a69.57.6.35_astrawalker_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/6/a69.57.6.35_astrawalker_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/6/a69.57.6.35_astrawalker_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a69.57.6.35_astrawalker_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a69.57.6.35_astrawalker_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Champagne Brass finish<br>• Round bar</p>"
+          },
+          "short_description": {
+            "html": "<p>Icon 600mm Double Towel Rail</p>"
+          },
+          "product_dimensions": "W600 x D106 x H21mm",
+          "price_store": 0,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W600 x D106 x H21mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL DOUBLE"
+              },
+              {
+                "code": "range",
+                "value": "Icon"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Astrawalker",
+                    "value": "355"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "A69.57.6.35"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22607,
+          "sku": "A6957610",
+          "vendorcode": "A69.57.6.10",
+          "name": "Icon 600mm Double Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6957610_astrawalker_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6957610_astrawalker_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/6/a6957610_astrawalker_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/6/a6957610_astrawalker_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6957610_astrawalker_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6957610_astrawalker_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Ice Grey finish<br>• Round bar</p>"
+          },
+          "short_description": {
+            "html": "<p>Icon 600mm Double Towel Rail</p>"
+          },
+          "product_dimensions": "W600 x D106 x H21mm",
+          "price_store": 0,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W600 x D106 x H21mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL DOUBLE"
+              },
+              {
+                "code": "range",
+                "value": "Icon"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Astrawalker",
+                    "value": "355"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Grey",
+                    "value": "939"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "A69.57.6.10"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22606,
+          "sku": "A6957601",
+          "vendorcode": "A69.57.6.01",
+          "name": "Icon 600mm Double Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6957601_astrawalker_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6957601_astrawalker_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/6/a6957601_astrawalker_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/6/a6957601_astrawalker_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6957601_astrawalker_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6957601_astrawalker_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Brushed Platinum finish<br>• Round bar</p>"
+          },
+          "short_description": {
+            "html": "<p>Icon 600mm Double Towel Rail</p>"
+          },
+          "product_dimensions": "W600 x D106 x H21mm",
+          "price_store": 0,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W600 x D106 x H21mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL DOUBLE"
+              },
+              {
+                "code": "range",
+                "value": "Icon"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Astrawalker",
+                    "value": "355"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Silver",
+                    "value": "942"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "A69.57.6.01"
+              }
+            ]
+          }
+        },
+        {
+          "id": 21768,
+          "sku": "A6955637",
+          "vendorcode": "A6955637",
+          "name": "Icon 600mm Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6955637_astrawalker_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6955637_astrawalker_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/6/a6955637_astrawalker_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/6/a6955637_astrawalker_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6955637_astrawalker_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6955637_astrawalker_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Sydney Bronze finish<br>• Round bar</p>"
+          },
+          "short_description": {
+            "html": "<p>Icon 600mm Single Towel Rail</p>"
+          },
+          "product_dimensions": "W600 x D58 x H21mm",
+          "price_store": 333,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W600 x D58 x H21mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL SINGLE"
+              },
+              {
+                "code": "range",
+                "value": "Icon"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Astrawalker",
+                    "value": "355"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Bronze",
+                    "value": "935"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "A6955637"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Sydney Bronze"
+              }
+            ]
+          }
+        },
+        {
+          "id": 21767,
+          "sku": "A6955635",
+          "vendorcode": "A69.55.6.35",
+          "name": "Icon 600mm Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6955635_astrawalker_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6955635_astrawalker_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/6/a6955635_astrawalker_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/6/a6955635_astrawalker_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6955635_astrawalker_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6955635_astrawalker_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Champagne Brass finish<br>• Round bar</p>"
+          },
+          "short_description": {
+            "html": "<p>Icon 600mm Single Towel Rail</p>"
+          },
+          "product_dimensions": "W600 x D58 x H21mm",
+          "price_store": 333,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W600 x D58 x H21mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL SINGLE"
+              },
+              {
+                "code": "range",
+                "value": "Icon"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Astrawalker",
+                    "value": "355"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "A69.55.6.35"
+              }
+            ]
+          }
+        },
+        {
+          "id": 21766,
+          "sku": "A6955610",
+          "vendorcode": "A69.55.6.10",
+          "name": "Icon 600mm Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6955610_astrawalker_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6955610_astrawalker_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/6/a6955610_astrawalker_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/6/a6955610_astrawalker_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6955610_astrawalker_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6955610_astrawalker_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Ice Grey finish<br>• Round bar</p>"
+          },
+          "short_description": {
+            "html": "<p>Icon 600mm Single Towel Rail</p>"
+          },
+          "product_dimensions": "W600 x D58 x H21mm",
+          "price_store": 0,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W600 x D58 x H21mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL SINGLE"
+              },
+              {
+                "code": "range",
+                "value": "Icon"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Astrawalker",
+                    "value": "355"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Grey",
+                    "value": "939"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "A69.55.6.10"
+              }
+            ]
+          }
+        },
+        {
+          "id": 21765,
+          "sku": "A6955601",
+          "vendorcode": "A69.55.6.01",
+          "name": "Icon 600mm Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6955601_astrawalker_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6955601_astrawalker_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/6/a6955601_astrawalker_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/6/a6955601_astrawalker_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6955601_astrawalker_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6955601_astrawalker_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Brushed Platinum finish<br>• Round bar</p>"
+          },
+          "short_description": {
+            "html": "<p>Icon 600mm Single Towel Rail</p>"
+          },
+          "product_dimensions": "W600 x D58 x H21mm",
+          "price_store": 0,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W600 x D58 x H21mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL SINGLE"
+              },
+              {
+                "code": "range",
+                "value": "Icon"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Astrawalker",
+                    "value": "355"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Silver",
+                    "value": "942"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "A69.55.6.01"
+              }
+            ]
+          }
+        },
+        {
+          "id": 10898,
+          "sku": "A5155600",
+          "vendorcode": "A51.55.6.00",
+          "name": "Olde English 600mm Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 196,
+              "name": "Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/5/a5155600_astrawalker_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/5/a5155600_astrawalker_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/5/a5155600_astrawalker_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/a/5/a51.55.6_astrawalker_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/5/a5155600_astrawalker_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/5/a51.55.6_astrawalker_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p class=\"p1\">&bull; Classic design</p>"
+          },
+          "short_description": {
+            "html": "<p class=\"p1\">Olde English 600mm Single Towel Rail</p>"
+          },
+          "product_dimensions": "W600 x D73 x H50mm",
+          "price_store": 229,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W600 x D73 x H50mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RAIL SINGLE"
+              },
+              {
+                "code": "range",
+                "value": "Olde"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Astrawalker",
+                    "value": "355"
+                  }
+                ]
+              },
+              {
+                "code": "size_mm",
+                "selected_options": [
+                  {
+                    "label": "600",
+                    "value": "746"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "A51.55.6.00"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

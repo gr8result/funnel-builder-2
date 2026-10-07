@@ -6,6 +6,7 @@ import { supabase } from "../../../lib/supabaseClient";
 import { listWebsiteProjects, updateWebsiteProject } from "../../../lib/website-builder/projectStore";
 import { normalizeDomain } from "../../../lib/website-builder/publishConfig";
 import { saveWebsiteProjectToServer } from "../../../lib/website-builder/remoteProjects";
+import { useWorkspace } from "../../../hooks/useWorkspace";
 
 function affiliateOrFallback(envKey, fallback) {
   return process.env[envKey] || fallback;
@@ -25,6 +26,7 @@ const namecheapAffiliateUrl = affiliateOrFallback(
 
 export default function WebsiteDomainsPage() {
   const router = useRouter();
+  const { workspaceId } = useWorkspace();
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState("");
@@ -120,6 +122,7 @@ export default function WebsiteDomainsPage() {
       const response = await fetch("/api/websites/domains", {
         headers: {
           Authorization: `Bearer ${accessToken}`,
+          ...(workspaceId ? { "x-workspace-id": workspaceId } : {}),
         },
       });
       const payload = await response.json().catch(() => ({}));
@@ -147,10 +150,12 @@ export default function WebsiteDomainsPage() {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${session.access_token}`,
+          ...(workspaceId ? { "x-workspace-id": workspaceId } : {}),
         },
         body: JSON.stringify({
           id: site.id,
           customDomain: draftDomains[site.id] || "",
+          workspace_id: workspaceId || "",
         }),
       });
       const payload = await response.json().catch(() => ({}));
@@ -177,8 +182,9 @@ export default function WebsiteDomainsPage() {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${session.access_token}`,
+          ...(workspaceId ? { "x-workspace-id": workspaceId } : {}),
         },
-        body: JSON.stringify({ id: site.id }),
+        body: JSON.stringify({ id: site.id, workspace_id: workspaceId || "" }),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Could not verify DNS");

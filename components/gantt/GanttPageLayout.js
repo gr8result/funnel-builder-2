@@ -1377,7 +1377,7 @@ export function GanttPageLayout() {
               Export PDF
             </button>
             <button style={S.primaryBtn} onClick={() => setShowNew(true)}>+ New Project</button>
-            <Link href="/modules/construction"><button style={S.backBtnBanner}>← Back</button></Link>
+            <Link href="/modules/estimate-builder?page=projectDashboard"><button style={S.backBtnBanner}>← Back</button></Link>
           </div>
         </div>
         <input

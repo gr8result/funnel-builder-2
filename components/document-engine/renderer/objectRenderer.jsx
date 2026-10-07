@@ -1,11 +1,29 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { resolveDynamicText } from "../fields/workbookFieldResolver.js";
+
+function isActivationRegion(object) {
+  return object?.data?.detectedRegion === true
+    || ["pdf-text-activation", "pdf-image-activation", "pptx-text-activation", "pptx-image-activation"].includes(object?.data?.overlayMode);
+}
+
+function isAcceptedEdit(object) {
+  return Boolean(object?.data?.edited || object?.data?.acceptedEdit);
+}
+
+const maskStyle = {
+  position: "absolute",
+  inset: 0,
+  background: "#ffffff",
+  zIndex: 0,
+  pointerEvents: "none",
+};
 
 export function ObjectRenderer({
   object,
   selected = false,
   workbook = null,
   editing = false,
+  showOriginal = false,
   textEditing = false,
   onSelect,
   onResize,
@@ -13,6 +31,7 @@ export function ObjectRenderer({
   onTextCommit,
 }) {
   const textEditRef = useRef(null);
+  const [hovered, setHovered] = useState(false);
   useEffect(() => {
     if (!textEditing || !textEditRef.current) return;
     const element = textEditRef.current;
@@ -27,6 +46,13 @@ export function ObjectRenderer({
   }, [textEditing]);
 
   if (!object || object.visible === false) return null;
+  const activationRegion = isActivationRegion(object);
+  const acceptedEdit = isAcceptedEdit(object);
+  const importedOrManualEdit = activationRegion || object.data?.manualRegion;
+  if (showOriginal && importedOrManualEdit && acceptedEdit) return null;
+  if (activationRegion && !acceptedEdit && !editing) return null;
+  const pendingActivation = activationRegion && !acceptedEdit;
+  const masksOriginal = importedOrManualEdit && acceptedEdit && object.data?.maskOriginal;
   const style = {
     position: "absolute",
     left: object.x,
@@ -38,9 +64,11 @@ export function ObjectRenderer({
     transformOrigin: "center center",
     zIndex: object.layer,
     boxSizing: "border-box",
-    cursor: editing && !object.locked ? "move" : "default",
-    outline: editing && selected ? "2px solid #2563eb" : "none",
+    cursor: editing && !object.locked ? (pendingActivation ? "pointer" : "move") : "default",
+    outline: editing && selected ? "2px solid #2563eb" : pendingActivation && hovered ? "1px solid rgba(37, 99, 235, 0.55)" : "none",
     ...baseObjectStyle(object),
+    ...(pendingActivation ? { background: "transparent", backgroundColor: "transparent" } : {}),
+    ...(masksOriginal ? { background: object.style?.backgroundColor || "#ffffff" } : {}),
   };
 
   return (
@@ -48,25 +76,43 @@ export function ObjectRenderer({
       data-document-object-id={object.id}
       data-document-object-name={object.name || object.type}
       data-document-object-type={object.type}
+      data-document-detected-text={object.data?.detectedText || object.data?.text || ""}
       style={style}
       onMouseDown={(event) => editing ? onSelect?.(object.id, event) : undefined}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       onDoubleClick={(event) => {
-        if (!editing || object.locked || !["text", "dynamicField"].includes(object.type)) return;
+        if (editing && activationRegion && !acceptedEdit) {
+          event.stopPropagation();
+          onTextEditStart?.(object.id);
+          return;
+        }
+        if (!editing || object.locked) return;
+        if (["image", "logo"].includes(object.type)) {
+          event.stopPropagation();
+          onTextEditStart?.(object.id);
+          return;
+        }
+        if (!["text", "dynamicField"].includes(object.type)) return;
         event.stopPropagation();
         onTextEditStart?.(object.id);
       }}
     >
-      {editing && selected ? <ElementBadge object={object} /> : null}
-      {renderObjectContent(object, workbook, { editing, textEditing, textEditRef, onTextCommit })}
-      {editing && selected && !textEditing ? <ResizeHandles object={object} onResize={onResize} /> : null}
+      {masksOriginal ? <div style={maskStyle} /> : null}
+      {editing && selected && acceptedEdit ? <ElementBadge object={object} /> : null}
+      {renderObjectContent(object, workbook, { editing, textEditing, textEditRef, onTextCommit, activationRegion, acceptedEdit })}
+      {editing && selected && acceptedEdit && !textEditing ? <ResizeHandles object={object} onResize={onResize} /> : null}
     </div>
   );
 }
 
 function renderObjectContent(object, workbook, editor = {}) {
+  if (editor.activationRegion && !editor.acceptedEdit) {
+    return <div style={{ width: "100%", height: "100%", opacity: 0 }} />;
+  }
   if (object.type === "text" || object.type === "dynamicField") {
     const text = resolveDynamicText(object.data?.text || "", workbook);
-    const activationHidden = object.data?.overlayMode === "pptx-text-activation" && !object.data?.edited && !editor.textEditing;
+    const activationHidden = isActivationRegion(object) && !isAcceptedEdit(object) && !editor.textEditing;
     return (
       <div
         contentEditable={editor.editing && editor.textEditing && !object.locked}
@@ -81,6 +127,7 @@ function renderObjectContent(object, workbook, editor = {}) {
           cursor: editor.editing ? "text" : "inherit",
           color: activationHidden ? "transparent" : "inherit",
           userSelect: activationHidden ? "none" : undefined,
+          backgroundColor: isActivationRegion(object) && isAcceptedEdit(object) && object.data?.maskOriginal ? object.style?.backgroundColor || "#ffffff" : object.style?.backgroundColor,
         }}
         onMouseDown={(event) => {
           if (editor.textEditing) event.stopPropagation();
@@ -99,7 +146,7 @@ function renderObjectContent(object, workbook, editor = {}) {
     );
   }
   if (object.type === "image" || object.type === "logo") {
-    const activationHidden = object.data?.overlayMode === "pptx-image-activation" && !object.data?.edited;
+    const activationHidden = isActivationRegion(object) && !isAcceptedEdit(object);
     return object.data?.imageRef ? (
       <img src={object.data.imageRef} alt={object.data.alt || ""} style={{ width: "100%", height: "100%", objectFit: object.style?.objectFit || "cover", borderRadius: object.style?.borderRadius || 0, opacity: activationHidden ? 0 : 1 }} />
     ) : (

@@ -1,0 +1,7 @@
+{
+  "url": "https://www.euromaid.com/en-au/live-search?keywords=ESL60RDS",
+  "retrievedAt": "2026-09-16T06:18:19.498Z",
+  "status": 200,
+  "sha256": "e2e8a29c6d4f1eb51f47737599b5cb5b5bae615ece54575b18dcdc43d242d162",
+  "text": "[{\"command\":\"liveSearchResults\",\"content\":\"\\u003Cdiv class=\\u0022gd-search-suggestions\\u0022\\u003E\\n  \\u003Cdiv class=\\u0022prod-results\\u0022\\u003E\\n          \\u003Cdiv class=\\u0022gd-search-results__title\\u0022\\u003EProducts\\u003C\\/div\\u003E\\n              \\u003Ca href=\\u0022\\/en-au\\/60cm-slide-out-rangehood\\u0022 title=\\u002260cm Slide Out Rangehood\\u0022\\u003E60cm Slide Out Rangehood\\u003C\\/a\\u003E\\n    \\n          \\u003Cdiv id=\\u0022gd-search-see-all\\u0022 class=\\u0022search-see-all\\u0022\\u003E\\n                \\u003Ca class=\\u0022gd-search__view-all-link\\u0022 href=\\u0022\\/en-au\\/search-results?keywords=ESL60RDS\\u0022 title=\\u0022See All Results for \\u0027ESL60RDS\\u0027\\u0022\\u003ESee All Results for \\u0027ESL60RDS\\u0027\\u003C\\/a\\u003E\\n      \\u003C\\/div\\u003E\\n          \\u003C\\/div\\u003E\\n\\n  \\u003Cdiv class=\\u0022content-results\\u0022\\u003E\\n          \\u003C\\/div\\u003E\\n\\u003C\\/div\\u003E\\n\"},{\"command\":\"gtagEvent\",\"event_name\":\"search\",\"data\":{\"search_term\":\"esl60rds\"}}]"
+}

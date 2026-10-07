@@ -1,0 +1,50 @@
+[
+  {
+    "pageName": "Home",
+    "file": "home"
+  },
+  {
+    "pageName": "About Us",
+    "file": "about-us"
+  },
+  {
+    "pageName": "Modules",
+    "file": "modules"
+  },
+  {
+    "pageName": "Contact Us",
+    "file": "contact-us"
+  },
+  {
+    "pageName": "Email",
+    "file": "email"
+  },
+  {
+    "pageName": "Pricing",
+    "file": "pricing"
+  },
+  {
+    "pageName": "CRM",
+    "file": "crm"
+  },
+  {
+    "pageName": "SMS",
+    "file": "sms"
+  },
+  {
+    "pageName": "Funnels",
+    "file": "funnels"
+  },
+  {
+    "pageName": "Website Builder",
+    "file": "website-builder"
+  },
+  {
+    "pageName": "Social Media",
+    "file": "social-media"
+  },
+  {
+    "pageName": "Project Hub",
+    "file": "project-hub"
+  }
+]

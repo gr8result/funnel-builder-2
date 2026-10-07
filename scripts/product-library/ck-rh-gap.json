@@ -1,0 +1,173 @@
+[
+  {
+    "fam": "cooktops",
+    "brand": "Bosch",
+    "model": "PCR6A5B90A",
+    "name": "Bosch 600mm Gas Cooktop",
+    "img": "",
+    "code": "CS-cooktop-bosch-bosch-600mm-gas-cooktop-pcr6a5b90a",
+    "src": "Client Selections one-time migration"
+  },
+  {
+    "fam": "cooktops",
+    "brand": "Smeg",
+    "model": "PGA75",
+    "name": "Smeg 750mm Gas Cooktop",
+    "img": "",
+    "code": "CS-cooktop-smeg-smeg-750mm-gas-cooktop-pga75",
+    "src": "Client Selections one-time migration"
+  },
+  {
+    "fam": "rangehoods",
+    "brand": "Bosch",
+    "model": "DWP66BC50A",
+    "name": "Bosch Canopy Rangehood",
+    "img": "",
+    "code": "CS-rangehood-bosch-bosch-canopy-rangehood-dwp66bc50a",
+    "src": "Client Selections one-time migration"
+  },
+  {
+    "fam": "cooktops",
+    "brand": "Blanco",
+    "model": "BCG604WX",
+    "name": "BLANCO 60CM GAS COOKTOP BCG604WX",
+    "img": "",
+    "code": "product:appliances:cooktops:blanco:bcg604wx",
+    "src": "AU Appliance Catalogue"
+  },
+  {
+    "fam": "cooktops",
+    "brand": "Blanco",
+    "model": "BCG905WX",
+    "name": "BLANCO 90CM GAS COOKTOP BCG905WX",
+    "img": "",
+    "code": "product:appliances:cooktops:blanco:bcg905wx",
+    "src": "AU Appliance Catalogue"
+  },
+  {
+    "fam": "cooktops",
+    "brand": "Blanco",
+    "model": "BIC90X",
+    "name": "BLANCO 90CM INDUCTION COOKTOP BIC90X",
+    "img": "",
+    "code": "product:appliances:cooktops:blanco:bic90x",
+    "src": "AU Appliance Catalogue"
+  },
+  {
+    "fam": "cooktops",
+    "brand": "Euromaid",
+    "model": "ECCK900",
+    "name": "EUROMAID 90CM CERAMIC COOKTOP ECCK900",
+    "img": "",
+    "code": "product:appliances:cooktops:euromaid:ecck900",
+    "src": "AU Appliance Catalogue"
+  },
+  {
+    "fam": "cooktops",
+    "brand": "Euromaid",
+    "model": "GC90S",
+    "name": "EUROMAID 90CM GAS COOKTOP GC90S",
+    "img": "",
+    "code": "product:appliances:cooktops:euromaid:gc90s",
+    "src": "AU Appliance Catalogue"
+  },
+  {
+    "fam": "cooktops",
+    "brand": "Omega",
+    "model": "OI90Z",
+    "name": "OMEGA 90CM INDUCTION COOKTOP OI90Z",
+    "img": "",
+    "code": "product:appliances:cooktops:omega:oi90z",
+    "src": "AU Appliance Catalogue"
+  },
+  {
+    "fam": "rangehoods",
+    "brand": "Blanco",
+    "model": "BRC60X",
+    "name": "BLANCO 600MM CANOPY RANGEHOOD OPTION - BLANCO 60CM CANOPY RANGEHOOD BRC60X",
+    "img": "",
+    "code": "product:appliances:rangehoods:blanco:brc60x",
+    "src": "AU Appliance Catalogue"
+  },
+  {
+    "fam": "rangehoods",
+    "brand": "Blanco",
+    "model": "BRC90X",
+    "name": "BLANCO 90CM CANOPY RANGEHOOD BRC90X",
+    "img": "",
+    "code": "product:appliances:rangehoods:blanco:brc90x",
+    "src": "AU Appliance Catalogue"
+  },
+  {
+    "fam": "rangehoods",
+    "brand": "Blanco",
+    "model": "BRU60X",
+    "name": "BLANCO 600MM UNDER CUPBOARD RANGEHOOD OPTION - BLANCO 60CM UNDERMOUNT RANGEHOOD BRU60X",
+    "img": "",
+    "code": "product:appliances:rangehoods:blanco:bru60x",
+    "src": "AU Appliance Catalogue"
+  },
+  {
+    "fam": "rangehoods",
+    "brand": "Blanco",
+    "model": "BRU90UX",
+    "name": "BLANCO 90CM UNDERMOUNT RANGEHOOD BRU90UX",
+    "img": "",
+    "code": "product:appliances:rangehoods:blanco:bru90ux",
+    "src": "AU Appliance Catalogue"
+  },
+  {
+    "fam": "rangehoods",
+    "brand": "Blanco",
+    "model": "BRU90X",
+    "name": "BLANCO 90CM SLIDE OUT RANGEHOOD BRU90X",
+    "img": "",
+    "code": "product:appliances:rangehoods:blanco:bru90x",
+    "src": "AU Appliance Catalogue"
+  },
+  {
+    "fam": "rangehoods",
+    "brand": "Euromaid",
+    "model": "CS60S",
+    "name": "EUROMAID 600MM UNDER CUPBOARD RANGEHOOD OPTION - EUROMAID 60CM RECIRCULATING/FIXED RANGEHOOD CS60S",
+    "img": "",
+    "code": "product:appliances:rangehoods:euromaid:cs60s",
+    "src": "AU Appliance Catalogue"
+  },
+  {
+    "fam": "rangehoods",
+    "brand": "Euromaid",
+    "model": "FS90S",
+    "name": "EUROMAID 90CM FIXED/UNDERCUPBOARD RANGEHOOD FS90S",
+    "img": "",
+    "code": "product:appliances:rangehoods:euromaid:fs90s",
+    "src": "AU Appliance Catalogue"
+  },
+  {
+    "fam": "rangehoods",
+    "brand": "Omega",
+    "model": "ORC60X",
+    "name": "OMEGA 600MM CANOPY RANGEHOOD OPTION - OMEGA 60CM CANOPY RANGEHOOD ORC60X",
+    "img": "",
+    "code": "product:appliances:rangehoods:omega:orc60x",
+    "src": "AU Appliance Catalogue"
+  },
+  {
+    "fam": "rangehoods",
+    "brand": "Omega",
+    "model": "ORC90X",
+    "name": "OMEGA 90CM CANOPY RANGEHOOD ORC90X",
+    "img": "",
+    "code": "product:appliances:rangehoods:omega:orc90x",
+    "src": "AU Appliance Catalogue"
+  },
+  {
+    "fam": "rangehoods",
+    "brand": "Westinghouse",
+    "model": "WRI930SB",
+    "name": "WESTINGHOUSE 90CM SLIDEOUT RANGEHOOD WRI930SB",
+    "img": "",
+    "code": "product:appliances:rangehoods:westinghouse:wri930sb",
+    "src": "AU Appliance Catalogue"
+  }
+]

@@ -4,6 +4,7 @@ import { requireUser } from '../../../lib/social/auth';
 import { createClient } from '@supabase/supabase-js';
 import { checkSocialLimit } from '../../../lib/social/checkSocialLimit';
 import { withAuth } from "../../../lib/withWorkspace";
+import { requestWorkspaceId } from "../../../lib/demoWorkspace";
 
 export const config = { api: { bodyParser: { sizeLimit: '10mb' } } };
 
@@ -26,6 +27,7 @@ async function handler(req, res) {
       return res.status(401).json({ success: false, ok: false, error: auth.error });
     }
     const userId = auth.user.id;
+    const workspaceId = requestWorkspaceId(req) || req.workspaceId || null;
     const admin = auth.admin || createSupabaseAdmin();
 
     const { content, platform, mediaUrl, scheduledFor } = req.body;
@@ -58,6 +60,7 @@ async function handler(req, res) {
       .from('social_posts')
       .insert({
         user_id: userId,
+        workspace_id: workspaceId,
         content,
         platform,
         media_url: mediaUrl || null,
@@ -80,6 +83,7 @@ async function handler(req, res) {
         .from('social_schedule')
         .insert({
           user_id: userId,
+          workspace_id: workspaceId,
           post_id: data.id,
           scheduled_for: normalizedScheduledFor,
           status: 'scheduled'
@@ -98,6 +102,7 @@ async function handler(req, res) {
     // Log usage — never deleted even if the post is deleted
     await admin.from('social_usage_log').insert({
       user_id: userId,
+      workspace_id: workspaceId,
       posts_count: 1,
       source: 'create-post',
     }).then(() => {});  // fire-and-forget, don't block the response

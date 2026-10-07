@@ -1,0 +1,156 @@
+path,action,before_lines,after_lines
+components/email/editor2/BlockWrapper.jsx,new extracted module/test/report/tool,0,108
+components/email/editor2/EditorInspector.jsx,new extracted module/test/report/tool,0,94
+components/email/editor2/EmailEditor.jsx,decomposed,6719,955
+components/email/editor2/alignmentGuides.js,new extracted module/test/report/tool,0,59
+components/email/editor2/blockInspectors.jsx,new extracted module/test/report/tool,0,653
+components/email/editor2/blockModel.js,new extracted module/test/report/tool,0,497
+components/email/editor2/canvasControls.jsx,new extracted module/test/report/tool,0,303
+components/email/editor2/canvasRenderers.jsx,new extracted module/test/report/tool,0,846
+components/email/editor2/colors.js,new extracted module/test/report/tool,0,71
+components/email/editor2/editorControls.jsx,new extracted module/test/report/tool,0,167
+components/email/editor2/editorOptions.js,new extracted module/test/report/tool,0,145
+components/email/editor2/editorStyles.jsx,new extracted module/test/report/tool,0,185
+components/email/editor2/editorUtils.js,new extracted module/test/report/tool,0,70
+components/email/editor2/htmlExport.js,new extracted module/test/report/tool,0,540
+components/email/editor2/inspectorFields.jsx,new extracted module/test/report/tool,0,510
+components/email/editor2/richTextCanvas.jsx,new extracted module/test/report/tool,0,495
+components/email/editor2/richTextCommands.js,new extracted module/test/report/tool,0,369
+components/email/editor2/socialAssets.js,new extracted module/test/report/tool,0,115
+components/email/editor2/tests/export-contract.test.mjs,new extracted module/test/report/tool,0,69
+components/email/editor2/textToolbar.jsx,new extracted module/test/report/tool,0,288
+components/email/editor2/useDocumentPersistence.js,new extracted module/test/report/tool,0,187
+components/email/editor2/useEditorMedia.js,new extracted module/test/report/tool,0,139
+components/email/editor2/useSavedBlocks.js,new extracted module/test/report/tool,0,39
+components/website-builder/WebsiteBlockRenderer.js,decomposed,5717,4480
+components/website-builder/page-builder/panels/EditorControls.js,extracted module,0,1382
+components/website-builder/page-builder/panels/NavigationPanels.js,extracted module,0,947
+components/website-builder/page-builder/pbCanvasBlockFrames.js,extracted module,0,480
+components/website-builder/page-builder/pbCanvasComponents.js,decomposed,5613,2491
+components/website-builder/page-builder/pbColumnPanels.js,extracted module,0,705
+components/website-builder/page-builder/pbContactFormPanel.js,extracted module,0,260
+components/website-builder/page-builder/pbGridSectionPanel.js,extracted module,0,688
+components/website-builder/page-builder/pbImageStackPanel.js,extracted module,0,291
+components/website-builder/page-builder/pbPropertiesPanels.js,decomposed,7056,4834
+components/website-builder/page-builder/pbShowcasePanels.js,extracted module,0,679
+components/website-builder/website-renderer/wbAccordionBlocks.js,extracted module,0,1836
+components/website-builder/website-renderer/wbBlockComponents.js,decomposed,8398,550
+components/website-builder/website-renderer/wbBlockHelpers.js,extracted module,0,59
+components/website-builder/website-renderer/wbColumnBlocks.js,extracted module,0,934
+components/website-builder/website-renderer/wbHeroRendering.js,extracted module,0,1271
+components/website-builder/website-renderer/wbMediaBlocks.js,extracted module,0,1234
+components/website-builder/website-renderer/wbOverlayBlocks.js,extracted module,0,1187
+components/website-builder/website-renderer/wbServiceBlocks.js,extracted module,0,968
+components/website-builder/website-renderer/wbShowcaseBlocks.js,extracted module,0,930
+components/website-builder/website-renderer/wbVideoBlocks.js,extracted module,0,760
+docs/reports/repository-cleanup/2026-09-16-appliance-plan.md,new extracted module/test/report/tool,0,237
+docs/reports/repository-cleanup/2026-09-16-audit.md,new extracted module/test/report/tool,0,160
+docs/reports/repository-cleanup/2026-09-16-batches.md,new extracted module/test/report/tool,0,75
+docs/reports/repository-cleanup/2026-09-16-email-editor-batch.md,new extracted module/test/report/tool,0,66
+docs/reports/repository-cleanup/2026-09-16-remaining.md,new extracted module/test/report/tool,0,93
+docs/reports/repository-cleanup/2026-09-16-revised-policy-batches.md,added report,0,139
+docs/reports/repository-cleanup/2026-09-16-untracked-inventory.csv,added read-only inventory report,0,106
+lib/funnelSections.js,split original removed,4885,0
+lib/sharedMediaLibrary.js,consumer imports migrated,1065,1065
+lib/website-builder/templateLibraryAssets.js,consumer imports migrated,67,67
+lib/website-builder/templateProfiles.js,split original removed,2627,0
+lib/website-builder/templates.js,consumer imports migrated,3304,3304
+modules/funnels/README.md,new extracted module/test/report/tool,0,28
+modules/funnels/assemblePage.js,new extracted module/test/report/tool,0,27
+modules/funnels/catalogue.js,new extracted module/test/report/tool,0,352
+modules/funnels/config.js,new extracted module/test/report/tool,0,3
+modules/funnels/data/serviceImages.js,new extracted module/test/report/tool,0,240
+modules/funnels/data/themes/appliance-repair.js,new extracted module/test/report/tool,0,82
+modules/funnels/data/themes/bathroom-renovation.js,new extracted module/test/report/tool,0,82
+modules/funnels/data/themes/car-detailing.js,new extracted module/test/report/tool,0,82
+modules/funnels/data/themes/carpentry.js,new extracted module/test/report/tool,0,82
+modules/funnels/data/themes/cleaning.js,new extracted module/test/report/tool,0,82
+modules/funnels/data/themes/concrete-cutting.js,new extracted module/test/report/tool,0,82
+modules/funnels/data/themes/concreting.js,new extracted module/test/report/tool,0,82
+modules/funnels/data/themes/electrician.js,new extracted module/test/report/tool,0,82
+modules/funnels/data/themes/epoxy-flooring.js,new extracted module/test/report/tool,0,82
+modules/funnels/data/themes/fencing.js,new extracted module/test/report/tool,0,82
+modules/funnels/data/themes/flooring.js,new extracted module/test/report/tool,0,82
+modules/funnels/data/themes/garage-doors.js,new extracted module/test/report/tool,0,82
+modules/funnels/data/themes/general-trades.js,new extracted module/test/report/tool,0,82
+modules/funnels/data/themes/glazing.js,new extracted module/test/report/tool,0,82
+modules/funnels/data/themes/guttering.js,new extracted module/test/report/tool,0,82
+modules/funnels/data/themes/handyman.js,new extracted module/test/report/tool,0,82
+modules/funnels/data/themes/hvac.js,new extracted module/test/report/tool,0,82
+modules/funnels/data/themes/index.js,new extracted module/test/report/tool,0,80
+modules/funnels/data/themes/irrigation.js,new extracted module/test/report/tool,0,82
+modules/funnels/data/themes/kitchen-renovation.js,new extracted module/test/report/tool,0,82
+modules/funnels/data/themes/lawn-care.js,new extracted module/test/report/tool,0,82
+modules/funnels/data/themes/locksmith.js,new extracted module/test/report/tool,0,82
+modules/funnels/data/themes/mechanic.js,new extracted module/test/report/tool,0,82
+modules/funnels/data/themes/painter.js,new extracted module/test/report/tool,0,82
+modules/funnels/data/themes/pest-control.js,new extracted module/test/report/tool,0,82
+modules/funnels/data/themes/plastering.js,new extracted module/test/report/tool,0,82
+modules/funnels/data/themes/plumbing.js,new extracted module/test/report/tool,0,82
+modules/funnels/data/themes/pool-service.js,new extracted module/test/report/tool,0,82
+modules/funnels/data/themes/pressure-washing.js,new extracted module/test/report/tool,0,82
+modules/funnels/data/themes/removals.js,new extracted module/test/report/tool,0,82
+modules/funnels/data/themes/rendering.js,new extracted module/test/report/tool,0,82
+modules/funnels/data/themes/roofing.js,new extracted module/test/report/tool,0,82
+modules/funnels/data/themes/security-screens.js,new extracted module/test/report/tool,0,82
+modules/funnels/data/themes/shopfitting.js,new extracted module/test/report/tool,0,82
+modules/funnels/data/themes/shutters-blinds.js,new extracted module/test/report/tool,0,82
+modules/funnels/data/themes/solar.js,new extracted module/test/report/tool,0,82
+modules/funnels/data/themes/tiling.js,new extracted module/test/report/tool,0,82
+modules/funnels/data/themes/tree-lopping.js,new extracted module/test/report/tool,0,82
+modules/funnels/data/themes/waterproofing.js,new extracted module/test/report/tool,0,82
+modules/funnels/index.js,new extracted module/test/report/tool,0,4
+modules/funnels/sections/generic.js,new extracted module/test/report/tool,0,594
+modules/funnels/sections/service.js,new extracted module/test/report/tool,0,312
+modules/funnels/services/images.js,new extracted module/test/report/tool,0,192
+modules/funnels/templates/serviceVariants.js,new extracted module/test/report/tool,0,78
+modules/funnels/tests/captureCatalogue.mjs,new extracted module/test/report/tool,0,46
+modules/funnels/tests/catalogue-reconciliation.test.mjs,new extracted module/test/report/tool,0,60
+modules/funnels/tests/fixtures/catalogue-baseline.json,new extracted module/test/report/tool,0,680
+modules/funnels/utils/serviceText.js,new extracted module/test/report/tool,0,29
+modules/website-builder/template-profiles/build-library-seed-images.js,new extracted module/test/report/tool,0,52
+modules/website-builder/template-profiles/create-trade-website-profile.js,new extracted module/test/report/tool,0,174
+modules/website-builder/template-profiles/index.js,new extracted module/test/report/tool,0,67
+modules/website-builder/template-profiles/profiles/accounting-bookkeeping.js,new extracted module/test/report/tool,0,200
+modules/website-builder/template-profiles/profiles/auto-repair.js,new extracted module/test/report/tool,0,23
+modules/website-builder/template-profiles/profiles/business-agency.js,new extracted module/test/report/tool,0,18
+modules/website-builder/template-profiles/profiles/cleaning-services.js,new extracted module/test/report/tool,0,23
+modules/website-builder/template-profiles/profiles/coach-personal-brand.js,new extracted module/test/report/tool,0,9
+modules/website-builder/template-profiles/profiles/concreting-company.js,new extracted module/test/report/tool,0,23
+modules/website-builder/template-profiles/profiles/ecommerce-store.js,new extracted module/test/report/tool,0,182
+modules/website-builder/template-profiles/profiles/electrician-company.js,new extracted module/test/report/tool,0,23
+modules/website-builder/template-profiles/profiles/fencing-gates.js,new extracted module/test/report/tool,0,23
+modules/website-builder/template-profiles/profiles/fitness-gym.js,new extracted module/test/report/tool,0,14
+modules/website-builder/template-profiles/profiles/flooring-tiling.js,new extracted module/test/report/tool,0,23
+modules/website-builder/template-profiles/profiles/garage-door-services.js,new extracted module/test/report/tool,0,23
+modules/website-builder/template-profiles/profiles/generic-premium.js,new extracted module/test/report/tool,0,54
+modules/website-builder/template-profiles/profiles/glass-glazing.js,new extracted module/test/report/tool,0,23
+modules/website-builder/template-profiles/profiles/home-renovation.js,new extracted module/test/report/tool,0,191
+modules/website-builder/template-profiles/profiles/hvac-air-conditioning.js,new extracted module/test/report/tool,0,23
+modules/website-builder/template-profiles/profiles/landscaping-lawn-care.js,new extracted module/test/report/tool,0,23
+modules/website-builder/template-profiles/profiles/law-firm.js,new extracted module/test/report/tool,0,197
+modules/website-builder/template-profiles/profiles/local-service.js,new extracted module/test/report/tool,0,9
+modules/website-builder/template-profiles/profiles/medical-clinic.js,new extracted module/test/report/tool,0,192
+modules/website-builder/template-profiles/profiles/mortgage-broker.js,new extracted module/test/report/tool,0,182
+modules/website-builder/template-profiles/profiles/painting-decorating.js,new extracted module/test/report/tool,0,23
+modules/website-builder/template-profiles/profiles/pest-control.js,new extracted module/test/report/tool,0,23
+modules/website-builder/template-profiles/profiles/plumbing-company.js,new extracted module/test/report/tool,0,23
+modules/website-builder/template-profiles/profiles/pool-service.js,new extracted module/test/report/tool,0,23
+modules/website-builder/template-profiles/profiles/portfolio-creative.js,new extracted module/test/report/tool,0,200
+modules/website-builder/template-profiles/profiles/real-estate.js,new extracted module/test/report/tool,0,192
+modules/website-builder/template-profiles/profiles/restaurant-cafe.js,new extracted module/test/report/tool,0,10
+modules/website-builder/template-profiles/profiles/roofing-company.js,new extracted module/test/report/tool,0,23
+modules/website-builder/template-profiles/profiles/saas-simple.js,new extracted module/test/report/tool,0,9
+modules/website-builder/template-profiles/profiles/salon-spa.js,new extracted module/test/report/tool,0,69
+modules/website-builder/template-profiles/profiles/solar-energy.js,new extracted module/test/report/tool,0,23
+modules/website-builder/template-profiles/seed-library-images.js,new extracted module/test/report/tool,0,80
+modules/website-builder/template-profiles/tests/profiles-reconciliation.test.mjs,new extracted module/test/report/tool,0,52
+modules/website-builder/template-profiles/trade-image-pools.js,new extracted module/test/report/tool,0,263
+pages/api/funnels/create-with-pages.js,consumer imports migrated,473,473
+pages/api/funnels/template-image.js,consumer imports migrated,174,174
+pages/modules/email/broadcast/index.js,consumer imports migrated,1559,1560
+pages/modules/funnels/edit/[id].js,consumer imports migrated,4692,4692
+pages/modules/funnels/new.js,consumer imports migrated,1077,1077
+postcss.config.mjs,unused config removed,7,0
+scripts/repository-maintenance/audit.mjs,new extracted module/test/report/tool,0,92
+scripts/test-website-builder-sticky-scroll-stack-regressions.mjs,source-reading test path migrated,154,154

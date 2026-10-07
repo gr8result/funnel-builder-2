@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { supabase } from '../../../utils/supabase-client';
+import { useWorkspace } from '../../../hooks/useWorkspace';
 
 const DAY_COLORS = ['#fda4af','#fdba74','#fde047','#86efac','#7dd3fc','#a5b4fc','#f0abfc'];
 const DAY_BG     = ['#9f1239','#9a3412','#854d0e','#166534','#0c4a6e','#3730a3','#6b21a8'];
@@ -51,6 +52,7 @@ function fmtTime(iso) {
 
 export default function CalendarDay() {
   const router = useRouter();
+  const { workspaceId } = useWorkspace();
   const { date: dateParam } = router.query;
 
   const [date, setDate]         = useState(null);
@@ -171,8 +173,8 @@ export default function CalendarDay() {
       const token = await getToken();
       const res = await fetch('/api/social/publish-now', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ postId: modal.post.postId }),
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, ...(workspaceId ? { 'x-workspace-id': workspaceId } : {}) },
+        body: JSON.stringify({ postId: modal.post.postId, workspace_id: workspaceId || '' }),
       });
       const json = await res.json().catch(() => ({ ok: false, success: false, error: "Server error — please try again." }));
       if (!json.ok) throw new Error(json.error || 'Publish failed');

@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { withAuth } from "../../../lib/withWorkspace";
+import { demoSimulationResult, isDemoWorkspace, requestWorkspaceId } from "../../../lib/demoWorkspace";
 import {
   buildDefaultSiteDomain,
   buildWebsitePath,
@@ -15,6 +16,7 @@ import {
 import { assembleWebsiteForRendering } from "../../../lib/website-builder/supabaseSiteStorage";
 import { getPublishedWebsiteByDomain } from "../../../lib/website-builder/publicationStore";
 import { createWebsiteBuilderBackup } from "../../../lib/website-builder/backupStorage";
+import { resolveGlobalPageWidthMode } from "../../../lib/website-builder/pageLayout";
 import {
   diffWebsitePersistence,
   buildWebsiteProjectVersion,
@@ -23,6 +25,13 @@ import {
   websitePersistenceHash,
 } from "../../../lib/website-builder/documentVersion";
 import { mergeWebsiteBuilderAssetSources } from "../../../lib/website-builder/mediaAssets";
+import {
+  assertWebsiteUnlockedForMutation,
+  getWebsiteUnlockTokenFromRequest,
+  markWebsiteMutationCommitted,
+  relockWebsite,
+  websiteLockedResponse,
+} from "../../../lib/website-builder/contentLock";
 
 export const config = {
   api: {
@@ -40,6 +49,16 @@ function getBearerToken(req) {
 
 function toErrorMessage(error, fallback) {
   return error?.message || fallback;
+}
+
+function resolvePublishWorkspaceId(req) {
+  return String(
+    requestWorkspaceId(req) ||
+      req?.body?.project?.workspace_id ||
+      req?.body?.project?.workspaceId ||
+      req?.body?.project?.workspace?.id ||
+      ""
+  ).trim();
 }
 
 function isMissingPublishedWebsitesTable(error) {
@@ -130,20 +149,30 @@ async function loadIntendedPublishedRows({ userId, projectId, slug, customDomain
 }
 
 async function writePublishedWebsiteRow(existingId, nextRecord) {
-  if (existingId) {
+  const write = async (record) => {
+    if (existingId) {
+      const result = await supabaseAdmin
+        .from("published_websites")
+        .update(record)
+        .eq("id", existingId)
+        .select("id, project_id, slug, primary_domain, custom_domain, domain_status, site_data, published_at, updated_at");
+      return { ...result, data: Array.isArray(result.data) ? result.data : [] };
+    }
+
     const result = await supabaseAdmin
       .from("published_websites")
-      .update(nextRecord)
-      .eq("id", existingId)
+      .insert(record)
       .select("id, project_id, slug, primary_domain, custom_domain, domain_status, site_data, published_at, updated_at");
     return { ...result, data: Array.isArray(result.data) ? result.data : [] };
-  }
+  };
 
-  const result = await supabaseAdmin
-    .from("published_websites")
-    .insert(nextRecord)
-    .select("id, project_id, slug, primary_domain, custom_domain, domain_status, site_data, published_at, updated_at");
-  return { ...result, data: Array.isArray(result.data) ? result.data : [] };
+  const result = await write(nextRecord);
+  const message = String(result.error?.message || "").toLowerCase();
+  if (result.error && Object.prototype.hasOwnProperty.call(nextRecord || {}, "workspace_id") && message.includes("workspace_id")) {
+    const { workspace_id: _workspaceId, ...compatibleRecord } = nextRecord;
+    return write(compatibleRecord);
+  }
+  return result;
 }
 
 function extractPublicationDebugMeta(html = "") {
@@ -208,6 +237,41 @@ async function handler(req, res) {
   }
 
   const userId = userData.user.id;
+  const workspaceId = resolvePublishWorkspaceId(req);
+  if (workspaceId && await isDemoWorkspace(workspaceId)) {
+    const project = req.body?.project || {};
+    const slug = slugifyWebsiteValue(req.body?.slug || project?.slug || project?.name || project?.id || "demo-website");
+    const simulated = await demoSimulationResult({
+      workspaceId,
+      actionType: "website-publish",
+      provider: "website-builder",
+      target: slug,
+      payload: {
+        projectId: project?.id || null,
+        slug,
+        customDomain: normalizeDomain(req.body?.customDomain || project?.customDomain || project?.custom_domain || ""),
+      },
+      userId,
+      message: "Demo website publish simulated - no published website row was changed.",
+    });
+    return res.status(200).json({
+      ...simulated,
+      publication: {
+        id: `demo-publication-${slug}`,
+        slug,
+        primary_domain: buildDefaultSiteDomain(slug),
+        custom_domain: null,
+        domain_status: "demo_simulated",
+        published_at: new Date().toISOString(),
+      },
+      verified: { ok: true, demo: true, simulated: true },
+      defaultUrl: buildDefaultSiteDomain(slug) ? `https://${buildDefaultSiteDomain(slug)}` : null,
+      liveUrl: buildDefaultSiteDomain(slug) ? `https://${buildDefaultSiteDomain(slug)}` : null,
+      customDomainInstructions: null,
+    });
+  }
+
+  const unlockToken = getWebsiteUnlockTokenFromRequest(req);
   const incomingProject = req.body?.project;
   const splitProjectId = String(incomingProject?.id || "").trim();
   const requestedDomainForProject = normalizeDomain(req.body?.customDomain);
@@ -221,7 +285,11 @@ async function handler(req, res) {
         name: incomingProject?.name || "",
       })
     : null;
-  const mergedBrandAssets = mergeWebsiteBuilderAssetSources(incomingProject?.brandAssets, assembledSnapshot?.brandAssets);
+  const hasIncomingBrandAssets = !!incomingProject?.brandAssets;
+  const hasAssembledBrandAssets = !!assembledSnapshot?.brandAssets;
+  const mergedBrandAssets = hasIncomingBrandAssets || hasAssembledBrandAssets
+    ? mergeWebsiteBuilderAssetSources(incomingProject?.brandAssets, assembledSnapshot?.brandAssets)
+    : assembledSnapshot?.brandAssets ?? incomingProject?.brandAssets ?? null;
   const project = withProjectPublicationIdentity({
     ...(assembledSnapshot || incomingProject || {}),
     customDomain: requestedDomainForProject || assembledSnapshot?.customDomain || incomingProject?.customDomain || incomingProject?.custom_domain || "",
@@ -231,6 +299,14 @@ async function handler(req, res) {
   if (!project || typeof project !== "object") {
     return res.status(400).json({ ok: false, error: "Missing website project payload" });
   }
+  const projectId = String(project.id || "").trim() || null;
+  const lock = assertWebsiteUnlockedForMutation({
+    projectId,
+    userId,
+    unlockToken,
+    action: "publish",
+  });
+  if (!lock.ok) return websiteLockedResponse(res, lock);
   const savedVersionMeta = project?.projectVersion && project?.savedAt && project?.contentHash
     ? { projectVersion: project.projectVersion, savedAt: project.savedAt, contentHash: project.contentHash }
     : buildWebsiteProjectVersion(project, project?.savedAt || project?.updatedAt || new Date().toISOString());
@@ -248,7 +324,6 @@ async function handler(req, res) {
     before: videoHeroMediaBeforePublish,
     published: videoHeroMediaForPublish,
   });
-  const projectId = String(project.id || "").trim() || null;
   const requestedCustomDomain = requestedDomainForProject || normalizeDomain(project?.customDomain || project?.custom_domain);
   const requestedSlug = slugifyWebsiteValue(req.body?.slug || project?.slug || project?.name || splitProjectId);
   if (!requestedSlug) {
@@ -310,13 +385,19 @@ async function handler(req, res) {
   const customDomainTarget = getCustomDomainTargetHost();
   const publishedAt = new Date().toISOString();
   const publishedVersionMeta = buildWebsiteProjectVersion(project, publishedAt);
+  const globalPageWidthMode = resolveGlobalPageWidthMode(project);
+  const pages = Array.isArray(project.pages) ? project.pages : [];
   const finalSiteData = {
     ...project,
+    pages,
     slug,
     customDomain: requestedCustomDomain || project.customDomain || project.custom_domain || "",
     custom_domain: requestedCustomDomain || project.custom_domain || project.customDomain || "",
     primaryDomain,
     primary_domain: primaryDomain,
+    pageWidthMode: globalPageWidthMode,
+    globalPageWidthMode,
+    containedWidth: project.containedWidth,
     projectVersion: savedVersionMeta.projectVersion,
     savedAt: savedVersionMeta.savedAt,
     contentHash: savedVersionMeta.contentHash,
@@ -578,6 +659,8 @@ async function handler(req, res) {
     }
   }
 
+  markWebsiteMutationCommitted({ projectId, unlockToken, action: "publish", draftRevision: project?.projectVersion || "", draftUpdatedAt: project?.updatedAt || project?.savedAt || "", contentHash: project?.contentHash || "" });
+  relockWebsite(projectId, unlockToken);
   return res.status(200).json({
     ok: true,
     publication: {

@@ -7,8 +7,10 @@ import Link from "next/link";
 import { supabase } from "../../../../../utils/supabase-client";
 import SubscriberAvatar from "../../../../../components/crm/SubscriberAvatar";
 import LeadDetailsModal from "../../../../../components/crm/LeadDetailsModal";
+import { useWorkspace } from "../../../../../hooks/useWorkspace";
 
 export default function CRMTasks() {
+  const { workspaceId } = useWorkspace();
   const [userId, setUserId] = useState(null);
 
   const [tasks, setTasks] = useState([]);
@@ -56,8 +58,12 @@ export default function CRMTasks() {
   const [selectedTasks, setSelectedTasks] = useState([]);
 
   useEffect(() => {
+    if (!workspaceId) {
+      setLoading(false);
+      return;
+    }
     loadUser();
-  }, []);
+  }, [workspaceId]);
 
   async function loadUser() {
     const { data, error } = await supabase.auth.getUser();
@@ -82,6 +88,7 @@ export default function CRMTasks() {
       .from("crm_tasks")
       .select("*")
       .eq("user_id", uid)
+      .eq("workspace_id", workspaceId)
       .order("due_date", { ascending: true })
       .order("created_at", { ascending: true });
 
@@ -99,7 +106,7 @@ export default function CRMTasks() {
     const { data, error } = await supabase
       .from("leads")
       .select("id, name, email")
-      .eq("user_id", uid)
+      .eq("workspace_id", workspaceId)
       .order("name", { ascending: true });
 
     if (error) {
@@ -116,6 +123,7 @@ export default function CRMTasks() {
       .from("crm_pipelines")
       .select("*")
       .eq("user_id", uid)
+      .eq("workspace_id", workspaceId)
       .order("position", { ascending: true });
 
     if (error) {
@@ -132,7 +140,7 @@ export default function CRMTasks() {
       const { data: leadsData, error: leadsError } = await supabase
         .from("leads")
         .select("id, created_at")
-        .eq("user_id", uid);
+        .eq("workspace_id", workspaceId);
 
       let subscribersTotal = 0;
       let subscribers7d = 0;
@@ -182,6 +190,7 @@ export default function CRMTasks() {
           .from("email_events")
           .select("id, event_type, created_at")
           .eq("user_id", uid)
+          .eq("workspace_id", workspaceId)
           .gte("created_at", sevenDaysAgoIso);
 
         if (!eventsError && events) {
@@ -444,6 +453,7 @@ export default function CRMTasks() {
 
     const payload = {
       user_id: userId,
+      workspace_id: workspaceId,
       contact_id: form.contact_id,
       title: form.title.trim(),
       notes: notesToSave,
@@ -462,7 +472,8 @@ export default function CRMTasks() {
       const { error: updError } = await supabase
         .from("crm_tasks")
         .update(payload)
-        .eq("id", editingTask.id);
+        .eq("id", editingTask.id)
+        .eq("workspace_id", workspaceId);
       error = updError;
     } else {
       const { error: insError } = await supabase
@@ -486,7 +497,8 @@ export default function CRMTasks() {
     const { error } = await supabase
       .from("crm_tasks")
       .update({ completed: !task.completed })
-      .eq("id", task.id);
+      .eq("id", task.id)
+      .eq("workspace_id", workspaceId);
 
     if (error) {
       console.error("toggleCompleted error:", error);
@@ -506,7 +518,8 @@ export default function CRMTasks() {
     const { error } = await supabase
       .from("crm_tasks")
       .delete()
-      .eq("id", task.id);
+      .eq("id", task.id)
+      .eq("workspace_id", workspaceId);
 
     if (error) {
       console.error("deleteTask error:", error);
@@ -538,7 +551,8 @@ export default function CRMTasks() {
     const { error } = await supabase
       .from("crm_tasks")
       .delete()
-      .in("id", selectedTasks);
+      .in("id", selectedTasks)
+      .eq("workspace_id", workspaceId);
 
     if (error) {
       console.error("deleteSelectedTasks error:", error);

@@ -97,7 +97,7 @@ Workbook values are never duplicated into document state for mapped dynamic fiel
 
 ## Dynamic Field Rule
 
-Dynamic fields resolve from `WORKBOOK_FIELD_MAP.md`.
+Dynamic fields resolve from `docs/architecture/WORKBOOK_FIELD_MAP.md`.
 
 No product module may guess workbook field names.
 

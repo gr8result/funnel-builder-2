@@ -1,0 +1,14 @@
+import fs from 'node:fs';
+let text=fs.readFileSync('scripts/verify-internal-finishing-sync-live.mjs','utf8');
+text=text.replaceAll('test-artifacts/internal-finishing-sync-live','test-artifacts/lockwood-sync-live').replaceAll('internal-finishing-verification-20260906','lockwood-verification-20260906');
+const start=text.indexOf(" await go('page=productLibrary"),end=text.indexOf(" await go('page=clientSelections');",start);
+text=text.slice(0,start)+text.slice(end);
+text=text.replace("await click('Internal Doors',false)","await click('Internal Door Furniture',false)");
+const loopStart=text.indexOf(" for(const [label,brand,key,quantity] of "),loopEnd=text.indexOf("){",loopStart);
+text=text.slice(0,loopStart)+" for(const [label,brand,key,quantity] of [['Internal Door Furniture','Lockwood','door-hardware','4']]"+text.slice(loopEnd);
+text=text.replace("if(key!=='internal-doors')",'if(false)');
+text=text.replace("await input('[aria-label=\"Internal quantity\"]',quantity);", "await page.waitForSelector('[aria-label=\"Internal hardware variant\"]');const variantValue=await page.$eval('[aria-label=\"Internal hardware variant\"]',e=>[...e.options].find(o=>o.text.includes('Privacy')&&o.text.includes('Matt black'))?.value||e.options[0].value);await page.select('[aria-label=\"Internal hardware variant\"]',variantValue);await input('[aria-label=\"Internal quantity\"]',quantity);");
+const assertionStart=text.indexOf("assert.equal(quote.length,6);"),assertionEnd=text.indexOf(" await click('Quotation Builder');",assertionStart);
+text=text.slice(0,assertionStart)+"assert.equal(quote.length,1);const row=quote[0];assert.equal(row.brand,'Lockwood');assert.equal(row.qty,4);assert(row.variantCode);assert(row.function);assert(row.finish);assert(row.productImageUrl.startsWith('/images/product-library/internal-areas/lockwood/'));assert(canonical.some(p=>p.productId===row.productId&&p.attributes.controlledVariants?.some(v=>v.productCode===row.variantCode)));assert.equal(row.priceStatus,'Quote required');\n"+text.slice(assertionEnd);
+text=text.replace(".length===6)",".length===1)");
+fs.writeFileSync('scripts/verify-lockwood-sync-live.mjs',text);

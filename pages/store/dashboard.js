@@ -6,16 +6,13 @@ import { useEffect, useState } from "react";
 import Head from "next/head";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from "../../utils/supabase-client";
 import { BarChart3, LineChart } from "lucide-react";
 import ICONS from "../../components/iconMap";
 import SubscriberAvatar from "../../components/crm/SubscriberAvatar";
 import LeadDetailsModal from "../../components/crm/LeadDetailsModal";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
+
 
 // Same Communities icon as SideNav
 const CommunitiesIcon = ({ size = 22, color = "#000" }) => (

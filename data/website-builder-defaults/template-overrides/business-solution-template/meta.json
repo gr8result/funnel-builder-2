@@ -1,0 +1,531 @@
+{
+  "updatedAt": "2026-08-17T23:39:39.245Z",
+  "globalNavBlock": {
+    "id": "shared-primary-navigation-2208a52a-8175-477e-823c-fc6de7fe4afe",
+    "role": "primary-navigation",
+    "type": "nav-bar",
+    "props": {
+      "logo": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/logo-1779485614189-logo-1776030030268-gr8-result-logo-transparant-background.png",
+      "role": "primary-navigation",
+      "brand": "Gr8 Result Digital Solutions",
+      "links": [
+        {
+          "id": "nav-home",
+          "href": "/",
+          "slug": "home",
+          "label": "Home",
+          "pageId": "home",
+          "children": [],
+          "linkType": "page",
+          "highlighted": false
+        },
+        {
+          "id": "nav-link-1779144221759-grnh3q",
+          "href": "/modules",
+          "slug": "modules",
+          "label": "Modules",
+          "pageId": "modules",
+          "children": [
+            {
+              "id": "nav-child-1779149028164-pd9mfy",
+              "href": "/email",
+              "slug": "email",
+              "label": "Email Marketing",
+              "pageId": "email",
+              "children": [],
+              "linkType": "page"
+            },
+            {
+              "id": "nav-child-1779149044705-0ov9ih",
+              "href": "/sms",
+              "slug": "sms",
+              "label": "SMS Marketing",
+              "pageId": "sms",
+              "children": [],
+              "linkType": "page"
+            },
+            {
+              "id": "nav-child-1779149064546-ii5sie",
+              "href": "/crm",
+              "slug": "crm",
+              "label": "CRM  Management",
+              "pageId": "crm",
+              "children": [],
+              "linkType": "page"
+            },
+            {
+              "id": "nav-child-funnels",
+              "href": "/funnels",
+              "slug": "funnels",
+              "label": "Funnels",
+              "pageId": "funnels",
+              "children": [],
+              "linkType": "page"
+            },
+            {
+              "id": "nav-child-website-builder",
+              "href": "/website-builder",
+              "slug": "website-builder",
+              "label": "Website Builder",
+              "pageId": "website-builder",
+              "children": [],
+              "linkType": "page"
+            },
+            {
+              "id": "nav-child-project-hub",
+              "href": "/project-hub",
+              "slug": "project-hub",
+              "label": "Project Hub",
+              "pageId": "project-hub",
+              "children": [],
+              "linkType": "page"
+            }
+          ],
+          "linkType": "page",
+          "highlighted": false
+        },
+        {
+          "id": "nav-link-1779143115150-nrgcvs",
+          "href": "/about-us",
+          "slug": "about-us",
+          "label": "About Us",
+          "pageId": "about-us",
+          "children": [],
+          "linkType": "page",
+          "highlighted": false
+        },
+        {
+          "id": "nav-contact-us",
+          "href": "/contact-us",
+          "slug": "contact-us",
+          "label": "Contact Us",
+          "pageId": "contact-us",
+          "children": [],
+          "linkType": "page"
+        },
+        {
+          "id": "nav-page-pricing",
+          "href": "/pricing",
+          "slug": "pricing",
+          "label": "Pricing",
+          "pageId": "pricing",
+          "children": [],
+          "linkType": "page"
+        },
+        {
+          "id": "nav-page-social-media",
+          "href": "/social-media",
+          "slug": "social-media",
+          "label": "Social Media",
+          "pageId": "social-media",
+          "children": [],
+          "linkType": "page"
+        }
+      ],
+      "style": "solid",
+      "sticky": true,
+      "ctaLink": "#contact",
+      "ctaText": "Contact Support",
+      "variant": "solid",
+      "showLogo": true,
+      "logoWidth": 150,
+      "textColor": "#06b6d4",
+      "stickyMode": "sticky-solid",
+      "borderColor": "rgba(125,211,252,0.24)",
+      "buttonColor": "#22c55e",
+      "ctaFontSize": 20,
+      "logoAssetId": "e548e010-ee00-4612-8fb7-2c22cb639e9a",
+      "linkFontSize": 20,
+      "brandFontSize": 24,
+      "textAnimation": "slide-up",
+      "positionSticky": true,
+      "backgroundColor": "#121c26",
+      "buttonTextColor": "#052e16",
+      "linkHoverEffect": "glow",
+      "mobileMenuStyle": "hamburger",
+      "navigationLinks": [
+        {
+          "id": "nav-home",
+          "href": "/",
+          "slug": "home",
+          "label": "Home",
+          "pageId": "home",
+          "children": [],
+          "linkType": "page",
+          "highlighted": false
+        },
+        {
+          "id": "nav-link-1779144221759-grnh3q",
+          "href": "/modules",
+          "slug": "modules",
+          "label": "Modules",
+          "pageId": "modules",
+          "children": [
+            {
+              "id": "nav-child-1779149028164-pd9mfy",
+              "href": "/email",
+              "slug": "email",
+              "label": "Email Marketing",
+              "pageId": "email",
+              "children": [],
+              "linkType": "page"
+            },
+            {
+              "id": "nav-child-1779149044705-0ov9ih",
+              "href": "/sms",
+              "slug": "sms",
+              "label": "SMS Marketing",
+              "pageId": "sms",
+              "children": [],
+              "linkType": "page"
+            },
+            {
+              "id": "nav-child-1779149064546-ii5sie",
+              "href": "/crm",
+              "slug": "crm",
+              "label": "CRM  Management",
+              "pageId": "crm",
+              "children": [],
+              "linkType": "page"
+            },
+            {
+              "id": "nav-child-funnels",
+              "href": "/funnels",
+              "slug": "funnels",
+              "label": "Funnels",
+              "pageId": "funnels",
+              "children": [],
+              "linkType": "page"
+            },
+            {
+              "id": "nav-child-website-builder",
+              "href": "/website-builder",
+              "slug": "website-builder",
+              "label": "Website Builder",
+              "pageId": "website-builder",
+              "children": [],
+              "linkType": "page"
+            },
+            {
+              "id": "nav-child-project-hub",
+              "href": "/project-hub",
+              "slug": "project-hub",
+              "label": "Project Hub",
+              "pageId": "project-hub",
+              "children": [],
+              "linkType": "page"
+            }
+          ],
+          "linkType": "page",
+          "highlighted": false
+        },
+        {
+          "id": "nav-link-1779143115150-nrgcvs",
+          "href": "/about-us",
+          "slug": "about-us",
+          "label": "About Us",
+          "pageId": "about-us",
+          "children": [],
+          "linkType": "page",
+          "highlighted": false
+        },
+        {
+          "id": "nav-contact-us",
+          "href": "/contact-us",
+          "slug": "contact-us",
+          "label": "Contact Us",
+          "pageId": "contact-us",
+          "children": [],
+          "linkType": "page"
+        },
+        {
+          "id": "nav-page-pricing",
+          "href": "/pricing",
+          "slug": "pricing",
+          "label": "Pricing",
+          "pageId": "pricing",
+          "children": [],
+          "linkType": "page"
+        },
+        {
+          "id": "nav-page-social-media",
+          "href": "/social-media",
+          "slug": "social-media",
+          "label": "Social Media",
+          "pageId": "social-media",
+          "children": [],
+          "linkType": "page"
+        }
+      ],
+      "useGlobalHeader": true,
+      "navigationManual": true,
+      "sectionAnimation": "fade-in",
+      "sharedComponentId": "shared-primary-navigation-2208a52a-8175-477e-823c-fc6de7fe4afe",
+      "linkHoverTextColor": "#ec4899",
+      "textAnimationDelay": 0.08,
+      "textAnimationSpeed": 0.95,
+      "activeLinkTextColor": "#f59e0b",
+      "fullWidthBackground": true,
+      "globalHeaderRevision": "2026-08-13T00:12:04.622Z",
+      "subheadlineAnimation": "fade-up",
+      "sectionAnimationDelay": 0,
+      "sectionAnimationSpeed": 1,
+      "syncPagesToNavigation": false,
+      "linkHoverBackgroundColor": "#ec4899",
+      "activeLinkBackgroundColor": "#121c26",
+      "globalHeaderSchemaVersion": 1,
+      "subheadlineAnimationDelay": 0.16,
+      "subheadlineAnimationSpeed": 1.05
+    },
+    "sharedComponentId": "shared-primary-navigation-2208a52a-8175-477e-823c-fc6de7fe4afe",
+    "globalHeaderRevision": "2026-08-13T00:12:04.622Z"
+  },
+  "globalFooterBlock": {
+    "id": 1779416282454,
+    "type": "footer",
+    "props": {
+      "logo": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779421709551-logo-1776030030268-gr8-result-logo-transparant-background.png",
+      "brand": "Gr8 Result Digital Solutions",
+      "tagline": "Code Hard or Code Home",
+      "__blockId": 1779416282454,
+      "linkColor": "#f59e0b",
+      "logoWidth": 200,
+      "textColor": "#ffffff",
+      "extraLinks": [
+        {
+          "href": "#blog",
+          "label": "Blog"
+        },
+        {
+          "href": "#privacy",
+          "label": "Privacy Policy"
+        },
+        {
+          "href": "#terms",
+          "label": "Terms"
+        }
+      ],
+      "linkGroups": [
+        {
+          "id": "footer-navigation-card",
+          "role": "navigation",
+          "type": "navigation-links",
+          "links": [
+            {
+              "id": "footer-nav-home",
+              "href": "/",
+              "role": "navigation-link",
+              "slug": "home",
+              "label": "Home",
+              "pageId": "home"
+            },
+            {
+              "id": "footer-nav-modules",
+              "href": "/modules",
+              "role": "navigation-link",
+              "slug": "modules",
+              "label": "Modules",
+              "pageId": "modules"
+            },
+            {
+              "id": "footer-nav-email",
+              "href": "/email",
+              "role": "navigation-link",
+              "slug": "email",
+              "label": "Email",
+              "pageId": "email"
+            },
+            {
+              "id": "footer-nav-sms",
+              "href": "/sms",
+              "role": "navigation-link",
+              "slug": "sms",
+              "label": "SMS",
+              "pageId": "sms"
+            },
+            {
+              "id": "footer-nav-crm",
+              "href": "/crm",
+              "role": "navigation-link",
+              "slug": "crm",
+              "label": "CRM",
+              "pageId": "crm"
+            },
+            {
+              "id": "footer-nav-funnels",
+              "href": "/funnels",
+              "role": "navigation-link",
+              "slug": "funnels",
+              "label": "Funnels",
+              "pageId": "funnels"
+            },
+            {
+              "id": "footer-nav-website-builder",
+              "href": "/website-builder",
+              "role": "navigation-link",
+              "slug": "website-builder",
+              "label": "Website Builder",
+              "pageId": "website-builder"
+            },
+            {
+              "id": "footer-nav-social-media",
+              "href": "/social-media",
+              "role": "navigation-link",
+              "slug": "social-media",
+              "label": "Social Media",
+              "pageId": "social-media"
+            },
+            {
+              "id": "footer-nav-project-hub",
+              "href": "/project-hub",
+              "role": "navigation-link",
+              "slug": "project-hub",
+              "label": "Project Hub",
+              "pageId": "project-hub"
+            },
+            {
+              "id": "footer-nav-about-us",
+              "href": "/about-us",
+              "role": "navigation-link",
+              "slug": "about-us",
+              "label": "About Us",
+              "pageId": "about-us"
+            },
+            {
+              "id": "footer-nav-pricing",
+              "href": "/pricing",
+              "role": "navigation-link",
+              "slug": "pricing",
+              "label": "Pricing",
+              "pageId": "pricing"
+            },
+            {
+              "id": "footer-nav-contact-us",
+              "href": "/contact-us",
+              "role": "navigation-link",
+              "slug": "contact-us",
+              "label": "Contact Us",
+              "pageId": "contact-us"
+            }
+          ],
+          "heading": "Navigation"
+        },
+        {
+          "id": "footer-australian-company-panel",
+          "type": "australian-company-panel",
+          "heading": "Proudly Australian",
+          "body": "Gr8 Result Digital Solutions is proudly Australian owned and operated. Our platform development and customer support are handled by our Australian team.",
+          "location": "Sunshine Coast, Queensland",
+          "timezone": "UTC+10",
+          "flagImageUrl": "data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%20360%20240%27%3E%3Crect%20width%3D%27360%27%20height%3D%27240%27%20rx%3D%2724%27%20fill%3D%27%23012249%27/%3E%3Cpath%20d%3D%27M0%200h176v112H0z%27%20fill%3D%27%23012169%27/%3E%3Cpath%20d%3D%27M0%200l176%20112M176%200L0%20112%27%20stroke%3D%27%23fff%27%20stroke-width%3D%2720%27/%3E%3Cpath%20d%3D%27M0%200l176%20112M176%200L0%20112%27%20stroke%3D%27%23c8102e%27%20stroke-width%3D%2710%27/%3E%3Cpath%20d%3D%27M88%200v112M0%2056h176%27%20stroke%3D%27%23fff%27%20stroke-width%3D%2734%27/%3E%3Cpath%20d%3D%27M88%200v112M0%2056h176%27%20stroke%3D%27%23c8102e%27%20stroke-width%3D%2720%27/%3E%3Cg%20fill%3D%27%23f8d15c%27%3E%3Cpath%20d%3D%27M271%2039l7%2020h21l-17%2012%206%2020-17-12-17%2012%206-20-17-12h21z%27/%3E%3Cpath%20d%3D%27M230%20111l5%2014h15l-12%209%205%2014-13-9-12%209%205-14-12-9h15z%27/%3E%3Cpath%20d%3D%27M307%20120l5%2015h16l-13%209%205%2015-13-9-13%209%205-15-13-9h16z%27/%3E%3Cpath%20d%3D%27M269%20173l6%2018h19l-15%2011%206%2018-16-11-15%2011%206-18-16-11h19z%27/%3E%3Cpath%20d%3D%27M315%2069l4%2011h12l-10%207%204%2012-10-7-10%207%204-12-10-7h12z%27/%3E%3C/g%3E%3C/svg%3E",
+          "role": "australian-company"
+        }
+      ],
+      "navHeading": "Navigation",
+      "__blockType": "footer",
+      "borderColor": "#f59e0b",
+      "contactRole": "contact",
+      "logoAssetId": "asset:35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779421709551-logo-1776030030268-gr8-result-logo-transparant-background.png",
+      "companyLinks": [
+        {
+          "href": "#blog",
+          "label": "Blog"
+        },
+        {
+          "href": "#privacy",
+          "label": "Privacy Policy"
+        },
+        {
+          "href": "#terms",
+          "label": "Terms"
+        }
+      ],
+      "contactEmail": "support@gr8result.com",
+      "contactPhone": "Sunshine Coast 4557",
+      "extraHeading": "Company",
+      "copyrightText": "© 2026 Gr8 Result Digital Solutions. All rights reserved.",
+      "contactAddress": "Queensland, Australia",
+      "contactHeading": "Contact details",
+      "newsletterRole": "newsletter",
+      "showNewsletter": true,
+      "spotlightItems": [],
+      "backgroundColor": "#121c26",
+      "baseLayoutWidth": 1500,
+      "footerCardOrder": [
+        "contact",
+        "navigation",
+        "australian-company",
+        "newsletter"
+      ],
+      "footerNavManual": true,
+      "navigationLinks": [
+        {
+          "href": "/",
+          "label": "Home"
+        },
+        {
+          "href": "/modules",
+          "label": "Modules"
+        },
+        {
+          "href": "/email",
+          "label": "Email"
+        },
+        {
+          "href": "/sms",
+          "label": "SMS"
+        },
+        {
+          "href": "/crm",
+          "label": "CRM"
+        },
+        {
+          "href": "/funnels",
+          "label": "Funnels"
+        },
+        {
+          "href": "/website-builder",
+          "label": "Website Builder"
+        },
+        {
+          "href": "/social-media",
+          "label": "Social Media"
+        },
+        {
+          "href": "/project-hub",
+          "label": "Project Hub"
+        },
+        {
+          "href": "/about-us",
+          "label": "About Us"
+        },
+        {
+          "href": "/pricing",
+          "label": "Pricing"
+        },
+        {
+          "href": "/contact-us",
+          "label": "Contact Us"
+        }
+      ],
+      "newsletterHeading": "Stay Updated",
+      "newsletterSubtitle": "Get the latest news or updates on new modules added to the platform, delivered to your inbox.",
+      "newsletterActionUrl": "suppport@gr8result.com",
+      "newsletterButtonText": "Submit",
+      "newsletterButtonColor": "#2563eb",
+      "australianCompanyPanel": {
+        "id": "footer-australian-company-panel",
+        "type": "australian-company-panel",
+        "heading": "Proudly Australian",
+        "body": "Gr8 Result Digital Solutions is proudly Australian owned and operated. Our platform development and customer support are handled by our Australian team.",
+        "location": "Sunshine Coast, Queensland",
+        "timezone": "UTC+10",
+        "flagImageUrl": "data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%20360%20240%27%3E%3Crect%20width%3D%27360%27%20height%3D%27240%27%20rx%3D%2724%27%20fill%3D%27%23012249%27/%3E%3Cpath%20d%3D%27M0%200h176v112H0z%27%20fill%3D%27%23012169%27/%3E%3Cpath%20d%3D%27M0%200l176%20112M176%200L0%20112%27%20stroke%3D%27%23fff%27%20stroke-width%3D%2720%27/%3E%3Cpath%20d%3D%27M0%200l176%20112M176%200L0%20112%27%20stroke%3D%27%23c8102e%27%20stroke-width%3D%2710%27/%3E%3Cpath%20d%3D%27M88%200v112M0%2056h176%27%20stroke%3D%27%23fff%27%20stroke-width%3D%2734%27/%3E%3Cpath%20d%3D%27M88%200v112M0%2056h176%27%20stroke%3D%27%23c8102e%27%20stroke-width%3D%2720%27/%3E%3Cg%20fill%3D%27%23f8d15c%27%3E%3Cpath%20d%3D%27M271%2039l7%2020h21l-17%2012%206%2020-17-12-17%2012%206-20-17-12h21z%27/%3E%3Cpath%20d%3D%27M230%20111l5%2014h15l-12%209%205%2014-13-9-12%209%205-14-12-9h15z%27/%3E%3Cpath%20d%3D%27M307%20120l5%2015h16l-13%209%205%2015-13-9-13%209%205-15-13-9h16z%27/%3E%3Cpath%20d%3D%27M269%20173l6%2018h19l-15%2011%206%2018-16-11-15%2011%206-18-16-11h19z%27/%3E%3Cpath%20d%3D%27M315%2069l4%2011h12l-10%207%204%2012-10-7-10%207%204-12-10-7h12z%27/%3E%3C/g%3E%3C/svg%3E",
+        "role": "australian-company"
+      },
+      "newsletterSubmitMethod": "post",
+      "newsletterFallbackEmail": "",
+      "newsletterButtonTextColor": "#ffffff"
+    }
+  }
+}

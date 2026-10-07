@@ -23,7 +23,8 @@ export const MODULES = [
   { href: "/modules/subaccounts",         emoji: "👥", title: "Subaccounts" },
   { href: "/modules/pipelines",           emoji: "🌿", title: "Pipelines" },
   { href: "/modules/communities",         emoji: "💬", title: "Communities" },
-  { href: "/modules/construction",        emoji: "🗂️", title: "Projects Hub" },
+  { href: "/modules/estimate-builder?page=projectDashboard", emoji: "🗂️", title: "Project Workspace" },
+  { href: "/client-portal", emoji: "👥", title: "Client Portal" },
 ];
 
 export const TOOLS = [

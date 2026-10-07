@@ -1,0 +1,25 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Johnson takeoff verification</title></head><body>
+<p id="status">Connecting to local takeoff verification…</p>
+<iframe id="app" style="width:100%;height:92vh;border:0"></iframe>
+<script type="module">
+const bridge = new URL(location.href).searchParams.get('bridge');
+if (!bridge || new URL(bridge).hostname !== '127.0.0.1') throw Error('Local diagnostic connection required.');
+const completed = new Set();
+window.openExistingDb = name => new Promise((resolve,reject)=>{ const req=indexedDB.open(name); req.onupgradeneeded=()=>req.transaction.abort(); req.onsuccess=()=>resolve(req.result); req.onerror=()=>reject(req.error); });
+window.readRecord = async (name,store,key) => { const db=await openExistingDb(name);try{return await new Promise((resolve,reject)=>{const req=db.transaction(store,'readonly').objectStore(store).get(key);req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});}finally{db.close();} };
+window.readKeys = async (name,store) => { const db=await openExistingDb(name);try{return await new Promise((resolve,reject)=>{const req=db.transaction(store,'readonly').objectStore(store).getAllKeys();req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});}finally{db.close();} };
+while (true) {
+ try {
+  const command=await (await fetch(bridge+'/command')).json();
+  if(command.id && !completed.has(command.id)){
+   completed.add(command.id);document.querySelector('#status').textContent=command.label||command.id;
+   let result;
+   try { result={id:command.id,value:await new (Object.getPrototypeOf(async function(){}).constructor)(command.code)()}; }
+   catch(error){result={id:command.id,error:error.message,stack:error.stack};}
+   await fetch(bridge+'/result',{method:'POST',body:JSON.stringify(result)});
+   document.querySelector('#status').textContent=result.error||'Completed '+command.id;
+  }
+ }catch(error){document.querySelector('#status').textContent=error.message;}
+ await new Promise(resolve=>setTimeout(resolve,600));
+}
+</script></body></html>

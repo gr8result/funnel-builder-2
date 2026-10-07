@@ -2,6 +2,7 @@
 import Stripe from "stripe";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { withWorkspace } from "../../../lib/withWorkspace";
+import { demoSimulationResult } from "../../../lib/demoWorkspace";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -17,11 +18,32 @@ async function handler(req, res) {
     .from("services")
     .select("*")
     .eq("id", service_id)
+    .eq("workspace_id", req.workspaceId)
     .eq("user_id", req.user.id)
     .single();
 
   if (error || !service) return res.status(404).json({ error: "Service not found" });
   if (!service.price || service.price <= 0) return res.status(400).json({ error: "Service must have a price > 0" });
+
+  if (req.isDemoWorkspace) {
+    const simulatedPriceId = `demo_price_${service.id}`;
+    await demoSimulationResult({
+      workspaceId: req.workspaceId,
+      userId: req.user.id,
+      actionType: "stripe-price",
+      provider: "stripe",
+      target: service.name,
+      payload: { service_id, price: service.price },
+      message: "Demo Stripe price simulated - no Stripe product or price created.",
+    });
+    await supabaseAdmin
+      .from("services")
+      .update({ stripe_price_id: simulatedPriceId })
+      .eq("id", service.id)
+      .eq("workspace_id", req.workspaceId)
+      .eq("user_id", req.user.id);
+    return res.status(200).json({ success: true, demo: true, simulated: true, stripe_price_id: simulatedPriceId });
+  }
 
   const product = await stripe.products.create({ name: service.name });
   const price = await stripe.prices.create({
@@ -34,6 +56,7 @@ async function handler(req, res) {
     .from("services")
     .update({ stripe_price_id: price.id })
     .eq("id", service.id)
+    .eq("workspace_id", req.workspaceId)
     .eq("user_id", req.user.id);
 
   return res.status(200).json({ success: true, stripe_price_id: price.id });

@@ -1,0 +1,417 @@
+{
+  "walls": [
+    {
+      "id": "ai:stubbed-ai-takeoff-job:takeoff%3Astubbed-ai-takeoff-job:canvas-sha256%3A<document>:ai-takeoff-v1:wall:page-1%3Ageometry%3AW01",
+      "page": 1,
+      "level": "Ground Floor",
+      "source": "ai",
+      "confidence": 0.92,
+      "ai": {
+        "runId": "ai-takeoff-v1",
+        "detectionId": "page-1:geometry:W01",
+        "documentHash": "canvas-sha256:<document>",
+        "sourcePage": 1,
+        "modelVersion": "stub-model",
+        "analysisEvidence": {
+          "basis": "OBSERVED",
+          "confidence": 0.92,
+          "evidence": "North and east outer wall.",
+          "fields": {
+            "thicknessMm": {
+              "basis": "ASSUMED",
+              "confidence": 0,
+              "evidence": "230 mm is the existing manual tool display default; wall thickness was not documented."
+            },
+            "lengthMm": {
+              "basis": "DERIVED",
+              "confidence": 0.92,
+              "evidence": "The Phase 1 adapter calculates length from this observed geometry and the confirmed Takeoff calibration."
+            },
+            "linedFaces": {
+              "basis": "ASSUMED",
+              "confidence": 0,
+              "evidence": "Two lined faces is the existing manual wall tool default, not a measured finish specification."
+            },
+            "openingDeductionsEnabled": {
+              "basis": "ASSUMED",
+              "confidence": 0,
+              "evidence": "Linked-opening deductions use the existing enabled manual wall setting."
+            },
+            "constructionSystem": {
+              "basis": "ASSUMED",
+              "confidence": 0,
+              "evidence": "Construction system is not established from the drawing."
+            },
+            "exteriorType": {
+              "basis": "ASSUMED",
+              "confidence": 0,
+              "evidence": "Construction system is not established from the drawing."
+            },
+            "alignment": {
+              "basis": "DERIVED",
+              "confidence": 0.92,
+              "evidence": "Trace is the outer wall face; the adapter uses the existing outer alignment convention."
+            }
+          }
+        }
+      },
+      "category": "exterior",
+      "nodes": [
+        {
+          "x": 240,
+          "y": 225
+        },
+        {
+          "x": 960,
+          "y": 225
+        },
+        {
+          "x": 960,
+          "y": 675
+        }
+      ],
+      "lengthMm": 19500,
+      "thicknessMm": 230,
+      "alignment": "outer",
+      "exteriorType": "Other",
+      "constructionSystem": "unclassified",
+      "frameThicknessMm": null,
+      "linedFaces": 2,
+      "openingDeductionsEnabled": true,
+      "wallHeightM": null
+    },
+    {
+      "id": "ai:stubbed-ai-takeoff-job:takeoff%3Astubbed-ai-takeoff-job:canvas-sha256%3A<document>:ai-takeoff-v1:wall:page-1%3Ageometry%3AW02",
+      "page": 1,
+      "level": "Ground Floor",
+      "source": "ai",
+      "confidence": 0.92,
+      "ai": {
+        "runId": "ai-takeoff-v1",
+        "detectionId": "page-1:geometry:W02",
+        "documentHash": "canvas-sha256:<document>",
+        "sourcePage": 1,
+        "modelVersion": "stub-model",
+        "analysisEvidence": {
+          "basis": "OBSERVED",
+          "confidence": 0.92,
+          "evidence": "South and west outer wall.",
+          "fields": {
+            "thicknessMm": {
+              "basis": "ASSUMED",
+              "confidence": 0,
+              "evidence": "230 mm is the existing manual tool display default; wall thickness was not documented."
+            },
+            "lengthMm": {
+              "basis": "DERIVED",
+              "confidence": 0.92,
+              "evidence": "The Phase 1 adapter calculates length from this observed geometry and the confirmed Takeoff calibration."
+            },
+            "linedFaces": {
+              "basis": "ASSUMED",
+              "confidence": 0,
+              "evidence": "Two lined faces is the existing manual wall tool default, not a measured finish specification."
+            },
+            "openingDeductionsEnabled": {
+              "basis": "ASSUMED",
+              "confidence": 0,
+              "evidence": "Linked-opening deductions use the existing enabled manual wall setting."
+            },
+            "constructionSystem": {
+              "basis": "ASSUMED",
+              "confidence": 0,
+              "evidence": "Construction system is not established from the drawing."
+            },
+            "exteriorType": {
+              "basis": "ASSUMED",
+              "confidence": 0,
+              "evidence": "Construction system is not established from the drawing."
+            },
+            "alignment": {
+              "basis": "DERIVED",
+              "confidence": 0.92,
+              "evidence": "Trace is the outer wall face; the adapter uses the existing outer alignment convention."
+            }
+          }
+        }
+      },
+      "category": "exterior",
+      "nodes": [
+        {
+          "x": 960,
+          "y": 675
+        },
+        {
+          "x": 240,
+          "y": 675
+        },
+        {
+          "x": 240,
+          "y": 225
+        }
+      ],
+      "lengthMm": 19500,
+      "thicknessMm": 230,
+      "alignment": "outer",
+      "exteriorType": "Other",
+      "constructionSystem": "unclassified",
+      "frameThicknessMm": null,
+      "linedFaces": 2,
+      "openingDeductionsEnabled": true,
+      "wallHeightM": null
+    },
+    {
+      "id": "ai:stubbed-ai-takeoff-job:takeoff%3Astubbed-ai-takeoff-job:canvas-sha256%3A<document>:ai-takeoff-v1:wall:page-1%3Ageometry%3AW03",
+      "page": 1,
+      "level": "Ground Floor",
+      "source": "ai",
+      "confidence": 0.92,
+      "ai": {
+        "runId": "ai-takeoff-v1",
+        "detectionId": "page-1:geometry:W03",
+        "documentHash": "canvas-sha256:<document>",
+        "sourcePage": 1,
+        "modelVersion": "stub-model",
+        "analysisEvidence": {
+          "basis": "OBSERVED",
+          "confidence": 0.92,
+          "evidence": "Internal wall between Bed 1 and Living.",
+          "fields": {
+            "thicknessMm": {
+              "basis": "ASSUMED",
+              "confidence": 0,
+              "evidence": "70 mm is the existing manual tool display default; wall thickness was not documented."
+            },
+            "lengthMm": {
+              "basis": "DERIVED",
+              "confidence": 0.92,
+              "evidence": "The Phase 1 adapter calculates length from this observed geometry and the confirmed Takeoff calibration."
+            },
+            "linedFaces": {
+              "basis": "ASSUMED",
+              "confidence": 0,
+              "evidence": "Two lined faces is the existing manual wall tool default, not a measured finish specification."
+            },
+            "openingDeductionsEnabled": {
+              "basis": "ASSUMED",
+              "confidence": 0,
+              "evidence": "Linked-opening deductions use the existing enabled manual wall setting."
+            },
+            "constructionSystem": {
+              "basis": "ASSUMED",
+              "confidence": 0,
+              "evidence": "Construction system is not established from the drawing."
+            },
+            "alignment": {
+              "basis": "DERIVED",
+              "confidence": 0.92,
+              "evidence": "Trace is the outer wall face; the adapter uses the existing outer alignment convention."
+            }
+          }
+        }
+      },
+      "category": "interior",
+      "nodes": [
+        {
+          "x": 600,
+          "y": 225
+        },
+        {
+          "x": 600,
+          "y": 675
+        }
+      ],
+      "lengthMm": 7500,
+      "thicknessMm": 70,
+      "alignment": "outer",
+      "exteriorType": "",
+      "constructionSystem": "unclassified",
+      "frameThicknessMm": null,
+      "linedFaces": 2,
+      "openingDeductionsEnabled": true,
+      "wallHeightM": null
+    }
+  ],
+  "openings": [
+    {
+      "id": "ai:stubbed-ai-takeoff-job:takeoff%3Astubbed-ai-takeoff-job:canvas-sha256%3A<document>:ai-takeoff-v1:opening:page-1%3Aitems%3AO01",
+      "page": 1,
+      "level": "Ground Floor",
+      "source": "ai",
+      "confidence": 0.92,
+      "ai": {
+        "runId": "ai-takeoff-v1",
+        "detectionId": "page-1:items:O01",
+        "documentHash": "canvas-sha256:<document>",
+        "sourcePage": 1,
+        "modelVersion": "stub-model",
+        "analysisEvidence": {
+          "basis": "OBSERVED",
+          "confidence": 0.92,
+          "evidence": "Window 1218 on north wall.",
+          "fields": {
+            "hostWall": {
+              "basis": "DERIVED",
+              "confidence": 0.92,
+              "evidence": "Unique nearby wall on the same calibrated page, with matching internal/external classification."
+            },
+            "location": {
+              "basis": "OBSERVED",
+              "confidence": 0.92,
+              "evidence": "Window 1218 on north wall."
+            },
+            "widthMm": {
+              "basis": "DERIVED",
+              "confidence": 0.92,
+              "evidence": "Australian height-first shorthand 1218: first two digits ×100 mm high, final two ×100 mm wide."
+            },
+            "heightMm": {
+              "basis": "DERIVED",
+              "confidence": 0.92,
+              "evidence": "Australian height-first shorthand 1218: first two digits ×100 mm high, final two ×100 mm wide."
+            },
+            "glassType": {
+              "basis": "ASSUMED",
+              "confidence": 0,
+              "evidence": "Glass type is not documented on the drawing or window schedule."
+            }
+          },
+          "originalTag": "1218",
+          "rawSizeCode": "1218",
+          "discrepancies": []
+        }
+      },
+      "type": "window",
+      "openingClass": "Window",
+      "x": 420,
+      "y": 225,
+      "hostWallId": "ai:stubbed-ai-takeoff-job:takeoff%3Astubbed-ai-takeoff-job:canvas-sha256%3A<document>:ai-takeoff-v1:wall:page-1%3Ageometry%3AW01",
+      "widthMm": 1800,
+      "heightMm": 1200,
+      "itemTag": "1218",
+      "subType": "Window",
+      "glassType": "",
+      "frameMaterial": "",
+      "frameColour": "",
+      "sillType": "",
+      "brickSillRequired": false,
+      "location": "",
+      "frameJambDetails": ""
+    },
+    {
+      "id": "ai:stubbed-ai-takeoff-job:takeoff%3Astubbed-ai-takeoff-job:canvas-sha256%3A<document>:ai-takeoff-v1:opening:page-1%3Aitems%3AO02",
+      "page": 1,
+      "level": "Ground Floor",
+      "source": "ai",
+      "confidence": 0.92,
+      "ai": {
+        "runId": "ai-takeoff-v1",
+        "detectionId": "page-1:items:O02",
+        "documentHash": "canvas-sha256:<document>",
+        "sourcePage": 1,
+        "modelVersion": "stub-model",
+        "analysisEvidence": {
+          "basis": "OBSERVED",
+          "confidence": 0.92,
+          "evidence": "Entry door on south wall.",
+          "fields": {
+            "hostWall": {
+              "basis": "DERIVED",
+              "confidence": 0.92,
+              "evidence": "Unique nearby wall on the same calibrated page, with matching internal/external classification."
+            },
+            "location": {
+              "basis": "OBSERVED",
+              "confidence": 0.92,
+              "evidence": "Entry door on south wall."
+            },
+            "widthMm": {
+              "basis": "ASSUMED",
+              "confidence": 0,
+              "evidence": "Not documented; no dimension was invented."
+            },
+            "heightMm": {
+              "basis": "ASSUMED",
+              "confidence": 0,
+              "evidence": "Not documented; no dimension was invented."
+            },
+            "glassType": {
+              "basis": "ASSUMED",
+              "confidence": 0,
+              "evidence": "Glass type is not documented on the drawing or window schedule."
+            }
+          },
+          "originalTag": "D1",
+          "rawSizeCode": "",
+          "discrepancies": []
+        }
+      },
+      "type": "door",
+      "openingClass": "External Door",
+      "x": 780,
+      "y": 675,
+      "hostWallId": "ai:stubbed-ai-takeoff-job:takeoff%3Astubbed-ai-takeoff-job:canvas-sha256%3A<document>:ai-takeoff-v1:wall:page-1%3Ageometry%3AW02",
+      "widthMm": null,
+      "heightMm": null,
+      "itemTag": "D1",
+      "subType": "External Door",
+      "glassType": "",
+      "frameMaterial": "",
+      "frameColour": "",
+      "sillType": "",
+      "brickSillRequired": false,
+      "location": "",
+      "frameJambDetails": ""
+    }
+  ],
+  "floorplans": [
+    {
+      "id": "ai:stubbed-ai-takeoff-job:takeoff%3Astubbed-ai-takeoff-job:canvas-sha256%3A<document>:ai-takeoff-v1:floorplan:page-1%3Ageometry%3AA01",
+      "page": 1,
+      "level": "Ground Floor",
+      "source": "ai",
+      "confidence": 0.92,
+      "ai": {
+        "runId": "ai-takeoff-v1",
+        "detectionId": "page-1:geometry:A01",
+        "documentHash": "canvas-sha256:<document>",
+        "sourcePage": 1,
+        "modelVersion": "stub-model",
+        "analysisEvidence": {
+          "basis": "OBSERVED",
+          "confidence": 0.92,
+          "evidence": "Living area inside outer walls.",
+          "fields": {
+            "areaM2": {
+              "basis": "DERIVED",
+              "confidence": 0.92,
+              "evidence": "Existing Takeoff polygon-area calculation and confirmed calibration."
+            }
+          }
+        }
+      },
+      "type": "Living",
+      "label": "Living",
+      "color": "rgba(76, 175, 80, 0.3)",
+      "stroke": "#2e7d32",
+      "nodes": [
+        {
+          "x": 240,
+          "y": 225
+        },
+        {
+          "x": 960,
+          "y": 225
+        },
+        {
+          "x": 960,
+          "y": 675
+        },
+        {
+          "x": 240,
+          "y": 675
+        }
+      ]
+    }
+  ]
+}

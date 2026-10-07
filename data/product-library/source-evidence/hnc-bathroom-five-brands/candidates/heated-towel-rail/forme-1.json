@@ -1,0 +1,3156 @@
+{
+  "data": {
+    "products": {
+      "total_count": 46,
+      "page_info": {
+        "total_pages": 2
+      },
+      "items": [
+        {
+          "id": 18726,
+          "sku": "HTRVERTSNGGMG",
+          "vendorcode": "HTR-VERTSNGGMG",
+          "name": "1000mm Vertical Heated Single Towel Rail with Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrvertsnggmg_forme_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrvertsnggmg_forme_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/h/t/htrvertsnggmg_forme_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/h/t/htrvertsngl_forme_tech_1.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrvertsnggmg_forme_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrvertsngl_forme_tech_1.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• 1 x Vertical Heated Bar and 1 x Robe Hook<br>• 12 volt power design<br>• Top hardwire entry<br>• Transformer not included<br>• Fixing kit includes diamond drill bit</p>"
+          },
+          "short_description": {
+            "html": "<p>1000mm Vertical Heated Single Towel Rail with Robe Hook</p>"
+          },
+          "product_dimensions": "W150 x D100 x H1000mm",
+          "price_store": 421,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W150 x D100 x H1000mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Vertical"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Forme",
+                    "value": "70"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Gun Metal",
+                    "value": "947"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "HTR-VERTSNGGMG"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Gun Metal Grey PVD"
+              }
+            ]
+          }
+        },
+        {
+          "id": 18481,
+          "sku": "HTRTR0402MBR",
+          "vendorcode": "HTR-TR0402MBR",
+          "name": "4-Bar Round Heated Towel Ladder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrtr0402mbr_forme_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrtr0402mbr_forme_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/h/t/htrtr0402mbr_forme_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/h/t/htrtr0402mbr_forme_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrtr0402mbr_forme_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrtr0402mbr_forme_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• 4 heated bars<br>• Bottom left and right hand wire entry<br>• Option of switch or timer</p>"
+          },
+          "short_description": {
+            "html": "<p>4-Bar Round Heated Towel Ladder</p>"
+          },
+          "product_dimensions": "W620 x D120 x H500mm",
+          "price_store": 398,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W620 x D120 x H500mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Heated"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Forme",
+                    "value": "70"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Stainless Steel",
+                    "value": "943"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "HTR-TR0402MBR"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Stainless Steel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 15714,
+          "sku": "HTRVERTSNGLBR",
+          "vendorcode": "HTR-VERTSNGLBR",
+          "name": "1000mm Vertical Heated Single Towel Rail with Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrvertsnglbr_forme_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrvertsnglbr_forme_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/h/t/htrvertsnglbr_forme_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/h/t/htrvertsnglbr_forme_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrvertsnglbr_forme_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrvertsnglbr_forme_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• 12 volt power<br>• Recommended spacing between rails is 70mm to 150mm<br>• Top hardwired only<br>• Brushed Stainless Steel in colour. Can be installed with or with out the included robe hook<br>• Transformer sold separately</p>"
+          },
+          "short_description": {
+            "html": "<p>1000mm Vertical Heated Single Towel Rail with Robe Hook</p>"
+          },
+          "product_dimensions": "W150 x D100 x H1000mm",
+          "price_store": 421,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W150 x D100 x H1000mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Vertical"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Forme",
+                    "value": "70"
+                  }
+                ]
+              },
+              {
+                "code": "size_mm",
+                "selected_options": [
+                  {
+                    "label": "1000",
+                    "value": "701"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Stainless Steel",
+                    "value": "943"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "HTR-VERTSNGLBR"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Stainless Steel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 15713,
+          "sku": "HTRVERTSNGLBG",
+          "vendorcode": "HTRVERTSNGLBG",
+          "name": "1000mm Vertical Heated Single Towel Rail with Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrvertsnglbg_forme_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrvertsnglbg_forme_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/h/t/htrvertsnglbg_forme_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/h/t/htrvertsnglbg_forme_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrvertsnglbg_forme_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrvertsnglbg_forme_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>•&nbsp;12 volt power<br>• Recommended Spacing Between Rails is 70mm to 150mm<br>• Top hardwired only<br>• Can be installed with or with out the included robe hook.<br>• Transformer sold separately</p>"
+          },
+          "short_description": {
+            "html": "<p>1000mm Vertical Heated Single Towel Rail with Robe Hook</p>"
+          },
+          "product_dimensions": "W150 x D100 x H1000mm",
+          "price_store": 0,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W150 x D100 x H1000mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Vertical"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Forme",
+                    "value": "70"
+                  }
+                ]
+              },
+              {
+                "code": "size_mm",
+                "selected_options": [
+                  {
+                    "label": "1000",
+                    "value": "701"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "HTRVERTSNGLBG"
+              }
+            ]
+          }
+        },
+        {
+          "id": 15349,
+          "sku": "HTRVERTSNGBL",
+          "vendorcode": "HTR-VERTSNGBL",
+          "name": "1000mm Vertical Heated Single Towel Rail with Robe Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrvertsngbl_forme_web_1.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrvertsngbl_forme_web_1.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/h/t/htrvertsngbl_forme_web_1.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/h/t/htrvertsnglbl_forme_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrvertsngbl_forme_web_1.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrvertsnglbl_forme_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; 1 x Vertical Heated Bar and 1 x Robe Hook<br />&bull; 12 volt power design <br />&bull; Top hardwire entry<br />&bull; Transformer not included<br />&bull; Fixing kit includes diamond drill bit</p>"
+          },
+          "short_description": {
+            "html": "<p>1000mm Vertical Heated Single Towel Rail with Robe Hook</p>"
+          },
+          "product_dimensions": "W150 x D100 x H1000",
+          "price_store": 421,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W150 x D100 x H1000"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Vertical"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Forme",
+                    "value": "70"
+                  }
+                ]
+              },
+              {
+                "code": "size_mm",
+                "selected_options": [
+                  {
+                    "label": "150",
+                    "value": "727"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Black",
+                    "value": "937"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "HTR-VERTSNGBL"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Black"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14378,
+          "sku": "HTRTS0402MGR",
+          "vendorcode": "HTR-TS0402MGR",
+          "name": "4-Bar Heated Towel Ladder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrts0402mgr_forme_web_1.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrts0402mgr_forme_web_1.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/h/t/htrts0402mgr_forme_web_1.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/h/t/htrts0402mgr_forme_tech_1.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrts0402mgr_forme_web_1.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrts0402mgr_forme_tech_1.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; New multi connect allows for bottom left or right hand side wiring<br />&bull; Fixing kit includes diamond drill bit<br />&bull; Square design &amp; easy to install<br />&bull; Easy to install<br />&bull; 304 grade stainless steel</p>"
+          },
+          "short_description": {
+            "html": "4-Bar Heated Towel Ladder"
+          },
+          "product_dimensions": "W620 x D120 x H500mm",
+          "price_store": 1071,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W620 x D120 x H500mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Heated"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Forme",
+                    "value": "70"
+                  }
+                ]
+              },
+              {
+                "code": "size_mm",
+                "selected_options": [
+                  {
+                    "label": "620",
+                    "value": "749"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Gun Metal",
+                    "value": "947"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "HTR-TS0402MGR"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Gun Metal Grey PVD"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14377,
+          "sku": "HTRTR0701MBR",
+          "vendorcode": "HTR-TR0701MBR",
+          "name": "7-Bar Heated Towel Ladder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrtr0701mbr_forme_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrtr0701mbr_forme_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/h/t/htrtr0701mbr_forme_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/h/t/htrtr0701mbr_forme_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrtr0701mbr_forme_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrtr0701mbr_forme_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; New multi connect allows for bottom left or right hand side wiring<br />&bull; Fixing kit includes diamond drill bit<br />&bull; Round design &amp; easy to install<br />&bull; Easy to install<br />&bull; 304 grade stainless steel</p>"
+          },
+          "short_description": {
+            "html": "7-Bar Heated Towel Ladder"
+          },
+          "product_dimensions": "W620 x D120 x H920mm",
+          "price_store": 892,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W620 x D120 x H920mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Heated"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Forme",
+                    "value": "70"
+                  }
+                ]
+              },
+              {
+                "code": "size_mm",
+                "selected_options": [
+                  {
+                    "label": "620",
+                    "value": "749"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Stainless Steel",
+                    "value": "943"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "HTR-TR0701MBR"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Stainless Steel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14376,
+          "sku": "HLF8511SBG",
+          "vendorcode": "HLF8511SBG",
+          "name": "850mm Heated Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/l/hlf8511sbg_forme_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/l/hlf8511sbg_forme_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/h/l/hlf8511sbg_forme_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/h/l/hlf8511sbg_forme_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/l/hlf8511sbg_forme_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/l/hlf8511sbg_forme_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull;&nbsp;12 volt power<br />&bull; Sold as single bar<br />&bull; Square design &amp; easy to install<br />&bull; Right-hand side hardwired only<br />&bull; Unique optional installation system for added strength<br />&bull; Transformer &amp; fixing bar sold separately if heated option required, this can hold up to minimum 2, maximum 4 rails.</p>"
+          },
+          "short_description": {
+            "html": "850mm Heated Single Towel Rail"
+          },
+          "product_dimensions": "W850 x D110 x H25mm",
+          "price_store": 554,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W850 x D110 x H25mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Single"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Forme",
+                    "value": "70"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "HLF8511SBG"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Gold PVD"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14375,
+          "sku": "HLF8511RBL",
+          "vendorcode": "HLF8511R-BL",
+          "name": "850mm Heated Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/l/hlf8511rbl_forme_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/l/hlf8511rbl_forme_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/h/l/hlf8511rbl_forme_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/h/l/hlf8511rbl_forme_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/l/hlf8511rbl_forme_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/l/hlf8511rbl_forme_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull;&nbsp;12 volt power<br />&bull; Sold as single bar<br />&bull; Round design &amp; easy to install<br />&bull; Right-hand side hardwired only<br />&bull; Unique optional installation system for added strength<br />&bull; Transformer &amp; fixing bar sold separately if heated option required, this can hold up to minimum 2, maximum 4 rails.</p>"
+          },
+          "short_description": {
+            "html": "850mm Heated Single Towel Rail"
+          },
+          "product_dimensions": "W850 x D110 x H25mm",
+          "price_store": 372,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W850 x D110 x H25mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Single"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Forme",
+                    "value": "70"
+                  }
+                ]
+              },
+              {
+                "code": "size_mm",
+                "selected_options": [
+                  {
+                    "label": "850",
+                    "value": "829"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Matte Black",
+                    "value": "940"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "HLF8511R-BL"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Black"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14374,
+          "sku": "HLF8511RBG",
+          "vendorcode": "HLF8511RBG",
+          "name": "850mm Heated Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/l/hlf8511rbg_forme_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/l/hlf8511rbg_forme_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/h/l/hlf8511rbg_forme_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/h/l/hlf8511rbg_forme_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/l/hlf8511rbg_forme_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/l/hlf8511rbg_forme_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull;&nbsp;12 volt power<br />&bull; Sold as single bar<br />&bull; Round design &amp; easy to install<br />&bull; Right-hand side hardwired only<br />&bull; Unique optional installation system for added strength<br />&bull; Transformer &amp; fixing bar sold separately if heated option required, this can hold up to minimum 2, maximum 4 rails.</p>"
+          },
+          "short_description": {
+            "html": "850mm Heated Single Towel Rail"
+          },
+          "product_dimensions": "W850 x D110 x H25mm",
+          "price_store": 500,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W850 x D110 x H25mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Single"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Forme",
+                    "value": "70"
+                  }
+                ]
+              },
+              {
+                "code": "size_mm",
+                "selected_options": [
+                  {
+                    "label": "850",
+                    "value": "829"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "HLF8511RBG"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Gold PVD"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14372,
+          "sku": "HTRTS0402MBG",
+          "vendorcode": "HTR-TS0402MBG",
+          "name": "4-Bar Heated Towel Ladder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrts0402mbg_forme_web_1.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrts0402mbg_forme_web_1.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/h/t/htrts0402mbg_forme_web_1.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/h/t/htrts0402mbg_forme_tech_1.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrts0402mbg_forme_web_1.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrts0402mbg_forme_tech_1.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; New multi connect allows for bottom left or right hand side wiring<br />&bull; Fixing kit includes diamond drill bit<br />&bull; Square design &amp; easy to install<br />&bull; Easy to install<br />&bull; 304 grade stainless steel</p>"
+          },
+          "short_description": {
+            "html": "4-Bar Heated Towel Ladder"
+          },
+          "product_dimensions": "W620 x D120 x H500mm",
+          "price_store": 1080,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W620 x D120 x H500mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Commercial"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Forme",
+                    "value": "70"
+                  }
+                ]
+              },
+              {
+                "code": "size_mm",
+                "selected_options": [
+                  {
+                    "label": "620",
+                    "value": "749"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "HTR-TS0402MBG"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Gold PVD"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14371,
+          "sku": "HLF6011SBG",
+          "vendorcode": "HLF6011SBG",
+          "name": "600mm Heated Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/l/hlf6011sbg_forme_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/l/hlf6011sbg_forme_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/h/l/hlf6011sbg_forme_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/h/l/hlf6011sbg_forme_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/l/hlf6011sbg_forme_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/l/hlf6011sbg_forme_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull;&nbsp;12 volt power<br />&bull; Sold as single bar<br />&bull; Square design &amp; easy to install<br />&bull; Right-hand side hardwired only<br />&bull; Unique optional installation system for added strength<br />&bull; Transformer &amp; fixing bar sold separately if heated option required, this can hold up to minimum 2, maximum 4 rails.</p>"
+          },
+          "short_description": {
+            "html": "600mm Heated Single Towel Rail"
+          },
+          "product_dimensions": "W600 x D110 x H25mm",
+          "price_store": 447,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W600 x D110 x H25mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Single"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Forme",
+                    "value": "70"
+                  }
+                ]
+              },
+              {
+                "code": "size_mm",
+                "selected_options": [
+                  {
+                    "label": "600",
+                    "value": "746"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "HLF6011SBG"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Gold PVD"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14368,
+          "sku": "HTRTS0701MGR",
+          "vendorcode": "HTR-TS0701MGR",
+          "name": "7-Bar Heated Towel Ladder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrts0701mgr_forme_web_1.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrts0701mgr_forme_web_1.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/h/t/htrts0701mgr_forme_web_1.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/h/t/htrtr0701mgr_forme_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrts0701mgr_forme_web_1.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrtr0701mgr_forme_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; New multi connect allows for bottom left or right hand side wiring<br />&bull; Fixing kit includes diamond drill bit<br />&bull; Square design &amp; easy to install<br />&bull; Easy to install<br />&bull; 304 grade stainless steel</p>"
+          },
+          "short_description": {
+            "html": "7-Bar Heated Towel Ladder"
+          },
+          "product_dimensions": "W620 x D120 x H920mm",
+          "price_store": 1428,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W620 x D120 x H920mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Heated"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Forme",
+                    "value": "70"
+                  }
+                ]
+              },
+              {
+                "code": "size_mm",
+                "selected_options": [
+                  {
+                    "label": "620",
+                    "value": "749"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Gun Metal",
+                    "value": "947"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "HTR-TS0701MGR"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Gun Metal Grey PVD"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14367,
+          "sku": "HTRTS0701MBR",
+          "vendorcode": "HTR-TS0701MBR",
+          "name": "7-Bar Heated Towel Ladder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrts0701mbr_forme_web_1.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrts0701mbr_forme_web_1.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/h/t/htrts0701mbr_forme_web_1.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/h/t/htrts0701mbr_forme_tech_1.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrts0701mbr_forme_web_1.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrts0701mbr_forme_tech_1.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; New multi connect allows for bottom left or right hand side wiring<br />&bull; Fixing kit includes diamond drill bit<br />&bull; Square design &amp; easy to install<br />&bull; Easy to install<br />&bull; 304 grade stainless steel</p>"
+          },
+          "short_description": {
+            "html": "7-Bar Heated Towel Ladder"
+          },
+          "product_dimensions": "W620 x D120 x H920mm",
+          "price_store": 903,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W620 x D120 x H920mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Heated"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Forme",
+                    "value": "70"
+                  }
+                ]
+              },
+              {
+                "code": "size_mm",
+                "selected_options": [
+                  {
+                    "label": "620",
+                    "value": "749"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Stainless Steel",
+                    "value": "943"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "HTR-TS0701MBR"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Stainless Steel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14366,
+          "sku": "HTRTR0402MGR",
+          "vendorcode": "HTR-TR0402MGR",
+          "name": "4-Bar Heated Towel Ladder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrtr0402mgr_forme_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrtr0402mgr_forme_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/h/t/htrtr0402mgr_forme_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/h/t/htrts0402mgr_forme_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrtr0402mgr_forme_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrts0402mgr_forme_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; New multi connect allows for bottom left or right hand side wiring<br />&bull; Fixing kit includes diamond drill bit<br />&bull; Round design &amp; easy to install<br />&bull; Easy to install<br />&bull; 304 grade stainless steel</p>"
+          },
+          "short_description": {
+            "html": "4-Bar Heated Towel Ladder"
+          },
+          "product_dimensions": "W620 x D120 x H500mm",
+          "price_store": 1080,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W620 x D120 x H500mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Heated"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Forme",
+                    "value": "70"
+                  }
+                ]
+              },
+              {
+                "code": "size_mm",
+                "selected_options": [
+                  {
+                    "label": "620",
+                    "value": "749"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Gun Metal",
+                    "value": "947"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "HTR-TR0402MGR"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Gun Metal Grey PVD"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14365,
+          "sku": "HTRTR0402MBG",
+          "vendorcode": "HTR-TR0402MBG",
+          "name": "4-Bar Heated Towel Ladder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrtr0402mbg_forme_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrtr0402mbg_forme_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/h/t/htrtr0402mbg_forme_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/h/t/htrts0402mbg_forme_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrtr0402mbg_forme_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrts0402mbg_forme_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; New multi connect allows for bottom left or right hand side wiring<br />&bull; Fixing kit includes diamond drill bit<br />&bull; Round design &amp; easy to install<br />&bull; Easy to install<br />&bull; 304 grade stainless steel</p>"
+          },
+          "short_description": {
+            "html": "4-Bar Heated Towel Ladder"
+          },
+          "product_dimensions": "W620 x D120 x H500mm",
+          "price_store": 1080,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W620 x D120 x H500mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Heated"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Forme",
+                    "value": "70"
+                  }
+                ]
+              },
+              {
+                "code": "size_mm",
+                "selected_options": [
+                  {
+                    "label": "620",
+                    "value": "749"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "HTR-TR0402MBG"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Gold PVD"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14364,
+          "sku": "HLF8511SBL",
+          "vendorcode": "HLF8511S-BL",
+          "name": "850mm Heated Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/l/hlf8511sbl_forme_web_1.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/l/hlf8511sbl_forme_web_1.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/h/l/hlf8511sbl_forme_web_1.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/h/l/hlf8511sbl_forme_tech_1.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/l/hlf8511sbl_forme_web_1.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/l/hlf8511sbl_forme_tech_1.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull;&nbsp;12 volt power<br />&bull; Sold as single bar<br />&bull; Square design &amp; easy to install<br />&bull; Right-hand side hardwired only<br />&bull; Unique optional installation system for added strength<br />&bull; Transformer &amp; fixing bar sold separately if heated option required, this can hold up to minimum 2, maximum 4 rails.</p>"
+          },
+          "short_description": {
+            "html": "850mm Heated Single Towel Rail"
+          },
+          "product_dimensions": "W850 x D110 x H25mm",
+          "price_store": 416,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W850 x D110 x H25mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Single"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Forme",
+                    "value": "70"
+                  }
+                ]
+              },
+              {
+                "code": "size_mm",
+                "selected_options": [
+                  {
+                    "label": "850",
+                    "value": "829"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Matte Black",
+                    "value": "940"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "HLF8511S-BL"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Black"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14363,
+          "sku": "HLF8511RBR",
+          "vendorcode": "HLF8511RBR",
+          "name": "850mm Heated Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/l/hlf8511rbr_forme_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/l/hlf8511rbr_forme_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/h/l/hlf8511rbr_forme_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/h/l/hlf8511rbr_forme_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/l/hlf8511rbr_forme_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/l/hlf8511rbr_forme_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull;&nbsp;12 volt power<br />&bull; Sold as single bar<br />&bull; Round design &amp; easy to install<br />&bull; Right-hand side hardwired only<br />&bull; Unique optional installation system for added strength<br />&bull; Transformer &amp; fixing bar sold separately if heated option required, this can hold up to minimum 2, maximum 4 rails.</p>"
+          },
+          "short_description": {
+            "html": "850mm Heated Single Towel Rail"
+          },
+          "product_dimensions": "W850 x D110 x H25mm",
+          "price_store": 500,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W850 x D110 x H25mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Single"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Forme",
+                    "value": "70"
+                  }
+                ]
+              },
+              {
+                "code": "size_mm",
+                "selected_options": [
+                  {
+                    "label": "850",
+                    "value": "829"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Stainless Steel",
+                    "value": "943"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "HLF8511RBR"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Stainless Steel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14362,
+          "sku": "HLF6011RGR",
+          "vendorcode": "HLF6011RGR",
+          "name": "600mm Heated Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/l/hlf6011rgr_forme_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/l/hlf6011rgr_forme_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/h/l/hlf6011rgr_forme_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/h/l/hlf6011rgr_forme_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/l/hlf6011rgr_forme_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/l/hlf6011rgr_forme_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull;&nbsp;12 volt power<br />&bull; Sold as single bar<br />&bull; Round design &amp; easy to install<br />&bull; Right-hand side hardwired only<br />&bull; Unique optional installation system for added strength<br />&bull; Transformer &amp; fixing bar sold separately if heated option required, this can hold up to minimum 2, maximum 4 rails.</p>"
+          },
+          "short_description": {
+            "html": "600mm Heated Single Towel Rail"
+          },
+          "product_dimensions": "W600 x D110 x H25mm",
+          "price_store": 394,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W600 x D110 x H25mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Single"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Forme",
+                    "value": "70"
+                  }
+                ]
+              },
+              {
+                "code": "size_mm",
+                "selected_options": [
+                  {
+                    "label": "600",
+                    "value": "746"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Gun Metal",
+                    "value": "947"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "HLF6011RGR"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Gun Metal Grey PVD"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14361,
+          "sku": "HLF6011RBL",
+          "vendorcode": "HLF6011R-BL",
+          "name": "600mm Heated Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/l/hlf6011rbl_forme_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/l/hlf6011rbl_forme_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/h/l/hlf6011rbl_forme_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/h/l/hlf6011rbl_forme_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/l/hlf6011rbl_forme_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/l/hlf6011rbl_forme_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull;&nbsp;12 volt power<br />&bull; Sold as single bar<br />&bull; Round design &amp; easy to install<br />&bull; Right-hand side hardwired only<br />&bull; Unique optional installation system for added strength<br />&bull; Transformer &amp; fixing bar sold separately if heated option required, this can hold up to minimum 2, maximum 4 rails.</p>"
+          },
+          "short_description": {
+            "html": "600mm Heated Single Towel Rail"
+          },
+          "product_dimensions": "W600 x D110 x H25mm",
+          "price_store": 295,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W600 x D110 x H25mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Single"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Forme",
+                    "value": "70"
+                  }
+                ]
+              },
+              {
+                "code": "size_mm",
+                "selected_options": [
+                  {
+                    "label": "600",
+                    "value": "746"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Matte Black",
+                    "value": "940"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "HLF6011R-BL"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Black"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14360,
+          "sku": "HLF6011RBR",
+          "vendorcode": "HLF6011RBR",
+          "name": "600mm Heated Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/l/hlf6011rbr_forme_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/l/hlf6011rbr_forme_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/h/l/hlf6011rbr_forme_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/h/l/hlf6011rbr_forme_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/l/hlf6011rbr_forme_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/l/hlf6011rbr_forme_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull;&nbsp;12 volt power<br />&bull; Sold as single bar<br />&bull; Brushed stainless steel finish<br />&bull; Right-hand side hardwired only<br />&bull; Unique optional installation system for added strength<br />&bull; Transformer &amp; fixing bar sold separately if heated option required, this can hold up to minimum 2, maximum 4 rails.</p>"
+          },
+          "short_description": {
+            "html": "600mm Heated Single Towel Rail"
+          },
+          "product_dimensions": "W600 x D110 x H25mm",
+          "price_store": 295,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W600 x D110 x H25mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Single"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Forme",
+                    "value": "70"
+                  }
+                ]
+              },
+              {
+                "code": "size_mm",
+                "selected_options": [
+                  {
+                    "label": "600",
+                    "value": "746"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Stainless Steel",
+                    "value": "943"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "HLF6011RBR"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Stainless Steel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14359,
+          "sku": "HTRTS0402MBR",
+          "vendorcode": "HTR-TS0402MBR",
+          "name": "4-Bar Heated Towel Ladder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrts0402mbr_forme_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrts0402mbr_forme_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/h/t/htrts0402mbr_forme_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/h/t/htrts0402mbr_forme_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrts0402mbr_forme_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrts0402mbr_forme_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; New multi connect allows for bottom left or right hand side wiring<br />&bull; Fixing kit includes diamond drill bit<br />&bull; Square design &amp; easy to install<br />&bull; Easy to install<br />&bull; 304 grade stainless steel</p>"
+          },
+          "short_description": {
+            "html": "4-Bar Heated Towel Ladder"
+          },
+          "product_dimensions": "W620 x D120 x H500mm",
+          "price_store": 656,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W620 x D120 x H500mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Heated"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Forme",
+                    "value": "70"
+                  }
+                ]
+              },
+              {
+                "code": "size_mm",
+                "selected_options": [
+                  {
+                    "label": "620",
+                    "value": "749"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Stainless Steel",
+                    "value": "943"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "HTR-TS0402MBR"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Stainless Steel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14358,
+          "sku": "HLF6011RBG",
+          "vendorcode": "HLF6011RBG",
+          "name": "600mm Heated Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/l/hlf6011rbg_forme_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/l/hlf6011rbg_forme_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/h/l/hlf6011rbg_forme_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/h/l/hlf6011rbg_forme_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/l/hlf6011rbg_forme_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/l/hlf6011rbg_forme_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull;&nbsp;12 volt power<br />&bull; Sold as single bar<br />&bull; Round design &amp; easy to install<br />&bull; Right-hand side hardwired only<br />&bull; Unique optional installation system for added strength<br />&bull; Transformer &amp; fixing bar sold separately if heated option required, this can hold up to minimum 2, maximum 4 rails.</p>"
+          },
+          "short_description": {
+            "html": "600mm Heated Single Towel Rail"
+          },
+          "product_dimensions": "W600 x D110 x H25mm",
+          "price_store": 394,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W600 x D110 x H25mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Single"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Forme",
+                    "value": "70"
+                  }
+                ]
+              },
+              {
+                "code": "size_mm",
+                "selected_options": [
+                  {
+                    "label": "600",
+                    "value": "746"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "HLF6011RBG"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Gold PVD"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14352,
+          "sku": "HLF6011SGR",
+          "vendorcode": "HLF6011SGR",
+          "name": "600mm Heated Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/l/hlf6011sgr_forme_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/l/hlf6011sgr_forme_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/h/l/hlf6011sgr_forme_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/h/l/hlf6011sgr_forme_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/l/hlf6011sgr_forme_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/l/hlf6011sgr_forme_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull;&nbsp;12 volt power<br />&bull; Sold as single bar<br />&bull; Square design &amp; easy to install<br />&bull; Right-hand side hardwired only<br />&bull; Unique optional installation system for added strength<br />&bull; Transformer &amp; fixing bar sold separately if heated option required, this can hold up to minimum 2, maximum 4 rails.</p>"
+          },
+          "short_description": {
+            "html": "600mm Heated Single Towel Rail"
+          },
+          "product_dimensions": "W600 x D110 x H25mm",
+          "price_store": 447,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W600 x D110 x H25mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Single"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Forme",
+                    "value": "70"
+                  }
+                ]
+              },
+              {
+                "code": "size_mm",
+                "selected_options": [
+                  {
+                    "label": "600",
+                    "value": "746"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Stainless Steel",
+                    "value": "943"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "HLF6011SGR"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Gun Metal Grey PVD"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14351,
+          "sku": "HLF6011SBL",
+          "vendorcode": "HLF6011S-BL",
+          "name": "600mm Heated Single Towel Rail",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 189,
+              "name": "Heated Towel Rails ",
+              "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/l/hlf6011sbl_forme_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/l/hlf6011sbl_forme_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/h/l/hlf6011sbl_forme_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/h/l/hlf6011sbl_forme_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/l/hlf6011sbl_forme_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/l/hlf6011sbl_forme_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull;&nbsp;12 volt power<br />&bull; Sold as single bar<br />&bull; Square design &amp; easy to install<br />&bull; Right-hand side hardwired only<br />&bull; Unique optional installation system for added strength<br />&bull; Transformer &amp; fixing bar sold separately if heated option required, this can hold up to minimum 2, maximum 4 rails.</p>"
+          },
+          "short_description": {
+            "html": "600mm Heated Single Towel Rail"
+          },
+          "product_dimensions": "W600 x D110 x H25mm",
+          "price_store": 341,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W600 x D110 x H25mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "HEATED HAND RAIL"
+              },
+              {
+                "code": "range",
+                "value": "Single"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Forme",
+                    "value": "70"
+                  }
+                ]
+              },
+              {
+                "code": "size_mm",
+                "selected_options": [
+                  {
+                    "label": "600",
+                    "value": "746"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Matte Black",
+                    "value": "940"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "HLF6011S-BL"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Black"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,6 +1,7 @@
 // /pages/api/stripe/create-checkout-session.js
 import { NextApiRequest, NextApiResponse } from "next";
 import Stripe from "stripe";
+import { getRequestDemoState, requestWorkspaceId, demoSimulationResult } from "../../../lib/demoWorkspace";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2022-11-15",
@@ -17,6 +18,20 @@ export default async function handler(req, res) {
   }
 
   try {
+    const workspaceId = requestWorkspaceId(req);
+    const demoState = await getRequestDemoState(req);
+    if (demoState.isDemo) {
+      const simulated = await demoSimulationResult({
+        workspaceId,
+        actionType: "stripe-checkout-session",
+        provider: "stripe",
+        target: priceId,
+        payload: { priceId },
+        message: "Demo Stripe Checkout simulated - no Stripe session created.",
+      });
+      return res.status(200).json({ ...simulated, url: `/checkout/success?demo=1&workspace_id=${encodeURIComponent(workspaceId)}` });
+    }
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       line_items: [

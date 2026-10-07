@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 420" role="img" aria-label="Rangehood image required">
+  <rect width="640" height="420" fill="#eef3f7"/>
+  <path d="M210 88h220l38 126H172z" fill="#ffffff" stroke="#1f3448" stroke-width="12" stroke-linejoin="round"/>
+  <rect x="152" y="214" width="336" height="56" rx="10" fill="#dbe7ef" stroke="#1f3448" stroke-width="10"/>
+  <path d="M255 308c0-18 22-18 22-36M320 318c0-22 28-22 28-46M385 308c0-18 22-18 22-36" fill="none" stroke="#19a0bd" stroke-width="10" stroke-linecap="round"/>
+  <text x="320" y="370" fill="#1f3448" font-family="Arial, sans-serif" font-size="28" text-anchor="middle">Exact rangehood image required</text>
+</svg>

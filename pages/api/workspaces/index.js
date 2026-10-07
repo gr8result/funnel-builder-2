@@ -3,6 +3,8 @@
 // POST — create a new workspace (authenticated user becomes owner)
 import { withAuth } from "../../../lib/withWorkspace";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
+import { isDeveloperEmail } from "../../../lib/adminUsers";
+import { ensureDemoCompanyForUser } from "../../../lib/demoWorkspace";
 
 async function handler(req, res) {
   const { user } = req;
@@ -10,9 +12,13 @@ async function handler(req, res) {
   try {
     // ── GET: list user's workspaces ──────────────────────────────────────────
     if (req.method === "GET") {
+      if (isDeveloperEmail(user.email || "")) {
+        await ensureDemoCompanyForUser(user.id);
+      }
+
       const { data, error } = await supabaseAdmin
         .from("workspace_members")
-        .select("role, status, workspace:workspaces(id, name, slug, plan, created_at)")
+        .select("role, status, workspace:workspaces(id, name, slug, plan, is_demo, created_at)")
         .eq("user_id", user.id)
         .eq("status", "active");
 
@@ -42,6 +48,7 @@ async function handler(req, res) {
           slug: slug ? String(slug).trim() : null,
           owner_id: user.id,
           plan: "starter",
+          is_demo: false,
         })
         .select("*")
         .single();

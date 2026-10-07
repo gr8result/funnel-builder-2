@@ -1,0 +1,50 @@
+{
+  "updatedAt": "2026-09-05T22:02:37.881Z",
+  "products": 950,
+  "brands": {
+    "Corinthian Doors": {
+      "products": 246,
+      "images": 246,
+      "missingSkus": 246,
+      "quoteRequired": 246
+    },
+    "Gainsborough": {
+      "products": 239,
+      "images": 239,
+      "missingSkus": 0,
+      "quoteRequired": 239
+    },
+    "Hume Doors": {
+      "products": 340,
+      "images": 340,
+      "missingSkus": 340,
+      "quoteRequired": 340
+    },
+    "Lockwood": {
+      "products": 20,
+      "images": 20,
+      "missingSkus": 20,
+      "quoteRequired": 20
+    },
+    "Porta": {
+      "products": 105,
+      "images": 103,
+      "missingSkus": 0,
+      "quoteRequired": 105
+    }
+  },
+  "unresolved": [
+    {
+      "url": "[object Object]",
+      "error": "404 https://www.gainsboroughhardware.com.au/en/products/715ALBLR.html"
+    },
+    {
+      "url": "[object Object]",
+      "error": "404 https://www.gainsboroughhardware.com.au/en/products/110LIA.html"
+    },
+    {
+      "url": "[object Object]",
+      "error": "404 https://www.gainsboroughhardware.com.au/en/products/715RIVLR.html"
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 // pages/api/billing/checkout.js
 import Stripe from "stripe";
 import { slugsToPriceIds } from "../../../services/modules";
+import { demoSimulationResult, getRequestDemoState, requestWorkspaceId } from "../../../lib/demoWorkspace";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
   apiVersion: "2023-10-16",
@@ -22,6 +23,24 @@ export default async function handler(req, res) {
     }
 
     const base = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+    const workspaceId = requestWorkspaceId(req);
+    const demoState = await getRequestDemoState(req);
+    if (demoState.isDemo) {
+      const result = await demoSimulationResult({
+        workspaceId,
+        actionType: "billing-checkout",
+        provider: "stripe",
+        target: Array.isArray(slugs) ? slugs.join(",") : priceIds.join(","),
+        payload: { priceIds, slugs },
+        message: "Demo billing checkout simulated - no Stripe session created.",
+      });
+      return res.status(200).json({
+        ...result,
+        id: `demo_checkout_${Date.now()}`,
+        url: `${successUrl || `${base}/billing?success=1`}${String(successUrl || "").includes("?") ? "&" : "?"}demo=1`,
+      });
+    }
+
     const line_items = priceIds.map((price) => ({ price, quantity: 1 }));
 
     const session = await stripe.checkout.sessions.create({

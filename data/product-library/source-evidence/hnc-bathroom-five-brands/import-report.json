@@ -1,0 +1,745 @@
+{
+  "checkedAt": "2026-09-30",
+  "supplier": "Harvey Norman Commercial",
+  "endpoint": "https://www.harveynormancommercial.com.au/api/magento-proxy",
+  "batch": "hnc-bathroom-five-brands-v1",
+  "requestedBrands": [
+    "Caroma",
+    "Phoenix",
+    "Parisi",
+    "Astrawalker",
+    "Forme"
+  ],
+  "perBrandType": 2,
+  "coverage": [
+    {
+      "type": "towel-rail",
+      "brand": "Caroma",
+      "supplierCount": 96,
+      "selected": [
+        "849036C",
+        "849036B"
+      ]
+    },
+    {
+      "type": "towel-rail",
+      "brand": "Phoenix",
+      "supplierCount": 109,
+      "selected": [
+        "111-8030-31",
+        "129-8010-00"
+      ]
+    },
+    {
+      "type": "towel-rail",
+      "brand": "Parisi",
+      "supplierCount": 88,
+      "selected": [
+        "TO.TR30.48",
+        "NE03812.02"
+      ]
+    },
+    {
+      "type": "towel-rail",
+      "brand": "Astrawalker",
+      "supplierCount": 9,
+      "selected": [
+        "A51.55.6.00",
+        "A69.55.6.35"
+      ]
+    },
+    {
+      "type": "towel-rail",
+      "brand": "Forme",
+      "supplierCount": 2,
+      "selected": []
+    },
+    {
+      "type": "toilet-roll-holder",
+      "brand": "Caroma",
+      "supplierCount": 19,
+      "selected": [
+        "303128C",
+        "99607BL"
+      ]
+    },
+    {
+      "type": "toilet-roll-holder",
+      "brand": "Phoenix",
+      "supplierCount": 30,
+      "selected": [
+        "111-8200-00",
+        "RA892MB"
+      ]
+    },
+    {
+      "type": "toilet-roll-holder",
+      "brand": "Parisi",
+      "supplierCount": 41,
+      "selected": [
+        "NE016",
+        "NE036.02"
+      ]
+    },
+    {
+      "type": "toilet-roll-holder",
+      "brand": "Astrawalker",
+      "supplierCount": 5,
+      "selected": [
+        "A51.61.00"
+      ]
+    },
+    {
+      "type": "toilet-roll-holder",
+      "brand": "Forme",
+      "supplierCount": 0,
+      "selected": []
+    },
+    {
+      "type": "hand-towel",
+      "brand": "Caroma",
+      "supplierCount": 6,
+      "selected": [
+        "305102C",
+        "520032BB"
+      ]
+    },
+    {
+      "type": "hand-towel",
+      "brand": "Phoenix",
+      "supplierCount": 13,
+      "selected": [
+        "RA893CHR",
+        "134-8500-10"
+      ]
+    },
+    {
+      "type": "hand-towel",
+      "brand": "Parisi",
+      "supplierCount": 25,
+      "selected": [
+        "NE015",
+        "NE035.02"
+      ]
+    },
+    {
+      "type": "hand-towel",
+      "brand": "Astrawalker",
+      "supplierCount": 0,
+      "selected": []
+    },
+    {
+      "type": "hand-towel",
+      "brand": "Forme",
+      "supplierCount": 0,
+      "selected": []
+    },
+    {
+      "type": "heated-towel-rail",
+      "brand": "Caroma",
+      "supplierCount": 30,
+      "selected": [
+        "11202084PSS",
+        "11225049B"
+      ]
+    },
+    {
+      "type": "heated-towel-rail",
+      "brand": "Phoenix",
+      "supplierCount": 27,
+      "selected": [
+        "650-8761-10",
+        "650-8763-00"
+      ]
+    },
+    {
+      "type": "heated-towel-rail",
+      "brand": "Parisi",
+      "supplierCount": 24,
+      "selected": [
+        "TO.HTR60-A2",
+        "PV.HTR.02"
+      ]
+    },
+    {
+      "type": "heated-towel-rail",
+      "brand": "Astrawalker",
+      "supplierCount": 4,
+      "selected": [
+        "A69.58.V2.H.600.10",
+        "A69.58.V2.H.600.35"
+      ]
+    },
+    {
+      "type": "heated-towel-rail",
+      "brand": "Forme",
+      "supplierCount": 46,
+      "selected": [
+        "HLF6011R-BL",
+        "HTR-VERTSNGGMG"
+      ]
+    },
+    {
+      "type": "robe-hook",
+      "brand": "Caroma",
+      "supplierCount": 25,
+      "selected": [
+        "309128C",
+        "99608BB"
+      ]
+    },
+    {
+      "type": "robe-hook",
+      "brand": "Phoenix",
+      "supplierCount": 24,
+      "selected": [
+        "111-8400-00",
+        "RA897MB"
+      ]
+    },
+    {
+      "type": "robe-hook",
+      "brand": "Parisi",
+      "supplierCount": 35,
+      "selected": [
+        "NE021.02",
+        "NE021.41"
+      ]
+    },
+    {
+      "type": "robe-hook",
+      "brand": "Astrawalker",
+      "supplierCount": 9,
+      "selected": [
+        "A69.63.35",
+        "A69.63.37"
+      ]
+    },
+    {
+      "type": "robe-hook",
+      "brand": "Forme",
+      "supplierCount": 0,
+      "selected": []
+    }
+  ],
+  "dryRun": false,
+  "imported": 39,
+  "updated": 0,
+  "duplicateSupplierCodes": [],
+  "rejected": [],
+  "images": [
+    {
+      "sku": "111-8400-00",
+      "path": "/images/catalogues/plumbing/hnc-accessories/111840000.webp",
+      "source": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/111840000_phoenix_web.jpg",
+      "width": 604,
+      "height": 496,
+      "sha256": "f4fa28dde48d39fc450eead490c504b872427dd0b6a89489e683e5b7144d1306"
+    },
+    {
+      "sku": "11202084PSS",
+      "path": "/images/catalogues/plumbing/hnc-accessories/11202084pss.webp",
+      "source": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11202084pss_caroma_web.jpg",
+      "width": 1000,
+      "height": 332,
+      "sha256": "23de9d7aa9c1dad0212959200e73d5315586098aadd4074c5d07519bdd9db6c0"
+    },
+    {
+      "sku": "111-8200-00",
+      "path": "/images/catalogues/plumbing/hnc-accessories/111820000.webp",
+      "source": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/111820000_phoenix_web.jpg",
+      "width": 663,
+      "height": 542,
+      "sha256": "30c79e0cb934778978810230e72fca11b182b6dc4a0e9dc5846474680d7aa685"
+    },
+    {
+      "sku": "111-8030-31",
+      "path": "/images/catalogues/plumbing/hnc-accessories/111803031.webp",
+      "source": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/111803031_phoenix_web.jpg",
+      "width": 1000,
+      "height": 316,
+      "sha256": "363009047a344efa6ca689b2618e2c4148f03e57deec8618f5e6074118f060ad"
+    },
+    {
+      "sku": "134-8500-10",
+      "path": "/images/catalogues/plumbing/hnc-accessories/134850010.webp",
+      "source": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/3/134850010_phoenix_web.jpg",
+      "width": 735,
+      "height": 1000,
+      "sha256": "5239099dc12496fe4e2edee2fd06fe48711728e8acb3f9f53f04af6e28b018d5"
+    },
+    {
+      "sku": "303128C",
+      "path": "/images/catalogues/plumbing/hnc-accessories/303128c.webp",
+      "source": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/3/0/303128c_.jpg",
+      "width": 860,
+      "height": 401,
+      "sha256": "238f35fbde6433168387b4d7ccf92fcd529ac65e268e47a11298e6bfa74f220d"
+    },
+    {
+      "sku": "129-8010-00",
+      "path": "/images/catalogues/plumbing/hnc-accessories/129801000.webp",
+      "source": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8010-00_phoenix_web.jpg",
+      "width": 1000,
+      "height": 1000,
+      "sha256": "9d189b96b81ea7b07282d0dae67e2439a3e07180cb602a85f28bcd716d34b329"
+    },
+    {
+      "sku": "11225049B",
+      "path": "/images/catalogues/plumbing/hnc-accessories/11225049b.webp",
+      "source": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225049b_caroma_web.jpg",
+      "width": 1000,
+      "height": 321,
+      "sha256": "4a75a8adf3a5bcb4165027bd63a7f4c63b516a288943266b2f58d1ed44672c97"
+    },
+    {
+      "sku": "305102C",
+      "path": "/images/catalogues/plumbing/hnc-accessories/305102c.webp",
+      "source": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/3/0/305102c_web.jpg",
+      "width": 267,
+      "height": 281,
+      "sha256": "d5569f87c5964f0cdbd44feb319b12f8d458b36570265549f152b376bd67a9d5"
+    },
+    {
+      "sku": "309128C",
+      "path": "/images/catalogues/plumbing/hnc-accessories/309128c.webp",
+      "source": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/3/0/309128c_web.jpg",
+      "width": 281,
+      "height": 207,
+      "sha256": "570537ffb4bd47bbc5d4959548d64399536cbd771d8685f40eddfac648d872cd"
+    },
+    {
+      "sku": "520032BB",
+      "path": "/images/catalogues/plumbing/hnc-accessories/520032bb.webp",
+      "source": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520032BB_Caroma_web.jpg",
+      "width": 669,
+      "height": 1000,
+      "sha256": "2c0f93ab575da11c201ddc1892bc61e9565affc149d326b145cc8bc5a03bc9bb"
+    },
+    {
+      "sku": "650-8761-10",
+      "path": "/images/catalogues/plumbing/hnc-accessories/650876110.webp",
+      "source": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876110_phoenix_web.jpg",
+      "width": 1000,
+      "height": 384,
+      "sha256": "25ce9a4c1fa7609ae5150596b187557e2fd7cf62e6a0fb68c9dd04cdced2facb"
+    },
+    {
+      "sku": "650-8763-00",
+      "path": "/images/catalogues/plumbing/hnc-accessories/650876300.webp",
+      "source": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876300_phoenix_web.jpg",
+      "width": 518,
+      "height": 1000,
+      "sha256": "bb3de8ebef83359fdc2d13f1019f9777c42608ec24156db89047584c08a5f922"
+    },
+    {
+      "sku": "849036B",
+      "path": "/images/catalogues/plumbing/hnc-accessories/849036b.webp",
+      "source": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849036b_caroma_web.jpg",
+      "width": 1000,
+      "height": 301,
+      "sha256": "7aa3d8c02bc5860ce5633e03a36bb0bd3ec550aa897b272934fe22bec86c0e9a"
+    },
+    {
+      "sku": "99607BL",
+      "path": "/images/catalogues/plumbing/hnc-accessories/99607bl.webp",
+      "source": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99607bl_caroma_web.jpg",
+      "width": 1000,
+      "height": 542,
+      "sha256": "8178bb71013e32e0de04e68f62630675166d4460811ffe71654b86b5afd9349b"
+    },
+    {
+      "sku": "849036C",
+      "path": "/images/catalogues/plumbing/hnc-accessories/849036c.webp",
+      "source": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849036c_caroma_web.jpg",
+      "width": 1000,
+      "height": 292,
+      "sha256": "c55dc09b2c0afb8d9f4b15bb98e5b81f2b57152b67e8bef35b0a698db98d510c"
+    },
+    {
+      "sku": "A51.55.6.00",
+      "path": "/images/catalogues/plumbing/hnc-accessories/a5155600.webp",
+      "source": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/5/a5155600_astrawalker_web.jpg",
+      "width": 540,
+      "height": 540,
+      "sha256": "e511c2d5d00ce830cdd3e131dad18086550b82d4498809a43542971fb28532f0"
+    },
+    {
+      "sku": "A51.61.00",
+      "path": "/images/catalogues/plumbing/hnc-accessories/a516100.webp",
+      "source": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/5/a516100_astrawalker_web.jpg",
+      "width": 540,
+      "height": 540,
+      "sha256": "185d79154765e4ec5b11f039c3fdfd895dee975ab0a36e79f36c9634a4f6afeb"
+    },
+    {
+      "sku": "A69.55.6.35",
+      "path": "/images/catalogues/plumbing/hnc-accessories/a6955635.webp",
+      "source": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6955635_astrawalker_web.jpg",
+      "width": 1000,
+      "height": 231,
+      "sha256": "971419c5dfefa0101bc8824039243b144df505df24074e0346fbec79d383a2ad"
+    },
+    {
+      "sku": "99608BB",
+      "path": "/images/catalogues/plumbing/hnc-accessories/99608bb.webp",
+      "source": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99608bb_caroma_web.jpg",
+      "width": 833,
+      "height": 1000,
+      "sha256": "1ffe040c94842ac9f69931987c072a8c9c3e6994d9c927a6a879445982231ef1"
+    },
+    {
+      "sku": "A69.58.V2.H.600.10",
+      "path": "/images/catalogues/plumbing/hnc-accessories/a6958v2h60010.webp",
+      "source": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6958v2h60010_astrawalker_web.jpg",
+      "width": 1000,
+      "height": 181,
+      "sha256": "67bc0f76efebbe7370ed1002ba2fb1392449ae49c1610c643f18f904d70045e9"
+    },
+    {
+      "sku": "A69.58.V2.H.600.35",
+      "path": "/images/catalogues/plumbing/hnc-accessories/a6958v2h60035.webp",
+      "source": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6958v2h60035_astrawalker_web.jpg",
+      "width": 1000,
+      "height": 182,
+      "sha256": "40e0f0a4955ce5bb9d6b8a45cddd928b21e1506d1bcb6632d10e7ec643210044"
+    },
+    {
+      "sku": "HTR-VERTSNGGMG",
+      "path": "/images/catalogues/plumbing/hnc-accessories/htrvertsnggmg.webp",
+      "source": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrvertsnggmg_forme_web.jpg",
+      "width": 133,
+      "height": 1000,
+      "sha256": "9dfedce09fb2fd423377388892811326bfb10284434e70a056320c72dce53d76"
+    },
+    {
+      "sku": "HLF6011R-BL",
+      "path": "/images/catalogues/plumbing/hnc-accessories/hlf6011rbl.webp",
+      "source": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/l/hlf6011rbl_forme_web.jpg",
+      "width": 288,
+      "height": 260,
+      "sha256": "d8e48b2dba4e2f84ffef6c884fce953247267f69c544b809ec06d9434d33f64c"
+    },
+    {
+      "sku": "A69.63.35",
+      "path": "/images/catalogues/plumbing/hnc-accessories/a696335.webp",
+      "source": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a696335_astrawalker_web.jpg",
+      "width": 974,
+      "height": 485,
+      "sha256": "3f3517a6914011c7467d21663d60adcabcab8a2fad0cc23477e13131392525fc"
+    },
+    {
+      "sku": "A69.63.37",
+      "path": "/images/catalogues/plumbing/hnc-accessories/a696337.webp",
+      "source": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a696337_astrawalker_web.jpg",
+      "width": 974,
+      "height": 483,
+      "sha256": "593e231bdf7a7802812f0a3b6b8ddd84bfdf19693db11938f623296807c0dd7c"
+    },
+    {
+      "sku": "NE015",
+      "path": "/images/catalogues/plumbing/hnc-accessories/ne015.webp",
+      "source": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE015_parisi_web.jpg",
+      "width": 908,
+      "height": 500,
+      "sha256": "01cf5c9195659ffb04e5069bf18f25d21a51f4da35790ea09ef530ccc3d9378e"
+    },
+    {
+      "sku": "NE016",
+      "path": "/images/catalogues/plumbing/hnc-accessories/ne016.webp",
+      "source": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE016_parisi_web.jpg",
+      "width": 888,
+      "height": 468,
+      "sha256": "23110cc0cb836da25cbf40b160caa395c05dafeaf9a733f13526ebba364aff08"
+    },
+    {
+      "sku": "NE021.02",
+      "path": "/images/catalogues/plumbing/hnc-accessories/ne02102.webp",
+      "source": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/n/e/ne02102_parisi_web.jpg",
+      "width": 1000,
+      "height": 848,
+      "sha256": "2c854aed06192806dbe88155efbd3d16d3be4357e76b277ab4593d7f179f9f64"
+    },
+    {
+      "sku": "NE036.02",
+      "path": "/images/catalogues/plumbing/hnc-accessories/ne03602.webp",
+      "source": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03602_parisi_web.jpg",
+      "width": 772,
+      "height": 393,
+      "sha256": "5691ada7f07506368026c1aece1ed24532017ef4613db40c6a0159df06c2cbf7"
+    },
+    {
+      "sku": "NE035.02",
+      "path": "/images/catalogues/plumbing/hnc-accessories/ne03502.webp",
+      "source": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03502_parisi_web.jpg",
+      "width": 760,
+      "height": 546,
+      "sha256": "92f78e6dddde146902733a03eea993a7da9695e467576d9574508dc302b4fe87"
+    },
+    {
+      "sku": "NE021.41",
+      "path": "/images/catalogues/plumbing/hnc-accessories/ne02141.webp",
+      "source": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/n/e/ne02141_parisi_web.jpg",
+      "width": 1000,
+      "height": 861,
+      "sha256": "3d1fa8a0193b7225564a686bdc561f214ac0b386c706a915fc4929f892d19152"
+    },
+    {
+      "sku": "NE03812.02",
+      "path": "/images/catalogues/plumbing/hnc-accessories/ne0381202.webp",
+      "source": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE0381202_parisi_web.jpg",
+      "width": 832,
+      "height": 444,
+      "sha256": "737cc859606d33a61e77da07c9593eedef79e51f79c897f9b5ac11cc90ab0084"
+    },
+    {
+      "sku": "PV.HTR.02",
+      "path": "/images/catalogues/plumbing/hnc-accessories/pv-htr-02.webp",
+      "source": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/v/pv.htr.02_parisi_web.jpeg",
+      "width": 1000,
+      "height": 1000,
+      "sha256": "657181da71bc16051b4d5a3f6d66c6fb0c65fe6152e7b546da1f1f9ebf36872e"
+    },
+    {
+      "sku": "RA892MB",
+      "path": "/images/catalogues/plumbing/hnc-accessories/ra892mb.webp",
+      "source": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra892mb_phoenix_web.jpg",
+      "width": 1000,
+      "height": 542,
+      "sha256": "916526341448a373898c2f7e6d010f38f25d0fee94a558c8df1ec322966a1cbc"
+    },
+    {
+      "sku": "RA897MB",
+      "path": "/images/catalogues/plumbing/hnc-accessories/ra897mb.webp",
+      "source": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra897mb_phoenix_web_2.jpg",
+      "width": 1000,
+      "height": 976,
+      "sha256": "c543ba963c87628a0a8eaf305682b98dca220f102942fca52c725e5abf790478"
+    },
+    {
+      "sku": "RA893CHR",
+      "path": "/images/catalogues/plumbing/hnc-accessories/ra893chr.webp",
+      "source": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra893chr_web.jpg",
+      "width": 939,
+      "height": 691,
+      "sha256": "5f261ebd5ef16b2391aee83c5f4f44407ec60f465ed8937f60a62f6ce7cf30b4"
+    },
+    {
+      "sku": "TO.TR30.48",
+      "path": "/images/catalogues/plumbing/hnc-accessories/totr3048.webp",
+      "source": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/totr3048_parisi_web.jpg",
+      "width": 1000,
+      "height": 558,
+      "sha256": "13847d4ea3e16795ff1440125c9bc189bb2aef6f4dfe95048d38b28315e10c6e"
+    },
+    {
+      "sku": "TO.HTR60-A2",
+      "path": "/images/catalogues/plumbing/hnc-accessories/to-htr60-a2.webp",
+      "source": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a2_parisi_web.jpeg",
+      "width": 1000,
+      "height": 1000,
+      "sha256": "105e55167fb874d92aa5bd813e3c1e8354e8d8a561bdaab43acee1ac564ed433"
+    }
+  ],
+  "categories": [
+    {
+      "key": "towel-rail",
+      "label": "Towel Rails",
+      "count": 8,
+      "brands": [
+        "Astrawalker",
+        "Caroma",
+        "Parisi",
+        "Phoenix"
+      ]
+    },
+    {
+      "key": "heated-towel-rail",
+      "label": "Heated Towel Rails",
+      "count": 10,
+      "brands": [
+        "Astrawalker",
+        "Caroma",
+        "Forme",
+        "Parisi",
+        "Phoenix"
+      ]
+    },
+    {
+      "key": "hand-towel",
+      "label": "Hand Towel Rings / Rails",
+      "count": 6,
+      "brands": [
+        "Caroma",
+        "Parisi",
+        "Phoenix"
+      ]
+    },
+    {
+      "key": "robe-hook",
+      "label": "Robe Hooks",
+      "count": 8,
+      "brands": [
+        "Astrawalker",
+        "Caroma",
+        "Parisi",
+        "Phoenix"
+      ]
+    },
+    {
+      "key": "toilet-roll-holder",
+      "label": "Toilet Roll Holders",
+      "count": 7,
+      "brands": [
+        "Astrawalker",
+        "Caroma",
+        "Parisi",
+        "Phoenix"
+      ]
+    }
+  ],
+  "brands": {
+    "Phoenix": 10,
+    "Caroma": 10,
+    "Astrawalker": 7,
+    "Forme": 2,
+    "Parisi": 10
+  },
+  "finishes": {
+    "Brushed Carbon": 1,
+    "Chrome": 14,
+    "Stainless Steel": 1,
+    "Matte Black": 11,
+    "Brushed Brass": 5,
+    "Satin Black": 1,
+    "Grey": 1,
+    "Bronze": 1,
+    "Black": 1,
+    "Gun Metal Grey PVD": 1,
+    "Brushed Nickel": 1,
+    "Matte Bronze": 1
+  },
+  "before": {
+    "count": 137,
+    "categories": [
+      {
+        "key": "towel-rail",
+        "count": 28
+      },
+      {
+        "key": "hand-towel",
+        "count": 20
+      },
+      {
+        "key": "robe-hook",
+        "count": 16
+      },
+      {
+        "key": "toilet-roll-holder",
+        "count": 16
+      },
+      {
+        "key": "toilet-brush",
+        "count": 9
+      },
+      {
+        "key": "soap-dish",
+        "count": 9
+      },
+      {
+        "key": "soap-dispenser",
+        "count": 3
+      },
+      {
+        "key": "shower-shelf",
+        "count": 1
+      },
+      {
+        "key": "bathroom-shelf",
+        "count": 4
+      },
+      {
+        "key": "bathroom-floor-waste",
+        "count": 30
+      },
+      {
+        "key": "toilet-seat-accessory",
+        "count": 1
+      }
+    ]
+  },
+  "stagedProducts": 39,
+  "prices": {
+    "min": 27,
+    "max": 1183,
+    "published": 39,
+    "quoteRequired": 0
+  },
+  "imageFailures": [],
+  "after": {
+    "count": 176,
+    "categories": [
+      {
+        "key": "towel-rail",
+        "label": "Towel Rails",
+        "count": 36
+      },
+      {
+        "key": "heated-towel-rail",
+        "label": "Heated Towel Rails",
+        "count": 10
+      },
+      {
+        "key": "hand-towel",
+        "label": "Hand Towel Rings / Rails",
+        "count": 26
+      },
+      {
+        "key": "robe-hook",
+        "label": "Robe Hooks",
+        "count": 24
+      },
+      {
+        "key": "toilet-roll-holder",
+        "label": "Toilet Roll Holders",
+        "count": 23
+      },
+      {
+        "key": "toilet-brush",
+        "label": "Toilet Brushes",
+        "count": 9
+      },
+      {
+        "key": "soap-dish",
+        "label": "Soap Dishes / Holders",
+        "count": 9
+      },
+      {
+        "key": "soap-dispenser",
+        "label": "Soap Dispensers",
+        "count": 3
+      },
+      {
+        "key": "shower-shelf",
+        "label": "Shower Shelves",
+        "count": 1
+      },
+      {
+        "key": "bathroom-shelf",
+        "label": "Bathroom Shelves",
+        "count": 4
+      },
+      {
+        "key": "bathroom-floor-waste",
+        "label": "Floor Wastes / Waste Grates",
+        "count": 30
+      },
+      {
+        "key": "toilet-seat-accessory",
+        "label": "Toilet / Bidet Seats",
+        "count": 1
+      }
+    ]
+  },
+  "complete": true
+}

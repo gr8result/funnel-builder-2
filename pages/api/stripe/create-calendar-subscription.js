@@ -3,6 +3,7 @@
 
 import Stripe from "stripe";
 import { withAuth } from "../../../lib/withWorkspace";
+import { demoSimulationResult } from "../../../lib/demoWorkspace";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2023-10-16",
@@ -20,6 +21,22 @@ async function handler(req, res) {
 
     const baseUrl =
       process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+    if (req.isDemoWorkspace) {
+      const result = await demoSimulationResult({
+        workspaceId: req.workspaceId,
+        actionType: "calendar-subscription",
+        provider: "stripe",
+        target: userId,
+        payload: { price: process.env.STRIPE_CALENDAR_PRICE_ID },
+        userId,
+        message: "Demo calendar subscription simulated - no Stripe session created.",
+      });
+      return res.json({
+        ...result,
+        id: `demo_calendar_subscription_${Date.now()}`,
+        url: `${baseUrl}/modules/calendar/dashboard?sub=success&demo=1`,
+      });
+    }
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",

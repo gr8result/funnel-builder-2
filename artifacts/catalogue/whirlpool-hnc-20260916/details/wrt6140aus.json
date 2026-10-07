@@ -1,0 +1,113 @@
+{
+  "data": {
+    "products": {
+      "items": [
+        {
+          "id": 21511,
+          "sku": "WRT6140AUS",
+          "vendorcode": "WRT6140AUS",
+          "name": "600mm Ceramic Cooktop",
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/w/r/wrt6140aus_whirlpool_web_1.jpg"
+          },
+          "product_images": {
+            "thumbnail": "https://backend.harveynormancommercial.com.au/static/version1767508927/frontend/Hnc/Lumachild/en_US/Magento_Catalog/images/product/placeholder/thumbnail.jpg",
+            "small": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/1df791769d8cdc80e3c05129fe5437cf/w/r/wrt6140aus_whirlpool_web_1.jpg",
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/w/r/wrt6140aus_whirlpool_web_1.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/w/r/wrt6140aus_whirlpool_web_1.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/w/r/wrt6140aus_whirlpool_tech_1.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/w/r/wrt6140aus_whirlpool_web_1.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/w/r/wrt6140aus_whirlpool_tech_1.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• 4 cooking zones<br>• Child lock<br>• Residual heat indicator<br>• 9 power levels</p>"
+          },
+          "product_dimensions": "W590 x D510 x H54mm",
+          "price_promo": 0,
+          "price_store": 698,
+          "wels_reg_number": "",
+          "gp_product_group": "COOKTOPS",
+          "__typename": "SimpleProduct"
+        }
+      ],
+      "aggregations": [
+        {
+          "attribute_code": "category_id",
+          "label": "Category",
+          "options": [
+            {
+              "label": "Kitchen",
+              "value": "16",
+              "count": 1
+            },
+            {
+              "label": "Cooktops",
+              "value": "23",
+              "count": 1
+            },
+            {
+              "label": "Electric Cooktops ",
+              "value": "108",
+              "count": 1
+            },
+            {
+              "label": "Products",
+              "value": "1036",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "attribute_code": "brand",
+          "label": "Brand",
+          "options": [
+            {
+              "label": "Whirlpool",
+              "value": "1084",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "attribute_code": "colours",
+          "label": "Colour",
+          "options": [
+            {
+              "label": "Black Glass",
+              "value": "938",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "attribute_code": "size_cooktop",
+          "label": "Cooktop Size",
+          "options": [
+            {
+              "label": "300 - 600mm",
+              "value": "1090",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "attribute_code": "stock_line_filter",
+          "label": "Stock Line",
+          "options": [
+            {
+              "label": "Yes",
+              "value": "672",
+              "count": 1
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

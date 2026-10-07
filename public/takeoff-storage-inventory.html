@@ -1,0 +1,24 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Takeoff storage inspection</title></head><body><p id="status">Inspecting saved Takeoff identities without changing storage…</p><script type="module">
+const endpoint=new URL(location.href).searchParams.get('bridge');
+async function send(row){const r=await fetch(endpoint+'/row',{method:'POST',body:JSON.stringify(row)});if(!r.ok)throw new Error('Inspection sink failed');}
+function run(data){return new Promise((resolve,reject)=>{const w=new Worker('/takeoff-storage-inventory-worker.js');w.onmessage=({data})=>{w.terminate();data.error?reject(new Error(data.error)):resolve(data);};w.onerror=e=>{w.terminate();reject(new Error(e.message));};w.postMessage(data);});}
+try{
+ const inventory=await run({action:'inventory'});await send(inventory);
+ const local=[];
+ for(const key of Object.keys(localStorage).filter(k=>/takeoff|estimate-builder.*(recent|job|draft|active)/i.test(k))){
+  const raw=localStorage.getItem(key);let v;try{v=JSON.parse(raw);}catch{v=raw;}
+  const trim=(k,x)=>typeof x==='string'&&x.length>300?'[large string '+x.length+' characters]':x;
+  local.push({key,bytes:raw.length,value:JSON.parse(JSON.stringify(v,trim))});
+ }
+ await send({localStorage:local,locks:await navigator.locks.query()});
+ for(const entry of inventory.inventory){
+  if(/metadata|blobs/.test(entry.store))continue;
+  for(const key of entry.keys){
+   if(/snapshot|revision|job-backup|recovery-original/.test(String(key)))continue;
+   document.querySelector('#status').textContent='Inspecting '+String(key);
+   await send(await run({action:'inspect',...entry,key}));
+  }
+ }
+ await fetch(endpoint+'/done',{method:'POST'});document.querySelector('#status').textContent='Read-only storage inspection complete.';
+}catch(e){document.querySelector('#status').textContent=e.message;await fetch(endpoint+'/error',{method:'POST',body:e.message});}
+</script></body></html>

@@ -1,0 +1,1358 @@
+[1mdiff --git a/components/construction-estimation/ai-plan-takeoff/takeoffSchedule.js b/components/construction-estimation/ai-plan-takeoff/takeoffSchedule.js[m
+[1mindex bf83763..7bb2820 100644[m
+[1m--- a/components/construction-estimation/ai-plan-takeoff/takeoffSchedule.js[m
+[1m+++ b/components/construction-estimation/ai-plan-takeoff/takeoffSchedule.js[m
+[36m@@ -1,5 +1,13 @@[m
+[32m+[m[32mimport { associateTakeoffMeasurements, takeoffMaterialFields, takeoffThickness, openingQuantity, openingDimensions, openingHostId, uniqueTakeoffItems, brickSillLength, windowCodeForOpening, isCavitySlider, isRobeSlider, materialRound, EXTERIOR_WALL_SYSTEM_FIELD_KEYS, windowStyleLabel, isFixedWindowOpening, doorStyleLabel, brickOrderQuantities } from '../../../lib/construction-estimation/takeoffMaterialQuantities.js';[m
+[32m+[m[32mimport { absentTakeoffMaterialFields } from '../../../lib/construction-estimation/takeoffAbsentMaterialFields.js';[m
+[32m+[m[32mimport { ARCHITRAVE_DEFAULTS, ARCHITRAVE_RULES, packOpenings } from '../../../lib/construction-estimation/architraveCutting.js';[m
+[32m+[m[32mimport { INPUT_DATA_SHEET_TEMPLATE } from '../../../lib/construction-estimation/inputDataSheetTemplate.js';[m
+[32m+[m[32mimport { EXTERIOR_WALL_CLASSES, normaliseLevel, explicitLevel, resolveTakeoffLevel, importWallCategory, resolveExteriorClass, runLengthM, createExteriorClassificationTotals, resolveConstructionSystem, legacyExteriorClassFromSystem, EXTERIOR_CONSTRUCTION_SYSTEMS, INTERIOR_CONSTRUCTION_SYSTEMS, CONSTRUCTION_SYSTEM_LABELS, resolveOpeningRoom, resolvePostColumnCore, POST_SURROUND_TYPE_LABELS } from './takeoffRunData.js';[m
+[32m+[m
+ const DEFAULT_WALL_HEIGHT_M = 2.4;[m
+ [m
+[32m+[m[32mconst IMPORT_LEVELS = { 'Ground Floor': 'lower', 'Second Level': 'upper', 'Third Level': 'third' };[m
+[32m+[m
+ const FLOOR_AREA_LABELS = {[m
+   Footprint: 'Gross building footprint',[m
+   Living: 'Living area',[m
+[36m@@ -20,7 +28,6 @@[m [mconst FLOOR_FINISH_UNITS = {[m
+   'exposed Agg': 'm2'[m
+ };[m
+ [m
+[31m-const EXTERIOR_WALL_CLASSES = ['Brick Veneer', 'Lightweight Cladding', 'Rendered Masonry', 'Other'];[m
+ const OPENING_CLASSES = ['Window', 'Internal Door', 'External Door', 'Garage Door', 'Large Glazed/Stacker/Sliding Door', 'Other Opening'];[m
+ [m
+ function round(value, decimals = 2) {[m
+[36m@@ -39,30 +46,29 @@[m [mfunction polygonAreaM2(nodes, pixelsPerMm) {[m
+   return areaMm2 / 1000000;[m
+ }[m
+ [m
+[31m-function runLengthM(run, pixelsPerMm) {[m
+[31m-  if (run.lengthMm) return run.lengthMm / 1000;[m
+[31m-  if (!run.nodes || run.nodes.length < 2 || !pixelsPerMm) return 0;[m
+[31m-  let lengthPx = 0;[m
+[31m-  for (let i = 1; i < run.nodes.length; i += 1) {[m
+[31m-    lengthPx += Math.hypot(run.nodes[i].x - run.nodes[i - 1].x, run.nodes[i].y - run.nodes[i - 1].y);[m
+[31m-  }[m
+[31m-  return lengthPx / pixelsPerMm / 1000;[m
+[31m-}[m
+[31m-[m
+ function openingAreaM2(opening) {[m
+[31m-  return ((Number(opening.widthMm) || 0) * (Number(opening.heightMm) || 0)) / 1000000;[m
+[32m+[m[32m  const { widthMm, heightMm } = openingDimensions(opening);[m
+[32m+[m[32m  return widthMm * heightMm / 1000000 * openingQuantity(opening);[m
+ }[m
+ [m
+[31m-function floorFromPage(page = 1) {[m
+[32m+[m[32m// A PDF sheet number does not identify a storey - sheet 3 of a two-storey set is not a third level -[m
+[32m+[m[32m// so a sheet's building level comes from what the estimator assigned to it, never from its position[m
+[32m+[m[32m// in the file. An unassigned sheet stays labelled by sheet number and imports nothing, which is what[m
+[32m+[m[32m// surfaces the "assign the measured plan sheets to building levels" warning.[m
+[32m+[m[32mfunction floorFromPage(page = 1, sheetLevels = {}) {[m
+   const pageNumber = Number(page) || 1;[m
+[31m-  if (pageNumber === 1) return { key: 'lower', label: 'Ground Floor' };[m
+[31m-  if (pageNumber === 2) return { key: 'upper', label: 'Second Level' };[m
+[31m-  if (pageNumber === 3) return { key: 'third', label: 'Third Level' };[m
+[32m+[m[32m  const assigned = normaliseLevel(sheetLevels?.[pageNumber] ?? sheetLevels?.[String(pageNumber)]);[m
+[32m+[m[32m  if (assigned !== 'Unassigned') return { key: IMPORT_LEVELS[assigned], label: assigned };[m
+   return { key: `sheet${pageNumber}`, label: `Sheet ${pageNumber}` };[m
+ }[m
+ [m
+[32m+[m[32mfunction floorForItem(item, sheetLevels) {[m
+[32m+[m[32m  const level = resolveTakeoffLevel(item, sheetLevels);[m
+[32m+[m[32m  return level !== 'Unassigned' ? { key: IMPORT_LEVELS[level], label: level } : floorFromPage(item.page, sheetLevels);[m
+[32m+[m[32m}[m
+[32m+[m
+ function parseHeightM(value, fallback = DEFAULT_WALL_HEIGHT_M) {[m
+[31m-  const num = Number(value);[m
+[32m+[m[32m  const num = Number(value?.value ?? value);[m
+   if (!Number.isFinite(num) || num <= 0) return fallback;[m
+   if (num > 20) return num / 1000;[m
+   return num;[m
+[36m@@ -76,21 +82,13 @@[m [mfunction wallHeightByFloor(jobSetupRows = {}) {[m
+   };[m
+ }[m
+ [m
+[31m-function normaliseExteriorClass(value) {[m
+[31m-  const text = String(value || '').trim().toLowerCase();[m
+[31m-  if (text.includes('brick')) return 'Brick Veneer';[m
+[31m-  if (text.includes('lightweight') || text.includes('cladding')) return 'Lightweight Cladding';[m
+[31m-  if (text.includes('render')) return 'Rendered Masonry';[m
+[31m-  if (text.includes('other')) return 'Other';[m
+[31m-  return 'Other';[m
+[31m-}[m
+[31m-[m
+ function classifyOpening(opening = {}) {[m
+   const explicit = String(opening.openingClass || '').trim();[m
+   if (OPENING_CLASSES.includes(explicit)) return explicit;[m
+   const type = String(opening.type || '').toLowerCase();[m
+   const subType = String(opening.subType || opening.windowStyle || opening.doorType || '').toLowerCase();[m
+   if (type === 'window') return 'Window';[m
+[32m+[m[32m  if (isCavitySlider(opening) || isRobeSlider(opening)) return 'Internal Door';[m
+   if (subType.includes('garage') || subType.includes('panel') || subType.includes('roller')) return 'Garage Door';[m
+   if (subType.includes('stacker') || subType.includes('sliding') || subType.includes('glazed') || subType.includes('gsd')) return 'Large Glazed/Stacker/Sliding Door';[m
+   if (subType.includes('internal')) return 'Internal Door';[m
+[36m@@ -142,14 +140,15 @@[m [mfunction createFloorFinishRows(finishes = [], pixelsPerMm) {[m
+   });[m
+ }[m
+ [m
+[31m-function createEaveRows(eaves = []) {[m
+[32m+[m[32mfunction createEaveRows(eaves = [], pixelsPerMm, sheetLevels = {}) {[m
+   return Object.values(eaves.reduce((acc, eave) => {[m
+     const widthLabel = eave.widthOption === 'Special' ? `${eave.widthMm}mm Special` : `${eave.widthMm || eave.widthOption}mm`;[m
+[31m-    const key = `${eave.level || 'Unassigned'}|${widthLabel}`;[m
+[31m-    const lengthM = (eave.lengthMm || 0) / 1000;[m
+[32m+[m[32m    const level = resolveTakeoffLevel(eave, sheetLevels);[m
+[32m+[m[32m    const key = `${level}|${widthLabel}`;[m
+[32m+[m[32m    const lengthM = runLengthM(eave, pixelsPerMm);[m
+     if (!acc[key]) {[m
+       acc[key] = makeRow('Roof and Eaves', `eaves_${key}`, 'Eaves area', 0, 'm2', {[m
+[31m-        level: eave.level || 'Unassigned',[m
+[32m+[m[32m        level,[m
+         eavesWidth: widthLabel,[m
+         eavesLengthLm: 0,[m
+         fasciaLengthLm: 0,[m
+[36m@@ -165,6 +164,15 @@[m [mfunction createEaveRows(eaves = []) {[m
+   }, {}));[m
+ }[m
+ [m
+[32m+[m[32mfunction createRoofAreaRows(areas = [], pixelsPerMm) {[m
+[32m+[m[32m  return Object.values(areas.reduce((rows, area) => {[m
+[32m+[m[32m    const level = area.level || 'Unassigned';[m
+[32m+[m[32m    if (!rows[level]) rows[level] = makeRow('Roof Areas', `roof_area_${level.replace(/\s+/g, '_').toLowerCase()}`, `Roof area - ${level}`, 0, 'm2', { level });[m
+[32m+[m[32m    rows[level].quantity = round(rows[level].quantity + polygonAreaM2(area.nodes, pixelsPerMm));[m
+[32m+[m[32m    return rows;[m
+[32m+[m[32m  }, {}));[m
+[32m+[m[32m}[m
+[32m+[m
+ function createRoomRows(measurements = []) {[m
+   return measurements.map((measurement) => ([m
+     makeRow('Rooms', measurement.id, 'Basic project measurement', measurement.lengthMm ? measurement.lengthMm / 1000 : 0, 'lm', {[m
+[36m@@ -173,18 +181,20 @@[m [mfunction createRoomRows(measurements = []) {[m
+   ));[m
+ }[m
+ [m
+[31m-function createWindowAndDoorSchedules(openings = []) {[m
+[32m+[m[32m// Exported so downstream modules (Client Selections) can rebuild the window schedule from the[m
+[32m+[m[32m// persisted openings. The schedule object itself is derived state and is never saved, so this[m
+[32m+[m[32m// is the only way to get the same rows and counts the takeoff screen shows.[m
+[32m+[m[32mexport function createWindowAndDoorSchedules(openings = [], sheetLevels = {}) {[m
+   const windows = [];[m
+   const doors = [];[m
+ [m
+   const windowBuckets = new Map();[m
+   const doorBuckets = new Map();[m
+ [m
+[31m-  openings.forEach((opening) => {[m
+[32m+[m[32m  uniqueTakeoffItems(openings).forEach((opening) => {[m
+     const openingClass = classifyOpening(opening);[m
+[31m-    const floor = floorFromPage(opening.page);[m
+[31m-    const widthMm = Number(opening.widthMm) || 0;[m
+[31m-    const heightMm = Number(opening.heightMm) || 0;[m
+[32m+[m[32m    const floor = floorForItem(opening, sheetLevels);[m
+[32m+[m[32m    const { widthMm, heightMm } = openingDimensions(opening);[m
+     const areaM2 = openingAreaM2(opening);[m
+ [m
+     if (openingClass === 'Window') {[m
+[36m@@ -200,9 +210,12 @@[m [mfunction createWindowAndDoorSchedules(openings = []) {[m
+         String(opening.sillType || '').trim(),[m
+         String(opening.brickSillRequired || '').trim()[m
+       ].join('|');[m
+[32m+[m[32m      const windowRoom = resolveOpeningRoom(opening);[m
+       const existing = windowBuckets.get(key) || {[m
+         floor: floor.label,[m
+         location: String(opening.location || opening.room || '').trim() || 'Unspecified',[m
+[32m+[m[32m        roomKey: windowRoom.roomKey,[m
+[32m+[m[32m        roomLabel: windowRoom.roomLabel,[m
+         windowStyle: String(opening.windowStyle || opening.subType || 'Standard').trim(),[m
+         quantity: 0,[m
+         widthMm,[m
+[36m@@ -213,43 +226,75 @@[m [mfunction createWindowAndDoorSchedules(openings = []) {[m
+         glassType: String(opening.glassType || '').trim(),[m
+         sillType: String(opening.sillType || '').trim(),[m
+         brickSillRequired: Boolean(opening.brickSillRequired),[m
+[31m-        brickSillLengthLm: 0[m
+[32m+[m[32m        brickSillLengthLm: 0,[m
+[32m+[m[32m        // The original drawing tag survives even when the size does not reduce to a standard[m
+[32m+[m[32m        // height/width shorthand code; windowCodeForOpening (derived from the actual documented[m
+[32m+[m[32m        // height/width, so it can never disagree with them) takes precedence when it exists.[m
+[32m+[m[32m        originalTag: String(opening.itemTag || '').trim(),[m
+[32m+[m[32m        hostWallId: String(opening.hostWallId || '').trim(),[m
+[32m+[m[32m        hostWallSystem: CONSTRUCTION_SYSTEM_LABELS[opening.hostConstructionSystem] || '',[m
+[32m+[m[32m        openings: [],[m
+       };[m
+[31m-      existing.quantity += 1;[m
+[32m+[m[32m      existing.openings.push({ id: String(opening.id), page: Number(opening.page || 1) });[m
+[32m+[m[32m      existing.quantity += openingQuantity(opening);[m
+       existing.totalOpeningAreaM2 = round(existing.totalOpeningAreaM2 + areaM2);[m
+       const fullHeight = heightMm >= 2100;[m
+       const eligibleBrickSill = existing.brickSillRequired && !fullHeight && widthMm > 0;[m
+[31m-      if (eligibleBrickSill) {[m
+[31m-        existing.brickSillLengthLm = round(existing.brickSillLengthLm + (widthMm / 1000));[m
+[32m+[m[32m      if (opening.brickSillLengthLm !== undefined) {[m
+[32m+[m[32m        existing.brickSillLengthLm = round(existing.brickSillLengthLm + opening.brickSillLengthLm);[m
+[32m+[m[32m      } else if (eligibleBrickSill) {[m
+[32m+[m[32m        existing.brickSillLengthLm = round(existing.brickSillLengthLm + (widthMm / 1000) * openingQuantity(opening));[m
+       }[m
+       windowBuckets.set(key, existing);[m
+       return;[m
+     }[m
+ [m
+     const externalOrInternal = openingClass === 'Internal Door' ? 'Internal' : 'External';[m
+[32m+[m[32m    // A door's subtype (Cavity Sliding, Barn, Hinged...) is a distinct physical construction with[m
+[32m+[m[32m    // its own framing requirement - grouping it with an ordinary hinged door of the same size would[m
+[32m+[m[32m    // silently lose that framing requirement (a cavity slider needs a cage; a hinged door does not).[m
+[32m+[m[32m    const doorStyle = doorStyleLabel(opening.subType) || 'Hinged';[m
+[32m+[m[32m    const cavitySlider = isCavitySlider(opening);[m
+     const key = [[m
+       floor.label,[m
+       String(opening.location || opening.room || '').trim() || 'Unspecified',[m
+       externalOrInternal,[m
+       openingClass,[m
+[32m+[m[32m      doorStyle,[m
+       widthMm,[m
+       heightMm,[m
+       String(opening.glassType || '').trim(),[m
+       String(opening.frameJambDetails || opening.frameMaterial || '').trim()[m
+     ].join('|');[m
+[32m+[m[32m    const room = resolveOpeningRoom(opening);[m
+     const existing = doorBuckets.get(key) || {[m
+       floor: floor.label,[m
+       location: String(opening.location || opening.room || '').trim() || 'Unspecified',[m
+[32m+[m[32m      roomKey: room.roomKey,[m
+[32m+[m[32m      roomLabel: room.roomLabel,[m
+       internalExternal: externalOrInternal,[m
+       doorType: openingClass,[m
+[32m+[m[32m      doorStyle,[m
+[32m+[m[32m      isCavitySlider: cavitySlider,[m
+[32m+[m[32m      // For an interior-hosted door (which is what a cavity slider always is) the host wall's[m
+[32m+[m[32m      // measured thicknessMm IS its frame thickness - wallThicknessMm already reflects the cavity[m
+[32m+[m[32m      // pocket's forced 90mm upgrade from associateTakeoffMeasurements, so no separate field is[m
+[32m+[m[32m      // needed here.[m
+[32m+[m[32m      hostFrameThicknessMm: opening.wallThicknessMm ?? null,[m
+       quantity: 0,[m
+       widthMm,[m
+       heightMm,[m
+       totalOpeningAreaM2: 0,[m
+       frameJambDetails: String(opening.frameJambDetails || opening.frameMaterial || '').trim(),[m
+[31m-      glassType: String(opening.glassType || '').trim()[m
+[32m+[m[32m      glassType: String(opening.glassType || '').trim(),[m
+[32m+[m[32m      originalTag: String(opening.itemTag || '').trim(),[m
+[32m+[m[32m      hostWallId: String(opening.hostWallId || '').trim(),[m
+[32m+[m[32m      hostWallSystem: CONSTRUCTION_SYSTEM_LABELS[opening.hostConstructionSystem] || '',[m
+[32m+[m[32m      openings: [],[m
+     };[m
+[31m-    existing.quantity += 1;[m
+[32m+[m[32m    existing.openings.push({ id: String(opening.id), page: Number(opening.page || 1) });[m
+[32m+[m[32m    existing.brickSillLengthLm = round((existing.brickSillLengthLm || 0) + (opening.brickSillLengthLm || 0));[m
+[32m+[m[32m    existing.quantity += openingQuantity(opening);[m
+     existing.totalOpeningAreaM2 = round(existing.totalOpeningAreaM2 + areaM2);[m
+     doorBuckets.set(key, existing);[m
+   });[m
+[36m@@ -264,9 +309,19 @@[m [mfunction createWindowAndDoorSchedules(openings = []) {[m
+       quantity: row.quantity,[m
+       floor: row.floor,[m
+       location: row.location,[m
+[32m+[m[32m      roomKey: row.roomKey,[m
+[32m+[m[32m      roomLabel: row.roomLabel,[m
+       windowStyle: row.windowStyle,[m
+       widthMm: row.widthMm,[m
+       heightMm: row.heightMm,[m
+[32m+[m[32m      // The height/width-derived shorthand is authoritative whenever it exists (it can never[m
+[32m+[m[32m      // disagree with the documented heightMm/widthMm it was built from); the original drawing tag[m
+[32m+[m[32m      // is the fallback for a genuinely non-standard size, so every row still has a real code.[m
+[32m+[m[32m      code: windowCodeForOpening({ openingClass: 'Window', heightMm: row.heightMm, widthMm: row.widthMm }) || row.originalTag || '',[m
+[32m+[m[32m      sizeLabel: row.heightMm && row.widthMm ? `${row.heightMm}H x ${row.widthMm}W` : '',[m
+[32m+[m[32m      hostWallId: row.hostWallId,[m
+[32m+[m[32m      hostWallSystem: row.hostWallSystem,[m
+[32m+[m[32m      openings: row.openings,[m
+       totalOpeningAreaM2: row.totalOpeningAreaM2,[m
+       frameMaterial: row.frameMaterial,[m
+       frameColour: row.frameColour,[m
+[36m@@ -287,17 +342,32 @@[m [mfunction createWindowAndDoorSchedules(openings = []) {[m
+       quantity: row.quantity,[m
+       floor: row.floor,[m
+       location: row.location,[m
+[32m+[m[32m      roomKey: row.roomKey,[m
+[32m+[m[32m      roomLabel: row.roomLabel,[m
+       internalExternal: row.internalExternal,[m
+       doorType: row.doorType,[m
+[32m+[m[32m      // doorStyle distinguishes a Cavity Sliding Door / Barn Door / Robe Slider from an ordinary[m
+[32m+[m[32m      // Hinged door - the Doors section must show this, not just the coarser openingClass, so a[m
+[32m+[m[32m      // cavity slider's framing requirement is never silently folded into "Internal Door".[m
+[32m+[m[32m      doorStyle: row.doorStyle,[m
+[32m+[m[32m      isCavitySlider: row.isCavitySlider,[m
+[32m+[m[32m      hostFrameThicknessMm: row.hostFrameThicknessMm,[m
+       widthMm: row.widthMm,[m
+       heightMm: row.heightMm,[m
+[32m+[m[32m      code: row.originalTag || '',[m
+[32m+[m[32m      sizeLabel: row.heightMm && row.widthMm ? `${row.widthMm}W x ${row.heightMm}H` : '',[m
+[32m+[m[32m      hostWallId: row.hostWallId,[m
+[32m+[m[32m      hostWallSystem: row.hostWallSystem,[m
+[32m+[m[32m      openings: row.openings,[m
+       totalOpeningAreaM2: row.totalOpeningAreaM2,[m
+[32m+[m[32m      brickSillLengthLm: row.brickSillLengthLm || 0,[m
+[32m+[m[32m      brickSillRequired: row.brickSillLengthLm > 0 ? 'Yes' : 'No',[m
+       frameJambDetails: row.frameJambDetails,[m
+       glassType: row.glassType[m
+     });[m
+   });[m
+ [m
+[31m-  const brickSillSubtotals = windows.reduce((acc, row) => {[m
+[32m+[m[32m  const brickSillSubtotals = [...windows, ...doors].reduce((acc, row) => {[m
+     if (row.brickSillRequired !== 'Yes') return acc;[m
+     acc[row.floor] = round((acc[row.floor] || 0) + (Number(row.brickSillLengthLm) || 0));[m
+     return acc;[m
+[36m@@ -311,10 +381,328 @@[m [mfunction createWindowAndDoorSchedules(openings = []) {[m
+   };[m
+ }[m
+ [m
+[31m-function createWallSchedules(walls = [], openings = [], pixelsPerMm, jobSetupRows = {}) {[m
+[32m+[m[32m// A pillar's drawn footprint is the FINISHED/visible rectangle - the surround's outer face when a[m
+[32m+[m[32m// surround exists, or the core itself when it does not. Falls back to it only when the builder has[m
+[32m+[m[32m// not entered an explicit dimension, per "explicit entered/documented dimensions take precedence[m
+[32m+[m[32m// over scale-derived dimensions."[m
+[32m+[m[32mfunction pillarFootprintMm(pillar, pixelsPerMm) {[m
+[32m+[m[32m  const nodes = pillar.nodes || [];[m
+[32m+[m[32m  if (nodes.length < 3 || !(Number(pixelsPerMm) > 0)) return { widthMm: null, depthMm: null };[m
+[32m+[m[32m  const xs = nodes.map((n) => n.x), ys = nodes.map((n) => n.y);[m
+[32m+[m[32m  const widthPx = Math.max(...xs) - Math.min(...xs);[m
+[32m+[m[32m  const depthPx = Math.max(...ys) - Math.min(...ys);[m
+[32m+[m[32m  return { widthMm: round(widthPx / pixelsPerMm, 0) || null, depthMm: round(depthPx / pixelsPerMm, 0) || null };[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32m// A pillar/post/column's own type/size label, distinct from its optional surround - "100x100 SHS[m
+[32m+[m[32m// Steel", "150x150 Timber", "Face Brick" (masonry core, no separate "size" beyond width/depth).[m
+[32m+[m[32mfunction pillarCoreLabel(pillar, coreWidthMm, coreDepthMm) {[m
+[32m+[m[32m  const core = resolvePostColumnCore(pillar);[m
+[32m+[m[32m  const sizeText = coreWidthMm && coreDepthMm ? `${coreWidthMm}x${coreDepthMm}` : '';[m
+[32m+[m[32m  // A documented designation (e.g. "150 x 100", "Ø89" for a CHS) is the authoritative label for a[m
+[32m+[m[32m  // steel section when given - a CHS has one diameter, not a width x depth pair, so plain numeric[m
+[32m+[m[32m  // dimensions cannot always represent it.[m
+[32m+[m[32m  if (core.coreType === 'steel') return [pillar.steelSectionType, pillar.steelSectionDesignation || sizeText].filter(Boolean).join(' ') || core.displayLabel;[m
+[32m+[m[32m  if (core.coreType === 'timber') return sizeText ? `Timber ${sizeText}` : core.displayLabel;[m
+[32m+[m[32m  if (core.coreType === 'brick') return pillar.brickFinish || core.displayLabel;[m
+[32m+[m[32m  return core.displayLabel;[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32m// Groups pillars/posts/columns by level, only merging rows whose full specification matches[m
+[32m+[m[32m// exactly (core type/size, surround type/size, height) - "Where identical posts/columns exist,[m
+[32m+[m[32m// group them only when all relevant specification fields match."[m
+[32m+[m[32mexport function createPillarSchedule(pillars = [], pixelsPerMm, sheetLevels = {}) {[m
+[32m+[m[32m  const rows = [];[m
+[32m+[m[32m  const buckets = new Map();[m
+[32m+[m[32m  pillars.forEach((pillar) => {[m
+[32m+[m[32m    const floor = floorForItem(pillar, sheetLevels);[m
+[32m+[m[32m    const footprint = pillarFootprintMm(pillar, pixelsPerMm);[m
+[32m+[m[32m    const surroundType = pillar.surroundType && pillar.surroundType !== 'none' ? pillar.surroundType : 'none';[m
+[32m+[m[32m    // With no surround, the core IS the visible/finished footprint - fall back to the drawn[m
+[32m+[m[32m    // rectangle only when the builder has not entered an explicit core dimension.[m
+[32m+[m[32m    const coreWidthMm = pillar.coreWidthMm || (surroundType === 'none' ? footprint.widthMm : null);[m
+[32m+[m[32m    const coreDepthMm = pillar.coreDepthMm || (surroundType === 'none' ? footprint.depthMm : null);[m
+[32m+[m[32m    const finishedWidthMm = surroundType === 'none' ? coreWidthMm : (pillar.surroundWidthMm || footprint.widthMm);[m
+[32m+[m[32m    const finishedDepthMm = surroundType === 'none' ? coreDepthMm : (pillar.surroundDepthMm || footprint.depthMm);[m
+[32m+[m[32m    const room = resolveOpeningRoom(pillar);[m
+[32m+[m[32m    const key = [[m
+[32m+[m[32m      floor.label, pillar.coreType, coreWidthMm, coreDepthMm, pillar.steelSectionType, pillar.steelSectionDesignation, pillar.timberSizeOption,[m
+[32m+[m[32m      pillar.brickFinish, pillar.coreCustomLabel, surroundType, finishedWidthMm, finishedDepthMm,[m
+[32m+[m[32m      pillar.surroundCustomLabel, pillar.heightMm, room.roomLabel,[m
+[32m+[m[32m    ].join('|');[m
+[32m+[m[32m    const existing = buckets.get(key);[m
+[32m+[m[32m    if (existing) { existing.quantity += Number(pillar.quantity) || 1; existing.openings.push({ id: String(pillar.id), page: Number(pillar.page || 1) }); return; }[m
+[32m+[m[32m    buckets.set(key, {[m
+[32m+[m[32m      floor: floor.label, level: floor.label,[m
+[32m+[m[32m      typeLabel: pillarCoreLabel(pillar, coreWidthMm, coreDepthMm),[m
+[32m+[m[32m      coreType: pillar.coreType, coreWidthMm, coreDepthMm,[m
+[32m+[m[32m      steelSectionType: pillar.steelSectionType || null, steelSectionDesignation: pillar.steelSectionDesignation || null,[m
+[32m+[m[32m      surroundType, surroundLabel: POST_SURROUND_TYPE_LABELS[surroundType] || 'None',[m
+[32m+[m[32m      surroundWidthMm: surroundType === 'none' ? null : finishedWidthMm,[m
+[32m+[m[32m      surroundDepthMm: surroundType === 'none' ? null : finishedDepthMm,[m
+[32m+[m[32m      finishedWidthMm, finishedDepthMm,[m
+[32m+[m[32m      heightMm: pillar.heightMm || null,[m
+[32m+[m[32m      quantity: Number(pillar.quantity) || 1,[m
+[32m+[m[32m      roomKey: room.roomKey, roomLabel: room.roomLabel, location: pillar.location || room.roomLabel,[m
+[32m+[m[32m      classificationStatus: resolvePostColumnCore(pillar).classificationStatus,[m
+[32m+[m[32m      openings: [{ id: String(pillar.id), page: Number(pillar.page || 1) }],[m
+[32m+[m[32m    });[m
+[32m+[m[32m  });[m
+[32m+[m[32m  Array.from(buckets.values()).forEach((row, index) => {[m
+[32m+[m[32m    rows.push({[m
+[32m+[m[32m      section: 'Pillars, Posts & Columns',[m
+[32m+[m[32m      itemId: `pillar_schedule_${index + 1}`,[m
+[32m+[m[32m      mark: `P${index + 1}`,[m
+[32m+[m[32m      category: row.typeLabel,[m
+[32m+[m[32m      unit: 'count',[m
+[32m+[m[32m      ...row,[m
+[32m+[m[32m      sizeLabel: row.coreWidthMm && row.coreDepthMm ? `${row.coreWidthMm}x${row.coreDepthMm}` : '—',[m
+[32m+[m[32m      finishedSizeLabel: row.finishedWidthMm && row.finishedDepthMm ? `${row.finishedWidthMm}x${row.finishedDepthMm}` : (row.sizeLabel || '—'),[m
+[32m+[m[32m    });[m
+[32m+[m[32m  });[m
+[32m+[m[32m  return rows;[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32m// The Job Setup Window Schedule: one row per external window or external door, the only[m
+[32m+[m[32m// openings that reduce an external wall's area. An ordinary internal door has no bearing on[m
+[32m+[m[32m// external wall area or brick sills, so it is left out entirely rather than shown and ignored -[m
+[32m+[m[32m// keeping this table's row count the same as what the M2 totals below are actually built from.[m
+[32m+[m[32m//[m
+[32m+[m[32m// This is the single traceable source for those M2 totals and for brickVeneerSillsLm: every[m
+[32m+[m[32m// aggregate below is summed straight from these same rows rather than recomputed a second way,[m
+[32m+[m[32m// so the schedule and the numbers it feeds can never quietly drift apart. Where a Job Setup field[m
+[32m+[m[32m// already carries the identical total (${prefix}ExternalOpeningAreaM2, brickVeneerSillsLm), that[m
+[32m+[m[32m// field's own computation in takeoffMaterialFields is called here rather than re-derived, so[m
+[32m+[m[32m// there remains exactly one implementation of each rule.[m
+[32m+[m[32m//[m
+[32m+[m[32m// Exported so a saved takeoff job (placedOpenings + completedWallRuns + sheetLevels) can be[m
+[32m+[m[32m// rebuilt into this schedule directly, the same way Client Selections already rebuilds[m
+[32m+[m[32m// createWindowAndDoorSchedules from placedOpenings alone.[m
+[32m+[m[32mexport function createJobSetupWindowSchedule({ completedWallRuns = [], placedOpenings = [], pixelsPerMm, sheetLevels = {}, jobSetupRows = {} } = {}) {[m
+[32m+[m[32m  const records = createMeasurementRecords({[m
+[32m+[m[32m    completedWallRuns, placedOpenings, pixelsPerMm,[m
+[32m+[m[32m    completedFloorplans: [], completedAreas: [], completedEaves: [], completedMeasurements: [],[m
+[32m+[m[32m  });[m
+[32m+[m[32m  const measurements = associateTakeoffMeasurements(records.map((item) => ({[m
+[32m+[m[32m    ...item,[m
+[32m+[m[32m    level: resolveTakeoffLevel(item, sheetLevels),[m
+[32m+[m[32m  })));[m
+[32m+[m
+[32m+[m[32m  // The exact predicate takeoffMaterialFields' ${prefix}ExternalOpeningAreaM2 uses: linked to an[m
+[32m+[m[32m  // exterior wall, and not an internal door (a cavity-slider or robe door reclassified as[m
+[32m+[m[32m  // "Internal Door" is never external, however it is linked).[m
+[32m+[m[32m  const externalOpenings = uniqueTakeoffItems(measurements).filter((item) => item.kind === 'opening'[m
+[32m+[m[32m    && item.quantity !== null && item.linkedWallId && item.wallCategory === 'exterior' && item.openingClass !== 'Internal Door');[m
+[32m+[m
+[32m+[m[32m  const rows = externalOpenings.map((item) => {[m
+[32m+[m[32m    const floor = floorForItem(item, sheetLevels);[m
+[32m+[m[32m    const rawSillLm = brickSillLength(item);[m
+[32m+[m[32m    const rawAreaM2 = item.openingAreaM2 ?? openingAreaM2(item);[m
+[32m+[m[32m    return {[m
+[32m+[m[32m      section: 'Window Schedule',[m
+[32m+[m[32m      itemId: item.id,[m
+[32m+[m[32m      level: floor.label,[m
+[32m+[m[32m      openingType: item.openingClass,[m
+[32m+[m[32m      windowCode: windowCodeForOpening(item),[m
+[32m+[m[32m      heightMm: item.heightMm ?? null,[m
+[32m+[m[32m      widthMm: item.widthMm ?? null,[m
+[32m+[m[32m      quantity: item.quantity,[m
+[32m+[m[32m      // Rounded for display. The unrounded values (rawAreaM2, rawSillLm) are what level totals[m
+[32m+[m[32m      // sum, so a level's total is never a few millimetres off from adding up its own displayed[m
+[32m+[m[32m      // rows, and never a different rounding to takeoffMaterialFields' own totals.[m
+[32m+[m[32m      openingAreaM2: round(rawAreaM2),[m
+[32m+[m[32m      rawAreaM2,[m
+[32m+[m[32m      wallId: item.linkedWallId,[m
+[32m+[m[32m      // exteriorClassification (Face Brick Veneer / Rendered Brick Veneer / ...) is more specific[m
+[32m+[m[32m      // than the canonical constructionSystem alone (which does not carry exterior finish), so it[m
+[32m+[m[32m      // stays the richer label for this display column. But a legacy 'Other' is not itself proof of[m
+[32m+[m[32m      // no classification: a wall classified only through the newer canonical system (core-filled[m
+[32m+[m[32m      // blockwork, double brick, custom) has no legacy alias at all and would otherwise misreport[m
+[32m+[m[32m      // as 'Other' here even though it has a real, reviewed construction (Phase 2B).[m
+[32m+[m[32m      wallSystem: (item.exteriorClassification && item.exteriorClassification !== 'Other')[m
+[32m+[m[32m        ? item.exteriorClassification[m
+[32m+[m[32m        : (CONSTRUCTION_SYSTEM_LABELS[item.hostConstructionSystem] || item.exteriorClassification || ''),[m
+[32m+[m[32m      elevation: item.elevation || '',[m
+[32m+[m[32m      brickSillApplies: rawSillLm > 0 ? 'Yes' : 'No',[m
+[32m+[m[32m      brickSillLm: round(rawSillLm),[m
+[32m+[m[32m      rawSillLm,[m
+[32m+[m[32m      // Room/Location and Glass Type are already captured on the raw opening by AI Plan Takeoff's[m
+[32m+[m[32m      // own editor (the "Location / room" text field and "Glass Type" select in[m
+[32m+[m[32m      // AIPlanTakeoffStandalone.jsx both write directly onto opening.location / opening.glassType,[m
+[32m+[m[32m      // which associateTakeoffMeasurements/createMeasurementRecords carry through unchanged onto[m
+[32m+[m[32m      // this measurement item) - only reading them through into this row was missing. '' means the[m
+[32m+[m[32m      // estimator has not filled that field in yet for this opening, never an invented value.[m
+[32m+[m[32m      location: item.location || item.room || '',[m
+[32m+[m[32m      roomKey: resolveOpeningRoom(item).roomKey,[m
+[32m+[m[32m      roomLabel: resolveOpeningRoom(item).roomLabel,[m
+[32m+[m[32m      glassType: item.glassType || '',[m
+[32m+[m[32m      // opening.subType is the same live "Window Type" dropdown value (FG/AW/DH/LVR/CA/BI/...) -[m
+[32m+[m[32m      // windowStyleLabel/isFixedWindowOpening read it, they never classify from array position or[m
+[32m+[m[32m      // guess a style Client Selections invented on its own.[m
+[32m+[m[32m      openingStyle: item.openingClass === 'Window' ? windowStyleLabel(item.subType) : '',[m
+[32m+[m[32m      isFixed: item.openingClass === 'Window' && isFixedWindowOpening(item),[m
+[32m+[m[32m    };[m
+[32m+[m[32m  });[m
+[32m+[m
+[32m+[m[32m  const wallsByLevel = uniqueTakeoffItems(measurements).filter((item) => item.kind === 'wall' && item.quantity !== null);[m
+[32m+[m[32m  const fieldsByLevel = takeoffMaterialFields(measurements, jobSetupRows);[m
+[32m+[m[32m  const levelTotals = Object.entries(IMPORT_LEVELS).map(([level, prefix]) => {[m
+[32m+[m[32m    const levelRows = rows.filter((row) => row.level === level);[m
+[32m+[m[32m    return {[m
+[32m+[m[32m      level,[m
+[32m+[m[32m      // materialRound (4dp), matching takeoffMaterialFields' own precision, so this window/door[m
+[32m+[m[32m      // split always adds back up to externalOpeningAreaM2 exactly.[m
+[32m+[m[32m      windowOpeningAreaM2: materialRound(levelRows.filter((row) => row.openingType === 'Window').reduce((sum, row) => sum + row.rawAreaM2, 0)),[m
+[32m+[m[32m      externalDoorOpeningAreaM2: materialRound(levelRows.filter((row) => row.openingType !== 'Window').reduce((sum, row) => sum + row.rawAreaM2, 0)),[m
+[32m+[m[32m      // Sourced from takeoffMaterialFields directly (the same field Sections 83/84 read) rather[m
+[32m+[m[32m      // than summed again here, so this total and Sections 83/84 can never disagree. Already[m
+[32m+[m[32m      // rounded once inside takeoffMaterialFields (to 4dp) - rounding it again here (to this[m
+[32m+[m[32m      // function's own 2dp default) is exactly the kind of second, slightly different rounding[m
+[32m+[m[32m      // that let this total quietly drift from the two rows it is made of.[m
+[32m+[m[32m      externalOpeningAreaM2: Number(fieldsByLevel[`${prefix}ExternalOpeningAreaM2`]) || 0,[m
+[32m+[m[32m      brickSillLm: materialRound(levelRows.reduce((sum, row) => sum + row.rawSillLm, 0)),[m
+[32m+[m[32m      rowCount: levelRows.length,[m
+[32m+[m[32m    };[m
+[32m+[m[32m  }).filter((total) => total.rowCount > 0 || wallsByLevel.some((wall) => wall.level === total.level));[m
+[32m+[m
+[32m+[m[32m  return {[m
+[32m+[m[32m    rows: rows.map(({ rawAreaM2, rawSillLm, ...row }) => row),[m
+[32m+[m[32m    levelTotals,[m
+[32m+[m[32m    totalExternalOpeningAreaM2: materialRound(levelTotals.reduce((sum, total) => sum + total.externalOpeningAreaM2, 0)),[m
+[32m+[m[32m    // Already rounded once inside takeoffMaterialFields, for the same reason as above.[m
+[32m+[m[32m    totalBrickSillLm: Number(fieldsByLevel.brickVeneerSillsLm) || 0,[m
+[32m+[m[32m  };[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32m// Groups cavity sliding door openings into one row per (level, width, height, host frame[m
+[32m+[m[32m// thickness) - a cavity frame/system is specific to all three, so grouping on anything coarser[m
+[32m+[m[32m// would misrepresent what needs to be ordered. Shared by createJobSetupPayload and the standalone[m
+[32m+[m[32m// createCavitySliderCageSchedule below so there is exactly one implementation of this rule.[m
+[32m+[m[32mfunction buildCavitySliderSchedule(cavitySliderOpenings) {[m
+[32m+[m[32m  const groups = new Map();[m
+[32m+[m[32m  cavitySliderOpenings.forEach((item) => {[m
+[32m+[m[32m    const { widthMm, heightMm } = openingDimensions(item);[m
+[32m+[m[32m    const hostFrameThicknessMm = item.wallThicknessMm ?? null;[m
+[32m+[m[32m    const key = [item.level, widthMm, heightMm, hostFrameThicknessMm].join('|');[m
+[32m+[m[32m    const existing = groups.get(key) || { level: item.level, widthMm, heightMm, hostFrameThicknessMm, quantity: 0, openings: [] };[m
+[32m+[m[32m    existing.quantity += openingQuantity(item);[m
+[32m+[m[32m    existing.openings.push({ id: String(item.id), page: Number(item.page || 1) });[m
+[32m+[m[32m    groups.set(key, existing);[m
+[32m+[m[32m  });[m
+[32m+[m[32m  return Array.from(groups.values()).map((row, index) => ({[m
+[32m+[m[32m    section: 'Cavity Slider Frames / Cages',[m
+[32m+[m[32m    itemId: `cavity_slider_cage_${index + 1}`,[m
+[32m+[m[32m    level: row.level,[m
+[32m+[m[32m    widthMm: row.widthMm,[m
+[32m+[m[32m    heightMm: row.heightMm,[m
+[32m+[m[32m    hostFrameThicknessMm: row.hostFrameThicknessMm,[m
+[32m+[m[32m    sizeLabel: row.widthMm && row.heightMm ? `${row.widthMm} x ${row.heightMm}${row.hostFrameThicknessMm ? ` / ${row.hostFrameThicknessMm}mm host frame` : ''}` : '',[m
+[32m+[m[32m    quantity: row.quantity,[m
+[32m+[m[32m    openings: row.openings,[m
+[32m+[m[32m  }));[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32m// Standalone equivalent of createJobSetupWindowSchedule for cavity slider doors, so Job Setup's[m
+[32m+[m[32m// EstimateBuilderWorkbook can show the frame/cage order list the same way it shows the Window[m
+[32m+[m[32m// Schedule - straight from placedOpenings + completedWallRuns, without going through the full[m
+[32m+[m[32m// createJobSetupPayload pipeline (which needs project options this display does not).[m
+[32m+[m[32mexport function createCavitySliderCageSchedule({ completedWallRuns = [], placedOpenings = [], pixelsPerMm, sheetLevels = {} } = {}) {[m
+[32m+[m[32m  const records = createMeasurementRecords({[m
+[32m+[m[32m    completedWallRuns, placedOpenings, pixelsPerMm,[m
+[32m+[m[32m    completedFloorplans: [], completedAreas: [], completedEaves: [], completedMeasurements: [],[m
+[32m+[m[32m  });[m
+[32m+[m[32m  const measurements = associateTakeoffMeasurements(records.map((item) => ({[m
+[32m+[m[32m    ...item,[m
+[32m+[m[32m    level: resolveTakeoffLevel(item, sheetLevels),[m
+[32m+[m[32m  })));[m
+[32m+[m[32m  const cavitySliderOpenings = uniqueTakeoffItems(measurements).filter((item) => item.kind === 'opening'[m
+[32m+[m[32m    && item.quantity !== null && isCavitySlider(item));[m
+[32m+[m[32m  return { rows: buildCavitySliderSchedule(cavitySliderOpenings) };[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32m// Canonical row order for the redesigned wall-system schedule sections, matching the fixed nominal[m
+[32m+[m[32m// thickness/frame combinations Job Setup and the manual editing UI both use. Unclassified is always[m
+[32m+[m[32m// appended last and separately, never guessed into one of these rows.[m
+[32m+[m[32mconst EXTERNAL_WALL_SYSTEM_ROWS = [[m
+[32m+[m[32m  { system: 'brick_veneer', frame: 70, label: '230mm Brick Veneer', frameLabel: '70mm' },[m
+[32m+[m[32m  { system: 'brick_veneer', frame: 90, label: '250mm Brick Veneer', frameLabel: '90mm' },[m
+[32m+[m[32m  { system: 'core_filled_blockwork', frame: null, label: '200mm Core-filled Blockwork', frameLabel: 'N/A' },[m
+[32m+[m[32m  { system: 'double_brick', frame: null, label: '230mm Double Brick', frameLabel: 'N/A' },[m
+[32m+[m[32m  { system: 'lightweight_cladding', frame: 70, label: 'Lightweight Cladding', frameLabel: '70mm' },[m
+[32m+[m[32m  { system: 'lightweight_cladding', frame: 90, label: 'Lightweight Cladding', frameLabel: '90mm' },[m
+[32m+[m[32m  { system: 'custom', frame: null, label: 'Custom', frameLabel: '—' },[m
+[32m+[m[32m];[m
+[32m+[m[32mconst INTERNAL_WALL_SYSTEM_ROWS = [[m
+[32m+[m[32m  { system: 'internal_timber_frame', frame: 70, label: 'Internal Timber Frame', frameLabel: '70mm' },[m
+[32m+[m[32m  { system: 'internal_timber_frame', frame: 90, label: 'Internal Timber Frame', frameLabel: '90mm' },[m
+[32m+[m[32m  { system: 'custom', frame: null, label: 'Custom Internal Wall', frameLabel: '—' },[m
+[32m+[m[32m];[m
+[32m+[m[32mconst wallSystemRowKey = (system, frame) => (system === 'custom' ? 'custom' : `${system}:${frame ?? 'none'}`);[m
+[32m+[m
+[32m+[m[32m/**[m
+[32m+[m[32m * The Takeoff Schedule's wall sections, grouped by level then by canonical construction system and[m
+[32m+[m[32m * frame - the view the builder actually needs (what is it, what frame, how long), replacing the[m
+[32m+[m[32m * legacy per-class-only rows for display. Every group carries the exact wall ids and pages behind[m
+[32m+[m[32m * it, unclassified or not, so a review action can navigate straight to them; nothing here recomputes[m
+[32m+[m[32m * length or level differently to the rest of the schedule; it is a regrouping of the same walls.[m
+[32m+[m[32m */[m
+[32m+[m[32mfunction createWallSystemSchedule(walls = [], pixelsPerMm, sheetLevels = {}) {[m
+[32m+[m[32m  const byLevel = new Map();[m
+[32m+[m[32m  walls.forEach((wall) => {[m
+[32m+[m[32m    const isExterior = importWallCategory(wall) === 'exterior';[m
+[32m+[m[32m    const level = floorForItem(wall, sheetLevels).label;[m
+[32m+[m[32m    const lengthM = runLengthM(wall, pixelsPerMm);[m
+[32m+[m[32m    const wallSystem = resolveConstructionSystem(wall);[m
+[32m+[m[32m    if (!byLevel.has(level)) byLevel.set(level, { external: new Map(), internal: new Map() });[m
+[32m+[m[32m    const bucket = byLevel.get(level)[isExterior ? 'external' : 'internal'];[m
+[32m+[m[32m    const key = wallSystem.classificationStatus === 'unclassified' ? 'unclassified' : wallSystemRowKey(wallSystem.system, wallSystem.frameThicknessMm);[m
+[32m+[m[32m    if (!bucket.has(key)) bucket.set(key, { lengthM: 0, walls: [], products: new Map() });[m
+[32m+[m[32m    const entry = bucket.get(key);[m
+[32m+[m[32m    entry.lengthM += lengthM;[m
+[32m+[m[32m    entry.walls.push({ id: String(wall.id), page: Number(wall.page || 1) });[m
+[32m+[m[32m    // Cladding product is DETAIL under its Lightweight Cladding/frame row, never a second wall total:[m
+[32m+[m[32m    // the row above already carries the full bucket length regardless of product.[m
+[32m+[m[32m    if (wallSystem.system === 'lightweight_cladding' && wallSystem.exteriorFinishLabel) {[m
+[32m+[m[32m      const products = entry.products;[m
+[32m+[m[32m      products.set(wallSystem.exteriorFinishLabel, (products.get(wallSystem.exteriorFinishLabel) || 0) + lengthM);[m
+[32m+[m[32m    }[m
+[32m+[m[32m  });[m
+[32m+[m
+[32m+[m[32m  const buildRows = (bucket, templates) => {[m
+[32m+[m[32m    const rows = templates.map((def) => {[m
+[32m+[m[32m      const entry = bucket.get(wallSystemRowKey(def.system, def.frame));[m
+[32m+[m[32m      const products = entry?.products?.size[m
+[32m+[m[32m        ? Array.from(entry.products.entries()).map(([label, productLengthM]) => ({ label, lengthM: round(productLengthM) })).sort((a, b) => b.lengthM - a.lengthM)[m
+[32m+[m[32m        : [];[m
+[32m+[m[32m      return {[m
+[32m+[m[32m        itemId: `wallsystem_${wallSystemRowKey(def.system, def.frame)}`, system: def.system, frameThicknessMm: def.frame,[m
+[32m+[m[32m        label: def.label, frameLabel: def.frameLabel, lengthM: round(entry?.lengthM || 0), walls: entry?.walls || [], products,[m
+[32m+[m[32m      };[m
+[32m+[m[32m    });[m
+[32m+[m[32m    const unclassified = bucket.get('unclassified');[m
+[32m+[m[32m    rows.push({[m
+[32m+[m[32m      itemId: 'wallsystem_unclassified', system: 'unclassified', frameThicknessMm: null,[m
+[32m+[m[32m      label: 'Unclassified', frameLabel: '—', lengthM: round(unclassified?.lengthM || 0), walls: unclassified?.walls || [], products: [],[m
+[32m+[m[32m    });[m
+[32m+[m[32m    return rows;[m
+[32m+[m[32m  };[m
+[32m+[m
+[32m+[m[32m  const levels = Array.from(byLevel.entries()).map(([level, { external, internal }]) => {[m
+[32m+[m[32m    const externalRows = buildRows(external, EXTERNAL_WALL_SYSTEM_ROWS);[m
+[32m+[m[32m    const internalRows = buildRows(internal, INTERNAL_WALL_SYSTEM_ROWS);[m
+[32m+[m[32m    return {[m
+[32m+[m[32m      level,[m
+[32m+[m[32m      external: { rows: externalRows, totalLengthM: round(externalRows.reduce((sum, row) => sum + row.lengthM, 0)) },[m
+[32m+[m[32m      internal: { rows: internalRows, totalLengthM: round(internalRows.reduce((sum, row) => sum + row.lengthM, 0)) },[m
+[32m+[m[32m    };[m
+[32m+[m[32m  });[m
+[32m+[m[32m  return { levels };[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mfunction createWallSchedules(walls = [], openings = [], pixelsPerMm, jobSetupRows = {}, sheetLevels = {}) {[m
+   const heights = wallHeightByFloor(jobSetupRows);[m
+   const openingsByWallId = openings.reduce((acc, opening) => {[m
+[31m-    const host = String(opening.hostWallId || '').trim();[m
+[32m+[m[32m    const host = openingHostId(opening);[m
+     if (!host) return acc;[m
+     if (!acc[host]) acc[host] = [];[m
+     acc[host].push(opening);[m
+[36m@@ -327,14 +715,26 @@[m [mfunction createWallSchedules(walls = [], openings = [], pixelsPerMm, jobSetupRow[m
+   const wallRecords = [];[m
+ [m
+   walls.forEach((wall, index) => {[m
+[31m-    const floor = floorFromPage(wall.page);[m
+[32m+[m[32m    const floor = floorForItem(wall, sheetLevels);[m
+     const lengthM = runLengthM(wall, pixelsPerMm);[m
+[31m-    const isExterior = String(wall.category || '').toLowerCase() === 'exterior';[m
+[31m-    const className = isExterior ? normaliseExteriorClass(wall.exteriorType) : 'Internal';[m
+[32m+[m[32m    const isExterior = importWallCategory(wall) === 'exterior';[m
+[32m+[m[32m    const className = isExterior ? resolveExteriorClass(wall) : 'Internal';[m
+     const wallHeightM = parseHeightM(wall.wallHeightM || wall.heightM, heights[floor.key] || DEFAULT_WALL_HEIGHT_M);[m
+     const linedFaces = Number(wall.linedFaces || 2) === 1 ? 1 : 2;[m
+[31m-    const linkedOpenings = openingsByWallId[String(wall.id)] || [];[m
+[32m+[m[32m    // A hosted opening on the same page belongs to this wall regardless of how each item's own[m
+[32m+[m[32m    // level independently resolved - the same authority associateTakeoffMeasurements gives[m
+[32m+[m[32m    // hostWallId for the Job Setup import, so this displayed schedule agrees with what gets[m
+[32m+[m[32m    // imported instead of running its own, looser same-level-or-unassigned rule.[m
+[32m+[m[32m    const linkedOpenings = uniqueTakeoffItems(openingsByWallId[String(wall.id)] || []).filter((opening) => Number(opening.page || 1) === Number(wall.page || 1) && (!isExterior || classifyOpening(opening) !== 'Internal Door'));[m
+     const linkedOpeningArea = linkedOpenings.reduce((sum, opening) => sum + openingAreaM2(opening), 0);[m
+[32m+[m[32m    // Snap to a standard thickness and, on an interior wall, apply the same cavity-pocket rule[m
+[32m+[m[32m    // takeoffMaterialFields uses: a linked cavity-slider door always needs a 90mm frame, even on a[m
+[32m+[m[32m    // run saved without that thickness explicitly set. Without this the wall shown here can read[m
+[32m+[m[32m    // 70mm while the quantity actually imported into Job Setup is 90mm.[m
+[32m+[m[32m    const normalisedThicknessMm = takeoffThickness(wall.thicknessMm);[m
+[32m+[m[32m    const hasCavitySlider = !isExterior && linkedOpenings.some(isCavitySlider);[m
+[32m+[m[32m    const thicknessMm = hasCavitySlider && (!normalisedThicknessMm || normalisedThicknessMm === 70) ? 90 : normalisedThicknessMm;[m
+[32m+[m[32m    const wallSystem = resolveConstructionSystem(wall);[m
+ [m
+     wallRecords.push({[m
+       section: 'Wall Records',[m
+[36m@@ -344,8 +744,14 @@[m [mfunction createWallSchedules(walls = [], openings = [], pixelsPerMm, jobSetupRow[m
+       level: floor.label,[m
+       lengthM: round(lengthM),[m
+       wallHeightM: round(wallHeightM, 3),[m
+[31m-      thicknessMm: wall.thicknessMm || 0,[m
+[32m+[m[32m      thicknessMm: thicknessMm || 0,[m
+[32m+[m[32m      cavitySlider: hasCavitySlider,[m
+       exteriorClassification: isExterior ? className : '',[m
+[32m+[m[32m      constructionSystem: wallSystem.system,[m
+[32m+[m[32m      frameThicknessMm: hasCavitySlider ? 90 : wallSystem.frameThicknessMm,[m
+[32m+[m[32m      exteriorFinish: wallSystem.exteriorFinish,[m
+[32m+[m[32m      classificationStatus: wallSystem.classificationStatus,[m
+[32m+[m[32m      wallSystemLabel: wallSystem.displayLabel,[m
+       grossAreaM2: round(lengthM * wallHeightM),[m
+       linkedOpenings: linkedOpenings.map((opening) => opening.id),[m
+       openingAreaM2: round(linkedOpeningArea),[m
+[36m@@ -382,7 +788,7 @@[m [mfunction createWallSchedules(walls = [], openings = [], pixelsPerMm, jobSetupRow[m
+       grossPlasterboardAreaM2: round(grossAreaM2),[m
+       openingDeductionsEnabled: openingDeductionsEnabled ? 'Yes' : 'No',[m
+       openingDeductionAreaM2: round(openingDeductionM2),[m
+[31m-      netPlasterboardAreaM2: round(Math.max(0, grossAreaM2 - openingDeductionM2))[m
+[32m+[m[32m      netPlasterboardAreaM2: round(Math.max(0, grossAreaM2 - openingDeductionM2 * linedFaces))[m
+     });[m
+   });[m
+ [m
+[36m@@ -428,25 +834,77 @@[m [mfunction createWallSchedules(walls = [], openings = [], pixelsPerMm, jobSetupRow[m
+     exteriorRows,[m
+     exteriorTotals,[m
+     interiorRows,[m
+[31m-    interiorTotals[m
+[32m+[m[32m    interiorTotals,[m
+[32m+[m[32m    wallSystemSchedule: createWallSystemSchedule(walls, pixelsPerMm, sheetLevels)[m
+   };[m
+ }[m
+ [m
+[31m-function buildForPages({ pages, completedFloorplans, completedWallRuns, placedOpenings, completedAreas, completedMeasurements, completedEaves, pixelsPerMm, jobSetupRows }) {[m
+[32m+[m[32mfunction buildForPages({ pages, completedFloorplans, completedWallRuns, placedOpenings, completedAreas, completedMeasurements, completedEaves, completedPillars = [], pixelsPerMm, jobSetupRows, sheetLevels = {} }) {[m
+   const include = (item) => pages.includes(item.page);[m
+   const floorplans = completedFloorplans.filter(include);[m
+   const walls = completedWallRuns.filter(include);[m
+   const openings = placedOpenings.filter(include);[m
+[31m-  const finishes = completedAreas.filter(include);[m
+[32m+[m[32m  const pillars = completedPillars.filter(include);[m
+[32m+[m[32m  const finishes = completedAreas.filter((area) => include(area) && area.category !== 'Roof Area');[m
+[32m+[m[32m  const roofAreas = completedAreas.filter((area) => include(area) && area.category === 'Roof Area');[m
+   const eaves = completedEaves.filter(include);[m
+[32m+[m[32m  // Temporary audit: capture the actual eave inputs before changing schedule calculations.[m
+[32m+[m[32m  if (typeof window !== 'undefined' && completedEaves.length) {[m
+[32m+[m[32m    const runs = completedEaves.map((eave, index) => {[m
+[32m+[m[32m      const widthLabel = eave.widthOption === 'Special' ? `${eave.widthMm}mm Special` : `${eave.widthMm || eave.widthOption}mm`;[m
+[32m+[m[32m      return {[m
+[32m+[m[32m        index, id: eave.id, page: eave.page, included: include(eave),[m
+[32m+[m[32m        nodeCount: eave.nodes?.length || 0, lengthMm: eave.lengthMm ?? null,[m
+[32m+[m[32m        storedLengthM: (eave.lengthMm || 0) / 1000,[m
+[32m+[m[32m        runLengthM: runLengthM(eave, pixelsPerMm),[m
+[32m+[m[32m        nodeLengthM: runLengthM({ ...eave, lengthMm: 0 }, pixelsPerMm),[m
+[32m+[m[32m        storedLevel: eave.level ?? null, sheetLevel: sheetLevels[eave.page] ?? null,[m
+[32m+[m[32m        resolvedLevel: resolveTakeoffLevel(eave, sheetLevels),[m
+[32m+[m[32m        resolvedSheetLevel: floorFromPage(eave.page, sheetLevels).label,[m
+[32m+[m[32m        widthOption: eave.widthOption ?? null, widthMm: eave.widthMm ?? null,[m
+[32m+[m[32m        widthLabel, groupingKey: `${resolveTakeoffLevel(eave, sheetLevels)}|${widthLabel}`,[m
+[32m+[m[32m      };[m
+[32m+[m[32m    });[m
+[32m+[m[32m    const totals = (items) => ({[m
+[32m+[m[32m      count: items.length,[m
+[32m+[m[32m      storedLengthM: items.reduce((sum, item) => sum + item.storedLengthM, 0),[m
+[32m+[m[32m      runLengthM: items.reduce((sum, item) => sum + item.runLengthM, 0),[m
+[32m+[m[32m      nodeLengthM: items.reduce((sum, item) => sum + item.nodeLengthM, 0),[m
+[32m+[m[32m    });[m
+[32m+[m[32m    const filtered = runs.filter((run) => run.included);[m
+[32m+[m[32m    const summary = (items) => ({[m
+[32m+[m[32m      all: totals(items),[m
+[32m+[m[32m      secondLevel: totals(items.filter((run) => run.resolvedLevel === 'Second Level')),[m
+[32m+[m[32m      otherOrUnassignedLevels: totals(items.filter((run) => run.resolvedLevel !== 'Second Level')),[m
+[32m+[m[32m      width600mm: totals(items.filter((run) => ['600mm', '600mm Special'].includes(run.widthLabel))),[m
+[32m+[m[32m      otherWidths: totals(items.filter((run) => !['600mm', '600mm Special'].includes(run.widthLabel))),[m
+[32m+[m[32m    });[m
+[32m+[m[32m    console.log('[AI Plan Takeoff eave audit]', JSON.stringify({[m
+[32m+[m[32m      pages, pixelsPerMm, sheetLevels, completedEaves, eaves, runs,[m
+[32m+[m[32m      exteriorWalls: walls.filter((wall) => importWallCategory(wall) === 'exterior'),[m
+[32m+[m[32m      exteriorClassificationTotals: createExteriorClassificationTotals(walls, pixelsPerMm, sheetLevels),[m
+[32m+[m[32m      totals: { stored: summary(runs), filtered: summary(filtered) },[m
+[32m+[m[32m      // Include the real rounded rows as well as unrounded input totals.[m
+[32m+[m[32m      groupedRows: createEaveRows(eaves, pixelsPerMm, sheetLevels),[m
+[32m+[m[32m    }, null, 2));[m
+[32m+[m[32m  }[m
+   const measurements = completedMeasurements.filter(include);[m
+ [m
+   const floorAreas = createFloorAreaRows(floorplans, pixelsPerMm);[m
+[31m-  const wallSchedules = createWallSchedules(walls, openings, pixelsPerMm, jobSetupRows);[m
+[31m-  const openingSchedules = createWindowAndDoorSchedules(openings);[m
+[32m+[m[32m  const wallSchedules = createWallSchedules(walls, openings, pixelsPerMm, jobSetupRows, sheetLevels);[m
+[32m+[m[32m  const linkedMeasurements = associateTakeoffMeasurements(createMeasurementRecords({[m
+[32m+[m[32m    completedWallRuns: walls, placedOpenings: openings, pixelsPerMm,[m
+[32m+[m[32m    completedFloorplans: [], completedAreas: [], completedEaves: [], completedMeasurements: [],[m
+[32m+[m[32m  }).map((item) => ({ ...item, level: item.level !== 'Unassigned' ? item.level : normaliseLevel(sheetLevels[item.page]) })));[m
+[32m+[m[32m  const scheduledOpenings = linkedMeasurements.filter((item) => item.kind === 'opening').map((item) => ({[m
+[32m+[m[32m    ...item, brickSillLengthLm: brickSillLength(item), brickSillRequired: brickSillLength(item) > 0,[m
+[32m+[m[32m  }));[m
+[32m+[m[32m  const openingSchedules = createWindowAndDoorSchedules(scheduledOpenings, sheetLevels);[m
+   const floorFinishes = createFloorFinishRows(finishes, pixelsPerMm);[m
+[31m-  const roofAndEaves = createEaveRows(eaves);[m
+[32m+[m[32m  const roofAndEaves = createEaveRows(eaves, pixelsPerMm, sheetLevels);[m
+[32m+[m[32m  const roofAreaRows = createRoofAreaRows(roofAreas, pixelsPerMm);[m
+   const rooms = createRoomRows(measurements);[m
+[32m+[m[32m  const pillarRows = createPillarSchedule(pillars, pixelsPerMm, sheetLevels);[m
+ [m
+   const brickSillRows = Object.entries(openingSchedules.brickSillSubtotals).map(([floor, quantity]) => ({[m
+     section: 'Windows',[m
+[36m@@ -463,12 +921,13 @@[m [mfunction buildForPages({ pages, completedFloorplans, completedWallRuns, placedOp[m
+     wallRecords: wallSchedules.wallRecords,[m
+     exteriorWalls: [...wallSchedules.exteriorRows, ...wallSchedules.exteriorTotals],[m
+     interiorWallsAndPlasterboard: [...wallSchedules.interiorRows, ...wallSchedules.interiorTotals],[m
+[32m+[m[32m    wallSystems: wallSchedules.wallSystemSchedule,[m
+     openings: [...openingSchedules.windows, ...openingSchedules.doors],[m
+     windows: [...openingSchedules.windows, ...brickSillRows, {[m
+       section: 'Windows',[m
+       itemId: 'brick_sill_total',[m
+       mark: '',[m
+[31m-      category: 'Total brick-veneer window-sill length',[m
+[32m+[m[32m      category: 'Total brick-veneer sill length',[m
+       floor: 'All Floors',[m
+       quantity: openingSchedules.totalBrickSillLengthLm,[m
+       unit: 'lm',[m
+[36m@@ -477,11 +936,79 @@[m [mfunction buildForPages({ pages, completedFloorplans, completedWallRuns, placedOp[m
+     doors: openingSchedules.doors,[m
+     floorFinishes,[m
+     roofAndEaves,[m
+[32m+[m[32m    roofAreas: roofAreaRows,[m
+     rooms,[m
+[32m+[m[32m    pillars: pillarRows,[m
+     customTakeoffs: [][m
+   };[m
+ }[m
+ [m
+[32m+[m[32m// Keep source measurements alongside display summaries. Importing summaries alone[m
+[32m+[m[32m// loses the sheet/level distinction and counts their subtotal rows a second time.[m
+[32m+[m[32mfunction createMeasurementRecords({ completedFloorplans, completedWallRuns, placedOpenings, completedAreas, completedEaves, completedMeasurements, completedPillars = [], pixelsPerMm }) {[m
+[32m+[m[32m  const calibrated = Number.isFinite(Number(pixelsPerMm)) && Number(pixelsPerMm) > 0;[m
+[32m+[m[32m  const area = (item) => calibrated && item.nodes?.length >= 3[m
+[32m+[m[32m    ? polygonAreaM2(item.nodes, Number(pixelsPerMm)) : null;[m
+[32m+[m[32m  const length = (item) => Number(item.lengthMm) > 0 || (calibrated && item.nodes?.length >= 2)[m
+[32m+[m[32m    ? runLengthM(item, Number(pixelsPerMm)) : null;[m
+[32m+[m[32m  const record = (item, kind, quantity, unit, extra = {}) => ({[m
+[32m+[m[32m    ...item, kind, id: String(item.id ?? ''), page: Number(item.page || item.pageId || item.sourcePage || 1),[m
+[32m+[m[32m    level: explicitLevel(item), category: item.type || item.category || '', quantity, unit, ...extra,[m
+[32m+[m[32m  });[m
+[32m+[m[32m  return [[m
+[32m+[m[32m    ...completedFloorplans.map((item) => record(item, 'floorArea', area(item), 'm2', { label: item.label || item.type || 'Area' })),[m
+[32m+[m[32m    ...completedWallRuns.map((item) => {[m
+[32m+[m[32m      const wallSystem = resolveConstructionSystem(item);[m
+[32m+[m[32m      const category = importWallCategory(item);[m
+[32m+[m[32m      return record(item, 'wall', length(item), 'lm', {[m
+[32m+[m[32m        category,[m
+[32m+[m[32m        // Job Setup's LM/M2 totals (takeoffMaterialFields) key off this legacy five-class string,[m
+[32m+[m[32m        // not the canonical system/exteriorFinish pair - a wall classified only through the newer[m
+[32m+[m[32m        // Phase 2A constructionSystem field (no legacy exteriorType ever set) would otherwise read[m
+[32m+[m[32m        // back as "Other" here and get silently miscounted as unclassified even though[m
+[32m+[m[32m        // resolveConstructionSystem, right above, already knows exactly what it is.[m
+[32m+[m[32m        exteriorClassification: category === 'exterior' ? legacyExteriorClassFromSystem(wallSystem) : resolveExteriorClass(item),[m
+[32m+[m[32m        constructionSystem: wallSystem.system,[m
+[32m+[m[32m        frameThicknessMm: wallSystem.frameThicknessMm,[m
+[32m+[m[32m        frameMaterial: wallSystem.frameMaterial,[m
+[32m+[m[32m        exteriorFinish: wallSystem.exteriorFinish,[m
+[32m+[m[32m        classificationStatus: wallSystem.classificationStatus,[m
+[32m+[m[32m        wallSystemLabel: wallSystem.displayLabel,[m
+[32m+[m[32m        wallHeightM: parseHeightM(item.wallHeightM || item.heightM, null),[m
+[32m+[m[32m        thicknessMm: takeoffThickness(item.thicknessMm),[m
+[32m+[m[32m        linedFaces: Number(item.linedFaces || 2) === 1 ? 1 : 2,[m
+[32m+[m[32m        openingDeductionsEnabled: item.openingDeductionsEnabled !== false,[m
+[32m+[m[32m        linkedOpeningAreaM2: placedOpenings.filter((opening) => opening.hostWallId && String(opening.hostWallId) === String(item.id)).reduce((sum, opening) => sum + openingAreaM2(opening), 0),[m
+[32m+[m[32m      });[m
+[32m+[m[32m    }),[m
+[32m+[m[32m    ...placedOpenings.map((item) => record(item, 'opening', openingQuantity(item), 'count', {[m
+[32m+[m[32m      openingClass: classifyOpening(item), ...openingDimensions(item),[m
+[32m+[m[32m      openingAreaM2: openingDimensions(item).widthMm > 0 && openingDimensions(item).heightMm > 0 ? openingAreaM2(item) : null,[m
+[32m+[m[32m      brickSillRequired: item.brickSillRequired === undefined ? undefined : item.brickSillRequired === true || item.brickSillRequired === 'Yes',[m
+[32m+[m[32m    })),[m
+[32m+[m[32m    ...completedAreas.map((item) => {[m
+[32m+[m[32m      const gross = area(item);[m
+[32m+[m[32m      const exclusions = (item.exclusions || []).map(area);[m
+[32m+[m[32m      const net = gross === null || exclusions.some((value) => value === null) ? null : Math.max(0, gross - exclusions.reduce((sum, value) => sum + value, 0));[m
+[32m+[m[32m      return record(item, item.category === 'Roof Area' ? 'roofArea' : 'floorFinish', net, 'm2', { category: item.category || '' });[m
+[32m+[m[32m    }),[m
+[32m+[m[32m    ...completedEaves.map((item) => record(item, 'eave', length(item), 'lm', { widthMm: Number(item.widthMm || (item.widthOption !== 'Special' ? item.widthOption : 0)) || null })),[m
+[32m+[m[32m    ...completedMeasurements.map((item) => record(item, 'measurement', length(item), 'lm', { label: item.label || 'Measurement' })),[m
+[32m+[m[32m    ...completedPillars.map((item) => {[m
+[32m+[m[32m      const core = resolvePostColumnCore(item);[m
+[32m+[m[32m      return record(item, 'pillar', Number(item.quantity) || 1, 'count', {[m
+[32m+[m[32m        coreType: core.coreType, classificationStatus: core.classificationStatus, displayLabel: core.displayLabel,[m
+[32m+[m[32m        coreWidthMm: item.coreWidthMm ?? null, coreDepthMm: item.coreDepthMm ?? null,[m
+[32m+[m[32m        steelSectionType: item.steelSectionType ?? null, steelSectionDesignation: item.steelSectionDesignation ?? null, timberSizeOption: item.timberSizeOption ?? null,[m
+[32m+[m[32m        brickFinish: item.brickFinish ?? null, coreCustomLabel: item.coreCustomLabel || '',[m
+[32m+[m[32m        surroundType: item.surroundType || 'none', surroundWidthMm: item.surroundWidthMm ?? null, surroundDepthMm: item.surroundDepthMm ?? null,[m
+[32m+[m[32m        surroundCustomLabel: item.surroundCustomLabel || '', heightMm: item.heightMm ?? null,[m
+[32m+[m[32m        location: item.location || '', roomKey: item.roomKey || '', roomLabel: item.roomLabel || '',[m
+[32m+[m[32m      });[m
+[32m+[m[32m    }),[m
+[32m+[m[32m  ];[m
+[32m+[m[32m}[m
+[32m+[m
+ export function createTakeoffSchedule({[m
+   projectInfo = {},[m
+   planFilename = '',[m
+[36m@@ -494,11 +1021,16 @@[m [mexport function createTakeoffSchedule({[m
+   completedFloorplans = [],[m
+   completedMeasurements = [],[m
+   completedEaves = [],[m
+[31m-  jobSetupRows = {}[m
+[32m+[m[32m  completedPillars = [],[m
+[32m+[m[32m  jobSetupRows = {},[m
+[32m+[m[32m  sheetLevels = {}[m
+ }) {[m
+   const projectPages = Array.from({ length: totalPages || 1 }, (_, index) => index + 1);[m
+   return {[m
+     generatedAt: new Date().toISOString(),[m
+[32m+[m[32m    measurementRecords: createMeasurementRecords({ completedFloorplans, completedWallRuns, placedOpenings, completedAreas, completedEaves, completedMeasurements, completedPillars, pixelsPerMm }),[m
+[32m+[m[32m    jobSetupRows,[m
+[32m+[m[32m    sheetLevels: { ...sheetLevels },[m
+     project: {[m
+       projectName: projectInfo.projectName || '',[m
+       clientName: projectInfo.clientName || '',[m
+[36m@@ -518,8 +1050,10 @@[m [mexport function createTakeoffSchedule({[m
+         completedAreas,[m
+         completedMeasurements,[m
+         completedEaves,[m
+[32m+[m[32m        completedPillars,[m
+         pixelsPerMm,[m
+[31m-        jobSetupRows[m
+[32m+[m[32m        jobSetupRows,[m
+[32m+[m[32m        sheetLevels[m
+       })[m
+     },[m
+     projectTotals: buildForPages({[m
+[36m@@ -530,8 +1064,10 @@[m [mexport function createTakeoffSchedule({[m
+       completedAreas,[m
+       completedMeasurements,[m
+       completedEaves,[m
+[32m+[m[32m      completedPillars,[m
+       pixelsPerMm,[m
+[31m-      jobSetupRows[m
+[32m+[m[32m      jobSetupRows,[m
+[32m+[m[32m      sheetLevels[m
+     })[m
+   };[m
+ }[m
+[36m@@ -547,8 +1083,10 @@[m [mexport function flattenScheduleRows(schedule, scope = 'projectTotals') {[m
+     ...(sectionData.doors || []),[m
+     ...(sectionData.openings || []),[m
+     ...(sectionData.roofAndEaves || []),[m
+[32m+[m[32m    ...(sectionData.roofAreas || []),[m
+     ...(sectionData.floorFinishes || []),[m
+     ...(sectionData.rooms || []),[m
+[32m+[m[32m    ...(sectionData.pillars || []),[m
+     ...(sectionData.customTakeoffs || [])[m
+   ];[m
+ }[m
+[36m@@ -579,7 +1117,9 @@[m [mexport function exportScheduleToExcelXml(schedule) {[m
+     'Windows': schedule.projectTotals.windows,[m
+     'Doors': schedule.projectTotals.doors,[m
+     'Rooms': schedule.projectTotals.rooms,[m
+[32m+[m[32m    'Pillars, Posts & Columns': schedule.projectTotals.pillars,[m
+     'Roof and Eaves': schedule.projectTotals.roofAndEaves,[m
+[32m+[m[32m    'Roof Areas': schedule.projectTotals.roofAreas,[m
+     'Floor Finishes': schedule.projectTotals.floorFinishes,[m
+     'Custom Takeoffs': schedule.projectTotals.customTakeoffs[m
+   };[m
+[36m@@ -642,119 +1182,316 @@[m [mfunction sumRows(rows = [], predicate = () => true, valueField = 'quantity') {[m
+ }[m
+ [m
+ export function createJobSetupPayload(schedule, options = {}) {[m
+[31m-  const floorAreas = schedule.projectTotals.floorAreas || [];[m
+[31m-  const exteriorWalls = schedule.projectTotals.exteriorWalls || [];[m
+[31m-  const interiorWalls = schedule.projectTotals.interiorWallsAndPlasterboard || [];[m
+[31m-  const windows = (schedule.projectTotals.windows || []).filter((row) => String(row.mark || '').startsWith('W'));[m
+[31m-  const doors = schedule.projectTotals.doors || [];[m
+[31m-  const floorFinishes = schedule.projectTotals.floorFinishes || [];[m
+[31m-  const eaves = schedule.projectTotals.roofAndEaves || [];[m
+[31m-[m
+[31m-  const floorAreaByName = (name, floor = '') => sumRows(floorAreas, (row) => row.category === name && (!floor || row.floor === floor));[m
+[31m-  const extByClass = (className, floor = '') => sumRows(exteriorWalls, (row) => row.category === className && (!floor || row.floor === floor));[m
+[31m-  const intByFloor = (floor = '') => sumRows(interiorWalls, (row) => row.category === 'Internal wall' && (!floor || row.floor === floor));[m
+[31m-[m
+[31m-  const fields = {[m
+[31m-    projectName: schedule.project.projectName,[m
+[31m-    clientName: schedule.project.clientName,[m
+[31m-    projectAddress: schedule.project.siteAddress,[m
+[31m-[m
+[31m-    lowerFloorAreaM2: floorAreaByName('Total living area', 'Ground Floor'),[m
+[31m-    upperFloorAreaM2: floorAreaByName('Total living area', 'Second Level'),[m
+[31m-    thirdFloorAreaM2: floorAreaByName('Total living area', 'Third Level'),[m
+[31m-[m
+[31m-    lowerExternalWallsLm: sumRows(exteriorWalls, (row) => row.floor === 'Ground Floor'),[m
+[31m-    upperExternalWallsLm: sumRows(exteriorWalls, (row) => row.floor === 'Second Level'),[m
+[31m-    thirdExternalWallsLm: sumRows(exteriorWalls, (row) => row.floor === 'Third Level'),[m
+[31m-    totalExternalWallsLm: sumRows(exteriorWalls),[m
+[31m-[m
+[31m-    lowerInternalWallsLm: intByFloor('Ground Floor'),[m
+[31m-    upperInternalWallsLm: intByFloor('Second Level'),[m
+[31m-    thirdInternalWallsLm: intByFloor('Third Level'),[m
+[31m-    totalInternalWallsLm: intByFloor(),[m
+[31m-[m
+[31m-    lowerBrickVeneerExternalWallsLm: extByClass('Brick Veneer', 'Ground Floor'),[m
+[31m-    upperBrickVeneerExternalWallsLm: extByClass('Brick Veneer', 'Second Level'),[m
+[31m-    thirdBrickVeneerExternalWallsLm: extByClass('Brick Veneer', 'Third Level'),[m
+[31m-    totalBrickVeneerExternalWallsLm: extByClass('Brick Veneer'),[m
+[31m-[m
+[31m-    lowerLightweightCladdingExternalWallsLm: extByClass('Lightweight Cladding', 'Ground Floor'),[m
+[31m-    upperLightweightCladdingExternalWallsLm: extByClass('Lightweight Cladding', 'Second Level'),[m
+[31m-    thirdLightweightCladdingExternalWallsLm: extByClass('Lightweight Cladding', 'Third Level'),[m
+[31m-    totalLightweightCladdingExternalWallsLm: extByClass('Lightweight Cladding'),[m
+[31m-[m
+[31m-    lowerRenderedMasonryExternalWallsLm: extByClass('Rendered Masonry', 'Ground Floor'),[m
+[31m-    upperRenderedMasonryExternalWallsLm: extByClass('Rendered Masonry', 'Second Level'),[m
+[31m-    thirdRenderedMasonryExternalWallsLm: extByClass('Rendered Masonry', 'Third Level'),[m
+[31m-    totalRenderedMasonryExternalWallsLm: extByClass('Rendered Masonry'),[m
+[31m-[m
+[31m-    totalUnclassifiedExteriorWallsLm: extByClass('Other'),[m
+[31m-[m
+[31m-    lowerInternalWallGrossPlasterboardM2: sumRows(interiorWalls, (row) => row.floor === 'Ground Floor', 'grossPlasterboardAreaM2'),[m
+[31m-    upperInternalWallGrossPlasterboardM2: sumRows(interiorWalls, (row) => row.floor === 'Second Level', 'grossPlasterboardAreaM2'),[m
+[31m-    thirdInternalWallGrossPlasterboardM2: sumRows(interiorWalls, (row) => row.floor === 'Third Level', 'grossPlasterboardAreaM2'),[m
+[31m-    totalInternalWallGrossPlasterboardM2: sumRows(interiorWalls, () => true, 'grossPlasterboardAreaM2'),[m
+[31m-[m
+[31m-    lowerInternalWallNetPlasterboardM2: sumRows(interiorWalls, (row) => row.floor === 'Ground Floor', 'netPlasterboardAreaM2'),[m
+[31m-    upperInternalWallNetPlasterboardM2: sumRows(interiorWalls, (row) => row.floor === 'Second Level', 'netPlasterboardAreaM2'),[m
+[31m-    thirdInternalWallNetPlasterboardM2: sumRows(interiorWalls, (row) => row.floor === 'Third Level', 'netPlasterboardAreaM2'),[m
+[31m-    totalInternalWallNetPlasterboardM2: sumRows(interiorWalls, () => true, 'netPlasterboardAreaM2'),[m
+[31m-[m
+[31m-    windowOpeningsQty: sumRows(windows),[m
+[31m-    windowOpeningsAreaM2: sumRows(windows, () => true, 'totalOpeningAreaM2'),[m
+[31m-    doorOpeningsQty: sumRows(doors),[m
+[31m-    doorOpeningsAreaM2: sumRows(doors, () => true, 'totalOpeningAreaM2'),[m
+[31m-[m
+[31m-    lowerBrickSillLengthLm: sumRows(windows, (row) => row.floor === 'Ground Floor', 'brickSillLengthLm'),[m
+[31m-    upperBrickSillLengthLm: sumRows(windows, (row) => row.floor === 'Second Level', 'brickSillLengthLm'),[m
+[31m-    thirdBrickSillLengthLm: sumRows(windows, (row) => row.floor === 'Third Level', 'brickSillLengthLm'),[m
+[31m-    totalBrickSillLengthLm: sumRows(windows, () => true, 'brickSillLengthLm'),[m
+[31m-[m
+[31m-    lowerEavesLm: sumRows(eaves, (row) => row.level === 'Ground Floor', 'eavesLengthLm'),[m
+[31m-    upperEavesLm: sumRows(eaves, (row) => row.level === 'Second Level', 'eavesLengthLm'),[m
+[31m-    thirdEavesLm: sumRows(eaves, (row) => row.level === 'Third Level', 'eavesLengthLm'),[m
+[31m-    totalEavesLm: sumRows(eaves, () => true, 'eavesLengthLm'),[m
+[31m-    eavesAreaM2: sumRows(eaves, () => true, 'quantity'),[m
+[31m-[m
+[31m-    floorFinishTilesM2: sumRows(floorFinishes, (row) => row.category === 'Tiles'),[m
+[31m-    floorFinishCarpetsM2: sumRows(floorFinishes, (row) => row.category === 'Carpets'),[m
+[31m-    floorFinishHybridM2: sumRows(floorFinishes, (row) => row.category === 'Hybrid'),[m
+[31m-    floorFinishPolishedConcreteM2: sumRows(floorFinishes, (row) => row.category === 'Polished Concrete'),[m
+[31m-    floorFinishExposedAggM2: sumRows(floorFinishes, (row) => row.category === 'exposed Agg')[m
+[32m+[m[32m  const sheetLevels = { ...(schedule.sheetLevels || {}), ...(options.sheetLevels || {}) };[m
+[32m+[m[32m  const fields = {};[m
+[32m+[m[32m  const mappingPreview = [];[m
+[32m+[m[32m  const unsupported = [];[m
+[32m+[m[32m  const warnings = [];[m
+[32m+[m[32m  const editableRows = new Map(INPUT_DATA_SHEET_TEMPLATE.rows.filter((row) => row.editable && !row.calculated && !row.heading).map((row) => [row.key, row]));[m
+[32m+[m[32m  const measurements = associateTakeoffMeasurements((schedule.measurementRecords || []).map((item) => ({[m
+[32m+[m[32m    ...item,[m
+[32m+[m[32m    level: resolveTakeoffLevel(item, sheetLevels),[m
+[32m+[m[32m  })));[m
+[32m+[m[32m  const add = (key, value, source, unit = '') => {[m
+[32m+[m[32m    const destination = editableRows.get(key);[m
+[32m+[m[32m    if (!destination || value === null || value === undefined || value === '' || (typeof value === 'number' && !Number.isFinite(value))) return;[m
+[32m+[m[32m    fields[key] = typeof value === 'number' ? round(value, 4) : value;[m
+[32m+[m[32m    mappingPreview.push({ destinationKey: key, value: fields[key], source, status: 'ready', unit: destination.unit || unit, label: destination.label });[m
+   };[m
+[31m-[m
+[31m-  const mappingPreview = Object.entries(fields).map(([destinationKey, value]) => ({[m
+[31m-    destinationKey,[m
+[31m-    value,[m
+[31m-    source: 'AI Plan Takeoff schedule',[m
+[31m-    status: value === '' || value === null || value === undefined ? 'missing' : 'ready'[m
+[31m-  }));[m
+[31m-[m
+[31m-  const warnings = [[m
+[31m-    ...mappingPreview.filter((row) => row.status === 'missing').map((row) => `${row.destinationKey} is missing.`),[m
+[31m-    ...exteriorWalls.filter((row) => row.category === 'Other').map(() => 'Some exterior walls are unclassified and are included under Other.')[m
+[32m+[m[32m  const report = (items, reason) => {[m
+[32m+[m[32m    if (!items.length) return;[m
+[32m+[m[32m    unsupported.push(...items.map((item) => ({ itemId: item.id, page: item.page, level: item.level, category: item.label || item.category || item.kind, quantity: item.quantity, unit: item.unit, reason })));[m
+[32m+[m[32m  };[m
+[32m+[m[32m  const total = (items, valueField = 'quantity') => items.reduce((sum, row) => sum + Number(row[valueField] || 0), 0);[m
+[32m+[m[32m  const addTotal = (key, items, source, valueField = 'quantity') => {[m
+[32m+[m[32m    if (items.length && items.every((item) => item[valueField] !== null && Number.isFinite(Number(item[valueField])))) add(key, total(items, valueField), source, items[0].unit);[m
+[32m+[m[32m  };[m
+[32m+[m[32m  const incomplete = measurements.filter((item) => item.quantity === null);[m
+[32m+[m[32m  report(incomplete, 'This measurement needs a calibrated scale or valid geometry.');[m
+[32m+[m[32m  if (incomplete.length) warnings.push(`${incomplete.length} measurement(s) need calibration or valid geometry before import.`);[m
+[32m+[m[32m  const usable = measurements.filter((item) => item.quantity !== null);[m
+[32m+[m[32m  const unassigned = usable.filter((item) => item.level === 'Unassigned' && ['floorArea', 'wall', 'roofArea', 'eave', 'pillar'].includes(item.kind));[m
+[32m+[m[32m  report(unassigned, 'Assign this plan sheet to a building level before importing level quantities.');[m
+[32m+[m[32m  if (unassigned.length) warnings.push('Assign the measured plan sheets to building levels. A PDF sheet number does not identify a storey.');[m
+[32m+[m[32m  if (!schedule.measurementRecords) warnings.push('Reopen the saved takeoff to rebuild its measurements before importing this older summary.');[m
+[32m+[m
+[32m+[m[32m  add('projectName', schedule.project?.projectName, 'Takeoff project name');[m
+[32m+[m[32m  add('clientName', schedule.project?.clientName, 'Takeoff client');[m
+[32m+[m[32m  add('projectAddress', schedule.project?.siteAddress, 'Takeoff site address');[m
+[32m+[m
+[32m+[m[32m  const highestMeasuredLevel = Math.max(0, ...measurements.filter((item) => ['wall', 'floorArea'].includes(item.kind)).map((item) => Object.keys(IMPORT_LEVELS).indexOf(item.level) + 1));[m
+[32m+[m[32m  if (highestMeasuredLevel > 1) add('floorCount', highestMeasuredLevel === 3 ? 'Three storey' : 'Two storey', 'Highest assigned measured building level');[m
+[32m+[m
+[32m+[m[32m  const finishes = { Tiles: 'floorFinishTilesM2', Carpets: 'floorFinishCarpetsM2', Hybrid: 'floorFinishHybridM2', 'Polished Concrete': 'floorFinishPolishedConcreteM2', 'exposed Agg': 'floorFinishExposedAggM2' };[m
+[32m+[m[32m  Object.entries(finishes).forEach(([category, key]) => addTotal(key, measurements.filter((item) => item.kind === 'floorFinish' && item.category === category), `Measured ${category} area after exclusions`));[m
+[32m+[m[32m  report(usable.filter((item) => item.kind === 'floorFinish' && !finishes[item.category]), 'This finish has no matching Job Setup input.');[m
+[32m+[m[32m  report(usable.filter((item) => item.kind === 'measurement'), 'This general measurement has no classified Job Setup destination.');[m
+[32m+[m
+[32m+[m[32m  const walls = measurements.filter((item) => item.kind === 'wall' && item.category !== 'unclassified');[m
+[32m+[m[32m  report(usable.filter((item) => item.kind === 'wall' && item.category === 'unclassified'), 'Classify this wall as exterior or interior before importing its quantities.');[m
+[32m+[m[32m  // Construction class -> Job Setup field stem. Face Brick Veneer keeps the existing BrickVeneer[m
+[32m+[m[32m  // fields because that is what those rows have always measured; Rendered Brick Veneer is a new[m
+[32m+[m[32m  // construction type and needs its own destination rather than being folded into either[m
+[32m+[m[32m  // BrickVeneer or RenderedMasonry, which would misstate brick and render quantities.[m
+[32m+[m[32m  const wallClasses = Object.fromEntries([m
+[32m+[m[32m    Object.entries(EXTERIOR_WALL_SYSTEM_FIELD_KEYS)[m
+[32m+[m[32m      .filter(([, category]) => category !== 'Other')[m
+[32m+[m[32m      .map(([key, category]) => [category, key]),[m
+[32m+[m[32m  );[m
+[32m+[m[32m  const exteriorOfClass = (category) => walls.filter((item) => item.category === 'exterior' && item.exteriorClassification === category);[m
+[32m+[m[32m  Object.entries(wallClasses).forEach(([category, key]) => addTotal(`total${key}ExternalWallsLm`, exteriorOfClass(category), `All measured ${category} exterior wall lengths`));[m
+[32m+[m[32m  // A class with measured length but no destination row would be dropped by add() without a trace,[m
+[32m+[m[32m  // and an absent field is indistinguishable from a zero quantity once it reaches Job Setup.[m
+[32m+[m[32m  Object.entries(wallClasses).forEach(([category, key]) => {[m
+[32m+[m[32m    const measured = exteriorOfClass(category);[m
+[32m+[m[32m    if (!measured.length || editableRows.has(`total${key}ExternalWallsLm`)) return;[m
+[32m+[m[32m    warnings.push(`${category} exterior walls were measured but Job Setup has no ${key}ExternalWallsLm inputs. Review wall type mapping.`);[m
+[32m+[m[32m  });[m
+[32m+[m[32m  // A legacy exteriorClassification of Other is not itself proof of no classification: a wall[m
+[32m+[m[32m  // classified only under the newer canonical system (core-filled blockwork, double brick, custom)[m
+[32m+[m[32m  // carries no legacy exteriorType at all and would otherwise be misreported here as unclassified[m
+[32m+[m[32m  // even though it has a real, reviewed construction. classificationStatus is the single source of[m
+[32m+[m[32m  // truth for what genuinely has no evidence.[m
+[32m+[m[32m  const unclassifiedWalls = walls.filter((item) => item.category === 'exterior' && item.classificationStatus === 'unclassified');[m
+[32m+[m[32m  addTotal('totalUnclassifiedExteriorWallsLm', unclassifiedWalls, 'Unclassified measured exterior wall lengths');[m
+[32m+[m[32m  if (unclassifiedWalls.length) warnings.push('Some exterior walls have no material classification. Review these walls.');[m
+[32m+[m
+[32m+[m[32m  // Phase 2B: canonical LEVEL x CONSTRUCTION SYSTEM x FRAME Job Setup destinations. Every physical[m
+[32m+[m[32m  // wall above is grouped into exactly one of these buckets from that same single measurement -[m
+[32m+[m[32m  // never a second, independently imported source - so the visible wall-system rows on the sheet,[m
+[32m+[m[32m  // the legacy per-finish rows above and the derived cross-level totals can never disagree. Core-[m
+[32m+[m[32m  // filled Blockwork and Double Brick get their own dedicated destinations here, remaining separate[m
+[32m+[m[32m  // from Brick Veneer, Lightweight Cladding and Timber Framing, exactly as required.[m
+[32m+[m[32m  const CANONICAL_EXTERNAL_SYSTEM_ROWS = [[m
+[32m+[m[32m    { system: 'brick_veneer', frame: 70, key: 'BrickVeneer70mmWallsLm' },[m
+[32m+[m[32m    { system: 'brick_veneer', frame: 90, key: 'BrickVeneer90mmWallsLm' },[m
+[32m+[m[32m    { system: 'lightweight_cladding', frame: 70, key: 'LightweightCladding70mmWallsLm' },[m
+[32m+[m[32m    { system: 'lightweight_cladding', frame: 90, key: 'LightweightCladding90mmWallsLm' },[m
+[32m+[m[32m    { system: 'core_filled_blockwork', frame: null, key: 'CoreFilledBlockworkLm' },[m
+[32m+[m[32m    { system: 'double_brick', frame: null, key: 'DoubleBrickLm' },[m
+[32m+[m[32m    { system: 'custom', frame: null, key: 'CustomExternalLm' },[m
+   ];[m
+[32m+[m[32m  Object.entries(IMPORT_LEVELS).forEach(([level, prefix]) => {[m
+[32m+[m[32m    const levelExternalWalls = walls.filter((item) => item.category === 'exterior' && item.level === level);[m
+[32m+[m[32m    CANONICAL_EXTERNAL_SYSTEM_ROWS.forEach(({ system, frame, key }) => {[m
+[32m+[m[32m      const measured = levelExternalWalls.filter((item) => item.constructionSystem === system && (frame === null || item.frameThicknessMm === frame));[m
+[32m+[m[32m      addTotal(`${prefix}${key}`, measured, `${level}: measured ${CONSTRUCTION_SYSTEM_LABELS[system]}${frame ? ` ${frame}mm frame` : ''} exterior wall lengths`);[m
+[32m+[m[32m    });[m
+[32m+[m[32m    const levelUnclassifiedExternal = levelExternalWalls.filter((item) => item.classificationStatus === 'unclassified');[m
+[32m+[m[32m    addTotal(`${prefix}UnclassifiedExternalLm`, levelUnclassifiedExternal, `${level}: measured unclassified exterior wall lengths (review required)`);[m
+[32m+[m[32m    const levelInternalWalls = walls.filter((item) => item.category === 'interior' && item.level === level);[m
+[32m+[m[32m    addTotal(`${prefix}CustomInternalLm`, levelInternalWalls.filter((item) => item.constructionSystem === 'custom'), `${level}: measured custom internal wall lengths`);[m
+[32m+[m[32m    const levelUnclassifiedInternal = levelInternalWalls.filter((item) => item.classificationStatus === 'unclassified');[m
+[32m+[m[32m    addTotal(`${prefix}UnclassifiedInternalLm`, levelUnclassifiedInternal, `${level}: measured unclassified internal wall lengths (review required)`);[m
+[32m+[m[32m  });[m
+[32m+[m[32m  // Cross-level canonical totals - written directly from the full measured set, exactly like the[m
+[32m+[m[32m  // legacy total${system}ExternalWallsLm / totalUnclassifiedExteriorWallsLm rows already are, so[m
+[32m+[m[32m  // there is only ever one authoritative source per system, never a sheet formula duplicating it.[m
+[32m+[m[32m  const exteriorOfSystem = (system, frame) => walls.filter((item) => item.category === 'exterior' && item.constructionSystem === system && (frame === null || item.frameThicknessMm === frame));[m
+[32m+[m[32m  addTotal('totalBrickVeneer70mmWallsLm', exteriorOfSystem('brick_veneer', 70), 'All measured 230mm Brick Veneer — 70mm frame exterior wall lengths');[m
+[32m+[m[32m  addTotal('totalBrickVeneer90mmWallsLm', exteriorOfSystem('brick_veneer', 90), 'All measured 250mm Brick Veneer — 90mm frame exterior wall lengths');[m
+[32m+[m[32m  addTotal('totalLightweightCladding70mmWallsLm', exteriorOfSystem('lightweight_cladding', 70), 'All measured Lightweight Cladding — 70mm frame exterior wall lengths');[m
+[32m+[m[32m  addTotal('totalLightweightCladding90mmWallsLm', exteriorOfSystem('lightweight_cladding', 90), 'All measured Lightweight Cladding — 90mm frame exterior wall lengths');[m
+[32m+[m[32m  addTotal('totalCoreFilledBlockworkLm', exteriorOfSystem('core_filled_blockwork', null), 'All measured 200mm Core-filled Blockwork exterior wall lengths');[m
+[32m+[m[32m  addTotal('totalDoubleBrickLm', exteriorOfSystem('double_brick', null), 'All measured 230mm Double Brick exterior wall lengths');[m
+[32m+[m[32m  addTotal('totalCustomExternalLm', exteriorOfSystem('custom', null), 'All measured custom exterior wall lengths (review)');[m
+[32m+[m[32m  const interiorOfSystem = (system) => walls.filter((item) => item.category === 'interior' && item.constructionSystem === system);[m
+[32m+[m[32m  addTotal('totalCustomInternalLm', interiorOfSystem('custom'), 'All measured custom internal wall lengths (review)');[m
+[32m+[m[32m  const unclassifiedInternalWalls = walls.filter((item) => item.category === 'interior' && item.classificationStatus === 'unclassified');[m
+[32m+[m[32m  addTotal('totalUnclassifiedInternalLm', unclassifiedInternalWalls, 'All measured unclassified internal wall lengths (review required)');[m
+[32m+[m[32m  if (unclassifiedInternalWalls.length) warnings.push('Some internal walls have no material classification. Review these walls before pricing.');[m
+[32m+[m
+[32m+[m[32m  const openingGroups = [[m
+[32m+[m[32m    ['window', usable.filter((item) => item.kind === 'opening' && item.openingClass === 'Window')],[m
+[32m+[m[32m    ['door', usable.filter((item) => item.kind === 'opening' && /Door/.test(item.openingClass))],[m
+[32m+[m[32m  ];[m
+[32m+[m[32m  openingGroups.forEach(([type, items]) => {[m
+[32m+[m[32m    addTotal(`${type}OpeningsQty`, items, `Measured ${type} openings`);[m
+[32m+[m[32m    addTotal(`${type}OpeningsAreaM2`, items, `Measured ${type} opening width x height`, 'openingAreaM2');[m
+[32m+[m[32m    if (items.some((item) => item.openingAreaM2 === null)) warnings.push(`Some ${type} openings need width and height. Review openings.`);[m
+[32m+[m[32m  });[m
+[32m+[m[32m  report(usable.filter((item) => item.kind === 'opening' && item.openingClass === 'Other Opening'), 'This opening needs a window or door classification.');[m
+[32m+[m
+[32m+[m[32m  // Architraves. Every piece is cut longer than its opening to carry its mitres, and the whole job[m
+[32m+[m[32m  // is packed from one pool of stock so the offcut left by a wide window trims a narrower one.[m
+[32m+[m[32m  const openings = usable.filter((item) => item.kind === 'opening');[m
+[32m+[m[32m  const doorClasses = { 'Internal Door': 'internalDoor', 'External Door': 'externalDoor', 'Large Glazed/Stacker/Sliding Door': 'slidingDoor', 'Garage Door': 'garageDoor', Window: 'window' };[m
+[32m+[m[32m  Object.entries(doorClasses).forEach(([openingClass, prefix]) => {[m
+[32m+[m[32m    if (prefix !== 'window') addTotal(`${prefix}OpeningsQty`, openings.filter((item) => item.openingClass === openingClass), `Measured ${openingClass.toLowerCase()}s`);[m
+[32m+[m[32m  });[m
+[32m+[m[32m  const architrave = packOpenings(openings);[m
+[32m+[m[32m  if (openings.length && !architrave.unmeasured.length && !architrave.oversized) {[m
+[32m+[m[32m    add('architraveLengthsQty', architrave.lengths, `${ARCHITRAVE_DEFAULTS.stockLengthM}m lengths after cutting the whole job, offcuts reused`, 'EACH');[m
+[32m+[m[32m    add('architraveMeasuredLm', architrave.requiredM, 'Architrave actually cut, including mitre allowances', 'LM');[m
+[32m+[m[32m    add('architraveWasteLm', architrave.wasteM, 'Offcut that no remaining piece could use', 'LM');[m
+[32m+[m[32m    Object.entries(doorClasses).forEach(([openingClass, prefix]) => {[m
+[32m+[m[32m      if (architrave.perClass[openingClass]) add(`${prefix}ArchitraveLm`, architrave.perClass[openingClass], `${openingClass}: ${ARCHITRAVE_RULES[openingClass].faces === 2 ? 'both faces' : 'inside face'}, mitres included`, 'LM');[m
+[32m+[m[32m    });[m
+[32m+[m[32m  }[m
+[32m+[m[32m  if (architrave.unmeasured.length) warnings.push(`${architrave.unmeasured.length} opening(s) have no width and height. Review openings.`);[m
+[32m+[m[32m  if (architrave.oversized) warnings.push(`Some openings need a piece longer than a ${ARCHITRAVE_DEFAULTS.stockLengthM}m length. Review openings.`);[m
+[32m+[m[32m  const sills = openings.map((item) => ({ ...item, quantity: brickSillLength(item), unit: 'lm' })).filter((item) => item.quantity > 0);[m
+[32m+[m[32m  addTotal('totalBrickSillLengthLm', sills, 'Widths of windows requiring brick sills, excluding full height windows');[m
+[32m+[m
+[32m+[m[32m  const plasterRows = [];[m
+[32m+[m[32m  Object.entries(IMPORT_LEVELS).forEach(([level, prefix]) => {[m
+[32m+[m[32m    const floorplans = measurements.filter((item) => item.kind === 'floorArea' && item.level === level);[m
+[32m+[m[32m    const floorTypes = { Patio: `${prefix}PatioAreaM2`, Garage: `${prefix}GarageAreaM2`, Alfresco: `${prefix}AlfrescoAreaM2`, Porch: `${prefix}PorchAreaM2` };[m
+[32m+[m[32m    if (prefix !== 'third') Object.assign(floorTypes, { Deck: `${prefix}OtherAreaM2`, Other: `${prefix}OtherAreaM2` });[m
+[32m+[m[32m    if (prefix === 'lower') floorTypes.Balcony = 'lowerOtherAreaM2';[m
+[32m+[m[32m    if (prefix === 'upper') floorTypes.Balcony = 'balconyAreaM2';[m
+[32m+[m[32m    if (prefix === 'third') floorTypes.Balcony = 'upperBalconyAreaM2';[m
+[32m+[m[32m    new Set(Object.values(floorTypes)).forEach((key) => {[m
+[32m+[m[32m      const items = floorplans.filter((item) => floorTypes[item.category] === key);[m
+[32m+[m[32m      addTotal(key, items, `${level}: ${[...new Set(items.map((item) => item.category))].join(', ')} area`);[m
+[32m+[m[32m    });[m
+[32m+[m[32m    if (prefix !== 'third' && floorplans.some((item) => item.category === 'Patio') && !floorplans.some((item) => floorTypes[item.category] === `${prefix}OtherAreaM2`)) add(`${prefix}OtherAreaM2`, 0, `${level}: Patio is mapped separately; no Other area was measured`, 'm2');[m
+[32m+[m[32m    const living = floorplans.filter((item) => item.category === 'Living');[m
+[32m+[m[32m    const footprints = floorplans.filter((item) => item.category === 'Footprint');[m
+[32m+[m[32m    const deductions = floorplans.filter((item) => !['Footprint', 'Living'].includes(item.category));[m
+[32m+[m[32m    if (living.length) addTotal(`${prefix}FloorAreaM2`, living, `${level}: measured living area`);[m
+[32m+[m[32m    else if (footprints.length && floorplans.every((item) => item.quantity !== null)) {[m
+[32m+[m[32m      const livingArea = total(footprints) - total(deductions);[m
+[32m+[m[32m      if (livingArea >= 0) add(`${prefix}FloorAreaM2`, livingArea, `${level}: gross footprint less ${deductions.length ? 'separately measured areas' : 'no measured deductions'}`, 'm2');[m
+[32m+[m[32m      else warnings.push(`${level}: the measured deductions exceed the footprint. Review floor area boundaries.`);[m
+[32m+[m[32m    }[m
+[32m+[m[32mreport(floorplans.filter((item) => !['Footprint', 'Living'].includes(item.category) && !floorTypes[item.category]), 'This area category has no matching editable input on this level.');[m
+[32m+[m[41m [m
+[32m+[m[32m     const levelWalls = walls.filter((item) => item.level === level);[m
+[32m+[m[32m      const externalWalls = levelWalls.filter((item) => item.category === 'exterior');[m
+[32m+[m[32m      const internalWalls = levelWalls.filter((item) => item.category === 'interior');[m
+[32m+[m[41m [m
+[32m+[m[32m      // External walls total[m
+[32m+[m[32m     {[m
+[32m+[m[32m       const validExternalWalls = externalWalls.filter((item) => item.quantity !== null && Number.isFinite(Number(item.quantity)));[m
+[32m+[m[32m       if (validExternalWalls.length) {[m
+[32m+[m[32m         const total = validExternalWalls.reduce((sum, item) => sum + Number(item.quantity), 0);[m
+[32m+[m[32m         add(`${prefix}ExternalWallsLm`, total, `${level}: measured exterior wall lengths`, 'LM');[m
+[32m+[m[32m       }[m
+[32m+[m[32m     }[m
+[32m+[m
+[32m+[m[32m     // Internal walls total[m
+[32m+[m[32m     {[m
+[32m+[m[32m       const validInternalWalls = internalWalls.filter((item) => item.quantity !== null && Number.isFinite(Number(item.quantity)));[m
+[32m+[m[32m       if (validInternalWalls.length) {[m
+[32m+[m[32m         const total = validInternalWalls.reduce((sum, item) => sum + Number(item.quantity), 0);[m
+[32m+[m[32m         add(`${prefix}InternalWallsLm`, total, `${level}: measured internal wall lengths`, 'LM');[m
+[32m+[m[32m       }[m
+[32m+[m[32m     }[m
+[32m+[m
+[32m+[m[32m     // Wall class totals[m
+[32m+[m[32m     Object.entries(wallClasses).forEach(([category, key]) => {[m
+[32m+[m[32m       const wallsOfClass = levelWalls.filter((item) => item.category === 'exterior' && item.exteriorClassification === category);[m
+[32m+[m[32m       const validWallsOfClass = wallsOfClass.filter((item) => item.quantity !== null && Number.isFinite(Number(item.quantity)));[m
+[32m+[m[32m       if (validWallsOfClass.length) {[m
+[32m+[m[32m         const total = validWallsOfClass.reduce((sum, item) => sum + Number(item.quantity), 0);[m
+[32m+[m[32m         add(`${prefix}${key}ExternalWallsLm`, total, `${level}: measured ${category} exterior walls`, 'LM');[m
+[32m+[m[32m       }[m
+[32m+[m[32m     });[m
+[32m+[m[32m    const explicitHeights = levelWalls.map((item) => item.wallHeightM);[m
+[32m+[m[32m    if (explicitHeights.length && explicitHeights.every((value) => value > 0) && new Set(explicitHeights).size === 1) add(`${prefix}CeilingHeight`, explicitHeights[0] * 1000, `${level}: common measured wall height in millimetres`);[m
+[32m+[m[32m    ['exterior', 'interior'].forEach((category) => {[m
+[32m+[m[32m      const categoryWalls = levelWalls.filter((item) => item.category === category);[m
+[32m+[m[32m      const thicknesses = categoryWalls.map((item) => item.thicknessMm);[m
+[32m+[m[32m      if (thicknesses.length && thicknesses.every((value) => value > 0) && new Set(thicknesses).size === 1) add(`${prefix}${category === 'interior' ? 'Internal' : ''}WallThicknessMm`, thicknesses[0], `${level}: common ${category} wall thickness`, 'MM');[m
+[32m+[m[32m    });[m
+[32m+[m[32m    const interiorWalls = levelWalls.filter((item) => item.category === 'interior');[m
+[32m+[m[32m    const knownHeight = parseHeightM(schedule.jobSetupRows?.[`${prefix}CeilingHeight`]?.value ?? schedule.jobSetupRows?.[`${prefix}CeilingHeight`], null);[m
+[32m+[m[32m    if (levelWalls.some((item) => item.category === 'exterior' && !item.wallHeightM && !knownHeight)) warnings.push(`${level}: enter wall or ceiling heights.`);[m
+[32m+[m[32m    const plaster = interiorWalls.map((item) => {[m
+[32m+[m[32m      const height = item.wallHeightM || knownHeight;[m
+[32m+[m[32m      const gross = item.quantity !== null && height ? item.quantity * height * item.linedFaces : null;[m
+[32m+[m[32m      return { ...item, gross, net: gross === null ? null : Math.max(0, gross - (item.openingDeductionsEnabled ? item.linkedOpeningAreaM2 * item.linedFaces : 0)) };[m
+[32m+[m[32m    });[m
+[32m+[m[32m    addTotal(`${prefix}InternalWallGrossPlasterboardM2`, plaster, `${level}: internal wall lengths x known heights x lined faces`, 'gross');[m
+[32m+[m[32m    addTotal(`${prefix}InternalWallNetPlasterboardM2`, plaster, `${level}: internal wall lining less linked opening deductions`, 'net');[m
+[32m+[m[32m    plasterRows.push(...plaster);[m
+[32m+[m[32m    if (plaster.some((item) => item.gross === null)) warnings.push(`${level}: enter wall or ceiling heights.`);[m
+[32m+[m[32m    addTotal(`${prefix}BrickSillLengthLm`, sills.filter((item) => item.level === level), `${level}: measured brick sill widths`);[m
+[32m+[m[32m    addTotal(`${prefix}EavesLm`, measurements.filter((item) => item.kind === 'eave' && item.level === level), `${level}: measured eaves lengths`);[m
+[32m+[m[32m    addTotal(`${prefix}RoofPlanAreaM2`, measurements.filter((item) => item.kind === 'roofArea' && item.level === level), `${level}: measured roof plan area`);[m
+[32m+[m[32m  });[m
+[32m+[m[32m  const allInteriorWalls = walls.filter((item) => item.category === 'interior');[m
+[32m+[m[32m  if (plasterRows.length === allInteriorWalls.length) {[m
+[32m+[m[32m    addTotal('totalInternalWallGrossPlasterboardM2', plasterRows, 'Total measured internal wall plasterboard with known heights', 'gross');[m
+[32m+[m[32m    addTotal('totalInternalWallNetPlasterboardM2', plasterRows, 'Total measured internal wall plasterboard less linked openings', 'net');[m
+[32m+[m[32m  }[m
+[32m+[m[32m  const unlinked = openings.filter((item) => !item.linkedWallId);[m
+[32m+[m[32m  if (unlinked.length) warnings.push(`${unlinked.length} opening(s) need a wall assignment. Review openings.`);[m
+[32m+[m[32m  const unhostedDoors = openings.filter((item) => item.openingClass === 'Internal Door' && !item.wallThicknessMm && !item.thicknessMm);[m
+[32m+[m[32m  if (unhostedDoors.length) warnings.push(`${unhostedDoors.length} internal door opening(s) need a wall link or frame thickness. Review openings.`);[m
+[32m+[m[32m  Object.entries(takeoffMaterialFields(measurements, schedule.jobSetupRows)).forEach(([key, value]) => add(key, value, 'Associated takeoff wall/opening measurements'));[m
+[32m+[m[32m  const eaves = measurements.filter((item) => item.kind === 'eave');[m
+[32m+[m[41m  [m
+[32m+[m[32m  const widths = eaves.map((item) => item.widthMm);[m
+[32m+[m[32m  if (widths.length && widths.every((width) => width > 0) && new Set(widths).size === 1) add('eavesWidthM', widths[0] / 1000, 'Common measured eaves width in metres', 'M');[m
+[32m+[m[32m  else if (widths.length) warnings.push('Eaves have mixed or missing widths. Review the eaves width.');[m
+[32m+[m
+[32m+[m[32m  // ONE cavity sliding door = ONE canonical opening, which derives its own cavity slider[m
+[32m+[m[32m  // frame/cage requirement here - the builder never enters the cage as a second, independent[m
+[32m+[m[32m  // Takeoff item.[m
+[32m+[m[32m  const cavitySliderOpenings = usable.filter((item) => item.kind === 'opening' && isCavitySlider(item));[m
+[32m+[m[32m  const cavitySliderSchedule = buildCavitySliderSchedule(cavitySliderOpenings);[m
+[32m+[m[32m  Object.entries(IMPORT_LEVELS).forEach(([level, prefix]) => {[m
+[32m+[m[32m    addTotal(`${prefix}CavitySliderCagesEach`, cavitySliderOpenings.filter((item) => item.level === level), `${level}: cavity sliding doors, one frame/cage per door`);[m
+[32m+[m[32m  });[m
+[32m+[m[32m  addTotal('totalCavitySliderCagesEach', cavitySliderOpenings, 'All measured cavity sliding doors, one frame/cage per door');[m
+[32m+[m
+[32m+[m[32m  // Pillars, Posts & Columns: ONE physical column = ONE canonical Takeoff object, which derives[m
+[32m+[m[32m  // several downstream trade quantities here rather than requiring duplicate manual entries - a[m
+[32m+[m[32m  // post/column count for the frame order, and (only when a brick core or brick surround is[m
+[32m+[m[32m  // documented) a derived masonry face area for the SAME existing brick-order engine walls already[m
+[32m+[m[32m  // use (brickOrderQuantities), never a second, competing brick calculation.[m
+[32m+[m[32m  const pillars = usable.filter((item) => item.kind === 'pillar');[m
+[32m+[m[32m  const pillarSchedule = schedule.projectTotals?.pillars || [];[m
+[32m+[m[32m  Object.entries(IMPORT_LEVELS).forEach(([level, prefix]) => {[m
+[32m+[m[32m    addTotal(`${prefix}PostColumnsEach`, pillars.filter((item) => item.level === level), `${level}: measured posts/columns`);[m
+[32m+[m[32m  });[m
+[32m+[m[32m  addTotal('totalPostColumnsEach', pillars, 'All measured posts/columns');[m
+[32m+[m[32m  const unclassifiedPillars = pillars.filter((item) => item.classificationStatus === 'unclassified');[m
+[32m+[m[32m  addTotal('totalUnclassifiedPostColumnsEach', unclassifiedPillars, 'Unclassified posts/columns (review required)');[m
+[32m+[m[32m  if (unclassifiedPillars.length) warnings.push('Some posts/columns have no structural/core classification; review before pricing.');[m
+[32m+[m[32m  // Perimeter x height is the masonry FACE area a brick skin actually covers - never footprint x[m
+[32m+[m[32m  // height, which would misstate a slab/base area as a brick quantity. Uses whichever rectangle is[m
+[32m+[m[32m  // actually brick: the surround's outer footprint when one exists, or the core's own footprint for[m
+[32m+[m[32m  // a solid brick/masonry pillar with no separate core.[m
+[32m+[m[32m  const brickFaceNetM2 = (item) => {[m
+[32m+[m[32m    const hasBrickSurround = item.surroundType === 'brick' || item.surroundType === 'rendered_brick';[m
+[32m+[m[32m    const isBrickCore = item.coreType === 'brick' && (!item.surroundType || item.surroundType === 'none');[m
+[32m+[m[32m    if (!hasBrickSurround && !isBrickCore) return 0;[m
+[32m+[m[32m    const widthMm = hasBrickSurround ? item.surroundWidthMm : item.coreWidthMm;[m
+[32m+[m[32m    const depthMm = hasBrickSurround ? item.surroundDepthMm : item.coreDepthMm;[m
+[32m+[m[32m    if (!(widthMm > 0) || !(depthMm > 0) || !(item.heightMm > 0)) return 0;[m
+[32m+[m[32m    const perimeterM = 2 * (widthMm + depthMm) / 1000;[m
+[32m+[m[32m    return perimeterM * (item.heightMm / 1000) * (Number(item.quantity) || 1);[m
+[32m+[m[32m  };[m
+[32m+[m[32m  const isRenderedFinish = (item) => item.surroundType === 'rendered_brick' || (item.coreType === 'brick' && item.brickFinish === 'Rendered Brick');[m
+[32m+[m[32m  const facePillars = pillars.filter((item) => brickFaceNetM2(item) > 0 && !isRenderedFinish(item));[m
+[32m+[m[32m  const renderedPillars = pillars.filter((item) => brickFaceNetM2(item) > 0 && isRenderedFinish(item));[m
+[32m+[m[32m  const totalFaceNetM2 = round(facePillars.reduce((sum, item) => sum + brickFaceNetM2(item), 0), 4);[m
+[32m+[m[32m  const totalRenderedNetM2 = round(renderedPillars.reduce((sum, item) => sum + brickFaceNetM2(item), 0), 4);[m
+[32m+[m[32m  if (totalFaceNetM2 > 0) add('totalPostColumnFaceBrickNetM2', totalFaceNetM2, 'Derived from post/column brick surround or brick core geometry (perimeter x height), face finish', 'M2');[m
+[32m+[m[32m  if (totalRenderedNetM2 > 0) add('totalPostColumnRenderedBrickNetM2', totalRenderedNetM2, 'Derived from post/column brick surround or brick core geometry (perimeter x height), rendered finish', 'M2');[m
+[32m+[m[32m  if (totalFaceNetM2 > 0 || totalRenderedNetM2 > 0) {[m
+[32m+[m[32m    // Same engine, same waste/course-conversion rules as wall brick ordering - a post/column brick[m
+[32m+[m[32m    // quantity is never a second, competing calculation.[m
+[32m+[m[32m    const order = brickOrderQuantities(totalFaceNetM2, totalRenderedNetM2);[m
+[32m+[m[32m    add('totalPostColumnFaceBrickOrderEach', order.faceBrickOrderEach, 'Derived post/column face brick order quantity (same brick-order engine as walls)', 'EACH');[m
+[32m+[m[32m    add('totalPostColumnRenderedBrickOrderEach', order.renderedTwinOrderEach + order.renderedSingleOrderEach, 'Derived post/column rendered brick order quantity (same brick-order engine as walls)', 'EACH');[m
+[32m+[m[32m  }[m
+ [m
+   return {[m
+[31m-    projectName: schedule.project.projectName,[m
+[31m-    clientName: schedule.project.clientName,[m
+[31m-    siteAddress: schedule.project.siteAddress,[m
+[31m-    planFilename: schedule.project.planFilename,[m
+[31m-    numberOfStoreys: schedule.project.numberOfPlanSheets,[m
+[31m-    floorAreas: schedule.projectTotals.floorAreas,[m
+[31m-    roomList: schedule.projectTotals.rooms,[m
+[32m+[m[32m    projectName: schedule.project?.projectName || '', clientName: schedule.project?.clientName || '', siteAddress: schedule.project?.siteAddress || '',[m
+[32m+[m[32m    planFilename: schedule.project?.planFilename || '',[m
+[32m+[m[32m    floorAreas: schedule.projectTotals?.floorAreas || [], roomList: schedule.projectTotals?.rooms || [],[m
+     basicProjectMeasurements: flattenScheduleRows(schedule, 'projectTotals'),[m
+[31m-    dataInputFields: fields,[m
+[31m-    mappingPreview,[m
+[31m-    warnings,[m
+[31m-    provenance: {[m
+[31m-      takeoffId: options.takeoffId || '',[m
+[31m-      revision: Number(options.revision || 0),[m
+[31m-      transferredAt: new Date().toISOString()[m
+[31m-    }[m
+[32m+[m[32m    schedule, sheetLevels, dataInputFields: fields, cavitySliderSchedule, pillarSchedule,[m
+[32m+[m[32m    ...(Array.isArray(schedule.measurementRecords) ? { absentMaterialFields: absentTakeoffMaterialFields(measurements).filter((key) => editableRows.has(key) && !Object.hasOwn(fields, key)) } : {}),[m
+[32m+[m[32m    mappingPreview: [...new Map(mappingPreview.map((row) => [row.destinationKey, row])).values()], unsupported,[m
+[32m+[m[32m    warnings: [...new Set(warnings)],[m
+[32m+[m[32m    provenance: { takeoffId: options.takeoffId || '', revision: Number(options.revision || 0), projectId: options.projectId || '', sheetLevels, transferredAt: new Date().toISOString() },[m
+   };[m
+ }[m
+[31m-[m
+ export function getScheduleSignature(schedule) {[m
+   return JSON.stringify(flattenScheduleRows(schedule, 'projectTotals').map((row) => [row.itemId, row.quantity, row.unit]));[m
+ }[m

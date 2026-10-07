@@ -4,6 +4,7 @@
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 import { withAuth } from "../../../lib/withWorkspace";
+import { demoSimulationResult } from "../../../lib/demoWorkspace";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2023-10-16",
@@ -21,6 +22,20 @@ async function handler(req, res) {
   }
 
   const userId = req.user.id;
+  if (req.isDemoWorkspace) {
+    const result = await demoSimulationResult({
+      workspaceId: req.workspaceId,
+      actionType: "billing-portal",
+      provider: "stripe",
+      target: userId,
+      userId,
+      message: "Demo billing portal simulated - no Stripe portal session created.",
+    });
+    return res.json({
+      ...result,
+      url: `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/modules/calendar/dashboard?portal=demo`,
+    });
+  }
 
   const { data: profile } = await supabase
     .from("profiles")

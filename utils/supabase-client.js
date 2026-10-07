@@ -2,6 +2,7 @@
 // Supabase client (browser) – FIXES: "Module not found: Can't resolve .../utils/supabase-client"
 
 import { createClient } from "@supabase/supabase-js";
+import { nonStealingLock } from "../lib/nonStealingLock.js";
 
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -18,12 +19,15 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
   );
 }
 
-export const supabase = createClient(SUPABASE_URL || "", SUPABASE_ANON_KEY || "", {
+const clientKey = `__gr8SupabaseNonStealing:${SUPABASE_URL}`;
+export const supabase = (typeof window !== "undefined" && window[clientKey]) || createClient(SUPABASE_URL || "", SUPABASE_ANON_KEY || "", {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
+    lock: nonStealingLock,
   },
 });
+if (typeof window !== "undefined") window[clientKey] = supabase;
 
 export default supabase;

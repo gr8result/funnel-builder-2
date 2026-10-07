@@ -1,0 +1,1009 @@
+product_id,brand,model,family,field,value,source_status,source_organisation,source_url,checked_at
+product:appliances:cooktops:ariston:nio-844-do-b-aus,Ariston,NIO 844 DO B AUS,cooktops,family,cooktops,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:ariston:nio-844-do-b-aus,Ariston,NIO 844 DO B AUS,cooktops,manufacturerModel,NIO 844 DO B AUS,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:ariston:nio-844-do-b-aus,Ariston,NIO 844 DO B AUS,cooktops,width,785 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:ariston:nio-844-do-b-aus,Ariston,NIO 844 DO B AUS,cooktops,widthMm,785,verified-source,Ariston Australia,https://ariston.com.au/inventory/nio844dob/,2026-09-02
+product:appliances:cooktops:ariston:nio-844-do-b-aus,Ariston,NIO 844 DO B AUS,cooktops,finish,,pending-verification,,,2026-09-02
+product:appliances:cooktops:ariston:nio-844-do-b-aus,Ariston,NIO 844 DO B AUS,cooktops,fuelOrEnergyType,induction,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:ariston:nio-844-do-b-aus,Ariston,NIO 844 DO B AUS,cooktops,installationType,,pending-verification,,,2026-09-02
+product:appliances:cooktops:ariston:nio-844-do-b-aus,Ariston,NIO 844 DO B AUS,cooktops,cooktopType,induction,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:ariston:nio-844-do-b-aus,Ariston,NIO 844 DO B AUS,cooktops,cookingZonesOrBurners,4,verified-source,Ariston Australia,https://ariston.com.au/inventory/nio844dob/,2026-09-02
+product:appliances:cooktops:ariston:nio-844-do-b-aus,Ariston,NIO 844 DO B AUS,cooktops,controlType,,pending-verification,,,2026-09-02
+product:appliances:cooktops:ariston:nio-844-do-b-aus,Ariston,NIO 844 DO B AUS,cooktops,gasOrElectricalRequirements,,pending-verification,,,2026-09-02
+product:appliances:cooktops:ariston:nio-844-do-b-aus,Ariston,NIO 844 DO B AUS,cooktops,heightMm,51,verified-source,Ariston Australia,https://ariston.com.au/inventory/nio844dob/,2026-09-02
+product:appliances:cooktops:ariston:nio-844-do-b-aus,Ariston,NIO 844 DO B AUS,cooktops,depthMm,520,verified-source,Ariston Australia,https://ariston.com.au/inventory/nio844dob/,2026-09-02
+product:appliances:cooktops:ariston:nio-844-do-b-aus,Ariston,NIO 844 DO B AUS,cooktops,controls,touch control,verified-source,Ariston Australia,https://ariston.com.au/inventory/nio844dob/,2026-09-02
+product:appliances:cooktops:ariston:nio-844-do-b-aus,Ariston,NIO 844 DO B AUS,cooktops,cookingTechnology,induction,verified-source,Ariston Australia,https://ariston.com.au/inventory/nio844dob/,2026-09-02
+product:appliances:cooktops:ariston:pc640ntx,Ariston,PC640NTX,cooktops,family,cooktops,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:ariston:pc640ntx,Ariston,PC640NTX,cooktops,manufacturerModel,PC640NTX,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:ariston:pc640ntx,Ariston,PC640NTX,cooktops,width,555 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:ariston:pc640ntx,Ariston,PC640NTX,cooktops,widthMm,555,verified-source,Ariston Australia,https://ariston.com.au/inventory/pc640ntx/,2026-09-02
+product:appliances:cooktops:ariston:pc640ntx,Ariston,PC640NTX,cooktops,finish,,pending-verification,,,2026-09-02
+product:appliances:cooktops:ariston:pc640ntx,Ariston,PC640NTX,cooktops,fuelOrEnergyType,gas,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:ariston:pc640ntx,Ariston,PC640NTX,cooktops,installationType,,pending-verification,,,2026-09-02
+product:appliances:cooktops:ariston:pc640ntx,Ariston,PC640NTX,cooktops,cooktopType,gas,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:ariston:pc640ntx,Ariston,PC640NTX,cooktops,cookingZonesOrBurners,4,verified-source,Ariston Australia,https://ariston.com.au/inventory/pc640ntx/,2026-09-02
+product:appliances:cooktops:ariston:pc640ntx,Ariston,PC640NTX,cooktops,controlType,,pending-verification,,,2026-09-02
+product:appliances:cooktops:ariston:pc640ntx,Ariston,PC640NTX,cooktops,gasOrElectricalRequirements,,pending-verification,,,2026-09-02
+product:appliances:cooktops:ariston:pc640ntx,Ariston,PC640NTX,cooktops,heightMm,390,verified-source,Ariston Australia,https://ariston.com.au/inventory/pc640ntx/,2026-09-02
+product:appliances:cooktops:ariston:pc640ntx,Ariston,PC640NTX,cooktops,depthMm,475,verified-source,Ariston Australia,https://ariston.com.au/inventory/pc640ntx/,2026-09-02
+product:appliances:cooktops:ariston:pc640ntx,Ariston,PC640NTX,cooktops,controls,one hand electronic ignition,verified-source,Ariston Australia,https://ariston.com.au/inventory/pc640ntx/,2026-09-02
+product:appliances:cooktops:ariston:pc640ntx,Ariston,PC640NTX,cooktops,cookingTechnology,gas,verified-source,Ariston Australia,https://ariston.com.au/inventory/pc640ntx/,2026-09-02
+product:appliances:cooktops:ariston:pf604ix,Ariston,PF604IX,cooktops,family,cooktops,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:ariston:pf604ix,Ariston,PF604IX,cooktops,manufacturerModel,PF604IX,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:ariston:pf604ix,Ariston,PF604IX,cooktops,width,600 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:ariston:pf604ix,Ariston,PF604IX,cooktops,widthMm,600,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:ariston:pf604ix,Ariston,PF604IX,cooktops,finish,,pending-verification,,,2026-09-02
+product:appliances:cooktops:ariston:pf604ix,Ariston,PF604IX,cooktops,fuelOrEnergyType,electric,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:ariston:pf604ix,Ariston,PF604IX,cooktops,installationType,,pending-verification,,,2026-09-02
+product:appliances:cooktops:ariston:pf604ix,Ariston,PF604IX,cooktops,cooktopType,electric,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:ariston:pf604ix,Ariston,PF604IX,cooktops,cookingZonesOrBurners,,pending-verification,,,2026-09-02
+product:appliances:cooktops:ariston:pf604ix,Ariston,PF604IX,cooktops,controlType,,pending-verification,,,2026-09-02
+product:appliances:cooktops:ariston:pf604ix,Ariston,PF604IX,cooktops,gasOrElectricalRequirements,,pending-verification,,,2026-09-02
+product:appliances:cooktops:ariston:pkq-755-d-gh-aus,Ariston,PKQ 755 D GH AUS,cooktops,family,cooktops,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:ariston:pkq-755-d-gh-aus,Ariston,PKQ 755 D GH AUS,cooktops,manufacturerModel,PKQ 755 D GH AUS,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:ariston:pkq-755-d-gh-aus,Ariston,PKQ 755 D GH AUS,cooktops,width,900 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:ariston:pkq-755-d-gh-aus,Ariston,PKQ 755 D GH AUS,cooktops,widthMm,900,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:ariston:pkq-755-d-gh-aus,Ariston,PKQ 755 D GH AUS,cooktops,finish,,pending-verification,,,2026-09-02
+product:appliances:cooktops:ariston:pkq-755-d-gh-aus,Ariston,PKQ 755 D GH AUS,cooktops,fuelOrEnergyType,gas,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:ariston:pkq-755-d-gh-aus,Ariston,PKQ 755 D GH AUS,cooktops,installationType,,pending-verification,,,2026-09-02
+product:appliances:cooktops:ariston:pkq-755-d-gh-aus,Ariston,PKQ 755 D GH AUS,cooktops,cooktopType,gas,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:ariston:pkq-755-d-gh-aus,Ariston,PKQ 755 D GH AUS,cooktops,cookingZonesOrBurners,,pending-verification,,,2026-09-02
+product:appliances:cooktops:ariston:pkq-755-d-gh-aus,Ariston,PKQ 755 D GH AUS,cooktops,controlType,,pending-verification,,,2026-09-02
+product:appliances:cooktops:ariston:pkq-755-d-gh-aus,Ariston,PKQ 755 D GH AUS,cooktops,gasOrElectricalRequirements,,pending-verification,,,2026-09-02
+product:appliances:cooktops:blanco:bcc604t,Blanco,BCC604T,cooktops,family,cooktops,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:blanco:bcc604t,Blanco,BCC604T,cooktops,manufacturerModel,BCC604T,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:blanco:bcc604t,Blanco,BCC604T,cooktops,width,600 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:blanco:bcc604t,Blanco,BCC604T,cooktops,widthMm,600,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:blanco:bcc604t,Blanco,BCC604T,cooktops,finish,,pending-verification,,,2026-09-02
+product:appliances:cooktops:blanco:bcc604t,Blanco,BCC604T,cooktops,fuelOrEnergyType,ceramic electric,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:blanco:bcc604t,Blanco,BCC604T,cooktops,installationType,,pending-verification,,,2026-09-02
+product:appliances:cooktops:blanco:bcc604t,Blanco,BCC604T,cooktops,cooktopType,ceramic electric,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:blanco:bcc604t,Blanco,BCC604T,cooktops,cookingZonesOrBurners,,pending-verification,,,2026-09-02
+product:appliances:cooktops:blanco:bcc604t,Blanco,BCC604T,cooktops,controlType,,pending-verification,,,2026-09-02
+product:appliances:cooktops:blanco:bcc604t,Blanco,BCC604T,cooktops,gasOrElectricalRequirements,,pending-verification,,,2026-09-02
+product:appliances:cooktops:blanco:bcg604wx,Blanco,BCG604WX,cooktops,family,cooktops,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:blanco:bcg604wx,Blanco,BCG604WX,cooktops,manufacturerModel,BCG604WX,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:blanco:bcg604wx,Blanco,BCG604WX,cooktops,width,600 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:blanco:bcg604wx,Blanco,BCG604WX,cooktops,widthMm,600,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:blanco:bcg604wx,Blanco,BCG604WX,cooktops,finish,,pending-verification,,,2026-09-02
+product:appliances:cooktops:blanco:bcg604wx,Blanco,BCG604WX,cooktops,fuelOrEnergyType,gas,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:blanco:bcg604wx,Blanco,BCG604WX,cooktops,installationType,,pending-verification,,,2026-09-02
+product:appliances:cooktops:blanco:bcg604wx,Blanco,BCG604WX,cooktops,cooktopType,gas,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:blanco:bcg604wx,Blanco,BCG604WX,cooktops,cookingZonesOrBurners,,pending-verification,,,2026-09-02
+product:appliances:cooktops:blanco:bcg604wx,Blanco,BCG604WX,cooktops,controlType,,pending-verification,,,2026-09-02
+product:appliances:cooktops:blanco:bcg604wx,Blanco,BCG604WX,cooktops,gasOrElectricalRequirements,,pending-verification,,,2026-09-02
+product:appliances:cooktops:blanco:bcg905wx,Blanco,BCG905WX,cooktops,family,cooktops,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:blanco:bcg905wx,Blanco,BCG905WX,cooktops,manufacturerModel,BCG905WX,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:blanco:bcg905wx,Blanco,BCG905WX,cooktops,width,900 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:blanco:bcg905wx,Blanco,BCG905WX,cooktops,widthMm,900,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:blanco:bcg905wx,Blanco,BCG905WX,cooktops,finish,,pending-verification,,,2026-09-02
+product:appliances:cooktops:blanco:bcg905wx,Blanco,BCG905WX,cooktops,fuelOrEnergyType,gas,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:blanco:bcg905wx,Blanco,BCG905WX,cooktops,installationType,,pending-verification,,,2026-09-02
+product:appliances:cooktops:blanco:bcg905wx,Blanco,BCG905WX,cooktops,cooktopType,gas,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:blanco:bcg905wx,Blanco,BCG905WX,cooktops,cookingZonesOrBurners,,pending-verification,,,2026-09-02
+product:appliances:cooktops:blanco:bcg905wx,Blanco,BCG905WX,cooktops,controlType,,pending-verification,,,2026-09-02
+product:appliances:cooktops:blanco:bcg905wx,Blanco,BCG905WX,cooktops,gasOrElectricalRequirements,,pending-verification,,,2026-09-02
+product:appliances:cooktops:blanco:bic90x,Blanco,BIC90X,cooktops,family,cooktops,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:blanco:bic90x,Blanco,BIC90X,cooktops,manufacturerModel,BIC90X,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:blanco:bic90x,Blanco,BIC90X,cooktops,width,900 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:blanco:bic90x,Blanco,BIC90X,cooktops,widthMm,900,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:blanco:bic90x,Blanco,BIC90X,cooktops,finish,,pending-verification,,,2026-09-02
+product:appliances:cooktops:blanco:bic90x,Blanco,BIC90X,cooktops,fuelOrEnergyType,induction,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:blanco:bic90x,Blanco,BIC90X,cooktops,installationType,,pending-verification,,,2026-09-02
+product:appliances:cooktops:blanco:bic90x,Blanco,BIC90X,cooktops,cooktopType,induction,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:blanco:bic90x,Blanco,BIC90X,cooktops,cookingZonesOrBurners,,pending-verification,,,2026-09-02
+product:appliances:cooktops:blanco:bic90x,Blanco,BIC90X,cooktops,controlType,,pending-verification,,,2026-09-02
+product:appliances:cooktops:blanco:bic90x,Blanco,BIC90X,cooktops,gasOrElectricalRequirements,,pending-verification,,,2026-09-02
+product:appliances:cooktops:euromaid:ecck900,Euromaid,ECCK900,cooktops,family,cooktops,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:euromaid:ecck900,Euromaid,ECCK900,cooktops,manufacturerModel,ECCK900,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:euromaid:ecck900,Euromaid,ECCK900,cooktops,width,900 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:euromaid:ecck900,Euromaid,ECCK900,cooktops,widthMm,900,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:euromaid:ecck900,Euromaid,ECCK900,cooktops,finish,,pending-verification,,,2026-09-02
+product:appliances:cooktops:euromaid:ecck900,Euromaid,ECCK900,cooktops,fuelOrEnergyType,ceramic electric,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:euromaid:ecck900,Euromaid,ECCK900,cooktops,installationType,,pending-verification,,,2026-09-02
+product:appliances:cooktops:euromaid:ecck900,Euromaid,ECCK900,cooktops,cooktopType,ceramic electric,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:euromaid:ecck900,Euromaid,ECCK900,cooktops,cookingZonesOrBurners,,pending-verification,,,2026-09-02
+product:appliances:cooktops:euromaid:ecck900,Euromaid,ECCK900,cooktops,controlType,,pending-verification,,,2026-09-02
+product:appliances:cooktops:euromaid:ecck900,Euromaid,ECCK900,cooktops,gasOrElectricalRequirements,,pending-verification,,,2026-09-02
+product:appliances:cooktops:euromaid:gc90s,Euromaid,GC90S,cooktops,family,cooktops,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:euromaid:gc90s,Euromaid,GC90S,cooktops,manufacturerModel,GC90S,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:euromaid:gc90s,Euromaid,GC90S,cooktops,width,900 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:euromaid:gc90s,Euromaid,GC90S,cooktops,widthMm,900,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:euromaid:gc90s,Euromaid,GC90S,cooktops,finish,,pending-verification,,,2026-09-02
+product:appliances:cooktops:euromaid:gc90s,Euromaid,GC90S,cooktops,fuelOrEnergyType,gas,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:euromaid:gc90s,Euromaid,GC90S,cooktops,installationType,,pending-verification,,,2026-09-02
+product:appliances:cooktops:euromaid:gc90s,Euromaid,GC90S,cooktops,cooktopType,gas,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:euromaid:gc90s,Euromaid,GC90S,cooktops,cookingZonesOrBurners,,pending-verification,,,2026-09-02
+product:appliances:cooktops:euromaid:gc90s,Euromaid,GC90S,cooktops,controlType,,pending-verification,,,2026-09-02
+product:appliances:cooktops:euromaid:gc90s,Euromaid,GC90S,cooktops,gasOrElectricalRequirements,,pending-verification,,,2026-09-02
+product:appliances:cooktops:euromaid:kcs4,Euromaid,KCS4,cooktops,family,cooktops,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:euromaid:kcs4,Euromaid,KCS4,cooktops,manufacturerModel,KCS4,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:euromaid:kcs4,Euromaid,KCS4,cooktops,width,600 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:euromaid:kcs4,Euromaid,KCS4,cooktops,widthMm,600,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:euromaid:kcs4,Euromaid,KCS4,cooktops,finish,,pending-verification,,,2026-09-02
+product:appliances:cooktops:euromaid:kcs4,Euromaid,KCS4,cooktops,fuelOrEnergyType,ceramic electric,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:euromaid:kcs4,Euromaid,KCS4,cooktops,installationType,,pending-verification,,,2026-09-02
+product:appliances:cooktops:euromaid:kcs4,Euromaid,KCS4,cooktops,cooktopType,ceramic electric,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:euromaid:kcs4,Euromaid,KCS4,cooktops,cookingZonesOrBurners,,pending-verification,,,2026-09-02
+product:appliances:cooktops:euromaid:kcs4,Euromaid,KCS4,cooktops,controlType,,pending-verification,,,2026-09-02
+product:appliances:cooktops:euromaid:kcs4,Euromaid,KCS4,cooktops,gasOrElectricalRequirements,,pending-verification,,,2026-09-02
+product:appliances:cooktops:euromaid:wk60s,Euromaid,WK60S,cooktops,family,cooktops,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:euromaid:wk60s,Euromaid,WK60S,cooktops,manufacturerModel,WK60S,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:euromaid:wk60s,Euromaid,WK60S,cooktops,width,600 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:euromaid:wk60s,Euromaid,WK60S,cooktops,widthMm,600,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:euromaid:wk60s,Euromaid,WK60S,cooktops,finish,,pending-verification,,,2026-09-02
+product:appliances:cooktops:euromaid:wk60s,Euromaid,WK60S,cooktops,fuelOrEnergyType,gas,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:euromaid:wk60s,Euromaid,WK60S,cooktops,installationType,,pending-verification,,,2026-09-02
+product:appliances:cooktops:euromaid:wk60s,Euromaid,WK60S,cooktops,cooktopType,gas,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:euromaid:wk60s,Euromaid,WK60S,cooktops,cookingZonesOrBurners,,pending-verification,,,2026-09-02
+product:appliances:cooktops:euromaid:wk60s,Euromaid,WK60S,cooktops,controlType,,pending-verification,,,2026-09-02
+product:appliances:cooktops:euromaid:wk60s,Euromaid,WK60S,cooktops,gasOrElectricalRequirements,,pending-verification,,,2026-09-02
+product:appliances:cooktops:omega:ocg604x,Omega,OCG604X,cooktops,family,cooktops,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:omega:ocg604x,Omega,OCG604X,cooktops,manufacturerModel,OCG604X,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:omega:ocg604x,Omega,OCG604X,cooktops,width,600 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:omega:ocg604x,Omega,OCG604X,cooktops,widthMm,600,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:omega:ocg604x,Omega,OCG604X,cooktops,finish,,pending-verification,,,2026-09-02
+product:appliances:cooktops:omega:ocg604x,Omega,OCG604X,cooktops,fuelOrEnergyType,gas,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:omega:ocg604x,Omega,OCG604X,cooktops,installationType,,pending-verification,,,2026-09-02
+product:appliances:cooktops:omega:ocg604x,Omega,OCG604X,cooktops,cooktopType,gas,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:omega:ocg604x,Omega,OCG604X,cooktops,cookingZonesOrBurners,4,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:omega:ocg604x,Omega,OCG604X,cooktops,controlType,,pending-verification,,,2026-09-02
+product:appliances:cooktops:omega:ocg604x,Omega,OCG604X,cooktops,gasOrElectricalRequirements,,pending-verification,,,2026-09-02
+product:appliances:cooktops:omega:oci64z,Omega,OCI64Z,cooktops,family,cooktops,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:omega:oci64z,Omega,OCI64Z,cooktops,manufacturerModel,OCI64Z,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:omega:oci64z,Omega,OCI64Z,cooktops,width,600 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:omega:oci64z,Omega,OCI64Z,cooktops,widthMm,600,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:omega:oci64z,Omega,OCI64Z,cooktops,finish,,pending-verification,,,2026-09-02
+product:appliances:cooktops:omega:oci64z,Omega,OCI64Z,cooktops,fuelOrEnergyType,induction,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:omega:oci64z,Omega,OCI64Z,cooktops,installationType,,pending-verification,,,2026-09-02
+product:appliances:cooktops:omega:oci64z,Omega,OCI64Z,cooktops,cooktopType,induction,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:omega:oci64z,Omega,OCI64Z,cooktops,cookingZonesOrBurners,,pending-verification,,,2026-09-02
+product:appliances:cooktops:omega:oci64z,Omega,OCI64Z,cooktops,controlType,,pending-verification,,,2026-09-02
+product:appliances:cooktops:omega:oci64z,Omega,OCI64Z,cooktops,gasOrElectricalRequirements,,pending-verification,,,2026-09-02
+product:appliances:cooktops:omega:oi90z,Omega,OI90Z,cooktops,family,cooktops,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:omega:oi90z,Omega,OI90Z,cooktops,manufacturerModel,OI90Z,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:omega:oi90z,Omega,OI90Z,cooktops,width,900 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:omega:oi90z,Omega,OI90Z,cooktops,widthMm,900,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:omega:oi90z,Omega,OI90Z,cooktops,finish,,pending-verification,,,2026-09-02
+product:appliances:cooktops:omega:oi90z,Omega,OI90Z,cooktops,fuelOrEnergyType,induction,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:omega:oi90z,Omega,OI90Z,cooktops,installationType,,pending-verification,,,2026-09-02
+product:appliances:cooktops:omega:oi90z,Omega,OI90Z,cooktops,cooktopType,induction,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:omega:oi90z,Omega,OI90Z,cooktops,cookingZonesOrBurners,,pending-verification,,,2026-09-02
+product:appliances:cooktops:omega:oi90z,Omega,OI90Z,cooktops,controlType,,pending-verification,,,2026-09-02
+product:appliances:cooktops:omega:oi90z,Omega,OI90Z,cooktops,gasOrElectricalRequirements,,pending-verification,,,2026-09-02
+product:appliances:cooktops:smeg:pga64,Smeg,PGA64,cooktops,family,cooktops,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:smeg:pga64,Smeg,PGA64,cooktops,manufacturerModel,PGA64,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:smeg:pga64,Smeg,PGA64,cooktops,width,600 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:smeg:pga64,Smeg,PGA64,cooktops,widthMm,600,verified-source,Smeg Australia,https://www.smeg.com/au/products/PGA64,2026-09-02
+product:appliances:cooktops:smeg:pga64,Smeg,PGA64,cooktops,finish,stainless steel,verified-source,Smeg Australia,https://www.smeg.com/au/products/PGA64,2026-09-02
+product:appliances:cooktops:smeg:pga64,Smeg,PGA64,cooktops,fuelOrEnergyType,gas,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:smeg:pga64,Smeg,PGA64,cooktops,installationType,,pending-verification,,,2026-09-02
+product:appliances:cooktops:smeg:pga64,Smeg,PGA64,cooktops,cooktopType,gas,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:smeg:pga64,Smeg,PGA64,cooktops,cookingZonesOrBurners,4,verified-source,Smeg Australia,https://www.smeg.com/au/products/PGA64,2026-09-02
+product:appliances:cooktops:smeg:pga64,Smeg,PGA64,cooktops,controlType,,pending-verification,,,2026-09-02
+product:appliances:cooktops:smeg:pga64,Smeg,PGA64,cooktops,gasOrElectricalRequirements,,pending-verification,,,2026-09-02
+product:appliances:cooktops:smeg:pga64,Smeg,PGA64,cooktops,cookingTechnology,gas,verified-source,Smeg Australia,https://www.smeg.com/au/products/PGA64,2026-09-02
+product:appliances:cooktops:smeg:pga64,Smeg,PGA64,cooktops,controls,knobs,verified-source,Smeg Australia,https://www.smeg.com/au/products/PGA64,2026-09-02
+product:appliances:cooktops:smeg:pga95,Smeg,PGA95,cooktops,family,cooktops,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:smeg:pga95,Smeg,PGA95,cooktops,manufacturerModel,PGA95,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:smeg:pga95,Smeg,PGA95,cooktops,width,900 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:smeg:pga95,Smeg,PGA95,cooktops,widthMm,900,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:smeg:pga95,Smeg,PGA95,cooktops,finish,,pending-verification,,,2026-09-02
+product:appliances:cooktops:smeg:pga95,Smeg,PGA95,cooktops,fuelOrEnergyType,gas,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:smeg:pga95,Smeg,PGA95,cooktops,installationType,,pending-verification,,,2026-09-02
+product:appliances:cooktops:smeg:pga95,Smeg,PGA95,cooktops,cooktopType,gas,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:smeg:pga95,Smeg,PGA95,cooktops,cookingZonesOrBurners,,pending-verification,,,2026-09-02
+product:appliances:cooktops:smeg:pga95,Smeg,PGA95,cooktops,controlType,,pending-verification,,,2026-09-02
+product:appliances:cooktops:smeg:pga95,Smeg,PGA95,cooktops,gasOrElectricalRequirements,,pending-verification,,,2026-09-02
+product:appliances:cooktops:smeg:sai4954d,Smeg,SAI4954D,cooktops,family,cooktops,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:smeg:sai4954d,Smeg,SAI4954D,cooktops,manufacturerModel,SAI4954D,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:smeg:sai4954d,Smeg,SAI4954D,cooktops,width,900 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:smeg:sai4954d,Smeg,SAI4954D,cooktops,widthMm,900,verified-source,Smeg Australia,https://www.smeg.com/au/products/SAI4954D,2026-09-02
+product:appliances:cooktops:smeg:sai4954d,Smeg,SAI4954D,cooktops,finish,black,verified-source,Smeg Australia,https://www.smeg.com/au/products/SAI4954D,2026-09-02
+product:appliances:cooktops:smeg:sai4954d,Smeg,SAI4954D,cooktops,fuelOrEnergyType,induction,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:smeg:sai4954d,Smeg,SAI4954D,cooktops,installationType,,pending-verification,,,2026-09-02
+product:appliances:cooktops:smeg:sai4954d,Smeg,SAI4954D,cooktops,cooktopType,induction,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:smeg:sai4954d,Smeg,SAI4954D,cooktops,cookingZonesOrBurners,,pending-verification,,,2026-09-02
+product:appliances:cooktops:smeg:sai4954d,Smeg,SAI4954D,cooktops,controlType,,pending-verification,,,2026-09-02
+product:appliances:cooktops:smeg:sai4954d,Smeg,SAI4954D,cooktops,gasOrElectricalRequirements,,pending-verification,,,2026-09-02
+product:appliances:cooktops:smeg:sai4954d,Smeg,SAI4954D,cooktops,cookingTechnology,induction,verified-source,Smeg Australia,https://www.smeg.com/au/products/SAI4954D,2026-09-02
+product:appliances:cooktops:smeg:si2641d,Smeg,SI2641D,cooktops,family,cooktops,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:smeg:si2641d,Smeg,SI2641D,cooktops,manufacturerModel,SI2641D,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:smeg:si2641d,Smeg,SI2641D,cooktops,width,600 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:smeg:si2641d,Smeg,SI2641D,cooktops,widthMm,600,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:smeg:si2641d,Smeg,SI2641D,cooktops,finish,,pending-verification,,,2026-09-02
+product:appliances:cooktops:smeg:si2641d,Smeg,SI2641D,cooktops,fuelOrEnergyType,induction,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:smeg:si2641d,Smeg,SI2641D,cooktops,installationType,,pending-verification,,,2026-09-02
+product:appliances:cooktops:smeg:si2641d,Smeg,SI2641D,cooktops,cooktopType,induction,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:smeg:si2641d,Smeg,SI2641D,cooktops,cookingZonesOrBurners,,pending-verification,,,2026-09-02
+product:appliances:cooktops:smeg:si2641d,Smeg,SI2641D,cooktops,controlType,,pending-verification,,,2026-09-02
+product:appliances:cooktops:smeg:si2641d,Smeg,SI2641D,cooktops,gasOrElectricalRequirements,,pending-verification,,,2026-09-02
+product:appliances:cooktops:westinghouse:whc642bc,Westinghouse,WHC642BC,cooktops,family,cooktops,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:westinghouse:whc642bc,Westinghouse,WHC642BC,cooktops,manufacturerModel,WHC642BC,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:westinghouse:whc642bc,Westinghouse,WHC642BC,cooktops,width,590 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:westinghouse:whc642bc,Westinghouse,WHC642BC,cooktops,widthMm,590,verified-source,Westinghouse Australia,https://www.westinghouse.com.au/cooking/cooktops/whc642bc/,2026-09-02
+product:appliances:cooktops:westinghouse:whc642bc,Westinghouse,WHC642BC,cooktops,finish,black ceramic glass,verified-source,Westinghouse Australia,https://www.westinghouse.com.au/cooking/cooktops/whc642bc/,2026-09-02
+product:appliances:cooktops:westinghouse:whc642bc,Westinghouse,WHC642BC,cooktops,fuelOrEnergyType,ceramic electric,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:westinghouse:whc642bc,Westinghouse,WHC642BC,cooktops,installationType,,pending-verification,,,2026-09-02
+product:appliances:cooktops:westinghouse:whc642bc,Westinghouse,WHC642BC,cooktops,cooktopType,ceramic electric,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:westinghouse:whc642bc,Westinghouse,WHC642BC,cooktops,cookingZonesOrBurners,4,verified-source,Westinghouse Australia,https://www.westinghouse.com.au/cooking/cooktops/whc642bc/,2026-09-02
+product:appliances:cooktops:westinghouse:whc642bc,Westinghouse,WHC642BC,cooktops,controlType,,pending-verification,,,2026-09-02
+product:appliances:cooktops:westinghouse:whc642bc,Westinghouse,WHC642BC,cooktops,gasOrElectricalRequirements,,pending-verification,,,2026-09-02
+product:appliances:cooktops:westinghouse:whc642bc,Westinghouse,WHC642BC,cooktops,heightMm,46,verified-source,Westinghouse Australia,https://www.westinghouse.com.au/cooking/cooktops/whc642bc/,2026-09-02
+product:appliances:cooktops:westinghouse:whc642bc,Westinghouse,WHC642BC,cooktops,depthMm,520,verified-source,Westinghouse Australia,https://www.westinghouse.com.au/cooking/cooktops/whc642bc/,2026-09-02
+product:appliances:cooktops:westinghouse:whc642bc,Westinghouse,WHC642BC,cooktops,cookingTechnology,ceramic,verified-source,Westinghouse Australia,https://www.westinghouse.com.au/cooking/cooktops/whc642bc/,2026-09-02
+product:appliances:cooktops:westinghouse:whc642bc,Westinghouse,WHC642BC,cooktops,controls,knob control,verified-source,Westinghouse Australia,https://www.westinghouse.com.au/cooking/cooktops/whc642bc/,2026-09-02
+product:appliances:cooktops:westinghouse:whg644sc,Westinghouse,WHG644SC,cooktops,family,cooktops,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:westinghouse:whg644sc,Westinghouse,WHG644SC,cooktops,manufacturerModel,WHG644SC,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:westinghouse:whg644sc,Westinghouse,WHG644SC,cooktops,width,595 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:westinghouse:whg644sc,Westinghouse,WHG644SC,cooktops,widthMm,595,verified-source,Westinghouse Australia,https://www.westinghouse.com.au/cooking/cooktops/whg644sc/,2026-09-02
+product:appliances:cooktops:westinghouse:whg644sc,Westinghouse,WHG644SC,cooktops,finish,stainless steel,verified-source,Westinghouse Australia,https://www.westinghouse.com.au/cooking/cooktops/whg644sc/,2026-09-02
+product:appliances:cooktops:westinghouse:whg644sc,Westinghouse,WHG644SC,cooktops,fuelOrEnergyType,gas,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:westinghouse:whg644sc,Westinghouse,WHG644SC,cooktops,installationType,,pending-verification,,,2026-09-02
+product:appliances:cooktops:westinghouse:whg644sc,Westinghouse,WHG644SC,cooktops,cooktopType,gas,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:westinghouse:whg644sc,Westinghouse,WHG644SC,cooktops,cookingZonesOrBurners,4,verified-source,Westinghouse Australia,https://www.westinghouse.com.au/cooking/cooktops/whg644sc/,2026-09-02
+product:appliances:cooktops:westinghouse:whg644sc,Westinghouse,WHG644SC,cooktops,controlType,,pending-verification,,,2026-09-02
+product:appliances:cooktops:westinghouse:whg644sc,Westinghouse,WHG644SC,cooktops,gasOrElectricalRequirements,,pending-verification,,,2026-09-02
+product:appliances:cooktops:westinghouse:whg644sc,Westinghouse,WHG644SC,cooktops,heightMm,55,verified-source,Westinghouse Australia,https://www.westinghouse.com.au/cooking/cooktops/whg644sc/,2026-09-02
+product:appliances:cooktops:westinghouse:whg644sc,Westinghouse,WHG644SC,cooktops,depthMm,530,verified-source,Westinghouse Australia,https://www.westinghouse.com.au/cooking/cooktops/whg644sc/,2026-09-02
+product:appliances:cooktops:westinghouse:whg644sc,Westinghouse,WHG644SC,cooktops,cookingTechnology,gas,verified-source,Westinghouse Australia,https://www.westinghouse.com.au/cooking/cooktops/whg644sc/,2026-09-02
+product:appliances:cooktops:westinghouse:whg644sc,Westinghouse,WHG644SC,cooktops,controls,control knob,verified-source,Westinghouse Australia,https://www.westinghouse.com.au/cooking/cooktops/whg644sc/,2026-09-02
+product:appliances:cooktops:westinghouse:whg644sc,Westinghouse,WHG644SC,cooktops,electricalRequirements,10A plug and lead,verified-source,Westinghouse Australia,https://www.westinghouse.com.au/cooking/cooktops/whg644sc/,2026-09-02
+product:appliances:cooktops:westinghouse:whg958sc,Westinghouse,WHG958SC,cooktops,family,cooktops,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:westinghouse:whg958sc,Westinghouse,WHG958SC,cooktops,manufacturerModel,WHG958SC,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:westinghouse:whg958sc,Westinghouse,WHG958SC,cooktops,width,900 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:westinghouse:whg958sc,Westinghouse,WHG958SC,cooktops,widthMm,900,verified-source,Westinghouse Australia,https://www.westinghouse.com.au/cooking/cooktops/whg958sc/,2026-09-02
+product:appliances:cooktops:westinghouse:whg958sc,Westinghouse,WHG958SC,cooktops,finish,stainless steel,verified-source,Westinghouse Australia,https://www.westinghouse.com.au/cooking/cooktops/whg958sc/,2026-09-02
+product:appliances:cooktops:westinghouse:whg958sc,Westinghouse,WHG958SC,cooktops,fuelOrEnergyType,gas,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:westinghouse:whg958sc,Westinghouse,WHG958SC,cooktops,installationType,,pending-verification,,,2026-09-02
+product:appliances:cooktops:westinghouse:whg958sc,Westinghouse,WHG958SC,cooktops,cooktopType,gas,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:westinghouse:whg958sc,Westinghouse,WHG958SC,cooktops,cookingZonesOrBurners,5,verified-source,Westinghouse Australia,https://www.westinghouse.com.au/cooking/cooktops/whg958sc/,2026-09-02
+product:appliances:cooktops:westinghouse:whg958sc,Westinghouse,WHG958SC,cooktops,controlType,,pending-verification,,,2026-09-02
+product:appliances:cooktops:westinghouse:whg958sc,Westinghouse,WHG958SC,cooktops,gasOrElectricalRequirements,,pending-verification,,,2026-09-02
+product:appliances:cooktops:westinghouse:whg958sc,Westinghouse,WHG958SC,cooktops,cookingTechnology,gas,verified-source,Westinghouse Australia,https://www.westinghouse.com.au/cooking/cooktops/whg958sc/,2026-09-02
+product:appliances:cooktops:westinghouse:whi955bd,Westinghouse,WHI955BD,cooktops,family,cooktops,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:westinghouse:whi955bd,Westinghouse,WHI955BD,cooktops,manufacturerModel,WHI955BD,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:westinghouse:whi955bd,Westinghouse,WHI955BD,cooktops,width,900 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:westinghouse:whi955bd,Westinghouse,WHI955BD,cooktops,widthMm,900,verified-source,Westinghouse Australia,https://www.westinghouse.com.au/cooking/cooktops/whi955bd/,2026-09-02
+product:appliances:cooktops:westinghouse:whi955bd,Westinghouse,WHI955BD,cooktops,finish,black glass,verified-source,Westinghouse Australia,https://www.westinghouse.com.au/cooking/cooktops/whi955bd/,2026-09-02
+product:appliances:cooktops:westinghouse:whi955bd,Westinghouse,WHI955BD,cooktops,fuelOrEnergyType,induction,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:westinghouse:whi955bd,Westinghouse,WHI955BD,cooktops,installationType,,pending-verification,,,2026-09-02
+product:appliances:cooktops:westinghouse:whi955bd,Westinghouse,WHI955BD,cooktops,cooktopType,induction,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:cooktops:westinghouse:whi955bd,Westinghouse,WHI955BD,cooktops,cookingZonesOrBurners,5,verified-source,Westinghouse Australia,https://www.westinghouse.com.au/cooking/cooktops/whi955bd/,2026-09-02
+product:appliances:cooktops:westinghouse:whi955bd,Westinghouse,WHI955BD,cooktops,controlType,,pending-verification,,,2026-09-02
+product:appliances:cooktops:westinghouse:whi955bd,Westinghouse,WHI955BD,cooktops,gasOrElectricalRequirements,,pending-verification,,,2026-09-02
+product:appliances:cooktops:westinghouse:whi955bd,Westinghouse,WHI955BD,cooktops,cookingTechnology,induction,verified-source,Westinghouse Australia,https://www.westinghouse.com.au/cooking/cooktops/whi955bd/,2026-09-02
+product:appliances:dishwashers:ariston:lfo3c23wf,Ariston,LFO3C23WF,dishwashers,family,dishwashers,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:dishwashers:ariston:lfo3c23wf,Ariston,LFO3C23WF,dishwashers,manufacturerModel,LFO3C23WF,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:dishwashers:ariston:lfo3c23wf,Ariston,LFO3C23WF,dishwashers,width,600 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:dishwashers:ariston:lfo3c23wf,Ariston,LFO3C23WF,dishwashers,widthMm,600,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:dishwashers:ariston:lfo3c23wf,Ariston,LFO3C23WF,dishwashers,finish,,pending-verification,,,2026-09-02
+product:appliances:dishwashers:ariston:lfo3c23wf,Ariston,LFO3C23WF,dishwashers,fuelOrEnergyType,,pending-verification,,,2026-09-02
+product:appliances:dishwashers:ariston:lfo3c23wf,Ariston,LFO3C23WF,dishwashers,installationType,freestanding,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:dishwashers:ariston:lfo3c23wf,Ariston,LFO3C23WF,dishwashers,placeSettings,,pending-verification,,,2026-09-02
+product:appliances:dishwashers:ariston:lfo3c23wf,Ariston,LFO3C23WF,dishwashers,waterRating,,pending-verification,,,2026-09-02
+product:appliances:dishwashers:ariston:lfo3c23wf,Ariston,LFO3C23WF,dishwashers,energyRating,,pending-verification,,,2026-09-02
+product:appliances:dishwashers:blanco:bdw146x,Blanco,BDW146X,dishwashers,family,dishwashers,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:dishwashers:blanco:bdw146x,Blanco,BDW146X,dishwashers,manufacturerModel,BDW146X,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:dishwashers:blanco:bdw146x,Blanco,BDW146X,dishwashers,width,600 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:dishwashers:blanco:bdw146x,Blanco,BDW146X,dishwashers,widthMm,600,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:dishwashers:blanco:bdw146x,Blanco,BDW146X,dishwashers,finish,,pending-verification,,,2026-09-02
+product:appliances:dishwashers:blanco:bdw146x,Blanco,BDW146X,dishwashers,fuelOrEnergyType,,pending-verification,,,2026-09-02
+product:appliances:dishwashers:blanco:bdw146x,Blanco,BDW146X,dishwashers,installationType,freestanding,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:dishwashers:blanco:bdw146x,Blanco,BDW146X,dishwashers,placeSettings,,pending-verification,,,2026-09-02
+product:appliances:dishwashers:blanco:bdw146x,Blanco,BDW146X,dishwashers,waterRating,,pending-verification,,,2026-09-02
+product:appliances:dishwashers:blanco:bdw146x,Blanco,BDW146X,dishwashers,energyRating,,pending-verification,,,2026-09-02
+product:appliances:dishwashers:euromaid:edw14s,Euromaid,EDW14S,dishwashers,family,dishwashers,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:dishwashers:euromaid:edw14s,Euromaid,EDW14S,dishwashers,manufacturerModel,EDW14S,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:dishwashers:euromaid:edw14s,Euromaid,EDW14S,dishwashers,width,600 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:dishwashers:euromaid:edw14s,Euromaid,EDW14S,dishwashers,widthMm,600,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:dishwashers:euromaid:edw14s,Euromaid,EDW14S,dishwashers,finish,,pending-verification,,,2026-09-02
+product:appliances:dishwashers:euromaid:edw14s,Euromaid,EDW14S,dishwashers,fuelOrEnergyType,,pending-verification,,,2026-09-02
+product:appliances:dishwashers:euromaid:edw14s,Euromaid,EDW14S,dishwashers,installationType,freestanding,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:dishwashers:euromaid:edw14s,Euromaid,EDW14S,dishwashers,placeSettings,,pending-verification,,,2026-09-02
+product:appliances:dishwashers:euromaid:edw14s,Euromaid,EDW14S,dishwashers,waterRating,,pending-verification,,,2026-09-02
+product:appliances:dishwashers:euromaid:edw14s,Euromaid,EDW14S,dishwashers,energyRating,,pending-verification,,,2026-09-02
+product:appliances:dishwashers:omega:odw702xb,Omega,ODW702XB,dishwashers,family,dishwashers,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:dishwashers:omega:odw702xb,Omega,ODW702XB,dishwashers,manufacturerModel,ODW702XB,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:dishwashers:omega:odw702xb,Omega,ODW702XB,dishwashers,width,600 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:dishwashers:omega:odw702xb,Omega,ODW702XB,dishwashers,widthMm,600,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:dishwashers:omega:odw702xb,Omega,ODW702XB,dishwashers,finish,,pending-verification,,,2026-09-02
+product:appliances:dishwashers:omega:odw702xb,Omega,ODW702XB,dishwashers,fuelOrEnergyType,,pending-verification,,,2026-09-02
+product:appliances:dishwashers:omega:odw702xb,Omega,ODW702XB,dishwashers,installationType,freestanding,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:dishwashers:omega:odw702xb,Omega,ODW702XB,dishwashers,placeSettings,,pending-verification,,,2026-09-02
+product:appliances:dishwashers:omega:odw702xb,Omega,ODW702XB,dishwashers,waterRating,,pending-verification,,,2026-09-02
+product:appliances:dishwashers:omega:odw702xb,Omega,ODW702XB,dishwashers,energyRating,,pending-verification,,,2026-09-02
+product:appliances:dishwashers:smeg:dwau6315x3,Smeg,DWAU6315X3,dishwashers,family,dishwashers,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:dishwashers:smeg:dwau6315x3,Smeg,DWAU6315X3,dishwashers,manufacturerModel,DWAU6315X3,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:dishwashers:smeg:dwau6315x3,Smeg,DWAU6315X3,dishwashers,width,600 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:dishwashers:smeg:dwau6315x3,Smeg,DWAU6315X3,dishwashers,widthMm,600,verified-source,Smeg Australia,https://www.smeg.com/au/products/DWAU6315X3,2026-09-02
+product:appliances:dishwashers:smeg:dwau6315x3,Smeg,DWAU6315X3,dishwashers,finish,,pending-verification,,,2026-09-02
+product:appliances:dishwashers:smeg:dwau6315x3,Smeg,DWAU6315X3,dishwashers,fuelOrEnergyType,,pending-verification,,,2026-09-02
+product:appliances:dishwashers:smeg:dwau6315x3,Smeg,DWAU6315X3,dishwashers,installationType,under counter built-in,verified-source,Smeg Australia,https://www.smeg.com/au/products/DWAU6315X3,2026-09-02
+product:appliances:dishwashers:smeg:dwau6315x3,Smeg,DWAU6315X3,dishwashers,placeSettings,,pending-verification,,,2026-09-02
+product:appliances:dishwashers:smeg:dwau6315x3,Smeg,DWAU6315X3,dishwashers,waterRating,,pending-verification,,,2026-09-02
+product:appliances:dishwashers:smeg:dwau6315x3,Smeg,DWAU6315X3,dishwashers,energyRating,,pending-verification,,,2026-09-02
+product:appliances:dishwashers:westinghouse:wsf6606x,Westinghouse,WSF6606X,dishwashers,family,dishwashers,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:dishwashers:westinghouse:wsf6606x,Westinghouse,WSF6606X,dishwashers,manufacturerModel,WSF6606X,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:dishwashers:westinghouse:wsf6606x,Westinghouse,WSF6606X,dishwashers,width,600 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:dishwashers:westinghouse:wsf6606x,Westinghouse,WSF6606X,dishwashers,widthMm,600,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:dishwashers:westinghouse:wsf6606x,Westinghouse,WSF6606X,dishwashers,finish,,pending-verification,,,2026-09-02
+product:appliances:dishwashers:westinghouse:wsf6606x,Westinghouse,WSF6606X,dishwashers,fuelOrEnergyType,,pending-verification,,,2026-09-02
+product:appliances:dishwashers:westinghouse:wsf6606x,Westinghouse,WSF6606X,dishwashers,installationType,freestanding,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:dishwashers:westinghouse:wsf6606x,Westinghouse,WSF6606X,dishwashers,placeSettings,,pending-verification,,,2026-09-02
+product:appliances:dishwashers:westinghouse:wsf6606x,Westinghouse,WSF6606X,dishwashers,waterRating,,pending-verification,,,2026-09-02
+product:appliances:dishwashers:westinghouse:wsf6606x,Westinghouse,WSF6606X,dishwashers,energyRating,,pending-verification,,,2026-09-02
+product:appliances:freestanding-cookers:ariston:cp059mdx,Ariston,CP059MDX,freestanding-cookers,family,freestanding-cookers,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:freestanding-cookers:ariston:cp059mdx,Ariston,CP059MDX,freestanding-cookers,manufacturerModel,CP059MDX,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:freestanding-cookers:ariston:cp059mdx,Ariston,CP059MDX,freestanding-cookers,width,900 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:freestanding-cookers:ariston:cp059mdx,Ariston,CP059MDX,freestanding-cookers,widthMm,900,verified-source,Ariston Australia,https://ariston.com.au/inventory/freestanding-cooker-cp059mdx-2/,2026-09-02
+product:appliances:freestanding-cookers:ariston:cp059mdx,Ariston,CP059MDX,freestanding-cookers,finish,,pending-verification,,,2026-09-02
+product:appliances:freestanding-cookers:ariston:cp059mdx,Ariston,CP059MDX,freestanding-cookers,fuelOrEnergyType,dual fuel,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:freestanding-cookers:ariston:cp059mdx,Ariston,CP059MDX,freestanding-cookers,installationType,freestanding,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:freestanding-cookers:ariston:cp059mdx,Ariston,CP059MDX,freestanding-cookers,cooktopFuel,gas,verified-source,Ariston Australia,https://ariston.com.au/inventory/freestanding-cooker-cp059mdx-2/,2026-09-02
+product:appliances:freestanding-cookers:ariston:cp059mdx,Ariston,CP059MDX,freestanding-cookers,ovenFuel,electric,verified-source,Ariston Australia,https://ariston.com.au/inventory/freestanding-cooker-cp059mdx-2/,2026-09-02
+product:appliances:freestanding-cookers:ariston:cp059mdx,Ariston,CP059MDX,freestanding-cookers,ovenCapacity,,pending-verification,,,2026-09-02
+product:appliances:freestanding-cookers:ariston:cp059mdx,Ariston,CP059MDX,freestanding-cookers,functions,8,verified-source,Ariston Australia,https://ariston.com.au/inventory/freestanding-cooker-cp059mdx-2/,2026-09-02
+product:appliances:freestanding-cookers:ariston:cp059mdx,Ariston,CP059MDX,freestanding-cookers,heightMm,850,verified-source,Ariston Australia,https://ariston.com.au/inventory/freestanding-cooker-cp059mdx-2/,2026-09-02
+product:appliances:freestanding-cookers:ariston:cp059mdx,Ariston,CP059MDX,freestanding-cookers,depthMm,600,verified-source,Ariston Australia,https://ariston.com.au/inventory/freestanding-cooker-cp059mdx-2/,2026-09-02
+product:appliances:freestanding-cookers:ariston:cp059mdx,Ariston,CP059MDX,freestanding-cookers,capacity,90 L gross,verified-source,Ariston Australia,https://ariston.com.au/inventory/freestanding-cooker-cp059mdx-2/,2026-09-02
+product:appliances:freestanding-cookers:ariston:cp059mdx,Ariston,CP059MDX,freestanding-cookers,cookingZonesOrBurners,5,verified-source,Ariston Australia,https://ariston.com.au/inventory/freestanding-cooker-cp059mdx-2/,2026-09-02
+product:appliances:freestanding-cookers:ariston:cp059mdx,Ariston,CP059MDX,freestanding-cookers,cleaningSystem,catalytic liners,verified-source,Ariston Australia,https://ariston.com.au/inventory/freestanding-cooker-cp059mdx-2/,2026-09-02
+product:appliances:freestanding-cookers:blanco:bfs90wx,Blanco,BFS90WX,freestanding-cookers,family,freestanding-cookers,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:freestanding-cookers:blanco:bfs90wx,Blanco,BFS90WX,freestanding-cookers,manufacturerModel,BFS90WX,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:freestanding-cookers:blanco:bfs90wx,Blanco,BFS90WX,freestanding-cookers,width,900 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:freestanding-cookers:blanco:bfs90wx,Blanco,BFS90WX,freestanding-cookers,widthMm,900,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:freestanding-cookers:blanco:bfs90wx,Blanco,BFS90WX,freestanding-cookers,finish,,pending-verification,,,2026-09-02
+product:appliances:freestanding-cookers:blanco:bfs90wx,Blanco,BFS90WX,freestanding-cookers,fuelOrEnergyType,dual fuel,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:freestanding-cookers:blanco:bfs90wx,Blanco,BFS90WX,freestanding-cookers,installationType,freestanding,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:freestanding-cookers:blanco:bfs90wx,Blanco,BFS90WX,freestanding-cookers,cooktopFuel,dual fuel,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:freestanding-cookers:blanco:bfs90wx,Blanco,BFS90WX,freestanding-cookers,ovenFuel,,pending-verification,,,2026-09-02
+product:appliances:freestanding-cookers:blanco:bfs90wx,Blanco,BFS90WX,freestanding-cookers,ovenCapacity,,pending-verification,,,2026-09-02
+product:appliances:freestanding-cookers:blanco:bfs90wx,Blanco,BFS90WX,freestanding-cookers,functions,,pending-verification,,,2026-09-02
+product:appliances:freestanding-cookers:euromaid:gg90s,Euromaid,GG90S,freestanding-cookers,family,freestanding-cookers,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:freestanding-cookers:euromaid:gg90s,Euromaid,GG90S,freestanding-cookers,manufacturerModel,GG90S,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:freestanding-cookers:euromaid:gg90s,Euromaid,GG90S,freestanding-cookers,width,900 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:freestanding-cookers:euromaid:gg90s,Euromaid,GG90S,freestanding-cookers,widthMm,900,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:freestanding-cookers:euromaid:gg90s,Euromaid,GG90S,freestanding-cookers,finish,,pending-verification,,,2026-09-02
+product:appliances:freestanding-cookers:euromaid:gg90s,Euromaid,GG90S,freestanding-cookers,fuelOrEnergyType,dual fuel,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:freestanding-cookers:euromaid:gg90s,Euromaid,GG90S,freestanding-cookers,installationType,freestanding,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:freestanding-cookers:euromaid:gg90s,Euromaid,GG90S,freestanding-cookers,cooktopFuel,dual fuel,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:freestanding-cookers:euromaid:gg90s,Euromaid,GG90S,freestanding-cookers,ovenFuel,,pending-verification,,,2026-09-02
+product:appliances:freestanding-cookers:euromaid:gg90s,Euromaid,GG90S,freestanding-cookers,ovenCapacity,,pending-verification,,,2026-09-02
+product:appliances:freestanding-cookers:euromaid:gg90s,Euromaid,GG90S,freestanding-cookers,functions,,pending-verification,,,2026-09-02
+product:appliances:freestanding-cookers:omega:of916fx,Omega,OF916FX,freestanding-cookers,family,freestanding-cookers,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:freestanding-cookers:omega:of916fx,Omega,OF916FX,freestanding-cookers,manufacturerModel,OF916FX,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:freestanding-cookers:omega:of916fx,Omega,OF916FX,freestanding-cookers,width,900 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:freestanding-cookers:omega:of916fx,Omega,OF916FX,freestanding-cookers,widthMm,900,verified-source,Omega Appliances Australia,https://omegaappliances.com.au/product/90cm-9-function-freestanding-oven-of916fx/,2026-09-02
+product:appliances:freestanding-cookers:omega:of916fx,Omega,OF916FX,freestanding-cookers,finish,stainless steel,verified-source,Omega Appliances Australia,https://omegaappliances.com.au/product/90cm-9-function-freestanding-oven-of916fx/,2026-09-02
+product:appliances:freestanding-cookers:omega:of916fx,Omega,OF916FX,freestanding-cookers,fuelOrEnergyType,,pending-verification,,,2026-09-02
+product:appliances:freestanding-cookers:omega:of916fx,Omega,OF916FX,freestanding-cookers,installationType,freestanding,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:freestanding-cookers:omega:of916fx,Omega,OF916FX,freestanding-cookers,cooktopFuel,gas,verified-source,Omega Appliances Australia,https://omegaappliances.com.au/product/90cm-9-function-freestanding-oven-of916fx/,2026-09-02
+product:appliances:freestanding-cookers:omega:of916fx,Omega,OF916FX,freestanding-cookers,ovenFuel,electric,verified-source,Omega Appliances Australia,https://omegaappliances.com.au/product/90cm-9-function-freestanding-oven-of916fx/,2026-09-02
+product:appliances:freestanding-cookers:omega:of916fx,Omega,OF916FX,freestanding-cookers,ovenCapacity,,pending-verification,,,2026-09-02
+product:appliances:freestanding-cookers:omega:of916fx,Omega,OF916FX,freestanding-cookers,functions,9,verified-source,Omega Appliances Australia,https://omegaappliances.com.au/product/90cm-9-function-freestanding-oven-of916fx/,2026-09-02
+product:appliances:freestanding-cookers:omega:of916fx,Omega,OF916FX,freestanding-cookers,capacity,153 L,verified-source,Omega Appliances Australia,https://omegaappliances.com.au/product/90cm-9-function-freestanding-oven-of916fx/,2026-09-02
+product:appliances:freestanding-cookers:omega:of916fx,Omega,OF916FX,freestanding-cookers,cookingZonesOrBurners,5,verified-source,Omega Appliances Australia,https://omegaappliances.com.au/product/90cm-9-function-freestanding-oven-of916fx/,2026-09-02
+product:appliances:freestanding-cookers:omega:of916fx,Omega,OF916FX,freestanding-cookers,electricalRequirements,15 amp plug,verified-source,Omega Appliances Australia,https://omegaappliances.com.au/product/90cm-9-function-freestanding-oven-of916fx/,2026-09-02
+product:appliances:freestanding-cookers:smeg:fs9606as-1,Smeg,FS9606AS-1,freestanding-cookers,family,freestanding-cookers,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:freestanding-cookers:smeg:fs9606as-1,Smeg,FS9606AS-1,freestanding-cookers,manufacturerModel,FS9606AS-1,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:freestanding-cookers:smeg:fs9606as-1,Smeg,FS9606AS-1,freestanding-cookers,width,900 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:freestanding-cookers:smeg:fs9606as-1,Smeg,FS9606AS-1,freestanding-cookers,widthMm,900,verified-source,Smeg Australia,https://www.smeg.com/au/products/FS9606AS-1,2026-09-02
+product:appliances:freestanding-cookers:smeg:fs9606as-1,Smeg,FS9606AS-1,freestanding-cookers,finish,,pending-verification,,,2026-09-02
+product:appliances:freestanding-cookers:smeg:fs9606as-1,Smeg,FS9606AS-1,freestanding-cookers,fuelOrEnergyType,dual fuel,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:freestanding-cookers:smeg:fs9606as-1,Smeg,FS9606AS-1,freestanding-cookers,installationType,freestanding,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:freestanding-cookers:smeg:fs9606as-1,Smeg,FS9606AS-1,freestanding-cookers,cooktopFuel,gas,verified-source,Smeg Australia,https://www.smeg.com/au/products/FS9606AS-1,2026-09-02
+product:appliances:freestanding-cookers:smeg:fs9606as-1,Smeg,FS9606AS-1,freestanding-cookers,ovenFuel,electric,verified-source,Smeg Australia,https://www.smeg.com/au/products/FS9606AS-1,2026-09-02
+product:appliances:freestanding-cookers:smeg:fs9606as-1,Smeg,FS9606AS-1,freestanding-cookers,ovenCapacity,,pending-verification,,,2026-09-02
+product:appliances:freestanding-cookers:smeg:fs9606as-1,Smeg,FS9606AS-1,freestanding-cookers,functions,,pending-verification,,,2026-09-02
+product:appliances:freestanding-cookers:smeg:fs9606as-1,Smeg,FS9606AS-1,freestanding-cookers,depthMm,600,verified-source,Smeg Australia,https://www.smeg.com/au/products/FS9606AS-1,2026-09-02
+product:appliances:freestanding-cookers:smeg:fs9606as-1,Smeg,FS9606AS-1,freestanding-cookers,cookingZonesOrBurners,5,verified-source,Smeg Australia,https://www.smeg.com/au/products/FS9606AS-1,2026-09-02
+product:appliances:freestanding-cookers:westinghouse:wfe9515sd,Westinghouse,WFE9515SD,freestanding-cookers,family,freestanding-cookers,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:freestanding-cookers:westinghouse:wfe9515sd,Westinghouse,WFE9515SD,freestanding-cookers,manufacturerModel,WFE9515SD,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:freestanding-cookers:westinghouse:wfe9515sd,Westinghouse,WFE9515SD,freestanding-cookers,width,900 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:freestanding-cookers:westinghouse:wfe9515sd,Westinghouse,WFE9515SD,freestanding-cookers,widthMm,900,verified-source,Westinghouse Australia,https://www.westinghouse.com.au/cooking/freestanding-ovens/wfe9515sd/,2026-09-02
+product:appliances:freestanding-cookers:westinghouse:wfe9515sd,Westinghouse,WFE9515SD,freestanding-cookers,finish,stainless steel,verified-source,Westinghouse Australia,https://www.westinghouse.com.au/cooking/freestanding-ovens/wfe9515sd/,2026-09-02
+product:appliances:freestanding-cookers:westinghouse:wfe9515sd,Westinghouse,WFE9515SD,freestanding-cookers,fuelOrEnergyType,dual fuel,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:freestanding-cookers:westinghouse:wfe9515sd,Westinghouse,WFE9515SD,freestanding-cookers,installationType,freestanding,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:freestanding-cookers:westinghouse:wfe9515sd,Westinghouse,WFE9515SD,freestanding-cookers,cooktopFuel,gas,verified-source,Westinghouse Australia,https://www.westinghouse.com.au/cooking/freestanding-ovens/wfe9515sd/,2026-09-02
+product:appliances:freestanding-cookers:westinghouse:wfe9515sd,Westinghouse,WFE9515SD,freestanding-cookers,ovenFuel,electric,verified-source,Westinghouse Australia,https://www.westinghouse.com.au/cooking/freestanding-ovens/wfe9515sd/,2026-09-02
+product:appliances:freestanding-cookers:westinghouse:wfe9515sd,Westinghouse,WFE9515SD,freestanding-cookers,ovenCapacity,,pending-verification,,,2026-09-02
+product:appliances:freestanding-cookers:westinghouse:wfe9515sd,Westinghouse,WFE9515SD,freestanding-cookers,functions,,pending-verification,,,2026-09-02
+product:appliances:ovens:ariston:fa5834hixaaus,Ariston,FA5834HIXAAUS,ovens,family,ovens,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:ariston:fa5834hixaaus,Ariston,FA5834HIXAAUS,ovens,manufacturerModel,FA5834HIXAAUS,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:ariston:fa5834hixaaus,Ariston,FA5834HIXAAUS,ovens,width,600 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:ariston:fa5834hixaaus,Ariston,FA5834HIXAAUS,ovens,widthMm,600,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:ariston:fa5834hixaaus,Ariston,FA5834HIXAAUS,ovens,finish,,pending-verification,,,2026-09-02
+product:appliances:ovens:ariston:fa5834hixaaus,Ariston,FA5834HIXAAUS,ovens,fuelOrEnergyType,electric,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:ariston:fa5834hixaaus,Ariston,FA5834HIXAAUS,ovens,installationType,,pending-verification,,,2026-09-02
+product:appliances:ovens:ariston:fa5834hixaaus,Ariston,FA5834HIXAAUS,ovens,functions,,pending-verification,,,2026-09-02
+product:appliances:ovens:ariston:fa5834hixaaus,Ariston,FA5834HIXAAUS,ovens,fuelType,electric,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:ariston:fa5834hixaaus,Ariston,FA5834HIXAAUS,ovens,capacity,,pending-verification,,,2026-09-02
+product:appliances:ovens:ariston:fa5834hixaaus,Ariston,FA5834HIXAAUS,ovens,controlType,,pending-verification,,,2026-09-02
+product:appliances:ovens:ariston:fa5834hixaaus,Ariston,FA5834HIXAAUS,ovens,cleaningType,,pending-verification,,,2026-09-02
+product:appliances:ovens:ariston:fa5834hixaaus,Ariston,FA5834HIXAAUS,ovens,electricalRequirements,,pending-verification,,,2026-09-02
+product:appliances:ovens:ariston:fi9-891-sp-ix-a-aus,Ariston,FI9 891 SP IX A AUS,ovens,family,ovens,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:ariston:fi9-891-sp-ix-a-aus,Ariston,FI9 891 SP IX A AUS,ovens,manufacturerModel,FI9 891 SP IX A AUS,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:ariston:fi9-891-sp-ix-a-aus,Ariston,FI9 891 SP IX A AUS,ovens,width,900 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:ariston:fi9-891-sp-ix-a-aus,Ariston,FI9 891 SP IX A AUS,ovens,widthMm,900,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:ariston:fi9-891-sp-ix-a-aus,Ariston,FI9 891 SP IX A AUS,ovens,finish,,pending-verification,,,2026-09-02
+product:appliances:ovens:ariston:fi9-891-sp-ix-a-aus,Ariston,FI9 891 SP IX A AUS,ovens,fuelOrEnergyType,,pending-verification,,,2026-09-02
+product:appliances:ovens:ariston:fi9-891-sp-ix-a-aus,Ariston,FI9 891 SP IX A AUS,ovens,installationType,built-in,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:ariston:fi9-891-sp-ix-a-aus,Ariston,FI9 891 SP IX A AUS,ovens,functions,,pending-verification,,,2026-09-02
+product:appliances:ovens:ariston:fi9-891-sp-ix-a-aus,Ariston,FI9 891 SP IX A AUS,ovens,fuelType,electric,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:ariston:fi9-891-sp-ix-a-aus,Ariston,FI9 891 SP IX A AUS,ovens,capacity,,pending-verification,,,2026-09-02
+product:appliances:ovens:ariston:fi9-891-sp-ix-a-aus,Ariston,FI9 891 SP IX A AUS,ovens,controlType,,pending-verification,,,2026-09-02
+product:appliances:ovens:ariston:fi9-891-sp-ix-a-aus,Ariston,FI9 891 SP IX A AUS,ovens,cleaningType,,pending-verification,,,2026-09-02
+product:appliances:ovens:ariston:fi9-891-sp-ix-a-aus,Ariston,FI9 891 SP IX A AUS,ovens,electricalRequirements,,pending-verification,,,2026-09-02
+product:appliances:ovens:blanco:bose65xm,Blanco,BOSE65XM,ovens,family,ovens,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:blanco:bose65xm,Blanco,BOSE65XM,ovens,manufacturerModel,BOSE65XM,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:blanco:bose65xm,Blanco,BOSE65XM,ovens,width,600 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:blanco:bose65xm,Blanco,BOSE65XM,ovens,widthMm,600,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:blanco:bose65xm,Blanco,BOSE65XM,ovens,finish,,pending-verification,,,2026-09-02
+product:appliances:ovens:blanco:bose65xm,Blanco,BOSE65XM,ovens,fuelOrEnergyType,electric,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:blanco:bose65xm,Blanco,BOSE65XM,ovens,installationType,,pending-verification,,,2026-09-02
+product:appliances:ovens:blanco:bose65xm,Blanco,BOSE65XM,ovens,functions,,pending-verification,,,2026-09-02
+product:appliances:ovens:blanco:bose65xm,Blanco,BOSE65XM,ovens,fuelType,electric,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:blanco:bose65xm,Blanco,BOSE65XM,ovens,capacity,,pending-verification,,,2026-09-02
+product:appliances:ovens:blanco:bose65xm,Blanco,BOSE65XM,ovens,controlType,,pending-verification,,,2026-09-02
+product:appliances:ovens:blanco:bose65xm,Blanco,BOSE65XM,ovens,cleaningType,,pending-verification,,,2026-09-02
+product:appliances:ovens:blanco:bose65xm,Blanco,BOSE65XM,ovens,electricalRequirements,,pending-verification,,,2026-09-02
+product:appliances:ovens:blanco:bose90x,Blanco,BOSE90X,ovens,family,ovens,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:blanco:bose90x,Blanco,BOSE90X,ovens,manufacturerModel,BOSE90X,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:blanco:bose90x,Blanco,BOSE90X,ovens,width,900 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:blanco:bose90x,Blanco,BOSE90X,ovens,widthMm,900,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:blanco:bose90x,Blanco,BOSE90X,ovens,finish,,pending-verification,,,2026-09-02
+product:appliances:ovens:blanco:bose90x,Blanco,BOSE90X,ovens,fuelOrEnergyType,electric,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:blanco:bose90x,Blanco,BOSE90X,ovens,installationType,,pending-verification,,,2026-09-02
+product:appliances:ovens:blanco:bose90x,Blanco,BOSE90X,ovens,functions,,pending-verification,,,2026-09-02
+product:appliances:ovens:blanco:bose90x,Blanco,BOSE90X,ovens,fuelType,electric,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:blanco:bose90x,Blanco,BOSE90X,ovens,capacity,,pending-verification,,,2026-09-02
+product:appliances:ovens:blanco:bose90x,Blanco,BOSE90X,ovens,controlType,,pending-verification,,,2026-09-02
+product:appliances:ovens:blanco:bose90x,Blanco,BOSE90X,ovens,cleaningType,,pending-verification,,,2026-09-02
+product:appliances:ovens:blanco:bose90x,Blanco,BOSE90X,ovens,electricalRequirements,,pending-verification,,,2026-09-02
+product:appliances:ovens:euromaid:eo605dtb,Euromaid,EO605DTB,ovens,family,ovens,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:euromaid:eo605dtb,Euromaid,EO605DTB,ovens,manufacturerModel,EO605DTB,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:euromaid:eo605dtb,Euromaid,EO605DTB,ovens,width,600 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:euromaid:eo605dtb,Euromaid,EO605DTB,ovens,widthMm,600,verified-source,Euromaid Australia,https://www.euromaid.com/en-au/60cm-5-function-built-in-oven-dark-stainless,2026-09-02
+product:appliances:ovens:euromaid:eo605dtb,Euromaid,EO605DTB,ovens,finish,dark stainless,verified-source,Euromaid Australia,https://www.euromaid.com/en-au/60cm-5-function-built-in-oven-dark-stainless,2026-09-02
+product:appliances:ovens:euromaid:eo605dtb,Euromaid,EO605DTB,ovens,fuelOrEnergyType,,pending-verification,,,2026-09-02
+product:appliances:ovens:euromaid:eo605dtb,Euromaid,EO605DTB,ovens,installationType,built-in,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:euromaid:eo605dtb,Euromaid,EO605DTB,ovens,functions,5,verified-source,Euromaid Australia,https://www.euromaid.com/en-au/60cm-5-function-built-in-oven-dark-stainless,2026-09-02
+product:appliances:ovens:euromaid:eo605dtb,Euromaid,EO605DTB,ovens,fuelType,electric,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:euromaid:eo605dtb,Euromaid,EO605DTB,ovens,capacity,92 L,verified-source,Euromaid Australia,https://www.euromaid.com/en-au/60cm-5-function-built-in-oven-dark-stainless,2026-09-02
+product:appliances:ovens:euromaid:eo605dtb,Euromaid,EO605DTB,ovens,controlType,,pending-verification,,,2026-09-02
+product:appliances:ovens:euromaid:eo605dtb,Euromaid,EO605DTB,ovens,cleaningType,,pending-verification,,,2026-09-02
+product:appliances:ovens:euromaid:eo605dtb,Euromaid,EO605DTB,ovens,electricalRequirements,,pending-verification,,,2026-09-02
+product:appliances:ovens:euromaid:eo916astb,Euromaid,EO916ASTB,ovens,family,ovens,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:euromaid:eo916astb,Euromaid,EO916ASTB,ovens,manufacturerModel,EO916ASTB,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:euromaid:eo916astb,Euromaid,EO916ASTB,ovens,width,900 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:euromaid:eo916astb,Euromaid,EO916ASTB,ovens,widthMm,900,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:euromaid:eo916astb,Euromaid,EO916ASTB,ovens,finish,,pending-verification,,,2026-09-02
+product:appliances:ovens:euromaid:eo916astb,Euromaid,EO916ASTB,ovens,fuelOrEnergyType,,pending-verification,,,2026-09-02
+product:appliances:ovens:euromaid:eo916astb,Euromaid,EO916ASTB,ovens,installationType,built-in,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:euromaid:eo916astb,Euromaid,EO916ASTB,ovens,functions,,pending-verification,,,2026-09-02
+product:appliances:ovens:euromaid:eo916astb,Euromaid,EO916ASTB,ovens,fuelType,electric,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:euromaid:eo916astb,Euromaid,EO916ASTB,ovens,capacity,,pending-verification,,,2026-09-02
+product:appliances:ovens:euromaid:eo916astb,Euromaid,EO916ASTB,ovens,controlType,,pending-verification,,,2026-09-02
+product:appliances:ovens:euromaid:eo916astb,Euromaid,EO916ASTB,ovens,cleaningType,,pending-verification,,,2026-09-02
+product:appliances:ovens:euromaid:eo916astb,Euromaid,EO916ASTB,ovens,electricalRequirements,,pending-verification,,,2026-09-02
+product:appliances:ovens:omega:obo660x,Omega,OBO660X,ovens,family,ovens,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:omega:obo660x,Omega,OBO660X,ovens,manufacturerModel,OBO660X,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:omega:obo660x,Omega,OBO660X,ovens,width,600 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:omega:obo660x,Omega,OBO660X,ovens,widthMm,600,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:omega:obo660x,Omega,OBO660X,ovens,finish,,pending-verification,,,2026-09-02
+product:appliances:ovens:omega:obo660x,Omega,OBO660X,ovens,fuelOrEnergyType,,pending-verification,,,2026-09-02
+product:appliances:ovens:omega:obo660x,Omega,OBO660X,ovens,installationType,,pending-verification,,,2026-09-02
+product:appliances:ovens:omega:obo660x,Omega,OBO660X,ovens,functions,4,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:omega:obo660x,Omega,OBO660X,ovens,fuelType,electric,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:omega:obo660x,Omega,OBO660X,ovens,capacity,,pending-verification,,,2026-09-02
+product:appliances:ovens:omega:obo660x,Omega,OBO660X,ovens,controlType,,pending-verification,,,2026-09-02
+product:appliances:ovens:omega:obo660x,Omega,OBO660X,ovens,cleaningType,,pending-verification,,,2026-09-02
+product:appliances:ovens:omega:obo660x,Omega,OBO660X,ovens,electricalRequirements,,pending-verification,,,2026-09-02
+product:appliances:ovens:omega:obo960x1,Omega,OBO960X1,ovens,family,ovens,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:omega:obo960x1,Omega,OBO960X1,ovens,manufacturerModel,OBO960X1,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:omega:obo960x1,Omega,OBO960X1,ovens,width,900 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:omega:obo960x1,Omega,OBO960X1,ovens,widthMm,900,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:omega:obo960x1,Omega,OBO960X1,ovens,finish,,pending-verification,,,2026-09-02
+product:appliances:ovens:omega:obo960x1,Omega,OBO960X1,ovens,fuelOrEnergyType,,pending-verification,,,2026-09-02
+product:appliances:ovens:omega:obo960x1,Omega,OBO960X1,ovens,installationType,,pending-verification,,,2026-09-02
+product:appliances:ovens:omega:obo960x1,Omega,OBO960X1,ovens,functions,9,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:omega:obo960x1,Omega,OBO960X1,ovens,fuelType,electric,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:omega:obo960x1,Omega,OBO960X1,ovens,capacity,,pending-verification,,,2026-09-02
+product:appliances:ovens:omega:obo960x1,Omega,OBO960X1,ovens,controlType,,pending-verification,,,2026-09-02
+product:appliances:ovens:omega:obo960x1,Omega,OBO960X1,ovens,cleaningType,,pending-verification,,,2026-09-02
+product:appliances:ovens:omega:obo960x1,Omega,OBO960X1,ovens,electricalRequirements,,pending-verification,,,2026-09-02
+product:appliances:ovens:smeg:sf64m3tvx,Smeg,SF64M3TVX,ovens,family,ovens,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:smeg:sf64m3tvx,Smeg,SF64M3TVX,ovens,manufacturerModel,SF64M3TVX,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:smeg:sf64m3tvx,Smeg,SF64M3TVX,ovens,width,600 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:smeg:sf64m3tvx,Smeg,SF64M3TVX,ovens,widthMm,600,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:smeg:sf64m3tvx,Smeg,SF64M3TVX,ovens,finish,,pending-verification,,,2026-09-02
+product:appliances:ovens:smeg:sf64m3tvx,Smeg,SF64M3TVX,ovens,fuelOrEnergyType,electric,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:smeg:sf64m3tvx,Smeg,SF64M3TVX,ovens,installationType,,pending-verification,,,2026-09-02
+product:appliances:ovens:smeg:sf64m3tvx,Smeg,SF64M3TVX,ovens,functions,,pending-verification,,,2026-09-02
+product:appliances:ovens:smeg:sf64m3tvx,Smeg,SF64M3TVX,ovens,fuelType,electric,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:smeg:sf64m3tvx,Smeg,SF64M3TVX,ovens,capacity,,pending-verification,,,2026-09-02
+product:appliances:ovens:smeg:sf64m3tvx,Smeg,SF64M3TVX,ovens,controlType,,pending-verification,,,2026-09-02
+product:appliances:ovens:smeg:sf64m3tvx,Smeg,SF64M3TVX,ovens,cleaningType,,pending-verification,,,2026-09-02
+product:appliances:ovens:smeg:sf64m3tvx,Smeg,SF64M3TVX,ovens,electricalRequirements,,pending-verification,,,2026-09-02
+product:appliances:ovens:smeg:sfpa9395x1,Smeg,SFPA9395X1,ovens,family,ovens,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:smeg:sfpa9395x1,Smeg,SFPA9395X1,ovens,manufacturerModel,SFPA9395X1,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:smeg:sfpa9395x1,Smeg,SFPA9395X1,ovens,width,900 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:smeg:sfpa9395x1,Smeg,SFPA9395X1,ovens,widthMm,900,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:smeg:sfpa9395x1,Smeg,SFPA9395X1,ovens,finish,,pending-verification,,,2026-09-02
+product:appliances:ovens:smeg:sfpa9395x1,Smeg,SFPA9395X1,ovens,fuelOrEnergyType,,pending-verification,,,2026-09-02
+product:appliances:ovens:smeg:sfpa9395x1,Smeg,SFPA9395X1,ovens,installationType,,pending-verification,,,2026-09-02
+product:appliances:ovens:smeg:sfpa9395x1,Smeg,SFPA9395X1,ovens,functions,,pending-verification,,,2026-09-02
+product:appliances:ovens:smeg:sfpa9395x1,Smeg,SFPA9395X1,ovens,fuelType,electric,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:smeg:sfpa9395x1,Smeg,SFPA9395X1,ovens,capacity,,pending-verification,,,2026-09-02
+product:appliances:ovens:smeg:sfpa9395x1,Smeg,SFPA9395X1,ovens,controlType,,pending-verification,,,2026-09-02
+product:appliances:ovens:smeg:sfpa9395x1,Smeg,SFPA9395X1,ovens,cleaningType,,pending-verification,,,2026-09-02
+product:appliances:ovens:smeg:sfpa9395x1,Smeg,SFPA9395X1,ovens,electricalRequirements,,pending-verification,,,2026-09-02
+product:appliances:ovens:westinghouse:wve6314dd,Westinghouse,WVE6314DD,ovens,family,ovens,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:westinghouse:wve6314dd,Westinghouse,WVE6314DD,ovens,manufacturerModel,WVE6314DD,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:westinghouse:wve6314dd,Westinghouse,WVE6314DD,ovens,width,600 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:westinghouse:wve6314dd,Westinghouse,WVE6314DD,ovens,widthMm,600,verified-source,Westinghouse Australia,https://www.westinghouse.com.au/cooking/ovens/wve6314dd/,2026-09-02
+product:appliances:ovens:westinghouse:wve6314dd,Westinghouse,WVE6314DD,ovens,finish,dark stainless steel,verified-source,Westinghouse Australia,https://www.westinghouse.com.au/cooking/ovens/wve6314dd/,2026-09-02
+product:appliances:ovens:westinghouse:wve6314dd,Westinghouse,WVE6314DD,ovens,fuelOrEnergyType,,pending-verification,,,2026-09-02
+product:appliances:ovens:westinghouse:wve6314dd,Westinghouse,WVE6314DD,ovens,installationType,,pending-verification,,,2026-09-02
+product:appliances:ovens:westinghouse:wve6314dd,Westinghouse,WVE6314DD,ovens,functions,5,verified-source,Westinghouse Australia,https://www.westinghouse.com.au/cooking/ovens/wve6314dd/,2026-09-02
+product:appliances:ovens:westinghouse:wve6314dd,Westinghouse,WVE6314DD,ovens,fuelType,electric,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:westinghouse:wve6314dd,Westinghouse,WVE6314DD,ovens,capacity,80 L gross,verified-source,Westinghouse Australia,https://www.westinghouse.com.au/cooking/ovens/wve6314dd/,2026-09-02
+product:appliances:ovens:westinghouse:wve6314dd,Westinghouse,WVE6314DD,ovens,controlType,,pending-verification,,,2026-09-02
+product:appliances:ovens:westinghouse:wve6314dd,Westinghouse,WVE6314DD,ovens,cleaningType,,pending-verification,,,2026-09-02
+product:appliances:ovens:westinghouse:wve6314dd,Westinghouse,WVE6314DD,ovens,electricalRequirements,10A plug,verified-source,Westinghouse Australia,https://www.westinghouse.com.au/cooking/ovens/wve6314dd/,2026-09-02
+product:appliances:ovens:westinghouse:wve6314dd,Westinghouse,WVE6314DD,ovens,controls,knob controls,verified-source,Westinghouse Australia,https://www.westinghouse.com.au/cooking/ovens/wve6314dd/,2026-09-02
+product:appliances:ovens:westinghouse:wve916sc,Westinghouse,WVE916SC,ovens,family,ovens,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:westinghouse:wve916sc,Westinghouse,WVE916SC,ovens,manufacturerModel,WVE916SC,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:westinghouse:wve916sc,Westinghouse,WVE916SC,ovens,width,900 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:westinghouse:wve916sc,Westinghouse,WVE916SC,ovens,widthMm,900,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:westinghouse:wve916sc,Westinghouse,WVE916SC,ovens,finish,,pending-verification,,,2026-09-02
+product:appliances:ovens:westinghouse:wve916sc,Westinghouse,WVE916SC,ovens,fuelOrEnergyType,electric,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:westinghouse:wve916sc,Westinghouse,WVE916SC,ovens,installationType,,pending-verification,,,2026-09-02
+product:appliances:ovens:westinghouse:wve916sc,Westinghouse,WVE916SC,ovens,functions,,pending-verification,,,2026-09-02
+product:appliances:ovens:westinghouse:wve916sc,Westinghouse,WVE916SC,ovens,fuelType,electric,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:ovens:westinghouse:wve916sc,Westinghouse,WVE916SC,ovens,capacity,,pending-verification,,,2026-09-02
+product:appliances:ovens:westinghouse:wve916sc,Westinghouse,WVE916SC,ovens,controlType,,pending-verification,,,2026-09-02
+product:appliances:ovens:westinghouse:wve916sc,Westinghouse,WVE916SC,ovens,cleaningType,,pending-verification,,,2026-09-02
+product:appliances:ovens:westinghouse:wve916sc,Westinghouse,WVE916SC,ovens,electricalRequirements,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:ariston:arhc60x,Ariston,ARHC60X,rangehoods,family,rangehoods,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:ariston:arhc60x,Ariston,ARHC60X,rangehoods,manufacturerModel,ARHC60X,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:ariston:arhc60x,Ariston,ARHC60X,rangehoods,width,600 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:ariston:arhc60x,Ariston,ARHC60X,rangehoods,widthMm,600,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:ariston:arhc60x,Ariston,ARHC60X,rangehoods,finish,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:ariston:arhc60x,Ariston,ARHC60X,rangehoods,fuelOrEnergyType,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:ariston:arhc60x,Ariston,ARHC60X,rangehoods,installationType,canopy,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:ariston:arhc60x,Ariston,ARHC60X,rangehoods,rangehoodType,canopy,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:ariston:arhc60x,Ariston,ARHC60X,rangehoods,extractionCapacity,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:ariston:arhc60x,Ariston,ARHC60X,rangehoods,ductedOrRecirculating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:ariston:arhc60x,Ariston,ARHC60X,rangehoods,lighting,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:ariston:arhc60x,Ariston,ARHC60X,rangehoods,noiseRating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:ariston:arhc90x,Ariston,ARHC90X,rangehoods,family,rangehoods,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:ariston:arhc90x,Ariston,ARHC90X,rangehoods,manufacturerModel,ARHC90X,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:ariston:arhc90x,Ariston,ARHC90X,rangehoods,width,900 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:ariston:arhc90x,Ariston,ARHC90X,rangehoods,widthMm,900,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:ariston:arhc90x,Ariston,ARHC90X,rangehoods,finish,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:ariston:arhc90x,Ariston,ARHC90X,rangehoods,fuelOrEnergyType,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:ariston:arhc90x,Ariston,ARHC90X,rangehoods,installationType,canopy,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:ariston:arhc90x,Ariston,ARHC90X,rangehoods,rangehoodType,canopy,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:ariston:arhc90x,Ariston,ARHC90X,rangehoods,extractionCapacity,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:ariston:arhc90x,Ariston,ARHC90X,rangehoods,ductedOrRecirculating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:ariston:arhc90x,Ariston,ARHC90X,rangehoods,lighting,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:ariston:arhc90x,Ariston,ARHC90X,rangehoods,noiseRating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:ariston:arhs60x,Ariston,ARHS60X,rangehoods,family,rangehoods,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:ariston:arhs60x,Ariston,ARHS60X,rangehoods,manufacturerModel,ARHS60X,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:ariston:arhs60x,Ariston,ARHS60X,rangehoods,width,600 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:ariston:arhs60x,Ariston,ARHS60X,rangehoods,widthMm,600,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:ariston:arhs60x,Ariston,ARHS60X,rangehoods,finish,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:ariston:arhs60x,Ariston,ARHS60X,rangehoods,fuelOrEnergyType,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:ariston:arhs60x,Ariston,ARHS60X,rangehoods,installationType,slide-out,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:ariston:arhs60x,Ariston,ARHS60X,rangehoods,rangehoodType,slide-out,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:ariston:arhs60x,Ariston,ARHS60X,rangehoods,extractionCapacity,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:ariston:arhs60x,Ariston,ARHS60X,rangehoods,ductedOrRecirculating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:ariston:arhs60x,Ariston,ARHS60X,rangehoods,lighting,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:ariston:arhs60x,Ariston,ARHS60X,rangehoods,noiseRating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:ariston:arhs90x,Ariston,ARHS90X,rangehoods,family,rangehoods,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:ariston:arhs90x,Ariston,ARHS90X,rangehoods,manufacturerModel,ARHS90X,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:ariston:arhs90x,Ariston,ARHS90X,rangehoods,width,900 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:ariston:arhs90x,Ariston,ARHS90X,rangehoods,widthMm,900,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:ariston:arhs90x,Ariston,ARHS90X,rangehoods,finish,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:ariston:arhs90x,Ariston,ARHS90X,rangehoods,fuelOrEnergyType,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:ariston:arhs90x,Ariston,ARHS90X,rangehoods,installationType,slide-out,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:ariston:arhs90x,Ariston,ARHS90X,rangehoods,rangehoodType,slide-out,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:ariston:arhs90x,Ariston,ARHS90X,rangehoods,extractionCapacity,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:ariston:arhs90x,Ariston,ARHS90X,rangehoods,ductedOrRecirculating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:ariston:arhs90x,Ariston,ARHS90X,rangehoods,lighting,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:ariston:arhs90x,Ariston,ARHS90X,rangehoods,noiseRating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:ariston:aru60x,Ariston,ARU60X,rangehoods,family,rangehoods,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:ariston:aru60x,Ariston,ARU60X,rangehoods,manufacturerModel,ARU60X,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:ariston:aru60x,Ariston,ARU60X,rangehoods,width,600 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:ariston:aru60x,Ariston,ARU60X,rangehoods,widthMm,600,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:ariston:aru60x,Ariston,ARU60X,rangehoods,finish,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:ariston:aru60x,Ariston,ARU60X,rangehoods,fuelOrEnergyType,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:ariston:aru60x,Ariston,ARU60X,rangehoods,installationType,under-cupboard,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:ariston:aru60x,Ariston,ARU60X,rangehoods,rangehoodType,under-cupboard,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:ariston:aru60x,Ariston,ARU60X,rangehoods,extractionCapacity,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:ariston:aru60x,Ariston,ARU60X,rangehoods,ductedOrRecirculating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:ariston:aru60x,Ariston,ARU60X,rangehoods,lighting,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:ariston:aru60x,Ariston,ARU60X,rangehoods,noiseRating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:ariston:aru90x,Ariston,ARU90X,rangehoods,family,rangehoods,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:ariston:aru90x,Ariston,ARU90X,rangehoods,manufacturerModel,ARU90X,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:ariston:aru90x,Ariston,ARU90X,rangehoods,width,900 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:ariston:aru90x,Ariston,ARU90X,rangehoods,widthMm,900,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:ariston:aru90x,Ariston,ARU90X,rangehoods,finish,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:ariston:aru90x,Ariston,ARU90X,rangehoods,fuelOrEnergyType,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:ariston:aru90x,Ariston,ARU90X,rangehoods,installationType,under-cupboard,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:ariston:aru90x,Ariston,ARU90X,rangehoods,rangehoodType,under-cupboard,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:ariston:aru90x,Ariston,ARU90X,rangehoods,extractionCapacity,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:ariston:aru90x,Ariston,ARU90X,rangehoods,ductedOrRecirculating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:ariston:aru90x,Ariston,ARU90X,rangehoods,lighting,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:ariston:aru90x,Ariston,ARU90X,rangehoods,noiseRating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:blanco:brc60x,Blanco,BRC60X,rangehoods,family,rangehoods,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:blanco:brc60x,Blanco,BRC60X,rangehoods,manufacturerModel,BRC60X,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:blanco:brc60x,Blanco,BRC60X,rangehoods,width,600 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:blanco:brc60x,Blanco,BRC60X,rangehoods,widthMm,600,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:blanco:brc60x,Blanco,BRC60X,rangehoods,finish,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:blanco:brc60x,Blanco,BRC60X,rangehoods,fuelOrEnergyType,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:blanco:brc60x,Blanco,BRC60X,rangehoods,installationType,canopy,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:blanco:brc60x,Blanco,BRC60X,rangehoods,rangehoodType,canopy,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:blanco:brc60x,Blanco,BRC60X,rangehoods,extractionCapacity,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:blanco:brc60x,Blanco,BRC60X,rangehoods,ductedOrRecirculating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:blanco:brc60x,Blanco,BRC60X,rangehoods,lighting,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:blanco:brc60x,Blanco,BRC60X,rangehoods,noiseRating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:blanco:brc90x,Blanco,BRC90X,rangehoods,family,rangehoods,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:blanco:brc90x,Blanco,BRC90X,rangehoods,manufacturerModel,BRC90X,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:blanco:brc90x,Blanco,BRC90X,rangehoods,width,900 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:blanco:brc90x,Blanco,BRC90X,rangehoods,widthMm,900,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:blanco:brc90x,Blanco,BRC90X,rangehoods,finish,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:blanco:brc90x,Blanco,BRC90X,rangehoods,fuelOrEnergyType,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:blanco:brc90x,Blanco,BRC90X,rangehoods,installationType,canopy,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:blanco:brc90x,Blanco,BRC90X,rangehoods,rangehoodType,canopy,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:blanco:brc90x,Blanco,BRC90X,rangehoods,extractionCapacity,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:blanco:brc90x,Blanco,BRC90X,rangehoods,ductedOrRecirculating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:blanco:brc90x,Blanco,BRC90X,rangehoods,lighting,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:blanco:brc90x,Blanco,BRC90X,rangehoods,noiseRating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:blanco:bru53x,Blanco,BRU53X,rangehoods,family,rangehoods,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:blanco:bru53x,Blanco,BRU53X,rangehoods,manufacturerModel,BRU53X,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:blanco:bru53x,Blanco,BRU53X,rangehoods,width,600 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:blanco:bru53x,Blanco,BRU53X,rangehoods,widthMm,600,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:blanco:bru53x,Blanco,BRU53X,rangehoods,finish,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:blanco:bru53x,Blanco,BRU53X,rangehoods,fuelOrEnergyType,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:blanco:bru53x,Blanco,BRU53X,rangehoods,installationType,slide-out,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:blanco:bru53x,Blanco,BRU53X,rangehoods,rangehoodType,slide-out,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:blanco:bru53x,Blanco,BRU53X,rangehoods,extractionCapacity,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:blanco:bru53x,Blanco,BRU53X,rangehoods,ductedOrRecirculating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:blanco:bru53x,Blanco,BRU53X,rangehoods,lighting,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:blanco:bru53x,Blanco,BRU53X,rangehoods,noiseRating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:blanco:bru60x,Blanco,BRU60X,rangehoods,family,rangehoods,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:blanco:bru60x,Blanco,BRU60X,rangehoods,manufacturerModel,BRU60X,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:blanco:bru60x,Blanco,BRU60X,rangehoods,width,600 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:blanco:bru60x,Blanco,BRU60X,rangehoods,widthMm,600,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:blanco:bru60x,Blanco,BRU60X,rangehoods,finish,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:blanco:bru60x,Blanco,BRU60X,rangehoods,fuelOrEnergyType,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:blanco:bru60x,Blanco,BRU60X,rangehoods,installationType,under-cupboard,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:blanco:bru60x,Blanco,BRU60X,rangehoods,rangehoodType,under-cupboard,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:blanco:bru60x,Blanco,BRU60X,rangehoods,extractionCapacity,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:blanco:bru60x,Blanco,BRU60X,rangehoods,ductedOrRecirculating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:blanco:bru60x,Blanco,BRU60X,rangehoods,lighting,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:blanco:bru60x,Blanco,BRU60X,rangehoods,noiseRating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:blanco:bru90ux,Blanco,BRU90UX,rangehoods,family,rangehoods,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:blanco:bru90ux,Blanco,BRU90UX,rangehoods,manufacturerModel,BRU90UX,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:blanco:bru90ux,Blanco,BRU90UX,rangehoods,width,900 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:blanco:bru90ux,Blanco,BRU90UX,rangehoods,widthMm,900,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:blanco:bru90ux,Blanco,BRU90UX,rangehoods,finish,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:blanco:bru90ux,Blanco,BRU90UX,rangehoods,fuelOrEnergyType,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:blanco:bru90ux,Blanco,BRU90UX,rangehoods,installationType,under-cupboard,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:blanco:bru90ux,Blanco,BRU90UX,rangehoods,rangehoodType,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:blanco:bru90ux,Blanco,BRU90UX,rangehoods,extractionCapacity,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:blanco:bru90ux,Blanco,BRU90UX,rangehoods,ductedOrRecirculating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:blanco:bru90ux,Blanco,BRU90UX,rangehoods,lighting,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:blanco:bru90ux,Blanco,BRU90UX,rangehoods,noiseRating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:blanco:bru90x,Blanco,BRU90X,rangehoods,family,rangehoods,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:blanco:bru90x,Blanco,BRU90X,rangehoods,manufacturerModel,BRU90X,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:blanco:bru90x,Blanco,BRU90X,rangehoods,width,900 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:blanco:bru90x,Blanco,BRU90X,rangehoods,widthMm,900,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:blanco:bru90x,Blanco,BRU90X,rangehoods,finish,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:blanco:bru90x,Blanco,BRU90X,rangehoods,fuelOrEnergyType,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:blanco:bru90x,Blanco,BRU90X,rangehoods,installationType,slide-out,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:blanco:bru90x,Blanco,BRU90X,rangehoods,rangehoodType,slide-out,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:blanco:bru90x,Blanco,BRU90X,rangehoods,extractionCapacity,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:blanco:bru90x,Blanco,BRU90X,rangehoods,ductedOrRecirculating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:blanco:bru90x,Blanco,BRU90X,rangehoods,lighting,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:blanco:bru90x,Blanco,BRU90X,rangehoods,noiseRating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:euromaid:cpt6s,Euromaid,CPT6S,rangehoods,family,rangehoods,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:euromaid:cpt6s,Euromaid,CPT6S,rangehoods,manufacturerModel,CPT6S,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:euromaid:cpt6s,Euromaid,CPT6S,rangehoods,width,600 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:euromaid:cpt6s,Euromaid,CPT6S,rangehoods,widthMm,600,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:euromaid:cpt6s,Euromaid,CPT6S,rangehoods,finish,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:euromaid:cpt6s,Euromaid,CPT6S,rangehoods,fuelOrEnergyType,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:euromaid:cpt6s,Euromaid,CPT6S,rangehoods,installationType,canopy,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:euromaid:cpt6s,Euromaid,CPT6S,rangehoods,rangehoodType,canopy,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:euromaid:cpt6s,Euromaid,CPT6S,rangehoods,extractionCapacity,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:euromaid:cpt6s,Euromaid,CPT6S,rangehoods,ductedOrRecirculating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:euromaid:cpt6s,Euromaid,CPT6S,rangehoods,lighting,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:euromaid:cpt6s,Euromaid,CPT6S,rangehoods,noiseRating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:euromaid:cpt9mb,Euromaid,CPT9MB,rangehoods,family,rangehoods,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:euromaid:cpt9mb,Euromaid,CPT9MB,rangehoods,manufacturerModel,CPT9MB,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:euromaid:cpt9mb,Euromaid,CPT9MB,rangehoods,width,900 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:euromaid:cpt9mb,Euromaid,CPT9MB,rangehoods,widthMm,900,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:euromaid:cpt9mb,Euromaid,CPT9MB,rangehoods,finish,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:euromaid:cpt9mb,Euromaid,CPT9MB,rangehoods,fuelOrEnergyType,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:euromaid:cpt9mb,Euromaid,CPT9MB,rangehoods,installationType,canopy,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:euromaid:cpt9mb,Euromaid,CPT9MB,rangehoods,rangehoodType,canopy,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:euromaid:cpt9mb,Euromaid,CPT9MB,rangehoods,extractionCapacity,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:euromaid:cpt9mb,Euromaid,CPT9MB,rangehoods,ductedOrRecirculating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:euromaid:cpt9mb,Euromaid,CPT9MB,rangehoods,lighting,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:euromaid:cpt9mb,Euromaid,CPT9MB,rangehoods,noiseRating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:euromaid:cs60s,Euromaid,CS60S,rangehoods,family,rangehoods,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:euromaid:cs60s,Euromaid,CS60S,rangehoods,manufacturerModel,CS60S,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:euromaid:cs60s,Euromaid,CS60S,rangehoods,width,600 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:euromaid:cs60s,Euromaid,CS60S,rangehoods,widthMm,600,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:euromaid:cs60s,Euromaid,CS60S,rangehoods,finish,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:euromaid:cs60s,Euromaid,CS60S,rangehoods,fuelOrEnergyType,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:euromaid:cs60s,Euromaid,CS60S,rangehoods,installationType,under-cupboard,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:euromaid:cs60s,Euromaid,CS60S,rangehoods,rangehoodType,under-cupboard,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:euromaid:cs60s,Euromaid,CS60S,rangehoods,extractionCapacity,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:euromaid:cs60s,Euromaid,CS60S,rangehoods,ductedOrRecirculating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:euromaid:cs60s,Euromaid,CS60S,rangehoods,lighting,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:euromaid:cs60s,Euromaid,CS60S,rangehoods,noiseRating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:euromaid:fs90s,Euromaid,FS90S,rangehoods,family,rangehoods,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:euromaid:fs90s,Euromaid,FS90S,rangehoods,manufacturerModel,FS90S,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:euromaid:fs90s,Euromaid,FS90S,rangehoods,width,900 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:euromaid:fs90s,Euromaid,FS90S,rangehoods,widthMm,900,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:euromaid:fs90s,Euromaid,FS90S,rangehoods,finish,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:euromaid:fs90s,Euromaid,FS90S,rangehoods,fuelOrEnergyType,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:euromaid:fs90s,Euromaid,FS90S,rangehoods,installationType,under-cupboard,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:euromaid:fs90s,Euromaid,FS90S,rangehoods,rangehoodType,under-cupboard,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:euromaid:fs90s,Euromaid,FS90S,rangehoods,extractionCapacity,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:euromaid:fs90s,Euromaid,FS90S,rangehoods,ductedOrRecirculating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:euromaid:fs90s,Euromaid,FS90S,rangehoods,lighting,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:euromaid:fs90s,Euromaid,FS90S,rangehoods,noiseRating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:euromaid:rs6s,Euromaid,RS6S,rangehoods,family,rangehoods,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:euromaid:rs6s,Euromaid,RS6S,rangehoods,manufacturerModel,RS6S,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:euromaid:rs6s,Euromaid,RS6S,rangehoods,width,600 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:euromaid:rs6s,Euromaid,RS6S,rangehoods,widthMm,600,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:euromaid:rs6s,Euromaid,RS6S,rangehoods,finish,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:euromaid:rs6s,Euromaid,RS6S,rangehoods,fuelOrEnergyType,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:euromaid:rs6s,Euromaid,RS6S,rangehoods,installationType,slide-out,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:euromaid:rs6s,Euromaid,RS6S,rangehoods,rangehoodType,slide-out,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:euromaid:rs6s,Euromaid,RS6S,rangehoods,extractionCapacity,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:euromaid:rs6s,Euromaid,RS6S,rangehoods,ductedOrRecirculating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:euromaid:rs6s,Euromaid,RS6S,rangehoods,lighting,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:euromaid:rs6s,Euromaid,RS6S,rangehoods,noiseRating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:euromaid:rs9s,Euromaid,RS9S,rangehoods,family,rangehoods,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:euromaid:rs9s,Euromaid,RS9S,rangehoods,manufacturerModel,RS9S,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:euromaid:rs9s,Euromaid,RS9S,rangehoods,width,900 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:euromaid:rs9s,Euromaid,RS9S,rangehoods,widthMm,900,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:euromaid:rs9s,Euromaid,RS9S,rangehoods,finish,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:euromaid:rs9s,Euromaid,RS9S,rangehoods,fuelOrEnergyType,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:euromaid:rs9s,Euromaid,RS9S,rangehoods,installationType,slide-out,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:euromaid:rs9s,Euromaid,RS9S,rangehoods,rangehoodType,slide-out,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:euromaid:rs9s,Euromaid,RS9S,rangehoods,extractionCapacity,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:euromaid:rs9s,Euromaid,RS9S,rangehoods,ductedOrRecirculating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:euromaid:rs9s,Euromaid,RS9S,rangehoods,lighting,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:euromaid:rs9s,Euromaid,RS9S,rangehoods,noiseRating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:omega:orc60x,Omega,ORC60X,rangehoods,family,rangehoods,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:omega:orc60x,Omega,ORC60X,rangehoods,manufacturerModel,ORC60X,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:omega:orc60x,Omega,ORC60X,rangehoods,width,600 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:omega:orc60x,Omega,ORC60X,rangehoods,widthMm,600,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:omega:orc60x,Omega,ORC60X,rangehoods,finish,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:omega:orc60x,Omega,ORC60X,rangehoods,fuelOrEnergyType,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:omega:orc60x,Omega,ORC60X,rangehoods,installationType,canopy,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:omega:orc60x,Omega,ORC60X,rangehoods,rangehoodType,canopy,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:omega:orc60x,Omega,ORC60X,rangehoods,extractionCapacity,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:omega:orc60x,Omega,ORC60X,rangehoods,ductedOrRecirculating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:omega:orc60x,Omega,ORC60X,rangehoods,lighting,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:omega:orc60x,Omega,ORC60X,rangehoods,noiseRating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:omega:orc90x,Omega,ORC90X,rangehoods,family,rangehoods,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:omega:orc90x,Omega,ORC90X,rangehoods,manufacturerModel,ORC90X,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:omega:orc90x,Omega,ORC90X,rangehoods,width,900 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:omega:orc90x,Omega,ORC90X,rangehoods,widthMm,900,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:omega:orc90x,Omega,ORC90X,rangehoods,finish,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:omega:orc90x,Omega,ORC90X,rangehoods,fuelOrEnergyType,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:omega:orc90x,Omega,ORC90X,rangehoods,installationType,canopy,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:omega:orc90x,Omega,ORC90X,rangehoods,rangehoodType,canopy,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:omega:orc90x,Omega,ORC90X,rangehoods,extractionCapacity,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:omega:orc90x,Omega,ORC90X,rangehoods,ductedOrRecirculating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:omega:orc90x,Omega,ORC90X,rangehoods,lighting,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:omega:orc90x,Omega,ORC90X,rangehoods,noiseRating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:omega:orf60x,Omega,ORF60X,rangehoods,family,rangehoods,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:omega:orf60x,Omega,ORF60X,rangehoods,manufacturerModel,ORF60X,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:omega:orf60x,Omega,ORF60X,rangehoods,width,600 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:omega:orf60x,Omega,ORF60X,rangehoods,widthMm,600,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:omega:orf60x,Omega,ORF60X,rangehoods,finish,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:omega:orf60x,Omega,ORF60X,rangehoods,fuelOrEnergyType,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:omega:orf60x,Omega,ORF60X,rangehoods,installationType,under-cupboard,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:omega:orf60x,Omega,ORF60X,rangehoods,rangehoodType,under-cupboard,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:omega:orf60x,Omega,ORF60X,rangehoods,extractionCapacity,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:omega:orf60x,Omega,ORF60X,rangehoods,ductedOrRecirculating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:omega:orf60x,Omega,ORF60X,rangehoods,lighting,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:omega:orf60x,Omega,ORF60X,rangehoods,noiseRating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:omega:orf90x,Omega,ORF90X,rangehoods,family,rangehoods,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:omega:orf90x,Omega,ORF90X,rangehoods,manufacturerModel,ORF90X,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:omega:orf90x,Omega,ORF90X,rangehoods,width,900 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:omega:orf90x,Omega,ORF90X,rangehoods,widthMm,900,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:omega:orf90x,Omega,ORF90X,rangehoods,finish,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:omega:orf90x,Omega,ORF90X,rangehoods,fuelOrEnergyType,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:omega:orf90x,Omega,ORF90X,rangehoods,installationType,under-cupboard,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:omega:orf90x,Omega,ORF90X,rangehoods,rangehoodType,fixed,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:omega:orf90x,Omega,ORF90X,rangehoods,extractionCapacity,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:omega:orf90x,Omega,ORF90X,rangehoods,ductedOrRecirculating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:omega:orf90x,Omega,ORF90X,rangehoods,lighting,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:omega:orf90x,Omega,ORF90X,rangehoods,noiseRating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:omega:ort6wba,Omega,ORT6WBA,rangehoods,family,rangehoods,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:omega:ort6wba,Omega,ORT6WBA,rangehoods,manufacturerModel,ORT6WBA,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:omega:ort6wba,Omega,ORT6WBA,rangehoods,width,600 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:omega:ort6wba,Omega,ORT6WBA,rangehoods,widthMm,600,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:omega:ort6wba,Omega,ORT6WBA,rangehoods,finish,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:omega:ort6wba,Omega,ORT6WBA,rangehoods,fuelOrEnergyType,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:omega:ort6wba,Omega,ORT6WBA,rangehoods,installationType,slide-out,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:omega:ort6wba,Omega,ORT6WBA,rangehoods,rangehoodType,slide-out,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:omega:ort6wba,Omega,ORT6WBA,rangehoods,extractionCapacity,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:omega:ort6wba,Omega,ORT6WBA,rangehoods,ductedOrRecirculating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:omega:ort6wba,Omega,ORT6WBA,rangehoods,lighting,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:omega:ort6wba,Omega,ORT6WBA,rangehoods,noiseRating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:omega:ort9wxa,Omega,ORT9WXA,rangehoods,family,rangehoods,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:omega:ort9wxa,Omega,ORT9WXA,rangehoods,manufacturerModel,ORT9WXA,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:omega:ort9wxa,Omega,ORT9WXA,rangehoods,width,900 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:omega:ort9wxa,Omega,ORT9WXA,rangehoods,widthMm,900,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:omega:ort9wxa,Omega,ORT9WXA,rangehoods,finish,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:omega:ort9wxa,Omega,ORT9WXA,rangehoods,fuelOrEnergyType,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:omega:ort9wxa,Omega,ORT9WXA,rangehoods,installationType,slide-out,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:omega:ort9wxa,Omega,ORT9WXA,rangehoods,rangehoodType,slide-out,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:omega:ort9wxa,Omega,ORT9WXA,rangehoods,extractionCapacity,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:omega:ort9wxa,Omega,ORT9WXA,rangehoods,ductedOrRecirculating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:omega:ort9wxa,Omega,ORT9WXA,rangehoods,lighting,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:omega:ort9wxa,Omega,ORT9WXA,rangehoods,noiseRating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:smeg:pum601x,Smeg,PUM601X,rangehoods,family,rangehoods,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:smeg:pum601x,Smeg,PUM601X,rangehoods,manufacturerModel,PUM601X,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:smeg:pum601x,Smeg,PUM601X,rangehoods,width,600 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:smeg:pum601x,Smeg,PUM601X,rangehoods,widthMm,600,verified-source,Smeg Australia,https://www.smeg.com/au/products/PUM601X,2026-09-02
+product:appliances:rangehoods:smeg:pum601x,Smeg,PUM601X,rangehoods,finish,stainless steel,verified-source,Smeg Australia,https://www.smeg.com/au/products/PUM601X,2026-09-02
+product:appliances:rangehoods:smeg:pum601x,Smeg,PUM601X,rangehoods,fuelOrEnergyType,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:smeg:pum601x,Smeg,PUM601X,rangehoods,installationType,under-cupboard,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:smeg:pum601x,Smeg,PUM601X,rangehoods,rangehoodType,under-cupboard,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:smeg:pum601x,Smeg,PUM601X,rangehoods,extractionCapacity,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:smeg:pum601x,Smeg,PUM601X,rangehoods,ductedOrRecirculating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:smeg:pum601x,Smeg,PUM601X,rangehoods,lighting,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:smeg:pum601x,Smeg,PUM601X,rangehoods,noiseRating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:smeg:pum601x,Smeg,PUM601X,rangehoods,hoodType,integrated,verified-source,Smeg Australia,https://www.smeg.com/au/products/PUM601X,2026-09-02
+product:appliances:rangehoods:smeg:pum901x,Smeg,PUM901X,rangehoods,family,rangehoods,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:smeg:pum901x,Smeg,PUM901X,rangehoods,manufacturerModel,PUM901X,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:smeg:pum901x,Smeg,PUM901X,rangehoods,width,900 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:smeg:pum901x,Smeg,PUM901X,rangehoods,widthMm,900,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:smeg:pum901x,Smeg,PUM901X,rangehoods,finish,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:smeg:pum901x,Smeg,PUM901X,rangehoods,fuelOrEnergyType,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:smeg:pum901x,Smeg,PUM901X,rangehoods,installationType,under-cupboard,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:smeg:pum901x,Smeg,PUM901X,rangehoods,rangehoodType,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:smeg:pum901x,Smeg,PUM901X,rangehoods,extractionCapacity,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:smeg:pum901x,Smeg,PUM901X,rangehoods,ductedOrRecirculating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:smeg:pum901x,Smeg,PUM901X,rangehoods,lighting,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:smeg:pum901x,Smeg,PUM901X,rangehoods,noiseRating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:smeg:shw610x1,Smeg,SHW610X1,rangehoods,family,rangehoods,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:smeg:shw610x1,Smeg,SHW610X1,rangehoods,manufacturerModel,SHW610X1,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:smeg:shw610x1,Smeg,SHW610X1,rangehoods,width,600 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:smeg:shw610x1,Smeg,SHW610X1,rangehoods,widthMm,600,verified-source,Smeg Australia,https://www.smeg.com/au/products/SHW610X1,2026-09-02
+product:appliances:rangehoods:smeg:shw610x1,Smeg,SHW610X1,rangehoods,finish,stainless steel,verified-source,Smeg Australia,https://www.smeg.com/au/products/SHW610X1,2026-09-02
+product:appliances:rangehoods:smeg:shw610x1,Smeg,SHW610X1,rangehoods,fuelOrEnergyType,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:smeg:shw610x1,Smeg,SHW610X1,rangehoods,installationType,canopy,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:smeg:shw610x1,Smeg,SHW610X1,rangehoods,rangehoodType,canopy,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:smeg:shw610x1,Smeg,SHW610X1,rangehoods,extractionCapacity,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:smeg:shw610x1,Smeg,SHW610X1,rangehoods,ductedOrRecirculating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:smeg:shw610x1,Smeg,SHW610X1,rangehoods,lighting,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:smeg:shw610x1,Smeg,SHW610X1,rangehoods,noiseRating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:smeg:shw610x1,Smeg,SHW610X1,rangehoods,hoodType,wallmount canopy,verified-source,Smeg Australia,https://www.smeg.com/au/products/SHW610X1,2026-09-02
+product:appliances:rangehoods:smeg:shw910x2,Smeg,SHW910X2,rangehoods,family,rangehoods,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:smeg:shw910x2,Smeg,SHW910X2,rangehoods,manufacturerModel,SHW910X2,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:smeg:shw910x2,Smeg,SHW910X2,rangehoods,width,900 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:smeg:shw910x2,Smeg,SHW910X2,rangehoods,widthMm,900,verified-source,Smeg Australia,https://www.smeg.com/au/products/SHW910X2,2026-09-02
+product:appliances:rangehoods:smeg:shw910x2,Smeg,SHW910X2,rangehoods,finish,stainless steel,verified-source,Smeg Australia,https://www.smeg.com/au/products/SHW910X2,2026-09-02
+product:appliances:rangehoods:smeg:shw910x2,Smeg,SHW910X2,rangehoods,fuelOrEnergyType,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:smeg:shw910x2,Smeg,SHW910X2,rangehoods,installationType,canopy,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:smeg:shw910x2,Smeg,SHW910X2,rangehoods,rangehoodType,canopy,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:smeg:shw910x2,Smeg,SHW910X2,rangehoods,extractionCapacity,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:smeg:shw910x2,Smeg,SHW910X2,rangehoods,ductedOrRecirculating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:smeg:shw910x2,Smeg,SHW910X2,rangehoods,lighting,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:smeg:shw910x2,Smeg,SHW910X2,rangehoods,noiseRating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:smeg:shw910x2,Smeg,SHW910X2,rangehoods,hoodType,wallmount canopy,verified-source,Smeg Australia,https://www.smeg.com/au/products/SHW910X2,2026-09-02
+product:appliances:rangehoods:smeg:sth600x,Smeg,STH600X,rangehoods,family,rangehoods,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:smeg:sth600x,Smeg,STH600X,rangehoods,manufacturerModel,STH600X,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:smeg:sth600x,Smeg,STH600X,rangehoods,width,600 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:smeg:sth600x,Smeg,STH600X,rangehoods,widthMm,600,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:smeg:sth600x,Smeg,STH600X,rangehoods,finish,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:smeg:sth600x,Smeg,STH600X,rangehoods,fuelOrEnergyType,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:smeg:sth600x,Smeg,STH600X,rangehoods,installationType,slide-out,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:smeg:sth600x,Smeg,STH600X,rangehoods,rangehoodType,slide-out,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:smeg:sth600x,Smeg,STH600X,rangehoods,extractionCapacity,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:smeg:sth600x,Smeg,STH600X,rangehoods,ductedOrRecirculating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:smeg:sth600x,Smeg,STH600X,rangehoods,lighting,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:smeg:sth600x,Smeg,STH600X,rangehoods,noiseRating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:smeg:sth900x,Smeg,STH900X,rangehoods,family,rangehoods,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:smeg:sth900x,Smeg,STH900X,rangehoods,manufacturerModel,STH900X,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:smeg:sth900x,Smeg,STH900X,rangehoods,width,900 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:smeg:sth900x,Smeg,STH900X,rangehoods,widthMm,900,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:smeg:sth900x,Smeg,STH900X,rangehoods,finish,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:smeg:sth900x,Smeg,STH900X,rangehoods,fuelOrEnergyType,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:smeg:sth900x,Smeg,STH900X,rangehoods,installationType,slide-out,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:smeg:sth900x,Smeg,STH900X,rangehoods,rangehoodType,slide-out,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:smeg:sth900x,Smeg,STH900X,rangehoods,extractionCapacity,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:smeg:sth900x,Smeg,STH900X,rangehoods,ductedOrRecirculating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:smeg:sth900x,Smeg,STH900X,rangehoods,lighting,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:smeg:sth900x,Smeg,STH900X,rangehoods,noiseRating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrc614sd,Westinghouse,WRC614SD,rangehoods,family,rangehoods,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrc614sd,Westinghouse,WRC614SD,rangehoods,manufacturerModel,WRC614SD,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrc614sd,Westinghouse,WRC614SD,rangehoods,width,600 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrc614sd,Westinghouse,WRC614SD,rangehoods,widthMm,600,verified-source,Westinghouse Australia,https://www.westinghouse.com.au/cooking/rangehoods/wrc614sd/,2026-09-02
+product:appliances:rangehoods:westinghouse:wrc614sd,Westinghouse,WRC614SD,rangehoods,finish,stainless steel,verified-source,Westinghouse Australia,https://www.westinghouse.com.au/cooking/rangehoods/wrc614sd/,2026-09-02
+product:appliances:rangehoods:westinghouse:wrc614sd,Westinghouse,WRC614SD,rangehoods,fuelOrEnergyType,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrc614sd,Westinghouse,WRC614SD,rangehoods,installationType,canopy,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrc614sd,Westinghouse,WRC614SD,rangehoods,rangehoodType,canopy,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrc614sd,Westinghouse,WRC614SD,rangehoods,extractionCapacity,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrc614sd,Westinghouse,WRC614SD,rangehoods,ductedOrRecirculating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrc614sd,Westinghouse,WRC614SD,rangehoods,lighting,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrc614sd,Westinghouse,WRC614SD,rangehoods,noiseRating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrc614sd,Westinghouse,WRC614SD,rangehoods,hoodType,canopy,verified-source,Westinghouse Australia,https://www.westinghouse.com.au/cooking/rangehoods/wrc614sd/,2026-09-02
+product:appliances:rangehoods:westinghouse:wrc914sd,Westinghouse,WRC914SD,rangehoods,family,rangehoods,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrc914sd,Westinghouse,WRC914SD,rangehoods,manufacturerModel,WRC914SD,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrc914sd,Westinghouse,WRC914SD,rangehoods,width,900 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrc914sd,Westinghouse,WRC914SD,rangehoods,widthMm,900,verified-source,Westinghouse Australia,https://www.westinghouse.com.au/cooking/rangehoods/wrc914sd/,2026-09-02
+product:appliances:rangehoods:westinghouse:wrc914sd,Westinghouse,WRC914SD,rangehoods,finish,stainless steel,verified-source,Westinghouse Australia,https://www.westinghouse.com.au/cooking/rangehoods/wrc914sd/,2026-09-02
+product:appliances:rangehoods:westinghouse:wrc914sd,Westinghouse,WRC914SD,rangehoods,fuelOrEnergyType,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrc914sd,Westinghouse,WRC914SD,rangehoods,installationType,canopy,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrc914sd,Westinghouse,WRC914SD,rangehoods,rangehoodType,canopy,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrc914sd,Westinghouse,WRC914SD,rangehoods,extractionCapacity,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrc914sd,Westinghouse,WRC914SD,rangehoods,ductedOrRecirculating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrc914sd,Westinghouse,WRC914SD,rangehoods,lighting,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrc914sd,Westinghouse,WRC914SD,rangehoods,noiseRating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrc914sd,Westinghouse,WRC914SD,rangehoods,hoodType,canopy,verified-source,Westinghouse Australia,https://www.westinghouse.com.au/cooking/rangehoods/wrc914sd/,2026-09-02
+product:appliances:rangehoods:westinghouse:wrf610wa,Westinghouse,WRF610WA,rangehoods,family,rangehoods,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrf610wa,Westinghouse,WRF610WA,rangehoods,manufacturerModel,WRF610WA,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrf610wa,Westinghouse,WRF610WA,rangehoods,width,600 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrf610wa,Westinghouse,WRF610WA,rangehoods,widthMm,600,verified-source,Westinghouse Australia,https://www.westinghouse.com.au/cooking/rangehoods/wrf610wa/,2026-09-02
+product:appliances:rangehoods:westinghouse:wrf610wa,Westinghouse,WRF610WA,rangehoods,finish,white,verified-source,Westinghouse Australia,https://www.westinghouse.com.au/cooking/rangehoods/wrf610wa/,2026-09-02
+product:appliances:rangehoods:westinghouse:wrf610wa,Westinghouse,WRF610WA,rangehoods,fuelOrEnergyType,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrf610wa,Westinghouse,WRF610WA,rangehoods,installationType,under-cupboard,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrf610wa,Westinghouse,WRF610WA,rangehoods,rangehoodType,under-cupboard,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrf610wa,Westinghouse,WRF610WA,rangehoods,extractionCapacity,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrf610wa,Westinghouse,WRF610WA,rangehoods,ductedOrRecirculating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrf610wa,Westinghouse,WRF610WA,rangehoods,lighting,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrf610wa,Westinghouse,WRF610WA,rangehoods,noiseRating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrf610wa,Westinghouse,WRF610WA,rangehoods,hoodType,fixed,verified-source,Westinghouse Australia,https://www.westinghouse.com.au/cooking/rangehoods/wrf610wa/,2026-09-02
+product:appliances:rangehoods:westinghouse:wrf910wa,Westinghouse,WRF910WA,rangehoods,family,rangehoods,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrf910wa,Westinghouse,WRF910WA,rangehoods,manufacturerModel,WRF910WA,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrf910wa,Westinghouse,WRF910WA,rangehoods,width,900 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrf910wa,Westinghouse,WRF910WA,rangehoods,widthMm,900,verified-source,Westinghouse Australia,https://www.westinghouse.com.au/cooking/rangehoods/wrf910wa/,2026-09-02
+product:appliances:rangehoods:westinghouse:wrf910wa,Westinghouse,WRF910WA,rangehoods,finish,white,verified-source,Westinghouse Australia,https://www.westinghouse.com.au/cooking/rangehoods/wrf910wa/,2026-09-02
+product:appliances:rangehoods:westinghouse:wrf910wa,Westinghouse,WRF910WA,rangehoods,fuelOrEnergyType,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrf910wa,Westinghouse,WRF910WA,rangehoods,installationType,under-cupboard,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrf910wa,Westinghouse,WRF910WA,rangehoods,rangehoodType,fixed,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrf910wa,Westinghouse,WRF910WA,rangehoods,extractionCapacity,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrf910wa,Westinghouse,WRF910WA,rangehoods,ductedOrRecirculating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrf910wa,Westinghouse,WRF910WA,rangehoods,lighting,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrf910wa,Westinghouse,WRF910WA,rangehoods,noiseRating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrf910wa,Westinghouse,WRF910WA,rangehoods,hoodType,fixed,verified-source,Westinghouse Australia,https://www.westinghouse.com.au/cooking/rangehoods/wrf910wa/,2026-09-02
+product:appliances:rangehoods:westinghouse:wri930sb,Westinghouse,WRI930SB,rangehoods,family,rangehoods,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:westinghouse:wri930sb,Westinghouse,WRI930SB,rangehoods,manufacturerModel,WRI930SB,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:westinghouse:wri930sb,Westinghouse,WRI930SB,rangehoods,width,900 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:westinghouse:wri930sb,Westinghouse,WRI930SB,rangehoods,widthMm,900,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:westinghouse:wri930sb,Westinghouse,WRI930SB,rangehoods,finish,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:westinghouse:wri930sb,Westinghouse,WRI930SB,rangehoods,fuelOrEnergyType,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:westinghouse:wri930sb,Westinghouse,WRI930SB,rangehoods,installationType,slide-out,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:westinghouse:wri930sb,Westinghouse,WRI930SB,rangehoods,rangehoodType,slide-out,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:westinghouse:wri930sb,Westinghouse,WRI930SB,rangehoods,extractionCapacity,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:westinghouse:wri930sb,Westinghouse,WRI930SB,rangehoods,ductedOrRecirculating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:westinghouse:wri930sb,Westinghouse,WRI930SB,rangehoods,lighting,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:westinghouse:wri930sb,Westinghouse,WRI930SB,rangehoods,noiseRating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrr614sb,Westinghouse,WRR614SB,rangehoods,family,rangehoods,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrr614sb,Westinghouse,WRR614SB,rangehoods,manufacturerModel,WRR614SB,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrr614sb,Westinghouse,WRR614SB,rangehoods,width,600 mm,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrr614sb,Westinghouse,WRR614SB,rangehoods,widthMm,600,verified-source,Westinghouse Australia,https://www.westinghouse.com.au/cooking/rangehoods/wrr614sb/,2026-09-02
+product:appliances:rangehoods:westinghouse:wrr614sb,Westinghouse,WRR614SB,rangehoods,finish,stainless steel,verified-source,Westinghouse Australia,https://www.westinghouse.com.au/cooking/rangehoods/wrr614sb/,2026-09-02
+product:appliances:rangehoods:westinghouse:wrr614sb,Westinghouse,WRR614SB,rangehoods,fuelOrEnergyType,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrr614sb,Westinghouse,WRR614SB,rangehoods,installationType,slide-out,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrr614sb,Westinghouse,WRR614SB,rangehoods,rangehoodType,slide-out,legacy-source-derived,Legacy appliance options CSV,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrr614sb,Westinghouse,WRR614SB,rangehoods,extractionCapacity,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrr614sb,Westinghouse,WRR614SB,rangehoods,ductedOrRecirculating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrr614sb,Westinghouse,WRR614SB,rangehoods,lighting,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrr614sb,Westinghouse,WRR614SB,rangehoods,noiseRating,,pending-verification,,,2026-09-02
+product:appliances:rangehoods:westinghouse:wrr614sb,Westinghouse,WRR614SB,rangehoods,hoodType,slide-out,verified-source,Westinghouse Australia,https://www.westinghouse.com.au/cooking/rangehoods/wrr614sb/,2026-09-02

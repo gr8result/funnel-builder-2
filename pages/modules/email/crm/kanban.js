@@ -35,6 +35,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { supabase } from "../../../../utils/supabase-client";
 import LeadDetailsModal from "../../../../components/crm/LeadDetailsModal";
+import { useWorkspace } from "../../../../hooks/useWorkspace";
 
 /* ─────────────────────────────────────────────────────────────────
    CONSTANTS & DEFAULTS
@@ -670,6 +671,7 @@ function HealthBanner({ health, loading, onRefresh }) {
 ───────────────────────────────────────────────────────────────── */
 
 export default function KanbanBoard() {
+  const { workspaceId } = useWorkspace();
   /* ── state ── */
   const [userId,          setUserId]          = useState(null);
   const [pipelines,       setPipelines]       = useState([]);
@@ -701,6 +703,10 @@ export default function KanbanBoard() {
   /* ── initial load ── */
   useEffect(() => {
     (async () => {
+      if (!workspaceId) {
+        setLoading(false);
+        return;
+      }
       const { data: authData } = await supabase.auth.getUser();
       if (!authData?.user) return;
       const uid = authData.user.id;
@@ -711,11 +717,12 @@ export default function KanbanBoard() {
           .from("crm_pipelines")
           .select("id, name, stages")
           .eq("user_id", uid)
+          .eq("workspace_id", workspaceId)
           .order("created_at", { ascending: true }),
         supabase
           .from("leads")
           .select("id, name, email, phone, stage, source, tags, deal_value, created_at, stage_entered_at")
-          .eq("user_id", uid),
+          .eq("workspace_id", workspaceId),
       ]);
 
       const pipelineRows = pipeRes.data || [];
@@ -735,7 +742,7 @@ export default function KanbanBoard() {
       setLoading(false);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [workspaceId]);
 
   function applyPipeline(p) {
     setCurrentPipeline(p);
@@ -797,7 +804,8 @@ export default function KanbanBoard() {
     await supabase
       .from("leads")
       .update({ stage: targetStage, stage_entered_at: new Date().toISOString() })
-      .eq("id", active.id);
+      .eq("id", active.id)
+      .eq("workspace_id", workspaceId);
   }
 
   /* ── modal ── */

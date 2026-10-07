@@ -3,6 +3,7 @@
 // Called by the public booking page for phone verification.
 
 import { sendSmsGlobal } from "../../../lib/smsglobal";
+import { requestWorkspaceId } from "../../../lib/demoWorkspace";
 import crypto from "crypto";
 
 export default async function handler(req, res) {
@@ -16,6 +17,7 @@ export default async function handler(req, res) {
   const result = await sendSmsGlobal({
     toPhone: phone,
     message: `Your GR8 booking verification code: ${code}`,
+    workspaceId: requestWorkspaceId(req),
   });
 
   if (!result?.ok) {

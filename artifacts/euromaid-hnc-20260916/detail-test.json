@@ -1,0 +1,89 @@
+{
+  "data": {
+    "products": {
+      "items": [
+        {
+          "id": 24927,
+          "name": "28 Litre Built-In Microwave",
+          "sku": "EBM28TB",
+          "vendorcode": "EBM28TB",
+          "url_key": "28l-built-in-microwave-black-ebm28tb",
+          "url_suffix": ".html",
+          "brand_label": null,
+          "pro_brand_label": null,
+          "pro_colour_label": null,
+          "product_dimensions": "W595 x D400 x H388mm",
+          "dimension": null,
+          "description": {
+            "html": "<p>• 28L Capacity<br>• 10A plug &amp; lead<br>• Digital display<br>• Auto cooking functions</p>"
+          },
+          "short_description": {
+            "html": "<p>28 Litre Built-In Microwave</p>"
+          },
+          "meta_description": null,
+          "price_promo": 0,
+          "price_store": 692,
+          "price_trade": "0.000000",
+          "wels_reg_number": "",
+          "stock_status": "IN_STOCK",
+          "gp_product_group": "MICROWAVES",
+          "product_images": {
+            "thumbnail": null,
+            "small": null,
+            "base": null,
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/e/b/ebm28tb_euromaid_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/e/b/ebm28tb_euromaid_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/b/ebm28tb_euromaid_web.jpg",
+              "label": "28 Litre Built-In Microwave",
+              "position": 1,
+              "disabled": false
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/b/ebm28tb_euromaid_tech.jpg",
+              "label": "28 Litre Built-In Microwave",
+              "position": 2,
+              "disabled": false
+            }
+          ],
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 24,
+              "name": "Microwaves",
+              "url_path": "products/kitchen/microwaves"
+            },
+            {
+              "id": 941,
+              "name": "Built In Microwaves",
+              "url_path": "products/kitchen/microwaves/built-in-microwaves"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "price_range": {
+            "minimum_price": {
+              "regular_price": {
+                "value": 0,
+                "currency": "AUD"
+              },
+              "final_price": {
+                "value": 0,
+                "currency": "AUD"
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -17,6 +17,25 @@ function escapeHtml(value = "") {
     .replace(/'/g, "&#39;");
 }
 
+function injectFunnelFormContext(content, funnelId, stepId) {
+  if (!funnelId || !stepId) return content || "";
+
+  const funnelInput = `<input type="hidden" name="funnel_id" value="${escapeHtml(funnelId)}" />`;
+  const stepInput = `<input type="hidden" name="step_id" value="${escapeHtml(stepId)}" />`;
+
+  return String(content || "").replace(
+    /<form\b([^>]*)>([\s\S]*?)<\/form>/gi,
+    (form, attributes, innerHtml) => {
+      if (!/\baction\s*=\s*["']\/api\/forms\/submit["']/i.test(attributes)) return form;
+
+      const withoutContext = innerHtml
+        .replace(/<input\b[^>]*\bname\s*=\s*["']funnel_id["'][^>]*>/gi, "")
+        .replace(/<input\b[^>]*\bname\s*=\s*["']step_id["'][^>]*>/gi, "");
+      return `<form${attributes}>${funnelInput}${stepInput}${withoutContext}</form>`;
+    }
+  );
+}
+
 function buildMissingStepPreview(name = "Your funnel") {
   const safeName = escapeHtml(name || "Your funnel");
   return `
@@ -371,7 +390,9 @@ export default function PublicFunnelPage() {
       {/* Rendered page content */}
       <div style={previewShellStyle || undefined}>
         <div
-          dangerouslySetInnerHTML={{ __html: currentStep.content || "" }}
+          dangerouslySetInnerHTML={{
+            __html: injectFunnelFormContext(currentStep.content, funnel?.id, currentStep.id),
+          }}
           className="fb-preview-root"
           style={{ minHeight: "100vh" }}
         />

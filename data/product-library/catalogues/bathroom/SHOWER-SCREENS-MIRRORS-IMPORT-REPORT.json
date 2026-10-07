@@ -1,0 +1,259 @@
+{
+  "generatedAt": "2026-10-01T00:54:10.962Z",
+  "totalProducts": 90,
+  "suppliers": {
+    "Bradnam's": {
+      "total": 8,
+      "showerScreens": 4,
+      "mirrors": 4,
+      "shavingCabinets": 0,
+      "screenTypes": [
+        "Framed",
+        "Semi-Frameless",
+        "Frameless"
+      ],
+      "supplierScreenTerms": [
+        "Essential (Framed)",
+        "Signature (Semi Frameless)",
+        "Frameless"
+      ],
+      "screenConfigurations": [
+        "Hinged / Pivot",
+        "Sliding"
+      ],
+      "mirrorRanges": [
+        "Essential",
+        "Signature",
+        "Frameless"
+      ],
+      "mirrorGroups": [
+        "Framed Mirrors",
+        "Frameless Mirrors"
+      ],
+      "pricedProducts": 0,
+      "quoteRequiredProducts": 8,
+      "skuVariants": 0,
+      "withImage": 8,
+      "withoutImage": [],
+      "feedProductsNotImported": [],
+      "notImported": [],
+      "pricingNote": "Bradnam's publishes no prices, sizes or product codes: product availability, pricing, sizes and configurations are subject to regional variations and a Bradnam's quotation.",
+      "availability": "Regional Queensland only. Please confirm availability with a Bradnam's representative."
+    },
+    "Regency": {
+      "total": 29,
+      "showerScreens": 20,
+      "mirrors": 9,
+      "shavingCabinets": 0,
+      "screenTypes": [
+        "Frameless",
+        "Semi-Frameless"
+      ],
+      "supplierScreenTerms": [
+        "Frameless",
+        "Semi-Frameless"
+      ],
+      "screenConfigurations": [
+        "Fixed Panel",
+        "Corner",
+        "Front Only",
+        "Splay",
+        "Alcove",
+        "Partition"
+      ],
+      "mirrorRanges": [
+        "Frameless Mirrors",
+        "Framed Mirrors",
+        "Shaped Mirrors"
+      ],
+      "mirrorGroups": [
+        "Frameless Mirrors",
+        "Framed Mirrors",
+        "Shaped Mirrors"
+      ],
+      "pricedProducts": 0,
+      "quoteRequiredProducts": 29,
+      "skuVariants": 0,
+      "withImage": 29,
+      "withoutImage": [],
+      "feedProductsNotImported": [],
+      "notImported": [
+        {
+          "handle": "mirror-collection",
+          "reason": "A colour/finish collection page (Silver, Bronze and Grey mirror), not a selectable product. Its three mirror finishes are carried as options on each mirror range."
+        }
+      ],
+      "pricingNote": "Regency publishes no prices: every range is custom made and installed to a Regency quotation.",
+      "availability": ""
+    },
+    "Stegbar": {
+      "total": 53,
+      "showerScreens": 26,
+      "mirrors": 24,
+      "shavingCabinets": 3,
+      "screenTypes": [
+        "Frameless",
+        "Semi-Frameless"
+      ],
+      "supplierScreenTerms": [
+        "Frameless",
+        "Semi Frameless",
+        "Semi-Frameless",
+        "Semi-Framed"
+      ],
+      "screenConfigurations": [
+        "Fixed Panel",
+        "Corner",
+        "Front Only",
+        "Splay",
+        "Alcove",
+        "Partition"
+      ],
+      "mirrorRanges": [
+        "Frameless Mirrors",
+        "Framed Mirrors",
+        "Shaped Mirrors",
+        "Framed Shaped Mirrors (Shop Online)",
+        "Shaped Mirrors (Shop Online)",
+        "Frameless Mirrors (Shop Online)"
+      ],
+      "mirrorGroups": [
+        "Frameless Mirrors",
+        "Framed Mirrors",
+        "Shaped Mirrors"
+      ],
+      "pricedProducts": 24,
+      "quoteRequiredProducts": 29,
+      "skuVariants": 298,
+      "withImage": 53,
+      "withoutImage": [],
+      "feedProductsNotImported": [
+        {
+          "handle": "mirror-collection",
+          "reason": "A colour/finish collection page (Silver, Bronze and Grey mirror), not a selectable product. Its three mirror finishes are carried as options on each custom mirror range."
+        }
+      ],
+      "notImported": [
+        {
+          "handle": "mirror-collection",
+          "reason": "A colour/finish collection page (Silver, Bronze and Grey mirror), not a selectable product. Its three mirror finishes are carried as options on each custom mirror range."
+        }
+      ],
+      "pricingNote": "Custom-made Stegbar ranges are quoted and installed by Stegbar. Shop Online (DIY) products carry Stegbar's published online store price for each size / glass / finish variant.",
+      "availability": ""
+    }
+  },
+  "dataQuality": {
+    "existingProductsScanned": 4567,
+    "existingProductsFromTheseSuppliers": [
+      {
+        "file": "data\\product-library\\catalogues\\exterior\\AU-WINDOWS-ENTRY-DOORS-GARAGE-DOORS-CATALOGUE.json",
+        "productCode": "WINDOW-BRADNAMS-SLIDING-WINDOWS",
+        "supplier": "Bradnam's Windows & Doors"
+      },
+      {
+        "file": "data\\product-library\\catalogues\\exterior\\AU-WINDOWS-ENTRY-DOORS-GARAGE-DOORS-CATALOGUE.json",
+        "productCode": "WINDOW-BRADNAMS-AWNING-WINDOWS",
+        "supplier": "Bradnam's Windows & Doors"
+      },
+      {
+        "file": "data\\product-library\\catalogues\\exterior\\AU-WINDOWS-ENTRY-DOORS-GARAGE-DOORS-CATALOGUE.json",
+        "productCode": "WINDOW-BRADNAMS-LOUVRE-WINDOWS",
+        "supplier": "Bradnam's Windows & Doors"
+      },
+      {
+        "file": "data\\product-library\\catalogues\\exterior\\AU-WINDOWS-ENTRY-DOORS-GARAGE-DOORS-CATALOGUE.json",
+        "productCode": "WINDOW-BRADNAMS-FIXED-WINDOWS",
+        "supplier": "Bradnam's Windows & Doors"
+      },
+      {
+        "file": "data\\product-library\\catalogues\\exterior\\AU-WINDOWS-ENTRY-DOORS-GARAGE-DOORS-CATALOGUE.json",
+        "productCode": "WINDOW-BRADNAMS-DOUBLE-HUNG-SASH-WINDOWS",
+        "supplier": "Bradnam's Windows & Doors"
+      },
+      {
+        "file": "data\\product-library\\catalogues\\exterior\\AU-WINDOWS-ENTRY-DOORS-GARAGE-DOORS-CATALOGUE.json",
+        "productCode": "WINDOW-BRADNAMS-CASEMENT-WINDOWS",
+        "supplier": "Bradnam's Windows & Doors"
+      }
+    ],
+    "existingShowerScreenMirrorFamilyProducts": [
+      {
+        "file": "data\\product-library\\catalogues\\plumbing\\AU-HNC-PLUMBING-CATALOGUE.json",
+        "productCode": "PLB-HNC-VE-700M-GW"
+      },
+      {
+        "file": "data\\product-library\\catalogues\\plumbing\\AU-HNC-PLUMBING-CATALOGUE.json",
+        "productCode": "PLB-HNC-VE-700M-CO"
+      },
+      {
+        "file": "data\\product-library\\catalogues\\plumbing\\AU-HNC-PLUMBING-CATALOGUE.json",
+        "productCode": "PLB-HNC-MZ-1400M"
+      },
+      {
+        "file": "data\\product-library\\catalogues\\plumbing\\AU-HNC-PLUMBING-CATALOGUE.json",
+        "productCode": "PLB-HNC-MZ-1200M"
+      },
+      {
+        "file": "data\\product-library\\catalogues\\plumbing\\AU-HNC-PLUMBING-CATALOGUE.json",
+        "productCode": "PLB-HNC-MIRND600GMG"
+      },
+      {
+        "file": "data\\product-library\\catalogues\\plumbing\\AU-HNC-PLUMBING-CATALOGUE.json",
+        "productCode": "PLB-HNC-MIRND800GMG"
+      },
+      {
+        "file": "data\\product-library\\catalogues\\plumbing\\AU-HNC-PLUMBING-CATALOGUE.json",
+        "productCode": "PLB-HNC-MIOVL900BSS"
+      },
+      {
+        "file": "data\\product-library\\catalogues\\plumbing\\AU-HNC-PLUMBING-CATALOGUE.json",
+        "productCode": "PLB-HNC-MIARCH800BLK"
+      },
+      {
+        "file": "data\\product-library\\catalogues\\plumbing\\AU-HNC-PLUMBING-CATALOGUE.json",
+        "productCode": "PLB-HNC-BEV600"
+      },
+      {
+        "file": "data\\product-library\\catalogues\\plumbing\\AU-HNC-PLUMBING-CATALOGUE.json",
+        "productCode": "PLB-HNC-BEV1500"
+      },
+      {
+        "file": "data\\product-library\\catalogues\\plumbing\\AU-HNC-PLUMBING-CATALOGUE.json",
+        "productCode": "PLB-HNC-BEV750"
+      },
+      {
+        "file": "data\\product-library\\catalogues\\plumbing\\AU-HNC-PLUMBING-CATALOGUE.json",
+        "productCode": "PLB-HNC-BEV1200"
+      },
+      {
+        "file": "data\\product-library\\catalogues\\plumbing\\AU-HNC-PLUMBING-CATALOGUE.json",
+        "productCode": "PLB-HNC-ECL-1000M"
+      },
+      {
+        "file": "data\\product-library\\catalogues\\plumbing\\AU-HNC-PLUMBING-CATALOGUE.json",
+        "productCode": "PLB-HNC-PO700MSGW"
+      }
+    ],
+    "supplierNameNormalisation": {
+      "Bradnam's": [
+        "Bradnams",
+        "Bradnam's Windows & Doors",
+        "Bradnams Windows and Doors",
+        "Bradnam’s",
+        "Bradnam’s Windows & Doors"
+      ],
+      "Regency": [
+        "regencyscreens",
+        "Regency Showerscreens",
+        "Regency Showerscreens and Wardrobes",
+        "Regency Shower Screens"
+      ],
+      "Stegbar": [
+        "Stegbar Pty Ltd",
+        "Stegbar Showerscreens"
+      ]
+    }
+  },
+  "warnings": []
+}

@@ -7,6 +7,8 @@ import {
   resolveWebsiteUrls,
 } from "../lib/website-builder/publishConfig.js";
 import {
+  buildExpectedSiteOnlyWebsitePersistenceProject,
+  buildExpectedWebsitePersistenceProject,
   diffWebsitePersistence,
   websitePersistenceHash,
 } from "../lib/website-builder/documentVersion.js";
@@ -142,6 +144,87 @@ assert.equal(pricingUrls.primaryPublicUrl, "https://gr8result.solutions/pricing"
 const readBackHash = websitePersistenceHash(JSON.parse(JSON.stringify(siteData)));
 assert.equal(readBackHash, websitePersistenceHash(siteData), "published snapshot hash must survive JSON database round trip");
 assert.deepEqual(diffWebsitePersistence(siteData, JSON.parse(JSON.stringify(siteData))), [], "canonical persistence diff must be empty after JSON round trip");
+
+const pageScopedEmailPayload = {
+  ...project,
+  pageBlocks: { Email: project.pageBlocks.Email },
+  pagesContent: { Email: "" },
+  chaiData: { Email: { blocks: project.pageBlocks.Email, theme: { preset: "test" } } },
+};
+const fullReadbackWithMorePages = {
+  ...pageScopedEmailPayload,
+  pageBlocks: project.pageBlocks,
+  pagesContent: project.pagesContent,
+  chaiData: {
+    Home: { blocks: project.pageBlocks.Home },
+    Modules: { blocks: project.pageBlocks.Modules },
+    Email: pageScopedEmailPayload.chaiData.Email,
+    Pricing: { blocks: project.pageBlocks.Pricing },
+  },
+};
+const expectedAfterEmailSave = buildExpectedWebsitePersistenceProject(fullReadbackWithMorePages, pageScopedEmailPayload, "Email");
+assert.deepEqual(
+  diffWebsitePersistence(expectedAfterEmailSave, fullReadbackWithMorePages),
+  [],
+  "page-scoped save verification must compare the full expected post-save project, including retained database pages"
+);
+assert.equal(expectedAfterEmailSave.pageBlocks.Modules[0].props.title, "Modules", "expected post-save project must retain unsubmitted page blocks");
+assert.equal(expectedAfterEmailSave.chaiData.Home.blocks[0].id, "home-hero", "expected post-save project must retain unsubmitted chaiData");
+assert.deepEqual(
+  diffWebsitePersistence(
+    expectedAfterEmailSave,
+    fullReadbackWithMorePages
+  ),
+  [],
+  "page-scoped save verification must not fail when the database retains the submitted page and existing full project"
+);
+
+const readbackWithLostEmailField = JSON.parse(JSON.stringify(fullReadbackWithMorePages));
+delete readbackWithLostEmailField.pageBlocks.Email[0].props.unknownNested;
+const lostEmailFieldDiffs = diffWebsitePersistence(
+  expectedAfterEmailSave,
+  readbackWithLostEmailField
+);
+assert.ok(
+  lostEmailFieldDiffs.some((diff) => diff.path === "pageBlocks.Email[0].props.unknownNested"),
+  "full post-save verification must still report genuine submitted page data loss"
+);
+
+const siteOnlyPayload = {
+  ...project,
+  name: "Gr8 Result Digital Solutions Updated",
+  customDomain: "gr8result.solutions",
+};
+delete siteOnlyPayload.pageBlocks;
+delete siteOnlyPayload.pagesContent;
+delete siteOnlyPayload.chaiData;
+delete siteOnlyPayload.brandAssets;
+
+const siteOnlyReadback = {
+  ...fullReadbackWithMorePages,
+  name: siteOnlyPayload.name,
+  customDomain: siteOnlyPayload.customDomain,
+};
+const expectedAfterSiteOnlySave = buildExpectedSiteOnlyWebsitePersistenceProject(fullReadbackWithMorePages, siteOnlyPayload);
+assert.deepEqual(
+  diffWebsitePersistence(expectedAfterSiteOnlySave, siteOnlyReadback),
+  [],
+  "siteOnly save verification must preserve canonical page maps omitted by transport"
+);
+assert.equal(expectedAfterSiteOnlySave.pageBlocks.Email[0].id, "email-hero", "siteOnly expected project must retain canonical pageBlocks");
+assert.equal(expectedAfterSiteOnlySave.pagesContent.Email, "", "siteOnly expected project must retain canonical pagesContent");
+assert.equal(expectedAfterSiteOnlySave.chaiData.Home.blocks[0].id, "home-hero", "siteOnly expected project must retain canonical chaiData");
+
+const siteOnlyReadbackWithLostPageData = JSON.parse(JSON.stringify(siteOnlyReadback));
+siteOnlyReadbackWithLostPageData.pageBlocks.Email = [];
+const lostSiteOnlyPageDiffs = diffWebsitePersistence(
+  expectedAfterSiteOnlySave,
+  siteOnlyReadbackWithLostPageData
+);
+assert.ok(
+  lostSiteOnlyPageDiffs.some((diff) => diff.path === "pageBlocks.Email[0]"),
+  "siteOnly verification must still fail when canonical page data is genuinely lost"
+);
 
 assert.equal(resolveWebsitePublicationStatus({
   id: project.id,

@@ -10,6 +10,7 @@ import Stripe from "stripe";
 import nodemailer from "nodemailer";
 import PRICING from "../../data/pricing";
 import { withAuth } from "../../lib/withWorkspace";
+import { demoSimulationResult } from "../../lib/demoWorkspace";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -33,6 +34,18 @@ const transporter = nodemailer.createTransport({
 
 async function handler(req, res) {
   try {
+    if (req.isDemoWorkspace) {
+      const result = await demoSimulationResult({
+        workspaceId: req.workspaceId,
+        actionType: "automatic-email-plan-upgrade",
+        provider: "stripe",
+        target: req.user?.id,
+        userId: req.user?.id,
+        message: "Demo email plan upgrade simulated - no invoice, PayPal revision, or alert email sent.",
+      });
+      return res.status(200).json({ ...result, upgraded: 0, details: [] });
+    }
+
     // 1️⃣ Load all accounts with active email marketing
     const { data: accounts, error } = await supabase
       .from("accounts")

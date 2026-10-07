@@ -3,6 +3,7 @@
 
 import twilio from "twilio";
 import { withAuth } from "../../../lib/withWorkspace";
+import { getRequestDemoState, requestWorkspaceId, demoSimulationResult } from "../../../lib/demoWorkspace";
 
 const ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
 const AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
@@ -63,6 +64,21 @@ async function handler(req, res) {
     return res
       .status(400)
       .json({ error: "Destination number must be in +E164 format." });
+  }
+
+  const workspaceId = requestWorkspaceId(req);
+  const demoState = await getRequestDemoState(req);
+  if (demoState.isDemo) {
+    const simulated = await demoSimulationResult({
+      workspaceId,
+      userId: req.user.id,
+      actionType: "phone-call",
+      provider: "twilio",
+      target: to,
+      payload: { route: "/api/twilio/test-call", to },
+      message: "Demo phone call simulated - no Twilio call placed.",
+    });
+    return res.status(200).json({ ...simulated, sid: `demo_call_${Date.now()}`, to, from: FROM_NUMBER || "demo" });
   }
 
   if (!ACCOUNT_SID || !AUTH_TOKEN || !FROM_NUMBER) {

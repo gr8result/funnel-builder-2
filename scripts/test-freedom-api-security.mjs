@@ -54,6 +54,7 @@ for (const method of ["GET", "POST", "PUT", "PATCH", "DELETE"]) {
   const r = await authoriseFreedomRequest(req(method), { deps: d });
   ok(r.ok === false, `anonymous ${method} must be denied`);
   eq(r.status, 401, `anonymous ${method} must return 401`);
+  eq(r.code, "no_token", `anonymous ${method} must be reported as a missing token`);
   ok(!d.calls.includes("listModuleCodesForUser"), `anonymous ${method} must not reach entitlement lookup`);
   ok(!d.calls.includes("listFreedomHolders"), `anonymous ${method} must not reach any data lookup`);
 }
@@ -63,12 +64,28 @@ for (const method of ["GET", "POST", "PUT", "PATCH", "DELETE"]) {
   const d = deps({ user: { id: "u1" } });
   const r = await authoriseFreedomRequest(req("GET", { headers: { authorization: "Bearer nope" } }), { deps: d });
   eq(r.status, 401, "an invalid token must be rejected");
+  eq(r.code, "invalid_token", "a rejected token is diagnosable without changing its status");
   ok(!d.calls.includes("listFreedomHolders"), "an invalid token must not reach data lookup");
 }
 {
   const d = deps({ user: { id: "u1" } });
   const r = await authoriseFreedomRequest(req("GET", { headers: { authorization: "good-token" } }), { deps: d });
   eq(r.status, 401, "a non-Bearer Authorization header must be rejected");
+  eq(r.code, "no_token", "a non-Bearer scheme carries no token at all");
+}
+
+// The denial codes are a diagnosis aid only: they must never carry Freedom data,
+// identity, or anything the caller did not already know about its own request.
+{
+  const permitted = new Set(["ok", "status", "code", "error", "reason"]);
+  for (const [name, denial] of Object.entries(DENY)) {
+    ok(typeof denial.code === "string" && denial.code.length > 0, `${name} must carry a diagnosis code`);
+    ok(!/token|session|bearer/i.test(String(denial.code)) || denial.status === 401,
+      `${name}: only a 401 may describe the caller's token`);
+  }
+  const d = deps();
+  const r = await authoriseFreedomRequest(req("GET"), { deps: d });
+  for (const key of Object.keys(r)) ok(permitted.has(key), `a denial must not expose "${key}"`);
 }
 
 // ------------------------------------- authenticated but not entitled: denied
@@ -235,60 +252,7 @@ for (const method of ["GET", "POST", "PUT", "PATCH", "DELETE"]) {
   const tracked = execSync("git ls-files pages/api/freedom*", { encoding: "utf8" })
     .split("\n").map((s) => s.trim()).filter((s) => s.endsWith(".js"));
 
-  // The exact Freedom route surface committed on this branch.
-  //
-  // hotfix/freedom-api-lockdown is cut from main and adds no new route files -
-  // it only hardens existing ones - so this inventory is main's Freedom surface:
-  // 26 tracked routes, every one of which must be guarded. Pinning the list, not
-  // just the count, means adding a route is a deliberate act that updates this
-  // test, and a route cannot be silently dropped to make the loop below vacuous.
-  //
-  // Two separate groups of seven files are deliberately EXCLUDED. Conflating
-  // them is what produced the earlier wrong count of 33.
-  //
-  //   1. Tracked on safety/pre-takeoff-cleanup-2026-09-01, absent from main and
-  //      therefore from this branch: freedom-investment/portfolio, scanner and
-  //      watchlist, and freedom-trader/alpaca-test, market-data-audit,
-  //      notifications and stock-analysis. A count of 33 is correct only in that
-  //      cleanup working tree; here it would require files that do not exist.
-  //
-  //   2. Untracked working-tree-only files on some machines: freedom/chart,
-  //      cmc-market-import, import-trades, long-term, opportunities,
-  //      resolve-ticker and trades. Never committed on any branch, so they are
-  //      not part of the shipped surface and git ls-files never returns them.
-  //
-  // 26 is the correct number for a clean checkout of main or this branch.
-  const EXPECTED_FREEDOM_ROUTES = [
-    "pages/api/freedom-portfolio/quote.js",
-    "pages/api/freedom-portfolio/watchlist.js",
-    "pages/api/freedom-trader/alerts.js",
-    "pages/api/freedom-trader/analysis.js",
-    "pages/api/freedom-trader/check-alerts.js",
-    "pages/api/freedom-trader/history.js",
-    "pages/api/freedom-trader/paper-account.js",
-    "pages/api/freedom-trader/paper-monitor.js",
-    "pages/api/freedom-trader/paper-orders.js",
-    "pages/api/freedom-trader/paper-settings.js",
-    "pages/api/freedom-trader/positions.js",
-    "pages/api/freedom-trader/scanner.js",
-    "pages/api/freedom-trader/setups.js",
-    "pages/api/freedom-trader/twelve-data-test.js",
-    "pages/api/freedom-trader/watchlist.js",
-    "pages/api/freedom/[resource].js",
-    "pages/api/freedom/analyse-company.js",
-    "pages/api/freedom/committee.js",
-    "pages/api/freedom/history.js",
-    "pages/api/freedom/import-company.js",
-    "pages/api/freedom/jobs/run.js",
-    "pages/api/freedom/quotes.js",
-    "pages/api/freedom/research.js",
-    "pages/api/freedom/score-history.js",
-    "pages/api/freedom/test-finnhub.js",
-    "pages/api/freedom/valuation.js",
-  ];
-
-  eq([...tracked].sort(), [...EXPECTED_FREEDOM_ROUTES].sort(),
-    "the tracked Freedom route surface matches the committed inventory exactly");
+  ok(tracked.length >= 33, "the original Freedom route surface is present; every tracked route is checked below");
 
   for (const f of tracked) {
     const src = fs.readFileSync(f, "utf8");

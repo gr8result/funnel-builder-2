@@ -1,0 +1,102 @@
+[
+  {
+    "key": "kitchen-panel-standard-colourboard-short",
+    "description": "Short end panel - Standard Colourboard",
+    "price": 250,
+    "room": "KITCHEN CABINETRY",
+    "range": "STANDARD COLOURBOARD",
+    "unit": "EACH",
+    "type": "product",
+    "approvedAddition": true
+  },
+  {
+    "key": "kitchen-panel-standard-colourboard-tall",
+    "description": "Tall end panel - Standard Colourboard",
+    "price": 450,
+    "room": "KITCHEN CABINETRY",
+    "range": "STANDARD COLOURBOARD",
+    "unit": "EACH",
+    "type": "product",
+    "approvedAddition": true
+  },
+  {
+    "key": "kitchen-panel-premium-laminate-short",
+    "description": "Short end panel - Premium Laminate",
+    "price": 325,
+    "room": "KITCHEN CABINETRY",
+    "range": "PREMIUM LAMINATE",
+    "unit": "EACH",
+    "type": "product",
+    "approvedAddition": true
+  },
+  {
+    "key": "kitchen-panel-premium-laminate-tall",
+    "description": "Tall end panel - Premium Laminate",
+    "price": 575,
+    "room": "KITCHEN CABINETRY",
+    "range": "PREMIUM LAMINATE",
+    "unit": "EACH",
+    "type": "product",
+    "approvedAddition": true
+  },
+  {
+    "key": "kitchen-panel-2-pack-short",
+    "description": "Short end panel - 2 Pack",
+    "price": 400,
+    "room": "KITCHEN CABINETRY",
+    "range": "2 PACK",
+    "unit": "EACH",
+    "type": "product",
+    "approvedAddition": true
+  },
+  {
+    "key": "kitchen-panel-2-pack-tall",
+    "description": "Tall end panel - 2 Pack",
+    "price": 700,
+    "room": "KITCHEN CABINETRY",
+    "range": "2 PACK",
+    "unit": "EACH",
+    "type": "product",
+    "approvedAddition": true
+  },
+  {
+    "key": "kitchen-panel-shaker-style-short",
+    "description": "Short end panel - Shaker Style",
+    "price": 450,
+    "room": "KITCHEN CABINETRY",
+    "range": "SHAKER STYLE",
+    "unit": "EACH",
+    "type": "product",
+    "approvedAddition": true
+  },
+  {
+    "key": "kitchen-panel-shaker-style-tall",
+    "description": "Tall end panel - Shaker Style",
+    "price": 800,
+    "room": "KITCHEN CABINETRY",
+    "range": "SHAKER STYLE",
+    "unit": "EACH",
+    "type": "product",
+    "approvedAddition": true
+  },
+  {
+    "key": "kitchen-panel-vinyl-wrap-short",
+    "description": "Short end panel - Vinyl Wrap",
+    "price": 350,
+    "room": "KITCHEN CABINETRY",
+    "range": "VINYL WRAP",
+    "unit": "EACH",
+    "type": "product",
+    "approvedAddition": true
+  },
+  {
+    "key": "kitchen-panel-vinyl-wrap-tall",
+    "description": "Tall end panel - Vinyl Wrap",
+    "price": 625,
+    "room": "KITCHEN CABINETRY",
+    "range": "VINYL WRAP",
+    "unit": "EACH",
+    "type": "product",
+    "approvedAddition": true
+  }
+]

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useWorkspace } from "../../../hooks/useWorkspace";
 import { supabase } from "../../../utils/supabase-client";
+import FlooringProjectSchedule from "../../../components/client-selections/FlooringProjectSchedule";
 
 const STATUS_OPTIONS = [
   { value: "all", label: "All items" },
@@ -12,7 +13,7 @@ const STATUS_OPTIONS = [
   { value: "archived", label: "Archived" },
 ];
 
-export default function BoqSnapshotViewerPage() {
+export default function BoqSnapshotViewerPage({ workbook = null } = {}) {
   const { workspaceId, activeWorkspace, loading: workspaceLoading } = useWorkspace();
   const [projects, setProjects] = useState([]);
   const [snapshots, setSnapshots] = useState([]);
@@ -263,6 +264,7 @@ export default function BoqSnapshotViewerPage() {
         <title>BOQ Snapshot Viewer</title>
       </Head>
       <main style={styles.page}>
+        <FlooringProjectSchedule workbook={workbook} />
         <header style={styles.hero}>
           <div>
             <div style={styles.eyebrow}>Project Commercials</div>

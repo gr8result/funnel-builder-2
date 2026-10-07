@@ -1,0 +1,4688 @@
+[
+  {
+    "product_code": "PLB-HNC-111803031",
+    "family_key": "bathroom-accessories",
+    "requirement_keys": "bathroom-accessories",
+    "category_key": "Bathroom Accessories",
+    "categories": [
+      {
+        "id": 19,
+        "name": "Bathroom",
+        "url_path": "products/bathroom"
+      },
+      {
+        "id": 40,
+        "name": "Bathroom Accessories",
+        "url_path": "products/bathroom/bathroom-accessories"
+      },
+      {
+        "id": 196,
+        "name": "Towel Rails ",
+        "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+      },
+      {
+        "id": 1036,
+        "name": "Products",
+        "url_path": "products"
+      }
+    ],
+    "subcategory": "Towel Rails",
+    "product_type": "Towel Rails",
+    "top_level_area": "bathroom",
+    "manufacturer": "Phoenix",
+    "brand": "Phoenix",
+    "supplier": "Harvey Norman Commercial",
+    "product_name": "Vivid Slimline 800mm Single Towel Rail",
+    "model": "111-8030-31",
+    "sku": "111-8030-31",
+    "range": "Vivid",
+    "colour": "Brushed Carbon",
+    "finish": "Brushed Carbon",
+    "material": "",
+    "dimensions": "W800 x D68 x H30mm",
+    "description": "• Available in single or double rail design\n• Available with 600mm or 800mm rail lengths\n• Rail can be cut down to size\n• Level adjustment mechanism and concealed fixing\n• Designed in Australia",
+    "primary_image_url": "/images/catalogues/plumbing/hnc-accessories/111803031.webp",
+    "image_source_url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/111803031_phoenix_web.jpg",
+    "image_source_type": "authorised-supplier-media",
+    "image_source_organisation": "Harvey Norman Commercial",
+    "official_product_url": "https://www.harveynormancommercial.com.au/products/111803031",
+    "supplier_url": "https://www.harveynormancommercial.com.au/products/111803031",
+    "rrp": 151,
+    "client_price": 151,
+    "price_status": "current",
+    "price_unit": "each",
+    "price_source_url": "https://www.harveynormancommercial.com.au/products/111803031",
+    "price_verified_at": "2026-09-30",
+    "currency": "AUD",
+    "gst_included": true,
+    "regions": "AU",
+    "active": true,
+    "source_type": "authorised_supplier_listing",
+    "source_name": "Harvey Norman Commercial Bathroom catalogue",
+    "source_url": "https://www.harveynormancommercial.com.au/products/111803031",
+    "source_verified_at": "2026-09-30",
+    "attributes": {
+      "plumbingCategoryKey": "bathroom-accessories",
+      "clientSelectionRequirement": "towel-rail",
+      "bathroomAccessoryType": "towel-rail",
+      "hncProductCode": "111-8030-31",
+      "hncUrlKey": "111803031",
+      "hncAliasSkus": [],
+      "hncSubCategory": "Towel Rails",
+      "sourceCategories": [
+        {
+          "id": 19,
+          "name": "Bathroom",
+          "url_path": "products/bathroom"
+        },
+        {
+          "id": 40,
+          "name": "Bathroom Accessories",
+          "url_path": "products/bathroom/bathroom-accessories"
+        },
+        {
+          "id": 196,
+          "name": "Towel Rails ",
+          "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+        },
+        {
+          "id": 1036,
+          "name": "Products",
+          "url_path": "products"
+        }
+      ],
+      "supplierProductType": "TOWEL RAIL SINGLE",
+      "supplierProductGroup": "BATHACCESS",
+      "supplierSpecifications": {
+        "status": "Enabled",
+        "visibility": "Catalog, Search",
+        "product_dimensions": "W800 x D68 x H30mm",
+        "gp_product_group": "BATHACCESS",
+        "gp_product_type": "TOWEL RAIL SINGLE",
+        "range": "Vivid",
+        "brand": "Phoenix",
+        "colours": "Grey",
+        "vendorcode": "111-8030-31",
+        "supplier_colour": "Brushed Carbon"
+      },
+      "features": [
+        "Available in single or double rail design",
+        "Available with 600mm or 800mm rail lengths",
+        "Rail can be cut down to size",
+        "Level adjustment mechanism and concealed fixing",
+        "Designed in Australia"
+      ],
+      "warranty": null,
+      "priceBasis": "Harvey Norman Commercial SRP inc GST",
+      "accessoryImportBatch": "hnc-bathroom-five-brands-v1",
+      "sourceEvidence": "data/product-library/source-evidence/hnc-bathroom-five-brands",
+      "imageSha256": "363009047a344efa6ca689b2618e2c4148f03e57deec8618f5e6074118f060ad"
+    },
+    "image_status": "verified_exact",
+    "image_verified_at": "2026-09-30"
+  },
+  {
+    "product_code": "PLB-HNC-111820000",
+    "family_key": "bathroom-accessories",
+    "requirement_keys": "bathroom-accessories",
+    "category_key": "Bathroom Accessories",
+    "categories": [
+      {
+        "id": 19,
+        "name": "Bathroom",
+        "url_path": "products/bathroom"
+      },
+      {
+        "id": 40,
+        "name": "Bathroom Accessories",
+        "url_path": "products/bathroom/bathroom-accessories"
+      },
+      {
+        "id": 195,
+        "name": "Toilet Roll Holders ",
+        "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+      },
+      {
+        "id": 1036,
+        "name": "Products",
+        "url_path": "products"
+      }
+    ],
+    "subcategory": "Toilet Roll Holders",
+    "product_type": "Toilet Roll Holders",
+    "top_level_area": "bathroom",
+    "manufacturer": "Phoenix",
+    "brand": "Phoenix",
+    "supplier": "Harvey Norman Commercial",
+    "product_name": "Vivid Slimline Toilet Roll Holder",
+    "model": "111-8200-00",
+    "sku": "111-8200-00",
+    "range": "Vivid",
+    "colour": "Chrome",
+    "finish": "Chrome",
+    "material": "",
+    "dimensions": "",
+    "description": "&bull; Unique fixing mechanism allows for quick level adjustment during installation\n&bull; Matching tapware available to complete your bathroom look\n&bull; Quality electroplated finish\n&bull; Twin pillar installation for sturdier fixing\n&bull; Available in chrome or brushed nickel or matte black",
+    "primary_image_url": "/images/catalogues/plumbing/hnc-accessories/111820000.webp",
+    "image_source_url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/111820000_phoenix_web.jpg",
+    "image_source_type": "authorised-supplier-media",
+    "image_source_organisation": "Harvey Norman Commercial",
+    "official_product_url": "https://www.harveynormancommercial.com.au/products/111820000",
+    "supplier_url": "https://www.harveynormancommercial.com.au/products/111820000",
+    "rrp": 72,
+    "client_price": 72,
+    "price_status": "current",
+    "price_unit": "each",
+    "price_source_url": "https://www.harveynormancommercial.com.au/products/111820000",
+    "price_verified_at": "2026-09-30",
+    "currency": "AUD",
+    "gst_included": true,
+    "regions": "AU",
+    "active": true,
+    "source_type": "authorised_supplier_listing",
+    "source_name": "Harvey Norman Commercial Bathroom catalogue",
+    "source_url": "https://www.harveynormancommercial.com.au/products/111820000",
+    "source_verified_at": "2026-09-30",
+    "attributes": {
+      "plumbingCategoryKey": "bathroom-accessories",
+      "clientSelectionRequirement": "toilet-roll-holder",
+      "bathroomAccessoryType": "toilet-roll-holder",
+      "hncProductCode": "111-8200-00",
+      "hncUrlKey": "111820000",
+      "hncAliasSkus": [],
+      "hncSubCategory": "Toilet Roll Holders",
+      "sourceCategories": [
+        {
+          "id": 19,
+          "name": "Bathroom",
+          "url_path": "products/bathroom"
+        },
+        {
+          "id": 40,
+          "name": "Bathroom Accessories",
+          "url_path": "products/bathroom/bathroom-accessories"
+        },
+        {
+          "id": 195,
+          "name": "Toilet Roll Holders ",
+          "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+        },
+        {
+          "id": 1036,
+          "name": "Products",
+          "url_path": "products"
+        }
+      ],
+      "supplierProductType": "TOILET ROLL HOLDER",
+      "supplierProductGroup": "BATHACCESS",
+      "supplierSpecifications": {
+        "status": "Enabled",
+        "visibility": "Catalog, Search",
+        "gp_product_group": "BATHACCESS",
+        "gp_product_type": "TOILET ROLL HOLDER",
+        "range": "Vivid",
+        "brand": "Phoenix",
+        "colours": "Chrome",
+        "vendorcode": "111-8200-00",
+        "supplier_colour": "Chrome"
+      },
+      "features": [
+        "&bull; Unique fixing mechanism allows for quick level adjustment during installation",
+        "&bull; Matching tapware available to complete your bathroom look",
+        "&bull; Quality electroplated finish",
+        "&bull; Twin pillar installation for sturdier fixing",
+        "&bull; Available in chrome or brushed nickel or matte black"
+      ],
+      "warranty": null,
+      "priceBasis": "Harvey Norman Commercial SRP inc GST",
+      "accessoryImportBatch": "hnc-bathroom-five-brands-v1",
+      "sourceEvidence": "data/product-library/source-evidence/hnc-bathroom-five-brands",
+      "imageSha256": "30c79e0cb934778978810230e72fca11b182b6dc4a0e9dc5846474680d7aa685"
+    },
+    "image_status": "verified_exact",
+    "image_verified_at": "2026-09-30"
+  },
+  {
+    "product_code": "PLB-HNC-111840000",
+    "family_key": "bathroom-accessories",
+    "requirement_keys": "bathroom-accessories",
+    "category_key": "Bathroom Accessories",
+    "categories": [
+      {
+        "id": 19,
+        "name": "Bathroom",
+        "url_path": "products/bathroom"
+      },
+      {
+        "id": 40,
+        "name": "Bathroom Accessories",
+        "url_path": "products/bathroom/bathroom-accessories"
+      },
+      {
+        "id": 191,
+        "name": "Robe Hooks ",
+        "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+      },
+      {
+        "id": 1036,
+        "name": "Products",
+        "url_path": "products"
+      }
+    ],
+    "subcategory": "Robe Hooks",
+    "product_type": "Robe Hooks",
+    "top_level_area": "bathroom",
+    "manufacturer": "Phoenix",
+    "brand": "Phoenix",
+    "supplier": "Harvey Norman Commercial",
+    "product_name": "Vivid Slimline Robe Hook",
+    "model": "111-8400-00",
+    "sku": "111-8400-00",
+    "range": "Vivid",
+    "colour": "Chrome",
+    "finish": "Chrome",
+    "material": "",
+    "dimensions": "",
+    "description": "&bull; Unique fixing mechanism allows for quick level adjustment during installation\n&bull; Matching tapware available\n&bull; Concealed fixing\n&bull; Quality electroplated finish\n&bull; Available in chrome or brushed nickel or matte black",
+    "primary_image_url": "/images/catalogues/plumbing/hnc-accessories/111840000.webp",
+    "image_source_url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/111840000_phoenix_web.jpg",
+    "image_source_type": "authorised-supplier-media",
+    "image_source_organisation": "Harvey Norman Commercial",
+    "official_product_url": "https://www.harveynormancommercial.com.au/products/111840000",
+    "supplier_url": "https://www.harveynormancommercial.com.au/products/111840000",
+    "rrp": 27,
+    "client_price": 27,
+    "price_status": "current",
+    "price_unit": "each",
+    "price_source_url": "https://www.harveynormancommercial.com.au/products/111840000",
+    "price_verified_at": "2026-09-30",
+    "currency": "AUD",
+    "gst_included": true,
+    "regions": "AU",
+    "active": true,
+    "source_type": "authorised_supplier_listing",
+    "source_name": "Harvey Norman Commercial Bathroom catalogue",
+    "source_url": "https://www.harveynormancommercial.com.au/products/111840000",
+    "source_verified_at": "2026-09-30",
+    "attributes": {
+      "plumbingCategoryKey": "bathroom-accessories",
+      "clientSelectionRequirement": "robe-hook",
+      "bathroomAccessoryType": "robe-hook",
+      "hncProductCode": "111-8400-00",
+      "hncUrlKey": "111840000",
+      "hncAliasSkus": [],
+      "hncSubCategory": "Robe Hooks",
+      "sourceCategories": [
+        {
+          "id": 19,
+          "name": "Bathroom",
+          "url_path": "products/bathroom"
+        },
+        {
+          "id": 40,
+          "name": "Bathroom Accessories",
+          "url_path": "products/bathroom/bathroom-accessories"
+        },
+        {
+          "id": 191,
+          "name": "Robe Hooks ",
+          "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+        },
+        {
+          "id": 1036,
+          "name": "Products",
+          "url_path": "products"
+        }
+      ],
+      "supplierProductType": "ROBE HOOK",
+      "supplierProductGroup": "BATHACCESS",
+      "supplierSpecifications": {
+        "status": "Enabled",
+        "visibility": "Catalog, Search",
+        "gp_product_group": "BATHACCESS",
+        "gp_product_type": "ROBE HOOK",
+        "range": "Vivid",
+        "brand": "Phoenix",
+        "colours": "Chrome",
+        "vendorcode": "111-8400-00",
+        "supplier_colour": "Chrome"
+      },
+      "features": [
+        "&bull; Unique fixing mechanism allows for quick level adjustment during installation",
+        "&bull; Matching tapware available",
+        "&bull; Concealed fixing",
+        "&bull; Quality electroplated finish",
+        "&bull; Available in chrome or brushed nickel or matte black"
+      ],
+      "warranty": null,
+      "priceBasis": "Harvey Norman Commercial SRP inc GST",
+      "accessoryImportBatch": "hnc-bathroom-five-brands-v1",
+      "sourceEvidence": "data/product-library/source-evidence/hnc-bathroom-five-brands",
+      "imageSha256": "f4fa28dde48d39fc450eead490c504b872427dd0b6a89489e683e5b7144d1306"
+    },
+    "image_status": "verified_exact",
+    "image_verified_at": "2026-09-30"
+  },
+  {
+    "product_code": "PLB-HNC-11202084PSS",
+    "family_key": "bathroom-accessories",
+    "requirement_keys": "bathroom-accessories",
+    "category_key": "Bathroom Accessories",
+    "categories": [
+      {
+        "id": 19,
+        "name": "Bathroom",
+        "url_path": "products/bathroom"
+      },
+      {
+        "id": 40,
+        "name": "Bathroom Accessories",
+        "url_path": "products/bathroom/bathroom-accessories"
+      },
+      {
+        "id": 189,
+        "name": "Heated Towel Rails ",
+        "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+      },
+      {
+        "id": 1036,
+        "name": "Products",
+        "url_path": "products"
+      }
+    ],
+    "subcategory": "Heated Towel Rails",
+    "product_type": "Heated Towel Rails",
+    "top_level_area": "bathroom",
+    "manufacturer": "Caroma",
+    "brand": "Caroma",
+    "supplier": "Harvey Norman Commercial",
+    "product_name": "Urbane II 600mm Heated Single Towel Rail",
+    "model": "11202084PSS",
+    "sku": "11202084PSS",
+    "range": "Urbane",
+    "colour": "Stainless Steel",
+    "finish": "Stainless Steel",
+    "material": "",
+    "dimensions": "W640 x D65 x H40mm",
+    "description": "• 40°C +/– 5°C at an ambient temp of 22°C\n• Concealed wiring\n• Transformer required & sold separately\n• Supplied with a fixing kit\n• 15 watt output",
+    "primary_image_url": "/images/catalogues/plumbing/hnc-accessories/11202084pss.webp",
+    "image_source_url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11202084pss_caroma_web.jpg",
+    "image_source_type": "authorised-supplier-media",
+    "image_source_organisation": "Harvey Norman Commercial",
+    "official_product_url": "https://www.harveynormancommercial.com.au/products/11202084PSS",
+    "supplier_url": "https://www.harveynormancommercial.com.au/products/11202084PSS",
+    "rrp": 313,
+    "client_price": 313,
+    "price_status": "current",
+    "price_unit": "each",
+    "price_source_url": "https://www.harveynormancommercial.com.au/products/11202084PSS",
+    "price_verified_at": "2026-09-30",
+    "currency": "AUD",
+    "gst_included": true,
+    "regions": "AU",
+    "active": true,
+    "source_type": "authorised_supplier_listing",
+    "source_name": "Harvey Norman Commercial Bathroom catalogue",
+    "source_url": "https://www.harveynormancommercial.com.au/products/11202084PSS",
+    "source_verified_at": "2026-09-30",
+    "attributes": {
+      "plumbingCategoryKey": "bathroom-accessories",
+      "clientSelectionRequirement": "heated-towel-rail",
+      "bathroomAccessoryType": "heated-towel-rail",
+      "hncProductCode": "11202084PSS",
+      "hncUrlKey": "11202084PSS",
+      "hncAliasSkus": [],
+      "hncSubCategory": "Heated Towel Rails",
+      "sourceCategories": [
+        {
+          "id": 19,
+          "name": "Bathroom",
+          "url_path": "products/bathroom"
+        },
+        {
+          "id": 40,
+          "name": "Bathroom Accessories",
+          "url_path": "products/bathroom/bathroom-accessories"
+        },
+        {
+          "id": 189,
+          "name": "Heated Towel Rails ",
+          "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+        },
+        {
+          "id": 1036,
+          "name": "Products",
+          "url_path": "products"
+        }
+      ],
+      "supplierProductType": "HEATED HAND RAIL",
+      "supplierProductGroup": "BATHACCESS",
+      "supplierSpecifications": {
+        "status": "Enabled",
+        "visibility": "Catalog, Search",
+        "product_dimensions": "W640 x D65 x H40mm",
+        "gp_product_group": "BATHACCESS",
+        "gp_product_type": "HEATED HAND RAIL",
+        "range": "Urbane",
+        "brand": "Caroma",
+        "colours": "Stainless Steel",
+        "vendorcode": "11202084PSS",
+        "supplier_colour": "Stainless Steel"
+      },
+      "features": [
+        "40°C +/– 5°C at an ambient temp of 22°C",
+        "Concealed wiring",
+        "Transformer required & sold separately",
+        "Supplied with a fixing kit",
+        "15 watt output"
+      ],
+      "warranty": null,
+      "priceBasis": "Harvey Norman Commercial SRP inc GST",
+      "accessoryImportBatch": "hnc-bathroom-five-brands-v1",
+      "sourceEvidence": "data/product-library/source-evidence/hnc-bathroom-five-brands",
+      "imageSha256": "23de9d7aa9c1dad0212959200e73d5315586098aadd4074c5d07519bdd9db6c0"
+    },
+    "image_status": "verified_exact",
+    "image_verified_at": "2026-09-30"
+  },
+  {
+    "product_code": "PLB-HNC-11225049B",
+    "family_key": "bathroom-accessories",
+    "requirement_keys": "bathroom-accessories",
+    "category_key": "Bathroom Accessories",
+    "categories": [
+      {
+        "id": 19,
+        "name": "Bathroom",
+        "url_path": "products/bathroom"
+      },
+      {
+        "id": 40,
+        "name": "Bathroom Accessories",
+        "url_path": "products/bathroom/bathroom-accessories"
+      },
+      {
+        "id": 189,
+        "name": "Heated Towel Rails ",
+        "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+      },
+      {
+        "id": 1036,
+        "name": "Products",
+        "url_path": "products"
+      }
+    ],
+    "subcategory": "Heated Towel Rails",
+    "product_type": "Heated Towel Rails",
+    "top_level_area": "bathroom",
+    "manufacturer": "Caroma",
+    "brand": "Caroma",
+    "supplier": "Harvey Norman Commercial",
+    "product_name": "Liano II 600mm Heated Single Towel Rail",
+    "model": "11225049B",
+    "sku": "11225049B",
+    "range": "Liano",
+    "colour": "Matte Black",
+    "finish": "Matte Black",
+    "material": "",
+    "dimensions": "W640 x D75 x H25mm",
+    "description": "• 40°C +/– 5°C at an ambient temp of 22°C\n• Concealed wiring\n• Transformer required & sold separately\n• Supplied with a fixing kit\n• 15 watt output",
+    "primary_image_url": "/images/catalogues/plumbing/hnc-accessories/11225049b.webp",
+    "image_source_url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/1/11225049b_caroma_web.jpg",
+    "image_source_type": "authorised-supplier-media",
+    "image_source_organisation": "Harvey Norman Commercial",
+    "official_product_url": "https://www.harveynormancommercial.com.au/products/11225049B",
+    "supplier_url": "https://www.harveynormancommercial.com.au/products/11225049B",
+    "rrp": 345,
+    "client_price": 345,
+    "price_status": "current",
+    "price_unit": "each",
+    "price_source_url": "https://www.harveynormancommercial.com.au/products/11225049B",
+    "price_verified_at": "2026-09-30",
+    "currency": "AUD",
+    "gst_included": true,
+    "regions": "AU",
+    "active": true,
+    "source_type": "authorised_supplier_listing",
+    "source_name": "Harvey Norman Commercial Bathroom catalogue",
+    "source_url": "https://www.harveynormancommercial.com.au/products/11225049B",
+    "source_verified_at": "2026-09-30",
+    "attributes": {
+      "plumbingCategoryKey": "bathroom-accessories",
+      "clientSelectionRequirement": "heated-towel-rail",
+      "bathroomAccessoryType": "heated-towel-rail",
+      "hncProductCode": "11225049B",
+      "hncUrlKey": "11225049B",
+      "hncAliasSkus": [],
+      "hncSubCategory": "Heated Towel Rails",
+      "sourceCategories": [
+        {
+          "id": 19,
+          "name": "Bathroom",
+          "url_path": "products/bathroom"
+        },
+        {
+          "id": 40,
+          "name": "Bathroom Accessories",
+          "url_path": "products/bathroom/bathroom-accessories"
+        },
+        {
+          "id": 189,
+          "name": "Heated Towel Rails ",
+          "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+        },
+        {
+          "id": 1036,
+          "name": "Products",
+          "url_path": "products"
+        }
+      ],
+      "supplierProductType": "HEATED HAND RAIL",
+      "supplierProductGroup": "BATHACCESS",
+      "supplierSpecifications": {
+        "status": "Enabled",
+        "visibility": "Catalog, Search",
+        "product_dimensions": "W640 x D75 x H25mm",
+        "gp_product_group": "BATHACCESS",
+        "gp_product_type": "HEATED HAND RAIL",
+        "range": "Liano",
+        "brand": "Caroma",
+        "colours": "Matte Black",
+        "vendorcode": "11225049B",
+        "supplier_colour": "Matte Black"
+      },
+      "features": [
+        "40°C +/– 5°C at an ambient temp of 22°C",
+        "Concealed wiring",
+        "Transformer required & sold separately",
+        "Supplied with a fixing kit",
+        "15 watt output"
+      ],
+      "warranty": null,
+      "priceBasis": "Harvey Norman Commercial SRP inc GST",
+      "accessoryImportBatch": "hnc-bathroom-five-brands-v1",
+      "sourceEvidence": "data/product-library/source-evidence/hnc-bathroom-five-brands",
+      "imageSha256": "4a75a8adf3a5bcb4165027bd63a7f4c63b516a288943266b2f58d1ed44672c97"
+    },
+    "image_status": "verified_exact",
+    "image_verified_at": "2026-09-30"
+  },
+  {
+    "product_code": "PLB-HNC-129801000",
+    "family_key": "bathroom-accessories",
+    "requirement_keys": "bathroom-accessories",
+    "category_key": "Bathroom Accessories",
+    "categories": [
+      {
+        "id": 19,
+        "name": "Bathroom",
+        "url_path": "products/bathroom"
+      },
+      {
+        "id": 40,
+        "name": "Bathroom Accessories",
+        "url_path": "products/bathroom/bathroom-accessories"
+      },
+      {
+        "id": 196,
+        "name": "Towel Rails ",
+        "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+      },
+      {
+        "id": 1036,
+        "name": "Products",
+        "url_path": "products"
+      }
+    ],
+    "subcategory": "Towel Rails",
+    "product_type": "Towel Rails",
+    "top_level_area": "bathroom",
+    "manufacturer": "Phoenix",
+    "brand": "Phoenix",
+    "supplier": "Harvey Norman Commercial",
+    "product_name": "Nuage 600mm Single Towel Rail",
+    "model": "129-8010-00",
+    "sku": "129-8010-00",
+    "range": "Nuage",
+    "colour": "Chrome",
+    "finish": "Chrome",
+    "material": "",
+    "dimensions": "",
+    "description": "• Brass rail\n• Designed in Australia\n• Durable, high quality finish\n• Unique, organic design",
+    "primary_image_url": "/images/catalogues/plumbing/hnc-accessories/129801000.webp",
+    "image_source_url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/2/129-8010-00_phoenix_web.jpg",
+    "image_source_type": "authorised-supplier-media",
+    "image_source_organisation": "Harvey Norman Commercial",
+    "official_product_url": "https://www.harveynormancommercial.com.au/products/129801000",
+    "supplier_url": "https://www.harveynormancommercial.com.au/products/129801000",
+    "rrp": 236,
+    "client_price": 236,
+    "price_status": "current",
+    "price_unit": "each",
+    "price_source_url": "https://www.harveynormancommercial.com.au/products/129801000",
+    "price_verified_at": "2026-09-30",
+    "currency": "AUD",
+    "gst_included": true,
+    "regions": "AU",
+    "active": true,
+    "source_type": "authorised_supplier_listing",
+    "source_name": "Harvey Norman Commercial Bathroom catalogue",
+    "source_url": "https://www.harveynormancommercial.com.au/products/129801000",
+    "source_verified_at": "2026-09-30",
+    "attributes": {
+      "plumbingCategoryKey": "bathroom-accessories",
+      "clientSelectionRequirement": "towel-rail",
+      "bathroomAccessoryType": "towel-rail",
+      "hncProductCode": "129-8010-00",
+      "hncUrlKey": "129801000",
+      "hncAliasSkus": [],
+      "hncSubCategory": "Towel Rails",
+      "sourceCategories": [
+        {
+          "id": 19,
+          "name": "Bathroom",
+          "url_path": "products/bathroom"
+        },
+        {
+          "id": 40,
+          "name": "Bathroom Accessories",
+          "url_path": "products/bathroom/bathroom-accessories"
+        },
+        {
+          "id": 196,
+          "name": "Towel Rails ",
+          "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+        },
+        {
+          "id": 1036,
+          "name": "Products",
+          "url_path": "products"
+        }
+      ],
+      "supplierProductType": "TOWEL RAIL SINGLE",
+      "supplierProductGroup": "BATHACCESS",
+      "supplierSpecifications": {
+        "status": "Enabled",
+        "visibility": "Catalog, Search",
+        "gp_product_group": "BATHACCESS",
+        "gp_product_type": "TOWEL RAIL SINGLE",
+        "range": "Nuage",
+        "brand": "Phoenix",
+        "colours": "Chrome",
+        "vendorcode": "129-8010-00",
+        "supplier_colour": "Chrome"
+      },
+      "features": [
+        "Brass rail",
+        "Designed in Australia",
+        "Durable, high quality finish",
+        "Unique, organic design"
+      ],
+      "warranty": null,
+      "priceBasis": "Harvey Norman Commercial SRP inc GST",
+      "accessoryImportBatch": "hnc-bathroom-five-brands-v1",
+      "sourceEvidence": "data/product-library/source-evidence/hnc-bathroom-five-brands",
+      "imageSha256": "9d189b96b81ea7b07282d0dae67e2439a3e07180cb602a85f28bcd716d34b329"
+    },
+    "image_status": "verified_exact",
+    "image_verified_at": "2026-09-30"
+  },
+  {
+    "product_code": "PLB-HNC-134850010",
+    "family_key": "bathroom-accessories",
+    "requirement_keys": "bathroom-accessories",
+    "category_key": "Bathroom Accessories",
+    "categories": [
+      {
+        "id": 19,
+        "name": "Bathroom",
+        "url_path": "products/bathroom"
+      },
+      {
+        "id": 40,
+        "name": "Bathroom Accessories",
+        "url_path": "products/bathroom/bathroom-accessories"
+      },
+      {
+        "id": 197,
+        "name": "Towel Rings ",
+        "url_path": "products/bathroom/bathroom-accessories/towel-rings"
+      },
+      {
+        "id": 1036,
+        "name": "Products",
+        "url_path": "products"
+      }
+    ],
+    "subcategory": "Towel Rings",
+    "product_type": "Hand Towel Rings / Rails",
+    "top_level_area": "bathroom",
+    "manufacturer": "Phoenix",
+    "brand": "Phoenix",
+    "supplier": "Harvey Norman Commercial",
+    "product_name": "Cromford Towel Ring",
+    "model": "134-8500-10",
+    "sku": "134-8500-10",
+    "range": "Cromford",
+    "colour": "Matte Black",
+    "finish": "Matte Black",
+    "material": "",
+    "dimensions": "",
+    "description": "• Twin screw mounting plate\n• Designed in Australia\n• Durable, high quality finish",
+    "primary_image_url": "/images/catalogues/plumbing/hnc-accessories/134850010.webp",
+    "image_source_url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/1/3/134850010_phoenix_web.jpg",
+    "image_source_type": "authorised-supplier-media",
+    "image_source_organisation": "Harvey Norman Commercial",
+    "official_product_url": "https://www.harveynormancommercial.com.au/products/134850010",
+    "supplier_url": "https://www.harveynormancommercial.com.au/products/134850010",
+    "rrp": 112,
+    "client_price": 112,
+    "price_status": "current",
+    "price_unit": "each",
+    "price_source_url": "https://www.harveynormancommercial.com.au/products/134850010",
+    "price_verified_at": "2026-09-30",
+    "currency": "AUD",
+    "gst_included": true,
+    "regions": "AU",
+    "active": true,
+    "source_type": "authorised_supplier_listing",
+    "source_name": "Harvey Norman Commercial Bathroom catalogue",
+    "source_url": "https://www.harveynormancommercial.com.au/products/134850010",
+    "source_verified_at": "2026-09-30",
+    "attributes": {
+      "plumbingCategoryKey": "bathroom-accessories",
+      "clientSelectionRequirement": "hand-towel",
+      "bathroomAccessoryType": "hand-towel",
+      "hncProductCode": "134-8500-10",
+      "hncUrlKey": "134850010",
+      "hncAliasSkus": [],
+      "hncSubCategory": "Towel Rings",
+      "sourceCategories": [
+        {
+          "id": 19,
+          "name": "Bathroom",
+          "url_path": "products/bathroom"
+        },
+        {
+          "id": 40,
+          "name": "Bathroom Accessories",
+          "url_path": "products/bathroom/bathroom-accessories"
+        },
+        {
+          "id": 197,
+          "name": "Towel Rings ",
+          "url_path": "products/bathroom/bathroom-accessories/towel-rings"
+        },
+        {
+          "id": 1036,
+          "name": "Products",
+          "url_path": "products"
+        }
+      ],
+      "supplierProductType": "TOWEL RING",
+      "supplierProductGroup": "BATHACCESS",
+      "supplierSpecifications": {
+        "status": "Enabled",
+        "visibility": "Catalog, Search",
+        "gp_product_group": "BATHACCESS",
+        "gp_product_type": "TOWEL RING",
+        "range": "Cromford",
+        "brand": "Phoenix",
+        "colours": "Matte Black",
+        "vendorcode": "134-8500-10",
+        "supplier_colour": "Matte Black"
+      },
+      "features": [
+        "Twin screw mounting plate",
+        "Designed in Australia",
+        "Durable, high quality finish"
+      ],
+      "warranty": null,
+      "priceBasis": "Harvey Norman Commercial SRP inc GST",
+      "accessoryImportBatch": "hnc-bathroom-five-brands-v1",
+      "sourceEvidence": "data/product-library/source-evidence/hnc-bathroom-five-brands",
+      "imageSha256": "5239099dc12496fe4e2edee2fd06fe48711728e8acb3f9f53f04af6e28b018d5"
+    },
+    "image_status": "verified_exact",
+    "image_verified_at": "2026-09-30"
+  },
+  {
+    "product_code": "PLB-HNC-303128C",
+    "family_key": "bathroom-accessories",
+    "requirement_keys": "bathroom-accessories",
+    "category_key": "Bathroom Accessories",
+    "categories": [
+      {
+        "id": 19,
+        "name": "Bathroom",
+        "url_path": "products/bathroom"
+      },
+      {
+        "id": 40,
+        "name": "Bathroom Accessories",
+        "url_path": "products/bathroom/bathroom-accessories"
+      },
+      {
+        "id": 195,
+        "name": "Toilet Roll Holders ",
+        "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+      },
+      {
+        "id": 1036,
+        "name": "Products",
+        "url_path": "products"
+      }
+    ],
+    "subcategory": "Toilet Roll Holders",
+    "product_type": "Toilet Roll Holders",
+    "top_level_area": "bathroom",
+    "manufacturer": "Caroma",
+    "brand": "Caroma",
+    "supplier": "Harvey Norman Commercial",
+    "product_name": "Cosmo Toilet Roll Holder",
+    "model": "303128C",
+    "sku": "303128C",
+    "range": "Cosmo",
+    "colour": "Chrome",
+    "finish": "Chrome",
+    "material": "",
+    "dimensions": "",
+    "description": "&bull; Smooth clean lines\n&bull; Durable metal construction\n&bull; Suitable in all plastered & tiled bathrooms",
+    "primary_image_url": "/images/catalogues/plumbing/hnc-accessories/303128c.webp",
+    "image_source_url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/3/0/303128c_.jpg",
+    "image_source_type": "authorised-supplier-media",
+    "image_source_organisation": "Harvey Norman Commercial",
+    "official_product_url": "https://www.harveynormancommercial.com.au/products/303128C",
+    "supplier_url": "https://www.harveynormancommercial.com.au/products/303128C",
+    "rrp": 67,
+    "client_price": 67,
+    "price_status": "current",
+    "price_unit": "each",
+    "price_source_url": "https://www.harveynormancommercial.com.au/products/303128C",
+    "price_verified_at": "2026-09-30",
+    "currency": "AUD",
+    "gst_included": true,
+    "regions": "AU",
+    "active": true,
+    "source_type": "authorised_supplier_listing",
+    "source_name": "Harvey Norman Commercial Bathroom catalogue",
+    "source_url": "https://www.harveynormancommercial.com.au/products/303128C",
+    "source_verified_at": "2026-09-30",
+    "attributes": {
+      "plumbingCategoryKey": "bathroom-accessories",
+      "clientSelectionRequirement": "toilet-roll-holder",
+      "bathroomAccessoryType": "toilet-roll-holder",
+      "hncProductCode": "303128C",
+      "hncUrlKey": "303128C",
+      "hncAliasSkus": [],
+      "hncSubCategory": "Toilet Roll Holders",
+      "sourceCategories": [
+        {
+          "id": 19,
+          "name": "Bathroom",
+          "url_path": "products/bathroom"
+        },
+        {
+          "id": 40,
+          "name": "Bathroom Accessories",
+          "url_path": "products/bathroom/bathroom-accessories"
+        },
+        {
+          "id": 195,
+          "name": "Toilet Roll Holders ",
+          "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+        },
+        {
+          "id": 1036,
+          "name": "Products",
+          "url_path": "products"
+        }
+      ],
+      "supplierProductType": "TOILET ROLL HOLDER",
+      "supplierProductGroup": "BATHACCESS",
+      "supplierSpecifications": {
+        "status": "Enabled",
+        "visibility": "Catalog, Search",
+        "gp_product_group": "BATHACCESS",
+        "gp_product_type": "TOILET ROLL HOLDER",
+        "range": "Cosmo",
+        "brand": "Caroma",
+        "colours": "Chrome",
+        "vendorcode": "303128C",
+        "supplier_colour": "Chrome"
+      },
+      "features": [
+        "&bull; Smooth clean lines",
+        "&bull; Durable metal construction",
+        "&bull; Suitable in all plastered & tiled bathrooms"
+      ],
+      "warranty": null,
+      "priceBasis": "Harvey Norman Commercial SRP inc GST",
+      "accessoryImportBatch": "hnc-bathroom-five-brands-v1",
+      "sourceEvidence": "data/product-library/source-evidence/hnc-bathroom-five-brands",
+      "imageSha256": "238f35fbde6433168387b4d7ccf92fcd529ac65e268e47a11298e6bfa74f220d"
+    },
+    "image_status": "verified_exact",
+    "image_verified_at": "2026-09-30"
+  },
+  {
+    "product_code": "PLB-HNC-305102C",
+    "family_key": "bathroom-accessories",
+    "requirement_keys": "bathroom-accessories",
+    "category_key": "Bathroom Accessories",
+    "categories": [
+      {
+        "id": 19,
+        "name": "Bathroom",
+        "url_path": "products/bathroom"
+      },
+      {
+        "id": 40,
+        "name": "Bathroom Accessories",
+        "url_path": "products/bathroom/bathroom-accessories"
+      },
+      {
+        "id": 197,
+        "name": "Towel Rings ",
+        "url_path": "products/bathroom/bathroom-accessories/towel-rings"
+      },
+      {
+        "id": 1036,
+        "name": "Products",
+        "url_path": "products"
+      }
+    ],
+    "subcategory": "Towel Rings",
+    "product_type": "Hand Towel Rings / Rails",
+    "top_level_area": "bathroom",
+    "manufacturer": "Caroma",
+    "brand": "Caroma",
+    "supplier": "Harvey Norman Commercial",
+    "product_name": "Cosmo Towel Ring",
+    "model": "305102C",
+    "sku": "305102C",
+    "range": "Cosmo",
+    "colour": "Chrome",
+    "finish": "Chrome",
+    "material": "",
+    "dimensions": "",
+    "description": "&bull; Smooth clean lines\n&bull; Durable metal construction\n&bull; Suitable all plastered & tiled bathrooms",
+    "primary_image_url": "/images/catalogues/plumbing/hnc-accessories/305102c.webp",
+    "image_source_url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/3/0/305102c_web.jpg",
+    "image_source_type": "authorised-supplier-media",
+    "image_source_organisation": "Harvey Norman Commercial",
+    "official_product_url": "https://www.harveynormancommercial.com.au/products/305102C",
+    "supplier_url": "https://www.harveynormancommercial.com.au/products/305102C",
+    "rrp": 61,
+    "client_price": 61,
+    "price_status": "current",
+    "price_unit": "each",
+    "price_source_url": "https://www.harveynormancommercial.com.au/products/305102C",
+    "price_verified_at": "2026-09-30",
+    "currency": "AUD",
+    "gst_included": true,
+    "regions": "AU",
+    "active": true,
+    "source_type": "authorised_supplier_listing",
+    "source_name": "Harvey Norman Commercial Bathroom catalogue",
+    "source_url": "https://www.harveynormancommercial.com.au/products/305102C",
+    "source_verified_at": "2026-09-30",
+    "attributes": {
+      "plumbingCategoryKey": "bathroom-accessories",
+      "clientSelectionRequirement": "hand-towel",
+      "bathroomAccessoryType": "hand-towel",
+      "hncProductCode": "305102C",
+      "hncUrlKey": "305102C",
+      "hncAliasSkus": [],
+      "hncSubCategory": "Towel Rings",
+      "sourceCategories": [
+        {
+          "id": 19,
+          "name": "Bathroom",
+          "url_path": "products/bathroom"
+        },
+        {
+          "id": 40,
+          "name": "Bathroom Accessories",
+          "url_path": "products/bathroom/bathroom-accessories"
+        },
+        {
+          "id": 197,
+          "name": "Towel Rings ",
+          "url_path": "products/bathroom/bathroom-accessories/towel-rings"
+        },
+        {
+          "id": 1036,
+          "name": "Products",
+          "url_path": "products"
+        }
+      ],
+      "supplierProductType": "TOWEL RING",
+      "supplierProductGroup": "BATHACCESS",
+      "supplierSpecifications": {
+        "status": "Enabled",
+        "visibility": "Catalog, Search",
+        "gp_product_group": "BATHACCESS",
+        "gp_product_type": "TOWEL RING",
+        "range": "Cosmo",
+        "brand": "Caroma",
+        "colours": "Chrome",
+        "vendorcode": "305102C",
+        "supplier_colour": "Chrome"
+      },
+      "features": [
+        "&bull; Smooth clean lines",
+        "&bull; Durable metal construction",
+        "&bull; Suitable all plastered & tiled bathrooms"
+      ],
+      "warranty": null,
+      "priceBasis": "Harvey Norman Commercial SRP inc GST",
+      "accessoryImportBatch": "hnc-bathroom-five-brands-v1",
+      "sourceEvidence": "data/product-library/source-evidence/hnc-bathroom-five-brands",
+      "imageSha256": "d5569f87c5964f0cdbd44feb319b12f8d458b36570265549f152b376bd67a9d5"
+    },
+    "image_status": "verified_exact",
+    "image_verified_at": "2026-09-30"
+  },
+  {
+    "product_code": "PLB-HNC-309128C",
+    "family_key": "bathroom-accessories",
+    "requirement_keys": "bathroom-accessories",
+    "category_key": "Bathroom Accessories",
+    "categories": [
+      {
+        "id": 19,
+        "name": "Bathroom",
+        "url_path": "products/bathroom"
+      },
+      {
+        "id": 40,
+        "name": "Bathroom Accessories",
+        "url_path": "products/bathroom/bathroom-accessories"
+      },
+      {
+        "id": 191,
+        "name": "Robe Hooks ",
+        "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+      },
+      {
+        "id": 1036,
+        "name": "Products",
+        "url_path": "products"
+      }
+    ],
+    "subcategory": "Robe Hooks",
+    "product_type": "Robe Hooks",
+    "top_level_area": "bathroom",
+    "manufacturer": "Caroma",
+    "brand": "Caroma",
+    "supplier": "Harvey Norman Commercial",
+    "product_name": "Cosmo Robe Hook",
+    "model": "309128C",
+    "sku": "309128C",
+    "range": "Cosmo",
+    "colour": "Chrome",
+    "finish": "Chrome",
+    "material": "",
+    "dimensions": "",
+    "description": "&bull; Smooth clean lines\n&bull; Modern bathrooms\n&bull; Durable metal construction\n&bull; Designed to suit the Cosmo range\n&bull; Suitable in all plastered & tiled bathrooms",
+    "primary_image_url": "/images/catalogues/plumbing/hnc-accessories/309128c.webp",
+    "image_source_url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/3/0/309128c_web.jpg",
+    "image_source_type": "authorised-supplier-media",
+    "image_source_organisation": "Harvey Norman Commercial",
+    "official_product_url": "https://www.harveynormancommercial.com.au/products/309128C",
+    "supplier_url": "https://www.harveynormancommercial.com.au/products/309128C",
+    "rrp": 37,
+    "client_price": 37,
+    "price_status": "current",
+    "price_unit": "each",
+    "price_source_url": "https://www.harveynormancommercial.com.au/products/309128C",
+    "price_verified_at": "2026-09-30",
+    "currency": "AUD",
+    "gst_included": true,
+    "regions": "AU",
+    "active": true,
+    "source_type": "authorised_supplier_listing",
+    "source_name": "Harvey Norman Commercial Bathroom catalogue",
+    "source_url": "https://www.harveynormancommercial.com.au/products/309128C",
+    "source_verified_at": "2026-09-30",
+    "attributes": {
+      "plumbingCategoryKey": "bathroom-accessories",
+      "clientSelectionRequirement": "robe-hook",
+      "bathroomAccessoryType": "robe-hook",
+      "hncProductCode": "309128C",
+      "hncUrlKey": "309128C",
+      "hncAliasSkus": [],
+      "hncSubCategory": "Robe Hooks",
+      "sourceCategories": [
+        {
+          "id": 19,
+          "name": "Bathroom",
+          "url_path": "products/bathroom"
+        },
+        {
+          "id": 40,
+          "name": "Bathroom Accessories",
+          "url_path": "products/bathroom/bathroom-accessories"
+        },
+        {
+          "id": 191,
+          "name": "Robe Hooks ",
+          "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+        },
+        {
+          "id": 1036,
+          "name": "Products",
+          "url_path": "products"
+        }
+      ],
+      "supplierProductType": "ROBE HOOK",
+      "supplierProductGroup": "BATHACCESS",
+      "supplierSpecifications": {
+        "status": "Enabled",
+        "visibility": "Catalog, Search",
+        "gp_product_group": "BATHACCESS",
+        "gp_product_type": "ROBE HOOK",
+        "range": "Cosmo",
+        "brand": "Caroma",
+        "colours": "Chrome",
+        "vendorcode": "309128C",
+        "supplier_colour": "Chrome"
+      },
+      "features": [
+        "&bull; Smooth clean lines",
+        "&bull; Modern bathrooms",
+        "&bull; Durable metal construction",
+        "&bull; Designed to suit the Cosmo range",
+        "&bull; Suitable in all plastered & tiled bathrooms"
+      ],
+      "warranty": null,
+      "priceBasis": "Harvey Norman Commercial SRP inc GST",
+      "accessoryImportBatch": "hnc-bathroom-five-brands-v1",
+      "sourceEvidence": "data/product-library/source-evidence/hnc-bathroom-five-brands",
+      "imageSha256": "570537ffb4bd47bbc5d4959548d64399536cbd771d8685f40eddfac648d872cd"
+    },
+    "image_status": "verified_exact",
+    "image_verified_at": "2026-09-30"
+  },
+  {
+    "product_code": "PLB-HNC-520032BB",
+    "family_key": "bathroom-accessories",
+    "requirement_keys": "bathroom-accessories",
+    "category_key": "Bathroom Accessories",
+    "categories": [
+      {
+        "id": 19,
+        "name": "Bathroom",
+        "url_path": "products/bathroom"
+      },
+      {
+        "id": 40,
+        "name": "Bathroom Accessories",
+        "url_path": "products/bathroom/bathroom-accessories"
+      },
+      {
+        "id": 197,
+        "name": "Towel Rings ",
+        "url_path": "products/bathroom/bathroom-accessories/towel-rings"
+      },
+      {
+        "id": 1036,
+        "name": "Products",
+        "url_path": "products"
+      }
+    ],
+    "subcategory": "Towel Rings",
+    "product_type": "Hand Towel Rings / Rails",
+    "top_level_area": "bathroom",
+    "manufacturer": "Caroma",
+    "brand": "Caroma",
+    "supplier": "Harvey Norman Commercial",
+    "product_name": "Riviere Towel Ring",
+    "model": "520032BB",
+    "sku": "520032BB",
+    "range": "Riviere",
+    "colour": "Brushed Brass",
+    "finish": "Brushed Brass",
+    "material": "",
+    "dimensions": "W180 x D55 x H197mm",
+    "description": "• PVD finish\n• High quality metal construction ensures durability\n• 3 point fixing for added strength\n• Australian designed & engineered",
+    "primary_image_url": "/images/catalogues/plumbing/hnc-accessories/520032bb.webp",
+    "image_source_url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520032BB_Caroma_web.jpg",
+    "image_source_type": "authorised-supplier-media",
+    "image_source_organisation": "Harvey Norman Commercial",
+    "official_product_url": "https://www.harveynormancommercial.com.au/products/520032BB",
+    "supplier_url": "https://www.harveynormancommercial.com.au/products/520032BB",
+    "rrp": 135,
+    "client_price": 135,
+    "price_status": "current",
+    "price_unit": "each",
+    "price_source_url": "https://www.harveynormancommercial.com.au/products/520032BB",
+    "price_verified_at": "2026-09-30",
+    "currency": "AUD",
+    "gst_included": true,
+    "regions": "AU",
+    "active": true,
+    "source_type": "authorised_supplier_listing",
+    "source_name": "Harvey Norman Commercial Bathroom catalogue",
+    "source_url": "https://www.harveynormancommercial.com.au/products/520032BB",
+    "source_verified_at": "2026-09-30",
+    "attributes": {
+      "plumbingCategoryKey": "bathroom-accessories",
+      "clientSelectionRequirement": "hand-towel",
+      "bathroomAccessoryType": "hand-towel",
+      "hncProductCode": "520032BB",
+      "hncUrlKey": "520032BB",
+      "hncAliasSkus": [],
+      "hncSubCategory": "Towel Rings",
+      "sourceCategories": [
+        {
+          "id": 19,
+          "name": "Bathroom",
+          "url_path": "products/bathroom"
+        },
+        {
+          "id": 40,
+          "name": "Bathroom Accessories",
+          "url_path": "products/bathroom/bathroom-accessories"
+        },
+        {
+          "id": 197,
+          "name": "Towel Rings ",
+          "url_path": "products/bathroom/bathroom-accessories/towel-rings"
+        },
+        {
+          "id": 1036,
+          "name": "Products",
+          "url_path": "products"
+        }
+      ],
+      "supplierProductType": "TOWEL RING",
+      "supplierProductGroup": "BATHACCESS",
+      "supplierSpecifications": {
+        "status": "Enabled",
+        "visibility": "Catalog, Search",
+        "product_dimensions": "W180 x D55 x H197mm",
+        "gp_product_group": "BATHACCESS",
+        "gp_product_type": "TOWEL RING",
+        "range": "Riviere",
+        "brand": "Caroma",
+        "colours": "Brushed Brass",
+        "vendorcode": "520032BB",
+        "supplier_colour": "Brushed Brass"
+      },
+      "features": [
+        "PVD finish",
+        "High quality metal construction ensures durability",
+        "3 point fixing for added strength",
+        "Australian designed & engineered"
+      ],
+      "warranty": null,
+      "priceBasis": "Harvey Norman Commercial SRP inc GST",
+      "accessoryImportBatch": "hnc-bathroom-five-brands-v1",
+      "sourceEvidence": "data/product-library/source-evidence/hnc-bathroom-five-brands",
+      "imageSha256": "2c0f93ab575da11c201ddc1892bc61e9565affc149d326b145cc8bc5a03bc9bb"
+    },
+    "image_status": "verified_exact",
+    "image_verified_at": "2026-09-30"
+  },
+  {
+    "product_code": "PLB-HNC-650876110",
+    "family_key": "bathroom-accessories",
+    "requirement_keys": "bathroom-accessories",
+    "category_key": "Bathroom Accessories",
+    "categories": [
+      {
+        "id": 19,
+        "name": "Bathroom",
+        "url_path": "products/bathroom"
+      },
+      {
+        "id": 40,
+        "name": "Bathroom Accessories",
+        "url_path": "products/bathroom/bathroom-accessories"
+      },
+      {
+        "id": 189,
+        "name": "Heated Towel Rails ",
+        "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+      },
+      {
+        "id": 1036,
+        "name": "Products",
+        "url_path": "products"
+      }
+    ],
+    "subcategory": "Heated Towel Rails",
+    "product_type": "Heated Towel Rails",
+    "top_level_area": "bathroom",
+    "manufacturer": "Phoenix",
+    "brand": "Phoenix",
+    "supplier": "Harvey Norman Commercial",
+    "product_name": "800mm Heated Single Towel Rail",
+    "model": "650-8761-10",
+    "sku": "650-8761-10",
+    "range": "Phoenix",
+    "colour": "Matte Black",
+    "finish": "Matte Black",
+    "material": "",
+    "dimensions": "W870 x D82 x H32mm",
+    "description": "• Transformer included\n• 45 degrees +/- 5 degrees at room temp of 22 degrees\n• Integrated on & off switch\n• Cable exits through bottom mount\n• Can be installed vertically or horizontally",
+    "primary_image_url": "/images/catalogues/plumbing/hnc-accessories/650876110.webp",
+    "image_source_url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876110_phoenix_web.jpg",
+    "image_source_type": "authorised-supplier-media",
+    "image_source_organisation": "Harvey Norman Commercial",
+    "official_product_url": "https://www.harveynormancommercial.com.au/products/650876110",
+    "supplier_url": "https://www.harveynormancommercial.com.au/products/650876110",
+    "rrp": 460,
+    "client_price": 460,
+    "price_status": "current",
+    "price_unit": "each",
+    "price_source_url": "https://www.harveynormancommercial.com.au/products/650876110",
+    "price_verified_at": "2026-09-30",
+    "currency": "AUD",
+    "gst_included": true,
+    "regions": "AU",
+    "active": true,
+    "source_type": "authorised_supplier_listing",
+    "source_name": "Harvey Norman Commercial Bathroom catalogue",
+    "source_url": "https://www.harveynormancommercial.com.au/products/650876110",
+    "source_verified_at": "2026-09-30",
+    "attributes": {
+      "plumbingCategoryKey": "bathroom-accessories",
+      "clientSelectionRequirement": "heated-towel-rail",
+      "bathroomAccessoryType": "heated-towel-rail",
+      "hncProductCode": "650-8761-10",
+      "hncUrlKey": "650876110",
+      "hncAliasSkus": [],
+      "hncSubCategory": "Heated Towel Rails",
+      "sourceCategories": [
+        {
+          "id": 19,
+          "name": "Bathroom",
+          "url_path": "products/bathroom"
+        },
+        {
+          "id": 40,
+          "name": "Bathroom Accessories",
+          "url_path": "products/bathroom/bathroom-accessories"
+        },
+        {
+          "id": 189,
+          "name": "Heated Towel Rails ",
+          "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+        },
+        {
+          "id": 1036,
+          "name": "Products",
+          "url_path": "products"
+        }
+      ],
+      "supplierProductType": "HEATED HAND RAIL",
+      "supplierProductGroup": "BATHACCESS",
+      "supplierSpecifications": {
+        "status": "Enabled",
+        "visibility": "Catalog, Search",
+        "product_dimensions": "W870 x D82 x H32mm",
+        "gp_product_group": "BATHACCESS",
+        "gp_product_type": "HEATED HAND RAIL",
+        "range": "Phoenix",
+        "brand": "Phoenix",
+        "colours": "Matte Black",
+        "vendorcode": "650-8761-10",
+        "supplier_colour": "Matte Black"
+      },
+      "features": [
+        "Transformer included",
+        "45 degrees +/- 5 degrees at room temp of 22 degrees",
+        "Integrated on & off switch",
+        "Cable exits through bottom mount",
+        "Can be installed vertically or horizontally"
+      ],
+      "warranty": null,
+      "priceBasis": "Harvey Norman Commercial SRP inc GST",
+      "accessoryImportBatch": "hnc-bathroom-five-brands-v1",
+      "sourceEvidence": "data/product-library/source-evidence/hnc-bathroom-five-brands",
+      "imageSha256": "25ce9a4c1fa7609ae5150596b187557e2fd7cf62e6a0fb68c9dd04cdced2facb"
+    },
+    "image_status": "verified_exact",
+    "image_verified_at": "2026-09-30"
+  },
+  {
+    "product_code": "PLB-HNC-650876300",
+    "family_key": "bathroom-accessories",
+    "requirement_keys": "bathroom-accessories",
+    "category_key": "Bathroom Accessories",
+    "categories": [
+      {
+        "id": 19,
+        "name": "Bathroom",
+        "url_path": "products/bathroom"
+      },
+      {
+        "id": 40,
+        "name": "Bathroom Accessories",
+        "url_path": "products/bathroom/bathroom-accessories"
+      },
+      {
+        "id": 189,
+        "name": "Heated Towel Rails ",
+        "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+      },
+      {
+        "id": 1036,
+        "name": "Products",
+        "url_path": "products"
+      }
+    ],
+    "subcategory": "Heated Towel Rails",
+    "product_type": "Heated Towel Rails",
+    "top_level_area": "bathroom",
+    "manufacturer": "Phoenix",
+    "brand": "Phoenix",
+    "supplier": "Harvey Norman Commercial",
+    "product_name": "3-Bar Round Heated Towel Rail",
+    "model": "650-8763-00",
+    "sku": "650-8763-00",
+    "range": "Phoenix",
+    "colour": "Chrome",
+    "finish": "Chrome",
+    "material": "",
+    "dimensions": "",
+    "description": "• Transformer included\n• 45˚ +/- 5˚ at room temp of 22˚\n• Integrated on and off switch\n• Cable exits through bottom mount\n• Vertical or horizontal mount",
+    "primary_image_url": "/images/catalogues/plumbing/hnc-accessories/650876300.webp",
+    "image_source_url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/6/5/650876300_phoenix_web.jpg",
+    "image_source_type": "authorised-supplier-media",
+    "image_source_organisation": "Harvey Norman Commercial",
+    "official_product_url": "https://www.harveynormancommercial.com.au/products/650876300",
+    "supplier_url": "https://www.harveynormancommercial.com.au/products/650876300",
+    "rrp": 1183,
+    "client_price": 1183,
+    "price_status": "current",
+    "price_unit": "each",
+    "price_source_url": "https://www.harveynormancommercial.com.au/products/650876300",
+    "price_verified_at": "2026-09-30",
+    "currency": "AUD",
+    "gst_included": true,
+    "regions": "AU",
+    "active": true,
+    "source_type": "authorised_supplier_listing",
+    "source_name": "Harvey Norman Commercial Bathroom catalogue",
+    "source_url": "https://www.harveynormancommercial.com.au/products/650876300",
+    "source_verified_at": "2026-09-30",
+    "attributes": {
+      "plumbingCategoryKey": "bathroom-accessories",
+      "clientSelectionRequirement": "heated-towel-rail",
+      "bathroomAccessoryType": "heated-towel-rail",
+      "hncProductCode": "650-8763-00",
+      "hncUrlKey": "650876300",
+      "hncAliasSkus": [],
+      "hncSubCategory": "Heated Towel Rails",
+      "sourceCategories": [
+        {
+          "id": 19,
+          "name": "Bathroom",
+          "url_path": "products/bathroom"
+        },
+        {
+          "id": 40,
+          "name": "Bathroom Accessories",
+          "url_path": "products/bathroom/bathroom-accessories"
+        },
+        {
+          "id": 189,
+          "name": "Heated Towel Rails ",
+          "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+        },
+        {
+          "id": 1036,
+          "name": "Products",
+          "url_path": "products"
+        }
+      ],
+      "supplierProductType": "HEATED HAND RAIL",
+      "supplierProductGroup": "BATHACCESS",
+      "supplierSpecifications": {
+        "status": "Enabled",
+        "visibility": "Catalog, Search",
+        "gp_product_group": "BATHACCESS",
+        "gp_product_type": "HEATED HAND RAIL",
+        "range": "Phoenix",
+        "brand": "Phoenix",
+        "colours": "Chrome",
+        "vendorcode": "650-8763-00",
+        "supplier_colour": "Chrome"
+      },
+      "features": [
+        "Transformer included",
+        "45˚ +/- 5˚ at room temp of 22˚",
+        "Integrated on and off switch",
+        "Cable exits through bottom mount",
+        "Vertical or horizontal mount"
+      ],
+      "warranty": null,
+      "priceBasis": "Harvey Norman Commercial SRP inc GST",
+      "accessoryImportBatch": "hnc-bathroom-five-brands-v1",
+      "sourceEvidence": "data/product-library/source-evidence/hnc-bathroom-five-brands",
+      "imageSha256": "bb3de8ebef83359fdc2d13f1019f9777c42608ec24156db89047584c08a5f922"
+    },
+    "image_status": "verified_exact",
+    "image_verified_at": "2026-09-30"
+  },
+  {
+    "product_code": "PLB-HNC-849036B",
+    "family_key": "bathroom-accessories",
+    "requirement_keys": "bathroom-accessories",
+    "category_key": "Bathroom Accessories",
+    "categories": [
+      {
+        "id": 19,
+        "name": "Bathroom",
+        "url_path": "products/bathroom"
+      },
+      {
+        "id": 40,
+        "name": "Bathroom Accessories",
+        "url_path": "products/bathroom/bathroom-accessories"
+      },
+      {
+        "id": 196,
+        "name": "Towel Rails ",
+        "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+      },
+      {
+        "id": 1036,
+        "name": "Products",
+        "url_path": "products"
+      }
+    ],
+    "subcategory": "Towel Rails",
+    "product_type": "Towel Rails",
+    "top_level_area": "bathroom",
+    "manufacturer": "Caroma",
+    "brand": "Caroma",
+    "supplier": "Harvey Norman Commercial",
+    "product_name": "Contura II 820mm Double Towel Rail",
+    "model": "849036B",
+    "sku": "849036B",
+    "range": "Contura",
+    "colour": "Matte Black",
+    "finish": "Matte Black",
+    "material": "",
+    "dimensions": "W820 x D123 x H17mm",
+    "description": "• High quality metal construction\n• Dual fixings",
+    "primary_image_url": "/images/catalogues/plumbing/hnc-accessories/849036b.webp",
+    "image_source_url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849036b_caroma_web.jpg",
+    "image_source_type": "authorised-supplier-media",
+    "image_source_organisation": "Harvey Norman Commercial",
+    "official_product_url": "https://www.harveynormancommercial.com.au/products/849036B",
+    "supplier_url": "https://www.harveynormancommercial.com.au/products/849036B",
+    "rrp": 237,
+    "client_price": 237,
+    "price_status": "current",
+    "price_unit": "each",
+    "price_source_url": "https://www.harveynormancommercial.com.au/products/849036B",
+    "price_verified_at": "2026-09-30",
+    "currency": "AUD",
+    "gst_included": true,
+    "regions": "AU",
+    "active": true,
+    "source_type": "authorised_supplier_listing",
+    "source_name": "Harvey Norman Commercial Bathroom catalogue",
+    "source_url": "https://www.harveynormancommercial.com.au/products/849036B",
+    "source_verified_at": "2026-09-30",
+    "attributes": {
+      "plumbingCategoryKey": "bathroom-accessories",
+      "clientSelectionRequirement": "towel-rail",
+      "bathroomAccessoryType": "towel-rail",
+      "hncProductCode": "849036B",
+      "hncUrlKey": "849036B",
+      "hncAliasSkus": [],
+      "hncSubCategory": "Towel Rails",
+      "sourceCategories": [
+        {
+          "id": 19,
+          "name": "Bathroom",
+          "url_path": "products/bathroom"
+        },
+        {
+          "id": 40,
+          "name": "Bathroom Accessories",
+          "url_path": "products/bathroom/bathroom-accessories"
+        },
+        {
+          "id": 196,
+          "name": "Towel Rails ",
+          "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+        },
+        {
+          "id": 1036,
+          "name": "Products",
+          "url_path": "products"
+        }
+      ],
+      "supplierProductType": "TOWEL RAIL DOUBLE",
+      "supplierProductGroup": "BATHACCESS",
+      "supplierSpecifications": {
+        "status": "Enabled",
+        "visibility": "Catalog, Search",
+        "product_dimensions": "W820 x D123 x H17mm",
+        "gp_product_group": "BATHACCESS",
+        "gp_product_type": "TOWEL RAIL DOUBLE",
+        "range": "Contura",
+        "brand": "Caroma",
+        "colours": "Matte Black",
+        "vendorcode": "849036B",
+        "supplier_colour": "Matte Black"
+      },
+      "features": [
+        "High quality metal construction",
+        "Dual fixings"
+      ],
+      "warranty": null,
+      "priceBasis": "Harvey Norman Commercial SRP inc GST",
+      "accessoryImportBatch": "hnc-bathroom-five-brands-v1",
+      "sourceEvidence": "data/product-library/source-evidence/hnc-bathroom-five-brands",
+      "imageSha256": "7aa3d8c02bc5860ce5633e03a36bb0bd3ec550aa897b272934fe22bec86c0e9a"
+    },
+    "image_status": "verified_exact",
+    "image_verified_at": "2026-09-30"
+  },
+  {
+    "product_code": "PLB-HNC-849036C",
+    "family_key": "bathroom-accessories",
+    "requirement_keys": "bathroom-accessories",
+    "category_key": "Bathroom Accessories",
+    "categories": [
+      {
+        "id": 19,
+        "name": "Bathroom",
+        "url_path": "products/bathroom"
+      },
+      {
+        "id": 40,
+        "name": "Bathroom Accessories",
+        "url_path": "products/bathroom/bathroom-accessories"
+      },
+      {
+        "id": 196,
+        "name": "Towel Rails ",
+        "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+      },
+      {
+        "id": 1036,
+        "name": "Products",
+        "url_path": "products"
+      }
+    ],
+    "subcategory": "Towel Rails",
+    "product_type": "Towel Rails",
+    "top_level_area": "bathroom",
+    "manufacturer": "Caroma",
+    "brand": "Caroma",
+    "supplier": "Harvey Norman Commercial",
+    "product_name": "Contura II 820mm Double Towel Rail",
+    "model": "849036C",
+    "sku": "849036C",
+    "range": "Contura",
+    "colour": "Chrome",
+    "finish": "Chrome",
+    "material": "",
+    "dimensions": "W820 x D123 x H17mm",
+    "description": "• High quality metal construction\n• Dual fixings",
+    "primary_image_url": "/images/catalogues/plumbing/hnc-accessories/849036c.webp",
+    "image_source_url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849036c_caroma_web.jpg",
+    "image_source_type": "authorised-supplier-media",
+    "image_source_organisation": "Harvey Norman Commercial",
+    "official_product_url": "https://www.harveynormancommercial.com.au/products/849036C",
+    "supplier_url": "https://www.harveynormancommercial.com.au/products/849036C",
+    "rrp": 224,
+    "client_price": 224,
+    "price_status": "current",
+    "price_unit": "each",
+    "price_source_url": "https://www.harveynormancommercial.com.au/products/849036C",
+    "price_verified_at": "2026-09-30",
+    "currency": "AUD",
+    "gst_included": true,
+    "regions": "AU",
+    "active": true,
+    "source_type": "authorised_supplier_listing",
+    "source_name": "Harvey Norman Commercial Bathroom catalogue",
+    "source_url": "https://www.harveynormancommercial.com.au/products/849036C",
+    "source_verified_at": "2026-09-30",
+    "attributes": {
+      "plumbingCategoryKey": "bathroom-accessories",
+      "clientSelectionRequirement": "towel-rail",
+      "bathroomAccessoryType": "towel-rail",
+      "hncProductCode": "849036C",
+      "hncUrlKey": "849036C",
+      "hncAliasSkus": [],
+      "hncSubCategory": "Towel Rails",
+      "sourceCategories": [
+        {
+          "id": 19,
+          "name": "Bathroom",
+          "url_path": "products/bathroom"
+        },
+        {
+          "id": 40,
+          "name": "Bathroom Accessories",
+          "url_path": "products/bathroom/bathroom-accessories"
+        },
+        {
+          "id": 196,
+          "name": "Towel Rails ",
+          "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+        },
+        {
+          "id": 1036,
+          "name": "Products",
+          "url_path": "products"
+        }
+      ],
+      "supplierProductType": "TOWEL RAIL DOUBLE",
+      "supplierProductGroup": "BATHACCESS",
+      "supplierSpecifications": {
+        "status": "Enabled",
+        "visibility": "Catalog, Search",
+        "product_dimensions": "W820 x D123 x H17mm",
+        "gp_product_group": "BATHACCESS",
+        "gp_product_type": "TOWEL RAIL DOUBLE",
+        "range": "Contura",
+        "brand": "Caroma",
+        "colours": "Chrome",
+        "vendorcode": "849036C",
+        "supplier_colour": "Chrome"
+      },
+      "features": [
+        "High quality metal construction",
+        "Dual fixings"
+      ],
+      "warranty": null,
+      "priceBasis": "Harvey Norman Commercial SRP inc GST",
+      "accessoryImportBatch": "hnc-bathroom-five-brands-v1",
+      "sourceEvidence": "data/product-library/source-evidence/hnc-bathroom-five-brands",
+      "imageSha256": "c55dc09b2c0afb8d9f4b15bb98e5b81f2b57152b67e8bef35b0a698db98d510c"
+    },
+    "image_status": "verified_exact",
+    "image_verified_at": "2026-09-30"
+  },
+  {
+    "product_code": "PLB-HNC-99607BL",
+    "family_key": "bathroom-accessories",
+    "requirement_keys": "bathroom-accessories",
+    "category_key": "Bathroom Accessories",
+    "categories": [
+      {
+        "id": 19,
+        "name": "Bathroom",
+        "url_path": "products/bathroom"
+      },
+      {
+        "id": 40,
+        "name": "Bathroom Accessories",
+        "url_path": "products/bathroom/bathroom-accessories"
+      },
+      {
+        "id": 195,
+        "name": "Toilet Roll Holders ",
+        "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+      },
+      {
+        "id": 1036,
+        "name": "Products",
+        "url_path": "products"
+      }
+    ],
+    "subcategory": "Toilet Roll Holders",
+    "product_type": "Toilet Roll Holders",
+    "top_level_area": "bathroom",
+    "manufacturer": "Caroma",
+    "brand": "Caroma",
+    "supplier": "Harvey Norman Commercial",
+    "product_name": "Luna Toilet Roll Holder",
+    "model": "99607BL",
+    "sku": "99607BL",
+    "range": "Luna",
+    "colour": "Satin Black",
+    "finish": "Satin Black",
+    "material": "",
+    "dimensions": "W169 x D70 x H25mm",
+    "description": "&bull; Designed to match Luna tapware and basins\n&bull; Long lasting chrome finish\n&bull; Dual fixings for added strength",
+    "primary_image_url": "/images/catalogues/plumbing/hnc-accessories/99607bl.webp",
+    "image_source_url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99607bl_caroma_web.jpg",
+    "image_source_type": "authorised-supplier-media",
+    "image_source_organisation": "Harvey Norman Commercial",
+    "official_product_url": "https://www.harveynormancommercial.com.au/products/99607BL",
+    "supplier_url": "https://www.harveynormancommercial.com.au/products/99607BL",
+    "rrp": 77,
+    "client_price": 77,
+    "price_status": "current",
+    "price_unit": "each",
+    "price_source_url": "https://www.harveynormancommercial.com.au/products/99607BL",
+    "price_verified_at": "2026-09-30",
+    "currency": "AUD",
+    "gst_included": true,
+    "regions": "AU",
+    "active": true,
+    "source_type": "authorised_supplier_listing",
+    "source_name": "Harvey Norman Commercial Bathroom catalogue",
+    "source_url": "https://www.harveynormancommercial.com.au/products/99607BL",
+    "source_verified_at": "2026-09-30",
+    "attributes": {
+      "plumbingCategoryKey": "bathroom-accessories",
+      "clientSelectionRequirement": "toilet-roll-holder",
+      "bathroomAccessoryType": "toilet-roll-holder",
+      "hncProductCode": "99607BL",
+      "hncUrlKey": "99607BL",
+      "hncAliasSkus": [],
+      "hncSubCategory": "Toilet Roll Holders",
+      "sourceCategories": [
+        {
+          "id": 19,
+          "name": "Bathroom",
+          "url_path": "products/bathroom"
+        },
+        {
+          "id": 40,
+          "name": "Bathroom Accessories",
+          "url_path": "products/bathroom/bathroom-accessories"
+        },
+        {
+          "id": 195,
+          "name": "Toilet Roll Holders ",
+          "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+        },
+        {
+          "id": 1036,
+          "name": "Products",
+          "url_path": "products"
+        }
+      ],
+      "supplierProductType": "TOILET ROLL HOLDER",
+      "supplierProductGroup": "BATHACCESS",
+      "supplierSpecifications": {
+        "status": "Enabled",
+        "visibility": "Catalog, Search",
+        "product_dimensions": "W169 x D70 x H25mm",
+        "gp_product_group": "BATHACCESS",
+        "gp_product_type": "TOILET ROLL HOLDER",
+        "range": "Luna",
+        "brand": "Caroma",
+        "size_mm": "170",
+        "colours": "Black",
+        "vendorcode": "99607BL",
+        "supplier_colour": "Satin Black"
+      },
+      "features": [
+        "&bull; Designed to match Luna tapware and basins",
+        "&bull; Long lasting chrome finish",
+        "&bull; Dual fixings for added strength"
+      ],
+      "warranty": null,
+      "priceBasis": "Harvey Norman Commercial SRP inc GST",
+      "accessoryImportBatch": "hnc-bathroom-five-brands-v1",
+      "sourceEvidence": "data/product-library/source-evidence/hnc-bathroom-five-brands",
+      "imageSha256": "8178bb71013e32e0de04e68f62630675166d4460811ffe71654b86b5afd9349b"
+    },
+    "image_status": "verified_exact",
+    "image_verified_at": "2026-09-30"
+  },
+  {
+    "product_code": "PLB-HNC-99608BB",
+    "family_key": "bathroom-accessories",
+    "requirement_keys": "bathroom-accessories",
+    "category_key": "Bathroom Accessories",
+    "categories": [
+      {
+        "id": 19,
+        "name": "Bathroom",
+        "url_path": "products/bathroom"
+      },
+      {
+        "id": 40,
+        "name": "Bathroom Accessories",
+        "url_path": "products/bathroom/bathroom-accessories"
+      },
+      {
+        "id": 191,
+        "name": "Robe Hooks ",
+        "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+      },
+      {
+        "id": 1036,
+        "name": "Products",
+        "url_path": "products"
+      }
+    ],
+    "subcategory": "Robe Hooks",
+    "product_type": "Robe Hooks",
+    "top_level_area": "bathroom",
+    "manufacturer": "Caroma",
+    "brand": "Caroma",
+    "supplier": "Harvey Norman Commercial",
+    "product_name": "Luna Robe Hook",
+    "model": "99608BB",
+    "sku": "99608BB",
+    "range": "Luna",
+    "colour": "Brushed Brass",
+    "finish": "Brushed Brass",
+    "material": "",
+    "dimensions": "W25 x D40 x H53mm",
+    "description": "&bull; Designed to match Luna tapware and basins\n&bull; Long lasting chrome finish\n&bull; Dual fixings for added strength",
+    "primary_image_url": "/images/catalogues/plumbing/hnc-accessories/99608bb.webp",
+    "image_source_url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99608bb_caroma_web.jpg",
+    "image_source_type": "authorised-supplier-media",
+    "image_source_organisation": "Harvey Norman Commercial",
+    "official_product_url": "https://www.harveynormancommercial.com.au/products/99608BB",
+    "supplier_url": "https://www.harveynormancommercial.com.au/products/99608BB",
+    "rrp": 43,
+    "client_price": 43,
+    "price_status": "current",
+    "price_unit": "each",
+    "price_source_url": "https://www.harveynormancommercial.com.au/products/99608BB",
+    "price_verified_at": "2026-09-30",
+    "currency": "AUD",
+    "gst_included": true,
+    "regions": "AU",
+    "active": true,
+    "source_type": "authorised_supplier_listing",
+    "source_name": "Harvey Norman Commercial Bathroom catalogue",
+    "source_url": "https://www.harveynormancommercial.com.au/products/99608BB",
+    "source_verified_at": "2026-09-30",
+    "attributes": {
+      "plumbingCategoryKey": "bathroom-accessories",
+      "clientSelectionRequirement": "robe-hook",
+      "bathroomAccessoryType": "robe-hook",
+      "hncProductCode": "99608BB",
+      "hncUrlKey": "99608BB",
+      "hncAliasSkus": [],
+      "hncSubCategory": "Robe Hooks",
+      "sourceCategories": [
+        {
+          "id": 19,
+          "name": "Bathroom",
+          "url_path": "products/bathroom"
+        },
+        {
+          "id": 40,
+          "name": "Bathroom Accessories",
+          "url_path": "products/bathroom/bathroom-accessories"
+        },
+        {
+          "id": 191,
+          "name": "Robe Hooks ",
+          "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+        },
+        {
+          "id": 1036,
+          "name": "Products",
+          "url_path": "products"
+        }
+      ],
+      "supplierProductType": "ROBE HOOK",
+      "supplierProductGroup": "BATHACCESS",
+      "supplierSpecifications": {
+        "status": "Enabled",
+        "visibility": "Catalog, Search",
+        "product_dimensions": "W25 x D40 x H53mm",
+        "gp_product_group": "BATHACCESS",
+        "gp_product_type": "ROBE HOOK",
+        "range": "Luna",
+        "brand": "Caroma",
+        "colours": "Brushed Brass",
+        "vendorcode": "99608BB",
+        "supplier_colour": "Brushed Brass"
+      },
+      "features": [
+        "&bull; Designed to match Luna tapware and basins",
+        "&bull; Long lasting chrome finish",
+        "&bull; Dual fixings for added strength"
+      ],
+      "warranty": null,
+      "priceBasis": "Harvey Norman Commercial SRP inc GST",
+      "accessoryImportBatch": "hnc-bathroom-five-brands-v1",
+      "sourceEvidence": "data/product-library/source-evidence/hnc-bathroom-five-brands",
+      "imageSha256": "1ffe040c94842ac9f69931987c072a8c9c3e6994d9c927a6a879445982231ef1"
+    },
+    "image_status": "verified_exact",
+    "image_verified_at": "2026-09-30"
+  },
+  {
+    "product_code": "PLB-HNC-A5155600",
+    "family_key": "bathroom-accessories",
+    "requirement_keys": "bathroom-accessories",
+    "category_key": "Bathroom Accessories",
+    "categories": [
+      {
+        "id": 19,
+        "name": "Bathroom",
+        "url_path": "products/bathroom"
+      },
+      {
+        "id": 40,
+        "name": "Bathroom Accessories",
+        "url_path": "products/bathroom/bathroom-accessories"
+      },
+      {
+        "id": 196,
+        "name": "Towel Rails ",
+        "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+      },
+      {
+        "id": 1036,
+        "name": "Products",
+        "url_path": "products"
+      }
+    ],
+    "subcategory": "Towel Rails",
+    "product_type": "Towel Rails",
+    "top_level_area": "bathroom",
+    "manufacturer": "Astrawalker",
+    "brand": "Astrawalker",
+    "supplier": "Harvey Norman Commercial",
+    "product_name": "Olde English 600mm Single Towel Rail",
+    "model": "A51.55.6.00",
+    "sku": "A51.55.6.00",
+    "range": "Olde",
+    "colour": "Chrome",
+    "finish": "Chrome",
+    "material": "",
+    "dimensions": "W600 x D73 x H50mm",
+    "description": "&bull; Classic design",
+    "primary_image_url": "/images/catalogues/plumbing/hnc-accessories/a5155600.webp",
+    "image_source_url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/5/a5155600_astrawalker_web.jpg",
+    "image_source_type": "authorised-supplier-media",
+    "image_source_organisation": "Harvey Norman Commercial",
+    "official_product_url": "https://www.harveynormancommercial.com.au/products/A5155600",
+    "supplier_url": "https://www.harveynormancommercial.com.au/products/A5155600",
+    "rrp": 229,
+    "client_price": 229,
+    "price_status": "current",
+    "price_unit": "each",
+    "price_source_url": "https://www.harveynormancommercial.com.au/products/A5155600",
+    "price_verified_at": "2026-09-30",
+    "currency": "AUD",
+    "gst_included": true,
+    "regions": "AU",
+    "active": true,
+    "source_type": "authorised_supplier_listing",
+    "source_name": "Harvey Norman Commercial Bathroom catalogue",
+    "source_url": "https://www.harveynormancommercial.com.au/products/A5155600",
+    "source_verified_at": "2026-09-30",
+    "attributes": {
+      "plumbingCategoryKey": "bathroom-accessories",
+      "clientSelectionRequirement": "towel-rail",
+      "bathroomAccessoryType": "towel-rail",
+      "hncProductCode": "A51.55.6.00",
+      "hncUrlKey": "A5155600",
+      "hncAliasSkus": [],
+      "hncSubCategory": "Towel Rails",
+      "sourceCategories": [
+        {
+          "id": 19,
+          "name": "Bathroom",
+          "url_path": "products/bathroom"
+        },
+        {
+          "id": 40,
+          "name": "Bathroom Accessories",
+          "url_path": "products/bathroom/bathroom-accessories"
+        },
+        {
+          "id": 196,
+          "name": "Towel Rails ",
+          "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+        },
+        {
+          "id": 1036,
+          "name": "Products",
+          "url_path": "products"
+        }
+      ],
+      "supplierProductType": "TOWEL RAIL SINGLE",
+      "supplierProductGroup": "BATHACCESS",
+      "supplierSpecifications": {
+        "status": "Enabled",
+        "visibility": "Catalog, Search",
+        "product_dimensions": "W600 x D73 x H50mm",
+        "gp_product_group": "BATHACCESS",
+        "gp_product_type": "TOWEL RAIL SINGLE",
+        "range": "Olde",
+        "brand": "Astrawalker",
+        "size_mm": "600",
+        "colours": "Chrome",
+        "vendorcode": "A51.55.6.00",
+        "supplier_colour": "Chrome"
+      },
+      "features": [
+        "&bull; Classic design"
+      ],
+      "warranty": null,
+      "priceBasis": "Harvey Norman Commercial SRP inc GST",
+      "accessoryImportBatch": "hnc-bathroom-five-brands-v1",
+      "sourceEvidence": "data/product-library/source-evidence/hnc-bathroom-five-brands",
+      "imageSha256": "e511c2d5d00ce830cdd3e131dad18086550b82d4498809a43542971fb28532f0"
+    },
+    "image_status": "verified_exact",
+    "image_verified_at": "2026-09-30"
+  },
+  {
+    "product_code": "PLB-HNC-A516100",
+    "family_key": "bathroom-accessories",
+    "requirement_keys": "bathroom-accessories",
+    "category_key": "Bathroom Accessories",
+    "categories": [
+      {
+        "id": 19,
+        "name": "Bathroom",
+        "url_path": "products/bathroom"
+      },
+      {
+        "id": 40,
+        "name": "Bathroom Accessories",
+        "url_path": "products/bathroom/bathroom-accessories"
+      },
+      {
+        "id": 195,
+        "name": "Toilet Roll Holders ",
+        "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+      },
+      {
+        "id": 1036,
+        "name": "Products",
+        "url_path": "products"
+      }
+    ],
+    "subcategory": "Toilet Roll Holders",
+    "product_type": "Toilet Roll Holders",
+    "top_level_area": "bathroom",
+    "manufacturer": "Astrawalker",
+    "brand": "Astrawalker",
+    "supplier": "Harvey Norman Commercial",
+    "product_name": "Olde English Toilet Roll Holder",
+    "model": "A51.61.00",
+    "sku": "A51.61.00",
+    "range": "Olde",
+    "colour": "Chrome",
+    "finish": "Chrome",
+    "material": "",
+    "dimensions": "W166 x D73 x H91mm",
+    "description": "• Classic design\n• Holds one roll",
+    "primary_image_url": "/images/catalogues/plumbing/hnc-accessories/a516100.webp",
+    "image_source_url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/5/a516100_astrawalker_web.jpg",
+    "image_source_type": "authorised-supplier-media",
+    "image_source_organisation": "Harvey Norman Commercial",
+    "official_product_url": "https://www.harveynormancommercial.com.au/products/A516100",
+    "supplier_url": "https://www.harveynormancommercial.com.au/products/A516100",
+    "rrp": 136,
+    "client_price": 136,
+    "price_status": "current",
+    "price_unit": "each",
+    "price_source_url": "https://www.harveynormancommercial.com.au/products/A516100",
+    "price_verified_at": "2026-09-30",
+    "currency": "AUD",
+    "gst_included": true,
+    "regions": "AU",
+    "active": true,
+    "source_type": "authorised_supplier_listing",
+    "source_name": "Harvey Norman Commercial Bathroom catalogue",
+    "source_url": "https://www.harveynormancommercial.com.au/products/A516100",
+    "source_verified_at": "2026-09-30",
+    "attributes": {
+      "plumbingCategoryKey": "bathroom-accessories",
+      "clientSelectionRequirement": "toilet-roll-holder",
+      "bathroomAccessoryType": "toilet-roll-holder",
+      "hncProductCode": "A51.61.00",
+      "hncUrlKey": "A516100",
+      "hncAliasSkus": [],
+      "hncSubCategory": "Toilet Roll Holders",
+      "sourceCategories": [
+        {
+          "id": 19,
+          "name": "Bathroom",
+          "url_path": "products/bathroom"
+        },
+        {
+          "id": 40,
+          "name": "Bathroom Accessories",
+          "url_path": "products/bathroom/bathroom-accessories"
+        },
+        {
+          "id": 195,
+          "name": "Toilet Roll Holders ",
+          "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+        },
+        {
+          "id": 1036,
+          "name": "Products",
+          "url_path": "products"
+        }
+      ],
+      "supplierProductType": "TOILET ROLL HOLDER",
+      "supplierProductGroup": "BATHACCESS",
+      "supplierSpecifications": {
+        "status": "Enabled",
+        "visibility": "Catalog, Search",
+        "product_dimensions": "W166 x D73 x H91mm",
+        "gp_product_group": "BATHACCESS",
+        "gp_product_type": "TOILET ROLL HOLDER",
+        "range": "Olde",
+        "brand": "Astrawalker",
+        "colours": "Chrome",
+        "vendorcode": "A51.61.00",
+        "supplier_colour": "Chrome"
+      },
+      "features": [
+        "Classic design",
+        "Holds one roll"
+      ],
+      "warranty": null,
+      "priceBasis": "Harvey Norman Commercial SRP inc GST",
+      "accessoryImportBatch": "hnc-bathroom-five-brands-v1",
+      "sourceEvidence": "data/product-library/source-evidence/hnc-bathroom-five-brands",
+      "imageSha256": "185d79154765e4ec5b11f039c3fdfd895dee975ab0a36e79f36c9634a4f6afeb"
+    },
+    "image_status": "verified_exact",
+    "image_verified_at": "2026-09-30"
+  },
+  {
+    "product_code": "PLB-HNC-A6955635",
+    "family_key": "bathroom-accessories",
+    "requirement_keys": "bathroom-accessories",
+    "category_key": "Bathroom Accessories",
+    "categories": [
+      {
+        "id": 19,
+        "name": "Bathroom",
+        "url_path": "products/bathroom"
+      },
+      {
+        "id": 40,
+        "name": "Bathroom Accessories",
+        "url_path": "products/bathroom/bathroom-accessories"
+      },
+      {
+        "id": 196,
+        "name": "Towel Rails ",
+        "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+      },
+      {
+        "id": 1036,
+        "name": "Products",
+        "url_path": "products"
+      }
+    ],
+    "subcategory": "Towel Rails",
+    "product_type": "Towel Rails",
+    "top_level_area": "bathroom",
+    "manufacturer": "Astrawalker",
+    "brand": "Astrawalker",
+    "supplier": "Harvey Norman Commercial",
+    "product_name": "Icon 600mm Single Towel Rail",
+    "model": "A69.55.6.35",
+    "sku": "A69.55.6.35",
+    "range": "Icon",
+    "colour": "Brushed Brass",
+    "finish": "Brushed Brass",
+    "material": "",
+    "dimensions": "W600 x D58 x H21mm",
+    "description": "• Champagne Brass finish\n• Round bar",
+    "primary_image_url": "/images/catalogues/plumbing/hnc-accessories/a6955635.webp",
+    "image_source_url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6955635_astrawalker_web.jpg",
+    "image_source_type": "authorised-supplier-media",
+    "image_source_organisation": "Harvey Norman Commercial",
+    "official_product_url": "https://www.harveynormancommercial.com.au/products/A6955635",
+    "supplier_url": "https://www.harveynormancommercial.com.au/products/A6955635",
+    "rrp": 333,
+    "client_price": 333,
+    "price_status": "current",
+    "price_unit": "each",
+    "price_source_url": "https://www.harveynormancommercial.com.au/products/A6955635",
+    "price_verified_at": "2026-09-30",
+    "currency": "AUD",
+    "gst_included": true,
+    "regions": "AU",
+    "active": true,
+    "source_type": "authorised_supplier_listing",
+    "source_name": "Harvey Norman Commercial Bathroom catalogue",
+    "source_url": "https://www.harveynormancommercial.com.au/products/A6955635",
+    "source_verified_at": "2026-09-30",
+    "attributes": {
+      "plumbingCategoryKey": "bathroom-accessories",
+      "clientSelectionRequirement": "towel-rail",
+      "bathroomAccessoryType": "towel-rail",
+      "hncProductCode": "A69.55.6.35",
+      "hncUrlKey": "A6955635",
+      "hncAliasSkus": [],
+      "hncSubCategory": "Towel Rails",
+      "sourceCategories": [
+        {
+          "id": 19,
+          "name": "Bathroom",
+          "url_path": "products/bathroom"
+        },
+        {
+          "id": 40,
+          "name": "Bathroom Accessories",
+          "url_path": "products/bathroom/bathroom-accessories"
+        },
+        {
+          "id": 196,
+          "name": "Towel Rails ",
+          "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+        },
+        {
+          "id": 1036,
+          "name": "Products",
+          "url_path": "products"
+        }
+      ],
+      "supplierProductType": "TOWEL RAIL SINGLE",
+      "supplierProductGroup": "BATHACCESS",
+      "supplierSpecifications": {
+        "status": "Enabled",
+        "visibility": "Catalog, Search",
+        "product_dimensions": "W600 x D58 x H21mm",
+        "gp_product_group": "BATHACCESS",
+        "gp_product_type": "TOWEL RAIL SINGLE",
+        "range": "Icon",
+        "brand": "Astrawalker",
+        "colours": "Brushed Brass",
+        "vendorcode": "A69.55.6.35"
+      },
+      "features": [
+        "Champagne Brass finish",
+        "Round bar"
+      ],
+      "warranty": null,
+      "priceBasis": "Harvey Norman Commercial SRP inc GST",
+      "accessoryImportBatch": "hnc-bathroom-five-brands-v1",
+      "sourceEvidence": "data/product-library/source-evidence/hnc-bathroom-five-brands",
+      "imageSha256": "971419c5dfefa0101bc8824039243b144df505df24074e0346fbec79d383a2ad"
+    },
+    "image_status": "verified_exact",
+    "image_verified_at": "2026-09-30"
+  },
+  {
+    "product_code": "PLB-HNC-A6958V2H60010",
+    "family_key": "bathroom-accessories",
+    "requirement_keys": "bathroom-accessories",
+    "category_key": "Bathroom Accessories",
+    "categories": [
+      {
+        "id": 19,
+        "name": "Bathroom",
+        "url_path": "products/bathroom"
+      },
+      {
+        "id": 40,
+        "name": "Bathroom Accessories",
+        "url_path": "products/bathroom/bathroom-accessories"
+      },
+      {
+        "id": 189,
+        "name": "Heated Towel Rails ",
+        "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+      },
+      {
+        "id": 1036,
+        "name": "Products",
+        "url_path": "products"
+      }
+    ],
+    "subcategory": "Heated Towel Rails",
+    "product_type": "Heated Towel Rails",
+    "top_level_area": "bathroom",
+    "manufacturer": "Astrawalker",
+    "brand": "Astrawalker",
+    "supplier": "Harvey Norman Commercial",
+    "product_name": "Icon 600mm Heated Single Towel Rail",
+    "model": "A69.58.V2.H.600.10",
+    "sku": "A69.58.V2.H.600.10",
+    "range": "Icon",
+    "colour": "Grey",
+    "finish": "Grey",
+    "material": "",
+    "dimensions": "W600 x D80 x H32mm",
+    "description": "• Ice Grey finish\n• Round bar\n• Right or left hand entry point\n• Requires transformer",
+    "primary_image_url": "/images/catalogues/plumbing/hnc-accessories/a6958v2h60010.webp",
+    "image_source_url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6958v2h60010_astrawalker_web.jpg",
+    "image_source_type": "authorised-supplier-media",
+    "image_source_organisation": "Harvey Norman Commercial",
+    "official_product_url": "https://www.harveynormancommercial.com.au/products/A6958V2H60010",
+    "supplier_url": "https://www.harveynormancommercial.com.au/products/A6958V2H60010",
+    "rrp": 849,
+    "client_price": 849,
+    "price_status": "current",
+    "price_unit": "each",
+    "price_source_url": "https://www.harveynormancommercial.com.au/products/A6958V2H60010",
+    "price_verified_at": "2026-09-30",
+    "currency": "AUD",
+    "gst_included": true,
+    "regions": "AU",
+    "active": true,
+    "source_type": "authorised_supplier_listing",
+    "source_name": "Harvey Norman Commercial Bathroom catalogue",
+    "source_url": "https://www.harveynormancommercial.com.au/products/A6958V2H60010",
+    "source_verified_at": "2026-09-30",
+    "attributes": {
+      "plumbingCategoryKey": "bathroom-accessories",
+      "clientSelectionRequirement": "heated-towel-rail",
+      "bathroomAccessoryType": "heated-towel-rail",
+      "hncProductCode": "A69.58.V2.H.600.10",
+      "hncUrlKey": "A6958V2H60010",
+      "hncAliasSkus": [],
+      "hncSubCategory": "Heated Towel Rails",
+      "sourceCategories": [
+        {
+          "id": 19,
+          "name": "Bathroom",
+          "url_path": "products/bathroom"
+        },
+        {
+          "id": 40,
+          "name": "Bathroom Accessories",
+          "url_path": "products/bathroom/bathroom-accessories"
+        },
+        {
+          "id": 189,
+          "name": "Heated Towel Rails ",
+          "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+        },
+        {
+          "id": 1036,
+          "name": "Products",
+          "url_path": "products"
+        }
+      ],
+      "supplierProductType": "HEATED HAND RAIL",
+      "supplierProductGroup": "BATHACCESS",
+      "supplierSpecifications": {
+        "status": "Enabled",
+        "visibility": "Catalog, Search",
+        "product_dimensions": "W600 x D80 x H32mm",
+        "gp_product_group": "BATHACCESS",
+        "gp_product_type": "HEATED HAND RAIL",
+        "range": "Icon",
+        "brand": "Astrawalker",
+        "colours": "Grey",
+        "vendorcode": "A69.58.V2.H.600.10"
+      },
+      "features": [
+        "Ice Grey finish",
+        "Round bar",
+        "Right or left hand entry point",
+        "Requires transformer"
+      ],
+      "warranty": null,
+      "priceBasis": "Harvey Norman Commercial SRP inc GST",
+      "accessoryImportBatch": "hnc-bathroom-five-brands-v1",
+      "sourceEvidence": "data/product-library/source-evidence/hnc-bathroom-five-brands",
+      "imageSha256": "67bc0f76efebbe7370ed1002ba2fb1392449ae49c1610c643f18f904d70045e9"
+    },
+    "image_status": "verified_exact",
+    "image_verified_at": "2026-09-30"
+  },
+  {
+    "product_code": "PLB-HNC-A6958V2H60035",
+    "family_key": "bathroom-accessories",
+    "requirement_keys": "bathroom-accessories",
+    "category_key": "Bathroom Accessories",
+    "categories": [
+      {
+        "id": 19,
+        "name": "Bathroom",
+        "url_path": "products/bathroom"
+      },
+      {
+        "id": 40,
+        "name": "Bathroom Accessories",
+        "url_path": "products/bathroom/bathroom-accessories"
+      },
+      {
+        "id": 189,
+        "name": "Heated Towel Rails ",
+        "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+      },
+      {
+        "id": 1036,
+        "name": "Products",
+        "url_path": "products"
+      }
+    ],
+    "subcategory": "Heated Towel Rails",
+    "product_type": "Heated Towel Rails",
+    "top_level_area": "bathroom",
+    "manufacturer": "Astrawalker",
+    "brand": "Astrawalker",
+    "supplier": "Harvey Norman Commercial",
+    "product_name": "Icon 600mm Heated Single Towel Rail",
+    "model": "A69.58.V2.H.600.35",
+    "sku": "A69.58.V2.H.600.35",
+    "range": "Icon",
+    "colour": "Brushed Brass",
+    "finish": "Brushed Brass",
+    "material": "",
+    "dimensions": "W600 x D80 x H32mm",
+    "description": "• Champagne Brass finish\n• Round bar\n• Right or left hand entry point\n• Requires transformer",
+    "primary_image_url": "/images/catalogues/plumbing/hnc-accessories/a6958v2h60035.webp",
+    "image_source_url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a6958v2h60035_astrawalker_web.jpg",
+    "image_source_type": "authorised-supplier-media",
+    "image_source_organisation": "Harvey Norman Commercial",
+    "official_product_url": "https://www.harveynormancommercial.com.au/products/A6958V2H60035",
+    "supplier_url": "https://www.harveynormancommercial.com.au/products/A6958V2H60035",
+    "rrp": 849,
+    "client_price": 849,
+    "price_status": "current",
+    "price_unit": "each",
+    "price_source_url": "https://www.harveynormancommercial.com.au/products/A6958V2H60035",
+    "price_verified_at": "2026-09-30",
+    "currency": "AUD",
+    "gst_included": true,
+    "regions": "AU",
+    "active": true,
+    "source_type": "authorised_supplier_listing",
+    "source_name": "Harvey Norman Commercial Bathroom catalogue",
+    "source_url": "https://www.harveynormancommercial.com.au/products/A6958V2H60035",
+    "source_verified_at": "2026-09-30",
+    "attributes": {
+      "plumbingCategoryKey": "bathroom-accessories",
+      "clientSelectionRequirement": "heated-towel-rail",
+      "bathroomAccessoryType": "heated-towel-rail",
+      "hncProductCode": "A69.58.V2.H.600.35",
+      "hncUrlKey": "A6958V2H60035",
+      "hncAliasSkus": [],
+      "hncSubCategory": "Heated Towel Rails",
+      "sourceCategories": [
+        {
+          "id": 19,
+          "name": "Bathroom",
+          "url_path": "products/bathroom"
+        },
+        {
+          "id": 40,
+          "name": "Bathroom Accessories",
+          "url_path": "products/bathroom/bathroom-accessories"
+        },
+        {
+          "id": 189,
+          "name": "Heated Towel Rails ",
+          "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+        },
+        {
+          "id": 1036,
+          "name": "Products",
+          "url_path": "products"
+        }
+      ],
+      "supplierProductType": "HEATED HAND RAIL",
+      "supplierProductGroup": "BATHACCESS",
+      "supplierSpecifications": {
+        "status": "Enabled",
+        "visibility": "Catalog, Search",
+        "product_dimensions": "W600 x D80 x H32mm",
+        "gp_product_group": "BATHACCESS",
+        "gp_product_type": "HEATED HAND RAIL",
+        "range": "Icon",
+        "brand": "Astrawalker",
+        "colours": "Brushed Brass",
+        "vendorcode": "A69.58.V2.H.600.35"
+      },
+      "features": [
+        "Champagne Brass finish",
+        "Round bar",
+        "Right or left hand entry point",
+        "Requires transformer"
+      ],
+      "warranty": null,
+      "priceBasis": "Harvey Norman Commercial SRP inc GST",
+      "accessoryImportBatch": "hnc-bathroom-five-brands-v1",
+      "sourceEvidence": "data/product-library/source-evidence/hnc-bathroom-five-brands",
+      "imageSha256": "40e0f0a4955ce5bb9d6b8a45cddd928b21e1506d1bcb6632d10e7ec643210044"
+    },
+    "image_status": "verified_exact",
+    "image_verified_at": "2026-09-30"
+  },
+  {
+    "product_code": "PLB-HNC-A696335",
+    "family_key": "bathroom-accessories",
+    "requirement_keys": "bathroom-accessories",
+    "category_key": "Bathroom Accessories",
+    "categories": [
+      {
+        "id": 19,
+        "name": "Bathroom",
+        "url_path": "products/bathroom"
+      },
+      {
+        "id": 40,
+        "name": "Bathroom Accessories",
+        "url_path": "products/bathroom/bathroom-accessories"
+      },
+      {
+        "id": 191,
+        "name": "Robe Hooks ",
+        "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+      },
+      {
+        "id": 1036,
+        "name": "Products",
+        "url_path": "products"
+      }
+    ],
+    "subcategory": "Robe Hooks",
+    "product_type": "Robe Hooks",
+    "top_level_area": "bathroom",
+    "manufacturer": "Astrawalker",
+    "brand": "Astrawalker",
+    "supplier": "Harvey Norman Commercial",
+    "product_name": "Icon Robe Hook",
+    "model": "A69.63.35",
+    "sku": "A69.63.35",
+    "range": "Icon",
+    "colour": "Brushed Brass",
+    "finish": "Brushed Brass",
+    "material": "",
+    "dimensions": "W21 x D45 x H21mm",
+    "description": "• Champagne Brass finish\n• Round design",
+    "primary_image_url": "/images/catalogues/plumbing/hnc-accessories/a696335.webp",
+    "image_source_url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a696335_astrawalker_web.jpg",
+    "image_source_type": "authorised-supplier-media",
+    "image_source_organisation": "Harvey Norman Commercial",
+    "official_product_url": "https://www.harveynormancommercial.com.au/products/A696335",
+    "supplier_url": "https://www.harveynormancommercial.com.au/products/A696335",
+    "rrp": 84,
+    "client_price": 42,
+    "price_status": "current",
+    "price_unit": "each",
+    "price_source_url": "https://www.harveynormancommercial.com.au/products/A696335",
+    "price_verified_at": "2026-09-30",
+    "currency": "AUD",
+    "gst_included": true,
+    "regions": "AU",
+    "active": true,
+    "source_type": "authorised_supplier_listing",
+    "source_name": "Harvey Norman Commercial Bathroom catalogue",
+    "source_url": "https://www.harveynormancommercial.com.au/products/A696335",
+    "source_verified_at": "2026-09-30",
+    "attributes": {
+      "plumbingCategoryKey": "bathroom-accessories",
+      "clientSelectionRequirement": "robe-hook",
+      "bathroomAccessoryType": "robe-hook",
+      "hncProductCode": "A69.63.35",
+      "hncUrlKey": "A696335",
+      "hncAliasSkus": [],
+      "hncSubCategory": "Robe Hooks",
+      "sourceCategories": [
+        {
+          "id": 19,
+          "name": "Bathroom",
+          "url_path": "products/bathroom"
+        },
+        {
+          "id": 40,
+          "name": "Bathroom Accessories",
+          "url_path": "products/bathroom/bathroom-accessories"
+        },
+        {
+          "id": 191,
+          "name": "Robe Hooks ",
+          "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+        },
+        {
+          "id": 1036,
+          "name": "Products",
+          "url_path": "products"
+        }
+      ],
+      "supplierProductType": "ROBE HOOK",
+      "supplierProductGroup": "BATHACCESS",
+      "supplierSpecifications": {
+        "status": "Enabled",
+        "visibility": "Catalog, Search",
+        "product_dimensions": "W21 x D45 x H21mm",
+        "gp_product_group": "BATHACCESS",
+        "gp_product_type": "ROBE HOOK",
+        "range": "Icon",
+        "brand": "Astrawalker",
+        "colours": "Brushed Brass",
+        "vendorcode": "A69.63.35"
+      },
+      "features": [
+        "Champagne Brass finish",
+        "Round design"
+      ],
+      "warranty": null,
+      "priceBasis": "Harvey Norman Commercial SRP inc GST",
+      "promotionalPrice": 42,
+      "accessoryImportBatch": "hnc-bathroom-five-brands-v1",
+      "sourceEvidence": "data/product-library/source-evidence/hnc-bathroom-five-brands",
+      "imageSha256": "3f3517a6914011c7467d21663d60adcabcab8a2fad0cc23477e13131392525fc"
+    },
+    "image_status": "verified_exact",
+    "image_verified_at": "2026-09-30"
+  },
+  {
+    "product_code": "PLB-HNC-A696337",
+    "family_key": "bathroom-accessories",
+    "requirement_keys": "bathroom-accessories",
+    "category_key": "Bathroom Accessories",
+    "categories": [
+      {
+        "id": 19,
+        "name": "Bathroom",
+        "url_path": "products/bathroom"
+      },
+      {
+        "id": 40,
+        "name": "Bathroom Accessories",
+        "url_path": "products/bathroom/bathroom-accessories"
+      },
+      {
+        "id": 191,
+        "name": "Robe Hooks ",
+        "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+      },
+      {
+        "id": 1036,
+        "name": "Products",
+        "url_path": "products"
+      }
+    ],
+    "subcategory": "Robe Hooks",
+    "product_type": "Robe Hooks",
+    "top_level_area": "bathroom",
+    "manufacturer": "Astrawalker",
+    "brand": "Astrawalker",
+    "supplier": "Harvey Norman Commercial",
+    "product_name": "Icon Robe Hook",
+    "model": "A69.63.37",
+    "sku": "A69.63.37",
+    "range": "Icon",
+    "colour": "Bronze",
+    "finish": "Bronze",
+    "material": "",
+    "dimensions": "W21 x D45 x H21mm",
+    "description": "• Sydney Bronze finish\n• Round design",
+    "primary_image_url": "/images/catalogues/plumbing/hnc-accessories/a696337.webp",
+    "image_source_url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/6/a696337_astrawalker_web.jpg",
+    "image_source_type": "authorised-supplier-media",
+    "image_source_organisation": "Harvey Norman Commercial",
+    "official_product_url": "https://www.harveynormancommercial.com.au/products/A696337",
+    "supplier_url": "https://www.harveynormancommercial.com.au/products/A696337",
+    "rrp": 84,
+    "client_price": 84,
+    "price_status": "current",
+    "price_unit": "each",
+    "price_source_url": "https://www.harveynormancommercial.com.au/products/A696337",
+    "price_verified_at": "2026-09-30",
+    "currency": "AUD",
+    "gst_included": true,
+    "regions": "AU",
+    "active": true,
+    "source_type": "authorised_supplier_listing",
+    "source_name": "Harvey Norman Commercial Bathroom catalogue",
+    "source_url": "https://www.harveynormancommercial.com.au/products/A696337",
+    "source_verified_at": "2026-09-30",
+    "attributes": {
+      "plumbingCategoryKey": "bathroom-accessories",
+      "clientSelectionRequirement": "robe-hook",
+      "bathroomAccessoryType": "robe-hook",
+      "hncProductCode": "A69.63.37",
+      "hncUrlKey": "A696337",
+      "hncAliasSkus": [],
+      "hncSubCategory": "Robe Hooks",
+      "sourceCategories": [
+        {
+          "id": 19,
+          "name": "Bathroom",
+          "url_path": "products/bathroom"
+        },
+        {
+          "id": 40,
+          "name": "Bathroom Accessories",
+          "url_path": "products/bathroom/bathroom-accessories"
+        },
+        {
+          "id": 191,
+          "name": "Robe Hooks ",
+          "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+        },
+        {
+          "id": 1036,
+          "name": "Products",
+          "url_path": "products"
+        }
+      ],
+      "supplierProductType": "ROBE HOOK",
+      "supplierProductGroup": "BATHACCESS",
+      "supplierSpecifications": {
+        "status": "Enabled",
+        "visibility": "Catalog, Search",
+        "product_dimensions": "W21 x D45 x H21mm",
+        "gp_product_group": "BATHACCESS",
+        "gp_product_type": "ROBE HOOK",
+        "range": "Icon",
+        "brand": "Astrawalker",
+        "colours": "Bronze",
+        "vendorcode": "A69.63.37"
+      },
+      "features": [
+        "Sydney Bronze finish",
+        "Round design"
+      ],
+      "warranty": null,
+      "priceBasis": "Harvey Norman Commercial SRP inc GST",
+      "accessoryImportBatch": "hnc-bathroom-five-brands-v1",
+      "sourceEvidence": "data/product-library/source-evidence/hnc-bathroom-five-brands",
+      "imageSha256": "593e231bdf7a7802812f0a3b6b8ddd84bfdf19693db11938f623296807c0dd7c"
+    },
+    "image_status": "verified_exact",
+    "image_verified_at": "2026-09-30"
+  },
+  {
+    "product_code": "PLB-HNC-HLF6011RBL",
+    "family_key": "bathroom-accessories",
+    "requirement_keys": "bathroom-accessories",
+    "category_key": "Bathroom Accessories",
+    "categories": [
+      {
+        "id": 19,
+        "name": "Bathroom",
+        "url_path": "products/bathroom"
+      },
+      {
+        "id": 40,
+        "name": "Bathroom Accessories",
+        "url_path": "products/bathroom/bathroom-accessories"
+      },
+      {
+        "id": 189,
+        "name": "Heated Towel Rails ",
+        "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+      },
+      {
+        "id": 1036,
+        "name": "Products",
+        "url_path": "products"
+      }
+    ],
+    "subcategory": "Heated Towel Rails",
+    "product_type": "Heated Towel Rails",
+    "top_level_area": "bathroom",
+    "manufacturer": "Forme",
+    "brand": "Forme",
+    "supplier": "Harvey Norman Commercial",
+    "product_name": "600mm Heated Single Towel Rail",
+    "model": "HLF6011R-BL",
+    "sku": "HLF6011R-BL",
+    "range": "Single",
+    "colour": "Black",
+    "finish": "Black",
+    "material": "",
+    "dimensions": "W600 x D110 x H25mm",
+    "description": "&bull; 12 volt power\n&bull; Sold as single bar\n&bull; Round design & easy to install\n&bull; Right-hand side hardwired only\n&bull; Unique optional installation system for added strength\n&bull; Transformer & fixing bar sold separately if heated option required, this can hold up to minimum 2, maximum 4 rails.",
+    "primary_image_url": "/images/catalogues/plumbing/hnc-accessories/hlf6011rbl.webp",
+    "image_source_url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/l/hlf6011rbl_forme_web.jpg",
+    "image_source_type": "authorised-supplier-media",
+    "image_source_organisation": "Harvey Norman Commercial",
+    "official_product_url": "https://www.harveynormancommercial.com.au/products/HLF6011RBL",
+    "supplier_url": "https://www.harveynormancommercial.com.au/products/HLF6011RBL",
+    "rrp": 295,
+    "client_price": 295,
+    "price_status": "current",
+    "price_unit": "each",
+    "price_source_url": "https://www.harveynormancommercial.com.au/products/HLF6011RBL",
+    "price_verified_at": "2026-09-30",
+    "currency": "AUD",
+    "gst_included": true,
+    "regions": "AU",
+    "active": true,
+    "source_type": "authorised_supplier_listing",
+    "source_name": "Harvey Norman Commercial Bathroom catalogue",
+    "source_url": "https://www.harveynormancommercial.com.au/products/HLF6011RBL",
+    "source_verified_at": "2026-09-30",
+    "attributes": {
+      "plumbingCategoryKey": "bathroom-accessories",
+      "clientSelectionRequirement": "heated-towel-rail",
+      "bathroomAccessoryType": "heated-towel-rail",
+      "hncProductCode": "HLF6011R-BL",
+      "hncUrlKey": "HLF6011RBL",
+      "hncAliasSkus": [],
+      "hncSubCategory": "Heated Towel Rails",
+      "sourceCategories": [
+        {
+          "id": 19,
+          "name": "Bathroom",
+          "url_path": "products/bathroom"
+        },
+        {
+          "id": 40,
+          "name": "Bathroom Accessories",
+          "url_path": "products/bathroom/bathroom-accessories"
+        },
+        {
+          "id": 189,
+          "name": "Heated Towel Rails ",
+          "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+        },
+        {
+          "id": 1036,
+          "name": "Products",
+          "url_path": "products"
+        }
+      ],
+      "supplierProductType": "HEATED HAND RAIL",
+      "supplierProductGroup": "BATHACCESS",
+      "supplierSpecifications": {
+        "status": "Enabled",
+        "visibility": "Catalog, Search",
+        "product_dimensions": "W600 x D110 x H25mm",
+        "gp_product_group": "BATHACCESS",
+        "gp_product_type": "HEATED HAND RAIL",
+        "range": "Single",
+        "brand": "Forme",
+        "size_mm": "600",
+        "colours": "Matte Black",
+        "vendorcode": "HLF6011R-BL",
+        "supplier_colour": "Black"
+      },
+      "features": [
+        "&bull; 12 volt power",
+        "&bull; Sold as single bar",
+        "&bull; Round design & easy to install",
+        "&bull; Right-hand side hardwired only",
+        "&bull; Unique optional installation system for added strength",
+        "&bull; Transformer & fixing bar sold separately if heated option required, this can hold up to minimum 2, maximum 4 rails."
+      ],
+      "warranty": null,
+      "priceBasis": "Harvey Norman Commercial SRP inc GST",
+      "accessoryImportBatch": "hnc-bathroom-five-brands-v1",
+      "sourceEvidence": "data/product-library/source-evidence/hnc-bathroom-five-brands",
+      "imageSha256": "d8e48b2dba4e2f84ffef6c884fce953247267f69c544b809ec06d9434d33f64c"
+    },
+    "image_status": "verified_exact",
+    "image_verified_at": "2026-09-30"
+  },
+  {
+    "product_code": "PLB-HNC-HTRVERTSNGGMG",
+    "family_key": "bathroom-accessories",
+    "requirement_keys": "bathroom-accessories",
+    "category_key": "Bathroom Accessories",
+    "categories": [
+      {
+        "id": 19,
+        "name": "Bathroom",
+        "url_path": "products/bathroom"
+      },
+      {
+        "id": 40,
+        "name": "Bathroom Accessories",
+        "url_path": "products/bathroom/bathroom-accessories"
+      },
+      {
+        "id": 189,
+        "name": "Heated Towel Rails ",
+        "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+      },
+      {
+        "id": 1036,
+        "name": "Products",
+        "url_path": "products"
+      }
+    ],
+    "subcategory": "Heated Towel Rails",
+    "product_type": "Heated Towel Rails",
+    "top_level_area": "bathroom",
+    "manufacturer": "Forme",
+    "brand": "Forme",
+    "supplier": "Harvey Norman Commercial",
+    "product_name": "1000mm Vertical Heated Single Towel Rail with Robe Hook",
+    "model": "HTR-VERTSNGGMG",
+    "sku": "HTR-VERTSNGGMG",
+    "range": "Vertical",
+    "colour": "Gun Metal Grey PVD",
+    "finish": "Gun Metal Grey PVD",
+    "material": "",
+    "dimensions": "W150 x D100 x H1000mm",
+    "description": "• 1 x Vertical Heated Bar and 1 x Robe Hook\n• 12 volt power design\n• Top hardwire entry\n• Transformer not included\n• Fixing kit includes diamond drill bit",
+    "primary_image_url": "/images/catalogues/plumbing/hnc-accessories/htrvertsnggmg.webp",
+    "image_source_url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/t/htrvertsnggmg_forme_web.jpg",
+    "image_source_type": "authorised-supplier-media",
+    "image_source_organisation": "Harvey Norman Commercial",
+    "official_product_url": "https://www.harveynormancommercial.com.au/products/HTRVERTSNGGMG",
+    "supplier_url": "https://www.harveynormancommercial.com.au/products/HTRVERTSNGGMG",
+    "rrp": 421,
+    "client_price": 421,
+    "price_status": "current",
+    "price_unit": "each",
+    "price_source_url": "https://www.harveynormancommercial.com.au/products/HTRVERTSNGGMG",
+    "price_verified_at": "2026-09-30",
+    "currency": "AUD",
+    "gst_included": true,
+    "regions": "AU",
+    "active": true,
+    "source_type": "authorised_supplier_listing",
+    "source_name": "Harvey Norman Commercial Bathroom catalogue",
+    "source_url": "https://www.harveynormancommercial.com.au/products/HTRVERTSNGGMG",
+    "source_verified_at": "2026-09-30",
+    "attributes": {
+      "plumbingCategoryKey": "bathroom-accessories",
+      "clientSelectionRequirement": "heated-towel-rail",
+      "bathroomAccessoryType": "heated-towel-rail",
+      "hncProductCode": "HTR-VERTSNGGMG",
+      "hncUrlKey": "HTRVERTSNGGMG",
+      "hncAliasSkus": [],
+      "hncSubCategory": "Heated Towel Rails",
+      "sourceCategories": [
+        {
+          "id": 19,
+          "name": "Bathroom",
+          "url_path": "products/bathroom"
+        },
+        {
+          "id": 40,
+          "name": "Bathroom Accessories",
+          "url_path": "products/bathroom/bathroom-accessories"
+        },
+        {
+          "id": 189,
+          "name": "Heated Towel Rails ",
+          "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+        },
+        {
+          "id": 1036,
+          "name": "Products",
+          "url_path": "products"
+        }
+      ],
+      "supplierProductType": "HEATED HAND RAIL",
+      "supplierProductGroup": "BATHACCESS",
+      "supplierSpecifications": {
+        "status": "Enabled",
+        "visibility": "Catalog, Search",
+        "product_dimensions": "W150 x D100 x H1000mm",
+        "gp_product_group": "BATHACCESS",
+        "gp_product_type": "HEATED HAND RAIL",
+        "range": "Vertical",
+        "brand": "Forme",
+        "colours": "Gun Metal",
+        "vendorcode": "HTR-VERTSNGGMG",
+        "supplier_colour": "Gun Metal Grey PVD"
+      },
+      "features": [
+        "1 x Vertical Heated Bar and 1 x Robe Hook",
+        "12 volt power design",
+        "Top hardwire entry",
+        "Transformer not included",
+        "Fixing kit includes diamond drill bit"
+      ],
+      "warranty": null,
+      "priceBasis": "Harvey Norman Commercial SRP inc GST",
+      "accessoryImportBatch": "hnc-bathroom-five-brands-v1",
+      "sourceEvidence": "data/product-library/source-evidence/hnc-bathroom-five-brands",
+      "imageSha256": "9dfedce09fb2fd423377388892811326bfb10284434e70a056320c72dce53d76"
+    },
+    "image_status": "verified_exact",
+    "image_verified_at": "2026-09-30"
+  },
+  {
+    "product_code": "PLB-HNC-NE015",
+    "family_key": "bathroom-accessories",
+    "requirement_keys": "bathroom-accessories",
+    "category_key": "Bathroom Accessories",
+    "categories": [
+      {
+        "id": 19,
+        "name": "Bathroom",
+        "url_path": "products/bathroom"
+      },
+      {
+        "id": 40,
+        "name": "Bathroom Accessories",
+        "url_path": "products/bathroom/bathroom-accessories"
+      },
+      {
+        "id": 197,
+        "name": "Towel Rings ",
+        "url_path": "products/bathroom/bathroom-accessories/towel-rings"
+      },
+      {
+        "id": 1036,
+        "name": "Products",
+        "url_path": "products"
+      }
+    ],
+    "subcategory": "Towel Rings",
+    "product_type": "Hand Towel Rings / Rails",
+    "top_level_area": "bathroom",
+    "manufacturer": "Parisi",
+    "brand": "Parisi",
+    "supplier": "Harvey Norman Commercial",
+    "product_name": "Ellisse Towel Ring",
+    "model": "NE015",
+    "sku": "NE015",
+    "range": "Ellisse",
+    "colour": "Chrome",
+    "finish": "Chrome",
+    "material": "",
+    "dimensions": "",
+    "description": "Wall mounted\nDual fixing points\nRight hand only",
+    "primary_image_url": "/images/catalogues/plumbing/hnc-accessories/ne015.webp",
+    "image_source_url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE015_parisi_web.jpg",
+    "image_source_type": "authorised-supplier-media",
+    "image_source_organisation": "Harvey Norman Commercial",
+    "official_product_url": "https://www.harveynormancommercial.com.au/products/NE015",
+    "supplier_url": "https://www.harveynormancommercial.com.au/products/NE015",
+    "rrp": 94,
+    "client_price": 94,
+    "price_status": "current",
+    "price_unit": "each",
+    "price_source_url": "https://www.harveynormancommercial.com.au/products/NE015",
+    "price_verified_at": "2026-09-30",
+    "currency": "AUD",
+    "gst_included": true,
+    "regions": "AU",
+    "active": true,
+    "source_type": "authorised_supplier_listing",
+    "source_name": "Harvey Norman Commercial Bathroom catalogue",
+    "source_url": "https://www.harveynormancommercial.com.au/products/NE015",
+    "source_verified_at": "2026-09-30",
+    "attributes": {
+      "plumbingCategoryKey": "bathroom-accessories",
+      "clientSelectionRequirement": "hand-towel",
+      "bathroomAccessoryType": "hand-towel",
+      "hncProductCode": "NE015",
+      "hncUrlKey": "NE015",
+      "hncAliasSkus": [],
+      "hncSubCategory": "Towel Rings",
+      "sourceCategories": [
+        {
+          "id": 19,
+          "name": "Bathroom",
+          "url_path": "products/bathroom"
+        },
+        {
+          "id": 40,
+          "name": "Bathroom Accessories",
+          "url_path": "products/bathroom/bathroom-accessories"
+        },
+        {
+          "id": 197,
+          "name": "Towel Rings ",
+          "url_path": "products/bathroom/bathroom-accessories/towel-rings"
+        },
+        {
+          "id": 1036,
+          "name": "Products",
+          "url_path": "products"
+        }
+      ],
+      "supplierProductType": "TOWEL RING",
+      "supplierProductGroup": "BATHACCESS",
+      "supplierSpecifications": {
+        "status": "Enabled",
+        "visibility": "Catalog, Search",
+        "gp_product_group": "BATHACCESS",
+        "gp_product_type": "TOWEL RING",
+        "range": "Ellisse",
+        "brand": "Parisi",
+        "colours": "Chrome",
+        "vendorcode": "NE015",
+        "supplier_colour": "Chrome"
+      },
+      "features": [
+        "Wall mounted",
+        "Dual fixing points",
+        "Right hand only"
+      ],
+      "warranty": null,
+      "priceBasis": "Harvey Norman Commercial SRP inc GST",
+      "accessoryImportBatch": "hnc-bathroom-five-brands-v1",
+      "sourceEvidence": "data/product-library/source-evidence/hnc-bathroom-five-brands",
+      "imageSha256": "01cf5c9195659ffb04e5069bf18f25d21a51f4da35790ea09ef530ccc3d9378e"
+    },
+    "image_status": "verified_exact",
+    "image_verified_at": "2026-09-30"
+  },
+  {
+    "product_code": "PLB-HNC-NE016",
+    "family_key": "bathroom-accessories",
+    "requirement_keys": "bathroom-accessories",
+    "category_key": "Bathroom Accessories",
+    "categories": [
+      {
+        "id": 19,
+        "name": "Bathroom",
+        "url_path": "products/bathroom"
+      },
+      {
+        "id": 40,
+        "name": "Bathroom Accessories",
+        "url_path": "products/bathroom/bathroom-accessories"
+      },
+      {
+        "id": 195,
+        "name": "Toilet Roll Holders ",
+        "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+      },
+      {
+        "id": 1036,
+        "name": "Products",
+        "url_path": "products"
+      }
+    ],
+    "subcategory": "Toilet Roll Holders",
+    "product_type": "Toilet Roll Holders",
+    "top_level_area": "bathroom",
+    "manufacturer": "Parisi",
+    "brand": "Parisi",
+    "supplier": "Harvey Norman Commercial",
+    "product_name": "Ellisse Toilet Roll Holder",
+    "model": "NE016",
+    "sku": "NE016",
+    "range": "Ellisse",
+    "colour": "Chrome",
+    "finish": "Chrome",
+    "material": "",
+    "dimensions": "",
+    "description": "Right hand only\nNot suitable for double length paper rolls",
+    "primary_image_url": "/images/catalogues/plumbing/hnc-accessories/ne016.webp",
+    "image_source_url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE016_parisi_web.jpg",
+    "image_source_type": "authorised-supplier-media",
+    "image_source_organisation": "Harvey Norman Commercial",
+    "official_product_url": "https://www.harveynormancommercial.com.au/products/NE016",
+    "supplier_url": "https://www.harveynormancommercial.com.au/products/NE016",
+    "rrp": 80,
+    "client_price": 80,
+    "price_status": "current",
+    "price_unit": "each",
+    "price_source_url": "https://www.harveynormancommercial.com.au/products/NE016",
+    "price_verified_at": "2026-09-30",
+    "currency": "AUD",
+    "gst_included": true,
+    "regions": "AU",
+    "active": true,
+    "source_type": "authorised_supplier_listing",
+    "source_name": "Harvey Norman Commercial Bathroom catalogue",
+    "source_url": "https://www.harveynormancommercial.com.au/products/NE016",
+    "source_verified_at": "2026-09-30",
+    "attributes": {
+      "plumbingCategoryKey": "bathroom-accessories",
+      "clientSelectionRequirement": "toilet-roll-holder",
+      "bathroomAccessoryType": "toilet-roll-holder",
+      "hncProductCode": "NE016",
+      "hncUrlKey": "NE016",
+      "hncAliasSkus": [],
+      "hncSubCategory": "Toilet Roll Holders",
+      "sourceCategories": [
+        {
+          "id": 19,
+          "name": "Bathroom",
+          "url_path": "products/bathroom"
+        },
+        {
+          "id": 40,
+          "name": "Bathroom Accessories",
+          "url_path": "products/bathroom/bathroom-accessories"
+        },
+        {
+          "id": 195,
+          "name": "Toilet Roll Holders ",
+          "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+        },
+        {
+          "id": 1036,
+          "name": "Products",
+          "url_path": "products"
+        }
+      ],
+      "supplierProductType": "TOILET ROLL HOLDER",
+      "supplierProductGroup": "BATHACCESS",
+      "supplierSpecifications": {
+        "status": "Enabled",
+        "visibility": "Catalog, Search",
+        "gp_product_group": "BATHACCESS",
+        "gp_product_type": "TOILET ROLL HOLDER",
+        "range": "Ellisse",
+        "brand": "Parisi",
+        "colours": "Chrome",
+        "vendorcode": "NE016",
+        "supplier_colour": "Chrome"
+      },
+      "features": [
+        "Right hand only",
+        "Not suitable for double length paper rolls"
+      ],
+      "warranty": null,
+      "priceBasis": "Harvey Norman Commercial SRP inc GST",
+      "accessoryImportBatch": "hnc-bathroom-five-brands-v1",
+      "sourceEvidence": "data/product-library/source-evidence/hnc-bathroom-five-brands",
+      "imageSha256": "23110cc0cb836da25cbf40b160caa395c05dafeaf9a733f13526ebba364aff08"
+    },
+    "image_status": "verified_exact",
+    "image_verified_at": "2026-09-30"
+  },
+  {
+    "product_code": "PLB-HNC-NE02102",
+    "family_key": "bathroom-accessories",
+    "requirement_keys": "bathroom-accessories",
+    "category_key": "Bathroom Accessories",
+    "categories": [
+      {
+        "id": 19,
+        "name": "Bathroom",
+        "url_path": "products/bathroom"
+      },
+      {
+        "id": 40,
+        "name": "Bathroom Accessories",
+        "url_path": "products/bathroom/bathroom-accessories"
+      },
+      {
+        "id": 191,
+        "name": "Robe Hooks ",
+        "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+      },
+      {
+        "id": 1036,
+        "name": "Products",
+        "url_path": "products"
+      }
+    ],
+    "subcategory": "Robe Hooks",
+    "product_type": "Robe Hooks",
+    "top_level_area": "bathroom",
+    "manufacturer": "Parisi",
+    "brand": "Parisi",
+    "supplier": "Harvey Norman Commercial",
+    "product_name": "L’Hotel Robe Hook",
+    "model": "NE021.02",
+    "sku": "NE021.02",
+    "range": "L'Hotel",
+    "colour": "Matte Black",
+    "finish": "Matte Black",
+    "material": "",
+    "dimensions": "W20x D34 x H20mm",
+    "description": "&bull; Single fixing point\n&bull; Brass construction\n&bull; Contemporary curves and clean lines\n&bull; A durable and a practical solution for your bathroom",
+    "primary_image_url": "/images/catalogues/plumbing/hnc-accessories/ne02102.webp",
+    "image_source_url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/n/e/ne02102_parisi_web.jpg",
+    "image_source_type": "authorised-supplier-media",
+    "image_source_organisation": "Harvey Norman Commercial",
+    "official_product_url": "https://www.harveynormancommercial.com.au/products/NE02102",
+    "supplier_url": "https://www.harveynormancommercial.com.au/products/NE02102",
+    "rrp": 45,
+    "client_price": 45,
+    "price_status": "current",
+    "price_unit": "each",
+    "price_source_url": "https://www.harveynormancommercial.com.au/products/NE02102",
+    "price_verified_at": "2026-09-30",
+    "currency": "AUD",
+    "gst_included": true,
+    "regions": "AU",
+    "active": true,
+    "source_type": "authorised_supplier_listing",
+    "source_name": "Harvey Norman Commercial Bathroom catalogue",
+    "source_url": "https://www.harveynormancommercial.com.au/products/NE02102",
+    "source_verified_at": "2026-09-30",
+    "attributes": {
+      "plumbingCategoryKey": "bathroom-accessories",
+      "clientSelectionRequirement": "robe-hook",
+      "bathroomAccessoryType": "robe-hook",
+      "hncProductCode": "NE021.02",
+      "hncUrlKey": "NE02102",
+      "hncAliasSkus": [],
+      "hncSubCategory": "Robe Hooks",
+      "sourceCategories": [
+        {
+          "id": 19,
+          "name": "Bathroom",
+          "url_path": "products/bathroom"
+        },
+        {
+          "id": 40,
+          "name": "Bathroom Accessories",
+          "url_path": "products/bathroom/bathroom-accessories"
+        },
+        {
+          "id": 191,
+          "name": "Robe Hooks ",
+          "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+        },
+        {
+          "id": 1036,
+          "name": "Products",
+          "url_path": "products"
+        }
+      ],
+      "supplierProductType": "ROBE HOOK",
+      "supplierProductGroup": "BATHACCESS",
+      "supplierSpecifications": {
+        "status": "Enabled",
+        "visibility": "Catalog, Search",
+        "product_dimensions": "W20x D34 x H20mm",
+        "gp_product_group": "BATHACCESS",
+        "gp_product_type": "ROBE HOOK",
+        "range": "L'Hotel",
+        "brand": "Parisi",
+        "colours": "Matte Black",
+        "vendorcode": "NE021.02",
+        "supplier_colour": "Matte Black"
+      },
+      "features": [
+        "&bull; Single fixing point",
+        "&bull; Brass construction",
+        "&bull; Contemporary curves and clean lines",
+        "&bull; A durable and a practical solution for your bathroom"
+      ],
+      "warranty": null,
+      "priceBasis": "Harvey Norman Commercial SRP inc GST",
+      "accessoryImportBatch": "hnc-bathroom-five-brands-v1",
+      "sourceEvidence": "data/product-library/source-evidence/hnc-bathroom-five-brands",
+      "imageSha256": "2c854aed06192806dbe88155efbd3d16d3be4357e76b277ab4593d7f179f9f64"
+    },
+    "image_status": "verified_exact",
+    "image_verified_at": "2026-09-30"
+  },
+  {
+    "product_code": "PLB-HNC-NE02141",
+    "family_key": "bathroom-accessories",
+    "requirement_keys": "bathroom-accessories",
+    "category_key": "Bathroom Accessories",
+    "categories": [
+      {
+        "id": 19,
+        "name": "Bathroom",
+        "url_path": "products/bathroom"
+      },
+      {
+        "id": 40,
+        "name": "Bathroom Accessories",
+        "url_path": "products/bathroom/bathroom-accessories"
+      },
+      {
+        "id": 191,
+        "name": "Robe Hooks ",
+        "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+      },
+      {
+        "id": 1036,
+        "name": "Products",
+        "url_path": "products"
+      }
+    ],
+    "subcategory": "Robe Hooks",
+    "product_type": "Robe Hooks",
+    "top_level_area": "bathroom",
+    "manufacturer": "Parisi",
+    "brand": "Parisi",
+    "supplier": "Harvey Norman Commercial",
+    "product_name": "L'Hotel Robe Hook",
+    "model": "NE021.41",
+    "sku": "NE021.41",
+    "range": "L'Hotel",
+    "colour": "Brushed Nickel",
+    "finish": "Brushed Nickel",
+    "material": "",
+    "dimensions": "W20x D34 x H20mm",
+    "description": "&bull; Single fixing point\n&bull; Brass construction\n&bull; Contemporary curves and clean lines\n&bull; A durable and a practical solution for your bathroom",
+    "primary_image_url": "/images/catalogues/plumbing/hnc-accessories/ne02141.webp",
+    "image_source_url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/n/e/ne02141_parisi_web.jpg",
+    "image_source_type": "authorised-supplier-media",
+    "image_source_organisation": "Harvey Norman Commercial",
+    "official_product_url": "https://www.harveynormancommercial.com.au/products/NE02141",
+    "supplier_url": "https://www.harveynormancommercial.com.au/products/NE02141",
+    "rrp": 49,
+    "client_price": 49,
+    "price_status": "current",
+    "price_unit": "each",
+    "price_source_url": "https://www.harveynormancommercial.com.au/products/NE02141",
+    "price_verified_at": "2026-09-30",
+    "currency": "AUD",
+    "gst_included": true,
+    "regions": "AU",
+    "active": true,
+    "source_type": "authorised_supplier_listing",
+    "source_name": "Harvey Norman Commercial Bathroom catalogue",
+    "source_url": "https://www.harveynormancommercial.com.au/products/NE02141",
+    "source_verified_at": "2026-09-30",
+    "attributes": {
+      "plumbingCategoryKey": "bathroom-accessories",
+      "clientSelectionRequirement": "robe-hook",
+      "bathroomAccessoryType": "robe-hook",
+      "hncProductCode": "NE021.41",
+      "hncUrlKey": "NE02141",
+      "hncAliasSkus": [],
+      "hncSubCategory": "Robe Hooks",
+      "sourceCategories": [
+        {
+          "id": 19,
+          "name": "Bathroom",
+          "url_path": "products/bathroom"
+        },
+        {
+          "id": 40,
+          "name": "Bathroom Accessories",
+          "url_path": "products/bathroom/bathroom-accessories"
+        },
+        {
+          "id": 191,
+          "name": "Robe Hooks ",
+          "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+        },
+        {
+          "id": 1036,
+          "name": "Products",
+          "url_path": "products"
+        }
+      ],
+      "supplierProductType": "ROBE HOOK",
+      "supplierProductGroup": "BATHACCESS",
+      "supplierSpecifications": {
+        "status": "Enabled",
+        "visibility": "Catalog, Search",
+        "product_dimensions": "W20x D34 x H20mm",
+        "gp_product_group": "BATHACCESS",
+        "gp_product_type": "ROBE HOOK",
+        "range": "L'Hotel",
+        "brand": "Parisi",
+        "colours": "Brushed Nickel",
+        "vendorcode": "NE021.41",
+        "supplier_colour": "Brushed Nickel"
+      },
+      "features": [
+        "&bull; Single fixing point",
+        "&bull; Brass construction",
+        "&bull; Contemporary curves and clean lines",
+        "&bull; A durable and a practical solution for your bathroom"
+      ],
+      "warranty": null,
+      "priceBasis": "Harvey Norman Commercial SRP inc GST",
+      "accessoryImportBatch": "hnc-bathroom-five-brands-v1",
+      "sourceEvidence": "data/product-library/source-evidence/hnc-bathroom-five-brands",
+      "imageSha256": "3d1fa8a0193b7225564a686bdc561f214ac0b386c706a915fc4929f892d19152"
+    },
+    "image_status": "verified_exact",
+    "image_verified_at": "2026-09-30"
+  },
+  {
+    "product_code": "PLB-HNC-NE03502",
+    "family_key": "bathroom-accessories",
+    "requirement_keys": "bathroom-accessories",
+    "category_key": "Bathroom Accessories",
+    "categories": [
+      {
+        "id": 19,
+        "name": "Bathroom",
+        "url_path": "products/bathroom"
+      },
+      {
+        "id": 40,
+        "name": "Bathroom Accessories",
+        "url_path": "products/bathroom/bathroom-accessories"
+      },
+      {
+        "id": 197,
+        "name": "Towel Rings ",
+        "url_path": "products/bathroom/bathroom-accessories/towel-rings"
+      },
+      {
+        "id": 1036,
+        "name": "Products",
+        "url_path": "products"
+      }
+    ],
+    "subcategory": "Towel Rings",
+    "product_type": "Hand Towel Rings / Rails",
+    "top_level_area": "bathroom",
+    "manufacturer": "Parisi",
+    "brand": "Parisi",
+    "supplier": "Harvey Norman Commercial",
+    "product_name": "Linfa Towel Ring",
+    "model": "NE035.02",
+    "sku": "NE035.02",
+    "range": "Linfa",
+    "colour": "Matte Black",
+    "finish": "Matte Black",
+    "material": "",
+    "dimensions": "",
+    "description": "Fixed towel rail arm\nWall mounted\nDual fixing points",
+    "primary_image_url": "/images/catalogues/plumbing/hnc-accessories/ne03502.webp",
+    "image_source_url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03502_parisi_web.jpg",
+    "image_source_type": "authorised-supplier-media",
+    "image_source_organisation": "Harvey Norman Commercial",
+    "official_product_url": "https://www.harveynormancommercial.com.au/products/NE03502",
+    "supplier_url": "https://www.harveynormancommercial.com.au/products/NE03502",
+    "rrp": 125,
+    "client_price": 125,
+    "price_status": "current",
+    "price_unit": "each",
+    "price_source_url": "https://www.harveynormancommercial.com.au/products/NE03502",
+    "price_verified_at": "2026-09-30",
+    "currency": "AUD",
+    "gst_included": true,
+    "regions": "AU",
+    "active": true,
+    "source_type": "authorised_supplier_listing",
+    "source_name": "Harvey Norman Commercial Bathroom catalogue",
+    "source_url": "https://www.harveynormancommercial.com.au/products/NE03502",
+    "source_verified_at": "2026-09-30",
+    "attributes": {
+      "plumbingCategoryKey": "bathroom-accessories",
+      "clientSelectionRequirement": "hand-towel",
+      "bathroomAccessoryType": "hand-towel",
+      "hncProductCode": "NE035.02",
+      "hncUrlKey": "NE03502",
+      "hncAliasSkus": [],
+      "hncSubCategory": "Towel Rings",
+      "sourceCategories": [
+        {
+          "id": 19,
+          "name": "Bathroom",
+          "url_path": "products/bathroom"
+        },
+        {
+          "id": 40,
+          "name": "Bathroom Accessories",
+          "url_path": "products/bathroom/bathroom-accessories"
+        },
+        {
+          "id": 197,
+          "name": "Towel Rings ",
+          "url_path": "products/bathroom/bathroom-accessories/towel-rings"
+        },
+        {
+          "id": 1036,
+          "name": "Products",
+          "url_path": "products"
+        }
+      ],
+      "supplierProductType": "TOWEL RING",
+      "supplierProductGroup": "BATHACCESS",
+      "supplierSpecifications": {
+        "status": "Enabled",
+        "visibility": "Catalog, Search",
+        "gp_product_group": "BATHACCESS",
+        "gp_product_type": "TOWEL RING",
+        "range": "Linfa",
+        "brand": "Parisi",
+        "colours": "Matte Black",
+        "vendorcode": "NE035.02",
+        "supplier_colour": "Matte Black"
+      },
+      "features": [
+        "Fixed towel rail arm",
+        "Wall mounted",
+        "Dual fixing points"
+      ],
+      "warranty": null,
+      "priceBasis": "Harvey Norman Commercial SRP inc GST",
+      "accessoryImportBatch": "hnc-bathroom-five-brands-v1",
+      "sourceEvidence": "data/product-library/source-evidence/hnc-bathroom-five-brands",
+      "imageSha256": "92f78e6dddde146902733a03eea993a7da9695e467576d9574508dc302b4fe87"
+    },
+    "image_status": "verified_exact",
+    "image_verified_at": "2026-09-30"
+  },
+  {
+    "product_code": "PLB-HNC-NE03602",
+    "family_key": "bathroom-accessories",
+    "requirement_keys": "bathroom-accessories",
+    "category_key": "Bathroom Accessories",
+    "categories": [
+      {
+        "id": 19,
+        "name": "Bathroom",
+        "url_path": "products/bathroom"
+      },
+      {
+        "id": 40,
+        "name": "Bathroom Accessories",
+        "url_path": "products/bathroom/bathroom-accessories"
+      },
+      {
+        "id": 195,
+        "name": "Toilet Roll Holders ",
+        "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+      },
+      {
+        "id": 1036,
+        "name": "Products",
+        "url_path": "products"
+      }
+    ],
+    "subcategory": "Toilet Roll Holders",
+    "product_type": "Toilet Roll Holders",
+    "top_level_area": "bathroom",
+    "manufacturer": "Parisi",
+    "brand": "Parisi",
+    "supplier": "Harvey Norman Commercial",
+    "product_name": "Linfa Toilet Roll Holder",
+    "model": "NE036.02",
+    "sku": "NE036.02",
+    "range": "Linfa",
+    "colour": "Matte Black",
+    "finish": "Matte Black",
+    "material": "",
+    "dimensions": "",
+    "description": "Wall mounted\nDual fixing points\nHolds 1 roll",
+    "primary_image_url": "/images/catalogues/plumbing/hnc-accessories/ne03602.webp",
+    "image_source_url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03602_parisi_web.jpg",
+    "image_source_type": "authorised-supplier-media",
+    "image_source_organisation": "Harvey Norman Commercial",
+    "official_product_url": "https://www.harveynormancommercial.com.au/products/NE03602",
+    "supplier_url": "https://www.harveynormancommercial.com.au/products/NE03602",
+    "rrp": 94,
+    "client_price": 94,
+    "price_status": "current",
+    "price_unit": "each",
+    "price_source_url": "https://www.harveynormancommercial.com.au/products/NE03602",
+    "price_verified_at": "2026-09-30",
+    "currency": "AUD",
+    "gst_included": true,
+    "regions": "AU",
+    "active": true,
+    "source_type": "authorised_supplier_listing",
+    "source_name": "Harvey Norman Commercial Bathroom catalogue",
+    "source_url": "https://www.harveynormancommercial.com.au/products/NE03602",
+    "source_verified_at": "2026-09-30",
+    "attributes": {
+      "plumbingCategoryKey": "bathroom-accessories",
+      "clientSelectionRequirement": "toilet-roll-holder",
+      "bathroomAccessoryType": "toilet-roll-holder",
+      "hncProductCode": "NE036.02",
+      "hncUrlKey": "NE03602",
+      "hncAliasSkus": [],
+      "hncSubCategory": "Toilet Roll Holders",
+      "sourceCategories": [
+        {
+          "id": 19,
+          "name": "Bathroom",
+          "url_path": "products/bathroom"
+        },
+        {
+          "id": 40,
+          "name": "Bathroom Accessories",
+          "url_path": "products/bathroom/bathroom-accessories"
+        },
+        {
+          "id": 195,
+          "name": "Toilet Roll Holders ",
+          "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+        },
+        {
+          "id": 1036,
+          "name": "Products",
+          "url_path": "products"
+        }
+      ],
+      "supplierProductType": "TOILET ROLL HOLDER",
+      "supplierProductGroup": "BATHACCESS",
+      "supplierSpecifications": {
+        "status": "Enabled",
+        "visibility": "Catalog, Search",
+        "gp_product_group": "BATHACCESS",
+        "gp_product_type": "TOILET ROLL HOLDER",
+        "range": "Linfa",
+        "brand": "Parisi",
+        "colours": "Matte Black",
+        "vendorcode": "NE036.02",
+        "supplier_colour": "Matte Black"
+      },
+      "features": [
+        "Wall mounted",
+        "Dual fixing points",
+        "Holds 1 roll"
+      ],
+      "warranty": null,
+      "priceBasis": "Harvey Norman Commercial SRP inc GST",
+      "accessoryImportBatch": "hnc-bathroom-five-brands-v1",
+      "sourceEvidence": "data/product-library/source-evidence/hnc-bathroom-five-brands",
+      "imageSha256": "5691ada7f07506368026c1aece1ed24532017ef4613db40c6a0159df06c2cbf7"
+    },
+    "image_status": "verified_exact",
+    "image_verified_at": "2026-09-30"
+  },
+  {
+    "product_code": "PLB-HNC-NE0381202",
+    "family_key": "bathroom-accessories",
+    "requirement_keys": "bathroom-accessories",
+    "category_key": "Bathroom Accessories",
+    "categories": [
+      {
+        "id": 19,
+        "name": "Bathroom",
+        "url_path": "products/bathroom"
+      },
+      {
+        "id": 40,
+        "name": "Bathroom Accessories",
+        "url_path": "products/bathroom/bathroom-accessories"
+      },
+      {
+        "id": 196,
+        "name": "Towel Rails ",
+        "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+      },
+      {
+        "id": 1036,
+        "name": "Products",
+        "url_path": "products"
+      }
+    ],
+    "subcategory": "Towel Rails",
+    "product_type": "Towel Rails",
+    "top_level_area": "bathroom",
+    "manufacturer": "Parisi",
+    "brand": "Parisi",
+    "supplier": "Harvey Norman Commercial",
+    "product_name": "Linfa 600mm Single Towel Rail",
+    "model": "NE03812.02",
+    "sku": "NE03812.02",
+    "range": "Linfa",
+    "colour": "Matte Black",
+    "finish": "Matte Black",
+    "material": "",
+    "dimensions": "",
+    "description": "Wall mounted\nDual fixing points",
+    "primary_image_url": "/images/catalogues/plumbing/hnc-accessories/ne0381202.webp",
+    "image_source_url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE0381202_parisi_web.jpg",
+    "image_source_type": "authorised-supplier-media",
+    "image_source_organisation": "Harvey Norman Commercial",
+    "official_product_url": "https://www.harveynormancommercial.com.au/products/NE0381202",
+    "supplier_url": "https://www.harveynormancommercial.com.au/products/NE0381202",
+    "rrp": 149,
+    "client_price": 149,
+    "price_status": "current",
+    "price_unit": "each",
+    "price_source_url": "https://www.harveynormancommercial.com.au/products/NE0381202",
+    "price_verified_at": "2026-09-30",
+    "currency": "AUD",
+    "gst_included": true,
+    "regions": "AU",
+    "active": true,
+    "source_type": "authorised_supplier_listing",
+    "source_name": "Harvey Norman Commercial Bathroom catalogue",
+    "source_url": "https://www.harveynormancommercial.com.au/products/NE0381202",
+    "source_verified_at": "2026-09-30",
+    "attributes": {
+      "plumbingCategoryKey": "bathroom-accessories",
+      "clientSelectionRequirement": "towel-rail",
+      "bathroomAccessoryType": "towel-rail",
+      "hncProductCode": "NE03812.02",
+      "hncUrlKey": "NE0381202",
+      "hncAliasSkus": [],
+      "hncSubCategory": "Towel Rails",
+      "sourceCategories": [
+        {
+          "id": 19,
+          "name": "Bathroom",
+          "url_path": "products/bathroom"
+        },
+        {
+          "id": 40,
+          "name": "Bathroom Accessories",
+          "url_path": "products/bathroom/bathroom-accessories"
+        },
+        {
+          "id": 196,
+          "name": "Towel Rails ",
+          "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+        },
+        {
+          "id": 1036,
+          "name": "Products",
+          "url_path": "products"
+        }
+      ],
+      "supplierProductType": "TOWEL RAIL SINGLE",
+      "supplierProductGroup": "BATHACCESS",
+      "supplierSpecifications": {
+        "status": "Enabled",
+        "visibility": "Catalog, Search",
+        "gp_product_group": "BATHACCESS",
+        "gp_product_type": "TOWEL RAIL SINGLE",
+        "range": "Linfa",
+        "brand": "Parisi",
+        "colours": "Matte Black",
+        "vendorcode": "NE03812.02",
+        "supplier_colour": "Matte Black"
+      },
+      "features": [
+        "Wall mounted",
+        "Dual fixing points"
+      ],
+      "warranty": null,
+      "priceBasis": "Harvey Norman Commercial SRP inc GST",
+      "accessoryImportBatch": "hnc-bathroom-five-brands-v1",
+      "sourceEvidence": "data/product-library/source-evidence/hnc-bathroom-five-brands",
+      "imageSha256": "737cc859606d33a61e77da07c9593eedef79e51f79c897f9b5ac11cc90ab0084"
+    },
+    "image_status": "verified_exact",
+    "image_verified_at": "2026-09-30"
+  },
+  {
+    "product_code": "PLB-HNC-PV-HTR-02",
+    "family_key": "bathroom-accessories",
+    "requirement_keys": "bathroom-accessories",
+    "category_key": "Bathroom Accessories",
+    "categories": [
+      {
+        "id": 19,
+        "name": "Bathroom",
+        "url_path": "products/bathroom"
+      },
+      {
+        "id": 40,
+        "name": "Bathroom Accessories",
+        "url_path": "products/bathroom/bathroom-accessories"
+      },
+      {
+        "id": 189,
+        "name": "Heated Towel Rails ",
+        "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+      },
+      {
+        "id": 1036,
+        "name": "Products",
+        "url_path": "products"
+      }
+    ],
+    "subcategory": "Heated Towel Rails",
+    "product_type": "Heated Towel Rails",
+    "top_level_area": "bathroom",
+    "manufacturer": "Parisi",
+    "brand": "Parisi",
+    "supplier": "Harvey Norman Commercial",
+    "product_name": "Envy Vertical Heated Towel Rail",
+    "model": "PV.HTR.02",
+    "sku": "PV.HTR.02",
+    "range": "ENVY",
+    "colour": "Matte Black",
+    "finish": "Matte Black",
+    "material": "",
+    "dimensions": "W110 x D117 x H1403mm",
+    "description": "• Integrated digital controller\n• Top dual swivel robe hooks\n• ON/OFF timer, matte black finish\n• Temperature adjustment\n• Dual fixing points",
+    "primary_image_url": "/images/catalogues/plumbing/hnc-accessories/pv-htr-02.webp",
+    "image_source_url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/v/pv.htr.02_parisi_web.jpeg",
+    "image_source_type": "authorised-supplier-media",
+    "image_source_organisation": "Harvey Norman Commercial",
+    "official_product_url": "https://www.harveynormancommercial.com.au/products/PV.HTR.02",
+    "supplier_url": "https://www.harveynormancommercial.com.au/products/PV.HTR.02",
+    "rrp": 950,
+    "client_price": 950,
+    "price_status": "current",
+    "price_unit": "each",
+    "price_source_url": "https://www.harveynormancommercial.com.au/products/PV.HTR.02",
+    "price_verified_at": "2026-09-30",
+    "currency": "AUD",
+    "gst_included": true,
+    "regions": "AU",
+    "active": true,
+    "source_type": "authorised_supplier_listing",
+    "source_name": "Harvey Norman Commercial Bathroom catalogue",
+    "source_url": "https://www.harveynormancommercial.com.au/products/PV.HTR.02",
+    "source_verified_at": "2026-09-30",
+    "attributes": {
+      "plumbingCategoryKey": "bathroom-accessories",
+      "clientSelectionRequirement": "heated-towel-rail",
+      "bathroomAccessoryType": "heated-towel-rail",
+      "hncProductCode": "PV.HTR.02",
+      "hncUrlKey": "PV.HTR.02",
+      "hncAliasSkus": [],
+      "hncSubCategory": "Heated Towel Rails",
+      "sourceCategories": [
+        {
+          "id": 19,
+          "name": "Bathroom",
+          "url_path": "products/bathroom"
+        },
+        {
+          "id": 40,
+          "name": "Bathroom Accessories",
+          "url_path": "products/bathroom/bathroom-accessories"
+        },
+        {
+          "id": 189,
+          "name": "Heated Towel Rails ",
+          "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+        },
+        {
+          "id": 1036,
+          "name": "Products",
+          "url_path": "products"
+        }
+      ],
+      "supplierProductType": "HEATED HAND RAIL",
+      "supplierProductGroup": "BATHACCESS",
+      "supplierSpecifications": {
+        "status": "Enabled",
+        "visibility": "Catalog, Search",
+        "product_dimensions": "W110 x D117 x H1403mm",
+        "gp_product_group": "BATHACCESS",
+        "gp_product_type": "HEATED HAND RAIL",
+        "range": "ENVY",
+        "brand": "Parisi",
+        "colours": "Black",
+        "vendorcode": "PV.HTR.02",
+        "supplier_colour": "Matte Black"
+      },
+      "features": [
+        "Integrated digital controller",
+        "Top dual swivel robe hooks",
+        "ON/OFF timer, matte black finish",
+        "Temperature adjustment",
+        "Dual fixing points"
+      ],
+      "warranty": null,
+      "priceBasis": "Harvey Norman Commercial SRP inc GST",
+      "accessoryImportBatch": "hnc-bathroom-five-brands-v1",
+      "sourceEvidence": "data/product-library/source-evidence/hnc-bathroom-five-brands",
+      "imageSha256": "657181da71bc16051b4d5a3f6d66c6fb0c65fe6152e7b546da1f1f9ebf36872e"
+    },
+    "image_status": "verified_exact",
+    "image_verified_at": "2026-09-30"
+  },
+  {
+    "product_code": "PLB-HNC-RA892MB",
+    "family_key": "bathroom-accessories",
+    "requirement_keys": "bathroom-accessories",
+    "category_key": "Bathroom Accessories",
+    "categories": [
+      {
+        "id": 19,
+        "name": "Bathroom",
+        "url_path": "products/bathroom"
+      },
+      {
+        "id": 40,
+        "name": "Bathroom Accessories",
+        "url_path": "products/bathroom/bathroom-accessories"
+      },
+      {
+        "id": 195,
+        "name": "Toilet Roll Holders ",
+        "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+      },
+      {
+        "id": 1036,
+        "name": "Products",
+        "url_path": "products"
+      }
+    ],
+    "subcategory": "Toilet Roll Holders",
+    "product_type": "Toilet Roll Holders",
+    "top_level_area": "bathroom",
+    "manufacturer": "Phoenix",
+    "brand": "Phoenix",
+    "supplier": "Harvey Norman Commercial",
+    "product_name": "Radii Toilet Roll Holder",
+    "model": "RA892MB",
+    "sku": "RA892MB",
+    "range": "Radii",
+    "colour": "Matte Black",
+    "finish": "Matte Black",
+    "material": "",
+    "dimensions": "",
+    "description": "&bull; Australian designed\n&bull; Supported by a 7 year warranty\n&bull; Matching tapware available to complete your bathroom look\n&bull; Wide, flat surfaces beautifully designed to complement modern trends",
+    "primary_image_url": "/images/catalogues/plumbing/hnc-accessories/ra892mb.webp",
+    "image_source_url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra892mb_phoenix_web.jpg",
+    "image_source_type": "authorised-supplier-media",
+    "image_source_organisation": "Harvey Norman Commercial",
+    "official_product_url": "https://www.harveynormancommercial.com.au/products/RA892MB",
+    "supplier_url": "https://www.harveynormancommercial.com.au/products/RA892MB",
+    "rrp": 83,
+    "client_price": 83,
+    "price_status": "current",
+    "price_unit": "each",
+    "price_source_url": "https://www.harveynormancommercial.com.au/products/RA892MB",
+    "price_verified_at": "2026-09-30",
+    "currency": "AUD",
+    "gst_included": true,
+    "regions": "AU",
+    "active": true,
+    "source_type": "authorised_supplier_listing",
+    "source_name": "Harvey Norman Commercial Bathroom catalogue",
+    "source_url": "https://www.harveynormancommercial.com.au/products/RA892MB",
+    "source_verified_at": "2026-09-30",
+    "attributes": {
+      "plumbingCategoryKey": "bathroom-accessories",
+      "clientSelectionRequirement": "toilet-roll-holder",
+      "bathroomAccessoryType": "toilet-roll-holder",
+      "hncProductCode": "RA892MB",
+      "hncUrlKey": "RA892MB",
+      "hncAliasSkus": [],
+      "hncSubCategory": "Toilet Roll Holders",
+      "sourceCategories": [
+        {
+          "id": 19,
+          "name": "Bathroom",
+          "url_path": "products/bathroom"
+        },
+        {
+          "id": 40,
+          "name": "Bathroom Accessories",
+          "url_path": "products/bathroom/bathroom-accessories"
+        },
+        {
+          "id": 195,
+          "name": "Toilet Roll Holders ",
+          "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+        },
+        {
+          "id": 1036,
+          "name": "Products",
+          "url_path": "products"
+        }
+      ],
+      "supplierProductType": "TOILET ROLL HOLDER",
+      "supplierProductGroup": "BATHACCESS",
+      "supplierSpecifications": {
+        "status": "Enabled",
+        "visibility": "Catalog, Search",
+        "gp_product_group": "BATHACCESS",
+        "gp_product_type": "TOILET ROLL HOLDER",
+        "range": "Radii",
+        "brand": "Phoenix",
+        "colours": "Matte Black",
+        "vendorcode": "RA892MB",
+        "supplier_colour": "Matte Black"
+      },
+      "features": [
+        "&bull; Australian designed",
+        "&bull; Supported by a 7 year warranty",
+        "&bull; Matching tapware available to complete your bathroom look",
+        "&bull; Wide, flat surfaces beautifully designed to complement modern trends"
+      ],
+      "warranty": null,
+      "priceBasis": "Harvey Norman Commercial SRP inc GST",
+      "accessoryImportBatch": "hnc-bathroom-five-brands-v1",
+      "sourceEvidence": "data/product-library/source-evidence/hnc-bathroom-five-brands",
+      "imageSha256": "916526341448a373898c2f7e6d010f38f25d0fee94a558c8df1ec322966a1cbc"
+    },
+    "image_status": "verified_exact",
+    "image_verified_at": "2026-09-30"
+  },
+  {
+    "product_code": "PLB-HNC-RA893CHR",
+    "family_key": "bathroom-accessories",
+    "requirement_keys": "bathroom-accessories",
+    "category_key": "Bathroom Accessories",
+    "categories": [
+      {
+        "id": 19,
+        "name": "Bathroom",
+        "url_path": "products/bathroom"
+      },
+      {
+        "id": 40,
+        "name": "Bathroom Accessories",
+        "url_path": "products/bathroom/bathroom-accessories"
+      },
+      {
+        "id": 197,
+        "name": "Towel Rings ",
+        "url_path": "products/bathroom/bathroom-accessories/towel-rings"
+      },
+      {
+        "id": 1036,
+        "name": "Products",
+        "url_path": "products"
+      }
+    ],
+    "subcategory": "Towel Rings",
+    "product_type": "Hand Towel Rings / Rails",
+    "top_level_area": "bathroom",
+    "manufacturer": "Phoenix",
+    "brand": "Phoenix",
+    "supplier": "Harvey Norman Commercial",
+    "product_name": "Radii Towel Ring",
+    "model": "RA893CHR",
+    "sku": "RA893CHR",
+    "range": "Radii",
+    "colour": "Chrome",
+    "finish": "Chrome",
+    "material": "",
+    "dimensions": "",
+    "description": "&bull; Round flange\n&bull; Australian designed\n&bull; Will suit any contemporary bathroom\n&bull; Wide, flat surfaces beautifully designed to complement modern trends",
+    "primary_image_url": "/images/catalogues/plumbing/hnc-accessories/ra893chr.webp",
+    "image_source_url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra893chr_web.jpg",
+    "image_source_type": "authorised-supplier-media",
+    "image_source_organisation": "Harvey Norman Commercial",
+    "official_product_url": "https://www.harveynormancommercial.com.au/products/RA893CHR",
+    "supplier_url": "https://www.harveynormancommercial.com.au/products/RA893CHR",
+    "rrp": 60,
+    "client_price": 60,
+    "price_status": "current",
+    "price_unit": "each",
+    "price_source_url": "https://www.harveynormancommercial.com.au/products/RA893CHR",
+    "price_verified_at": "2026-09-30",
+    "currency": "AUD",
+    "gst_included": true,
+    "regions": "AU",
+    "active": true,
+    "source_type": "authorised_supplier_listing",
+    "source_name": "Harvey Norman Commercial Bathroom catalogue",
+    "source_url": "https://www.harveynormancommercial.com.au/products/RA893CHR",
+    "source_verified_at": "2026-09-30",
+    "attributes": {
+      "plumbingCategoryKey": "bathroom-accessories",
+      "clientSelectionRequirement": "hand-towel",
+      "bathroomAccessoryType": "hand-towel",
+      "hncProductCode": "RA893CHR",
+      "hncUrlKey": "RA893CHR",
+      "hncAliasSkus": [],
+      "hncSubCategory": "Towel Rings",
+      "sourceCategories": [
+        {
+          "id": 19,
+          "name": "Bathroom",
+          "url_path": "products/bathroom"
+        },
+        {
+          "id": 40,
+          "name": "Bathroom Accessories",
+          "url_path": "products/bathroom/bathroom-accessories"
+        },
+        {
+          "id": 197,
+          "name": "Towel Rings ",
+          "url_path": "products/bathroom/bathroom-accessories/towel-rings"
+        },
+        {
+          "id": 1036,
+          "name": "Products",
+          "url_path": "products"
+        }
+      ],
+      "supplierProductType": "TOWEL RING",
+      "supplierProductGroup": "BATHACCESS",
+      "supplierSpecifications": {
+        "status": "Enabled",
+        "visibility": "Catalog, Search",
+        "gp_product_group": "BATHACCESS",
+        "gp_product_type": "TOWEL RING",
+        "range": "Radii",
+        "brand": "Phoenix",
+        "colours": "Chrome",
+        "vendorcode": "RA893CHR",
+        "supplier_colour": "Chrome"
+      },
+      "features": [
+        "&bull; Round flange",
+        "&bull; Australian designed",
+        "&bull; Will suit any contemporary bathroom",
+        "&bull; Wide, flat surfaces beautifully designed to complement modern trends"
+      ],
+      "warranty": null,
+      "priceBasis": "Harvey Norman Commercial SRP inc GST",
+      "accessoryImportBatch": "hnc-bathroom-five-brands-v1",
+      "sourceEvidence": "data/product-library/source-evidence/hnc-bathroom-five-brands",
+      "imageSha256": "5f261ebd5ef16b2391aee83c5f4f44407ec60f465ed8937f60a62f6ce7cf30b4"
+    },
+    "image_status": "verified_exact",
+    "image_verified_at": "2026-09-30"
+  },
+  {
+    "product_code": "PLB-HNC-RA897MB",
+    "family_key": "bathroom-accessories",
+    "requirement_keys": "bathroom-accessories",
+    "category_key": "Bathroom Accessories",
+    "categories": [
+      {
+        "id": 19,
+        "name": "Bathroom",
+        "url_path": "products/bathroom"
+      },
+      {
+        "id": 40,
+        "name": "Bathroom Accessories",
+        "url_path": "products/bathroom/bathroom-accessories"
+      },
+      {
+        "id": 191,
+        "name": "Robe Hooks ",
+        "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+      },
+      {
+        "id": 1036,
+        "name": "Products",
+        "url_path": "products"
+      }
+    ],
+    "subcategory": "Robe Hooks",
+    "product_type": "Robe Hooks",
+    "top_level_area": "bathroom",
+    "manufacturer": "Phoenix",
+    "brand": "Phoenix",
+    "supplier": "Harvey Norman Commercial",
+    "product_name": "Radii Robe Hook",
+    "model": "RA897MB",
+    "sku": "RA897MB",
+    "range": "Radii",
+    "colour": "Matte Black",
+    "finish": "Matte Black",
+    "material": "",
+    "dimensions": "",
+    "description": "&bull; Australian designed\n&bull; Supported by a 7 year warranty\n&bull; Matching tapware available to complete your bathroom look\n&bull; Wide, flat surfaces beautifully designed to complement modern trends",
+    "primary_image_url": "/images/catalogues/plumbing/hnc-accessories/ra897mb.webp",
+    "image_source_url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/r/a/ra897mb_phoenix_web_2.jpg",
+    "image_source_type": "authorised-supplier-media",
+    "image_source_organisation": "Harvey Norman Commercial",
+    "official_product_url": "https://www.harveynormancommercial.com.au/products/RA897MB",
+    "supplier_url": "https://www.harveynormancommercial.com.au/products/RA897MB",
+    "rrp": 45,
+    "client_price": 45,
+    "price_status": "current",
+    "price_unit": "each",
+    "price_source_url": "https://www.harveynormancommercial.com.au/products/RA897MB",
+    "price_verified_at": "2026-09-30",
+    "currency": "AUD",
+    "gst_included": true,
+    "regions": "AU",
+    "active": true,
+    "source_type": "authorised_supplier_listing",
+    "source_name": "Harvey Norman Commercial Bathroom catalogue",
+    "source_url": "https://www.harveynormancommercial.com.au/products/RA897MB",
+    "source_verified_at": "2026-09-30",
+    "attributes": {
+      "plumbingCategoryKey": "bathroom-accessories",
+      "clientSelectionRequirement": "robe-hook",
+      "bathroomAccessoryType": "robe-hook",
+      "hncProductCode": "RA897MB",
+      "hncUrlKey": "RA897MB",
+      "hncAliasSkus": [],
+      "hncSubCategory": "Robe Hooks",
+      "sourceCategories": [
+        {
+          "id": 19,
+          "name": "Bathroom",
+          "url_path": "products/bathroom"
+        },
+        {
+          "id": 40,
+          "name": "Bathroom Accessories",
+          "url_path": "products/bathroom/bathroom-accessories"
+        },
+        {
+          "id": 191,
+          "name": "Robe Hooks ",
+          "url_path": "products/bathroom/bathroom-accessories/robe-hooks"
+        },
+        {
+          "id": 1036,
+          "name": "Products",
+          "url_path": "products"
+        }
+      ],
+      "supplierProductType": "ROBE HOOK",
+      "supplierProductGroup": "BATHACCESS",
+      "supplierSpecifications": {
+        "status": "Enabled",
+        "visibility": "Catalog, Search",
+        "gp_product_group": "BATHACCESS",
+        "gp_product_type": "ROBE HOOK",
+        "range": "Radii",
+        "brand": "Phoenix",
+        "colours": "Matte Black",
+        "vendorcode": "RA897MB",
+        "supplier_colour": "Matte Black"
+      },
+      "features": [
+        "&bull; Australian designed",
+        "&bull; Supported by a 7 year warranty",
+        "&bull; Matching tapware available to complete your bathroom look",
+        "&bull; Wide, flat surfaces beautifully designed to complement modern trends"
+      ],
+      "warranty": null,
+      "priceBasis": "Harvey Norman Commercial SRP inc GST",
+      "accessoryImportBatch": "hnc-bathroom-five-brands-v1",
+      "sourceEvidence": "data/product-library/source-evidence/hnc-bathroom-five-brands",
+      "imageSha256": "c543ba963c87628a0a8eaf305682b98dca220f102942fca52c725e5abf790478"
+    },
+    "image_status": "verified_exact",
+    "image_verified_at": "2026-09-30"
+  },
+  {
+    "product_code": "PLB-HNC-TO-HTR60-A2",
+    "family_key": "bathroom-accessories",
+    "requirement_keys": "bathroom-accessories",
+    "category_key": "Bathroom Accessories",
+    "categories": [
+      {
+        "id": 19,
+        "name": "Bathroom",
+        "url_path": "products/bathroom"
+      },
+      {
+        "id": 40,
+        "name": "Bathroom Accessories",
+        "url_path": "products/bathroom/bathroom-accessories"
+      },
+      {
+        "id": 189,
+        "name": "Heated Towel Rails ",
+        "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+      },
+      {
+        "id": 1036,
+        "name": "Products",
+        "url_path": "products"
+      }
+    ],
+    "subcategory": "Heated Towel Rails",
+    "product_type": "Heated Towel Rails",
+    "top_level_area": "bathroom",
+    "manufacturer": "Parisi",
+    "brand": "Parisi",
+    "supplier": "Harvey Norman Commercial",
+    "product_name": "Tondo 2-Bar Heated Towel Rail",
+    "model": "TO.HTR60-A2",
+    "sku": "TO.HTR60-A2",
+    "range": "Tondo",
+    "colour": "Chrome",
+    "finish": "Chrome",
+    "material": "",
+    "dimensions": "W600 x D100 x H346mm",
+    "description": "• Digital controller\n• On/Off timer\n• Temperature adjustment\n• Heating temperature 40 to 60C\n• 240V, 50/60Hz power voltage",
+    "primary_image_url": "/images/catalogues/plumbing/hnc-accessories/to-htr60-a2.webp",
+    "image_source_url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/to.htr60-a2_parisi_web.jpeg",
+    "image_source_type": "authorised-supplier-media",
+    "image_source_organisation": "Harvey Norman Commercial",
+    "official_product_url": "https://www.harveynormancommercial.com.au/products/TO.HTR60-A2",
+    "supplier_url": "https://www.harveynormancommercial.com.au/products/TO.HTR60-A2",
+    "rrp": 775,
+    "client_price": 775,
+    "price_status": "current",
+    "price_unit": "each",
+    "price_source_url": "https://www.harveynormancommercial.com.au/products/TO.HTR60-A2",
+    "price_verified_at": "2026-09-30",
+    "currency": "AUD",
+    "gst_included": true,
+    "regions": "AU",
+    "active": true,
+    "source_type": "authorised_supplier_listing",
+    "source_name": "Harvey Norman Commercial Bathroom catalogue",
+    "source_url": "https://www.harveynormancommercial.com.au/products/TO.HTR60-A2",
+    "source_verified_at": "2026-09-30",
+    "attributes": {
+      "plumbingCategoryKey": "bathroom-accessories",
+      "clientSelectionRequirement": "heated-towel-rail",
+      "bathroomAccessoryType": "heated-towel-rail",
+      "hncProductCode": "TO.HTR60-A2",
+      "hncUrlKey": "TO.HTR60-A2",
+      "hncAliasSkus": [],
+      "hncSubCategory": "Heated Towel Rails",
+      "sourceCategories": [
+        {
+          "id": 19,
+          "name": "Bathroom",
+          "url_path": "products/bathroom"
+        },
+        {
+          "id": 40,
+          "name": "Bathroom Accessories",
+          "url_path": "products/bathroom/bathroom-accessories"
+        },
+        {
+          "id": 189,
+          "name": "Heated Towel Rails ",
+          "url_path": "products/bathroom/bathroom-accessories/heated-towel-rails"
+        },
+        {
+          "id": 1036,
+          "name": "Products",
+          "url_path": "products"
+        }
+      ],
+      "supplierProductType": "HEATED HAND RAIL",
+      "supplierProductGroup": "BATHACCESS",
+      "supplierSpecifications": {
+        "status": "Enabled",
+        "visibility": "Catalog, Search",
+        "product_dimensions": "W600 x D100 x H346mm",
+        "gp_product_group": "BATHACCESS",
+        "gp_product_type": "HEATED HAND RAIL",
+        "range": "Tondo",
+        "brand": "Parisi",
+        "colours": "Chrome",
+        "vendorcode": "TO.HTR60-A2",
+        "supplier_colour": "Chrome"
+      },
+      "features": [
+        "Digital controller",
+        "On/Off timer",
+        "Temperature adjustment",
+        "Heating temperature 40 to 60C",
+        "240V, 50/60Hz power voltage"
+      ],
+      "warranty": null,
+      "priceBasis": "Harvey Norman Commercial SRP inc GST",
+      "accessoryImportBatch": "hnc-bathroom-five-brands-v1",
+      "sourceEvidence": "data/product-library/source-evidence/hnc-bathroom-five-brands",
+      "imageSha256": "105e55167fb874d92aa5bd813e3c1e8354e8d8a561bdaab43acee1ac564ed433"
+    },
+    "image_status": "verified_exact",
+    "image_verified_at": "2026-09-30"
+  },
+  {
+    "product_code": "PLB-HNC-TOTR3048",
+    "family_key": "bathroom-accessories",
+    "requirement_keys": "bathroom-accessories",
+    "category_key": "Bathroom Accessories",
+    "categories": [
+      {
+        "id": 19,
+        "name": "Bathroom",
+        "url_path": "products/bathroom"
+      },
+      {
+        "id": 40,
+        "name": "Bathroom Accessories",
+        "url_path": "products/bathroom/bathroom-accessories"
+      },
+      {
+        "id": 196,
+        "name": "Towel Rails ",
+        "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+      },
+      {
+        "id": 1036,
+        "name": "Products",
+        "url_path": "products"
+      }
+    ],
+    "subcategory": "Towel Rails",
+    "product_type": "Towel Rails",
+    "top_level_area": "bathroom",
+    "manufacturer": "Parisi",
+    "brand": "Parisi",
+    "supplier": "Harvey Norman Commercial",
+    "product_name": "Tondo 300mm Single Towel Rail",
+    "model": "TO.TR30.48",
+    "sku": "TO.TR30.48",
+    "range": "Tondo",
+    "colour": "Matte Bronze",
+    "finish": "Matte Bronze",
+    "material": "",
+    "dimensions": "W300 x D70 x H19mm",
+    "description": "• Brass composition\n• Organic shape",
+    "primary_image_url": "/images/catalogues/plumbing/hnc-accessories/totr3048.webp",
+    "image_source_url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/totr3048_parisi_web.jpg",
+    "image_source_type": "authorised-supplier-media",
+    "image_source_organisation": "Harvey Norman Commercial",
+    "official_product_url": "https://www.harveynormancommercial.com.au/products/TOTR3048",
+    "supplier_url": "https://www.harveynormancommercial.com.au/products/TOTR3048",
+    "rrp": 145,
+    "client_price": 145,
+    "price_status": "current",
+    "price_unit": "each",
+    "price_source_url": "https://www.harveynormancommercial.com.au/products/TOTR3048",
+    "price_verified_at": "2026-09-30",
+    "currency": "AUD",
+    "gst_included": true,
+    "regions": "AU",
+    "active": true,
+    "source_type": "authorised_supplier_listing",
+    "source_name": "Harvey Norman Commercial Bathroom catalogue",
+    "source_url": "https://www.harveynormancommercial.com.au/products/TOTR3048",
+    "source_verified_at": "2026-09-30",
+    "attributes": {
+      "plumbingCategoryKey": "bathroom-accessories",
+      "clientSelectionRequirement": "towel-rail",
+      "bathroomAccessoryType": "towel-rail",
+      "hncProductCode": "TO.TR30.48",
+      "hncUrlKey": "TOTR3048",
+      "hncAliasSkus": [],
+      "hncSubCategory": "Towel Rails",
+      "sourceCategories": [
+        {
+          "id": 19,
+          "name": "Bathroom",
+          "url_path": "products/bathroom"
+        },
+        {
+          "id": 40,
+          "name": "Bathroom Accessories",
+          "url_path": "products/bathroom/bathroom-accessories"
+        },
+        {
+          "id": 196,
+          "name": "Towel Rails ",
+          "url_path": "products/bathroom/bathroom-accessories/towel-rails"
+        },
+        {
+          "id": 1036,
+          "name": "Products",
+          "url_path": "products"
+        }
+      ],
+      "supplierProductType": "TOWEL RAIL SINGLE",
+      "supplierProductGroup": "BATHACCESS",
+      "supplierSpecifications": {
+        "status": "Enabled",
+        "visibility": "Catalog, Search",
+        "product_dimensions": "W300 x D70 x H19mm",
+        "gp_product_group": "BATHACCESS",
+        "gp_product_type": "TOWEL RAIL SINGLE",
+        "range": "Tondo",
+        "brand": "Parisi",
+        "colours": "Bronze",
+        "vendorcode": "TO.TR30.48",
+        "supplier_colour": "Matte Bronze"
+      },
+      "features": [
+        "Brass composition",
+        "Organic shape"
+      ],
+      "warranty": null,
+      "priceBasis": "Harvey Norman Commercial SRP inc GST",
+      "accessoryImportBatch": "hnc-bathroom-five-brands-v1",
+      "sourceEvidence": "data/product-library/source-evidence/hnc-bathroom-five-brands",
+      "imageSha256": "13847d4ea3e16795ff1440125c9bc189bb2aef6f4dfe95048d38b28315e10c6e"
+    },
+    "image_status": "verified_exact",
+    "image_verified_at": "2026-09-30"
+  }
+]

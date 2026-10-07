@@ -1,0 +1,889 @@
+{
+  "data": {
+    "products": {
+      "total_count": 41,
+      "page_info": {
+        "total_pages": 2,
+        "current_page": 1,
+        "page_size": 25
+      },
+      "items": [
+        {
+          "sku": "W7MWBLAUS",
+          "name": "40L Built-In Convection Microwave ",
+          "vendorcode": "W7MWBLAUS",
+          "price_store": 2276,
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/w/7/w7mwblaus_whirlpool_web.jpg"
+          },
+          "description": {
+            "html": "<p>• 16 cooking functions inc. steam, boil &amp; crisp&nbsp;<br>• '6th Sense' technology<br>• Electronic touch sensor<br>• 7 power levels<br>• Full touch LED display</p>"
+          },
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 24,
+              "name": "Microwaves",
+              "url_path": "products/kitchen/microwaves"
+            },
+            {
+              "id": 941,
+              "name": "Built In Microwaves",
+              "url_path": "products/kitchen/microwaves/built-in-microwaves"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "__typename": "SimpleProduct"
+        },
+        {
+          "sku": "WMF250GAUS",
+          "name": "25 Litre Built-in Microwave ",
+          "vendorcode": "WMF250GAUS",
+          "price_store": 692,
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/w/m/wmf250gaus_whirlpool_web.jpg"
+          },
+          "description": {
+            "html": "<p>• 25 litre microwave with grill&nbsp;<br>• Child lock safety<br>• 900W microwave<br>• 1000W quartz grill</p>"
+          },
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 24,
+              "name": "Microwaves",
+              "url_path": "products/kitchen/microwaves"
+            },
+            {
+              "id": 941,
+              "name": "Built In Microwaves",
+              "url_path": "products/kitchen/microwaves/built-in-microwaves"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "__typename": "SimpleProduct"
+        },
+        {
+          "sku": "WDFS3R4PBSAU",
+          "name": "600mm Freestanding Dishwasher ",
+          "vendorcode": "WDFS3R4PBSAU",
+          "price_store": 1315,
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/w/d/wdfs3r4pbsau_whirlpool_web.jpg"
+          },
+          "description": {
+            "html": "<p>• '6th Sense' technology<br>• LED display<br>• 14 place settings <br>• Adjustable removable racks<br>• 8 cleaning functions<br>• Half Load option<br><br></p>"
+          },
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 28,
+              "name": "Dishwashers",
+              "url_path": "products/kitchen/dishwashers"
+            },
+            {
+              "id": 136,
+              "name": "Freestanding/Built in Dishwashers ",
+              "url_path": "products/kitchen/dishwashers/freestanding-built-in-dishwashers"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "__typename": "SimpleProduct"
+        },
+        {
+          "sku": "AKC640IXOC",
+          "name": "600mm Gas Cooktop",
+          "vendorcode": "AKC640IXOC",
+          "price_store": 593,
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/k/akc640ixoc_whirlpool_web.jpg"
+          },
+          "description": {
+            "html": "<p>• 4 high efficiency burners<br>• Powerful wok burner<br>• Flame failure <br>• Cast iron trivets<br>• Electronic ignition</p>"
+          },
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 23,
+              "name": "Cooktops",
+              "url_path": "products/kitchen/cooktops"
+            },
+            {
+              "id": 107,
+              "name": "Gas Cooktops ",
+              "url_path": "products/kitchen/cooktops/gas-cooktops"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "__typename": "SimpleProduct"
+        },
+        {
+          "sku": "WDFS3R4NBSAU",
+          "name": "W Collection 600mm Freestanding Dishwasher",
+          "vendorcode": "WDFS3R4NBSAU",
+          "price_store": 1137,
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/w/d/wdfs3r4nbsau_whirlpool_web.jpg"
+          },
+          "description": {
+            "html": "<p>• 14 place settings <br>• '6th Sense' technology<br>• Touch controls<br>• Flexible upper rack<br>• 11.5L/wash<br>• LED display<br>• Half Load option</p>"
+          },
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 28,
+              "name": "Dishwashers",
+              "url_path": "products/kitchen/dishwashers"
+            },
+            {
+              "id": 136,
+              "name": "Freestanding/Built in Dishwashers ",
+              "url_path": "products/kitchen/dishwashers/freestanding-built-in-dishwashers"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "__typename": "SimpleProduct"
+        },
+        {
+          "sku": "WMH9900BLAUS",
+          "name": "900mm Electric Built-In Oven with Air Fry",
+          "vendorcode": "WMH9900BLAUS",
+          "price_store": 1880,
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/w/m/wmh9900blaus_whirlpool_web.jpg"
+          },
+          "description": {
+            "html": "<p>• Air Fry<br>• Gentle Steam <br>• Smart cleaning <br>• XXL enamelled cavity<br>• 133 litres<br>• Triple glass door <br>• LED digital display</p>"
+          },
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 22,
+              "name": "Ovens",
+              "url_path": "products/kitchen/ovens"
+            },
+            {
+              "id": 99,
+              "name": "Single Oven Electric Wall/Undermount ",
+              "url_path": "products/kitchen/ovens/single-oven-electric-wall-undermount"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "__typename": "SimpleProduct"
+        },
+        {
+          "sku": "WRT6140AUS",
+          "name": "600mm Ceramic Cooktop",
+          "vendorcode": "WRT6140AUS",
+          "price_store": 698,
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/w/r/wrt6140aus_whirlpool_web_1.jpg"
+          },
+          "description": {
+            "html": "<p>• 4 cooking zones<br>• Child lock<br>• Residual heat indicator<br>• 9 power levels</p>"
+          },
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 23,
+              "name": "Cooktops",
+              "url_path": "products/kitchen/cooktops"
+            },
+            {
+              "id": 108,
+              "name": "Electric Cooktops ",
+              "url_path": "products/kitchen/cooktops/electric-cooktops"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "__typename": "SimpleProduct"
+        },
+        {
+          "sku": "W3OMK55HR0BC",
+          "name": "600mm Electric Built-In Oven",
+          "vendorcode": "W3OMK55HR0BC",
+          "price_store": 642,
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/w/3/w3omk55hr0bc_whirlpool_web_5.jpeg"
+          },
+          "description": {
+            "html": "<p>• 73 litre capacity • 6 functions<br>• Air Fry function <br>• Forced Air technology<br>• Fan forced system<br>• Smart Clean (hydrolytic cleaning)<br>• LED digital display</p>"
+          },
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 22,
+              "name": "Ovens",
+              "url_path": "products/kitchen/ovens"
+            },
+            {
+              "id": 99,
+              "name": "Single Oven Electric Wall/Undermount ",
+              "url_path": "products/kitchen/ovens/single-oven-electric-wall-undermount"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "__typename": "SimpleProduct"
+        },
+        {
+          "sku": "IWSH6041CAUS",
+          "name": "600mm Induction Cooktop",
+          "vendorcode": "IWSH6041CAUS",
+          "price_store": 840,
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/i/w/iwsh6041caus_whirlpool_web_1.jpg"
+          },
+          "description": {
+            "html": "<p>• 4 cooking zones <br>• Child lock<br>• 9 power levels<br>• Residual heat indicator<br>• Pan detection</p>"
+          },
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 23,
+              "name": "Cooktops",
+              "url_path": "products/kitchen/cooktops"
+            },
+            {
+              "id": 109,
+              "name": "Induction Cooktops ",
+              "url_path": "products/kitchen/cooktops/induction-cooktops"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "__typename": "SimpleProduct"
+        },
+        {
+          "sku": "WDFS3R4NIXAU",
+          "name": "600mm Freestanding Dishwasher",
+          "vendorcode": "WDFS3R4NIXAU",
+          "price_store": 1137,
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/w/d/wdfs3r4nixau_whirlpool_web_1.jpg"
+          },
+          "description": {
+            "html": "<p>• 14 place settings<br>• 11.5L/cycle<br>• 6th SENSE Technology<br>• 8 wash cycles<br>• Flexible upper rack</p>"
+          },
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 28,
+              "name": "Dishwashers",
+              "url_path": "products/kitchen/dishwashers"
+            },
+            {
+              "id": 136,
+              "name": "Freestanding/Built in Dishwashers ",
+              "url_path": "products/kitchen/dishwashers/freestanding-built-in-dishwashers"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "__typename": "SimpleProduct"
+        },
+        {
+          "sku": "WIE2C19AUSA",
+          "name": "600mm Fully Integrated Dishwasher",
+          "vendorcode": "WIE2C19AUSA",
+          "price_store": 1434,
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/w/i/wie2c19ausa_whirlpool_web_1.jpg"
+          },
+          "description": {
+            "html": "<p>• 14 place settings<br>• 12L/cycle<br>• Removable and adjustable upper rack<br>• 6 wash programs<br>• LED control</p>"
+          },
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 28,
+              "name": "Dishwashers",
+              "url_path": "products/kitchen/dishwashers"
+            },
+            {
+              "id": 138,
+              "name": "Fully integrated Dishwashers ",
+              "url_path": "products/kitchen/dishwashers/fully-integrated-dishwashers"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "__typename": "SimpleProduct"
+        },
+        {
+          "sku": "WRK6140AUS",
+          "name": "600mm Ceramic Cooktop",
+          "vendorcode": "WRK6140AUS",
+          "price_store": 549,
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/w/r/wrk6140aus_whirlpool_web_1.jpg"
+          },
+          "description": {
+            "html": "<p>• 4 cooking zones<br>• 9 power settings<br>• Residual heat indicator<br>• Knob controls<br>• Overheat/Overflow protection<br>• Auto shutdown</p>"
+          },
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 23,
+              "name": "Cooktops",
+              "url_path": "products/kitchen/cooktops"
+            },
+            {
+              "id": 108,
+              "name": "Electric Cooktops ",
+              "url_path": "products/kitchen/cooktops/electric-cooktops"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "__typename": "SimpleProduct"
+        },
+        {
+          "sku": "W4OMK581HU1BA",
+          "name": "600mm Electric Built-In Oven",
+          "vendorcode": "W4OMK581HU1BAUS",
+          "price_store": 979,
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/w/4/w4omk581hu1ba_whirlpool_web.jpeg"
+          },
+          "description": {
+            "html": "<p>• Air Fry to crisp up foods<br>• Cook 3, allows 3 dishes to cook simultaneously<br>• Forced Air, seal in the taste<br>• Innovative SmartClean technology<br>• Telescopic rails</p>"
+          },
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 22,
+              "name": "Ovens",
+              "url_path": "products/kitchen/ovens"
+            },
+            {
+              "id": 99,
+              "name": "Single Oven Electric Wall/Undermount ",
+              "url_path": "products/kitchen/ovens/single-oven-electric-wall-undermount"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "__typename": "SimpleProduct"
+        },
+        {
+          "sku": "W4OMK581RU1XA",
+          "name": "600mm Electric Built-In Oven",
+          "vendorcode": "W4OMK581RU1XA",
+          "price_store": 1335,
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/w/4/w4omk581ru1xa_whirlpool_web.jpg"
+          },
+          "description": {
+            "html": "<p>• Air Fry<br>• LED digital display<br>• Telescopic shelf<br>• 9 functions<br>• Hybrid Flexi Clean system</p>"
+          },
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 22,
+              "name": "Ovens",
+              "url_path": "products/kitchen/ovens"
+            },
+            {
+              "id": 99,
+              "name": "Single Oven Electric Wall/Undermount ",
+              "url_path": "products/kitchen/ovens/single-oven-electric-wall-undermount"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "__typename": "SimpleProduct"
+        },
+        {
+          "sku": "WS8865NEP",
+          "name": "650mm Induction Cooktop",
+          "vendorcode": "WS8865NEP",
+          "price_store": 1632,
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/w/s/ws8865nep_whirlpool_web.jpg"
+          },
+          "description": {
+            "html": "<p>• Touch slider controls<br>• 6TH Sense Technology<br>• 4 cooking zones<br>• Pan detection<br>• Control panel lock</p>"
+          },
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 23,
+              "name": "Cooktops",
+              "url_path": "products/kitchen/cooktops"
+            },
+            {
+              "id": 109,
+              "name": "Induction Cooktops ",
+              "url_path": "products/kitchen/cooktops/induction-cooktops"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "__typename": "SimpleProduct"
+        },
+        {
+          "sku": "AKC950CIXOC",
+          "name": "900mm Gas Cooktop",
+          "vendorcode": "AKC950CIXOC",
+          "price_store": 890,
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/a/k/akc950cixoc_whirlpool_web.jpeg"
+          },
+          "description": {
+            "html": "<p>• 5 gas burners<br>• High efficiency burners<br>• Powerful wok burner<br>• Cast iron trivets<br>• Electronic ignition &amp; Flame Failure Safety</p>"
+          },
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 23,
+              "name": "Cooktops",
+              "url_path": "products/kitchen/cooktops"
+            },
+            {
+              "id": 107,
+              "name": "Gas Cooktops ",
+              "url_path": "products/kitchen/cooktops/gas-cooktops"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "__typename": "SimpleProduct"
+        },
+        {
+          "sku": "FWEB9012IW",
+          "name": "10kg Front Load Washer",
+          "vendorcode": "FWEB9012IW",
+          "price_store": 890,
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/f/w/fweb9012iw_whirlpool_web_1.jpeg"
+          },
+          "description": {
+            "html": "<p>• 4 star energy rating<br>• WELS 4 stars (92L per wash)<br>• 1400rpm spin speed<br>• Sanitise Wash function<br>• Allergy Care function</p>"
+          },
+          "categories": [
+            {
+              "id": 18,
+              "name": "Laundry",
+              "url_path": "products/laundry"
+            },
+            {
+              "id": 34,
+              "name": "Washing Machines",
+              "url_path": "products/laundry/washing-machines"
+            },
+            {
+              "id": 143,
+              "name": "Frontload Washers ",
+              "url_path": "products/laundry/washing-machines/frontload-washers"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "__typename": "SimpleProduct"
+        },
+        {
+          "sku": "GMWL758IXLAUS",
+          "name": "750mm Gas Cooktop",
+          "vendorcode": "GMWL758IXLAUS",
+          "price_store": 1335,
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/g/m/gmwl758ixlaus_whirlpool_web.jpeg"
+          },
+          "description": {
+            "html": "<p>• 5 gas burners<br>• iXelium stainless steel coating <br>• 3500W Power Burner <br>• Cast iron trivets &amp; wok support <br>•9-level multilevel flame Control </p>"
+          },
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 23,
+              "name": "Cooktops",
+              "url_path": "products/kitchen/cooktops"
+            },
+            {
+              "id": 107,
+              "name": "Gas Cooktops ",
+              "url_path": "products/kitchen/cooktops/gas-cooktops"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "__typename": "SimpleProduct"
+        },
+        {
+          "sku": "HWEC8002IW",
+          "name": "SaniCare 8kg Heat Pump Clothes Dryer",
+          "vendorcode": "HWEC8002IW",
+          "price_store": 1286,
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/h/w/hwec8002iw_whirlpool_web.jpeg"
+          },
+          "description": {
+            "html": "<p>• 8 star energy rating<br>• 6th Sense Intelli-Dry technology<br>• Allergy Care function<br>• Air Refresh function</p>"
+          },
+          "categories": [
+            {
+              "id": 18,
+              "name": "Laundry",
+              "url_path": "products/laundry"
+            },
+            {
+              "id": 35,
+              "name": "Clothes Dryers",
+              "url_path": "products/laundry/clothes-dryers"
+            },
+            {
+              "id": 145,
+              "name": "Heat Pump Dryer",
+              "url_path": "products/laundry/clothes-dryers/heat-pump-dryer"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "__typename": "SimpleProduct"
+        },
+        {
+          "sku": "IWHH9050CC",
+          "name": "900mm Induction Cooktop",
+          "vendorcode": "IWHH9050CC",
+          "price_store": 2308,
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/i/w/iwhh9050cc_whirlpool_web.jpeg"
+          },
+          "description": {
+            "html": "<p>• 5 cooking zones with FlexiCook technology<br>• Booster function for rapid boiling <br>• Black ceramic glass surface<br>• Stop &amp; Go function for cooking convenience<br>• Child Lock function</p>"
+          },
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 23,
+              "name": "Cooktops",
+              "url_path": "products/kitchen/cooktops"
+            },
+            {
+              "id": 109,
+              "name": "Induction Cooktops ",
+              "url_path": "products/kitchen/cooktops/induction-cooktops"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "__typename": "SimpleProduct"
+        },
+        {
+          "sku": "IWSH9051CAUS",
+          "name": "900mm Induction Cooktop",
+          "vendorcode": "IWSH9051CAUS",
+          "price_store": 1599,
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/i/w/iwsh9051caus_whirlpool_web.jpeg"
+          },
+          "description": {
+            "html": "<p>• 5 cooking zones with FlexiCook technology<br>• Booster function for rapid boiling <br>• Black ceramic glass surface<br>• Stop &amp; Go function for cooking convenience<br>• Child Lock function</p>"
+          },
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 23,
+              "name": "Cooktops",
+              "url_path": "products/kitchen/cooktops"
+            },
+            {
+              "id": 109,
+              "name": "Induction Cooktops ",
+              "url_path": "products/kitchen/cooktops/induction-cooktops"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "__typename": "SimpleProduct"
+        },
+        {
+          "sku": "VWED1202IG",
+          "name": "12kg Top Load Washer",
+          "vendorcode": "VWED1202IG",
+          "price_store": 1335,
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/v/w/vwed1202ig_whirlpool_web.jpeg"
+          },
+          "description": {
+            "html": "<p>• 4.5 star energy rating<br>• WELS 3.5 stars (147L per wash)<br>• 680rpm spin speed<br>• SonicClean technology<br>• Wash + AirDry function</p>"
+          },
+          "categories": [
+            {
+              "id": 18,
+              "name": "Laundry",
+              "url_path": "products/laundry"
+            },
+            {
+              "id": 34,
+              "name": "Washing Machines",
+              "url_path": "products/laundry/washing-machines"
+            },
+            {
+              "id": 142,
+              "name": "Topload Washers ",
+              "url_path": "products/laundry/washing-machines/topload-washers"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "__typename": "SimpleProduct"
+        },
+        {
+          "sku": "VWHD1502IG",
+          "name": "Sanipro 15kg Top Load Washer",
+          "vendorcode": "VWHD1502IG",
+          "price_store": 1632,
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/v/w/vwhd1502ig_whirlpool_web_1.jpeg"
+          },
+          "description": {
+            "html": "<p>• 4 star energy rating<br>• WELS 3.5 stars (184L per wash)<br>• 680rpm spin speed<br>• Steam Hygiene function<br>• SonicClean technology</p>"
+          },
+          "categories": [
+            {
+              "id": 18,
+              "name": "Laundry",
+              "url_path": "products/laundry"
+            },
+            {
+              "id": 34,
+              "name": "Washing Machines",
+              "url_path": "products/laundry/washing-machines"
+            },
+            {
+              "id": 142,
+              "name": "Topload Washers ",
+              "url_path": "products/laundry/washing-machines/topload-washers"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "__typename": "SimpleProduct"
+        },
+        {
+          "sku": "W3OMK55HR0XC",
+          "name": "600mm Electric Built-In Oven",
+          "vendorcode": "W3OMK55HR0XC",
+          "price_store": 593,
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/w/3/w3omk55hr0xc_whirlpool_web1.jpeg"
+          },
+          "description": {
+            "html": "<p>• 67L capacity<br>• Air Fry, Multi-Cook &amp; Forced Air cooking, 6 cooking functions<br>• SmartClean steam-assisted cleaning<br>• LED display with programmable timer<br>• Cool-touch triple glazed door</p>"
+          },
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 22,
+              "name": "Ovens",
+              "url_path": "products/kitchen/ovens"
+            },
+            {
+              "id": 99,
+              "name": "Single Oven Electric Wall/Undermount ",
+              "url_path": "products/kitchen/ovens/single-oven-electric-wall-undermount"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "__typename": "SimpleProduct"
+        },
+        {
+          "sku": "W4OMK381HU0BA",
+          "name": "600mm Electric Built-In Oven",
+          "vendorcode": "W4OMK381HU0BA",
+          "price_store": 890,
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/w/4/w4omk381hu0ba_whirlpool_web1.jpeg"
+          },
+          "description": {
+            "html": "<p>• 71L capacity<br>• Air Fry &amp; Cook 3 technology, 10 cooking functions<br>• SmartClean hydrolytic cleaning<br>• Fan Forced Air System &amp; Turbo Grill<br>• Full glass cool-touch door</p>"
+          },
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 22,
+              "name": "Ovens",
+              "url_path": "products/kitchen/ovens"
+            },
+            {
+              "id": 99,
+              "name": "Single Oven Electric Wall/Undermount ",
+              "url_path": "products/kitchen/ovens/single-oven-electric-wall-undermount"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "__typename": "SimpleProduct"
+        }
+      ]
+    }
+  }
+}

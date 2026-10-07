@@ -6,7 +6,7 @@
 //
 // Stores the active workspace_id in localStorage so it persists across reloads.
 
-import { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { supabase } from "../utils/supabase-client";
 import { canUseFeature, getLimit } from "../lib/featureGates";
 
@@ -14,19 +14,39 @@ const WorkspaceContext = createContext(null);
 
 const LS_KEY = "active_workspace_id";
 
+// Keep the current object when a reload returns identical data, so consumers do not re-render.
+function sameJson(current, next) {
+  if (current === next) return true;
+  try {
+    return JSON.stringify(current) === JSON.stringify(next);
+  } catch {
+    return false;
+  }
+}
+const keepIfUnchanged = (next) => (current) => (sameJson(current, next) ? current : next);
+
 export function WorkspaceProvider({ children }) {
   const [workspaces, setWorkspaces]       = useState([]);
   const [activeWorkspace, setActiveWorkspace] = useState(null);
   const [loading, setLoading]             = useState(true);
+  // The user whose workspaces are loaded, and the user whose sign-in already ran invite
+  // activation. Supabase re-emits SIGNED_IN/TOKEN_REFRESHED for the same user whenever a tab
+  // becomes visible; only a different user (or sign-out) is a real session change.
+  const loadedUserIdRef = useRef(null);
+  const activatedUserIdRef = useRef(null);
 
   // Load workspaces from API
   const loadWorkspaces = useCallback(async (session) => {
     if (!session?.access_token) {
-      setWorkspaces([]);
+      loadedUserIdRef.current = null;
+      activatedUserIdRef.current = null;
+      setWorkspaces(keepIfUnchanged([]));
       setActiveWorkspace(null);
+      if (typeof window !== 'undefined') localStorage.removeItem(LS_KEY);
       setLoading(false);
       return;
     }
+    loadedUserIdRef.current = session.user?.id || null;
 
     try {
       const res = await fetch("/api/workspaces", {
@@ -37,20 +57,27 @@ export function WorkspaceProvider({ children }) {
       }
       const json = await res.json().catch(() => ({}));
       const list = json.workspaces || [];
-      setWorkspaces(list);
+      setWorkspaces(keepIfUnchanged(list));
 
       // Restore previously selected workspace or fall back to first
       const stored = typeof window !== "undefined"
         ? localStorage.getItem(LS_KEY)
         : null;
       const match = list.find((w) => w.id === stored) || list[0] || null;
-      setActiveWorkspace(match);
+      if (typeof window !== 'undefined') {
+        if (match) localStorage.setItem(LS_KEY, match.id);
+        else localStorage.removeItem(LS_KEY);
+      }
+      setActiveWorkspace(keepIfUnchanged(match));
     } catch (err) {
       if (process.env.NODE_ENV !== "development") {
         console.warn("[useWorkspace] failed to load workspaces", err);
       }
+      // Not loaded: let the next auth event for this user try again.
+      loadedUserIdRef.current = null;
       setWorkspaces([]);
       setActiveWorkspace(null);
+      if (typeof window !== 'undefined') localStorage.removeItem(LS_KEY);
     } finally {
       setLoading(false);
     }
@@ -83,9 +110,14 @@ export function WorkspaceProvider({ children }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        if (event === "SIGNED_IN") {
+        const userId = session?.user?.id || null;
+        if (!session?.access_token) {
+          loadWorkspaces(session);
+        } else if (event === "SIGNED_IN") {
+          if (activatedUserIdRef.current === userId) return;
+          activatedUserIdRef.current = userId;
           activateAndLoad(session);
-        } else {
+        } else if (loadedUserIdRef.current !== userId) {
           loadWorkspaces(session);
         }
       }
@@ -103,19 +135,20 @@ export function WorkspaceProvider({ children }) {
     }
   }, [workspaces]);
 
-  const value = {
+  const value = useMemo(() => ({
     workspaces,
     activeWorkspace,
     workspaceId: activeWorkspace?.id || null,
     plan: activeWorkspace?.plan || "starter",
     role: activeWorkspace?.role || null,
+    isDemoWorkspace: activeWorkspace?.is_demo === true,
     loading,
     switchWorkspace,
     /** Check if the active workspace can use a feature */
     can: (feature) => canUseFeature(activeWorkspace?.plan || "starter", feature),
     /** Get usage limit for a resource */
     limit: (resource) => getLimit(activeWorkspace?.plan || "starter", resource),
-  };
+  }), [workspaces, activeWorkspace, loading, switchWorkspace]);
 
   return (
     <WorkspaceContext.Provider value={value}>

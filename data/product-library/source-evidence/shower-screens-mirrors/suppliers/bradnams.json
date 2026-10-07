@@ -1,0 +1,164 @@
+{
+  "supplier": "Bradnam's",
+  "legalName": "Bradnam's Windows & Doors",
+  "aliases": ["Bradnams", "Bradnam's Windows & Doors", "Bradnams Windows and Doors", "Bradnam’s", "Bradnam’s Windows & Doors"],
+  "codePrefix": "BRADNAMS",
+  "website": "https://www.bradnams.com.au",
+  "capturedAt": "2026-10-01",
+  "pricing": { "status": "quote_required", "note": "Bradnam's publishes no prices, sizes or product codes: product availability, pricing, sizes and configurations are subject to regional variations and a Bradnam's quotation." },
+  "availability": "Regional Queensland only. Please confirm availability with a Bradnam's representative.",
+  "regionalFinishes": {
+    "note": "Frame colours by Bradnam's region, exactly as published. Shower screen page lists five regions; the mirror page also lists South East Queensland.",
+    "Central Queensland": { "standard": ["White", "Bright Silver"], "decorative": ["Matt Silver", "Black", "White Birch", "Almond Ivory"] },
+    "Far North Queensland": { "standard": ["White", "Bright Silver"], "decorative": ["Black", "White Birch"] },
+    "North Queensland": { "standard": ["Pearl White Gloss", "Bright Silver", "Black"], "decorative": [] },
+    "South East Queensland (mirrors only)": { "standard": ["White", "Black", "Bright Silver", "Matt Silver"], "decorative": [] },
+    "South West Queensland": { "standard": ["White", "Black", "Bright Silver", "Matt Silver"], "decorative": [] },
+    "Wide Bay | Bundaberg": { "standard": ["White", "Matt Silver", "Bright Silver", "Black"], "decorative": [] }
+  },
+  "ranges": [
+    {
+      "key": "essential",
+      "requirement": "shower-screen",
+      "supplierCategory": "Shower Screens / Essential (Framed)",
+      "range": "Essential",
+      "name": "Essential Framed Shower Screen",
+      "url": "https://www.bradnams.com.au/product/shower-screens/",
+      "evidence": "pages/bradnams--shower-screens.txt",
+      "screenType": "Framed",
+      "supplierScreenType": "Essential (Framed)",
+      "madeToMeasure": true,
+      "madeToMeasureEvidence": "Custom Framed & Frameless Shower Screens",
+      "description": "Easy-clean 'Essential' framed shower screens: square frame with a curved edge, self-closing mechanism, water deflector strip and a glazing system that reduces the build up of mould and mildew.",
+      "configurations": [
+        { "supplierName": "Hinged / Pivot", "internal": "Hinged / Pivot", "doorType": "Hinged / Pivot", "evidenceText": "HINGED / PIVOT", "image": "https://www.bradnams.com.au/wp-content/uploads/2021/07/Black-Framed-Shower-Screens.jpg" },
+        { "supplierName": "Sliding", "internal": "Sliding", "doorType": "Sliding", "evidenceText": "Available in Essential only", "image": "https://www.bradnams.com.au/wp-content/uploads/2021/07/Sliding-Shower-Screens.jpg", "features": ["High-performance, adjustable rollers", "Anti-lift feature"] }
+      ],
+      "configurationNote": "Other configurations are available.",
+      "options": [
+        { "key": "glass", "label": "Glass", "values": ["Clear", "Satinlite"] },
+        { "key": "finish", "label": "Frame colour", "values": ["White", "Bright Silver", "Matt Silver", "Black", "White Birch", "Almond Ivory", "Pearl White Gloss"], "note": "Frame colours vary by Bradnam's region." }
+      ],
+      "glassThicknessMm": [],
+      "limits": {},
+      "warranty": ""
+    },
+    {
+      "key": "signature",
+      "requirement": "shower-screen",
+      "supplierCategory": "Shower Screens / Signature (Semi Frameless)",
+      "range": "Signature",
+      "name": "Signature Semi Frameless Shower Screen",
+      "url": "https://www.bradnams.com.au/product/shower-screens/",
+      "evidence": "pages/bradnams--shower-screens.txt",
+      "screenType": "Semi-Frameless",
+      "supplierScreenType": "Signature (Semi Frameless)",
+      "madeToMeasure": true,
+      "madeToMeasureEvidence": "Custom Framed & Frameless Shower Screens",
+      "description": "'Signature' semi frameless shower screens made from 6mm safety glass that's glazed to reduce mould and mildew, with a self-closing mechanism and water deflector strip.",
+      "configurations": [
+        { "supplierName": "Hinged / Pivot", "internal": "Hinged / Pivot", "doorType": "Hinged / Pivot", "evidenceText": "HINGED / PIVOT", "image": "https://www.bradnams.com.au/wp-content/uploads/2021/07/Semi-Frameless-Showerscreen.jpg" }
+      ],
+      "configurationNote": "Other configurations are available. Sliding is available in Essential only.",
+      "options": [
+        { "key": "glass", "label": "Glass", "values": ["Clear", "Satinlite"] },
+        { "key": "finish", "label": "Frame colour", "values": ["White", "Bright Silver", "Matt Silver", "Black", "White Birch", "Almond Ivory", "Pearl White Gloss"], "note": "Frame colours vary by Bradnam's region." }
+      ],
+      "glassEvidence": "Glazed with 6mm safety glass",
+      "glassThicknessMm": [6],
+      "limits": {},
+      "warranty": ""
+    },
+    {
+      "key": "frameless",
+      "requirement": "shower-screen",
+      "supplierCategory": "Shower Screens / Frameless",
+      "range": "Frameless",
+      "name": "Frameless Shower Screen",
+      "url": "https://www.bradnams.com.au/product/shower-screens/",
+      "evidence": "pages/bradnams--shower-screens.txt",
+      "screenType": "Frameless",
+      "supplierScreenType": "Frameless",
+      "madeToMeasure": true,
+      "madeToMeasureEvidence": "Custom Framed & Frameless Shower Screens",
+      "description": "Bradnam's premium shower screen: glazed with 10mm safety glass, a discreet handle and standard chrome hardware, with no tracks or channels.",
+      "configurations": [
+        { "supplierName": "Hinged / Pivot", "internal": "Hinged / Pivot", "doorType": "Hinged / Pivot", "evidenceText": "HINGED / PIVOT", "image": "https://www.bradnams.com.au/wp-content/uploads/2021/07/3-panel-Frameless-Shower-Screens.jpg" }
+      ],
+      "configurationNote": "Other configurations are available.",
+      "options": [
+        { "key": "glass", "label": "Glass", "values": ["Clear", "Satinlite"] },
+        { "key": "finish", "label": "Hardware finish", "values": ["Chrome"], "note": "Standard chrome hardware." }
+      ],
+      "glassEvidence": "Glazed with 10mm safety glass",
+      "glassThicknessMm": [10],
+      "limits": {},
+      "warranty": ""
+    },
+    {
+      "key": "essential-mirror",
+      "requirement": "mirror",
+      "mirrorGroup": "Framed Mirrors",
+      "supplierCategory": "Bathroom Mirrors / Essential",
+      "range": "Essential",
+      "name": "Essential Mirror",
+      "url": "https://www.bradnams.com.au/product/other-products/bathroom-mirrors/",
+      "evidence": "pages/bradnams--bathroom-mirrors.txt",
+      "madeToMeasure": true,
+      "madeToMeasureNote": "No standard sizes are published; sizes are quoted by Bradnam's.",
+      "description": "'Essential' framed bathroom mirrors in a choice of contemporary, neutral frame colours.",
+      "configurations": [
+        { "supplierName": "Essential Mirror Frame", "internal": "Framed", "frameStyle": "Framed", "edgeType": "Framed", "image": "https://www.bradnams.com.au/wp-content/uploads/2019/07/Standard-Frame-for-Mirrors.jpg" }
+      ],
+      "options": [
+        { "key": "finish", "label": "Frame colour", "values": ["White", "Bright Silver", "Matt Silver", "Black", "White Birch", "Almond Ivory", "Pearl White Gloss"], "note": "Frame colours vary by Bradnam's region." }
+      ],
+      "glassThicknessMm": [],
+      "limits": {},
+      "warranty": "one (1) year"
+    },
+    {
+      "key": "signature-mirror",
+      "requirement": "mirror",
+      "mirrorGroup": "Framed Mirrors",
+      "supplierCategory": "Bathroom Mirrors / Signature",
+      "range": "Signature",
+      "name": "Signature Mirror",
+      "url": "https://www.bradnams.com.au/product/other-products/bathroom-mirrors/",
+      "evidence": "pages/bradnams--bathroom-mirrors.txt",
+      "madeToMeasure": true,
+      "madeToMeasureNote": "No standard sizes are published; sizes are quoted by Bradnam's.",
+      "description": "'Signature' mirrors with Bradnam's micro-frames: the illusion of a frameless mirror with the benefits of a framed one.",
+      "configurations": [
+        { "supplierName": "Signature Mirror Frame", "internal": "Microframed", "frameStyle": "Microframed", "edgeType": "Microframed", "image": "https://www.bradnams.com.au/wp-content/uploads/2019/07/Micro-Frame-for-Mirrors.jpg" }
+      ],
+      "options": [],
+      "optionsNote": "Frame colours are applicable to Essential Mirrors only.",
+      "glassThicknessMm": [],
+      "limits": {},
+      "warranty": "one (1) year"
+    },
+    {
+      "key": "frameless-mirror",
+      "requirement": "mirror",
+      "mirrorGroup": "Frameless Mirrors",
+      "supplierCategory": "Bathroom Mirrors / Frameless",
+      "range": "Frameless",
+      "name": "Frameless Mirror",
+      "url": "https://www.bradnams.com.au/product/other-products/bathroom-mirrors/",
+      "evidence": "pages/bradnams--bathroom-mirrors.txt",
+      "frameStyle": "Frameless",
+      "madeToMeasure": true,
+      "madeToMeasureNote": "No standard sizes are published; sizes are quoted by Bradnam's.",
+      "description": "Frameless bathroom mirrors, the complement to Bradnam's frameless shower screens.",
+      "configurations": [
+        { "supplierName": "Bevelled", "internal": "Bevelled Edge", "edgeType": "Bevelled", "image": "https://www.bradnams.com.au/wp-content/uploads/2019/04/Frameless-Mirror-bevelled-edge.jpg" },
+        { "supplierName": "Flat Polished", "internal": "Polished Edge", "edgeType": "Polished", "image": "https://www.bradnams.com.au/wp-content/uploads/2019/04/Frameless-Mirror-polished-edge.jpg" }
+      ],
+      "options": [],
+      "glassThicknessMm": [],
+      "limits": {},
+      "warranty": "one (1) year"
+    }
+  ]
+}

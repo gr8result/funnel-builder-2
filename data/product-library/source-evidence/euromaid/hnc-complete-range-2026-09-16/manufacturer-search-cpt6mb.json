@@ -1,0 +1,7 @@
+{
+  "url": "https://www.euromaid.com/en-au/live-search?keywords=CPT6MB",
+  "retrievedAt": "2026-09-16T06:18:12.705Z",
+  "status": 200,
+  "sha256": "e9bfe5b91bb776faa5f30ed189525833002d01347ad03bdc00cacf76c58f6460",
+  "text": "[{\"command\":\"liveSearchResults\",\"content\":\"\\u003Cdiv class=\\u0022gd-search-suggestions\\u0022\\u003E\\n  \\u003Cdiv class=\\u0022prod-results\\u0022\\u003E\\n          \\u003Cdiv class=\\u0022gd-search-results__title\\u0022\\u003EProducts\\u003C\\/div\\u003E\\n              \\u003Ca href=\\u0022\\/en-au\\/60cm-pyramid-canopy-rangehood-matte-black-0\\u0022 title=\\u002260cm Pyramid Canopy Rangehood, Matte Black\\u0022\\u003E60cm Pyramid Canopy Rangehood, Matte Black\\u003C\\/a\\u003E\\n    \\n          \\u003Cdiv id=\\u0022gd-search-see-all\\u0022 class=\\u0022search-see-all\\u0022\\u003E\\n                \\u003Ca class=\\u0022gd-search__view-all-link\\u0022 href=\\u0022\\/en-au\\/search-results?keywords=CPT6MB\\u0022 title=\\u0022See All Results for \\u0027CPT6MB\\u0027\\u0022\\u003ESee All Results for \\u0027CPT6MB\\u0027\\u003C\\/a\\u003E\\n      \\u003C\\/div\\u003E\\n          \\u003C\\/div\\u003E\\n\\n  \\u003Cdiv class=\\u0022content-results\\u0022\\u003E\\n          \\u003C\\/div\\u003E\\n\\u003C\\/div\\u003E\\n\"},{\"command\":\"gtagEvent\",\"event_name\":\"search\",\"data\":{\"search_term\":\"cpt6mb\"}}]"
+}

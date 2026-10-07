@@ -15,6 +15,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { guardSmsSend } from "../../../lib/smsValidation";
+import { requestWorkspaceId } from "../../../lib/demoWorkspace";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
 const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
@@ -80,6 +81,7 @@ export default async function handler(req, res) {
 
     const user_id = userData.user.id;
     const body = req.body || {};
+    const workspaceId = requestWorkspaceId(req);
 
     const lead_id = pickLeadId(body);
     const msg = pickMessage(body);
@@ -93,11 +95,12 @@ export default async function handler(req, res) {
     if (directTo) {
       toPhone = directTo;
     } else if (lead_id) {
-      const { data: lead, error: leadErr } = await supabase
+      let leadQuery = supabase
         .from("leads")
         .select("id, user_id, phone, name")
-        .eq("id", lead_id)
-        .maybeSingle();
+        .eq("id", lead_id);
+      if (workspaceId) leadQuery = leadQuery.eq("workspace_id", workspaceId);
+      const { data: lead, error: leadErr } = await leadQuery.maybeSingle();
 
       if (leadErr) return res.status(500).json({ ok: false, error: leadErr.message });
       if (!lead) return res.status(404).json({ ok: false, error: "Lead not found" });
@@ -158,6 +161,7 @@ export default async function handler(req, res) {
     const nowIso = new Date().toISOString();
     const insertRow = {
       user_id,
+      workspace_id: workspaceId || null,
       lead_id: resolvedLeadId,
       step_no: 1,
       to_phone: to61,

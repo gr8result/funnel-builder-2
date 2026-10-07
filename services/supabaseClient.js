@@ -1,5 +1,5 @@
 // services/supabaseClient.js
-import { createClient } from '@supabase/supabase-js';
+export { supabase } from '../utils/supabase-client';
 
 // READ from .env.local (must be set)
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -13,4 +13,3 @@ if (!url || !anon) {
   );
 }
 
-export const supabase = createClient(url, anon);

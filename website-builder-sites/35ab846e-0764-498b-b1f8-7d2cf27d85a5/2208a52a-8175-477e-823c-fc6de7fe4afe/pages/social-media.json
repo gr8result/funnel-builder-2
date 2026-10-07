@@ -400,27 +400,33 @@
         "items": [
           {
             "title": "Drag and Drop Calendar",
-            "body": "Visualise your entire content schedule on a clean calendar view. Drag posts to different days, reorder your queue and spot gaps instantly — managing a month of content takes minutes."
+            "body": "Visualise your entire content schedule on a clean calendar view. Drag posts to different days, reorder your queue and spot gaps instantly — managing a month of content takes minutes.",
+            "image": "https://images.unsplash.com/photo-1506784365847-bbad939e9335?auto=format&fit=crop&w=900&q=80"
           },
           {
             "title": "Queue Management",
-            "body": "Add posts to a smart publishing queue and Gr8 Result automatically schedules them at optimal times. Content flows out consistently without you having to micromanage every post."
+            "body": "Add posts to a smart publishing queue and Gr8 Result automatically schedules them at optimal times. Content flows out consistently without you having to micromanage every post.",
+            "image": "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&w=900&q=80"
           },
           {
             "title": "Recurring Campaigns",
-            "body": "Set up repeating content campaigns — weekly tips, monthly promotions, daily quotes — and Gr8 Result regenerates and republishes them automatically, keeping your feed consistently active."
+            "body": "Set up repeating content campaigns — weekly tips, monthly promotions, daily quotes — and Gr8 Result regenerates and republishes them automatically, keeping your feed consistently active.",
+            "image": "https://images.unsplash.com/photo-1553729459-efe14ef6055d?auto=format&fit=crop&w=900&q=80"
           },
           {
             "title": "Best Posting Times",
-            "body": "Gr8 Result analyses engagement data and automatically schedules your posts at the times your audience is most active, maximising reach and interaction on every platform."
+            "body": "Gr8 Result analyses engagement data and automatically schedules your posts at the times your audience is most active, maximising reach and interaction on every platform.",
+            "image": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=900&q=80"
           },
           {
             "title": "Timezone Support",
-            "body": "Serving multiple markets or audiences in different regions? Schedule posts to publish at the right local time for each audience without manually tracking timezone differences."
+            "body": "Serving multiple markets or audiences in different regions? Schedule posts to publish at the right local time for each audience without manually tracking timezone differences.",
+            "image": "https://images.unsplash.com/photo-1484480974693-6ca0a78fb36b?auto=format&fit=crop&w=900&q=80"
           },
           {
             "title": "Draft Mode and Approval Workflows",
-            "body": "Save posts as drafts for review before they go live. Set up approval steps so content can be reviewed and signed off before publishing — perfect for teams and agency-managed accounts."
+            "body": "Save posts as drafts for review before they go live. Set up approval steps so content can be reviewed and signed off before publishing — perfect for teams and agency-managed accounts.",
+            "image": "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=900&q=80"
           }
         ],
         "backgroundColor": "linear-gradient(180deg,#0d0520,#06020f)",

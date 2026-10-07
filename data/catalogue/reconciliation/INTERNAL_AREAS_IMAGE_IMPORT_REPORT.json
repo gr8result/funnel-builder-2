@@ -1,0 +1,176 @@
+{
+  "checkedAt": "2026-09-09",
+  "dryRun": false,
+  "targets": 17,
+  "imported": 16,
+  "results": [
+    {
+      "code": "7545",
+      "brand": "Lockwood",
+      "name": "Lockwood Symmetry® Series - District Leverset ? Dummy",
+      "pageUrl": "https://www.lockweb.com.au/au/en/products/door-locks/locksets/symmetry-series-district-leverset",
+      "status": "resolved",
+      "localPath": "/images/product-library/internal-areas/lockwood-7545.webp",
+      "imageUrl": "https://gw-assets.assaabloy.com/is/image/assaabloy/8c24d-130426065253508",
+      "size": "1280x1280"
+    },
+    {
+      "code": "7541",
+      "brand": "Lockwood",
+      "name": "Lockwood Symmetry® Series - District Leverset ? Passage",
+      "pageUrl": "https://www.lockweb.com.au/au/en/products/door-locks/locksets/symmetry-series-district-leverset",
+      "status": "resolved",
+      "localPath": "/images/product-library/internal-areas/lockwood-7541.webp",
+      "imageUrl": "https://gw-assets.assaabloy.com/is/image/assaabloy/8c24d-130426065253508",
+      "size": "1280x1280"
+    },
+    {
+      "code": "7542",
+      "brand": "Lockwood",
+      "name": "Lockwood Symmetry® Series - District Leverset ? Privacy",
+      "pageUrl": "https://www.lockweb.com.au/au/en/products/door-locks/locksets/symmetry-series-district-leverset",
+      "status": "resolved",
+      "localPath": "/images/product-library/internal-areas/lockwood-7542.webp",
+      "imageUrl": "https://gw-assets.assaabloy.com/is/image/assaabloy/8c24d-130426065253508",
+      "size": "1280x1280"
+    },
+    {
+      "code": "7555",
+      "brand": "Lockwood",
+      "name": "Lockwood Symmetry® Series - Element™ Leverset ? Dummy",
+      "pageUrl": "https://www.lockweb.com.au/au/en/products/door-locks/locksets/symmetry-series-element-leverset",
+      "status": "resolved",
+      "localPath": "/images/product-library/internal-areas/lockwood-7555.webp",
+      "imageUrl": "https://gw-assets.assaabloy.com/is/image/assaabloy/f85f3-7550sc_lw_en_c1",
+      "size": "1000x1000"
+    },
+    {
+      "code": "7551",
+      "brand": "Lockwood",
+      "name": "Lockwood Symmetry® Series - Element™ Leverset ? Passage",
+      "pageUrl": "https://www.lockweb.com.au/au/en/products/door-locks/locksets/symmetry-series-element-leverset",
+      "status": "resolved",
+      "localPath": "/images/product-library/internal-areas/lockwood-7551.webp",
+      "imageUrl": "https://gw-assets.assaabloy.com/is/image/assaabloy/f85f3-7550sc_lw_en_c1",
+      "size": "1000x1000"
+    },
+    {
+      "code": "7552",
+      "brand": "Lockwood",
+      "name": "Lockwood Symmetry® Series - Element™ Leverset ? Privacy",
+      "pageUrl": "https://www.lockweb.com.au/au/en/products/door-locks/locksets/symmetry-series-element-leverset",
+      "status": "resolved",
+      "localPath": "/images/product-library/internal-areas/lockwood-7552.webp",
+      "imageUrl": "https://gw-assets.assaabloy.com/is/image/assaabloy/f85f3-7550sc_lw_en_c1",
+      "size": "1000x1000"
+    },
+    {
+      "code": "7025",
+      "brand": "Lockwood",
+      "name": "Lockwood Symmetry® Series - Imperial Knobset ? Dummy",
+      "pageUrl": "https://www.lockweb.com.au/au/en/products/door-locks/locksets/symmetry-series-imperial-knobset",
+      "status": "resolved",
+      "localPath": "/images/product-library/internal-areas/lockwood-7025.webp",
+      "imageUrl": "https://gw-assets.assaabloy.com/is/image/assaabloy/e9fb3-130426070504750",
+      "size": "1280x1280"
+    },
+    {
+      "code": "7021",
+      "brand": "Lockwood",
+      "name": "Lockwood Symmetry® Series - Imperial Knobset ? Passage",
+      "pageUrl": "https://www.lockweb.com.au/au/en/products/door-locks/locksets/symmetry-series-imperial-knobset",
+      "status": "resolved",
+      "localPath": "/images/product-library/internal-areas/lockwood-7021.webp",
+      "imageUrl": "https://gw-assets.assaabloy.com/is/image/assaabloy/e9fb3-130426070504750",
+      "size": "1280x1280"
+    },
+    {
+      "code": "7022",
+      "brand": "Lockwood",
+      "name": "Lockwood Symmetry® Series - Imperial Knobset ? Privacy",
+      "pageUrl": "https://www.lockweb.com.au/au/en/products/door-locks/locksets/symmetry-series-imperial-knobset",
+      "status": "resolved",
+      "localPath": "/images/product-library/internal-areas/lockwood-7022.webp",
+      "imageUrl": "https://gw-assets.assaabloy.com/is/image/assaabloy/e9fb3-130426070504750",
+      "size": "1280x1280"
+    },
+    {
+      "code": "7015",
+      "brand": "Lockwood",
+      "name": "Lockwood Symmetry® Series - Manor Knobset ? Dummy",
+      "pageUrl": "https://www.lockweb.com.au/au/en/products/door-locks/locksets/symmetry-series-manor-knobset",
+      "status": "resolved",
+      "localPath": "/images/product-library/internal-areas/lockwood-7015.webp",
+      "imageUrl": "https://gw-assets.assaabloy.com/is/image/assaabloy/d0085-130426070920879",
+      "size": "1280x1280"
+    },
+    {
+      "code": "7011",
+      "brand": "Lockwood",
+      "name": "Lockwood Symmetry® Series - Manor Knobset ? Passage",
+      "pageUrl": "https://www.lockweb.com.au/au/en/products/door-locks/locksets/symmetry-series-manor-knobset",
+      "status": "resolved",
+      "localPath": "/images/product-library/internal-areas/lockwood-7011.webp",
+      "imageUrl": "https://gw-assets.assaabloy.com/is/image/assaabloy/d0085-130426070920879",
+      "size": "1280x1280"
+    },
+    {
+      "code": "7012",
+      "brand": "Lockwood",
+      "name": "Lockwood Symmetry® Series - Manor Knobset ? Privacy",
+      "pageUrl": "https://www.lockweb.com.au/au/en/products/door-locks/locksets/symmetry-series-manor-knobset",
+      "status": "resolved",
+      "localPath": "/images/product-library/internal-areas/lockwood-7012.webp",
+      "imageUrl": "https://gw-assets.assaabloy.com/is/image/assaabloy/d0085-130426070920879",
+      "size": "1280x1280"
+    },
+    {
+      "code": "7535",
+      "brand": "Lockwood",
+      "name": "Lockwood Symmetry® Series - Vicinity Leverset ? Dummy",
+      "pageUrl": "https://www.lockweb.com.au/au/en/products/door-locks/locksets/symmetry-series-vicinity-leverset",
+      "status": "resolved",
+      "localPath": "/images/product-library/internal-areas/lockwood-7535.webp",
+      "imageUrl": "https://gw-assets.assaabloy.com/is/image/assaabloy/681de-130426070048980",
+      "size": "1280x1280"
+    },
+    {
+      "code": "7531",
+      "brand": "Lockwood",
+      "name": "Lockwood Symmetry® Series - Vicinity Leverset ? Passage",
+      "pageUrl": "https://www.lockweb.com.au/au/en/products/door-locks/locksets/symmetry-series-vicinity-leverset",
+      "status": "resolved",
+      "localPath": "/images/product-library/internal-areas/lockwood-7531.webp",
+      "imageUrl": "https://gw-assets.assaabloy.com/is/image/assaabloy/681de-130426070048980",
+      "size": "1280x1280"
+    },
+    {
+      "code": "7532",
+      "brand": "Lockwood",
+      "name": "Lockwood Symmetry® Series - Vicinity Leverset ? Privacy",
+      "pageUrl": "https://www.lockweb.com.au/au/en/products/door-locks/locksets/symmetry-series-vicinity-leverset",
+      "status": "resolved",
+      "localPath": "/images/product-library/internal-areas/lockwood-7532.webp",
+      "imageUrl": "https://gw-assets.assaabloy.com/is/image/assaabloy/681de-130426070048980",
+      "size": "1280x1280"
+    },
+    {
+      "code": "200081",
+      "brand": "Porta",
+      "name": "Bullnose 20 × 8 mm Tasmanian Oak Unfinished — 5.4 m",
+      "pageUrl": "https://www.porta.com.au/products/mouldings/architraves-skirting/bullnose",
+      "status": "resolved",
+      "localPath": "/images/product-library/internal-areas/porta-200081.jpg",
+      "imageUrl": "https://borg.bynder.com/transform/e5205642-4c3e-4d91-959a-3b3194d9f14e/Bullnose-Architrave-42-x-11mm-Primed-FJ-Pine",
+      "size": "2000x2000"
+    },
+    {
+      "code": "601560",
+      "brand": "Porta",
+      "name": "Square Dressed 57 × 18 mm Primed MDF Primed — 5.4 m",
+      "pageUrl": "https://www.porta.com.au/products/mouldings/square-dressed/square-dressed-5718",
+      "status": "unresolved",
+      "reason": "image too small 25x25"
+    }
+  ]
+}

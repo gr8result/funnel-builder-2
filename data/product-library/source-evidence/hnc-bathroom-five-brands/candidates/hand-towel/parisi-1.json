@@ -1,0 +1,2914 @@
+{
+  "data": {
+    "products": {
+      "total_count": 25,
+      "page_info": {
+        "total_pages": 1
+      },
+      "items": [
+        {
+          "id": 22773,
+          "sku": "NE981",
+          "vendorcode": "NE981",
+          "name": "Tondo Freestanding Double Towel Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 197,
+              "name": "Towel Rings ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rings"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/n/e/ne981_parisi_web.jpeg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/n/e/ne981_parisi_web.jpeg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/n/e/ne981_parisi_web.jpeg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/n/e/ne981_parisi_tech.jpeg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/n/e/ne981_parisi_web.jpeg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/n/e/ne981_parisi_tech.jpeg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Perfect for any modern or classic bathroom<br>• Elegant design &amp; sophisticated look<br>• Create an exclusive, luxurious atmosphere<br>• Floor fixing</p>"
+          },
+          "short_description": {
+            "html": "<p>Tondo Freestanding Double Towel Holder</p>"
+          },
+          "product_dimensions": "W400 x D150 x H800mm",
+          "price_store": 459,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W400 x D150 x H800mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RING"
+              },
+              {
+                "code": "range",
+                "value": "Tonda"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "NE981"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22756,
+          "sku": "NE035A50",
+          "vendorcode": "NE035.A.50",
+          "name": "Linfa Towel Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 197,
+              "name": "Towel Rings ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rings"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE035A50_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE035A50_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE035A50_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE035A50_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE035A50_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE035A50_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<ul>\r\n<li>Fixed towel rail arm</li>\r\n<li>Wall mounted</li>\r\n<li>Dual fixing points </li>\r\n</ul>"
+          },
+          "short_description": {
+            "html": "Linfa Hand Towel Holder"
+          },
+          "product_dimensions": null,
+          "price_store": 149,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RING"
+              },
+              {
+                "code": "range",
+                "value": "Linfa"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Fucile",
+                    "value": "1214"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "NE035.A.50"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Fucile"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22755,
+          "sku": "NE035A46",
+          "vendorcode": "NE035.A.46",
+          "name": "Linfa Towel Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 197,
+              "name": "Towel Rings ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rings"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE035A46_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE035A46_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE035A46_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE035A46_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE035A46_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE035A46_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<ul>\r\n<li>Fixed towel rail arm</li>\r\n<li>Wall mounted</li>\r\n<li>Dual fixing points </li>\r\n</ul>"
+          },
+          "short_description": {
+            "html": "Linfa Hand Towel Holder"
+          },
+          "product_dimensions": null,
+          "price_store": 149,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RING"
+              },
+              {
+                "code": "range",
+                "value": "Linfa"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "NE035.A.46"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Brass"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22754,
+          "sku": "NE03550",
+          "vendorcode": "NE035.50",
+          "name": "Linfa Towel Ring",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 197,
+              "name": "Towel Rings ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rings"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03550_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03550_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE03550_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE03550_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03550_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03550_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<ul><li> Fixed towel rail arm</li><li>Wall mounted</li><li>Dual fixing points</li></ul>"
+          },
+          "short_description": {
+            "html": "Linfa Towel Ring"
+          },
+          "product_dimensions": null,
+          "price_store": 149,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RING"
+              },
+              {
+                "code": "range",
+                "value": "Linfa"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Gun Metal",
+                    "value": "947"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "NE035.50"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Fucile"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22753,
+          "sku": "NE03546",
+          "vendorcode": "NE035.46",
+          "name": "Linfa Towel Ring",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 197,
+              "name": "Towel Rings ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rings"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03546_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03546_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE03546_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE03546_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03546_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03546_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<ul><li> Fixed towel rail arm</li><li>Wall mounted</li><li>Dual fixing points</li></ul>"
+          },
+          "short_description": {
+            "html": "Linfa Towel Ring"
+          },
+          "product_dimensions": null,
+          "price_store": 149,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RING"
+              },
+              {
+                "code": "range",
+                "value": "Linfa"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "NE035.46"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Brass"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22752,
+          "sku": "NE03541",
+          "vendorcode": "NE035.41",
+          "name": "Linfa Towel Ring",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 197,
+              "name": "Towel Rings ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rings"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03541_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03541_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE03541_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE03541_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03541_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03541_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<ul><li> Fixed towel rail arm</li><li>Wall mounted</li><li>Dual fixing points</li></ul>"
+          },
+          "short_description": {
+            "html": "Linfa Towel Ring"
+          },
+          "product_dimensions": null,
+          "price_store": 135,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RING"
+              },
+              {
+                "code": "range",
+                "value": "Linfa"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "NE035.41"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22751,
+          "sku": "NE03502",
+          "vendorcode": "NE035.02",
+          "name": "Linfa Towel Ring",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 197,
+              "name": "Towel Rings ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rings"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03502_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03502_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE03502_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE03502_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03502_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03502_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<ul><li> Fixed towel rail arm</li><li>Wall mounted</li><li>Dual fixing points</li></ul>"
+          },
+          "short_description": {
+            "html": "Linfa Towel Ring"
+          },
+          "product_dimensions": null,
+          "price_store": 125,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RING"
+              },
+              {
+                "code": "range",
+                "value": "Linfa"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Matte Black",
+                    "value": "940"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "NE035.02"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Black"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22729,
+          "sku": "NE01550",
+          "vendorcode": "NE015.50",
+          "name": "Ellisse Towel Ring",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 197,
+              "name": "Towel Rings ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rings"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE01550_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE01550_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE01550_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE01550_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE01550_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE01550_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<ul><li>Wall mounted</li><li>Dual fixing points</li><li>Right hand only</li></ul>"
+          },
+          "short_description": {
+            "html": "Ellisse Towel Ring"
+          },
+          "product_dimensions": null,
+          "price_store": 129,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RING"
+              },
+              {
+                "code": "range",
+                "value": "Ellisse"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Gun Metal",
+                    "value": "947"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "NE015.50"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Fucile"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22728,
+          "sku": "NE01548",
+          "vendorcode": "NE015.48",
+          "name": "Ellisse Towel Ring",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 197,
+              "name": "Towel Rings ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rings"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE01548_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE01548_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE01548_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE01548_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE01548_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE01548_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<ul><li>Wall mounted</li><li>Dual fixing points</li><li>Right hand only</li></ul>"
+          },
+          "short_description": {
+            "html": "Ellisse Towel Ring"
+          },
+          "product_dimensions": null,
+          "price_store": 135,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RING"
+              },
+              {
+                "code": "range",
+                "value": "Ellisse"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Bronze",
+                    "value": "935"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "NE015.48"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Bronze"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22727,
+          "sku": "NE01546",
+          "vendorcode": "NE015.46",
+          "name": "Ellisse Towel Ring",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 197,
+              "name": "Towel Rings ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rings"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE01546_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE01546_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE01546_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE01546_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE01546_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE01546_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<ul><li>Wall mounted</li><li>Dual fixing points</li><li>Right hand only</li></ul>"
+          },
+          "short_description": {
+            "html": "Ellisse Towel Ring"
+          },
+          "product_dimensions": null,
+          "price_store": 129,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RING"
+              },
+              {
+                "code": "range",
+                "value": "Ellisse"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "NE015.46"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Brass"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22726,
+          "sku": "NE01541",
+          "vendorcode": "NE015.41",
+          "name": "Ellisse Towel Ring",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 197,
+              "name": "Towel Rings ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rings"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE01541_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE01541_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE01541_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE01541_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE01541_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE01541_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<ul><li>Wall mounted</li><li>Dual fixing points</li><li>Right hand only</li></ul>"
+          },
+          "short_description": {
+            "html": "Ellisse Towel Ring"
+          },
+          "product_dimensions": null,
+          "price_store": 119,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RING"
+              },
+              {
+                "code": "range",
+                "value": "Ellisse"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "NE015.41"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22725,
+          "sku": "NE01502",
+          "vendorcode": "NE015.02",
+          "name": "Ellisse Towel Ring",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 197,
+              "name": "Towel Rings ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rings"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE01502_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE01502_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE01502_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE01502_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE01502_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE01502_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<ul><li>Wall mounted</li><li>Dual fixing points</li><li>Right hand only</li></ul>"
+          },
+          "short_description": {
+            "html": "Ellisse Towel Ring"
+          },
+          "product_dimensions": null,
+          "price_store": 110,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RING"
+              },
+              {
+                "code": "range",
+                "value": "Ellisse"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Matte Black",
+                    "value": "940"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "NE015.02"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Black"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22724,
+          "sku": "NE015",
+          "vendorcode": "NE015",
+          "name": "Ellisse Towel Ring",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 197,
+              "name": "Towel Rings ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rings"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE015_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE015_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE015_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE015_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE015_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE015_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<ul><li>Wall mounted</li><li>Dual fixing points</li><li>Right hand only</li></ul>"
+          },
+          "short_description": {
+            "html": "Ellisse Towel Ring"
+          },
+          "product_dimensions": null,
+          "price_store": 94,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RING"
+              },
+              {
+                "code": "range",
+                "value": "Ellisse"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "NE015"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 19937,
+          "sku": "ERTH50",
+          "vendorcode": "ER.TH.50",
+          "name": "Ellisse Towel Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 197,
+              "name": "Towel Rings ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rings"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/erth50_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/erth50_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/e/r/erth50_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/e/r/erth50_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/erth50_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/erth50_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Single fixing point<br>• Brass construction<br>• Round design</p>"
+          },
+          "short_description": {
+            "html": "<p>Ellisse Towel Hook</p>"
+          },
+          "product_dimensions": "W95 x D78 x H95mm",
+          "price_store": 265,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W95 x D78 x H95mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RING"
+              },
+              {
+                "code": "range",
+                "value": "Ellisse"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Gun Metal",
+                    "value": "947"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "ER.TH.50"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Fucile"
+              }
+            ]
+          }
+        },
+        {
+          "id": 19935,
+          "sku": "ERTH46",
+          "vendorcode": "ER.TH.46",
+          "name": "Ellisse Towel Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 197,
+              "name": "Towel Rings ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rings"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/erth46_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/erth46_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/e/r/erth46_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/e/r/erth46_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/erth46_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/erth46_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Single fixing point<br>• Brass construction<br>• Round design</p>"
+          },
+          "short_description": {
+            "html": "<p>Ellisse Towel Hook</p>"
+          },
+          "product_dimensions": "W95 x D78 x H95mm",
+          "price_store": 265,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W95 x D78 x H95mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RING"
+              },
+              {
+                "code": "range",
+                "value": "Ellisse"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "ER.TH.46"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Brass"
+              }
+            ]
+          }
+        },
+        {
+          "id": 19934,
+          "sku": "ERTH41",
+          "vendorcode": "ER.TH.41",
+          "name": "Ellisse Towel Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 197,
+              "name": "Towel Rings ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rings"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/erth41_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/erth41_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/e/r/erth41_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/e/r/erth41_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/erth41_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/erth41_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Single fixing point<br>• Brass construction<br>• Round design</p>"
+          },
+          "short_description": {
+            "html": "<p>Ellisse Towel Hook</p>"
+          },
+          "product_dimensions": "W95 x D78 x H95mm",
+          "price_store": 249,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W95 x D78 x H95mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RING"
+              },
+              {
+                "code": "range",
+                "value": "Ellisse"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "ER.TH.41"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 19933,
+          "sku": "ERTH02",
+          "vendorcode": "ER.TH.02",
+          "name": "Ellisse Towel Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 197,
+              "name": "Towel Rings ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rings"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/erth02_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/erth02_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/e/r/erth02_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/e/r/erth02_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/erth02_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/erth02_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Single fixing point<br>• Brass construction<br>• Round design</p>"
+          },
+          "short_description": {
+            "html": "<p>Ellisse Towel Hook</p>"
+          },
+          "product_dimensions": "W95 x D78 x H95mm",
+          "price_store": 229,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W95 x D78 x H95mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RING"
+              },
+              {
+                "code": "range",
+                "value": "Ellisse"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Matte Black",
+                    "value": "940"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "ER.TH.02"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Black"
+              }
+            ]
+          }
+        },
+        {
+          "id": 19932,
+          "sku": "ERTH",
+          "vendorcode": "ER.TH",
+          "name": "Ellisse Towel Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 197,
+              "name": "Towel Rings ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rings"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/erth_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/erth_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/e/r/erth_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/e/r/erth_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/erth_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/erth_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Single fixing point<br>• Brass construction<br>• Round design</p>"
+          },
+          "short_description": {
+            "html": "<p>Ellisse Towel Hook</p>"
+          },
+          "product_dimensions": "W95 x D78 x H95mm",
+          "price_store": 190,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W95 x D78 x H95mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RING"
+              },
+              {
+                "code": "range",
+                "value": "Ellisse"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "ER.TH"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14996,
+          "sku": "NE02502",
+          "vendorcode": "NE025.02",
+          "name": "L’Hotel Hand Towel Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 197,
+              "name": "Towel Rings ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rings"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/n/e/ne02502_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/n/e/ne02502_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/n/e/ne02502_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/n/e/ne02502_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/n/e/ne02502_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/n/e/ne02502_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Dual fixing points<br />&bull; Chrome plated brass construction<br />&bull; Contemporary curves and clean lines<br />&bull; A durable and a practical solution for any bathroom</p>"
+          },
+          "short_description": {
+            "html": "<p>L’Hotel Hand Towel Holder</p>"
+          },
+          "product_dimensions": "W200 x D35 x H100mm",
+          "price_store": 135,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W200 x D35 x H100mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RING"
+              },
+              {
+                "code": "range",
+                "value": "L'Hotel"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Matte Black",
+                    "value": "940"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "NE025.02"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Black"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14859,
+          "sku": "NE02550",
+          "vendorcode": "NE025.50",
+          "name": "L’Hotel Hand Towel Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 197,
+              "name": "Towel Rings ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rings"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/n/e/ne02550_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/n/e/ne02550_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/n/e/ne02550_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/n/e/ne02550_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/n/e/ne02550_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/n/e/ne02550_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Dual fixing points<br />&bull; Chrome plated brass construction<br />&bull; Contemporary curves and clean lines<br />&bull; A durable and a practical solution for any bathroom</p>"
+          },
+          "short_description": {
+            "html": "<p>L’Hotel Hand Towel Holder</p>"
+          },
+          "product_dimensions": "W200 x D35 x H100mm",
+          "price_store": 165,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W200 x D35 x H100mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RING"
+              },
+              {
+                "code": "range",
+                "value": "L'Hotel"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Gun Metal",
+                    "value": "947"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "NE025.50"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Fucile"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14858,
+          "sku": "NE02541",
+          "vendorcode": "NE025.41",
+          "name": "L’Hotel Hand Towel Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 197,
+              "name": "Towel Rings ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rings"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/n/e/ne02541_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/n/e/ne02541_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/n/e/ne02541_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/n/e/ne02541_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/n/e/ne02541_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/n/e/ne02541_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Dual fixing points<br />&bull; Chrome plated brass construction<br />&bull; Contemporary curves and clean lines<br />&bull; A durable and a practical solution for any bathroom</p>"
+          },
+          "short_description": {
+            "html": "<p>L’Hotel Hand Towel Holder</p>"
+          },
+          "product_dimensions": "W200 x D35 x H100mm",
+          "price_store": 149,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W200 x D35 x H100mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RING"
+              },
+              {
+                "code": "range",
+                "value": "L'Hotel"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "NE025.41"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 14829,
+          "sku": "NE02546",
+          "vendorcode": "NE025.46",
+          "name": "L’Hotel Hand Towel Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 197,
+              "name": "Towel Rings ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rings"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/n/e/ne02546_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/n/e/ne02546_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/n/e/ne02546_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/n/e/ne02546_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/n/e/ne02546_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/n/e/ne02546_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Dual fixing points<br />&bull; Chrome plated brass construction<br />&bull; Contemporary curves and clean lines<br />&bull; A durable and a practical solution for any bathroom</p>"
+          },
+          "short_description": {
+            "html": "<p>L’Hotel Hand Towel Holder</p>"
+          },
+          "product_dimensions": "W200 x D35 x H100mm",
+          "price_store": 165,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W200 x D35 x H100mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RING"
+              },
+              {
+                "code": "range",
+                "value": "L'Hotel"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "NE025.46"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Brass"
+              }
+            ]
+          }
+        },
+        {
+          "id": 12619,
+          "sku": "NE035",
+          "vendorcode": "NE035",
+          "name": "Linfa Hand Towel Holder ",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 197,
+              "name": "Towel Rings ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rings"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/n/e/ne035_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/n/e/ne035_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/n/e/ne035_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/n/e/ne035_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/n/e/ne035_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/n/e/ne035_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull;&nbsp;Chrome plated brass construction<br />&bull; Dual fixing points</p>"
+          },
+          "short_description": {
+            "html": "<p>Linfa Hand Towel Holder</p>"
+          },
+          "product_dimensions": "W224 x D34 x H100mm",
+          "price_store": 104,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W224 x D34 x H100mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RING"
+              },
+              {
+                "code": "range",
+                "value": "Linfa"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "NE035"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 7029,
+          "sku": "NE025",
+          "vendorcode": "NE025",
+          "name": "L’Hotel Hand Towel Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 197,
+              "name": "Towel Rings ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rings"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/n/e/ne025_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/n/e/ne025_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/n/e/ne025_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/n/e/ne025_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/n/e/ne025_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/n/e/ne025_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Dual fixing points<br />&bull; Chrome plated brass construction<br />&bull; Contemporary curves and clean lines<br />&bull; A durable and a practical solution for any bathroom</p>"
+          },
+          "short_description": {
+            "html": "<p>L’Hotel Hand Towel Holder</p>"
+          },
+          "product_dimensions": "W200 x D35 x H100mm",
+          "price_store": 115,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W200 x D35 x H100mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RING"
+              },
+              {
+                "code": "range",
+                "value": "L'Hotel"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "NE025"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 2523,
+          "sku": "QQTR22",
+          "vendorcode": "QQ.TR22",
+          "name": "Quadro Towel Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 197,
+              "name": "Towel Rings ",
+              "url_path": "products/bathroom/bathroom-accessories/towel-rings"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/q/q/qqtr22_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/q/q/qqtr22_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/q/q/qqtr22_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/q/q/qqtr22_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/q/q/qqtr22_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/q/q/qqtr22_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Dual fixing points<br />&bull; Chrome plated brass construction</p>"
+          },
+          "short_description": {
+            "html": "<p>Quadro Towel Holder</p>"
+          },
+          "product_dimensions": "W220 x D75 x H30mm",
+          "price_store": 135,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W220 x D75 x H30mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RING"
+              },
+              {
+                "code": "range",
+                "value": "Quadro"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "QQ.TR22"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

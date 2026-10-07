@@ -1,0 +1,60 @@
+{
+  "schema": "gr8-master-product-catalogue/v1",
+  "products": [
+    {
+      "productCode": "TEST-DOOR-001",
+      "familyKey": "internal-doors",
+      "requirementKeys": ["internal-doors"],
+      "categoryKey": "Fix Out",
+      "topLevelArea": "interior",
+      "manufacturer": "TEST Door Maker",
+      "brand": "TEST Brand",
+      "supplier": "TEST Supplier",
+      "range": "TEST Door Range",
+      "productName": "TEST Internal Door Product",
+      "model": "TD-820",
+      "sku": "TD-820-SKU",
+      "description": "TEST fixture only - not a real commercial product",
+      "attributes": {
+        "design": "Flush",
+        "configuration": "Hinged",
+        "size": "820mm",
+        "finish": "Primed",
+        "material": "MDF"
+      },
+      "media": {
+        "primaryImageUrl": "https://example.com/test-door.jpg",
+        "thumbnailUrl": "https://example.com/test-door-thumb.jpg",
+        "galleryImageUrls": ["https://example.com/test-door-1.jpg"],
+        "imageSourceUrl": "https://example.com/test-door-source",
+        "imageSourceType": "manufacturer_website",
+        "imageVerifiedAt": "2026-08-13T00:00:00.000Z",
+        "imageStatus": "verified_exact"
+      },
+      "links": {
+        "officialProductUrl": "https://example.com/test-door",
+        "specificationUrl": "https://example.com/test-door-spec.pdf",
+        "supplierUrl": "https://example.com/test-supplier"
+      },
+      "pricing": {
+        "currency": "AUD",
+        "gstIncluded": true,
+        "priceStatus": "quote_required"
+      },
+      "availability": {
+        "country": "AU",
+        "regions": ["QLD"],
+        "active": true,
+        "discontinued": false
+      },
+      "source": {
+        "sourceType": "manufacturer_website",
+        "sourceName": "TEST Door Maker",
+        "sourceUrl": "https://example.com/test-door",
+        "sourceRetrievedAt": "2026-08-13T00:00:00.000Z",
+        "sourceVerifiedAt": "2026-08-13T00:00:00.000Z",
+        "sourceNotes": "TEST fixture row"
+      }
+    }
+  ]
+}

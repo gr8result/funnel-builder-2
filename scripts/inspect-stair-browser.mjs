@@ -1,0 +1,3 @@
+import fs from 'node:fs';import puppeteer from 'puppeteer';
+const browser=await puppeteer.connect({browserWSEndpoint:fs.readFileSync('test-artifacts/stair-workflow-live/browser-endpoint.txt','utf8').trim()});
+if(process.argv.includes('--close'))await browser.close();else{const page=(await browser.pages()).find(p=>p.url().includes('localhost'));console.log(await page.evaluate(()=>({url:location.href,step:document.querySelector('[data-testid="stair-selection-wizard"]')?.dataset.stairStep,text:document.body.innerText.slice(-3800),drafts:Object.keys(localStorage).filter(k=>k.startsWith('product-library:stairs:')).map(k=>({key:k,value:JSON.parse(localStorage.getItem(k))}))})));await browser.disconnect();}

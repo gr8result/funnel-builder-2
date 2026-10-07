@@ -1,5 +1,6 @@
 import { withWorkspace } from "../../../../lib/withWorkspace";
 import { supabaseAdmin } from "../../../../lib/supabaseAdmin";
+import { CURRENT_BUILDER_WORKSPACE_ID } from '../../../../lib/builders/currentBuilderSeed';
 import {
   cloneMasterTemplateForTenant,
   loadStandardInclusionsDocumentForTenant,
@@ -27,6 +28,10 @@ async function handler(req, res) {
     const existing = await loadStandardInclusionsDocumentForTenant(tenantId);
     if (existing) {
       return res.status(200).json({ ok: true, document: existing, created: false });
+    }
+
+    if (tenantId !== CURRENT_BUILDER_WORKSPACE_ID) {
+      return res.status(404).json({ ok: false, code: 'BUILDER_INCLUSIONS_NOT_CONFIGURED', error: 'Upload an inclusions document for this builder.' });
     }
 
     if (!(await masterTemplateExists())) {

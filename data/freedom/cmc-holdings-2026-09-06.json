@@ -1,0 +1,13 @@
+{
+  "id": "cmc-user-supplied-holdings-2026-09-06",
+  "source": "User-supplied CMC Invest holdings screenshot; received 2026-09-06; quote and FX timestamps not supplied",
+  "holdings": [
+    { "recordId": "lt_CBA_159.174_45", "symbol": "CBA", "quantity": 45, "nativeCurrency": "AUD", "nativeCurrentPrice": 160.420, "averageBuyPriceAud": 159.174, "costAud": 7162.85, "marketValueAud": 7218.90, "profitLossAud": 56.05, "profitLossPercent": 0.78, "dailyProfitLossAud": -7.20 },
+    { "recordId": "legacy_market_watch_watch_1787308148465_n9xq4o4c", "symbol": "CLSK", "quantity": 320, "nativeCurrency": "USD", "nativeCurrentPrice": 12.690, "averageBuyPriceAud": 15.326, "costAud": 4904.38, "marketValueAud": 5600.99, "profitLossAud": 696.61, "profitLossPercent": 14.20, "dailyProfitLossAud": 48.55, "termClassification": "short-term" },
+    { "recordId": "st_ivv_pb_mtjr2gyn", "symbol": "IVV", "quantity": 86, "nativeCurrency": "AUD", "nativeCurrentPrice": 71.610, "averageBuyPriceAud": 71.738, "costAud": 6169.46, "marketValueAud": 6158.46, "profitLossAud": -11.00, "profitLossPercent": -0.18, "dailyProfitLossAud": 26.66, "termClassification": "long-term" },
+    { "recordId": "lt_JBLU_7.016_240", "symbol": "JBLU", "quantity": 240, "nativeCurrency": "USD", "nativeCurrentPrice": 4.630, "averageBuyPriceAud": 7.016, "costAud": 1683.94, "marketValueAud": 1532.66, "profitLossAud": -151.28, "profitLossPercent": -8.98, "dailyProfitLossAud": 6.62 },
+    { "recordId": "lt_NWH_real_1436", "symbol": "NWH", "quantity": 1436, "nativeCurrency": "AUD", "nativeCurrentPrice": 7.640, "averageBuyPriceAud": 7.728, "costAud": 11097.01, "marketValueAud": 10971.04, "profitLossAud": -125.97, "profitLossPercent": -1.14, "dailyProfitLossAud": -14.36, "companyName": "NRW Holdings" }
+  ],
+  "archiveIds": ["lt_WULF_21.619_88"],
+  "totals": { "costAud": 31017.64, "marketValueAud": 31482.05, "profitLossAud": 464.41, "profitLossPercent": 1.50, "dailyProfitLossAud": 60.27 }
+}

@@ -1,0 +1,2902 @@
+{
+  "data": {
+    "products": {
+      "total_count": 41,
+      "page_info": {
+        "total_pages": 2
+      },
+      "items": [
+        {
+          "id": 22760,
+          "sku": "NE03650",
+          "vendorcode": "NE036.50",
+          "name": "Linfa Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03650_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03650_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE03650_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE03650_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03650_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03650_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<ul><li>Wall mounted</li><li>Dual fixing points </li><li>Holds 1 roll</li></ul>"
+          },
+          "short_description": {
+            "html": "Linfa Toilet Roll Holder"
+          },
+          "product_dimensions": null,
+          "price_store": 110,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Linfa"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Gun Metal",
+                    "value": "947"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "NE036.50"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Fucile"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22759,
+          "sku": "NE03646",
+          "vendorcode": "NE036.46",
+          "name": "Linfa Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03646_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03646_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE03646_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE03646_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03646_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03646_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<ul><li>Wall mounted</li><li>Dual fixing points </li><li>Holds 1 roll</li></ul>"
+          },
+          "short_description": {
+            "html": "Linfa Toilet Roll Holder"
+          },
+          "product_dimensions": null,
+          "price_store": 110,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Linfa"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "NE036.46"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Brass"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22758,
+          "sku": "NE03641",
+          "vendorcode": "NE036.41",
+          "name": "Linfa Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03641_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03641_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE03641_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE03641_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03641_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03641_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<ul><li>Wall mounted</li><li>Dual fixing points </li><li>Holds 1 roll</li></ul>"
+          },
+          "short_description": {
+            "html": "Linfa Toilet Roll Holder"
+          },
+          "product_dimensions": null,
+          "price_store": 100,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Linfa"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "NE036.41"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22757,
+          "sku": "NE03602",
+          "vendorcode": "NE036.02",
+          "name": "Linfa Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03602_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03602_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE03602_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE03602_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03602_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE03602_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<ul><li>Wall mounted</li><li>Dual fixing points </li><li>Holds 1 roll</li></ul>"
+          },
+          "short_description": {
+            "html": "Linfa Toilet Roll Holder"
+          },
+          "product_dimensions": null,
+          "price_store": 94,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Linfa"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Matte Black",
+                    "value": "940"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "NE036.02"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Black"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22746,
+          "sku": "NE026D50",
+          "vendorcode": "NE026D.50",
+          "name": "L'Hotel Double Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE026D50_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE026D50_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE026D50_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE026D50_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE026D50_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE026D50_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<ul><li>Holds 2 standard size rolls</li><li>Wall mounted</li><li>Dual fixing points</li></ul>"
+          },
+          "short_description": {
+            "html": "L'Hotel Double Toilet Roll Holder"
+          },
+          "product_dimensions": null,
+          "price_store": 165,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "L'Hotel"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Gun Metal",
+                    "value": "947"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "NE026D.50"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Fucile"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22745,
+          "sku": "NE026D46",
+          "vendorcode": "NE026D.46",
+          "name": "L'Hotel Double Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE026D46_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE026D46_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE026D46_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE026D46_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE026D46_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE026D46_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<ul><li>Holds 2 standard size rolls</li><li>Wall mounted</li><li>Dual fixing points</li></ul>"
+          },
+          "short_description": {
+            "html": "L'Hotel Double Toilet Roll Holder"
+          },
+          "product_dimensions": null,
+          "price_store": 165,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "L'Hotel"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "NE026D.46"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Brass"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22744,
+          "sku": "NE026D41",
+          "vendorcode": "NE026D.41",
+          "name": "L'Hotel Double Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE026D41_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE026D41_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE026D41_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE026D41_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE026D41_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE026D41_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Holds 2 standard size rolls • Wall mounted • Dual fixing points</p>"
+          },
+          "short_description": {
+            "html": "L'Hotel Double Toilet Roll Holder"
+          },
+          "product_dimensions": null,
+          "price_store": 149,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "L'Hotel"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "NE026D.41"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22743,
+          "sku": "NE026D02",
+          "vendorcode": "NE026D.02",
+          "name": "L'Hotel Double Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE026D02_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE026D02_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE026D02_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE026D02_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE026D02_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE026D02_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<ul><li>Holds 2 standard size rolls</li><li>Wall mounted</li><li>Dual fixing points</li></ul>"
+          },
+          "short_description": {
+            "html": "L'Hotel Double Toilet Roll Holder"
+          },
+          "product_dimensions": null,
+          "price_store": 135,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "L'Hotel"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Matte Black",
+                    "value": "940"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "NE026D.02"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Black"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22742,
+          "sku": "NE026D",
+          "vendorcode": "NE026D",
+          "name": "L'Hotel Double Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE026D_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE026D_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE026D_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE026D_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE026D_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE026D_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<ul><li>Holds 2 standard size rolls</li><li>Wall mounted</li><li>Dual fixing points</li></ul>"
+          },
+          "short_description": {
+            "html": "<p>L'Hotel Double Toilet Roll Holder</p>"
+          },
+          "product_dimensions": null,
+          "price_store": 115,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "L'Hotel"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "NE026D"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22735,
+          "sku": "NE01650",
+          "vendorcode": "NE016.50",
+          "name": "Ellisse Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE01650_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE01650_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE01650_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE01650_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE01650_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE01650_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<ul><li> Right hand only</li><li>Not suitable for double length paper rolls</li></ul>"
+          },
+          "short_description": {
+            "html": "Ellisse Toilet Roll Holder"
+          },
+          "product_dimensions": null,
+          "price_store": 110,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Ellisse"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Gun Metal",
+                    "value": "947"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "NE016.50"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Fucile"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22734,
+          "sku": "NE01648",
+          "vendorcode": "NE016.48",
+          "name": "Ellisse Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE01648_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE01648_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE01648_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE01648_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE01648_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE01648_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<ul><li> Right hand only</li><li>Not suitable for double length paper rolls</li></ul>"
+          },
+          "short_description": {
+            "html": "Ellisse Toilet Roll Holder"
+          },
+          "product_dimensions": null,
+          "price_store": 115,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Ellisse"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Bronze",
+                    "value": "935"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "NE016.48"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Bronze"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22733,
+          "sku": "NE01646",
+          "vendorcode": "NE016.46",
+          "name": "Ellisse Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE01646_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE01646_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE01646_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE01646_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE01646_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE01646_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<ul><li> Right hand only</li><li>Not suitable for double length paper rolls</li></ul>"
+          },
+          "short_description": {
+            "html": "Ellisse Toilet Roll Holder"
+          },
+          "product_dimensions": null,
+          "price_store": 110,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Ellisse"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "NE016.46"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Brass"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22732,
+          "sku": "NE01641",
+          "vendorcode": "NE016.41",
+          "name": "Ellisse Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE01641_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE01641_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE01641_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE01641_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE01641_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE01641_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<ul><li> Right hand only</li><li>Not suitable for double length paper rolls</li></ul>"
+          },
+          "short_description": {
+            "html": "Ellisse Toilet Roll Holder"
+          },
+          "product_dimensions": null,
+          "price_store": 100,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Ellisse"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "NE016.41"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22731,
+          "sku": "NE01602",
+          "vendorcode": "NE016.02",
+          "name": "Ellisse Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE01602_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE01602_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE01602_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE01602_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE01602_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE01602_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<ul><li> Right hand only</li><li>Not suitable for double length paper rolls</li></ul>"
+          },
+          "short_description": {
+            "html": "Ellisse Toilet Roll Holder"
+          },
+          "product_dimensions": null,
+          "price_store": 94,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Ellisse"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Matte Black",
+                    "value": "940"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "NE016.02"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Black"
+              }
+            ]
+          }
+        },
+        {
+          "id": 22730,
+          "sku": "NE016",
+          "vendorcode": "NE016",
+          "name": "Ellisse Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE016_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE016_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE016_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/N/E/NE016_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE016_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/N/E/NE016_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<ul>\r\n<li>Right hand only</li>\r\n<li>Not suitable for double length paper rolls</li>\r\n</ul>"
+          },
+          "short_description": {
+            "html": "Ellisse Toilet Roll Holder"
+          },
+          "product_dimensions": null,
+          "price_store": 80,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Ellisse"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "NE016"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 19936,
+          "sku": "ERTH48",
+          "vendorcode": "ER.TH.48",
+          "name": "Ellisse Towel Hook",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/erth48_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/erth48_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/e/r/erth48_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/e/r/erth48_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/erth48_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/erth48_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Single fixing point<br>• Brass construction<br>• Round design<br>• Matte finish</p>"
+          },
+          "short_description": {
+            "html": "<p>Ellisse Towel Hook</p>"
+          },
+          "product_dimensions": "W95 x D78 x H95mm",
+          "price_store": 284,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W95 x D78 x H95mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOWEL RING"
+              },
+              {
+                "code": "range",
+                "value": "Ellisse"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Bronze",
+                    "value": "935"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "ER.TH.48"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Bronze"
+              }
+            ]
+          }
+        },
+        {
+          "id": 19931,
+          "sku": "ERRH50",
+          "vendorcode": "ER.RH.50",
+          "name": "Ellisse Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/errh50_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/errh50_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/e/r/errh50_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/e/r/errh50_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/errh50_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/errh50_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Round design <br>• Holds 1 roll<br>• Single fixing point</p>"
+          },
+          "short_description": {
+            "html": "<p>Ellisse Toilet Roll Holder</p>"
+          },
+          "product_dimensions": "W95 x D110 x H95mm",
+          "price_store": 335,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W95 x D110 x H95mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Ellisse"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Gun Metal",
+                    "value": "947"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "ER.RH.50"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Fucile"
+              }
+            ]
+          }
+        },
+        {
+          "id": 19930,
+          "sku": "ERRH48",
+          "vendorcode": "ER.RH.48",
+          "name": "Ellisse Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/errh48_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/errh48_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/e/r/errh48_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/e/r/errh48_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/errh48_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/errh48_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Round design <br>• Holds 1 roll<br>• Single fixing point<br>• Matte finish</p>"
+          },
+          "short_description": {
+            "html": "<p>Ellisse Toilet Roll Holder</p>"
+          },
+          "product_dimensions": "W95 x D110 x H95mm",
+          "price_store": 359,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W95 x D110 x H95mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Ellisse"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Bronze",
+                    "value": "935"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "ER.RH.48"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Bronze"
+              }
+            ]
+          }
+        },
+        {
+          "id": 19929,
+          "sku": "ERRH46",
+          "vendorcode": "ER.RH.46",
+          "name": "Ellisse Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/errh46_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/errh46_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/e/r/errh46_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/e/r/errh46_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/errh46_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/errh46_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Round design <br>• Holds 1 roll<br>• Single fixing point</p>"
+          },
+          "short_description": {
+            "html": "<p>Ellisse Toilet Roll Holder</p>"
+          },
+          "product_dimensions": "W95 x D110 x H95mm",
+          "price_store": 335,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W95 x D110 x H95mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Ellisse"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "ER.RH.46"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Brass"
+              }
+            ]
+          }
+        },
+        {
+          "id": 19928,
+          "sku": "ERRH41",
+          "vendorcode": "ER.RH.41",
+          "name": "Ellisse Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/errh41_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/errh41_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/e/r/errh41_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/e/r/errh41_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/errh41_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/errh41_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Round design <br>• Holds 1 roll<br>• Single fixing point</p>"
+          },
+          "short_description": {
+            "html": "<p>Ellisse Toilet Roll Holder</p>"
+          },
+          "product_dimensions": "W95 x D110 x H95mm",
+          "price_store": 310,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W95 x D110 x H95mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Ellisse"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "ER.RH.41"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 19927,
+          "sku": "ERRH02",
+          "vendorcode": "ER.RH.02",
+          "name": "Ellisse Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/errh02_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/errh02_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/e/r/errh02_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/e/r/errh02_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/errh02_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/errh02_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Round design <br>• Holds 1 roll<br>• Single fixing point</p>"
+          },
+          "short_description": {
+            "html": "<p>Ellisse Toilet Roll Holder</p>"
+          },
+          "product_dimensions": "W95 x D110 x H95mm",
+          "price_store": 290,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W95 x D110 x H95mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Ellisse"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Matte Black",
+                    "value": "940"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "ER.RH.02"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Black"
+              }
+            ]
+          }
+        },
+        {
+          "id": 19926,
+          "sku": "ERRH",
+          "vendorcode": "ER.RH",
+          "name": "Ellisse Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/errh_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/errh_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/e/r/errh_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/e/r/errh_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/errh_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/r/errh_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Round design <br>• Holds 1 roll<br>• Single fixing point</p>"
+          },
+          "short_description": {
+            "html": "<p>Ellisse Toilet Roll Holder</p>"
+          },
+          "product_dimensions": "W95 x D110 x H95mm",
+          "price_store": 239,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W95 x D110 x H95mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Ellisse"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "ER.RH"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 17804,
+          "sku": "TORH48",
+          "vendorcode": "TO.RH.48",
+          "name": "Tondo Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/torh48_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/torh48_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/t/o/torh48_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/t/o/torh48_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/torh48_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/torh48_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Brass Composition<br>• Organic shape</p>"
+          },
+          "short_description": {
+            "html": "<p>Tondo Toilet Roll Holder</p>"
+          },
+          "product_dimensions": "W152 x D90 H19mm",
+          "price_store": 125,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W152 x D90 H19mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Tondo"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Bronze",
+                    "value": "935"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "TO.RH.48"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Bronze"
+              }
+            ]
+          }
+        },
+        {
+          "id": 17772,
+          "sku": "PPRH48",
+          "vendorcode": "PP.RH.48",
+          "name": "Envy Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/p/pprh48_parisi_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/p/pprh48_parisi_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/p/p/pprh48_parisi_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/p/p/pprh48_parisi_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/p/pprh48_parisi_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/p/p/pprh48_parisi_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Dual fixing<br>• Brass<br>• Available on left side as well</p>"
+          },
+          "short_description": {
+            "html": "<p>Envy Toilet Roll Holder</p>"
+          },
+          "product_dimensions": "W145 x D80 x H28mm",
+          "price_store": 115,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W145 x D80 x H28mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Envy"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Bronze",
+                    "value": "935"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "PP.RH.48"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Bronze"
+              }
+            ]
+          }
+        },
+        {
+          "id": 15020,
+          "sku": "TORH41",
+          "vendorcode": "TO.RH.41",
+          "name": "Tondo Toilet Roll Holder ",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/torh41_parisi_web_2.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/torh41_parisi_web_2.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/t/o/torh41_parisi_web_2.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/t/o/torh41_parisi_tech_2.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/torh41_parisi_web_2.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/t/o/torh41_parisi_tech_2.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Brass Composition <br />&bull; Organic shape</p>"
+          },
+          "short_description": {
+            "html": "<p>Tondo Toilet Roll Holder&nbsp;</p>"
+          },
+          "product_dimensions": "W152 x D90 H19mm",
+          "price_store": 110,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W152 x D90 H19mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Tondo"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Parisi",
+                    "value": "58"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "TO.RH.41"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

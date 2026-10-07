@@ -42,8 +42,8 @@ export const PROJECT_ESTIMATE_EXPORT_ORDER = [
   { type: "page", pageId: "about" },
   { type: "documentSlot", slotId: "inclusions", placeholderPageId: "standardInclusions" },
   { type: "documentSlot", slotId: "plans", placeholderPageId: "pricedPlans" },
-  { type: "page", pageId: "pricing" },
-  { type: "page", pageId: "termsNotes" },
+  { type: "page", pageId: "pricingSummary" },
+  { type: "page", pageId: "importantEstimateNotice" },
   { type: "page", pageId: "acceptance" },
 ] as const;
 

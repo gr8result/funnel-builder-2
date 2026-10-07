@@ -1,6 +1,7 @@
 // /pages/api/social/schedule-post.js
 import { requireUser } from '../../../lib/social/auth';
 import { withAuth } from "../../../lib/withWorkspace";
+import { requestWorkspaceId } from "../../../lib/demoWorkspace";
 
 async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -13,18 +14,20 @@ async function handler(req, res) {
   try {
     const { post_id, scheduled_for } = req.body || {};
     const user_id = auth.user.id;
+    const workspaceId = requestWorkspaceId(req) || req.workspaceId || null;
 
     if (!post_id || !scheduled_for) {
       return res.status(400).json({ ok: false, error: 'Missing required fields' });
     }
 
     // Verify the post belongs to this user
-    const { data: postCheck } = await auth.admin
+    let postQuery = auth.admin
       .from('social_posts')
-      .select('id')
+      .select('id, workspace_id')
       .eq('id', post_id)
-      .eq('user_id', user_id)
-      .maybeSingle();
+      .eq('user_id', user_id);
+    if (workspaceId) postQuery = postQuery.eq('workspace_id', workspaceId);
+    const { data: postCheck } = await postQuery.maybeSingle();
     if (!postCheck) return res.status(404).json({ ok: false, error: 'Post not found' });
 
     const supabase = auth.admin;
@@ -32,7 +35,7 @@ async function handler(req, res) {
     // Insert into schedule
     const { error: scheduleError } = await supabase
       .from('social_schedule')
-      .insert({ user_id, post_id, scheduled_for, status: 'scheduled' });
+      .insert({ user_id, workspace_id: workspaceId || postCheck.workspace_id || null, post_id, scheduled_for, status: 'scheduled' });
 
     if (scheduleError) {
       return res.status(500).json({ ok: false, error: scheduleError.message });
@@ -41,7 +44,7 @@ async function handler(req, res) {
     // Update post status to scheduled
     await supabase
       .from('social_posts')
-      .update({ status: 'scheduled', updated_at: new Date().toISOString() })
+      .update({ status: 'scheduled', workspace_id: workspaceId || postCheck.workspace_id || null, updated_at: new Date().toISOString() })
       .eq('id', post_id)
       .eq('user_id', user_id);
 

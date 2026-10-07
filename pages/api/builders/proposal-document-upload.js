@@ -75,7 +75,31 @@ function parseStoragePath(value = "") {
 }
 
 function isInclusionsSourceType(sourceType = "") {
-  return ["standard_inclusions", "modified_inclusions"].includes(String(sourceType || ""));
+  return ["standard_inclusions", "modified_inclusions", "project_specific_inclusions"].includes(String(sourceType || ""));
+}
+
+function documentTypeForSource(sourceType = "") {
+  return sourceType === "priced_plans" ? "general" : "other";
+}
+
+function titleForSource(sourceType = "") {
+  if (sourceType === "priced_plans") return "Priced Plans";
+  if (sourceType === "project_specific_inclusions") return "Project-Specific Inclusions";
+  if (sourceType === "project_estimate_pdf") return "Project Estimate Template";
+  return "Inclusions Schedule";
+}
+
+function descriptionForSource(sourceType = "") {
+  if (sourceType === "project_specific_inclusions") return "Project-specific inclusions PDF.";
+  if (sourceType === "project_estimate_pdf") return "Imported editable project estimate template PDF.";
+  return "Imported into quote proposal builder.";
+}
+
+function assignmentTypeForSource(sourceType = "") {
+  if (sourceType === "project_specific_inclusions") return "project_specific";
+  if (sourceType === "project_estimate_pdf") return "project_estimate_template";
+  if (sourceType === "priced_plans") return "priced_plans";
+  return "standard";
 }
 
 function isQuoteProposalInclusionsRow(row = {}) {
@@ -105,9 +129,9 @@ async function deactivatePreviousInclusions({ workspaceId, projectId, keepId }) 
   const previousIds = previousRows.map((row) => row.id).filter(Boolean);
   if (previousIds.length) {
     const { error } = await supabaseAdmin
-      .from("builder_project_documents")
-      .update({ status: "inactive", updated_at: new Date().toISOString() })
-      .in("id", previousIds);
+        .from("builder_project_documents")
+        .update({ status: "archived", updated_at: new Date().toISOString() })
+        .in("id", previousIds);
     if (error) throw error;
   }
 
@@ -250,9 +274,9 @@ export default async function handler(req, res) {
           workspace_id: workspaceId,
           project_id: projectId,
           snapshot_id: estimateId && /^[0-9a-f-]{36}$/i.test(estimateId) ? estimateId : null,
-          document_type: sourceType === "priced_plans" ? "general" : "other",
-          title: sourceType === "priced_plans" ? "Priced Plans" : "Inclusions Schedule",
-          description: "Imported into quote proposal builder.",
+          document_type: documentTypeForSource(sourceType),
+          title: titleForSource(sourceType),
+          description: descriptionForSource(sourceType),
           file_name: fileName,
           mime_type: "application/pdf",
           file_size_bytes: buffer.length,
@@ -263,8 +287,10 @@ export default async function handler(req, res) {
           metadata: {
             source: "quote_proposal_builder",
             sourceType,
+            assignmentType: assignmentTypeForSource(sourceType),
             projectId: projectId || null,
             estimateId: estimateId || null,
+            assignedAt: new Date().toISOString(),
             active: true,
             fileHash,
             version: fileVersion,

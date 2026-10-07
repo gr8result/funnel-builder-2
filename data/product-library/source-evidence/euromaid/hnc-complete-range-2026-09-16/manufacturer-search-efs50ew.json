@@ -1,0 +1,7 @@
+{
+  "url": "https://www.euromaid.com/en-au/live-search?keywords=EFS50EW",
+  "retrievedAt": "2026-09-16T06:18:08.846Z",
+  "status": 200,
+  "sha256": "295ebfd0d6ed90bb699f0839794cef64fdedf7a04f784c73b7d2e44b77b2f04e",
+  "text": "[{\"command\":\"liveSearchResults\",\"content\":\"\\u003Cdiv class=\\u0022gd-search-suggestions\\u0022\\u003E\\n  \\u003Cdiv class=\\u0022prod-results\\u0022\\u003E\\n          \\u003Cdiv class=\\u0022gd-search-results__title\\u0022\\u003EProducts\\u003C\\/div\\u003E\\n              \\u003Ca href=\\u0022\\/en-au\\/50cm-electric-freestanding-cooker\\u0022 title=\\u002250cm Electric Freestanding Cooker\\u0022\\u003E50cm Electric Freestanding Cooker\\u003C\\/a\\u003E\\n    \\n          \\u003Cdiv id=\\u0022gd-search-see-all\\u0022 class=\\u0022search-see-all\\u0022\\u003E\\n                \\u003Ca class=\\u0022gd-search__view-all-link\\u0022 href=\\u0022\\/en-au\\/search-results?keywords=EFS50EW\\u0022 title=\\u0022See All Results for \\u0027EFS50EW\\u0027\\u0022\\u003ESee All Results for \\u0027EFS50EW\\u0027\\u003C\\/a\\u003E\\n      \\u003C\\/div\\u003E\\n          \\u003C\\/div\\u003E\\n\\n  \\u003Cdiv class=\\u0022content-results\\u0022\\u003E\\n          \\u003C\\/div\\u003E\\n\\u003C\\/div\\u003E\\n\"},{\"command\":\"gtagEvent\",\"event_name\":\"search\",\"data\":{\"search_term\":\"efs50ew\"}}]"
+}

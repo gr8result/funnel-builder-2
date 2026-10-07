@@ -11,7 +11,9 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { supabase } from "../../../../utils/supabase-client";
 import styles from "../../../../styles/email-crm.module.css";
-import { exportFullHtml, extractEmailSettings } from "../../../../components/email/editor2/EmailEditor";
+import { exportFullHtml } from "../../../../components/email/editor2/htmlExport";
+import { extractEmailSettings } from "../../../../components/email/editor2/blockModel";
+import { useWorkspace } from "../../../../hooks/useWorkspace";
 
 const EMAIL_TYPES = ["broadcast", "autoresponders", "templates"];
 const lsKey = (type) => "gr8:new-email:" + (type || "broadcast");
@@ -83,6 +85,7 @@ const initialForm = {
 
 export default function CreateEmail() {
   const router = useRouter();
+  const { workspaceId } = useWorkspace();
   const { type: rawType, broadcastId: rawBroadcastId } = router.query;
 
   const broadcastId = useMemo(() => {
@@ -741,6 +744,8 @@ export default function CreateEmail() {
           form.audienceType === "list" ? "list" : recipients.length,
 
         sandbox: Boolean(sandbox),
+        workspace_id: workspaceId || "",
+        workspace_id: workspaceId || "",
 
         form: {
           ...form,
@@ -756,6 +761,7 @@ export default function CreateEmail() {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`, // ✅ FIX (Unauthorized)
+          ...(workspaceId ? { "x-workspace-id": workspaceId } : {}),
         },
         body: JSON.stringify(payload),
       });
@@ -858,6 +864,7 @@ export default function CreateEmail() {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`, // ✅ FIX (Unauthorized)
+          ...(workspaceId ? { "x-workspace-id": workspaceId } : {}),
         },
         body: JSON.stringify(payload),
       });

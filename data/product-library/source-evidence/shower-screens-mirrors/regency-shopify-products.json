@@ -1,0 +1,560 @@
+{
+ "source": "https://www.regencyscreens.com.au/products.json?limit=250",
+ "retrievedAt": "2026-10-01",
+ "totalProductsInFeed": 16,
+ "filter": "non spare-part products whose title/type/tags mention shower screen, mirror, aqua or grange",
+ "products": [
+  {
+   "id": 15259172569459,
+   "title": "Mirror Collection",
+   "handle": "mirror-collection",
+   "body_html": "",
+   "published_at": "2025-12-29T19:05:04+11:00",
+   "created_at": "2025-12-29T19:05:05+11:00",
+   "updated_at": "2026-10-01T10:44:24+10:00",
+   "vendor": "regencyscreens",
+   "product_type": "",
+   "tags": [
+    "Mirror Collection",
+    "non-ecom",
+    "Splashbacks"
+   ],
+   "variants": [
+    {
+     "id": 62404790419827,
+     "title": "Default Title",
+     "option1": "Default Title",
+     "option2": null,
+     "option3": null,
+     "sku": null,
+     "requires_shipping": true,
+     "taxable": true,
+     "featured_image": null,
+     "available": true,
+     "price": "0.00",
+     "grams": 0,
+     "compare_at_price": null,
+     "position": 1,
+     "product_id": 15259172569459,
+     "created_at": "2025-12-29T19:05:05+11:00",
+     "updated_at": "2026-10-01T10:44:24+10:00"
+    }
+   ],
+   "images": [
+    {
+     "id": 66030326251891,
+     "created_at": "2025-12-29T19:06:25+11:00",
+     "position": 1,
+     "updated_at": "2025-12-29T19:06:26+11:00",
+     "product_id": 15259172569459,
+     "variant_ids": [],
+     "src": "https://cdn.shopify.com/s/files/1/0958/7274/5843/files/10001_11b1e152-9a68-4696-9c1e-2bbd218525b4.jpg?v=1766995586",
+     "width": 1920,
+     "height": 1080
+    },
+    {
+     "id": 66030326284659,
+     "created_at": "2025-12-29T19:06:25+11:00",
+     "position": 2,
+     "updated_at": "2025-12-29T19:06:26+11:00",
+     "product_id": 15259172569459,
+     "variant_ids": [],
+     "src": "https://cdn.shopify.com/s/files/1/0958/7274/5843/files/10002_e5dd9b8e-a900-4091-817e-b2e050831b68.jpg?v=1766995586",
+     "width": 2148,
+     "height": 1100
+    }
+   ],
+   "options": [
+    {
+     "name": "Title",
+     "position": 1,
+     "values": [
+      "Default Title"
+     ]
+    }
+   ]
+  },
+  {
+   "id": 15259132952947,
+   "title": "Aqua Slider",
+   "handle": "aqua-slider",
+   "body_html": "",
+   "published_at": "2025-12-29T17:54:23+11:00",
+   "created_at": "2025-12-29T17:54:23+11:00",
+   "updated_at": "2026-10-01T10:44:24+10:00",
+   "vendor": "regencyscreens",
+   "product_type": "",
+   "tags": [
+    "Aqua Slider",
+    "non-ecom",
+    "Semi-Frameless",
+    "Showerscreens"
+   ],
+   "variants": [
+    {
+     "id": 62404644897139,
+     "title": "Default Title",
+     "option1": "Default Title",
+     "option2": null,
+     "option3": null,
+     "sku": null,
+     "requires_shipping": true,
+     "taxable": true,
+     "featured_image": null,
+     "available": true,
+     "price": "0.00",
+     "grams": 0,
+     "compare_at_price": null,
+     "position": 1,
+     "product_id": 15259132952947,
+     "created_at": "2025-12-29T17:54:23+11:00",
+     "updated_at": "2026-10-01T10:44:24+10:00"
+    }
+   ],
+   "images": [
+    {
+     "id": 66030045528435,
+     "created_at": "2025-12-29T17:55:23+11:00",
+     "position": 1,
+     "updated_at": "2025-12-29T17:55:25+11:00",
+     "product_id": 15259132952947,
+     "variant_ids": [],
+     "src": "https://cdn.shopify.com/s/files/1/0958/7274/5843/files/b32eb0c3-46bf-423e-9f64-d6cbd3731f42.jpg?v=1766991325",
+     "width": 1920,
+     "height": 1080
+    }
+   ],
+   "options": [
+    {
+     "name": "Title",
+     "position": 1,
+     "values": [
+      "Default Title"
+     ]
+    }
+   ]
+  },
+  {
+   "id": 15259132625267,
+   "title": "Aqua Series Overlap",
+   "handle": "aqua-series-overlap",
+   "body_html": "",
+   "published_at": "2025-12-29T17:48:56+11:00",
+   "created_at": "2025-12-29T17:48:56+11:00",
+   "updated_at": "2026-10-01T10:44:24+10:00",
+   "vendor": "regencyscreens",
+   "product_type": "",
+   "tags": [
+    "Aqua Series Overlap",
+    "non-ecom",
+    "Semi-Frameless",
+    "Showerscreens"
+   ],
+   "variants": [
+    {
+     "id": 62404643946867,
+     "title": "Default Title",
+     "option1": "Default Title",
+     "option2": null,
+     "option3": null,
+     "sku": null,
+     "requires_shipping": true,
+     "taxable": true,
+     "featured_image": null,
+     "available": true,
+     "price": "0.00",
+     "grams": 0,
+     "compare_at_price": null,
+     "position": 1,
+     "product_id": 15259132625267,
+     "created_at": "2025-12-29T17:48:56+11:00",
+     "updated_at": "2026-10-01T10:44:24+10:00"
+    }
+   ],
+   "images": [
+    {
+     "id": 66030028128627,
+     "created_at": "2025-12-29T17:50:30+11:00",
+     "position": 1,
+     "updated_at": "2025-12-29T17:50:31+11:00",
+     "product_id": 15259132625267,
+     "variant_ids": [],
+     "src": "https://cdn.shopify.com/s/files/1/0958/7274/5843/files/satin-silver_overlap_a2_closed_rt_lr.jpg?v=1766991031",
+     "width": 1920,
+     "height": 1080
+    }
+   ],
+   "options": [
+    {
+     "name": "Title",
+     "position": 1,
+     "values": [
+      "Default Title"
+     ]
+    }
+   ]
+  },
+  {
+   "id": 15259131904371,
+   "title": "Aqua Series Inline",
+   "handle": "aqua-series-inline",
+   "body_html": "",
+   "published_at": "2025-12-29T17:37:18+11:00",
+   "created_at": "2025-12-29T17:37:18+11:00",
+   "updated_at": "2026-10-01T10:44:24+10:00",
+   "vendor": "regencyscreens",
+   "product_type": "",
+   "tags": [
+    "Aqua Series Inline",
+    "non-ecom",
+    "Semi-Frameless",
+    "Showerscreens"
+   ],
+   "variants": [
+    {
+     "id": 62404638179699,
+     "title": "Default Title",
+     "option1": "Default Title",
+     "option2": null,
+     "option3": null,
+     "sku": null,
+     "requires_shipping": true,
+     "taxable": true,
+     "featured_image": null,
+     "available": true,
+     "price": "0.00",
+     "grams": 0,
+     "compare_at_price": null,
+     "position": 1,
+     "product_id": 15259131904371,
+     "created_at": "2025-12-29T17:37:19+11:00",
+     "updated_at": "2026-10-01T10:44:24+10:00"
+    }
+   ],
+   "images": [
+    {
+     "id": 66030022197619,
+     "created_at": "2025-12-29T17:47:46+11:00",
+     "position": 1,
+     "updated_at": "2025-12-29T17:47:47+11:00",
+     "product_id": 15259131904371,
+     "variant_ids": [],
+     "src": "https://cdn.shopify.com/s/files/1/0958/7274/5843/files/inline_brushednickel_a2_open_rt_lr.webp?v=1766990867",
+     "width": 1920,
+     "height": 1080
+    }
+   ],
+   "options": [
+    {
+     "name": "Title",
+     "position": 1,
+     "values": [
+      "Default Title"
+     ]
+    }
+   ]
+  },
+  {
+   "id": 15259130134899,
+   "title": "Framed Mirrors",
+   "handle": "framed-mirrors",
+   "body_html": "",
+   "published_at": "2025-12-29T17:15:14+11:00",
+   "created_at": "2025-12-29T17:15:15+11:00",
+   "updated_at": "2026-10-01T10:44:24+10:00",
+   "vendor": "regencyscreens",
+   "product_type": "",
+   "tags": [
+    "Framed Mirrors",
+    "Mirrors",
+    "non-ecom"
+   ],
+   "variants": [
+    {
+     "id": 62404630249843,
+     "title": "Default Title",
+     "option1": "Default Title",
+     "option2": null,
+     "option3": null,
+     "sku": null,
+     "requires_shipping": true,
+     "taxable": true,
+     "featured_image": null,
+     "available": true,
+     "price": "0.00",
+     "grams": 0,
+     "compare_at_price": null,
+     "position": 1,
+     "product_id": 15259130134899,
+     "created_at": "2025-12-29T17:15:15+11:00",
+     "updated_at": "2026-10-01T10:44:24+10:00"
+    }
+   ],
+   "images": [
+    {
+     "id": 66029845479795,
+     "created_at": "2025-12-29T17:15:30+11:00",
+     "position": 1,
+     "updated_at": "2025-12-29T17:15:31+11:00",
+     "product_id": 15259130134899,
+     "variant_ids": [],
+     "src": "https://cdn.shopify.com/s/files/1/0958/7274/5843/files/40395958-3701-4a6d-ad2c-787e6f5d6069.jpg?v=1766988931",
+     "width": 1920,
+     "height": 1080
+    }
+   ],
+   "options": [
+    {
+     "name": "Title",
+     "position": 1,
+     "values": [
+      "Default Title"
+     ]
+    }
+   ]
+  },
+  {
+   "id": 15259125023091,
+   "title": "Frameless Mirrors",
+   "handle": "frameless-mirrors",
+   "body_html": "",
+   "published_at": "2025-12-29T16:57:07+11:00",
+   "created_at": "2025-12-29T16:57:07+11:00",
+   "updated_at": "2026-10-01T10:44:24+10:00",
+   "vendor": "regencyscreens",
+   "product_type": "",
+   "tags": [
+    "Frameless Mirrors",
+    "Mirrors",
+    "non-ecom"
+   ],
+   "variants": [
+    {
+     "id": 62404601250163,
+     "title": "Default Title",
+     "option1": "Default Title",
+     "option2": null,
+     "option3": null,
+     "sku": null,
+     "requires_shipping": true,
+     "taxable": true,
+     "featured_image": null,
+     "available": true,
+     "price": "0.00",
+     "grams": 0,
+     "compare_at_price": null,
+     "position": 1,
+     "product_id": 15259125023091,
+     "created_at": "2025-12-29T16:57:07+11:00",
+     "updated_at": "2026-10-01T10:44:24+10:00"
+    }
+   ],
+   "images": [
+    {
+     "id": 66029792264563,
+     "created_at": "2025-12-29T16:57:37+11:00",
+     "position": 1,
+     "updated_at": "2025-12-29T16:57:38+11:00",
+     "product_id": 15259125023091,
+     "variant_ids": [],
+     "src": "https://cdn.shopify.com/s/files/1/0958/7274/5843/files/10001_4cc3a665-fca0-4f73-8b1c-7e1d954f274e.jpg?v=1766987858",
+     "width": 1920,
+     "height": 1080
+    },
+    {
+     "id": 66029792297331,
+     "created_at": "2025-12-29T16:57:37+11:00",
+     "position": 2,
+     "updated_at": "2025-12-29T16:57:39+11:00",
+     "product_id": 15259125023091,
+     "variant_ids": [],
+     "src": "https://cdn.shopify.com/s/files/1/0958/7274/5843/files/10002_32f0be04-3780-4389-9240-4817354a477e.jpg?v=1766987859",
+     "width": 1920,
+     "height": 1080
+    },
+    {
+     "id": 66029792330099,
+     "created_at": "2025-12-29T16:57:37+11:00",
+     "position": 3,
+     "updated_at": "2025-12-29T16:57:38+11:00",
+     "product_id": 15259125023091,
+     "variant_ids": [],
+     "src": "https://cdn.shopify.com/s/files/1/0958/7274/5843/files/10003_cbd7214a-61d6-46c0-8394-94df773c1469.jpg?v=1766987858",
+     "width": 1920,
+     "height": 1080
+    }
+   ],
+   "options": [
+    {
+     "name": "Title",
+     "position": 1,
+     "values": [
+      "Default Title"
+     ]
+    }
+   ]
+  },
+  {
+   "id": 15259124171123,
+   "title": "Shaped Mirrors",
+   "handle": "shaped-mirrors",
+   "body_html": "",
+   "published_at": "2025-12-29T16:49:33+11:00",
+   "created_at": "2025-12-29T16:49:33+11:00",
+   "updated_at": "2026-10-01T10:44:24+10:00",
+   "vendor": "regencyscreens",
+   "product_type": "",
+   "tags": [
+    "Mirrors",
+    "non-ecom",
+    "Shaped Mirrors"
+   ],
+   "variants": [
+    {
+     "id": 62404596236659,
+     "title": "Default Title",
+     "option1": "Default Title",
+     "option2": null,
+     "option3": null,
+     "sku": null,
+     "requires_shipping": true,
+     "taxable": true,
+     "featured_image": null,
+     "available": true,
+     "price": "0.00",
+     "grams": 0,
+     "compare_at_price": null,
+     "position": 1,
+     "product_id": 15259124171123,
+     "created_at": "2025-12-29T16:49:33+11:00",
+     "updated_at": "2026-10-01T10:44:24+10:00"
+    }
+   ],
+   "images": [
+    {
+     "id": 66029783286131,
+     "created_at": "2025-12-29T16:55:04+11:00",
+     "position": 1,
+     "updated_at": "2025-12-29T16:55:05+11:00",
+     "product_id": 15259124171123,
+     "variant_ids": [],
+     "src": "https://cdn.shopify.com/s/files/1/0958/7274/5843/files/10001_731a4453-25bb-4fcb-a853-de5594eb955e.jpg?v=1766987705",
+     "width": 1920,
+     "height": 1080
+    },
+    {
+     "id": 66029783318899,
+     "created_at": "2025-12-29T16:55:04+11:00",
+     "position": 2,
+     "updated_at": "2025-12-29T16:55:05+11:00",
+     "product_id": 15259124171123,
+     "variant_ids": [],
+     "src": "https://cdn.shopify.com/s/files/1/0958/7274/5843/files/10002_8f32b671-d60e-4f97-851b-80c0bb2138e0.jpg?v=1766987705",
+     "width": 1920,
+     "height": 1080
+    },
+    {
+     "id": 66029783351667,
+     "created_at": "2025-12-29T16:55:04+11:00",
+     "position": 3,
+     "updated_at": "2025-12-29T16:55:05+11:00",
+     "product_id": 15259124171123,
+     "variant_ids": [],
+     "src": "https://cdn.shopify.com/s/files/1/0958/7274/5843/files/10003_951df506-0cbe-46d2-8565-01d0e51458c8.jpg?v=1766987705",
+     "width": 1920,
+     "height": 1080
+    },
+    {
+     "id": 66029783384435,
+     "created_at": "2025-12-29T16:55:04+11:00",
+     "position": 4,
+     "updated_at": "2025-12-29T16:55:05+11:00",
+     "product_id": 15259124171123,
+     "variant_ids": [],
+     "src": "https://cdn.shopify.com/s/files/1/0958/7274/5843/files/10004_205966eb-60bc-4688-bd86-4efb1ca09f3b.jpg?v=1766987705",
+     "width": 1920,
+     "height": 1080
+    }
+   ],
+   "options": [
+    {
+     "name": "Title",
+     "position": 1,
+     "values": [
+      "Default Title"
+     ]
+    }
+   ]
+  },
+  {
+   "id": 15250227134835,
+   "title": "Frameless Shower Screens",
+   "handle": "frameless-shower-screens",
+   "body_html": "",
+   "published_at": "2025-12-17T06:38:38+11:00",
+   "created_at": "2025-12-17T06:38:37+11:00",
+   "updated_at": "2026-10-01T10:44:24+10:00",
+   "vendor": "regencyscreens",
+   "product_type": "",
+   "tags": [
+    "Frameless Shower Screens",
+    "non-ecom",
+    "Showerscreens"
+   ],
+   "variants": [
+    {
+     "id": 62376832500083,
+     "title": "Default Title",
+     "option1": "Default Title",
+     "option2": null,
+     "option3": null,
+     "sku": null,
+     "requires_shipping": true,
+     "taxable": true,
+     "featured_image": null,
+     "available": true,
+     "price": "0.00",
+     "grams": 0,
+     "compare_at_price": null,
+     "position": 1,
+     "product_id": 15250227134835,
+     "created_at": "2025-12-17T06:38:37+11:00",
+     "updated_at": "2026-10-01T10:44:24+10:00"
+    }
+   ],
+   "images": [
+    {
+     "id": 65930650878323,
+     "created_at": "2025-12-17T06:40:16+11:00",
+     "position": 1,
+     "updated_at": "2025-12-29T22:56:56+11:00",
+     "product_id": 15250227134835,
+     "variant_ids": [],
+     "src": "https://cdn.shopify.com/s/files/1/0958/7274/5843/files/rsr-002_hr_cropped.jpg?v=1767009416",
+     "width": 1920,
+     "height": 1080
+    },
+    {
+     "id": 65930650845555,
+     "created_at": "2025-12-17T06:40:16+11:00",
+     "position": 2,
+     "updated_at": "2025-12-29T22:56:56+11:00",
+     "product_id": 15250227134835,
+     "variant_ids": [],
+     "src": "https://cdn.shopify.com/s/files/1/0958/7274/5843/files/inpd8839-2.jpg?v=1767009416",
+     "width": 1920,
+     "height": 1080
+    }
+   ],
+   "options": [
+    {
+     "name": "Title",
+     "position": 1,
+     "values": [
+      "Default Title"
+     ]
+    }
+   ]
+  }
+ ]
+}

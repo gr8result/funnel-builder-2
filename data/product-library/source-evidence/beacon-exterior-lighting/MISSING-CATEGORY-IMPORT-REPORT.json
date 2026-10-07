@@ -1,0 +1,28 @@
+{
+  "importedAt": "2026-09-09",
+  "purpose": "Populate the External Lighting categories that had no products: Bollards & Posts, Step & Deck, Garden & Landscape.",
+  "method": "Category pages used only to discover product URLs; every field taken from the product's own schema.org Product JSON-LD, with the image URL confirmed to serve image/* before use.",
+  "sources": [
+    {
+      "label": "Deck Lighting",
+      "url": "https://www.beaconlighting.com.au/exterior/deck-lighting"
+    },
+    {
+      "label": "Exterior Step Lights",
+      "url": "https://www.beaconlighting.com.au/exterior/exterior-step-lights"
+    },
+    {
+      "label": "Garden Lighting",
+      "url": "https://www.beaconlighting.com.au/exterior/garden-lighting"
+    }
+  ],
+  "counts": {
+    "discovered": 130,
+    "candidates": 0,
+    "imported": 0,
+    "byCategory": {}
+  },
+  "failures": [],
+  "skipped": [],
+  "imported": []
+}

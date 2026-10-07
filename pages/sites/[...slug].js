@@ -1,8 +1,8 @@
-﻿// /pages/sites/[...slug].js
-// FULL REPLACEMENT — Render /sites/<slug> from Supabase ONLY (no external builders)
-// ✅ Reads: website_pages.content_json.sections (version 2)
-// ✅ Full-bleed sections with constrained 1440px content
-// ✅ Responsive by default (stacks columns on small screens)
+// /pages/sites/[...slug].js
+// FULL REPLACEMENT â€” Render /sites/<slug> from Supabase ONLY (no external builders)
+// âœ… Reads: website_pages.content_json.sections (version 2)
+// âœ… Full-bleed sections with constrained 1440px content
+// âœ… Responsive by default (stacks columns on small screens)
 
 import Head from "next/head";
 import Link from "next/link";
@@ -18,6 +18,8 @@ import { globalFooterToFooterBlock } from "../../lib/website-builder/footerNavig
 import { isFullWidthPage, resolvePageWidthMode } from "../../lib/website-builder/pageLayout";
 import { isMobileUserAgent } from "../../lib/website-builder/responsiveViewport";
 import { isBlockVisibleOnDevice } from "../../lib/website-builder/responsiveValue";
+import { stickyNavigationFrameStyle } from "../../lib/website-builder/stickyNavigationFrame";
+import { repairProjectTestimonialAvatarUrls } from "../../lib/website-builder/testimonialImages";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
@@ -52,7 +54,9 @@ const publishedPageBlockFrame = (background, pageFullWidth, layoutWidth) => ({
   ...seamlessPublishedBlockFrame(background),
   width: pageFullWidth ? "100%" : `min(100%, ${Math.max(320, Number(layoutWidth) || CONTENT_WIDTH)}px)`,
   maxWidth: pageFullWidth ? "none" : `${Math.max(320, Number(layoutWidth) || CONTENT_WIDTH)}px`,
-  margin: "0 auto",
+  margin: 0,
+  marginLeft: pageFullWidth ? 0 : "auto",
+  marginRight: pageFullWidth ? 0 : "auto",
 });
 function publishedGlobalNavFrame(block) {
   const frame = seamlessPublishedBlockFrame(resolvePublishedBlockBackground(block));
@@ -419,7 +423,7 @@ export function PublishedWebsiteRenderer({ publication, siteDataHash = "", reque
     : (window.innerWidth < 768 ? "mobile" : window.innerWidth < 1024 ? "tablet" : "desktop");
   const compact = device !== "desktop";
 
-  const project = publication?.site_data || {};
+  const project = repairProjectTestimonialAvatarUrls(publication?.site_data || {});
   const publishedAssets = normalizeWebsiteBuilderAssets(project?.brandAssets);
   const pages = Array.isArray(project.pages) ? project.pages : [];
   const footerContext = { pages, logInvalid: true };
@@ -447,7 +451,7 @@ export function PublishedWebsiteRenderer({ publication, siteDataHash = "", reque
   const injectNav = globalNavBlock && !pageBlocks.some((block) => block.id && block.id === globalNavBlock.id);
   const injectFooter = !!globalFooterBlock;
   const blocksWithoutNav = injectNav ? pageBlocks.filter((block) => block.type !== "nav-bar") : pageBlocks;
-  // Strip any per-page footer blocks when a global footer exists — prevents duplicates and
+  // Strip any per-page footer blocks when a global footer exists â€” prevents duplicates and
   // ensures the home page (which may still have the original footer in its pageBlocks) also
   // gets the global footer injected consistently with every other page.
   const blocksToRender = (injectFooter ? blocksWithoutNav.filter((block) => block.type !== "footer") : blocksWithoutNav)
@@ -644,8 +648,8 @@ export function PublishedWebsiteRenderer({ publication, siteDataHash = "", reque
       </Head>
       <main data-published-website-root="true" data-page-width-mode={pageWidthMode} className="gr8wb-viewport" style={{ width: "100%", maxWidth: "100%", minWidth: 0, overflowX: "visible", minHeight: "100vh", background: "#ffffff", color: "#0f172a", fontFamily: "'Manrope','Segoe UI',system-ui,-apple-system,sans-serif", margin: 0, padding: 0 }}>
         {injectNav ? (
-          <div key="global-nav" data-published-block="true" data-published-block-id={globalNavBlock?.id || ""} data-published-block-type={globalNavBlock?.type || ""} style={publishedGlobalNavFrame(globalNavBlock)}>
-            {renderWebsiteBlock(globalNavBlock, { compact, device, assets: publishedAssets, editor: false, navigationContext, siteId: publication?.id || "" })}
+          <div key="global-nav" data-published-block="true" data-published-block-id={globalNavBlock?.id || ""} data-published-block-type={globalNavBlock?.type || ""} style={{ ...seamlessPublishedBlockFrame(resolvePublishedBlockBackground(globalNavBlock)), ...stickyNavigationFrameStyle(globalNavBlock) }}>
+            {renderWebsiteBlock(globalNavBlock, { compact, device, assets: publishedAssets, editor: false, navigationContext, siteId: publication?.id || "", project })}
           </div>
         ) : null}
 
@@ -655,7 +659,7 @@ export function PublishedWebsiteRenderer({ publication, siteDataHash = "", reque
               const blockBg = resolvePublishedStackBackground(blocksToRender, index, "");
               return (
                 <div key={block.id || `${block.type}-${index}`} data-published-block="true" data-published-block-id={block.id || ""} data-published-block-type={block.type || ""} style={publishedPageBlockFrame(blockBg, pageFullWidth, layoutWidth)}>
-                  {renderWebsiteBlock(block, { compact, device, assets: publishedAssets, editor: false, navigationContext, layoutWidth: pageFullWidth && !compact ? null : layoutWidth, siteId: publication?.id || "" })}
+                  {renderWebsiteBlock(block, { compact, device, assets: publishedAssets, editor: false, navigationContext, layoutWidth: pageFullWidth && !compact ? null : layoutWidth, siteId: publication?.id || "", project })}
                 </div>
               );
             })}
@@ -673,7 +677,7 @@ export function PublishedWebsiteRenderer({ publication, siteDataHash = "", reque
 
         {injectFooter ? (
           <div key="global-footer" data-published-block="true" data-published-block-id={globalFooterBlock?.id || ""} data-published-block-type={globalFooterBlock?.type || ""} style={seamlessPublishedBlockFrame(resolvePublishedBlockBackground(globalFooterBlock))}>
-            {renderWebsiteBlock(globalFooterBlock, { compact, device, assets: publishedAssets, editor: false, navigationContext, siteId: publication?.id || "" })}
+            {renderWebsiteBlock(globalFooterBlock, { compact, device, assets: publishedAssets, editor: false, navigationContext, siteId: publication?.id || "", project })}
           </div>
         ) : null}
 

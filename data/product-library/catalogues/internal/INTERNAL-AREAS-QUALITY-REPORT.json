@@ -1,0 +1,100 @@
+{
+  "auditedAt": "2026-09-05T22:19:07.716Z",
+  "records": 950,
+  "enabled": 948,
+  "brands": {
+    "Corinthian Doors": {
+      "records": 246,
+      "enabled": 246,
+      "withLocalImages": 246,
+      "missingManufacturerSkus": 246,
+      "missingModels": 0,
+      "withPublishedSizePrices": 246,
+      "quoteRequiredWithoutSize": 246
+    },
+    "Gainsborough": {
+      "records": 239,
+      "enabled": 239,
+      "withLocalImages": 239,
+      "missingManufacturerSkus": 0,
+      "missingModels": 0,
+      "withPublishedSizePrices": 0,
+      "quoteRequiredWithoutSize": 239
+    },
+    "Hume Doors": {
+      "records": 340,
+      "enabled": 340,
+      "withLocalImages": 340,
+      "missingManufacturerSkus": 340,
+      "missingModels": 0,
+      "withPublishedSizePrices": 0,
+      "quoteRequiredWithoutSize": 340
+    },
+    "Lockwood": {
+      "records": 20,
+      "enabled": 20,
+      "withLocalImages": 20,
+      "missingManufacturerSkus": 20,
+      "missingModels": 0,
+      "withPublishedSizePrices": 0,
+      "quoteRequiredWithoutSize": 20
+    },
+    "Porta": {
+      "records": 105,
+      "enabled": 103,
+      "withLocalImages": 103,
+      "missingManufacturerSkus": 0,
+      "missingModels": 0,
+      "withPublishedSizePrices": 0,
+      "quoteRequiredWithoutSize": 103
+    }
+  },
+  "categories": {
+    "internalDoors": 586,
+    "internalDoorFurniture": 259,
+    "skirtingAndArchitraves": 103
+  },
+  "uniqueLocalProductImages": 750,
+  "categoryImages": 3,
+  "imageFailures": [],
+  "missingEnabledImages": 0,
+  "duplicateProductIds": 0,
+  "heldRecords": [
+    {
+      "id": "master-INT-PORTA-200081",
+      "sku": "200081",
+      "name": "Edging Bullnose 20 x 8mm Tasmanian Oak 2.4m",
+      "reason": "Manufacturer item is edging, not an architrave/skirting profile",
+      "imageStatus": "missing",
+      "url": "https://www.porta.com.au/products/mouldings/architraves-skirting/bullnose"
+    },
+    {
+      "id": "master-INT-PORTA-601560",
+      "sku": "601560",
+      "name": "Square Dressed 57 x 18mm Primed MDF White 5.4m",
+      "reason": "Image awaiting verification",
+      "imageStatus": "missing",
+      "url": "https://www.porta.com.au/products/mouldings/square-dressed/square-dressed-5718"
+    }
+  ],
+  "sourceFailures": [
+    {
+      "url": "https://www.gainsboroughhardware.com.au/en/products/715ALBLR.html",
+      "error": "404 https://www.gainsboroughhardware.com.au/en/products/715ALBLR.html"
+    },
+    {
+      "url": "https://www.gainsboroughhardware.com.au/en/products/110LIA.html",
+      "error": "404 https://www.gainsboroughhardware.com.au/en/products/110LIA.html"
+    },
+    {
+      "url": "https://www.gainsboroughhardware.com.au/en/products/715RIVLR.html",
+      "error": "404 https://www.gainsboroughhardware.com.au/en/products/715RIVLR.html"
+    }
+  ],
+  "notes": [
+    "606 enabled records use manufacturer model identifiers rather than finish/size-specific order SKUs. No manufacturer SKU was invented.",
+    "Corinthian model photographs and Lockwood range photographs are labelled where a selected construction, glazing, finish or function may differ.",
+    "Porta dual-use profiles are one canonical SKU, selectable independently as Skirting or Architraves.",
+    "Corinthian published size prices are QLD GST-inclusive. Other unverified rates remain null."
+  ]
+}

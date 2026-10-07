@@ -1,0 +1,555 @@
+{
+  "url": "https://stairlock.com.au/products/custom-staircases/",
+  "title": "Custom Timber Staircases | Stairlock",
+  "images": [
+    {
+      "url": "https://stairlock.com.au/wp-content/uploads/2026/06/custom-timber-staircase-hero-1400x1600.jpg",
+      "alt": "Custom Staircases",
+      "title": "",
+      "context": ""
+    },
+    {
+      "url": "https://stairlock.com.au/wp-content/uploads/2026/06/custom-timber-stiarcase-with-glass-balustrade-woodforde-hero-1600x900.jpg",
+      "alt": "Custom timber staircase from a birds eye view, u-shaped with glass balustrade and timber handrails",
+      "title": "",
+      "context": ""
+    },
+    {
+      "url": "https://stairlock.com.au/wp-content/uploads/2024/06/StairlockHenleyBradGriffin2024%C2%A9-1-1300-x-1949-400x600.jpg",
+      "alt": "",
+      "title": "",
+      "context": ""
+    },
+    {
+      "url": "https://stairlock.com.au/wp-content/uploads/2025/11/Eagle-Homes-Wilton-Display-Custom-timber-treads-MDF-risers-Hampton-style-posts-metal-balusters-Large-3-400x600.jpg",
+      "alt": "",
+      "title": "",
+      "context": ""
+    },
+    {
+      "url": "https://stairlock.com.au/wp-content/uploads/2025/11/Eagle-Homes-Oran-Park-Display-White-Steel-Mono-Spine-Custom-Staircase-with-Glass-Balustrade-Large-1-400x600.jpg",
+      "alt": "",
+      "title": "",
+      "context": ""
+    },
+    {
+      "url": "https://stairlock.com.au/wp-content/uploads/2025/11/Bulleen-StoryBuilt-Open-Rise-Staircase-with-Feature-Landing-1-400x600.jpg",
+      "alt": "",
+      "title": "",
+      "context": ""
+    },
+    {
+      "url": "https://stairlock.com.au/wp-content/uploads/2026/05/549-Crows-Nest-Rd-Port-Elliot-SA-5212-44-1500x1000.jpg",
+      "alt": "",
+      "title": "",
+      "context": ""
+    },
+    {
+      "url": "https://stairlock.com.au/wp-content/uploads/2026/06/traditional-stringer-design-option-card-1600x1200.jpg",
+      "alt": "Traditional stringer — staircase design option",
+      "title": "",
+      "context": ""
+    },
+    {
+      "url": "https://stairlock.com.au/wp-content/uploads/2026/06/semi-cantilever-custom-staircase-render-1600x1200.jpg",
+      "alt": "Semi-cantilever — staircase design option",
+      "title": "",
+      "context": ""
+    },
+    {
+      "url": "https://stairlock.com.au/wp-content/uploads/2026/06/Untitled-5-1-1600x1200.jpg",
+      "alt": "Full cantilever — staircase design option",
+      "title": "",
+      "context": ""
+    },
+    {
+      "url": "https://stairlock.com.au/wp-content/uploads/2026/06/Timber-mono-spine-design-option-1600x1200.jpg",
+      "alt": "Monospine — staircase design option",
+      "title": "",
+      "context": ""
+    },
+    {
+      "url": "https://stairlock.com.au/wp-content/uploads/2026/06/closed-riser-design-options-1600x1200.jpg",
+      "alt": "Cut stringer (closed riser) — staircase design option",
+      "title": "",
+      "context": ""
+    },
+    {
+      "url": "https://stairlock.com.au/wp-content/uploads/2026/06/full-stringer-design-option-1600x1200.jpg",
+      "alt": "Full stringer (open riser) — staircase design option",
+      "title": "",
+      "context": ""
+    },
+    {
+      "url": "https://stairlock.com.au/wp-content/uploads/2026/06/cut-stringer-staircase-render-example-900x675.jpg",
+      "alt": "Cut stringer (open riser) — staircase design option",
+      "title": "",
+      "context": ""
+    },
+    {
+      "url": "https://stairlock.com.au/wp-content/uploads/2026/06/traditional-stringer-design-option-card-1600x1200.jpg",
+      "alt": "Full stringer (closed riser) — staircase design option",
+      "title": "",
+      "context": ""
+    },
+    {
+      "url": "https://stairlock.com.au/wp-content/uploads/2026/06/example-glass-balustrade-design-option-900x675.jpg",
+      "alt": "Frameless glass — staircase design option",
+      "title": "",
+      "context": ""
+    },
+    {
+      "url": "https://stairlock.com.au/wp-content/uploads/2026/06/steel-metal-balustrade-design-options-900x675.jpg",
+      "alt": "Steel & Metal — staircase design option",
+      "title": "",
+      "context": ""
+    },
+    {
+      "url": "https://stairlock.com.au/wp-content/uploads/2026/06/timber-balustrades-design-options-900x675.jpg",
+      "alt": "Timber — staircase design option",
+      "title": "",
+      "context": ""
+    },
+    {
+      "url": "https://stairlock.com.au/wp-content/uploads/2026/06/timber-screen-balustrade-example-design-option-900x675.jpg",
+      "alt": "Timber screen — staircase design option",
+      "title": "",
+      "context": ""
+    },
+    {
+      "url": "https://stairlock.com.au/wp-content/uploads/2026/06/custom-steel-balustrade-design-option-example-900x675.jpg",
+      "alt": "Custom — staircase design option",
+      "title": "",
+      "context": ""
+    },
+    {
+      "url": "https://stairlock.com.au/wp-content/uploads/2026/06/wire-balustrade-design-option.jpg",
+      "alt": "Wire — staircase design option",
+      "title": "",
+      "context": ""
+    },
+    {
+      "url": "https://stairlock.com.au/wp-content/uploads/2026/06/timber-handrail-design-option-example-900x675.jpg",
+      "alt": "Timber handrail — staircase design option",
+      "title": "",
+      "context": ""
+    },
+    {
+      "url": "https://stairlock.com.au/wp-content/uploads/2026/06/steel-handrails-design-option-examples-900x675.jpg",
+      "alt": "Steel handrail — staircase design option",
+      "title": "",
+      "context": ""
+    },
+    {
+      "url": "https://stairlock.com.au/wp-content/uploads/2026/06/integrated-LEd-lighting-design-option.jpg",
+      "alt": "Integrated LED lighting — staircase design option",
+      "title": "",
+      "context": ""
+    },
+    {
+      "url": "https://stairlock.com.au/wp-content/uploads/2026/06/premium-post-design-options-card-1600x1200.jpg",
+      "alt": "Premium newel posts — staircase design option",
+      "title": "",
+      "context": ""
+    },
+    {
+      "url": "https://stairlock.com.au/wp-content/uploads/2026/06/stair-safety-options-card.jpg",
+      "alt": "Stair safety options — staircase design option",
+      "title": "",
+      "context": ""
+    },
+    {
+      "url": "https://stairlock.com.au/wp-content/uploads/2026/06/American-Oak-material-sample-900x400.jpg",
+      "alt": "American Oak timber",
+      "title": "",
+      "context": ""
+    },
+    {
+      "url": "https://stairlock.com.au/wp-content/uploads/2026/06/Blackbutt-material-sample-900x400.jpg",
+      "alt": "Blackbutt timber",
+      "title": "",
+      "context": ""
+    },
+    {
+      "url": "https://stairlock.com.au/wp-content/uploads/2026/06/Eucalyptus-Grandis-material-sample-900x400.jpg",
+      "alt": "Eucalyptus grandis timber",
+      "title": "",
+      "context": ""
+    },
+    {
+      "url": "https://stairlock.com.au/wp-content/uploads/2026/06/Merbau-material-sample-900x400.jpg",
+      "alt": "Merbau timber",
+      "title": "",
+      "context": ""
+    },
+    {
+      "url": "https://stairlock.com.au/wp-content/uploads/2026/06/Spotted-Gum-material-sample-900x400.jpg",
+      "alt": "Spotted gum timber",
+      "title": "",
+      "context": ""
+    },
+    {
+      "url": "https://stairlock.com.au/wp-content/uploads/2026/06/forty-years-crafting-staircases-excellence-1600x940.jpg",
+      "alt": "Female running a piece of hardwood timber through a machine.",
+      "title": "",
+      "context": ""
+    },
+    {
+      "url": "https://stairlock.com.au/wp-content/uploads/2026/05/549-Crows-Nest-Rd-Port-Elliot-SA-5212-44-800x600.jpg",
+      "alt": "Dual Custom Timber Staircases, Victor Harbour",
+      "title": "",
+      "context": ""
+    },
+    {
+      "url": "https://stairlock.com.au/wp-content/uploads/2026/07/american-oak-staircase-and-timber-screen-balustrade-aldinga-hero-800x600.jpg",
+      "alt": "American Oak Staircase & Timber Screen Balustrade, Aldinga Beach",
+      "title": "",
+      "context": ""
+    },
+    {
+      "url": "https://stairlock.com.au/wp-content/uploads/2026/08/Eagle-Homes-Oran-Park-Grandis-steel-monospine-staircase-with-glass-balustrade-800x600.jpg",
+      "alt": "Custom Timber Staircase on Steel Monospine & Glass Balustrade, Oran Park",
+      "title": "",
+      "context": ""
+    },
+    {
+      "url": "https://stairlock.com.au/wp-content/uploads/2025/11/Bulleen-StoryBuilt-Open-Rise-Staircase-with-Feature-Landing-Hero-800x600.jpg",
+      "alt": "Open Rise Timber Staircase with Feature Landing, Bulleen",
+      "title": "",
+      "context": ""
+    },
+    {
+      "url": "https://stairlock.com.au/wp-content/uploads/2026/08/Eagle-Homes-Custom-Grandis-Staircase-with-glass-balustrade-and-steel-monospine-800x600.jpg",
+      "alt": "Custom Steel Monospine Staircase with Glass Balustrade, Oran Park",
+      "title": "",
+      "context": ""
+    },
+    {
+      "url": "https://stairlock.com.au/wp-content/uploads/2026/08/Eagle-Homes-NSW-Custom-Timber-Staircase-with-Hamptons-style-posts-and-metal-balusters-800x600.jpg",
+      "alt": "Hamptons Style Custom Staircase with Metal Balusters, Wilton",
+      "title": "",
+      "context": ""
+    },
+    {
+      "url": "https://stairlock.com.au/wp-content/uploads/2026/07/Stairlock-Adelaide-office-800x600.jpg",
+      "alt": "Stairlock Adelaide",
+      "title": "",
+      "context": ""
+    },
+    {
+      "url": "https://stairlock.com.au/wp-content/uploads/2026/08/Stairlock-Melbourne-Office.png-800x600.jpg",
+      "alt": "Stairlock Melbourne",
+      "title": "",
+      "context": ""
+    },
+    {
+      "url": "https://stairlock.com.au/wp-content/uploads/2026/08/Stairlock-Sydney-Office-Location-NSW-Hero-800x600.jpg",
+      "alt": "Stairlock Sydney",
+      "title": "",
+      "context": ""
+    }
+  ],
+  "links": [
+    {
+      "url": "https://stairlock.com.au/products/custom-staircases/#page",
+      "label": "Skip to content"
+    },
+    {
+      "url": "https://stairlock.com.au/",
+      "label": ""
+    },
+    {
+      "url": "https://stairlock.com.au/products/",
+      "label": "Products"
+    },
+    {
+      "url": "https://stairlock.com.au/products/easy-mdf/",
+      "label": "Easy MDF"
+    },
+    {
+      "url": "https://stairlock.com.au/products/american-oak-stairs",
+      "label": "American Oak"
+    },
+    {
+      "url": "https://stairlock.com.au/products/custom-staircases/",
+      "label": "Custom Staircases"
+    },
+    {
+      "url": "https://stairlock.com.au/products/timber-batten-screens/",
+      "label": "Timber Batten Screens"
+    },
+    {
+      "url": "https://stairlock.com.au/products/balusters-and-balustrades/",
+      "label": "Balusters & Balustrades"
+    },
+    {
+      "url": "https://stairlock.com.au/products/handrails-wall-rails/",
+      "label": "Handrails & Wall Rails"
+    },
+    {
+      "url": "https://stairlock.com.au/projects/",
+      "label": "Projects"
+    },
+    {
+      "url": "https://stairlock.com.au/trade-builders/",
+      "label": "Trade & Builders"
+    },
+    {
+      "url": "https://stairlock.com.au/about/",
+      "label": "About"
+    },
+    {
+      "url": "https://stairlock.com.au/about/sustainability/",
+      "label": "Sustainability"
+    },
+    {
+      "url": "https://stairlock.com.au/about/careers/",
+      "label": "Careers"
+    },
+    {
+      "url": "tel:+611800088219",
+      "label": "1800 088 219"
+    },
+    {
+      "url": "https://stairlock.com.au/quote/",
+      "label": "Get a quote"
+    },
+    {
+      "url": "https://stairlock.com.au/",
+      "label": ""
+    },
+    {
+      "url": "https://stairlock.com.au/products/",
+      "label": "Products"
+    },
+    {
+      "url": "https://stairlock.com.au/products/easy-mdf/",
+      "label": "Easy MDF"
+    },
+    {
+      "url": "https://stairlock.com.au/products/american-oak-stairs",
+      "label": "American Oak"
+    },
+    {
+      "url": "https://stairlock.com.au/products/custom-staircases/",
+      "label": "Custom Staircases"
+    },
+    {
+      "url": "https://stairlock.com.au/products/timber-batten-screens/",
+      "label": "Timber Batten Screens"
+    },
+    {
+      "url": "https://stairlock.com.au/products/balusters-and-balustrades/",
+      "label": "Balusters & Balustrades"
+    },
+    {
+      "url": "https://stairlock.com.au/products/handrails-wall-rails/",
+      "label": "Handrails & Wall Rails"
+    },
+    {
+      "url": "https://stairlock.com.au/projects/",
+      "label": "Projects"
+    },
+    {
+      "url": "https://stairlock.com.au/trade-builders/",
+      "label": "Trade & Builders"
+    },
+    {
+      "url": "https://stairlock.com.au/about/",
+      "label": "About"
+    },
+    {
+      "url": "https://stairlock.com.au/about/sustainability/",
+      "label": "Sustainability"
+    },
+    {
+      "url": "https://stairlock.com.au/about/careers/",
+      "label": "Careers"
+    },
+    {
+      "url": "https://stairlock.com.au/quote/",
+      "label": "Get a quote"
+    },
+    {
+      "url": "tel:+611800088219",
+      "label": "1800 088 219"
+    },
+    {
+      "url": "https://stairlock.com.au/products/",
+      "label": "All ranges"
+    },
+    {
+      "url": "https://stairlock.com.au/quote/",
+      "label": "Let's talk about your project"
+    },
+    {
+      "url": "https://stairlock.com.au/trade-builders/#account-enquiry",
+      "label": "Open a trade account"
+    },
+    {
+      "url": "https://stairlock.com.au/products/custom-staircases/#prod-overview",
+      "label": "Overview"
+    },
+    {
+      "url": "https://stairlock.com.au/products/custom-staircases/#prod-gallery",
+      "label": "Gallery"
+    },
+    {
+      "url": "https://stairlock.com.au/products/custom-staircases/#prod-downloads",
+      "label": "Downloads"
+    },
+    {
+      "url": "https://stairlock.com.au/products/custom-staircases/#prod-reviews",
+      "label": "Reviews"
+    },
+    {
+      "url": "https://stairlock.com.au/products/custom-staircases/#prod-faq",
+      "label": "FAQ"
+    },
+    {
+      "url": "https://stairlock.com.au/products/custom-staircases/#quote",
+      "label": "Start your project"
+    },
+    {
+      "url": "https://stairlock.com.au/trade-builders/#account-enquiry",
+      "label": "Trade & specifier enquiry"
+    },
+    {
+      "url": "https://stairlock.com.au/wp-content/uploads/2026/06/Stair-Lock-Brochure.pdf",
+      "label": "PDF\n\t\t\t\t\t\t\t\t\n\t\t\t\t\t\t\n\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t\tStairlock Brochure\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\n\t\t\t\t\t\t\tStairlock brochure featuring our product range and options\t\t\t\t\t\t\n\t\t\t\t\t\t\n\t\t\t\t\t\t\t8.5 MB\t\t\t\t\t\t\tPDF"
+    },
+    {
+      "url": "https://stairlock.com.au/products/easy-mdf/",
+      "label": "MDF stairs"
+    },
+    {
+      "url": "https://stairlock.com.au/projects/dual-custom-staircases-victor-harbour/",
+      "label": "American Oak\n\t\t\t\t\t\t\t\t\t\tDual Custom Timber Staircases, Victor Harbour"
+    },
+    {
+      "url": "https://stairlock.com.au/projects/american-oak-staircase-timber-screen-balustrade-aldinga-beach/",
+      "label": "American Oak\n\t\t\t\t\t\t\t\t\t\tAmerican Oak Staircase & Timber Screen Balustrade, Aldinga Beach"
+    },
+    {
+      "url": "https://stairlock.com.au/projects/custom-timber-staircase-on-steel-monospine-glass-balustrade-oran-park/",
+      "label": "Eucalyptus Grandis\n\t\t\t\t\t\t\t\t\t\tCustom Timber Staircase on Steel Monospine & Glass Balustrade, Oran Park"
+    },
+    {
+      "url": "https://stairlock.com.au/projects/open-rise-timber-staircase-with-feature-landing-bulleen/",
+      "label": "Custom Staircases\n\t\t\t\t\t\t\t\t\t\tOpen Rise Timber Staircase with Feature Landing, Bulleen"
+    },
+    {
+      "url": "https://stairlock.com.au/projects/custom-steel-monospine-staircase-with-glass-balustrade-oran-park/",
+      "label": "Eucalyptus Grandis\n\t\t\t\t\t\t\t\t\t\tCustom Steel Monospine Staircase with Glass Balustrade, Oran Park"
+    },
+    {
+      "url": "https://stairlock.com.au/projects/hamptons-style-custom-staircase-with-metal-balusters-wilton/",
+      "label": "Custom Staircases\n\t\t\t\t\t\t\t\t\t\tHamptons Style Custom Staircase with Metal Balusters, Wilton"
+    },
+    {
+      "url": "https://stairlock.com.au/locations/adelaide/",
+      "label": "South Australia\n\t\t\t\t\t\t\t\t\t\tAdelaide\n\t\t\t\t\t\t\t\t\t\tAdelaide metro, Adelaide Hills, Fleurieu Peninsula, Barossa Valley, Gawler, Mount Barker, regional South Australia\n\t\t\t\t\t\t\t\t\t\t\n\t\t\t\t\t\tCustom Staircases in Adelaide"
+    },
+    {
+      "url": "https://stairlock.com.au/locations/melbourne/",
+      "label": "Victoria\n\t\t\t\t\t\t\t\t\t\tMelbourne\n\t\t\t\t\t\t\t\t\t\tMelbourne metro, Mornington Peninsula, Geelong, the Yarra Valley, Bendigo, Ballarat and regional Victoria\n\t\t\t\t\t\t\t\t\t\t\n\t\t\t\t\t\tCustom Staircases in Melbourne"
+    },
+    {
+      "url": "https://stairlock.com.au/locations/sydney/",
+      "label": "New South Wales\n\t\t\t\t\t\t\t\t\t\tSydney\n\t\t\t\t\t\t\t\t\t\tSydney metro, the Hills District, Northern Beaches, Sutherland Shire, the Central Coast, Wollongong, Newcastle and regional New South Wales\n\t\t\t\t\t\t\t\t\t\t\n\t\t\t\t\t\tCustom Staircases in Sydney"
+    },
+    {
+      "url": "https://stairlock.com.au/quote/",
+      "label": "Ready to get started?\t\t\tReady for your custom timber staircase?\n\t\t\n\t\t\n\t\t\tLet's talk about your project"
+    },
+    {
+      "url": "https://stairlock.com.au/",
+      "label": ""
+    },
+    {
+      "url": "https://stairlock.com.au/locations/adelaide/",
+      "label": "Adelaide"
+    },
+    {
+      "url": "https://stairlock.com.au/locations/melbourne/",
+      "label": "Melbourne"
+    },
+    {
+      "url": "https://stairlock.com.au/locations/sydney/",
+      "label": "Sydney"
+    },
+    {
+      "url": "https://www.instagram.com/stairlock/",
+      "label": ""
+    },
+    {
+      "url": "https://www.facebook.com/stairlockau",
+      "label": ""
+    },
+    {
+      "url": "https://www.linkedin.com/company/stair-lock-pty-ltd/",
+      "label": ""
+    },
+    {
+      "url": "https://stairlock.com.au/about/",
+      "label": "About Stairlock"
+    },
+    {
+      "url": "https://stairlock.com.au/projects/",
+      "label": "Projects"
+    },
+    {
+      "url": "https://stairlock.com.au/about/sustainability/",
+      "label": "Sustainability"
+    },
+    {
+      "url": "https://stairlock.com.au/about/careers/",
+      "label": "Careers"
+    },
+    {
+      "url": "https://stairlock.com.au/trade-builders/resources-downloads/#guides",
+      "label": "Installation Guides"
+    },
+    {
+      "url": "https://stairlock.com.au/trade-builders/resources-downloads/",
+      "label": "Resources & Downloads"
+    },
+    {
+      "url": "https://stairlock.com.au/products/",
+      "label": "All Products"
+    },
+    {
+      "url": "https://stairlock.com.au/quote/",
+      "label": "Get a Quote"
+    },
+    {
+      "url": "https://stairlock.com.au/trade-builders/",
+      "label": "Trade & Builders"
+    },
+    {
+      "url": "https://stairlock.com.au/contact-us/",
+      "label": "Contact Us"
+    },
+    {
+      "url": "https://stairlock.com.au/locations/",
+      "label": "Locations"
+    },
+    {
+      "url": "tel:+611800088219",
+      "label": "1800 088 219"
+    },
+    {
+      "url": "https://stairlock.com.au/privacy-policy/",
+      "label": "Privacy Policy"
+    },
+    {
+      "url": "https://stairlock.com.au/terms-and-conditions/",
+      "label": "Terms and Conditions"
+    },
+    {
+      "url": "https://stairlock.com.au/wp-content/uploads/2026/06/Stair-Lock-Brochure.pdf",
+      "label": "Download"
+    }
+  ],
+  "text": " Skip to content ProductsEasy MDFAmerican OakCustom StaircasesTimber Batten ScreensBalusters & BalustradesHandrails & Wall RailsProjectsTrade & BuildersAboutSustainabilityCareers 1800 088 219 Get a quote Products Easy MDF American Oak Custom Staircases Timber Batten Screens Balusters & Balustrades Handrails & Wall Rails Projects Trade & Builders About Sustainability Careers Get a quote 1800 088 219 All ranges Bespoke design Custom Timber Staircases Premium staircases, made with solid hardwood timber, sustainably sourced. Let's talk about your project Open a trade account Experienced craftsmanship Over 40 years hand-building timber staircases. Choice of hardwoods A range of sustainably sourced timber species. Design, make and install One team from plans to installed staircase. Overview Gallery Downloads Reviews FAQ Overview Create your dream custom timber staircase. Stairs are often the first piece of furniture people see in a home, setting the architectural style and tone. Our custom range offers solid timber construction in beautiful Australian hardwoods and cutting edge design, with a wide range of stair furniture options to create a completely bespoke set of stairs. We design, build and install custom stairs for builders, architects, developers and homeowners. Our experienced team delivers the right staircase for the project, whether you want a striking open rise staircase, a modern frameless glass style, or stylish stainless steel balustrades. From idea and design through to manufacture and delivery or installation, we make the process easy. Our technical support and customer service are there every step of the way. Because every stair in our custom range is different, we’d encourage you to get in touch and talk through your plans. Design, make and install. One team, from your plans to a fitted staircase. Made to your plans We engineer your stairs from plans or architect drawings. Hand-built in-house Our own factory, our own team. Premium Australian hardwoods A choice of solid timber species to suit the design. Gallery Custom timber staircases - in the wild. 12 images Vic ash hardwood custom staircase with glass balustrade and timber handrail. Dual custom timber staircase with extended glass balustrade and custom door. Premium american oak hardwood custom staircase with frameless glass balustrade. View full gallery 12 photos [{\"src\":\"https:\\/\\/stairlock.com.au\\/wp-content\\/uploads\\/2026\\/06\\/custom-timber-stiarcase-with-glass-balustrade-woodforde-hero-2048x1152.jpg\",\"thumb\":\"https:\\/\\/stairlock.com.au\\/wp-content\\/uploads\\/2026\\/06\\/custom-timber-stiarcase-with-glass-balustrade-woodforde-hero-900x506.jpg\",\"alt\":\"Custom timber staircase from a birds eye view, u-shaped with glass balustrade and timber handrails\",\"caption\":\"Vic ash hardwood custom staircase with glass balustrade and timber handrail.\"},{\"src\":\"https:\\/\\/stairlock.com.au\\/wp-content\\/uploads\\/2024\\/06\\/StairlockHenleyBradGriffin2024\\u00a9-1-1300-x-1949.jpg\",\"thumb\":\"https:\\/\\/stairlock.com.au\\/wp-content\\/uploads\\/2024\\/06\\/StairlockHenleyBradGriffin2024\\u00a9-1-1300-x-1949-400x600.jpg\",\"alt\":\"\",\"caption\":\"Dual custom timber staircase with extended glass balustrade and custom door.\"},{\"src\":\"https:\\/\\/stairlock.com.au\\/wp-content\\/uploads\\/2025\\/11\\/Eagle-Homes-Wilton-Display-Custom-timber-treads-MDF-risers-Hampton-style-posts-metal-balusters-Large-3-1366x2048.jpg\",\"thumb\":\"https:\\/\\/stairlock.com.au\\/wp-content\\/uploads\\/2025\\/11\\/Eagle-Homes-Wilton-Display-Custom-timber-treads-MDF-risers-Hampton-style-posts-metal-balusters-Large-3-400x600.jpg\",\"alt\":\"\",\"caption\":\"\"},{\"src\":\"https:\\/\\/stairlock.com.au\\/wp-content\\/uploads\\/2025\\/11\\/Eagle-Homes-Oran-Park-Display-White-Steel-Mono-Spine-Custom-Staircase-with-Glass-Balustrade-Large-1-1366x2048.jpg\",\"thumb\":\"https:\\/\\/stairlock.com.au\\/wp-content\\/uploads\\/2025\\/11\\/Eagle-Homes-Oran-Park-Display-White-Steel-Mono-Spine-Custom-Staircase-with-Glass-Balustrade-Large-1-400x600.jpg\",\"alt\":\"\",\"caption\":\"\"},{\"src\":\"https:\\/\\/stairlock.com.au\\/wp-content\\/uploads\\/2025\\/11\\/Bulleen-StoryBuilt-Open-Rise-Staircase-with-Feature-Landing-1-1366x2048.jpg\",\"thumb\":\"https:\\/\\/stairlock.com.au\\/wp-content\\/uploads\\/2025\\/11\\/Bulleen-StoryBuilt-Open-Rise-Staircase-with-Feature-Landing-1-400x600.jpg\",\"alt\":\"\",\"caption\":\"\"},{\"src\":\"https:\\/\\/stairlock.com.au\\/wp-content\\/uploads\\/2026\\/05\\/549-Crows-Nest-Rd-Port-Elliot-SA-5212-44-2048x1365.jpg\",\"thumb\":\"https:\\/\\/stairlock.com.au\\/wp-content\\/uploads\\/2026\\/05\\/549-Crows-Nest-Rd-Port-Elliot-SA-5212-44-900x600.jpg\",\"alt\":\"\",\"caption\":\"Premium american oak hardwood custom staircase with frameless glass balustrade.\"},{\"src\":\"https:\\/\\/stairlock.com.au\\/wp-content\\/uploads\\/2025\\/12\\/Eagle-Homes-Oran-Park-Display-Steel-Monospine-staircase-with-framless-glass-balustrade-Large-4-1366x2048.jpg\",\"thumb\":\"https:\\/\\/stairlock.com.au\\/wp-content\\/uploads\\/2025\\/12\\/Eagle-Homes-Oran-Park-Display-Steel-Monospine-staircase-with-framless-glass-balustrade-Large-4-400x600.jpg\",\"alt\":\"\",\"caption\":\"\"},{\"src\":\"https:\\/\\/stairlock.com.au\\/wp-content\\/uploads\\/2026\\/01\\/South-Coast-Constructions-Aldinga-Beach-American-Oak-Custom-Staircase-And-Timber-Batten-Screen-2-2048x1364.jpg\",\"thumb\":\"https:\\/\\/stairlock.com.au\\/wp-content\\/uploads\\/2026\\/01\\/South-Coast-Constructions-Aldinga-Beach-American-Oak-Custom-Staircase-And-Timber-Batten-Screen-2-900x600.jpg\",\"alt\":\"\",\"caption\":\"\"},{\"src\":\"https:\\/\\/stairlock.com.au\\/wp-content\\/uploads\\/2020\\/02\\/Custom-Staircase-with-Frameless-Glass-Balustrade-Timber-Handrails-Rostrevor-1-2048x1366.jpg\",\"thumb\":\"https:\\/\\/stairlock.com.au\\/wp-content\\/uploads\\/2020\\/02\\/Custom-Staircase-with-Frameless-Glass-Balustrade-Timber-Handrails-Rostrevor-1-900x600.jpg\",\"alt\":\"\",\"caption\":\"\"},{\"src\":\"https:\\/\\/stairlock.com.au\\/wp-content\\/uploads\\/2026\\/07\\/Custom-blackbut-staircase-and-steel-balustrade-hero-2048x1152.jpg\",\"thumb\":\"https:\\/\\/stairlock.com.au\\/wp-content\\/uploads\\/2026\\/07\\/Custom-blackbut-staircase-and-steel-balustrade-hero-900x506.jpg\",\"alt\":\"Inside the foyer of a home looking at a closed door on the right, with a floating staircase on the left, supported by a custom white steel balustrade and blackbutt timber treads, and a white rectangle steel handrail on the wall.\",\"caption\":\"\"},{\"src\":\"https:\\/\\/stairlock.com.au\\/wp-content\\/uploads\\/2021\\/02\\/Medindie-Custom-Spotted-Gum-staircase-with-LED-feature-3-2048x1366.jpg\",\"thumb\":\"https:\\/\\/stairlock.com.au\\/wp-content\\/uploads\\/2021\\/02\\/Medindie-Custom-Spotted-Gum-staircase-with-LED-feature-3-900x600.jpg\",\"alt\":\"\",\"caption\":\"\"},{\"src\":\"https:\\/\\/stairlock.com.au\\/wp-content\\/uploads\\/2021\\/05\\/Oakford-Homes-Marino-SA-Steel-mono-spine-staircase-with-glass-balustrade-1-2048x1366.jpg\",\"thumb\":\"https:\\/\\/stairlock.com.au\\/wp-content\\/uploads\\/2021\\/05\\/Oakford-Homes-Marino-SA-Steel-mono-spine-staircase-with-glass-balustrade-1-900x600.jpg\",\"alt\":\"\",\"caption\":\"\"}] Design possibilities Custom staircases made to your specifications. Construction & support Traditional stringer Classic and timeless construction Semi-cantilever Creates an open and contemporary design Full cantilever Treads create a floating look from hidden fixings Monospine Single central spine, timber or steel. Treads, risers & stringers Cut stringer (closed riser) Sawtooth stringer with the risers closed in. Treads on show, steps solid. Full stringer (open riser) Housed stringer with open risers. Clean side, light and airy. Cut stringer (open riser) Sawtooth stringer, open risers. The most open, contemporary look. Full stringer (closed riser) Housed stringer with solid risers. Traditional and enclosed. Balustrades Frameless glass Uninterrupted glass for a clean, open outlook. Steel & Metal Powder-coated steel and metal, square or round. Timber Timber posts and rails in your choice of species. Timber screen Vertical timber battens as a feature screen or balustrade. Custom A bespoke balustrade built to your design. Wire Tensioned wire for a minimal, see-through line. Handrails, posts & finishing touches Timber handrail Solid timber, shaped to a comfortable grip. Steel handrail Powder-coated steel in the colour you choose. Integrated LED lighting Recessed strip lighting under the treads or handrail. Premium newel posts Turned or square profiles, including our Hampton style, for a classic finish. Stair safety options Flush safety bars and slip-resistant tread details. Materials Premium timber, your choice of species. You can choose from a range of premium and sustainably sourced hardwood timber species. Each brings it's own character and unique finish to your dream staircase. American Oak Warm tones. Distinctive grain. Blackbutt Golden tones. Natural grain. Eucalyptus grandis Soft pink tones. Straight grain. Merbau Rich tones. Wavy grain. Spotted gum Rich variation. Bold grain. Ready to get started? Enquire today and let us bring your dream custom timber staircase to life. Start your project Trade & specifier enquiry CRAFTMANSHIP Over forty years of staircase craft, in every step. A custom stair is part engineering, part joinery, part art. Ours are built by tradespeople who’ve done it for decades – measured precisely, finished by hand, and checked before they ever reach your site. Engineered to your plans CNC-precise, hand-finished Hand-selected timber Signed off by a tradesperson Installed by our own crews Documentation Downloads & resources PDF Stairlock Brochure Stairlock brochure featuring our product range and options 8.5 MB PDF Reviews What customers say about our custom timber staircases. May 21, 2026 We have dealt with Steve, Brad and the team at Stairlock for over 12 years and over this time their level of customer service has been exceptional, as well as the quality of work on site. The attention to detail and communication allows our business to run smoothly when planning… Creative Structures James Doyle May 21, 2026 Our team was very pleased with Stairlock’s installations and fast turnaround times during frame stage, eliminating the need for accident prone ladders. The company has exceptional service, and this really contributed to improving our overall completion times. Burbank Homes Milan Surla Operations Manager May 21, 2026 The craftmanship of the all the stairs and in particular the timber staircase, battens screens and handrails are outstanding. From quoting to installation, all staff were friendly and very professional with each question and query that was posed, answered with a willing attitude. The finished product reflects the care taken… Creation Homes Sean Hewitt Project Manager May 20, 2026 Stairlock has proven to be the A class stair manufacturer in the medium density space, and always performs with an exceptional level of quality and service. Metricon Townliving Mario Christodoulou Operations Manager Common questions Frequently asked questions about custom timber staircases. Do you work from our plans, or can you help with the design? Both. If you’ve got plans or architect’s drawings, we build to them. If it’s still being worked out, our team can help design the staircase to suit the space and the build. Either way, you sign off the detail before we start manufacturing. Do you install the staircase, or supply only? We install. A custom timber staircase needs specialised trade installation to fit it correctly and safely, so we handle it end to end: design, manufacture and install. Our MDF stairs are simpler to put in, so with those you’ve got the choice: install them yourself, or have us do it. Do the stairs come finished, or is that done on site? We take it up to the point the staircase is installed. Staining, sealing, painting and any floor coverings are done on site by your finisher. So we design, build and install, then hand it over ready for the finishing trades. Can you do glass and steel balustrades, or just timber? More than just timber. We do timber, glass and steel balustrades, plus wire and custom timber screen balustrades. So you can match the balustrade to the design, whether that’s a frameless glass look, a fine steel or wire detail, or a solid timber screen. Are your staircases BCA compliant? Yes. All our stair designs are made to meet the BCA and NCC, so the staircase complies with the current codes, including riser and going dimensions and balustrade heights and gaps. Our work Custom timber staircase projects. American Oak Dual Custom Timber Staircases, Victor Harbour American Oak American Oak Staircase & Timber Screen Balustrade, Aldinga Beach Eucalyptus Grandis Custom Timber Staircase on Steel Monospine & Glass Balustrade, Oran Park Custom Staircases Open Rise Timber Staircase with Feature Landing, Bulleen Eucalyptus Grandis Custom Steel Monospine Staircase with Glass Balustrade, Oran Park Custom Staircases Hamptons Style Custom Staircase with Metal Balusters, Wilton Availability Custom timber stairs - where we deliver. South Australia Adelaide Adelaide metro, Adelaide Hills, Fleurieu Peninsula, Barossa Valley, Gawler, Mount Barker, regional South Australia Custom Staircases in Adelaide Victoria Melbourne Melbourne metro, Mornington Peninsula, Geelong, the Yarra Valley, Bendigo, Ballarat and regional Victoria Custom Staircases in Melbourne New South Wales Sydney Sydney metro, the Hills District, Northern Beaches, Sutherland Shire, the Central Coast, Wollongong, Newcastle and regional New South Wales Custom Staircases in Sydney Ready to get started? Ready for your custom timber staircase? Let's talk about your project Adelaide · Melbourne · Sydney · Brisbane Four generations working with timber. Making stairs since 1982, delivered nationally. Company About Stairlock Projects Sustainability Careers Resources Installation Guides Resources & Downloads All Products Contact Get a Quote Trade & Builders Contact Us Locations 1800 088 219 © 2026 Stairlock Pty Ltd. All rights reserved. Privacy Policy Terms and Conditions · ABN 98 611 507 254 Free download Stairlock product brochure Download Request a quote Get a quote for your project Quote Request Form - With Uploads Newsletter Your DetailsNameEmailPhoneCompany NameState- Select -Australian Capital TerritoryNew South WalesNorthern TerritoryQueenslandSouth AustraliaTasmaniaVictoriaWestern AustraliaTell us about your projectPlans & SpecificationsOptional - but the more you share, the faster we can quoteFile UploadChoose File Submit Form window.fluent_form_ff_form_instance_3_1 = {\"id\":\"3\",\"ajaxUrl\":\"https:\\/\\/stairlock.com.au\\/wp-admin\\/admin-ajax.php\",\"settings\":{\"layout\":{\"labelPlacement\":\"top\",\"asteriskPlacement\":\"asterisk-right\",\"helpMessagePlacement\":\"with_label\",\"errorMessagePlacement\":\"inline\",\"cssClassName\":\"\"},\"restrictions\":{\"denyEmptySubmission\":{\"enabled\":false}}},\"form_instance\":\"ff_form_instance_3_1\",\"form_id_selector\":\"fluentform_3\",\"rules\":{\"input_text\":{\"required\":{\"value\":true,\"message\":\"This field is required\",\"global_message\":\"This field is required\",\"global\":true}},\"email\":{\"required\":{\"value\":true,\"message\":\"This field is required\",\"global_message\":\"This field is required\",\"global\":true},\"email\":{\"value\":true,\"message\":\"This field must contain a valid email\",\"global_message\":\"This field must contain a valid email\",\"global\":true}},\"phone\":{\"required\":{\"value\":true,\"global\":true,\"message\":\"This field is required\",\"global_message\":\"This field is required\"},\"valid_phone_number\":{\"value\":true,\"global\":true,\"message\":\"Phone number is not valid\",\"global_message\":\"Phone number is not valid\"}},\"input_text_1\":{\"required\":{\"value\":false,\"message\":\"This field is required\",\"global_message\":\"This field is required\",\"global\":true}},\"dropdown\":{\"required\":{\"value\":true,\"message\":\"This field is required\",\"global_message\":\"This field is required\",\"global\":true}},\"description\":{\"required\":{\"value\":false,\"message\":\"This field is required\",\"global_message\":\"This field is required\",\"global\":true}},\"file-upload\":{\"required\":{\"value\":false,\"message\":\"This field is required\",\"global_message\":\"This field is required\",\"global\":true},\"max_file_size\":{\"value\":20971520,\"_valueFrom\":\"MB\",\"message\":\"Your files have exceeded the maximum allowed file size. Please reduce below 20MB and try again.\",\"global_message\":\"Validation fails for maximum file size\",\"global\":false},\"max_file_count\":{\"value\":\"6\",\"message\":\"You've exceeded the maximum number of files that can be uploaded.\",\"global_message\":\"Validation fails for maximum file count\",\"global\":false},\"allowed_file_types\":{\"value\":[\"jpg|jpeg|gif|png|bmp\",\"pdf\",\"doc|ppt|pps|xls|mdb|docx|xlsx|pptx|odt|odp|ods|odg|odc|odb|odf|rtf|txt\"],\"message\":\"Invalid file type\",\"global_message\":\"Invalid file type\",\"global\":true}},\"cf-turnstile-response\":[]},\"debounce_time\":300,\"file_upload_settings\":[]}; {\"prefetch\":[{\"source\":\"document\",\"where\":{\"and\":[{\"href_matches\":\"/*\"},{\"not\":{\"href_matches\":[\"/wp-*.php\",\"/wp-admin/*\",\"/wp-content/uploads/*\",\"/wp-content/*\",\"/wp-content/plugins/*\",\"/wp-content/themes/stairlock/*\",\"/*\\\\?(.+)\"]}},{\"not\":{\"selector_matches\":\"a[rel~=\\\"nofollow\\\"]\"}},{\"not\":{\"selector_matches\":\".no-prefetch, .no-prefetch a\"}}]},\"eagerness\":\"conservative\"}]} form.fluent_form_3 .ff-btn-submit:not(.ff_btn_no_style) { background-color: var(--fluentform-primary); color: #ffffff; } var fluentform_upload_messages_3 = {\"drag_drop_text\":\"Drag & Drop files here or click to browse\",\"upload_text\":\"Choose File\",\"max_file_error\":\"Maximum file size exceeded\",\"file_type_error\":\"Invalid file type\",\"file_size_error\":\"File size too large\",\"upload_failed_text\":\"Sorry! The upload failed for some unknown reason.\",\"upload_error_text\":\"Something is wrong when uploading the file! Please try again\"}; //# sourceURL=fluentform-uploader-js-extra var fluentFormVars = {\"ajaxUrl\":\"https://stairlock.com.au/wp-admin/admin-ajax.php\",\"forms\":[],\"step_text\":\"Step %activeStep% of %totalStep% - %stepTitle%\",\"step_completed_text\":\"Completed\",\"is_rtl\":\"\",\"date_i18n\":{\"previousMonth\":\"Previous Month\",\"nextMonth\":\"Next Month\",\"months\":{\"shorthand\":[\"Jan\",\"Feb\",\"Mar\",\"Apr\",\"May\",\"Jun\",\"Jul\",\"Aug\",\"Sep\",\"Oct\",\"Nov\",\"Dec\"],\"longhand\":[\"January\",\"February\",\"March\",\"April\",\"May\",\"June\",\"July\",\"August\",\"September\",\"October\",\"November\",\"December\"]},\"weekdays\":{\"longhand\":[\"Sunday\",\"Monday\",\"Tuesday\",\"Wednesday\",\"Thursday\",\"Friday\",\"Saturday\"],\"shorthand\":[\"Sun\",\"Mon\",\"Tue\",\"Wed\",\"Thu\",\"Fri\",\"Sat\"]},\"daysInMonth\":[31,28,31,30,31,30,31,31,30,31,30,31],\"rangeSeparator\":\" to \",\"weekAbbreviation\":\"Wk\",\"scrollTitle\":\"Scroll to increment\",\"toggleTitle\":\"Click to toggle\",\"amPM\":[\"AM\",\"PM\"],\"yearAriaLabel\":\"Year\",\"firstDayOfWeek\":1},\"pro_version\":\"6.2.13\",\"fluentform_version\":\"6.2.13\",\"force_init\":\"\",\"stepAnimationDuration\":\"350\",\"upload_completed_txt\":\"100% Completed\",\"upload_start_txt\":\"0% Completed\",\"uploading_txt\":\"Uploading\",\"choice_js_vars\":{\"noResultsText\":\"No results found\",\"loadingText\":\"Loading...\",\"noChoicesText\":\"No choices to choose from\",\"itemSelectText\":\"Press to select\",\"maxItemTextSingular\":\"Only %%maxItemCount%% option can be added\",\"maxItemTextPlural\":\"Only %%maxItemCount%% options can be added\"},\"input_mask_vars\":{\"clearIfNotMatch\":false},\"nonce\":\"811785f0ad\",\"file_delete_nonce\":\"6f068140b5\",\"form_id\":\"3\",\"step_change_focus\":\"1\",\"has_cleantalk\":\"\",\"pro_payment_script_compatible\":\"1\",\"token_nonce\":\"690b30eb91\",\"crop_image_title\":\"Crop Image\",\"crop_confirm_txt\":\"Crop & Upload\",\"crop_cancel_txt\":\"Cancel\",\"crop_close_txt\":\"Close\",\"crop_reset_txt\":\"Reset\",\"crop_ratio_txt\":\"Crop ratio\",\"crop_ratio_free_txt\":\"Free\",\"crop_invalid_dimensions_txt\":\"The selected image is smaller than the required crop size.\",\"crop_exact_dimensions_txt\":\"The cropped image must match the required width and height.\",\"crop_dimension_instruction_txt\":\"Crop the image to exactly %1$s px x %2$s px.\",\"crop_invalid_image_txt\":\"Unable to process the selected image.\",\"crop_loading_txt\":\"Preparing image...\"}; var fluentform_submission_messages_3 = {\"file_upload_in_progress\":\"File upload in progress. Please wait...\",\"javascript_handler_failed\":\"Javascript handler could not be loaded. Form submission has been failed. Reload the page and try again\"}; var fluentform_payment_messages_3 = {\"stock_out_message\":\"This Item is Stock Out\",\"item_label\":\"Item\",\"price_label\":\"Price\",\"qty_label\":\"Qty\",\"line_total_label\":\"Line Total\",\"sub_total_label\":\"Sub Total\",\"discount_label\":\"Discount\",\"total_label\":\"Total\",\"signup_fee_label\":\"Signup Fee\",\"trial_label\":\"Trial\",\"processing_text\":\"Processing...\",\"confirming_text\":\"Confirming...\"}; var fluentform_save_progress_messages_3 = {\"copy_button\":\"Copy\",\"email_button\":\"Email\",\"email_placeholder\":\"Your Email Here\",\"copy_success\":\"Copied\"}; var fluentform_address_messages_3 = {\"please_wait\":\"Please wait ...\",\"location_not_determined\":\"Could not determine address from location.\",\"address_fetch_failed\":\"Failed to fetch address from coordinates.\",\"geolocation_failed\":\"Geolocation failed or was denied.\",\"geolocation_not_supported\":\"Geolocation is not supported by this browser.\"}; var fluentform_gateway_messages_3 = {\"request_failed\":\"Request failed. Please try again\",\"payment_failed\":\"Payment process failed!\",\"no_method_found\":\"No method found\",\"processing_text\":\"Processing...\"}; var fluentform_submission_messages_global = {\"javascript_handler_failed\":\"Javascript handler could not be loaded. Form submission has been failed. Reload the page and try again\"}; var fluentform_address_messages_global = {\"please_wait\":\"Please wait ...\",\"location_not_determined\":\"Could not determine address from location.\",\"address_fetch_failed\":\"Failed to fetch address from coordinates.\",\"geolocation_failed\":\"Geolocation failed or was denied.\",\"geolocation_not_supported\":\"Geolocation is not supported by this browser.\"}; //# sourceURL=fluent-form-submission-js-extra {\"baseUrl\":\"https://s.w.org/images/core/emoji/17.0.2/72x72/\",\"ext\":\".png\",\"svgUrl\":\"https://s.w.org/images/core/emoji/17.0.2/svg/\",\"svgExt\":\".svg\",\"source\":{\"concatemoji\":\"https://stairlock.com.au/wp-includes/js/wp-emoji-release.min.js?ver=7.1\"}} /*! This file is auto-generated */ var e=\"script#wp-emoji-settings\",t=document.querySelector(e);if(!(t instanceof HTMLScriptElement))throw new Error(\"Element missing: \"+e);const r=JSON.parse(t.text),s=(window._wpemojiSettings=r,\"wpEmojiSettingsSupports\"),o=[\"flag\",\"emoji\"];function i(e){try{var t={supportTests:e,timestamp:(new Date).valueOf()};sessionStorage.setItem(s,JSON.stringify(t))}catch(e){}}function c(e,t,n){e.clearRect(0,0,e.canvas.width,e.canvas.height),e.fillText(t,0,0);t=new Uint32Array(e.getImageData(0,0,e.canvas.width,e.canvas.height).data);e.clearRect(0,0,e.canvas.width,e.canvas.height),e.fillText(n,0,0);const r=new Uint32Array(e.getImageData(0,0,e.canvas.width,e.canvas.height).data);return t.every((e,t)=>e===r[t])}function p(e,t){e.clearRect(0,0,e.canvas.width,e.canvas.height),e.fillText(t,0,0);var n=e.getImageData(16,16,1,1);for(let e=0;e<n.data.length;e++)if(0!==n.data[e])return!1;return!0}function u(e,t,n,r){switch(t){case\"flag\":return n(e,\"\\ud83c\\udff3\\ufe0f\\u200d\\u26a7\\ufe0f\",\"\\ud83c\\udff3\\ufe0f\\u200b\\u26a7\\ufe0f\")?!1:!n(e,\"\\ud83c\\udde8\\ud83c\\uddf6\",\"\\ud83c\\udde8\\u200b\\ud83c\\uddf6\")&&!n(e,\"\\ud83c\\udff4\\udb40\\udc67\\udb40\\udc62\\udb40\\udc65\\udb40\\udc6e\\udb40\\udc67\\udb40\\udc7f\",\"\\ud83c\\udff4\\u200b\\udb40\\udc67\\u200b\\udb40\\udc62\\u200b\\udb40\\udc65\\u200b\\udb40\\udc6e\\u200b\\udb40\\udc67\\u200b\\udb40\\udc7f\");case\"emoji\":return!r(e,\"\\ud83e\\u1fac8\")}return!1}function f(e,t,n,r){let a;const s=(a=\"undefined\"!=typeof WorkerGlobalScope&&self instanceof WorkerGlobalScope?new OffscreenCanvas(300,150):document.createElement(\"canvas\")).getContext(\"2d\",{willReadFrequently:!0}),o=(s.textBaseline=\"top\",s.font=\"600 32px Arial\",{});return e.forEach(e=>{o[e]=t(s,e,n,r)}),o}function a(e){var t=document.createElement(\"script\");t.src=e,t.defer=!0,document.head.appendChild(t)}r.supports={everything:!0,everythingExceptFlag:!0},new Promise(t=>{let n=function(){try{var e=JSON.parse(sessionStorage.getItem(s));if(\"object\"==typeof e&&\"number\"==typeof e.timestamp&&(new Date).valueOf()<e.timestamp+604800&&\"object\"==typeof e.supportTests)return e.supportTests}catch(e){}return null}();if(!n){if(\"undefined\"!=typeof Worker&&\"undefined\"!=typeof OffscreenCanvas&&\"undefined\"!=typeof URL&&URL.createObjectURL&&\"undefined\"!=typeof Blob)try{var e=\"postMessage(\"+f.toString()+\"(\"+[JSON.stringify(o),u.toString(),c.toString(),p.toString()].join(\",\")+\"));\",r=new Blob([e],{type:\"text/javascript\"});const a=new Worker(URL.createObjectURL(r),{name:\"wpTestEmojiSupports\"});return void(a.onmessage=e=>{i(n=e.data),a.terminate(),t(n)})}catch(e){}i(n=f(o,u,c,p))}t(n)}).then(e=>{for(const n in e)r.supports[n]=e[n],r.supports.everything=r.supports.everything&&r.supports[n],\"flag\"!==n&&(r.supports.everythingExceptFlag=r.supports.everythingExceptFlag&&r.supports[n]);var t;r.supports.everythingExceptFlag=r.supports.everythingExceptFlag&&!r.supports.flag,r.supports.everything||((t=r.source||{}).concatemoji?a(t.concatemoji):t.wpemoji&&t.twemoji&&(a(t.twemoji),a(t.wpemoji)))}); //# sourceURL=https://stairlock.com.au/wp-includes/js/wp-emoji-loader.min.js /* Quote form — file-upload copy (styling now lives in the theme) */ .fluent_form_3 .ff-dropzone .ff_file_upload_holder::before { content: \"Drag and drop your files here\" !important; } .fluent_form_3 .ff-dropzone .ff_file_upload_holder::after { content: \"Images, PDFs or documents · up to 6 files, 20MB total\" !important; } if (typeof window.intlTelInput !== 'undefined' && !window.fluentFormIntlTelInput) { window.fluentFormIntlTelInput = window.intlTelInput; } jQuery(document).ready(function($) { if (window.fluentFormIntlTelInput && typeof window.fluentFormIntlTelInput === 'function') { window.intlTelInput = window.fluentFormIntlTelInput; } }); jQuery(document).ready(function ($) { function initTelInput() { var intlTelInputFunc = window.intlTelInput; if (typeof intlTelInputFunc == 'undefined') { return; } var telInput = jQuery('.ff_form_instance_3_1').find(\"#ff_3_phone\"); if (!telInput.length) { return; } var itlOptions = JSON.parse('{\"separateDialCode\":false,\"nationalMode\":true,\"autoPlaceholder\":\"polite\",\"useFullscreenPopup\":false,\"formatOnDisplay\":true,\"validationNumberTypes\":[\"MOBILE\",\"FIXED_LINE_OR_MOBILE\",\"FIXED_LINE\",\"TOLL_FREE\"],\"initialCountry\":\"auto\",\"onlyCountries\":[\"AU\"]}'); itlOptions.geoIpLookup = function (success, failure) { jQuery.get(\"https://ipinfo.io\", function (res) { return true; }, \"json\").always(function (resp) { var countryCode = (resp && resp.country) ? resp.country : \"\"; if (countryCode) { success(countryCode); } }); }; if (telInput.val()) { itlOptions.initialValue = telInput.val(); } var iti = intlTelInputFunc(telInput[0], itlOptions); telInput.data('iti', iti); telInput.data('strict_validation', 'yes'); } initTelInput(); $(document).on('reInitExtras', '.ff_form_instance_3_1', function () { initTelInput(); }); }); "
+}

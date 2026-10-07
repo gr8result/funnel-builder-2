@@ -1,0 +1,275 @@
+{
+  "checkedAt": "2026-09-16",
+  "method": "Visual inspection of complete local contact sheet plus exact SKU gallery ownership and byte-hash validation",
+  "contactSheet": "artifacts/euromaid-hnc-20260916/all38-contact-sheet.png",
+  "productCount": 38,
+  "result": "All 38 photographs show the corresponding appliance type; no placeholders or technical drawings. Exact-model association established by supplier SKU gallery evidence.",
+  "images": [
+    {
+      "model": "EBM28TB",
+      "file": "/images/catalogues/appliances/products/euromaid/hnc-ebm28tb.jpg",
+      "width": 771,
+      "height": 529,
+      "sha256": "93d59ace3e5a107652a3b20b561403401dbdb5fa74c6c5690843874065d5f1e4"
+    },
+    {
+      "model": "EFS50EW",
+      "file": "/images/catalogues/appliances/products/euromaid/hnc-efs50ew.jpg",
+      "width": 665,
+      "height": 1200,
+      "sha256": "36257518d3ce4dbdf898e7b74908d94f5c5ce6b2fc303173229901f5ffb6c9b7"
+    },
+    {
+      "model": "EUM52S",
+      "file": "/images/catalogues/appliances/products/euromaid/hnc-eum52s.jpg",
+      "width": 744,
+      "height": 533,
+      "sha256": "872d53af9da379e33c725f3ec98252eba7a2ef098181e97cdbb0cd28896396e3"
+    },
+    {
+      "model": "UCG52B",
+      "file": "/images/catalogues/appliances/products/euromaid/hnc-ucg52b.jpg",
+      "width": 952,
+      "height": 266,
+      "sha256": "7f12ac3a13a25e7a9bc85b56ccb429da5374dd3f01c0028b081d5eb3348c9ff3"
+    },
+    {
+      "model": "EFS54FC-SEW",
+      "file": "/images/catalogues/appliances/products/euromaid/hnc-efs54fc-sew.jpg",
+      "width": 672,
+      "height": 1230,
+      "sha256": "1767cd2de2bb62c88dc1f880491a82b45b7ade355d385b00d1549a6120244063"
+    },
+    {
+      "model": "EFS54FC-SGW",
+      "file": "/images/catalogues/appliances/products/euromaid/hnc-efs54fc-sgw.jpg",
+      "width": 799,
+      "height": 1200,
+      "sha256": "e529b240d7bacca9eca36b6d5434af7560a5469f560ede390a35deadb9f65a88"
+    },
+    {
+      "model": "E14FID",
+      "file": "/images/catalogues/appliances/products/euromaid/hnc-e14fid.jpg",
+      "width": 818,
+      "height": 1200,
+      "sha256": "6653525784650a2fda66818aed65279b6a4d7b2a10ce270346fb0e9ab8f207d9"
+    },
+    {
+      "model": "CPT6MB",
+      "file": "/images/catalogues/appliances/products/euromaid/hnc-cpt6mb.jpg",
+      "width": 1412,
+      "height": 1200,
+      "sha256": "ecfb9f9ecf7a71a23f8d2f4de34ce977ce03d1c33b84f056c4ddd03866c341fc"
+    },
+    {
+      "model": "CPT6S",
+      "file": "/images/catalogues/appliances/products/euromaid/hnc-cpt6s.jpg",
+      "width": 1428,
+      "height": 1200,
+      "sha256": "c04b53221adcd885020833aaabc3517c18b330faf25035fb81ea635e58ad8ebd"
+    },
+    {
+      "model": "RFT6MB",
+      "file": "/images/catalogues/appliances/products/euromaid/hnc-rft6mb.jpg",
+      "width": 1232,
+      "height": 858,
+      "sha256": "eb655c64357a92a60cb5f76aa2a104d46ce5f5ed732e64a807f8d48a70c2bcea"
+    },
+    {
+      "model": "ECE640K",
+      "file": "/images/catalogues/appliances/products/euromaid/hnc-ece640k.jpg",
+      "width": 1712,
+      "height": 1510,
+      "sha256": "36bc53cf0cfa4fdba4e76b37e9b41b279e7a0ca8f865010f326784b97d262720"
+    },
+    {
+      "model": "EPO617ASTB",
+      "file": "/images/catalogues/appliances/products/euromaid/hnc-epo617astb.jpg",
+      "width": 1682,
+      "height": 1654,
+      "sha256": "4b687c70f7f61ac7ef3776d52fa7bbfe8723b7ea1868a6ab3637339f30949b8c"
+    },
+    {
+      "model": "EO605DTB",
+      "file": "/images/catalogues/appliances/products/euromaid/hnc-eo605dtb.jpg",
+      "width": 1354,
+      "height": 1340,
+      "sha256": "d4436037b5b513066d44e29f5e84e8f7d26f1c85ec5e8a936913e1642b341a81"
+    },
+    {
+      "model": "EO605MTS",
+      "file": "/images/catalogues/appliances/products/euromaid/hnc-eo605mts.jpg",
+      "width": 1036,
+      "height": 1022,
+      "sha256": "b6917de0060186d7004c5cdccaf198be5b8aa217b53e86c0c04422d428efa929"
+    },
+    {
+      "model": "EO610ATB",
+      "file": "/images/catalogues/appliances/products/euromaid/hnc-eo610atb.jpg",
+      "width": 1344,
+      "height": 1328,
+      "sha256": "76720234d419166109d5fed8b18f9c491bbe2e0c800682cb6b343052fef80fc1"
+    },
+    {
+      "model": "R60FS",
+      "file": "/images/catalogues/appliances/products/euromaid/hnc-r60fs.jpg",
+      "width": 1485,
+      "height": 571,
+      "sha256": "0cd972315f40bde600ff845444a5b801c96b3ad412fed4bb18aa2281516eb5c5"
+    },
+    {
+      "model": "R60FW",
+      "file": "/images/catalogues/appliances/products/euromaid/hnc-r60fw.jpg",
+      "width": 810,
+      "height": 351,
+      "sha256": "aad1505df553647b265d96d26b9cc68a41c57ba8f78123d9274fa3916b313b37"
+    },
+    {
+      "model": "E14DWX",
+      "file": "/images/catalogues/appliances/products/euromaid/hnc-e14dwx.jpg",
+      "width": 831,
+      "height": 1200,
+      "sha256": "a4b19617d5aadb4376f78a78abe2cf95428c4018cef0a4bbb713e560de7941d3"
+    },
+    {
+      "model": "E14DWB",
+      "file": "/images/catalogues/appliances/products/euromaid/hnc-e14dwb.jpg",
+      "width": 441,
+      "height": 585,
+      "sha256": "fb789b2ad481c0049c1355ea82fb3ed6bbfd17114193e3bfe4eb82647d439fd5"
+    },
+    {
+      "model": "EC64GS",
+      "file": "/images/catalogues/appliances/products/euromaid/hnc-ec64gs.jpg",
+      "width": 1387,
+      "height": 1200,
+      "sha256": "0fc6edabe248280d03cc9cfbffcc126c35a5529eab0ba2c7b26311bfe98d97a5"
+    },
+    {
+      "model": "ECE641T",
+      "file": "/images/catalogues/appliances/products/euromaid/hnc-ece641t.jpg",
+      "width": 663,
+      "height": 584,
+      "sha256": "3caa4984dbc06fc0b5d78f799ed23905d91401aa544a96c9a06e93b8360351f1"
+    },
+    {
+      "model": "ECI640TE",
+      "file": "/images/catalogues/appliances/products/euromaid/hnc-eci640te.jpg",
+      "width": 650,
+      "height": 575,
+      "sha256": "9bfd7a9e30f19867b8592a1cd5edb2513bb6a561f7ffde96705441edc7a4a806"
+    },
+    {
+      "model": "ESL60RDS",
+      "file": "/images/catalogues/appliances/products/euromaid/hnc-esl60rds.jpg",
+      "width": 1333,
+      "height": 593,
+      "sha256": "2b8c6e9ff149ec02b3d47c99cd0e438e602c1972c7c0baab736bc1537861a7b4"
+    },
+    {
+      "model": "EUM85S",
+      "file": "/images/catalogues/appliances/products/euromaid/hnc-eum85s.jpg",
+      "width": 803,
+      "height": 472,
+      "sha256": "7e83cb9645bd0dfbce4e637f66408b1336b8a14590e6e5d0d40ffabe00de32a9"
+    },
+    {
+      "model": "CPT9S",
+      "file": "/images/catalogues/appliances/products/euromaid/hnc-cpt9s.jpg",
+      "width": 1845,
+      "height": 1060,
+      "sha256": "ac6aeb2856a2e124636b31752e045392a103c52e8900e35223b28b77434420ab"
+    },
+    {
+      "model": "CPT9MB",
+      "file": "/images/catalogues/appliances/products/euromaid/hnc-cpt9mb.jpg",
+      "width": 2080,
+      "height": 1224,
+      "sha256": "0ecd15384d9fbbeec50b8d5bcd5523174139e04eddac745e9545a31a7ed78cc4"
+    },
+    {
+      "model": "EO916ASTB",
+      "file": "/images/catalogues/appliances/products/euromaid/hnc-eo916astb.jpg",
+      "width": 1516,
+      "height": 1000,
+      "sha256": "60fd6bb8b7e9fa100e50eef85cfcd0b02a985e4806c561e1a1143f5545aba45f"
+    },
+    {
+      "model": "EO910TS",
+      "file": "/images/catalogues/appliances/products/euromaid/hnc-eo910ts.jpg",
+      "width": 2004,
+      "height": 1322,
+      "sha256": "ccb93dfb096f3ca44c858f0bd164ff5f94a9d5229d97caee6afb510664a18a54"
+    },
+    {
+      "model": "EPO917ASTB",
+      "file": "/images/catalogues/appliances/products/euromaid/hnc-epo917astb.jpg",
+      "width": 2034,
+      "height": 1342,
+      "sha256": "da106dee32526138b9234409707c37353c822f4f464510041e7312d216ed3bd7"
+    },
+    {
+      "model": "EFS9010CERS",
+      "file": "/images/catalogues/appliances/products/euromaid/hnc-efs9010cers.jpg",
+      "width": 584,
+      "height": 585,
+      "sha256": "da348f8bc24d6c6cbfacbe6080ccf6f0c248faf7c1d240ca63afcd4eee6efc93"
+    },
+    {
+      "model": "EC95GLS",
+      "file": "/images/catalogues/appliances/products/euromaid/hnc-ec95gls.jpg",
+      "width": 1500,
+      "height": 898,
+      "sha256": "09cecc69deba50ab59b0ac2369846c0b33439028c0cff7c2e68e76092b4de940"
+    },
+    {
+      "model": "ECI950TE",
+      "file": "/images/catalogues/appliances/products/euromaid/hnc-eci950te.jpg",
+      "width": 848,
+      "height": 541,
+      "sha256": "3d587d4d3ebb707137a2c11c1c2b86e3d7c003b39ba65d7f6462f231fd16817b"
+    },
+    {
+      "model": "EFS9010AINDB",
+      "file": "/images/catalogues/appliances/products/euromaid/hnc-efs9010aindb.jpg",
+      "width": 584,
+      "height": 585,
+      "sha256": "fd95aef3405b241fedcdc5b0d8b90acffe8d99f6ad307686f1de346b364082a9"
+    },
+    {
+      "model": "EFS9010DFS",
+      "file": "/images/catalogues/appliances/products/euromaid/hnc-efs9010dfs.jpg",
+      "width": 1117,
+      "height": 1200,
+      "sha256": "ea1cf9798b61028c581dcfcfa5ccca4abbe5867ad88b0cc9350f0773966f57b4"
+    },
+    {
+      "model": "ESL90RDS",
+      "file": "/images/catalogues/appliances/products/euromaid/hnc-esl90rds.jpg",
+      "width": 775,
+      "height": 349,
+      "sha256": "3d23a128f7b2856674d1a04dac9894a2cd46ee969328f1da31122ad761cd95e5"
+    },
+    {
+      "model": "UCG90B",
+      "file": "/images/catalogues/appliances/products/euromaid/hnc-ucg90b.jpg",
+      "width": 1767,
+      "height": 849,
+      "sha256": "b72037ae24024405472bb8f1b0d63104c73bf1be80034ad069552e422360ee7e"
+    },
+    {
+      "model": "EC64GB",
+      "file": "/images/catalogues/appliances/products/euromaid/hnc-ec64gb.jpg",
+      "width": 1500,
+      "height": 1283,
+      "sha256": "d0cc3f1ed96806f44bc4df91b3237be5059ff2ab7193fa82bc98a09142b05829"
+    },
+    {
+      "model": "EC95GLB",
+      "file": "/images/catalogues/appliances/products/euromaid/hnc-ec95glb.jpg",
+      "width": 1500,
+      "height": 954,
+      "sha256": "6b0971328e56951353534a5f8e7ea252f3141c39984e8df6ce40c7b5ecf4f02b"
+    }
+  ]
+}

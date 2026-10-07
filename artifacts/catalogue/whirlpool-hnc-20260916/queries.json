@@ -1,0 +1,7 @@
+{
+  "checkedAt": "2026-09-16",
+  "endpoint": "https://www.harveynormancommercial.com.au/api/magento-proxy",
+  "brandId": "1084",
+  "listing": "query WhirlpoolRange($page:Int!,$root:[String]){products(filter:{brand:{eq:\"1084\"},category_id:{in:$root}},pageSize:25,currentPage:$page){total_count page_info{total_pages current_page page_size}aggregations{attribute_code label options{label value count}}items{id sku vendorcode name categories{id name url_path}__typename}}}",
+  "detail": "query WhirlpoolProduct($sku:String!){products(filter:{sku:{eq:$sku}}){items{id sku vendorcode name image{url} product_images{thumbnail small base first_gallery second_gallery} media_gallery{url} description{html} product_dimensions price_promo price_store wels_reg_number gp_product_group __typename}aggregations{attribute_code label options{label value count}}}}"
+}

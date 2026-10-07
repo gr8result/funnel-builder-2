@@ -1,61 +1,26 @@
 // /context/AuthContext.js
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { supabase } from '../utils/supabase-client';
+import { observeAuthSession } from '../lib/authSessionState.js';
 
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [session, setSession] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [authState, setAuthState] = useState({ user: null, session: null, loading: true, error: null });
+  const observerRef = useRef(null);
+  const retryAuth = useCallback(() => observerRef.current?.retry(), []);
 
   useEffect(() => {
-    // Get initial session
-    const initAuth = async () => {
-      try {
-        let { data: { session: initialSession }, error: sessionError } = await supabase.auth.getSession();
-
-        // If no session (access token expired), try refresh before treating as logged out
-        if (!sessionError && !initialSession) {
-          try {
-            const { data: refreshed } = await supabase.auth.refreshSession();
-            if (refreshed?.session) initialSession = refreshed.session;
-          } catch { /* refresh failed – genuinely logged out */ }
-        }
-        
-        if (!sessionError && initialSession) {
-          setSession(initialSession);
-          setUser(initialSession.user || null);
-        }
-      } catch (err) {
-        console.error('Auth initialization error:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    initAuth();
-
-    // Subscribe to auth changes (login, logout, token refresh, etc.)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, newSession) => {
-        setSession(newSession);
-        if (newSession?.user) {
-          setUser(newSession.user);
-        } else {
-          setUser(null);
-        }
-        setLoading(false);
-      }
-    );
-
+    const observer = observeAuthSession(supabase.auth, setAuthState);
+    observerRef.current = observer;
     return () => {
-      subscription?.unsubscribe();
+      observer.dispose();
+      observerRef.current = null;
     };
   }, []);
-
+  const value = useMemo(() => ({ ...authState, retryAuth }), [authState, retryAuth]);
   return (
-    <AuthContext.Provider value={{ user, session, loading }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

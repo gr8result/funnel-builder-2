@@ -1,0 +1,43 @@
+{
+  "importedAt": "2026-09-05T02:27:26.947Z",
+  "brands": {
+    "Lockwood": {
+      "products": 25,
+      "missingImages": 0,
+      "missingSKUs": 25,
+      "missingModels": 0,
+      "missingRates": 25
+    },
+    "Gainsborough": {
+      "products": 121,
+      "missingImages": 0,
+      "missingSKUs": 0,
+      "missingModels": 0,
+      "missingRates": 121
+    },
+    "Lemaar": {
+      "products": 58,
+      "missingImages": 0,
+      "missingSKUs": 0,
+      "missingModels": 0,
+      "missingRates": 58
+    },
+    "Zanda": {
+      "products": 88,
+      "missingImages": 0,
+      "missingSKUs": 0,
+      "missingModels": 0,
+      "missingRates": 88
+    }
+  },
+  "failures": [
+    {
+      "url": "https://www.gainsboroughhardware.com.au/en/products/550.html",
+      "error": "404 https://www.gainsboroughhardware.com.au/en/products/550.html"
+    },
+    {
+      "url": "https://www.gainsboroughhardware.com.au/en/products/9648PH370.html",
+      "error": "404 https://www.gainsboroughhardware.com.au/en/products/9648PH370.html"
+    }
+  ]
+}

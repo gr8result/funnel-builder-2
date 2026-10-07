@@ -1,0 +1,2260 @@
+{
+  "data": {
+    "products": {
+      "total_count": 19,
+      "page_info": {
+        "total_pages": 1
+      },
+      "items": [
+        {
+          "id": 26145,
+          "sku": "520030C",
+          "vendorcode": "520030C",
+          "name": "Riviere Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520030C_Caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520030C_Caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520030C_Caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520030C_Caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520030C_Caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520030C_Caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "• High quality metal construction ensures durability\n• 3 point fixing for added strength\n• Australian designed & engineered\n• PVD finish"
+          },
+          "short_description": {
+            "html": "Riviere Toilet Roll Holder"
+          },
+          "product_dimensions": "W194 x D55 x H107mm",
+          "price_store": 93,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W194 x D55 x H107mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Riviere"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "520030C"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 26144,
+          "sku": "520030BN",
+          "vendorcode": "520030BN",
+          "name": "Riviere Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520030bn_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520030bn_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520030bn_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520030bn_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520030bn_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520030bn_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• High quality metal construction ensures durability<br>• 3 point fixing for added strength<br>• Australian designed &amp; engineered<br>• PVD finish</p>"
+          },
+          "short_description": {
+            "html": "<p>Riviere Toilet Roll Holder</p>"
+          },
+          "product_dimensions": "W194 x D55 x H107mm",
+          "price_store": 119,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W194 x D55 x H107mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Riviere"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "520030BN"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 26143,
+          "sku": "520030BBZ",
+          "vendorcode": "520030BBZ",
+          "name": "Riviere Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520030BBZ_Caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520030BBZ_Caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520030BBZ_Caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520030BBZ_Caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520030BBZ_Caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520030BBZ_Caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "• High quality metal construction ensures durability\n• 3 point fixing for added strength\n• Australian designed & engineered\n• PVD finish"
+          },
+          "short_description": {
+            "html": "Riviere Toilet Roll Holder"
+          },
+          "product_dimensions": "W194 x D55 x H107mm",
+          "price_store": 119,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W194 x D55 x H107mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Riviere"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Bronze",
+                    "value": "935"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "520030BBZ"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Bronze"
+              }
+            ]
+          }
+        },
+        {
+          "id": 26142,
+          "sku": "520030BB",
+          "vendorcode": "520030BB",
+          "name": "Riviere Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520030BB_Caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520030BB_Caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520030BB_Caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/5/2/520030BB_Caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520030BB_Caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/5/2/520030BB_Caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "• High quality metal construction ensures durability\n• 3 point fixing for added strength\n• Australian designed & engineered\n• PVD finish"
+          },
+          "short_description": {
+            "html": "Riviere Toilet Roll Holder"
+          },
+          "product_dimensions": "W194 x D55 x H107mm",
+          "price_store": 119,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W194 x D55 x H107mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Riviere"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "520030BB"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Brass"
+              }
+            ]
+          }
+        },
+        {
+          "id": 20679,
+          "sku": "849031BBZ",
+          "vendorcode": "849031BBZ",
+          "name": "Contura II Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849031bbz_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849031bbz_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/8/4/849031bbz_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/8/4/849031bbz_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849031bbz_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849031bbz_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Holds one roll<br>• High quality metal construction<br>• Left and right orientations<br>• Dual fixings<br>• Brushed bronze finish</p>"
+          },
+          "short_description": {
+            "html": "<p>Contura II Toilet Roll Holder</p>"
+          },
+          "product_dimensions": "W167 x D83 x D17mm",
+          "price_store": 134,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W167 x D83 x D17mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Contura"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Bronze",
+                    "value": "935"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "849031BBZ"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Bronze"
+              }
+            ]
+          }
+        },
+        {
+          "id": 20678,
+          "sku": "849031BB",
+          "vendorcode": "849031BB",
+          "name": "Contura II Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849031bb_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849031bb_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/8/4/849031bb_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/8/4/849031bb_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849031bb_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849031bb_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Holds one roll<br>• High quality metal construction<br>• Left and right orientations<br>• Dual fixings</p>"
+          },
+          "short_description": {
+            "html": "<p>Contura II Toilet Roll Holder</p>"
+          },
+          "product_dimensions": "W167 x D83 x D17mm",
+          "price_store": 134,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W167 x D83 x D17mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Contura"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "849031BB"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Brass"
+              }
+            ]
+          }
+        },
+        {
+          "id": 20677,
+          "sku": "849031B",
+          "vendorcode": "849031B",
+          "name": "Contura II Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849031b_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849031b_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/8/4/849031b_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/8/4/849031b_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849031b_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849031b_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Holds one roll<br>• High quality metal construction<br>• Left and right orientations<br>• Dual fixings</p>"
+          },
+          "short_description": {
+            "html": "<p>Contura II Toilet Roll Holder</p>"
+          },
+          "product_dimensions": "W167 x D83 x D17mm",
+          "price_store": 114,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W167 x D83 x D17mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Contura"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Matte Black",
+                    "value": "940"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "849031B"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Black"
+              }
+            ]
+          }
+        },
+        {
+          "id": 20634,
+          "sku": "849031C",
+          "vendorcode": "849031C",
+          "name": "Contura II Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849031c_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849031c_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/8/4/849031c_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/8/4/849031c_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849031c_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849031c_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Holds one roll<br>• High quality metal construction<br>• Left and right orientations<br>• Dual fixings</p>"
+          },
+          "short_description": {
+            "html": "<p>Contura II Toilet Roll Holder</p>"
+          },
+          "product_dimensions": "W167 x D83 x D17mm",
+          "price_store": 104,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W167 x D83 x D17mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Contura"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "849031C"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 20633,
+          "sku": "849031BN",
+          "vendorcode": "849031BN",
+          "name": "Contura II Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849031bn_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849031bn_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/8/4/849031bn_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/8/4/849031bn_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849031bn_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/8/4/849031bn_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>• Holds one roll<br>• High quality metal construction<br>• Left and right orientations<br>• Dual fixings</p>"
+          },
+          "short_description": {
+            "html": "<p>Contura II Toilet Roll Holder</p>"
+          },
+          "product_dimensions": "W167 x D83 x D17mm",
+          "price_store": 134,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W167 x D83 x D17mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Contura"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "849031BN"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 15672,
+          "sku": "99620B",
+          "vendorcode": "99620B",
+          "name": "Urbane II Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99620b_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99620b_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/9/9/99620b_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/9/9/99620b_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99620b_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99620b_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Metal construction ensures durability<br />&bull; Contemporary design and thin&nbsp;edge details to suit modern bathroom<br /><br /></p>"
+          },
+          "short_description": {
+            "html": "<p>Urbane II Toilet Roll Holder</p>"
+          },
+          "product_dimensions": "W145 x D70 x H25mm",
+          "price_store": 103,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W145 x D70 x H25mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Urbane"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Matte Black",
+                    "value": "940"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "99620B"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Matte Black"
+              }
+            ]
+          }
+        },
+        {
+          "id": 15669,
+          "sku": "99607BN",
+          "vendorcode": "99607BN",
+          "name": "Luna Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99607bn_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99607bn_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/9/9/99607bn_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/9/9/99607bn_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99607bn_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99607bn_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Designed to match Luna tapware and basins<br />&bull; Long lasting chrome finish<br />&bull; Dual fixings for added strength</p>"
+          },
+          "short_description": {
+            "html": "<p>Luna Toilet Roll Holder</p>"
+          },
+          "product_dimensions": "W169 x D70 x H25mm",
+          "price_store": 78,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W169 x D70 x H25mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Luna"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "size_mm",
+                "selected_options": [
+                  {
+                    "label": "170",
+                    "value": "739"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "99607BN"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 15648,
+          "sku": "99620BB",
+          "vendorcode": "99620BB",
+          "name": "Urbane II Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99620bb_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99620bb_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/9/9/99620bb_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/9/9/99620bb_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99620bb_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99620bb_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Metal construction ensures durability<br />&bull; Contemporary design and thin&nbsp;edge details to suit modern bathroom<br /><br /></p>"
+          },
+          "short_description": {
+            "html": "<p>Urbane II Toilet Roll Holder</p>"
+          },
+          "product_dimensions": "W145 x D70 x H25mm",
+          "price_store": 119,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W145 x D70 x H25mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Urbane"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Brass",
+                    "value": "948"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "99620BB"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Brass"
+              }
+            ]
+          }
+        },
+        {
+          "id": 15593,
+          "sku": "99620GM",
+          "vendorcode": "99620GM",
+          "name": "Urbane II Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99620gm_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99620gm_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/9/9/99620gm_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/9/9/99620gm_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99620gm_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99620gm_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Metal construction ensures durability<br />&bull; Contemporary design and thin&nbsp;edge details to suit modern bathroom<br /><br /></p>"
+          },
+          "short_description": {
+            "html": "<p>Urbane II Toilet Roll Holder</p>"
+          },
+          "product_dimensions": "W145 x D70 x H25mm",
+          "price_store": 119,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W145 x D70 x H25mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Urbane"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Gun Metal",
+                    "value": "947"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "99620GM"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Gunmetal"
+              }
+            ]
+          }
+        },
+        {
+          "id": 15573,
+          "sku": "99620C",
+          "vendorcode": "99620C",
+          "name": "Urbane II Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99620c_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99620c_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/9/9/99620c_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/9/9/99620c_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99620c_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99620c_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Metal construction ensures durability<br />&bull; Contemporary design and thin&nbsp;edge details to suit modern bathroom<br /><br /></p>"
+          },
+          "short_description": {
+            "html": "<p>Urbane II Toilet Roll Holder</p>"
+          },
+          "product_dimensions": "W145 x D70 x H25mm",
+          "price_store": 93,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W145 x D70 x H25mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Urbane"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "99620C"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 15572,
+          "sku": "99620BN",
+          "vendorcode": "99620BN",
+          "name": "Urbane II Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99620bn_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99620bn_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/9/9/99620bn_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/9/9/99620bn_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99620bn_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99620bn_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Metal construction ensures durability<br />&bull; Contemporary design and thin&nbsp;edge details to suit modern bathroom<br /><br /></p>"
+          },
+          "short_description": {
+            "html": "<p>Urbane II Toilet Roll Holder</p>"
+          },
+          "product_dimensions": "W145 x D70 x H25mm",
+          "price_store": 119,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W145 x D70 x H25mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Urbane"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Brushed Nickel",
+                    "value": "946"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "99620BN"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Brushed Nickel"
+              }
+            ]
+          }
+        },
+        {
+          "id": 15553,
+          "sku": "99607BL",
+          "vendorcode": "99607BL",
+          "name": "Luna Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99607bl_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99607bl_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/9/9/99607bl_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/9/9/99607bl_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99607bl_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99607bl_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Designed to match Luna tapware and basins<br />&bull; Long lasting chrome finish<br />&bull; Dual fixings for added strength</p>"
+          },
+          "short_description": {
+            "html": "<p>Luna Toilet Roll Holder</p>"
+          },
+          "product_dimensions": "W169 x D70 x H25mm",
+          "price_store": 77,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "product_dimensions",
+                "value": "W169 x D70 x H25mm"
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Luna"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "size_mm",
+                "selected_options": [
+                  {
+                    "label": "170",
+                    "value": "739"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Black",
+                    "value": "937"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "99607BL"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Satin Black"
+              }
+            ]
+          }
+        },
+        {
+          "id": 12266,
+          "sku": "99607C",
+          "vendorcode": "99607C",
+          "name": "Luna Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99607c_caroma_web.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99607c_caroma_web.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/9/9/99607c_caroma_web.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/9/9/99607c_caroma_web_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99607c_caroma_web.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/9/99607c_caroma_web_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Designed to match Luna tapware and basins <br />&bull; Long lasting chrome finish <br />&bull; Dual fixings for added strength</p>"
+          },
+          "short_description": {
+            "html": "<p>Luna Toilet Roll Holder</p>"
+          },
+          "product_dimensions": null,
+          "price_store": 70,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Luna"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "99607C"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 5598,
+          "sku": "90732C",
+          "vendorcode": "90732C",
+          "name": "Quatro Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/0/90732c_caroma_web_1.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/0/90732c_caroma_web_1.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/9/0/90732c_caroma_web_1.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/9/0/90732c_caroma_tech_1.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/0/90732c_caroma_web_1.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/9/0/90732c_caroma_tech_1.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Edgy &amp; modern <br />&bull; Durable metal construction <br />&bull; Dual fixings for added strength<br /> &bull; Match with Caroma Quatro mixers &amp; showers</p>"
+          },
+          "short_description": {
+            "html": "<p>Quatro Toilet Roll Holder</p>"
+          },
+          "product_dimensions": null,
+          "price_store": 70,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Quatro"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "90732C"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        },
+        {
+          "id": 1101,
+          "sku": "303128C",
+          "vendorcode": "303128C",
+          "name": "Cosmo Toilet Roll Holder",
+          "categories": [
+            {
+              "id": 19,
+              "name": "Bathroom",
+              "url_path": "products/bathroom"
+            },
+            {
+              "id": 40,
+              "name": "Bathroom Accessories",
+              "url_path": "products/bathroom/bathroom-accessories"
+            },
+            {
+              "id": 195,
+              "name": "Toilet Roll Holders ",
+              "url_path": "products/bathroom/bathroom-accessories/toilet-roll-holders"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/3/0/303128c_.jpg"
+          },
+          "product_images": {
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/3/0/303128c_.jpg",
+            "first_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/3/0/303128c_.jpg",
+            "second_gallery": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/6122cb5919f5aaa9b6095cb9b0bccb5c/3/0/303128c_caroma_tech.jpg"
+          },
+          "media_gallery": [
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/3/0/303128c_.jpg"
+            },
+            {
+              "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/3/0/303128c_caroma_tech.jpg"
+            }
+          ],
+          "description": {
+            "html": "<p>&bull; Smooth clean lines <br />&bull; Durable metal construction <br />&bull; Suitable in all plastered &amp; tiled bathrooms</p>"
+          },
+          "short_description": {
+            "html": "<p>Cosmo Toilet Roll Holder</p>"
+          },
+          "product_dimensions": null,
+          "price_store": 67,
+          "price_promo": 0,
+          "price_trade": "0.000000",
+          "custom_attributesV2": {
+            "items": [
+              {
+                "code": "status",
+                "selected_options": [
+                  {
+                    "label": "Enabled",
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "code": "visibility",
+                "selected_options": [
+                  {
+                    "label": "Catalog, Search",
+                    "value": "4"
+                  }
+                ]
+              },
+              {
+                "code": "gp_product_group",
+                "value": "BATHACCESS"
+              },
+              {
+                "code": "gp_product_type",
+                "value": "TOILET ROLL HOLDER"
+              },
+              {
+                "code": "range",
+                "value": "Cosmo"
+              },
+              {
+                "code": "brand",
+                "selected_options": [
+                  {
+                    "label": "Caroma",
+                    "value": "44"
+                  }
+                ]
+              },
+              {
+                "code": "colours",
+                "selected_options": [
+                  {
+                    "label": "Chrome",
+                    "value": "945"
+                  }
+                ]
+              },
+              {
+                "code": "vendorcode",
+                "value": "303128C"
+              },
+              {
+                "code": "supplier_colour",
+                "value": "Chrome"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

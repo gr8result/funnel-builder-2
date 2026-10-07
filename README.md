@@ -1,5 +1,23 @@
 This is a [Next.js](https://nextjs.org) project.
 
+## Repository layout
+
+| Path | What lives there |
+|---|---|
+| `pages/`, `components/`, `hooks/`, `lib/`, `styles/` | The Next.js application |
+| `modules/`, `platform-core/`, `services/` | Feature modules and shared platform services |
+| `data/` | Curated product data (`product-library/`) and catalogue working data (`catalogue/`) |
+| `supabase/` | Migrations and schema |
+| `scripts/` | Generators, importers, audits, and browser regression scripts |
+| `docs/` | All written documentation - start at [`docs/README.md`](docs/README.md) |
+| `deploy/` | docker-compose files, the pm2 ecosystem config, and `reset-dev.ps1` |
+| `artifacts/` | Test and diagnostic output (`test-artifacts/` is kept, `test-results/` is git-ignored) |
+| `archive/` | Local one-off snapshots that are not a source of truth |
+
+Around 60 report, CSV and config files used to sit at the repository root. They were relocated
+on 2026-09-07; [`docs/README.md`](docs/README.md) carries the full old-path to new-path map, and
+`git log --follow <new path>` still shows each file's complete history.
+
 ## Getting Started
 
 First, run the development server:

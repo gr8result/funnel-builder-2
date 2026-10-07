@@ -47,7 +47,7 @@ export default function BuyEstimateCreditsPage() {
               <p style={styles.subtitle}>Purchase job credits to use when registering Estimate Builder jobs.</p>
             </div>
           </div>
-          <Link href="/modules/construction">
+          <Link href="/modules/estimate-builder?page=projectDashboard">
             <button style={styles.backButton}>Back to Projects Hub</button>
           </Link>
         </header>

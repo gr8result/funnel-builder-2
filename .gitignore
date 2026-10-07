@@ -12,12 +12,15 @@
 
 # testing
 /coverage
+/artifacts/test-results/
 
 # next.js
 /.next/
 /.next-dev/
 /.next-build/
 /out/
+# one-off NEXT_DIST_DIR runs from debugging sessions (.next-<investigation-name>/)
+/.next-*/
 
 # production
 /build
@@ -32,6 +35,8 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 build-output.log
+build_output.txt
+*.log
 
 # env files (can opt-in for committing if needed)
 .env*
@@ -54,11 +59,18 @@ node_modules/
 # local editor artifacts
 .history/
 
+# python virtualenv and tool caches (tesseract.js eng.traineddata lives here)
+.venv/
+.cache/
+
 # local scratch and generated helpers
 tmp/
 tmp-thumbs/
+tmp-trade-check/
 .tmp-*
+tmp-public-schema.sql
 .nextignor
+~$*
 
 # website builder local exports, recovery snapshots, and autosave backups
 # Supabase (website_builder_sites / website_builder_pages / website_builder_page_versions) is the
@@ -68,11 +80,29 @@ website-builder-sites/_emergency-drafts/
 website-builder-sites-backup-*/
 website-builder-sites-*-backup-*/
 recovery/
-/2208a52a-8175-477e-823c-fc6de7fe4afe/
+/archive/website-builder-export-2208a52a/
 website-builder-sites/**/full-project.json
 website-builder-sites/**/metadata.json
 website-builder-sites/**/*.tmp
 
 # local dev runtime locks
 .next-dev.lock.json
+.next-build.lock.json
 
+
+# Local temporary/test files
+status-before-push.txt
+temp_prefix.txt
+test.txt
+whirlpool_brand.html
+sd-designer-sectional-doors.html
+sd-roller-doors.html
+sd-sectional-doors.html
+sd-tilt-doors.html
+components/estimate-builder/JobSetupTakeoffImport.jsx.bak
+pages/modules/builders/client-selections.js.backup
+funnel-builder-clean.code-workspace 1.code-workspace
+lib/construction-estimation/funnel-builder-clean.code-workspace 3.code-workspace
+artifacts/test-artifacts/
+test-artifacts/
+supabase/.temp/

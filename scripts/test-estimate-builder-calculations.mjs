@@ -15,7 +15,7 @@ function minimalWorkbook({ rows, formulas = {}, quotation = {}, windowsDoors = [
   };
 }
 
-const preview = calculateEstimateBuilderWorkbook(minimalWorkbook({
+const workbook = minimalWorkbook({
   rows: {
     lowerFloorAreaM2: 235,
     lowerGarageAreaM2: 36,
@@ -40,10 +40,6 @@ const preview = calculateEstimateBuilderWorkbook(minimalWorkbook({
     internalDoors: 7,
     roofPlanAreaM2: 200,
     roofPitchDegrees: 0,
-  },
-  formulas: {
-    lowerSlabAreaM2: "lowerFloorAreaM2",
-    secondLevelFloorAreaM2: "upperFloorAreaM2",
   },
   quotation: {
     "CONCRETE SLAB": {
@@ -106,7 +102,6 @@ const preview = calculateEstimateBuilderWorkbook(minimalWorkbook({
           section: "Lock-up Stage Labour",
           item: "LINE EAVES - FLAT",
           quantity: "1",
-          quantityManualOverride: true,
           unit: "LM",
           excelRate: "$15.00",
           sourceOfRate: "workbook",
@@ -190,7 +185,6 @@ const preview = calculateEstimateBuilderWorkbook(minimalWorkbook({
           section: "ROOFING MATERIALS",
           item: "M2 RATE (BATTENS, FASCIA, GUTTER, ROOF & INS)",
           quantity: "",
-          quantityManualOverride: true,
           unit: "M2",
           excelRate: "$85.00",
           sourceOfRate: "workbook",
@@ -292,7 +286,7 @@ const preview = calculateEstimateBuilderWorkbook(minimalWorkbook({
           id: "quote-71-static",
           sourceRow: 71,
           section: "DOORS",
-          item: "STATIC IMPORTED ENTRANCE DOOR ROW SHOULD BE REMOVED",
+          item: "ESTIMATOR DOOR ALLOWANCE",
           quantity: "99",
           unit: "EACH",
           excelRate: "$99.00",
@@ -370,7 +364,8 @@ const preview = calculateEstimateBuilderWorkbook(minimalWorkbook({
       rate: "",
     },
   ],
-}));
+});
+const preview = calculateEstimateBuilderWorkbook(workbook);
 
 assert.equal(preview.quantities.lowerSlabAreaM2, 271);
 assert.equal(preview.quantities.secondLevelFloorAreaM2, 140);
@@ -455,7 +450,11 @@ assert.equal(windowQuoteRows[4].finalRateUsed, "$305.00");
 assert.equal(windowQuoteRows[4].cost, 305);
 assert.equal(windowQuoteRows[4].sourceOfRate, "10% of selected windows/doors");
 assert.equal(windowQuoteRows.some((row) => String(row.item || "").includes("ENTRY DOOR")), false);
-const entranceDoorQuoteRows = preview.quotation.DOORS.rows;
+const storedDoorRow = preview.quotation.DOORS.rows.find((row) => row.id === "quote-71-static");
+assert.equal(storedDoorRow.item, "ESTIMATOR DOOR ALLOWANCE", "Recalculation must preserve estimator rows");
+assert.equal(storedDoorRow.qty, 99);
+assert.equal(storedDoorRow.cost, 9801);
+const entranceDoorQuoteRows = preview.quotation.DOORS.rows.filter((row) => row.generatedWindowDoorQuoteRow);
 assert.deepEqual(entranceDoorQuoteRows.map((row) => row.id), ["quote-window-door-wd-entry-door-1"]);
 assert.equal(entranceDoorQuoteRows[0].generatedWindowDoorQuoteRow, true);
 assert.match(entranceDoorQuoteRows[0].item, /820 ENTRY DOORS/);
@@ -463,8 +462,37 @@ assert.equal(entranceDoorQuoteRows[0].quantity, "1");
 assert.equal(entranceDoorQuoteRows[0].qty, 1);
 assert.equal(entranceDoorQuoteRows[0].finalRateUsed, "$1,950.00");
 assert.equal(entranceDoorQuoteRows[0].cost, 1950);
-assert.equal(entranceDoorQuoteRows.some((row) => String(row.item || "").includes("STATIC IMPORTED")), false);
-assert.equal(entranceDoorQuoteRows.some((row) => row.id === "quote-1350" || row.id === "quote-1351"), false);
+assert.equal(preview.quotation.DOORS.rows.some((row) => row.id === "quote-1350" || row.id === "quote-1351"), false);
+
+// Defaults, explicit formulas, and manual quantities are distinct modes. A default
+// calculation fixture must not also request that the defaults be overridden.
+const overridden = structuredClone(workbook);
+overridden.formulas = {
+  lowerSlabAreaM2: "lowerFloorAreaM2",
+  secondLevelFloorAreaM2: "upperFloorAreaM2",
+};
+overridden.quotation["LOCK-UP STAGE LABOUR"].rows[0].quantityManualOverride = true;
+overridden.quotation["ROOFING MATERIALS"].rows[0].quantityManualOverride = true;
+const overridePreview = calculateEstimateBuilderWorkbook(overridden);
+assert.equal(overridePreview.quantities.lowerSlabAreaM2, 235);
+assert.equal(overridePreview.quantities.secondLevelFloorAreaM2, 100);
+assert.equal(overridePreview.quotation["CONCRETE SLAB"].rows[0].cost, 29375);
+assert.equal(overridePreview.quotation["LOCK-UP STAGE LABOUR"].rows[0].qty, 1);
+assert.equal(overridePreview.quotation["LOCK-UP STAGE LABOUR"].rows[0].cost, 15);
+assert.equal(overridePreview.quotation["ROOFING MATERIALS"].rows[0].qty, 0);
+assert.equal(overridePreview.quotation["ROOFING MATERIALS"].rows[0].cost, 0);
+
+const edited = structuredClone(workbook);
+edited.data.inputDataSheet.rows.lowerFloorAreaM2.value = 300;
+edited.data.inputDataSheet.rows.lowerEavesLm.value = 15;
+edited.quotation = preview.quotation;
+const recalculated = calculateEstimateBuilderWorkbook(edited);
+assert.equal(recalculated.quantities.lowerSlabAreaM2, 336);
+assert.equal(recalculated.quotation["CONCRETE SLAB"].rows[0].qty, 336);
+assert.equal(recalculated.quotation["CONCRETE SLAB"].rows[0].cost, 42000);
+assert.equal(recalculated.quotation["LOCK-UP STAGE LABOUR"].rows[0].qty, 65);
+assert.equal(recalculated.quotation["LOCK-UP STAGE LABOUR"].rows[0].cost, 975);
+assert.deepEqual(recalculated.quotation.DOORS.rows.map((row) => row.id), preview.quotation.DOORS.rows.map((row) => row.id), "Recalculation must not accumulate generated door rows");
 
 const dataRows = V4_DATA_SECTIONS[0].rows;
 const thirdEavesIndex = dataRows.findIndex((row) => row.key === "thirdEavesLm");

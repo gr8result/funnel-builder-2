@@ -1,0 +1,880 @@
+{
+  "data": {
+    "products": {
+      "total_count": 38,
+      "page_info": {
+        "current_page": 2,
+        "page_size": 28,
+        "total_pages": 2
+      },
+      "aggregations": [
+        {
+          "attribute_code": "category_id",
+          "label": "Category",
+          "options": [
+            {
+              "label": "Kitchen",
+              "value": "16",
+              "count": 38
+            },
+            {
+              "label": "Products",
+              "value": "1036",
+              "count": 38
+            },
+            {
+              "label": "Ovens",
+              "value": "22",
+              "count": 13
+            },
+            {
+              "label": "Rangehoods",
+              "value": "25",
+              "count": 13
+            },
+            {
+              "label": "Cooktops",
+              "value": "23",
+              "count": 8
+            },
+            {
+              "label": "Single Oven Electric Wall/Undermount ",
+              "value": "99",
+              "count": 7
+            },
+            {
+              "label": "Freestanding Cookers",
+              "value": "105",
+              "count": 6
+            },
+            {
+              "label": "Canopy Rangehoods ",
+              "value": "115",
+              "count": 5
+            },
+            {
+              "label": "Gas Cooktops ",
+              "value": "107",
+              "count": 4
+            },
+            {
+              "label": "Undermount Rangehoods ",
+              "value": "117",
+              "count": 4
+            },
+            {
+              "label": "Dishwashers",
+              "value": "28",
+              "count": 3
+            },
+            {
+              "label": "Electric Cooktops ",
+              "value": "108",
+              "count": 2
+            },
+            {
+              "label": "Induction Cooktops ",
+              "value": "109",
+              "count": 2
+            },
+            {
+              "label": "Fixed Rangehoods ",
+              "value": "113",
+              "count": 2
+            },
+            {
+              "label": "Slideout Rangehoods ",
+              "value": "114",
+              "count": 2
+            },
+            {
+              "label": "Freestanding/Built in Dishwashers ",
+              "value": "136",
+              "count": 2
+            },
+            {
+              "label": "Microwaves",
+              "value": "24",
+              "count": 1
+            },
+            {
+              "label": "Fully integrated Dishwashers ",
+              "value": "138",
+              "count": 1
+            },
+            {
+              "label": "Built In Microwaves",
+              "value": "941",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "attribute_code": "brand",
+          "label": "Brand",
+          "options": [
+            {
+              "label": "Euromaid",
+              "value": "59",
+              "count": 38
+            }
+          ]
+        },
+        {
+          "attribute_code": "colours",
+          "label": "Colour",
+          "options": [
+            {
+              "label": "Black",
+              "value": "937",
+              "count": 8
+            },
+            {
+              "label": "Black Glass",
+              "value": "938",
+              "count": 2
+            },
+            {
+              "label": "Dark Stainless Steel",
+              "value": "1107",
+              "count": 7
+            },
+            {
+              "label": "Integrated",
+              "value": "931",
+              "count": 1
+            },
+            {
+              "label": "Matte Black",
+              "value": "940",
+              "count": 3
+            },
+            {
+              "label": "Stainless Steel",
+              "value": "943",
+              "count": 13
+            },
+            {
+              "label": "White",
+              "value": "2371",
+              "count": 4
+            }
+          ]
+        },
+        {
+          "attribute_code": "size_mm",
+          "label": "Size (mm)",
+          "options": [
+            {
+              "label": "890",
+              "value": "852",
+              "count": 1
+            },
+            {
+              "label": "900",
+              "value": "833",
+              "count": 5
+            },
+            {
+              "label": "850",
+              "value": "829",
+              "count": 1
+            },
+            {
+              "label": "540",
+              "value": "768",
+              "count": 1
+            },
+            {
+              "label": "500",
+              "value": "761",
+              "count": 1
+            },
+            {
+              "label": "600",
+              "value": "746",
+              "count": 5
+            }
+          ]
+        },
+        {
+          "attribute_code": "size_cooktop",
+          "label": "Cooktop Size",
+          "options": [
+            {
+              "label": "300 - 600mm",
+              "value": "1090",
+              "count": 5
+            },
+            {
+              "label": "891mm +",
+              "value": "1087",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "attribute_code": "size_oven",
+          "label": "Oven Size",
+          "options": [
+            {
+              "label": "551 - 600mm",
+              "value": "1102",
+              "count": 4
+            },
+            {
+              "label": "851mm +",
+              "value": "1100",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "attribute_code": "stock_line_filter",
+          "label": "Stock Line",
+          "options": [
+            {
+              "label": "Yes",
+              "value": "672",
+              "count": 6
+            },
+            {
+              "label": "No",
+              "value": "673",
+              "count": 32
+            }
+          ]
+        },
+        {
+          "attribute_code": "wels_water_rating",
+          "label": "Water Rating",
+          "options": [
+            {
+              "label": "4.5",
+              "value": "921",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "attribute_code": "energy_rating",
+          "label": "Energy Rating",
+          "options": [
+            {
+              "label": "3.5",
+              "value": "1000",
+              "count": 1
+            },
+            {
+              "label": "3",
+              "value": "999",
+              "count": 2
+            }
+          ]
+        }
+      ],
+      "items": [
+        {
+          "id": 18754,
+          "sku": "EPO917ASTB",
+          "vendorcode": "EPO917ASTB",
+          "name": "900mm Electric Built-In Oven",
+          "url_key": "90cm-17f-pyro-oven-air-fryer-dark-stainless-steel-epo917astb",
+          "url_suffix": ".html",
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/p/epo917astb_euromaid_web.jpg",
+            "label": "900mm Electric Built-In Oven"
+          },
+          "thumbnail": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/p/epo917astb_euromaid_web.jpg",
+            "label": "900mm Electric Built-In Oven"
+          },
+          "product_images": {
+            "thumbnail": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/07ba508bbc2444c0df3c958b3d918048/e/p/epo917astb_euromaid_web.jpg",
+            "small": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/1df791769d8cdc80e3c05129fe5437cf/e/p/epo917astb_euromaid_web.jpg",
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/p/epo917astb_euromaid_web.jpg"
+          },
+          "description": {
+            "html": "<p>• 148L class leading capacity<br>• 17 oven functions<br>• Air fry and easy steam functions<br>• Pyrolytic cleaning</p>"
+          },
+          "price_store": 2078,
+          "price_trade": "0.000000",
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 22,
+              "name": "Ovens",
+              "url_path": "products/kitchen/ovens"
+            },
+            {
+              "id": 99,
+              "name": "Single Oven Electric Wall/Undermount ",
+              "url_path": "products/kitchen/ovens/single-oven-electric-wall-undermount"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "price_range": {
+            "minimum_price": {
+              "regular_price": {
+                "value": 0,
+                "currency": "AUD"
+              },
+              "final_price": {
+                "value": 0,
+                "currency": "AUD"
+              }
+            }
+          }
+        },
+        {
+          "id": 24934,
+          "sku": "EFS9010CERS",
+          "vendorcode": "EFS9010CERS",
+          "name": "900mm Electric Freestanding Cooker",
+          "url_key": "90cm-ceramic-upright-cooker-stainless-steel-efs9010cers",
+          "url_suffix": ".html",
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/f/efs9010cers_euromaid_web1.jpg",
+            "label": "900mm Electric Freestanding Cooker"
+          },
+          "thumbnail": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/f/efs9010cers_euromaid_web1.jpg",
+            "label": "900mm Electric Freestanding Cooker"
+          },
+          "product_images": {
+            "thumbnail": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/07ba508bbc2444c0df3c958b3d918048/e/f/efs9010cers_euromaid_web1.jpg",
+            "small": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/1df791769d8cdc80e3c05129fe5437cf/e/f/efs9010cers_euromaid_web1.jpg",
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/f/efs9010cers_euromaid_web1.jpg"
+          },
+          "description": {
+            "html": "<p>• 10 oven functions<br>• Dual zone ceramic cooktop<br>• 148L oven capacity<br>• Easy steam function<br>• Telescopic rails</p>"
+          },
+          "price_store": 2474,
+          "price_trade": "0.000000",
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 22,
+              "name": "Ovens",
+              "url_path": "products/kitchen/ovens"
+            },
+            {
+              "id": 105,
+              "name": "Freestanding Cookers",
+              "url_path": "products/kitchen/ovens/freestanding-cookers"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "price_range": {
+            "minimum_price": {
+              "regular_price": {
+                "value": 0,
+                "currency": "AUD"
+              },
+              "final_price": {
+                "value": 0,
+                "currency": "AUD"
+              }
+            }
+          }
+        },
+        {
+          "id": 15467,
+          "sku": "EC95GLS",
+          "vendorcode": "EC95GLS",
+          "name": "900mm Gas Cooktop ",
+          "url_key": "90cm-stainless-steel-gas-cooktop-ec95gls",
+          "url_suffix": ".html",
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec95gls3_euromaid_web_1.jpg",
+            "label": "900mm Gas Cooktop "
+          },
+          "thumbnail": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec95gls3_euromaid_web_1.jpg",
+            "label": "900mm Gas Cooktop "
+          },
+          "product_images": {
+            "thumbnail": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/07ba508bbc2444c0df3c958b3d918048/e/c/ec95gls3_euromaid_web_1.jpg",
+            "small": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/1df791769d8cdc80e3c05129fe5437cf/e/c/ec95gls3_euromaid_web_1.jpg",
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec95gls3_euromaid_web_1.jpg"
+          },
+          "description": {
+            "html": "<p>&bull; 5 matte black Italian gas burners &amp; x1 high power wok burner - 14.4MJ/h<br />&bull; Raised Cast-Iron Trivets<br />&bull; Eclipse Series knob controls<br />&bull; Automatic ignition<br />&bull; Flame safety device</p>"
+          },
+          "price_store": 1187,
+          "price_trade": "0.000000",
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 23,
+              "name": "Cooktops",
+              "url_path": "products/kitchen/cooktops"
+            },
+            {
+              "id": 107,
+              "name": "Gas Cooktops ",
+              "url_path": "products/kitchen/cooktops/gas-cooktops"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "price_range": {
+            "minimum_price": {
+              "regular_price": {
+                "value": 0,
+                "currency": "AUD"
+              },
+              "final_price": {
+                "value": 0,
+                "currency": "AUD"
+              }
+            }
+          }
+        },
+        {
+          "id": 24930,
+          "sku": "ECI950TE",
+          "vendorcode": "ECI950TE",
+          "name": "900mm Induction Cooktop",
+          "url_key": "90cm-induction-cooktop-eci950te",
+          "url_suffix": ".html",
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/eci950te_euromaid_web1.jpg",
+            "label": "900mm Induction Cooktop"
+          },
+          "thumbnail": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/eci950te_euromaid_web1.jpg",
+            "label": "900mm Induction Cooktop"
+          },
+          "product_images": {
+            "thumbnail": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/07ba508bbc2444c0df3c958b3d918048/e/c/eci950te_euromaid_web1.jpg",
+            "small": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/1df791769d8cdc80e3c05129fe5437cf/e/c/eci950te_euromaid_web1.jpg",
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/eci950te_euromaid_web1.jpg"
+          },
+          "description": {
+            "html": "<p>• 5 cooking zones with 9 power levels<br>• Boost function<br>• Slide-touch controls<br>• ECO shift</p>"
+          },
+          "price_store": 1187,
+          "price_trade": "0.000000",
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 23,
+              "name": "Cooktops",
+              "url_path": "products/kitchen/cooktops"
+            },
+            {
+              "id": 109,
+              "name": "Induction Cooktops ",
+              "url_path": "products/kitchen/cooktops/induction-cooktops"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "price_range": {
+            "minimum_price": {
+              "regular_price": {
+                "value": 0,
+                "currency": "AUD"
+              },
+              "final_price": {
+                "value": 0,
+                "currency": "AUD"
+              }
+            }
+          }
+        },
+        {
+          "id": 24933,
+          "sku": "EFS9010AINDB",
+          "vendorcode": "EFS9010AINDB",
+          "name": "900mm Induction Freestanding Cooker",
+          "url_key": "90cm-induction-upright-cooker-stainless-steel-efs9010aindb",
+          "url_suffix": ".html",
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/f/efs9010aindb_euromaid_web1.jpg",
+            "label": "900mm Induction Freestanding Cooker"
+          },
+          "thumbnail": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/f/efs9010aindb_euromaid_web1.jpg",
+            "label": "900mm Induction Freestanding Cooker"
+          },
+          "product_images": {
+            "thumbnail": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/07ba508bbc2444c0df3c958b3d918048/e/f/efs9010aindb_euromaid_web1.jpg",
+            "small": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/1df791769d8cdc80e3c05129fe5437cf/e/f/efs9010aindb_euromaid_web1.jpg",
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/f/efs9010aindb_euromaid_web1.jpg"
+          },
+          "description": {
+            "html": "<p>• Air fry function<br>• With power boost<br>• 148L oven capacity<br>• Easy steam function<br>• Telescopic rails</p>"
+          },
+          "price_store": 2969,
+          "price_trade": "0.000000",
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 22,
+              "name": "Ovens",
+              "url_path": "products/kitchen/ovens"
+            },
+            {
+              "id": 105,
+              "name": "Freestanding Cookers",
+              "url_path": "products/kitchen/ovens/freestanding-cookers"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "price_range": {
+            "minimum_price": {
+              "regular_price": {
+                "value": 0,
+                "currency": "AUD"
+              },
+              "final_price": {
+                "value": 0,
+                "currency": "AUD"
+              }
+            }
+          }
+        },
+        {
+          "id": 22684,
+          "sku": "EFS9010DFS",
+          "vendorcode": "EFS9010DFS",
+          "name": "900mm Multi-Fuel Freestanding Cooker",
+          "url_key": "90cm-dual-fuel-upright-cooker-stainless-steel-efs9010dfs",
+          "url_suffix": ".html",
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/f/efs9010dfs_euromaid_web.jpg",
+            "label": "900mm Multi-Fuel Freestanding Cooker"
+          },
+          "thumbnail": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/f/efs9010dfs_euromaid_web.jpg",
+            "label": "900mm Multi-Fuel Freestanding Cooker"
+          },
+          "product_images": {
+            "thumbnail": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/07ba508bbc2444c0df3c958b3d918048/e/f/efs9010dfs_euromaid_web.jpg",
+            "small": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/1df791769d8cdc80e3c05129fe5437cf/e/f/efs9010dfs_euromaid_web.jpg",
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/f/efs9010dfs_euromaid_web.jpg"
+          },
+          "description": {
+            "html": "<p>• Adjustable feet<br>• Telescopic rails<br>• 10 oven functions<br>• 148L capacity<br>• 5 gas cooktop zones</p>"
+          },
+          "price_store": 2276,
+          "price_trade": "0.000000",
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 22,
+              "name": "Ovens",
+              "url_path": "products/kitchen/ovens"
+            },
+            {
+              "id": 105,
+              "name": "Freestanding Cookers",
+              "url_path": "products/kitchen/ovens/freestanding-cookers"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "price_range": {
+            "minimum_price": {
+              "regular_price": {
+                "value": 0,
+                "currency": "AUD"
+              },
+              "final_price": {
+                "value": 0,
+                "currency": "AUD"
+              }
+            }
+          }
+        },
+        {
+          "id": 24936,
+          "sku": "ESL90RDS",
+          "vendorcode": "ESL90RDS",
+          "name": "900mm Slideout Rangehood",
+          "url_key": "90cm-slideout-rangehood-esl90rds",
+          "url_suffix": ".html",
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/s/esl90rds_euromaid_web.jpg",
+            "label": "900mm Slideout Rangehood"
+          },
+          "thumbnail": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/s/esl90rds_euromaid_web.jpg",
+            "label": "900mm Slideout Rangehood"
+          },
+          "product_images": {
+            "thumbnail": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/07ba508bbc2444c0df3c958b3d918048/e/s/esl90rds_euromaid_web.jpg",
+            "small": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/1df791769d8cdc80e3c05129fe5437cf/e/s/esl90rds_euromaid_web.jpg",
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/s/esl90rds_euromaid_web.jpg"
+          },
+          "description": {
+            "html": "<p>• 440m3/h extraction<br>• 3 speed slide control<br>• LED strip light<br>• 2 x aluminium mesh filters<br>• Ducted or recirculating</p>"
+          },
+          "price_store": 395,
+          "price_trade": "0.000000",
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 25,
+              "name": "Rangehoods",
+              "url_path": "products/kitchen/rangehoods"
+            },
+            {
+              "id": 114,
+              "name": "Slideout Rangehoods ",
+              "url_path": "products/kitchen/rangehoods/slideout-rangehoods"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "price_range": {
+            "minimum_price": {
+              "regular_price": {
+                "value": 0,
+                "currency": "AUD"
+              },
+              "final_price": {
+                "value": 0,
+                "currency": "AUD"
+              }
+            }
+          }
+        },
+        {
+          "id": 25095,
+          "sku": "UCG90B",
+          "vendorcode": "UCG90B",
+          "name": "900mm Undermount Rangehood",
+          "url_key": "90cm-undermount-rangehood-black-glass1000-m3-hr-ucg90b",
+          "url_suffix": ".html",
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/u/c/ucg90b_euromaid_web.jpg",
+            "label": "900mm Undermount Rangehood"
+          },
+          "thumbnail": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/u/c/ucg90b_euromaid_web.jpg",
+            "label": "900mm Undermount Rangehood"
+          },
+          "product_images": {
+            "thumbnail": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/07ba508bbc2444c0df3c958b3d918048/u/c/ucg90b_euromaid_web.jpg",
+            "small": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/1df791769d8cdc80e3c05129fe5437cf/u/c/ucg90b_euromaid_web.jpg",
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/u/c/ucg90b_euromaid_web.jpg"
+          },
+          "description": {
+            "html": "<p>• 1000m3/h airflow<br>• Touch controls<br>• LED strip light<br>• 3 fan speeds<br>• 1 x aluminium grease filter</p>"
+          },
+          "price_store": 768,
+          "price_trade": "0.000000",
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 25,
+              "name": "Rangehoods",
+              "url_path": "products/kitchen/rangehoods"
+            },
+            {
+              "id": 117,
+              "name": "Undermount Rangehoods ",
+              "url_path": "products/kitchen/rangehoods/undermount-rangehoods"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "price_range": {
+            "minimum_price": {
+              "regular_price": {
+                "value": 0,
+                "currency": "AUD"
+              },
+              "final_price": {
+                "value": 0,
+                "currency": "AUD"
+              }
+            }
+          }
+        },
+        {
+          "id": 15852,
+          "sku": "EC64GB",
+          "vendorcode": "EC64GB",
+          "name": "Eclipse 600mm Gas Cooktop",
+          "url_key": "60cm-4b-gas-c-top-black-glass-ec64gb",
+          "url_suffix": ".html",
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec64gb_euromaid_web.jpg",
+            "label": "Eclipse 600mm Gas Cooktop"
+          },
+          "thumbnail": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec64gb_euromaid_web.jpg",
+            "label": "Eclipse 600mm Gas Cooktop"
+          },
+          "product_images": {
+            "thumbnail": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/07ba508bbc2444c0df3c958b3d918048/e/c/ec64gb_euromaid_web.jpg",
+            "small": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/1df791769d8cdc80e3c05129fe5437cf/e/c/ec64gb_euromaid_web.jpg",
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec64gb_euromaid_web.jpg"
+          },
+          "description": {
+            "html": "<p>&bull; Four Italian gas burners<br />&bull; Powerful wok burner with brass cap<br />&bull; LPG conversion kit<br />&bull; Automatic Ignition<br />&bull; Raised cast-iron trivets</p>"
+          },
+          "price_store": 939,
+          "price_trade": "0.000000",
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 23,
+              "name": "Cooktops",
+              "url_path": "products/kitchen/cooktops"
+            },
+            {
+              "id": 107,
+              "name": "Gas Cooktops ",
+              "url_path": "products/kitchen/cooktops/gas-cooktops"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "price_range": {
+            "minimum_price": {
+              "regular_price": {
+                "value": 0,
+                "currency": "AUD"
+              },
+              "final_price": {
+                "value": 0,
+                "currency": "AUD"
+              }
+            }
+          }
+        },
+        {
+          "id": 15849,
+          "sku": "EC95GLB",
+          "vendorcode": "EC95GLB",
+          "name": "Eclipse 600mm Gas Cooktop",
+          "url_key": "90cm-gas-on-glass-cooktop-ec95glb",
+          "url_suffix": ".html",
+          "image": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec95glb_euromaid_web.jpg",
+            "label": "Eclipse 600mm Gas Cooktop"
+          },
+          "thumbnail": {
+            "url": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec95glb_euromaid_web.jpg",
+            "label": "Eclipse 600mm Gas Cooktop"
+          },
+          "product_images": {
+            "thumbnail": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/07ba508bbc2444c0df3c958b3d918048/e/c/ec95glb_euromaid_web.jpg",
+            "small": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/1df791769d8cdc80e3c05129fe5437cf/e/c/ec95glb_euromaid_web.jpg",
+            "base": "https://backend.harveynormancommercial.com.au/media/catalog/product/cache/0c3a137efe244b3d6d41c8307424e639/e/c/ec95glb_euromaid_web.jpg"
+          },
+          "description": {
+            "html": "<p>&bull; Five matte black Italian gas burners<br />&bull; Powerful wok burner with Dual-Valve control + brass burner cap<br />&bull; Raised Cast-Iron Trivets<br />&bull; Automatic ignition<br />&bull; LGP conversion kit included</p>"
+          },
+          "price_store": 1385,
+          "price_trade": "0.000000",
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 23,
+              "name": "Cooktops",
+              "url_path": "products/kitchen/cooktops"
+            },
+            {
+              "id": 107,
+              "name": "Gas Cooktops ",
+              "url_path": "products/kitchen/cooktops/gas-cooktops"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "price_range": {
+            "minimum_price": {
+              "regular_price": {
+                "value": 0,
+                "currency": "AUD"
+              },
+              "final_price": {
+                "value": 0,
+                "currency": "AUD"
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

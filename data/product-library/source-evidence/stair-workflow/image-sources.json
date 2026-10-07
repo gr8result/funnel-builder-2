@@ -1,0 +1,815 @@
+{
+  "copyright": "Manufacturer copyright retained. Original supplier images copied without editing; locally authored SVG identified separately.",
+  "images": [
+    {
+      "id": "INT-STAIR-COMPLETE-CLOSED-CARPET",
+      "imageUrl": "/images/product-library/internal-areas/systems/7cae4072182ca0228673fc26.jpg",
+      "imageSourceUrl": "https://stairlock.com.au/wp-content/uploads/2026/06/Stairlock-MDF-install-pre-plasterboard-1333x1000.jpg",
+      "sourceUrl": "https://stairlock.com.au/products/easy-mdf/",
+      "imageStatus": "verified_range"
+    },
+    {
+      "id": "INT-STAIR-COMPLETE-CLOSED-PAINT",
+      "imageUrl": "/images/product-library/stairs/dd4d681a04ce926b4d.jpg",
+      "imageSourceUrl": "https://stairpro.com.au/sites/default/files/imagecache/Lightbox/Stairpro%20s3g.jpg",
+      "sourceUrl": "https://stairpro.com.au/stairs-gallery",
+      "imageStatus": "verified_range"
+    },
+    {
+      "id": "INT-STAIR-COMPLETE-CLOSED-POLISHED",
+      "imageUrl": "/images/product-library/stairs/246af3c3ed16aba612.jpg",
+      "imageSourceUrl": "https://stairpro.com.au/sites/default/files/imagecache/Lightbox/Stairpro%20Stairs%20Brisbane%20s6d.jpg",
+      "sourceUrl": "https://stairpro.com.au/stairs-gallery",
+      "imageStatus": "verified_range"
+    },
+    {
+      "id": "INT-STAIR-COMPLETE-OPEN-TIMBER",
+      "imageUrl": "/images/product-library/stairs/873630f63f44e8ab05.jpg",
+      "imageSourceUrl": "https://stairlock.com.au/wp-content/uploads/2026/06/cut-stringer-staircase-render-example-900x675.jpg",
+      "sourceUrl": "https://stairlock.com.au/products/custom-staircases/",
+      "imageStatus": "verified_range"
+    },
+    {
+      "id": "INT-STAIR-COMPLETE-MONO-STRINGER",
+      "imageUrl": "/images/product-library/stairs/41e1b0539a2b637b4d.jpg",
+      "imageSourceUrl": "https://stairlock.com.au/wp-content/uploads/2026/06/Timber-mono-spine-design-option-1600x1200.jpg",
+      "sourceUrl": "https://stairlock.com.au/products/custom-staircases/",
+      "imageStatus": "verified_range"
+    },
+    {
+      "id": "INT-STAIR-COMPLETE-TWIN-STRINGER",
+      "imageUrl": "/images/product-library/stairs/9a83bea2fd4f84a65c.jpg",
+      "imageSourceUrl": "https://stairlock.com.au/wp-content/uploads/2026/06/full-stringer-design-option-1600x1200.jpg",
+      "sourceUrl": "https://stairlock.com.au/products/custom-staircases/",
+      "imageStatus": "verified_range"
+    },
+    {
+      "id": "INT-STAIR-COMPLETE-STEEL-TIMBER",
+      "imageUrl": "/images/product-library/stairs/85f4d72d0d80e49831.jpg",
+      "imageSourceUrl": "https://stairlock.com.au/wp-content/uploads/2025/11/Eagle-Homes-Oran-Park-Display-White-Steel-Mono-Spine-Custom-Staircase-with-Glass-Balustrade-Large-1-400x600.jpg",
+      "sourceUrl": "https://stairlock.com.au/products/custom-staircases/",
+      "imageStatus": "verified_range"
+    },
+    {
+      "id": "INT-STAIR-COMPLETE-FLOATING",
+      "imageUrl": "/images/product-library/stairs/7e1d802016a6c4a622.jpg",
+      "imageSourceUrl": "https://stairlock.com.au/wp-content/uploads/2026/06/Untitled-5-1-1600x1200.jpg",
+      "sourceUrl": "https://stairlock.com.au/products/custom-staircases/",
+      "imageStatus": "verified_range"
+    },
+    {
+      "id": "straight",
+      "name": "Straight flight",
+      "flights": 1,
+      "imageUrl": "/images/product-library/stairs/b3dfe1e2a498b1567b.jpg",
+      "sourceUrl": "https://stairpro.com.au/stairs-gallery",
+      "imageSourceUrl": "https://stairpro.com.au/sites/default/files/imagecache/Lightbox/8a.jpg",
+      "imageStatus": "verified_range",
+      "priceAdjustment": null,
+      "pricingStatus": "quote_required",
+      "availabilityStatus": "Supplier confirmation required",
+      "active": true
+    },
+    {
+      "id": "l-shaped",
+      "name": "L-shaped with landing",
+      "flights": 2,
+      "imageUrl": "/images/product-library/stairs/5be3b8b4ac0d06b780.jpg",
+      "sourceUrl": "https://stairpro.com.au/stairs-gallery",
+      "imageSourceUrl": "https://stairpro.com.au/sites/default/files/imagecache/Lightbox/Stairpro%20Stairs%205f.jpg",
+      "imageStatus": "verified_range",
+      "priceAdjustment": null,
+      "pricingStatus": "quote_required",
+      "availabilityStatus": "Supplier confirmation required",
+      "active": true
+    },
+    {
+      "id": "u-shaped",
+      "name": "U-shaped with landing",
+      "flights": 2,
+      "imageUrl": "/images/product-library/stairs/c68351d19387411e1b.jpg",
+      "sourceUrl": "https://stairlock.com.au/products/custom-staircases/",
+      "imageSourceUrl": "https://stairlock.com.au/wp-content/uploads/2026/06/custom-timber-stiarcase-with-glass-balustrade-woodforde-hero-1600x900.jpg",
+      "imageStatus": "verified_range",
+      "priceAdjustment": null,
+      "pricingStatus": "quote_required",
+      "availabilityStatus": "Supplier confirmation required",
+      "active": true
+    },
+    {
+      "id": "winder",
+      "name": "Winder stair",
+      "flights": 2,
+      "imageUrl": "/images/product-library/stairs/6e3774e12e2754a7cd.jpg",
+      "sourceUrl": "https://stairpro.com.au/stairs-gallery",
+      "imageSourceUrl": "https://stairpro.com.au/sites/default/files/imagecache/Lightbox/Stairpro%20Stairs%20Brisbane%20s2l.jpg",
+      "imageStatus": "verified_range",
+      "priceAdjustment": null,
+      "pricingStatus": "quote_required",
+      "availabilityStatus": "Supplier confirmation required",
+      "active": true
+    },
+    {
+      "id": "curved",
+      "name": "Curved stair",
+      "flights": 1,
+      "imageUrl": "/images/product-library/stairs/f34a83d3371da1ab0b.jpg",
+      "sourceUrl": "https://stairpro.com.au/stairs-gallery",
+      "imageSourceUrl": "https://stairpro.com.au/sites/default/files/imagecache/Lightbox/13a.jpg",
+      "imageStatus": "verified_range",
+      "priceAdjustment": null,
+      "pricingStatus": "quote_required",
+      "availabilityStatus": "Supplier confirmation required",
+      "active": true
+    },
+    {
+      "id": "durian",
+      "name": "Durian",
+      "aliases": [],
+      "description": "The supplier sample shows pale golden-tan colour and a fine, mainly linear grain.",
+      "typicalUse": "Stair treads, risers, strings and handrails, or complete exposed-timber stair, subject to supplier specification.",
+      "finishIds": [
+        "clear",
+        "stained",
+        "raw",
+        "paint"
+      ],
+      "supplierEvidence": [
+        "StairPro"
+      ],
+      "priceAdjustment": null,
+      "pricingStatus": "quote_required",
+      "availabilityStatus": "Supplier confirmation required",
+      "active": true,
+      "imageUrl": "/images/product-library/stairs/5479435f28792e8313.jpg",
+      "sourceUrl": "https://stairpro.com.au/node/25",
+      "imageSourceUrl": "https://stairpro.com.au/sites/default/files/imagecache/Lightbox/Durian.jpg",
+      "imageStatus": "verified_exact",
+      "finishSuitability": "Clear polished, Stained timber, Raw/uncoated, Paint grade"
+    },
+    {
+      "id": "kwila",
+      "name": "Kwila",
+      "aliases": [
+        "Merbau",
+        "Merbau / Kwila"
+      ],
+      "description": "The supplier sample shows rich reddish-brown tones with darker grain streaks.",
+      "typicalUse": "Stair treads, risers, strings and handrails, or complete exposed-timber stair, subject to supplier specification.",
+      "finishIds": [
+        "clear",
+        "stained",
+        "raw"
+      ],
+      "supplierEvidence": [
+        "StairPro"
+      ],
+      "priceAdjustment": null,
+      "pricingStatus": "quote_required",
+      "availabilityStatus": "Supplier confirmation required",
+      "active": true,
+      "imageUrl": "/images/product-library/stairs/7cb83f7409995c8c1f.jpg",
+      "sourceUrl": "https://stairpro.com.au/node/25",
+      "imageSourceUrl": "https://stairpro.com.au/sites/default/files/imagecache/Lightbox/Kwila.jpg",
+      "imageStatus": "verified_exact",
+      "finishSuitability": "Clear polished, Stained timber, Raw/uncoated"
+    },
+    {
+      "id": "blackbutt",
+      "name": "Blackbutt",
+      "aliases": [],
+      "description": "Warm cream to honey-brown tones with a generally even grain.",
+      "typicalUse": "Stair treads, risers, strings and handrails, or complete exposed-timber stair, subject to supplier specification.",
+      "finishIds": [
+        "clear",
+        "stained",
+        "raw"
+      ],
+      "supplierEvidence": [
+        "StairPro"
+      ],
+      "priceAdjustment": null,
+      "pricingStatus": "quote_required",
+      "availabilityStatus": "Supplier confirmation required",
+      "active": true,
+      "imageUrl": "/images/product-library/stairs/ab42ab2438b71d079e.jpg",
+      "sourceUrl": "https://stairpro.com.au/node/25",
+      "imageSourceUrl": "https://stairpro.com.au/sites/default/files/imagecache/Lightbox/Blackbutt.jpg",
+      "imageStatus": "verified_exact",
+      "finishSuitability": "Clear polished, Stained timber, Raw/uncoated"
+    },
+    {
+      "id": "spotted-gum",
+      "name": "Spotted Gum",
+      "aliases": [],
+      "description": "Light to deep brown variation and a prominent, often interlocked grain.",
+      "typicalUse": "Stair treads, risers, strings and handrails, or complete exposed-timber stair, subject to supplier specification.",
+      "finishIds": [
+        "clear",
+        "stained",
+        "raw"
+      ],
+      "supplierEvidence": [
+        "StairPro"
+      ],
+      "priceAdjustment": null,
+      "pricingStatus": "quote_required",
+      "availabilityStatus": "Supplier confirmation required",
+      "active": true,
+      "imageUrl": "/images/product-library/stairs/df5626810ef1432fd8.jpg",
+      "sourceUrl": "https://stairpro.com.au/node/25",
+      "imageSourceUrl": "https://stairpro.com.au/sites/default/files/imagecache/Lightbox/Spotted%20Gum.jpg",
+      "imageStatus": "verified_exact",
+      "finishSuitability": "Clear polished, Stained timber, Raw/uncoated"
+    },
+    {
+      "id": "tasmanian-oak",
+      "name": "Tasmanian Oak",
+      "aliases": [],
+      "description": "Pale straw to pink-brown colour with a straight, even grain.",
+      "typicalUse": "Stair treads, risers, strings and handrails, or complete exposed-timber stair, subject to supplier specification.",
+      "finishIds": [
+        "clear",
+        "stained",
+        "raw",
+        "paint"
+      ],
+      "supplierEvidence": [
+        "StairPro"
+      ],
+      "priceAdjustment": null,
+      "pricingStatus": "quote_required",
+      "availabilityStatus": "Supplier confirmation required",
+      "active": true,
+      "imageUrl": "/images/product-library/stairs/19657abb2b16098d16.jpg",
+      "sourceUrl": "https://stairpro.com.au/node/25",
+      "imageSourceUrl": "https://stairpro.com.au/sites/default/files/imagecache/Lightbox/Tasmanian%20Oak.jpg",
+      "imageStatus": "verified_exact",
+      "finishSuitability": "Clear polished, Stained timber, Raw/uncoated, Paint grade"
+    },
+    {
+      "id": "victorian-ash",
+      "name": "Victorian Ash",
+      "aliases": [],
+      "description": "Light straw to pale pink tones with a straight grain.",
+      "typicalUse": "Stair treads, risers, strings and handrails, or complete exposed-timber stair, subject to supplier specification.",
+      "finishIds": [
+        "clear",
+        "stained",
+        "raw",
+        "paint"
+      ],
+      "supplierEvidence": [
+        "StairPro"
+      ],
+      "priceAdjustment": null,
+      "pricingStatus": "quote_required",
+      "availabilityStatus": "Supplier confirmation required",
+      "active": true,
+      "imageUrl": "/images/product-library/stairs/859d6e262c4c80a748.jpg",
+      "sourceUrl": "https://stairpro.com.au/node/25",
+      "imageSourceUrl": "https://stairpro.com.au/sites/default/files/imagecache/Lightbox/Victorian%20Ash.jpg",
+      "imageStatus": "verified_exact",
+      "finishSuitability": "Clear polished, Stained timber, Raw/uncoated, Paint grade"
+    },
+    {
+      "id": "american-oak",
+      "name": "American Oak",
+      "aliases": [],
+      "description": "Warm straw to mid-brown tones with distinctive growth rings.",
+      "typicalUse": "Stair treads, risers, strings and handrails, or complete exposed-timber stair, subject to supplier specification.",
+      "finishIds": [
+        "clear",
+        "stained",
+        "raw"
+      ],
+      "supplierEvidence": [
+        "Stairlock"
+      ],
+      "priceAdjustment": null,
+      "pricingStatus": "quote_required",
+      "availabilityStatus": "Supplier confirmation required",
+      "active": true,
+      "imageUrl": "/images/product-library/stairs/1e573bb647f3e8bb6c.jpg",
+      "sourceUrl": "https://stairlock.com.au/products/custom-staircases/",
+      "imageSourceUrl": "https://stairlock.com.au/wp-content/uploads/2026/06/American-Oak-material-sample-900x400.jpg",
+      "imageStatus": "verified_range",
+      "finishSuitability": "Clear polished, Stained timber, Raw/uncoated"
+    },
+    {
+      "id": "pine",
+      "name": "Pine",
+      "aliases": [],
+      "description": "Pale cream to yellow timber with visible growth rings; knots vary by grade.",
+      "typicalUse": "Paint-grade treads, risers, strings and handrails; grade selected by supplier.",
+      "finishIds": [
+        "clear",
+        "stained",
+        "raw",
+        "paint"
+      ],
+      "supplierEvidence": [
+        "StairPro"
+      ],
+      "priceAdjustment": null,
+      "pricingStatus": "quote_required",
+      "availabilityStatus": "Supplier confirmation required",
+      "active": true,
+      "imageUrl": "/images/product-library/stairs/43313c20a93bc242ba.jpg",
+      "sourceUrl": "https://stairpro.com.au/node/25",
+      "imageSourceUrl": "https://stairpro.com.au/sites/default/files/imagecache/Lightbox/Radiata%20Pine.jpg",
+      "imageStatus": "verified_exact",
+      "finishSuitability": "Clear polished, Stained timber, Raw/uncoated, Paint grade"
+    },
+    {
+      "id": "jarrah",
+      "name": "Jarrah",
+      "aliases": [],
+      "description": "Rich red to reddish-brown timber with a varied, sometimes interlocked grain.",
+      "typicalUse": "Stair treads, risers, strings and handrails, or complete exposed-timber stair, subject to supplier specification.",
+      "finishIds": [
+        "clear",
+        "stained",
+        "raw"
+      ],
+      "supplierEvidence": [
+        "StairPro"
+      ],
+      "priceAdjustment": null,
+      "pricingStatus": "quote_required",
+      "availabilityStatus": "Supplier confirmation required",
+      "active": true,
+      "imageUrl": "/images/product-library/stairs/709988df6ba9360069.jpg",
+      "sourceUrl": "https://stairpro.com.au/node/25",
+      "imageSourceUrl": "https://stairpro.com.au/sites/default/files/imagecache/Lightbox/Jarrah.jpg",
+      "imageStatus": "verified_exact",
+      "finishSuitability": "Clear polished, Stained timber, Raw/uncoated"
+    },
+    {
+      "id": "timber",
+      "name": "Hardwood timber balusters + hardwood handrail",
+      "handrailMaterialIds": [
+        "timber"
+      ],
+      "priceAdjustment": null,
+      "pricingStatus": "builder_estimating_allowance",
+      "availabilityStatus": "Supplier confirmation required",
+      "active": true,
+      "imageUrl": "/images/product-library/stairs/8a0b62327fc8f20bba.jpg",
+      "sourceUrl": "https://stairpro.com.au/balustrading-gallery",
+      "imageSourceUrl": "https://stairpro.com.au/sites/default/files/imagecache/Lightbox/Bal23.JPG",
+      "imageStatus": "verified_range",
+      "imageScope": "Design reference; dimensions and details are project-specific.",
+      "familyKey": "balustrades",
+      "canonicalOptionId": "stair-balustrade:timber",
+      "applicableRequirements": [
+        "stairs"
+      ],
+      "allowanceRate": 450,
+      "allowanceUnit": "LM",
+      "priceIncludesGst": false,
+      "priceSource": "Builder-supplied Queensland estimating allowance, 2026-09-07",
+      "quotationItem": "BALUSTRADE",
+      "includesStandardHandrail": true
+    },
+    {
+      "id": "painted-timber",
+      "name": "Painted timber balusters + timber handrail",
+      "handrailMaterialIds": [
+        "timber"
+      ],
+      "priceAdjustment": null,
+      "pricingStatus": "builder_estimating_allowance",
+      "availabilityStatus": "Supplier confirmation required",
+      "active": true,
+      "imageUrl": "/images/product-library/stairs/c6edcdf6ca866eb8f6.jpg",
+      "sourceUrl": "https://stairlock.com.au/products/custom-staircases/",
+      "imageSourceUrl": "https://stairlock.com.au/wp-content/uploads/2026/06/timber-balustrades-design-options-900x675.jpg",
+      "imageStatus": "verified_range",
+      "imageScope": "Design reference; dimensions and details are project-specific.",
+      "familyKey": "balustrades",
+      "canonicalOptionId": "stair-balustrade:painted-timber",
+      "applicableRequirements": [
+        "stairs"
+      ],
+      "allowanceRate": 325,
+      "allowanceUnit": "LM",
+      "priceIncludesGst": false,
+      "priceSource": "Builder-supplied Queensland estimating allowance, 2026-09-07",
+      "quotationItem": "BALUSTRADE",
+      "includesStandardHandrail": true
+    },
+    {
+      "id": "wire",
+      "name": "Stainless steel horizontal wire",
+      "handrailMaterialIds": [
+        "timber",
+        "stainless"
+      ],
+      "priceAdjustment": null,
+      "pricingStatus": "builder_estimating_allowance",
+      "availabilityStatus": "Supplier confirmation required",
+      "active": true,
+      "imageUrl": "/images/product-library/stairs/0fb5fcd79a6fa3d2a2.jpg",
+      "sourceUrl": "https://stairlock.com.au/products/custom-staircases/",
+      "imageSourceUrl": "https://stairlock.com.au/wp-content/uploads/2026/06/wire-balustrade-design-option.jpg",
+      "imageStatus": "verified_range",
+      "imageScope": "Design reference; dimensions and details are project-specific.",
+      "familyKey": "balustrades",
+      "canonicalOptionId": "stair-balustrade:wire",
+      "applicableRequirements": [
+        "stairs"
+      ],
+      "allowanceRate": 400,
+      "allowanceUnit": "LM",
+      "priceIncludesGst": false,
+      "priceSource": "Builder-supplied Queensland estimating allowance, 2026-09-07",
+      "quotationItem": "BALUSTRADE",
+      "includesStandardHandrail": true
+    },
+    {
+      "id": "horizontal-rails",
+      "name": "Stainless-steel horizontal rails",
+      "handrailMaterialIds": [
+        "stainless"
+      ],
+      "priceAdjustment": null,
+      "pricingStatus": "quote_required",
+      "availabilityStatus": "Supplier confirmation required",
+      "active": true,
+      "imageUrl": "/images/product-library/stairs/9f732677b2d1ddd6f2.jpg",
+      "sourceUrl": "https://stairpro.com.au/balustrading-gallery",
+      "imageSourceUrl": "https://stairpro.com.au/sites/default/files/imagecache/Lightbox/Bal4.jpg",
+      "imageStatus": "verified_range",
+      "imageScope": "Design reference; dimensions and details are project-specific.",
+      "familyKey": "balustrades",
+      "canonicalOptionId": "stair-balustrade:horizontal-rails",
+      "applicableRequirements": [
+        "stairs"
+      ]
+    },
+    {
+      "id": "frameless-glass",
+      "name": "Frameless glass – spigot/pin fixed",
+      "handrailMaterialIds": [
+        "none",
+        "timber",
+        "stainless"
+      ],
+      "priceAdjustment": null,
+      "pricingStatus": "builder_estimating_allowance",
+      "availabilityStatus": "Supplier confirmation required",
+      "active": true,
+      "imageUrl": "/images/product-library/stairs/c8d84bf3d54e83cf20.jpg",
+      "sourceUrl": "https://stairpro.com.au/balustrading-gallery",
+      "imageSourceUrl": "https://stairpro.com.au/sites/default/files/imagecache/Lightbox/glass.jpg",
+      "imageStatus": "verified_range",
+      "imageScope": "Design reference; dimensions and details are project-specific.",
+      "familyKey": "balustrades",
+      "canonicalOptionId": "stair-balustrade:frameless-glass",
+      "applicableRequirements": [
+        "stairs"
+      ],
+      "allowanceRate": 700,
+      "allowanceUnit": "LM",
+      "priceIncludesGst": false,
+      "priceSource": "Builder-supplied Queensland estimating allowance, 2026-09-07",
+      "quotationItem": "BALUSTRADE",
+      "includesStandardHandrail": true
+    },
+    {
+      "id": "semi-frameless-glass",
+      "name": "Semi-frameless glass",
+      "handrailMaterialIds": [
+        "timber",
+        "stainless",
+        "aluminium"
+      ],
+      "priceAdjustment": null,
+      "pricingStatus": "builder_estimating_allowance",
+      "availabilityStatus": "Supplier confirmation required",
+      "active": true,
+      "imageUrl": "/images/product-library/stairs/9ec2381de87e6789a4.jpg",
+      "sourceUrl": "https://stairpro.com.au/balustrading-gallery",
+      "imageSourceUrl": "https://stairpro.com.au/sites/default/files/imagecache/Lightbox/P1000356_0.JPG",
+      "imageStatus": "verified_range",
+      "imageScope": "Design reference; dimensions and details are project-specific.",
+      "familyKey": "balustrades",
+      "canonicalOptionId": "stair-balustrade:semi-frameless-glass",
+      "applicableRequirements": [
+        "stairs"
+      ],
+      "allowanceRate": 525,
+      "allowanceUnit": "LM",
+      "priceIncludesGst": false,
+      "priceSource": "Builder-supplied Queensland estimating allowance, 2026-09-07",
+      "quotationItem": "SEMI FRAMELESS GLASS BALUSTRADE",
+      "includesStandardHandrail": true
+    },
+    {
+      "id": "glass-timber",
+      "name": "Glass + timber handrail",
+      "handrailMaterialIds": [
+        "timber"
+      ],
+      "priceAdjustment": null,
+      "pricingStatus": "builder_estimating_allowance",
+      "availabilityStatus": "Supplier confirmation required",
+      "active": true,
+      "imageUrl": "/images/product-library/stairs/365be088f903faa608.jpg",
+      "sourceUrl": "https://stairpro.com.au/balustrading-gallery",
+      "imageSourceUrl": "https://stairpro.com.au/sites/default/files/imagecache/Lightbox/Bal15.jpg",
+      "imageStatus": "verified_range",
+      "imageScope": "Design reference; dimensions and details are project-specific.",
+      "familyKey": "balustrades",
+      "canonicalOptionId": "stair-balustrade:glass-timber",
+      "applicableRequirements": [
+        "stairs"
+      ],
+      "allowanceRate": 650,
+      "allowanceUnit": "LM",
+      "priceIncludesGst": false,
+      "priceSource": "Builder-supplied Queensland estimating allowance, 2026-09-07",
+      "quotationItem": "BALUSTRADE",
+      "includesStandardHandrail": true
+    },
+    {
+      "id": "glass-metal",
+      "name": "Glass with metal handrail",
+      "handrailMaterialIds": [
+        "stainless",
+        "steel",
+        "aluminium"
+      ],
+      "priceAdjustment": null,
+      "pricingStatus": "quote_required",
+      "availabilityStatus": "Supplier confirmation required",
+      "active": true,
+      "imageUrl": "/images/product-library/stairs/17456c12394b098455.jpg",
+      "sourceUrl": "https://stairpro.com.au/balustrading-gallery",
+      "imageSourceUrl": "https://stairpro.com.au/sites/default/files/imagecache/Lightbox/Bal6.jpg",
+      "imageStatus": "verified_range",
+      "imageScope": "Design reference; dimensions and details are project-specific.",
+      "familyKey": "balustrades",
+      "canonicalOptionId": "stair-balustrade:glass-metal",
+      "applicableRequirements": [
+        "stairs"
+      ]
+    },
+    {
+      "id": "vertical-steel",
+      "name": "Powder-coated steel vertical balusters",
+      "handrailMaterialIds": [
+        "timber",
+        "steel"
+      ],
+      "priceAdjustment": null,
+      "pricingStatus": "builder_estimating_allowance",
+      "availabilityStatus": "Supplier confirmation required",
+      "active": true,
+      "imageUrl": "/images/product-library/stairs/1cfaf29be325ef1f2e.jpg",
+      "sourceUrl": "https://stairlock.com.au/products/custom-staircases/",
+      "imageSourceUrl": "https://stairlock.com.au/wp-content/uploads/2026/06/steel-metal-balustrade-design-options-900x675.jpg",
+      "imageStatus": "verified_range",
+      "imageScope": "Design reference; dimensions and details are project-specific.",
+      "familyKey": "balustrades",
+      "canonicalOptionId": "stair-balustrade:vertical-steel",
+      "applicableRequirements": [
+        "stairs"
+      ],
+      "allowanceRate": 425,
+      "allowanceUnit": "LM",
+      "priceIncludesGst": false,
+      "priceSource": "Builder-supplied Queensland estimating allowance, 2026-09-07",
+      "quotationItem": "BALUSTRADE",
+      "includesStandardHandrail": true
+    },
+    {
+      "id": "aluminium",
+      "name": "Powder-coated aluminium vertical balusters",
+      "handrailMaterialIds": [
+        "aluminium"
+      ],
+      "priceAdjustment": null,
+      "pricingStatus": "builder_estimating_allowance",
+      "availabilityStatus": "Supplier confirmation required",
+      "active": true,
+      "imageUrl": "/images/product-library/stairs/7d51263f0590e337fe.jpg",
+      "sourceUrl": "https://stairpro.com.au/Spiral%20Stairs%20Brisbane",
+      "imageSourceUrl": "https://stairpro.com.au/sites/default/files/Stairpro%20Spiral%2002a_1.jpg",
+      "imageStatus": "verified_range",
+      "imageScope": "Official powder-coated aluminium balustrade example on a spiral stair; final layout is project-specific.",
+      "familyKey": "balustrades",
+      "canonicalOptionId": "stair-balustrade:aluminium",
+      "applicableRequirements": [
+        "stairs"
+      ],
+      "allowanceRate": 350,
+      "allowanceUnit": "LM",
+      "priceIncludesGst": false,
+      "priceSource": "Builder-supplied Queensland estimating allowance, 2026-09-07",
+      "quotationItem": "BALUSTRADE",
+      "includesStandardHandrail": true
+    },
+    {
+      "id": "screen",
+      "name": "Feature screen/batten balustrade",
+      "handrailMaterialIds": [
+        "timber",
+        "steel"
+      ],
+      "priceAdjustment": null,
+      "pricingStatus": "quote_required",
+      "availabilityStatus": "Supplier confirmation required",
+      "active": true,
+      "imageUrl": "/images/product-library/stairs/12b5f46eef96753843.jpg",
+      "sourceUrl": "https://stairlock.com.au/products/custom-staircases/",
+      "imageSourceUrl": "https://stairlock.com.au/wp-content/uploads/2026/06/timber-screen-balustrade-example-design-option-900x675.jpg",
+      "imageStatus": "verified_range",
+      "imageScope": "Design reference; dimensions and details are project-specific.",
+      "familyKey": "balustrades",
+      "canonicalOptionId": "stair-balustrade:screen",
+      "applicableRequirements": [
+        "stairs"
+      ]
+    },
+    {
+      "id": "none",
+      "name": "No balustrade required",
+      "handrailMaterialIds": [
+        "none",
+        "timber",
+        "steel"
+      ],
+      "priceAdjustment": null,
+      "pricingStatus": "quote_required",
+      "availabilityStatus": "Supplier confirmation required",
+      "active": true,
+      "imageUrl": "/images/product-library/stairs/no-balustrade.svg",
+      "imageStatus": "verified_exact",
+      "sourceUrl": "Product Library design option",
+      "imageSourceUrl": "Locally authored SVG diagram",
+      "imageScope": "Design reference; dimensions and details are project-specific.",
+      "familyKey": "balustrades",
+      "canonicalOptionId": "stair-balustrade:none",
+      "applicableRequirements": [
+        "stairs"
+      ]
+    },
+    {
+      "id": "channel-glass",
+      "name": "Frameless glass – premium/channel fixed",
+      "handrailMaterialIds": [
+        "none",
+        "stainless"
+      ],
+      "priceAdjustment": null,
+      "pricingStatus": "builder_estimating_allowance",
+      "availabilityStatus": "Supplier confirmation required",
+      "active": true,
+      "imageUrl": "/images/product-library/stairs/22974603bd2a8949dc.jpg",
+      "imageSourceUrl": "https://metforce.com.au/wp-content/uploads/2026/04/IMG_2320_800x600.jpg",
+      "sourceUrl": "https://metforce.com.au/products/metforce-channel/",
+      "imageStatus": "verified_range",
+      "familyKey": "balustrades",
+      "canonicalOptionId": "stair-balustrade:channel-glass",
+      "applicableRequirements": [
+        "stairs"
+      ],
+      "allowanceRate": 900,
+      "allowanceUnit": "LM",
+      "priceIncludesGst": false,
+      "priceSource": "Builder-supplied Queensland estimating allowance, 2026-09-07",
+      "quotationItem": "BALUSTRADE",
+      "includesStandardHandrail": true
+    },
+    {
+      "id": "decorative-steel",
+      "name": "Decorative wrought iron / steel",
+      "handrailMaterialIds": [
+        "timber",
+        "steel"
+      ],
+      "priceAdjustment": null,
+      "pricingStatus": "builder_estimating_allowance",
+      "availabilityStatus": "Supplier confirmation required",
+      "active": true,
+      "imageUrl": "/images/product-library/stairs/7ac3bf1443691d1603.jpg",
+      "sourceUrl": "https://stairpro.com.au/stairs-gallery",
+      "imageSourceUrl": "https://stairpro.com.au/sites/default/files/imagecache/Lightbox/Stairpro%20Stairs%20Brisbane%20s9c.jpg",
+      "imageStatus": "verified_range",
+      "familyKey": "balustrades",
+      "canonicalOptionId": "stair-balustrade:decorative-steel",
+      "applicableRequirements": [
+        "stairs"
+      ],
+      "allowanceRate": 550,
+      "allowanceUnit": "LM",
+      "priceIncludesGst": false,
+      "priceSource": "Builder-supplied Queensland estimating allowance, 2026-09-07",
+      "quotationItem": "BALUSTRADE",
+      "includesStandardHandrail": true
+    },
+    {
+      "id": "timber",
+      "name": "Timber",
+      "profiles": [
+        "Round",
+        "Oval",
+        "Rectangular",
+        "Moulded"
+      ],
+      "finishes": [
+        "Clear polished",
+        "Stained timber",
+        "Painted",
+        "Raw/uncoated"
+      ],
+      "imageUrl": "/images/product-library/stairs/7c736e434f8436a60c.jpg",
+      "sourceUrl": "https://stairlock.com.au/products/custom-staircases/",
+      "imageSourceUrl": "https://stairlock.com.au/wp-content/uploads/2026/06/timber-handrail-design-option-example-900x675.jpg",
+      "imageStatus": "verified_range",
+      "priceAdjustment": null,
+      "pricingStatus": "quote_required",
+      "availabilityStatus": "Supplier confirmation required",
+      "active": true
+    },
+    {
+      "id": "stainless",
+      "name": "Stainless steel",
+      "profiles": [
+        "Round",
+        "Rectangular"
+      ],
+      "finishes": [
+        "Satin stainless",
+        "Polished stainless"
+      ],
+      "imageUrl": "/images/product-library/stairs/cb15c13c2c3027cbe1.jpg",
+      "sourceUrl": "https://stairpro.com.au/balustrading-gallery",
+      "imageSourceUrl": "https://stairpro.com.au/sites/default/files/imagecache/Lightbox/12.jpg",
+      "imageStatus": "verified_range",
+      "priceAdjustment": null,
+      "pricingStatus": "quote_required",
+      "availabilityStatus": "Supplier confirmation required",
+      "active": true
+    },
+    {
+      "id": "steel",
+      "name": "Steel",
+      "profiles": [
+        "Round",
+        "Rectangular"
+      ],
+      "finishes": [
+        "Powder-coated",
+        "Painted"
+      ],
+      "imageUrl": "/images/product-library/stairs/684508367207115a53.jpg",
+      "sourceUrl": "https://stairlock.com.au/products/custom-staircases/",
+      "imageSourceUrl": "https://stairlock.com.au/wp-content/uploads/2026/06/steel-handrails-design-option-examples-900x675.jpg",
+      "imageStatus": "verified_range",
+      "priceAdjustment": null,
+      "pricingStatus": "quote_required",
+      "availabilityStatus": "Supplier confirmation required",
+      "active": true
+    },
+    {
+      "id": "aluminium",
+      "name": "Aluminium",
+      "profiles": [
+        "Round",
+        "Rectangular"
+      ],
+      "finishes": [
+        "Powder-coated"
+      ],
+      "imageUrl": "/images/product-library/stairs/7d51263f0590e337fe.jpg",
+      "sourceUrl": "https://stairpro.com.au/Spiral%20Stairs%20Brisbane",
+      "imageSourceUrl": "https://stairpro.com.au/sites/default/files/Stairpro%20Spiral%2002a_1.jpg",
+      "imageStatus": "verified_range",
+      "priceAdjustment": null,
+      "pricingStatus": "quote_required",
+      "availabilityStatus": "Supplier confirmation required",
+      "active": true,
+      "imageScope": "Official powder-coated aluminium balustrade example on a spiral stair; final layout is project-specific."
+    },
+    {
+      "id": "none",
+      "name": "No handrail",
+      "profiles": [
+        "Not applicable"
+      ],
+      "finishes": [
+        "Not applicable"
+      ],
+      "imageUrl": "/images/product-library/stairs/no-balustrade.svg",
+      "imageStatus": "verified_exact",
+      "sourceUrl": "Product Library design option",
+      "priceAdjustment": null,
+      "pricingStatus": "quote_required",
+      "availabilityStatus": "Supplier confirmation required",
+      "active": true
+    }
+  ]
+}

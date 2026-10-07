@@ -7,6 +7,8 @@ import SideNav from "./SideNav";
 import ICONS from "./iconMap";
 import { supabase } from "../utils/supabase-client";
 import UsageWarning from "./UsageWarning";
+import { useWorkspace } from "../hooks/useWorkspace";
+import { useAuth } from "../context/AuthContext";
 
 const DEFAULT_BRAND_NAME = "Gr8 Result Digital Solutions";
 const DEFAULT_BRAND_LOGO = "/logo/gr8result-logo.png";
@@ -24,6 +26,27 @@ const PROTECTED_ROUTE_PREFIXES = [
 // Routes that approved vendors / affiliates (without a full platform subscription) are allowed to access
 const VENDOR_ONLY_ROUTE_PREFIXES = ["/modules/vendor", "/modules/affiliates"];
 const QA_ROUTE_PREFIXES = ["/modules/social_media"];
+const ACCOUNT_PROFILE_LEGACY_SELECT =
+  "business_name, business_logo, business_logo_url, business_avatar, business_avatar_url, approved, is_approved, status, subscription_status";
+
+function normalizeAccountProfile(account) {
+  if (!account || typeof account !== "object") return account || null;
+  return {
+    onboarding_completed: true,
+    phone_verified: true,
+    email_verified: true,
+    ...account,
+  };
+}
+
+async function loadAccountProfile(userId) {
+  const result = await supabase
+    .from("accounts")
+    .select(ACCOUNT_PROFILE_LEGACY_SELECT)
+    .eq("user_id", userId)
+    .single();
+  return { data: normalizeAccountProfile(result.data), error: result.error || null };
+}
 
 function isQaAccessibleRoute(pathname = "") {
   return QA_ROUTE_PREFIXES.some((prefix) => pathname.startsWith(prefix));
@@ -156,6 +179,8 @@ async function resolveBrandingAssetUrl(rawValue) {
 
 export default function Layout({ children }) {
   const router = useRouter();
+  const { session, loading: authLoading, error: authError, retryAuth } = useAuth();
+  const { activeWorkspace, isDemoWorkspace } = useWorkspace();
   const path = router.pathname;
 
   const isAdminRoute = path.startsWith("/admin") || path.startsWith("/dev");
@@ -168,7 +193,8 @@ export default function Layout({ children }) {
   const isQaRoute = isQaAccessibleRoute(path);
   const marketplaceAccessEndpoint = getMarketplaceAccessEndpoint(path);
   const noNavRoutes = ["/login", "/signup", "/pending-approval"];
-  const showNavDefault = !noNavRoutes.includes(path);
+  const noNavRoutePrefixes = ["/client-portal"];
+  const showNavDefault = !noNavRoutes.includes(path) && !noNavRoutePrefixes.some((prefix) => path.startsWith(prefix));
 
   const [account, setAccount] = useState(null);
   const [header, setHeader] = useState({
@@ -180,22 +206,24 @@ export default function Layout({ children }) {
   const [marketplaceVendorAllowed, setMarketplaceVendorAllowed] = useState(false);
   const [developerAccess, setDeveloperAccess] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [navCollapsed, setNavCollapsed] = useState(false);
+
+  // Read persisted nav state only after mount to avoid SSR/CSR hydration mismatch.
+  useEffect(() => {
+    setNavCollapsed(window.localStorage.getItem("gr8:sidenav-collapsed") === "true");
+  }, []);
 
   useEffect(() => {
+    window.localStorage.setItem("gr8:sidenav-collapsed", String(navCollapsed));
+  }, [navCollapsed]);
+
+  useEffect(() => {
+    if (authLoading || (authError && !session)) return;
+    let cancelled = false;
     (async () => {
       try {
         let localMarketplaceAllowed = false;
 
-        let { data: { session } } = await supabase.auth.getSession();
-        // If no session, try an explicit refresh once (handles expired access tokens
-        // that weren't auto-refreshed, e.g. after the computer woke from sleep or
-        // the dev server restarted during the refresh window).
-        if (!session?.user) {
-          try {
-            const { data: refreshed } = await supabase.auth.refreshSession();
-            if (refreshed?.session) session = refreshed.session;
-          } catch { /* refresh failed – user is genuinely logged out */ }
-        }
         const user = session?.user;
         if (!user) {
           setDeveloperAccess(false);
@@ -211,6 +239,7 @@ export default function Layout({ children }) {
                   `${marketplaceAccessEndpoint}?code=${encodeURIComponent(code)}`
                 );
                 const payload = await resp.json();
+                if (cancelled) return;
 
                 if (resp.ok && payload?.allowed) {
                   setMarketplaceVendorAllowed(true);
@@ -254,13 +283,8 @@ export default function Layout({ children }) {
         setDeveloperAccess(hasDeveloperAccess);
 
         // 🧾 Load user data from Supabase
-        const { data, error } = await supabase
-          .from("accounts")
-          .select(
-            "business_name, business_logo, business_logo_url, business_avatar, business_avatar_url, approved, is_approved, status, subscription_status, onboarding_completed, phone_verified, email_verified"
-          )
-          .eq("user_id", user.id)
-          .single();
+        const { data, error } = await loadAccountProfile(user.id);
+        if (cancelled) return;
 
         if (error) console.error(error);
         setAccount(data);
@@ -348,12 +372,20 @@ export default function Layout({ children }) {
       } catch (err) {
         console.error("❌ Layout load error:", err);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     })();
-}, [isAdminRoute, isProtectedPlatformRoute, isVendorOnlyRoute, isQaRoute, marketplaceAccessEndpoint, path, router]);
+    return () => { cancelled = true; };
+}, [session, authLoading, authError, isAdminRoute, isProtectedPlatformRoute, isVendorOnlyRoute, isQaRoute, marketplaceAccessEndpoint, path, router]);
 
-  if (loading) {
+  if (authError && !session) {
+    return <main role="status" style={{ padding: 32 }}>
+      <p>We couldn’t reconnect to your saved login. Retrying automatically.</p>
+      <button onClick={retryAuth}>Retry connection</button>
+    </main>;
+  }
+
+  if (loading || authLoading) {
     return (
       <main
         style={{
@@ -397,7 +429,7 @@ export default function Layout({ children }) {
   const showNav = showNavDefault && hasPlatformAccess;
   // Use single-column layout if nav is hidden
   const layoutStyle = showNav
-    ? wrap
+    ? { ...wrap, gridTemplateColumns: `${navCollapsed ? 68 : NAV_WIDTH}px 1fr` }
     : { ...wrap, gridTemplateColumns: "1fr" };
   const sectionStyle = showNav
     ? rightCol
@@ -407,7 +439,7 @@ export default function Layout({ children }) {
     <div style={layoutStyle}>
       {showNav && (
         <aside style={leftCol}>
-          <SideNav />
+          <SideNav collapsed={navCollapsed} onToggleCollapsed={() => setNavCollapsed((current) => !current)} />
         </aside>
       )}
 
@@ -438,6 +470,7 @@ export default function Layout({ children }) {
               </span>
             </div>
             {/* ✅ Usage stats */}
+            {isDemoWorkspace && <DemoCompanyBadge workspaceName={activeWorkspace?.name} />}
             <UsageWarning />
             {/* ✅ Getting Started checklist */}
             <GettingStartedMenu />
@@ -449,6 +482,14 @@ export default function Layout({ children }) {
         )}
         <main style={main}>{children}</main>
       </section>
+    </div>
+  );
+}
+
+function DemoCompanyBadge({ workspaceName }) {
+  return (
+    <div style={demoBadge} title={workspaceName || "Demo workspace"}>
+      DEMO COMPANY
     </div>
   );
 }
@@ -466,11 +507,13 @@ const SETUP_STEPS = [
 
 function GettingStartedMenu() {
   const [open, setOpen] = useState(false);
-  const [done, setDone] = useState(() => {
-    if (typeof window === "undefined") return {};
-    try { return JSON.parse(localStorage.getItem("gr8:setup:done") || "{}"); }
-    catch { return {}; }
-  });
+  const [done, setDone] = useState({});
+
+  // Read persisted setup state only after mount to avoid SSR/CSR hydration mismatch.
+  useEffect(() => {
+    try { setDone(JSON.parse(localStorage.getItem("gr8:setup:done") || "{}")); }
+    catch { setDone({}); }
+  }, []);
 
   const doneCount = SETUP_STEPS.filter(s => done[s.id]).length;
   const allDone = doneCount === SETUP_STEPS.length;
@@ -845,6 +888,18 @@ const brandName = {
   whiteSpace: "nowrap",
   fontSize: 2.0 + 'rem', // Make brand name text bigger
   fontWeight: 600,
+};
+const demoBadge = {
+  flexShrink: 0,
+  border: "1px solid rgba(250,204,21,0.75)",
+  background: "rgba(250,204,21,0.14)",
+  color: "#fde68a",
+  borderRadius: 999,
+  padding: "8px 14px",
+  fontSize: 14,
+  fontWeight: 800,
+  letterSpacing: "0.08em",
+  whiteSpace: "nowrap",
 };
 
 const pmWrap = { position: "relative" };

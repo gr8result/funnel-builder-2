@@ -1,8 +1,9 @@
-// GET  /api/project-estimate/instances?workspace_id=...&projectId=...&templateId=...
-//      Get-or-create semantics: returns the existing instance for this
-//      (workspace, project) if one exists; otherwise materializes a new
-//      instance from `templateId` (falling back to the workspace's
-//      organisation-default template, then the system default).
+// GET  /api/project-estimate/instances?workspace_id=...&projectId=...&templateId=...&create=false
+//      Returns the existing instance for this (workspace, project) if one
+//      exists. By default, when no row exists, materializes a new instance
+//      from `templateId` (falling back to the workspace's organisation-default
+//      template, then the system default). Pass create=false to prove whether
+//      an instance exists without silently creating a fallback document.
 //
 // POST /api/project-estimate/instances
 //      Force-create a fresh instance from a template, even if one already
@@ -15,6 +16,7 @@
 
 import { supabaseAdmin } from "../../../../lib/supabaseAdmin";
 import { withWorkspace } from "../../../../lib/withWorkspace";
+import { assignCurrentStandardInclusionsToProject } from "../../../../lib/builders/projectInclusionsAssignment";
 import {
   fetchInstanceWithPages,
   fetchTemplateWithPages,
@@ -61,6 +63,16 @@ async function createInstanceFromTemplate({ workspaceId, projectId, templateId, 
   if (insertError) throw insertError;
 
   const pages = await replaceInstancePages(instance.id, template.pages || []);
+  if (projectId) {
+    await assignCurrentStandardInclusionsToProject({
+      workspaceId,
+      projectId,
+      userId: ownerUserId,
+      force: false,
+    }).catch((error) => {
+      console.warn("[project-estimate/instances] Standard Inclusions assignment skipped", error?.message || error);
+    });
+  }
   return { ...shapeInstanceRowForClient(instance), pages };
 }
 
@@ -70,6 +82,8 @@ async function handler(req, res) {
   if (req.method === "GET") {
     const projectId = req.query.projectId ? String(req.query.projectId) : null;
     const templateId = req.query.templateId ? String(req.query.templateId) : null;
+    const createParam = req.query.create === undefined ? "" : String(req.query.create).toLowerCase();
+    const shouldCreate = !["0", "false", "no"].includes(createParam);
 
     try {
       if (projectId) {
@@ -83,6 +97,13 @@ async function handler(req, res) {
           const instance = await fetchInstanceWithPages(existingRow.id);
           return res.status(200).json({ ok: true, instance, created: false });
         }
+      }
+      if (!shouldCreate) {
+        return res.status(404).json({
+          ok: false,
+          code: "PROJECT_ESTIMATE_INSTANCE_NOT_FOUND",
+          error: "No saved Project Estimate was found for this project. No replacement document has been created.",
+        });
       }
       const instance = await createInstanceFromTemplate({ workspaceId, projectId, templateId, ownerUserId: user.id });
       return res.status(200).json({ ok: true, instance, created: true });

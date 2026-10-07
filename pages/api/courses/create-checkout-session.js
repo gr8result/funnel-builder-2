@@ -1,5 +1,6 @@
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
+import { demoSimulationResult, getRequestDemoState, requestWorkspaceId } from "../../../lib/demoWorkspace";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2023-10-16" });
 
@@ -30,6 +31,8 @@ export default async function handler(req, res) {
 
     const userId = userData.user.id;
     const userEmail = userData.user.email || undefined;
+    const workspaceId = requestWorkspaceId(req);
+    const demoState = await getRequestDemoState(req);
 
     // ✅ Load pricing row
     let pricingQ = supabaseAdmin
@@ -57,6 +60,22 @@ export default async function handler(req, res) {
     if (cErr || !course) return res.status(404).json({ error: "Course not found" });
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    if (demoState.isDemo) {
+      const result = await demoSimulationResult({
+        workspaceId,
+        actionType: "course-checkout",
+        provider: "stripe",
+        target: courseId,
+        payload: { courseId, scope, moduleId, userId },
+        userId,
+        message: "Demo course checkout simulated - no Stripe session created.",
+      });
+      return res.status(200).json({
+        ...result,
+        id: `demo_course_checkout_${Date.now()}`,
+        url: `${appUrl}/pages/modules/courses/${courseId}/checkout-success?demo=1&workspace_id=${encodeURIComponent(workspaceId)}`,
+      });
+    }
 
     // ✅ IMPORTANT: We mark course purchases using metadata keys that DO NOT clash
     // with your existing store metadata (app_checkout_session_id etc.)

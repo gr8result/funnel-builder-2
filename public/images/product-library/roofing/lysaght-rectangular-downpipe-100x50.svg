@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 540" role="img" aria-label="100 by 50 millimetre rectangular metal downpipe">
+  <defs>
+    <linearGradient id="face" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#d7ddd8"/>
+      <stop offset="0.35" stop-color="#f5f7f4"/>
+      <stop offset="0.68" stop-color="#9da69f"/>
+      <stop offset="1" stop-color="#eef1ed"/>
+    </linearGradient>
+    <linearGradient id="side" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#8f9891"/>
+      <stop offset="1" stop-color="#c8cec8"/>
+    </linearGradient>
+  </defs>
+  <rect width="900" height="540" fill="#eef2f7"/>
+  <g transform="translate(70 95) rotate(-22 390 170)">
+    <polygon points="120,120 708,120 760,166 172,166" fill="#f9fbf8"/>
+    <polygon points="172,166 760,166 760,258 172,258" fill="url(#face)"/>
+    <polygon points="120,120 172,166 172,258 120,212" fill="url(#side)"/>
+    <polygon points="708,120 760,166 760,258 708,212" fill="#aab2ac"/>
+    <path d="M178 178h572" stroke="#ffffff" stroke-opacity=".55" stroke-width="12"/>
+    <path d="M178 248h572" stroke="#737b75" stroke-opacity=".35" stroke-width="7"/>
+    <path d="M120 120h588l52 46v92H172l-52-46z" fill="none" stroke="#7f8882" stroke-width="7"/>
+  </g>
+</svg>

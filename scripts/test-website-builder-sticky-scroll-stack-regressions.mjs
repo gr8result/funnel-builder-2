@@ -8,7 +8,7 @@ const read = (file) => fs.readFileSync(path.join(repoRoot, file), "utf8");
 
 const liveRenderer = read("pages/sites/[...slug].js");
 const previewSurface = read("components/website-builder/WebsitePreviewSurface.js");
-const blockRenderer = read("components/website-builder/website-renderer/wbBlockComponents.js");
+const blockRenderer = read("components/website-builder/website-renderer/wbAccordionBlocks.js");
 
 assert.match(
   liveRenderer,

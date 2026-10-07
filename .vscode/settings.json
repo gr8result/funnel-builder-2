@@ -6,6 +6,12 @@
   "typescript.validate.enable": false,
   "javascript.validate.enable": true,
 
+  // Include the complete imported workbook in JSON outlines and folding.
+  "json.maxItemsComputed": 100000,
+  "[json]": {
+    "editor.foldingMaximumRegions": 20000
+  },
+
   // Treat this extensionless billing file as JSX to prevent false CSS parser errors
   "files.associations": {
     "tsconfig.json": "jsonc",

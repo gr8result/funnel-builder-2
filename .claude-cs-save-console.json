@@ -1,0 +1,206 @@
+[
+  {
+    "t": 1789526023277,
+    "text": "%cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold"
+  },
+  {
+    "t": 1789526023684,
+    "text": "[HMR] connected"
+  },
+  {
+    "t": 1789526024852,
+    "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  },
+  {
+    "t": 1789526028291,
+    "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+  },
+  {
+    "t": 1789526034555,
+    "text": "Estimate Builder summary recalculation [object Object]"
+  },
+  {
+    "t": 1789526034563,
+    "text": "[Estimate Builder] Saving workbook [object Object]"
+  },
+  {
+    "t": 1789526038067,
+    "text": "Estimate Builder summary recalculation [object Object]"
+  },
+  {
+    "t": 1789526038067,
+    "text": "[Estimate Builder] Saving workbook [object Object]"
+  },
+  {
+    "t": 1789526038290,
+    "text": "[Estimate Builder] Saving workbook [object Object]"
+  },
+  {
+    "t": 1789526038366,
+    "text": "[Estimate Builder] Saving workbook [object Object]"
+  },
+  {
+    "t": 1789526041569,
+    "text": "Estimate Builder summary recalculation [object Object]"
+  },
+  {
+    "t": 1789526044375,
+    "text": "Estimate Builder summary recalculation [object Object]"
+  },
+  {
+    "t": 1789526044819,
+    "text": "[Estimate Builder] loading workbook [object Object]"
+  },
+  {
+    "t": 1789526055005,
+    "text": "[Estimate Builder] local job file selected [object Object]"
+  },
+  {
+    "t": 1789526055604,
+    "text": "[Client Selections] module is still mounting [object Object]"
+  },
+  {
+    "t": 1789526069539,
+    "text": "[Estimate Builder] local job file opened [object Object]"
+  },
+  {
+    "t": 1789526070829,
+    "text": "[Estimate Builder] Saving workbook [object Object]"
+  },
+  {
+    "t": 1789526072043,
+    "text": "[Estimate Builder] Saving workbook [object Object]"
+  },
+  {
+    "t": 1789526075266,
+    "text": "[Estimate Builder] Saving workbook [object Object]"
+  },
+  {
+    "t": 1789526076151,
+    "text": "[Estimate Builder] Saving workbook [object Object]"
+  },
+  {
+    "t": 1789526091191,
+    "text": "[Client Selections] missing project context [object Object]"
+  },
+  {
+    "t": 1789526106343,
+    "text": "Estimate Builder summary recalculation [object Object]"
+  },
+  {
+    "t": 1789526109891,
+    "text": "Estimate Builder summary recalculation [object Object]"
+  },
+  {
+    "t": 1789526112563,
+    "text": "[Client Selections] missing snapshot [object Object]"
+  },
+  {
+    "t": 1789526112563,
+    "text": "[Selections Book] persisted project selections review load failed Error: Another tab is still saving or signing in. Retry shortly; no lock was stolen."
+  },
+  {
+    "t": 1789526119279,
+    "text": "Failed to load resource: the server responded with a status of 400 ()"
+  },
+  {
+    "t": 1789526191607,
+    "text": "[Estimate Builder] Saving workbook [object Object]"
+  },
+  {
+    "t": 1789526192423,
+    "text": "[Estimate Builder] Saving workbook [object Object]"
+  },
+  {
+    "t": 1789526200766,
+    "text": "Estimate Builder summary recalculation [object Object]"
+  },
+  {
+    "t": 1789526204533,
+    "text": "Estimate Builder summary recalculation [object Object]"
+  },
+  {
+    "t": 1789526225901,
+    "text": "[Estimate Builder] Saving workbook [object Object]"
+  },
+  {
+    "t": 1789526226776,
+    "text": "[Estimate Builder] Saving workbook [object Object]"
+  },
+  {
+    "t": 1789526231744,
+    "text": "Estimate Builder summary recalculation [object Object]"
+  },
+  {
+    "t": 1789526234413,
+    "text": "Estimate Builder summary recalculation [object Object]"
+  },
+  {
+    "t": 1789526254684,
+    "text": "%cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold"
+  },
+  {
+    "t": 1789526254736,
+    "text": "[HMR] connected"
+  },
+  {
+    "t": 1789526256220,
+    "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+  },
+  {
+    "t": 1789526267602,
+    "text": "Estimate Builder summary recalculation [object Object]"
+  },
+  {
+    "t": 1789526267607,
+    "text": "[Estimate Builder] Saving workbook [object Object]"
+  },
+  {
+    "t": 1789526269815,
+    "text": "Estimate Builder summary recalculation [object Object]"
+  },
+  {
+    "t": 1789526269819,
+    "text": "[Estimate Builder] Saving workbook [object Object]"
+  },
+  {
+    "t": 1789526269932,
+    "text": "[Estimate Builder] Saving workbook [object Object]"
+  },
+  {
+    "t": 1789526269967,
+    "text": "[Estimate Builder] Saving workbook [object Object]"
+  },
+  {
+    "t": 1789526271802,
+    "text": "Estimate Builder summary recalculation [object Object]"
+  },
+  {
+    "t": 1789526273624,
+    "text": "Estimate Builder summary recalculation [object Object]"
+  },
+  {
+    "t": 1789526275273,
+    "text": "[Estimate Builder] loading workbook [object Object]"
+  },
+  {
+    "t": 1789526276106,
+    "text": "[Estimate Builder] Saving workbook [object Object]"
+  },
+  {
+    "t": 1789526277040,
+    "text": "[Estimate Builder] Saving workbook [object Object]"
+  },
+  {
+    "t": 1789526281032,
+    "text": "Estimate Builder summary recalculation [object Object]"
+  },
+  {
+    "t": 1789526284000,
+    "text": "Estimate Builder summary recalculation [object Object]"
+  },
+  {
+    "t": 1789526287570,
+    "text": "[Client Selections] module is still mounting [object Object]"
+  }
+]

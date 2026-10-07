@@ -18,6 +18,7 @@ import sgMail from "@sendgrid/mail";
 import { createClient } from "@supabase/supabase-js";
 import { guardEmailSend } from "../../../lib/emailValidation";
 import { withAuth } from "../../../lib/withWorkspace";
+import { getRequestDemoState, requestWorkspaceId, recordDemoAction } from "../../../lib/demoWorkspace";
 import {
   buildUnsubscribeUrls,
   injectUnsubscribeUrl,
@@ -103,13 +104,6 @@ async function handler(req, res) {
     if (req.method !== "POST")
       return res.status(405).json({ success: false });
 
-    if (!SENDGRID_KEY)
-      return res
-        .status(500)
-        .json({ success: false, error: "Missing SendGrid key" });
-
-    sgMail.setApiKey(SENDGRID_KEY);
-
     const user = await getUserFromBearer(req);
     if (!user)
       return res
@@ -117,6 +111,9 @@ async function handler(req, res) {
         .json({ success: false, error: "Unauthorized" });
 
     const body = req.body || {};
+    const workspaceId = requestWorkspaceId(req);
+    const demoState = await getRequestDemoState(req);
+    const isDemo = demoState.isDemo;
 
     const {
       broadcastId,
@@ -184,6 +181,7 @@ async function handler(req, res) {
         .from("email_broadcasts")
         .insert({
           user_id: user.id,
+          workspace_id: workspaceId || null,
           subject,
           from_name: senderName,
           from_email: senderEmail,
@@ -236,10 +234,11 @@ async function handler(req, res) {
 
     // 2️⃣ Otherwise send to ALL leads for user
     if (!finalRecipients.length) {
-      const { data } = await supabaseAdmin
+      let leadQuery = supabaseAdmin
         .from("leads")
-        .select("email")
-        .eq("user_id", user.id);
+        .select("email");
+      leadQuery = workspaceId ? leadQuery.eq("workspace_id", workspaceId) : leadQuery.eq("user_id", user.id);
+      const { data } = await leadQuery;
 
       finalRecipients = (data || [])
         .map((r) => r.email)
@@ -255,18 +254,30 @@ async function handler(req, res) {
       });
 
     let emailGuard = null;
-    try {
-      emailGuard = await guardEmailSend(user.id, finalRecipients.length);
-    } catch (limitErr) {
-      return res.status(429).json({
-        success: false,
-        error: limitErr.message,
-        code: limitErr.code,
-        details: limitErr.details,
-      });
+    if (!isDemo) {
+      try {
+        emailGuard = await guardEmailSend(user.id, finalRecipients.length);
+      } catch (limitErr) {
+        return res.status(429).json({
+          success: false,
+          error: limitErr.message,
+          code: limitErr.code,
+          details: limitErr.details,
+        });
+      }
+    } else {
+      emailGuard = { demo: true, allowed: true, requested: finalRecipients.length };
     }
 
     let sent = 0;
+
+    if (!isDemo) {
+      if (!SENDGRID_KEY)
+        return res
+          .status(500)
+          .json({ success: false, error: "Missing SendGrid key" });
+      sgMail.setApiKey(SENDGRID_KEY);
+    }
 
     // ==========================================
     // SEND + LOG
@@ -289,6 +300,7 @@ async function handler(req, res) {
           .from("email_sends")
           .insert({
             user_id: user.id,
+            workspace_id: workspaceId || null,
             broadcast_id: finalBroadcastId,
             email: to,
             recipient_email: to,
@@ -305,6 +317,29 @@ async function handler(req, res) {
           success: false,
           error: insertError.message,
         });
+
+      if (isDemo) {
+        const messageId = `demo_email_${row.id}`;
+        await recordDemoAction({
+          workspaceId,
+          userId: user.id,
+          actionType: "broadcast-email",
+          provider: "sendgrid",
+          target: normalizedTo,
+          payload: { broadcastId: finalBroadcastId, subject: useSubject },
+          simulatedResult: { ok: true, demo: true, sendgrid_message_id: messageId, message: "Demo broadcast email simulated - no external message sent." },
+        });
+        await supabaseAdmin
+          .from("email_sends")
+          .update({
+            status: "demo_simulated",
+            sent_at: new Date().toISOString(),
+            sendgrid_message_id: messageId,
+          })
+          .eq("id", row.id);
+        sent++;
+        continue;
+      }
 
       let response;
       try {

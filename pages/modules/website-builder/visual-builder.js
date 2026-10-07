@@ -1,4 +1,4 @@
-﻿import Head from "next/head";
+import Head from "next/head";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/router";
@@ -30,8 +30,22 @@ import { DEFAULT_FOOTER_COMPANY_LINKS, GR8_RESULT_FOOTER_NAVIGATION_LINKS, apply
 import { VIDEO_HERO_CANONICAL_MEDIA_FIELDS, isUnsafeVideoHeroUrl, isVideoHeroMediaFieldKey, mergeVideoHeroProps, normalizeVideoHeroBlock, normalizeVideoHeroBlocksForPersistence, resolveVideoHeroUrl } from "../../../lib/website-builder/videoHero";
 import { fetchWebsiteProjectFromServer, saveWebsiteProjectToServer } from "../../../lib/website-builder/remoteProjects";
 import { normalizeSharedPrimaryNavigation } from "../../../lib/website-builder/sharedNavigation";
+import { useWorkspace } from "../../../hooks/useWorkspace";
+import { hasGlobalPageWidthMode, normalizePageWidthMode, resolveGlobalPageWidthMode, resolvePageWidthMode } from "../../../lib/website-builder/pageLayout";
+import {
+  preserveExistingTestimonialAvatarUrls,
+  preserveExistingTestimonialChaiAvatarUrls,
+} from "../../../lib/website-builder/testimonialImages";
+import {
+  detachSharedBlockInstance,
+  getSharedBlockTemplates,
+  getSharedTemplateId,
+  updateSharedBlockTemplateFromBlock,
+} from "../../../lib/website-builder/sharedBlockTemplates";
 
 const DEVELOPER_USER_IDS = new Set(["35ab846e-0764-498b-b1f8-7d2cf27d85a5"]);
+const FINAL_APPROVED_WEBSITE_PROJECT_ID = "2208a52a-8175-477e-823c-fc6de7fe4afe";
+const WEBSITE_LOCK_STORAGE_PREFIX = "gr8:website-builder-unlock:";
 const WEBSITE_BUILDER_SAVE_DEBUG = process.env.NODE_ENV !== "production";
 const WEBSITE_BUILDER_MAX_VIDEO_BYTES = 250 * 1024 * 1024;
 
@@ -253,9 +267,67 @@ function normalizeDeletedBlockTombstones(projectLike) {
 }
 
 function getSavedPageBlocks(projectLike, pageName) {
-  if (Array.isArray(projectLike?.pageBlocks?.[pageName])) return projectLike.pageBlocks[pageName];
-  if (Array.isArray(projectLike?.chaiData?.[pageName]?.blocks)) return projectLike.chaiData[pageName].blocks;
+  const mapKey = resolveProjectPageMapKey(projectLike, pageName);
+  if (mapKey && Array.isArray(projectLike?.pageBlocks?.[mapKey])) return projectLike.pageBlocks[mapKey];
+  if (mapKey && Array.isArray(projectLike?.chaiData?.[mapKey]?.blocks)) return projectLike.chaiData[mapKey].blocks;
   return null;
+}
+
+function normalizeWebsiteProjectId(value = "") {
+  return String(value || "").trim().replace(/^draft:/, "");
+}
+
+function isFinalApprovedWebsiteProjectId(value = "") {
+  return normalizeWebsiteProjectId(value) === FINAL_APPROVED_WEBSITE_PROJECT_ID;
+}
+
+function buildCanonicalSubmittedPageBlocksForSave(projectLike, pageName, blocks) {
+  const mapKey = resolveProjectPageMapKey(projectLike, pageName) || pageNameFromValue(pageName);
+  if (!mapKey) return Array.isArray(blocks) ? blocks : [];
+  const safeBlocks = Array.isArray(blocks) ? blocks : [];
+  const existingChai = projectLike?.chaiData?.[mapKey] && typeof projectLike.chaiData[mapKey] === "object"
+    ? projectLike.chaiData[mapKey]
+    : {};
+  const canonicalProject = normalizeSharedPrimaryNavigation({
+    ...(projectLike || {}),
+    pageBlocks: {
+      ...(projectLike?.pageBlocks || {}),
+      [mapKey]: safeBlocks,
+    },
+    chaiData: {
+      ...(projectLike?.chaiData || {}),
+      [mapKey]: {
+        ...existingChai,
+        blocks: safeBlocks,
+      },
+    },
+  });
+  return getSavedPageBlocks(canonicalProject, mapKey) || [];
+}
+
+function resolveProjectPageMapKey(projectLike, pageName) {
+  const requested = pageNameFromValue(pageName);
+  if (!requested || !projectLike || typeof projectLike !== "object") return "";
+  const requestedSlug = slugify(requested);
+  const pages = Array.isArray(projectLike?.pages) ? projectLike.pages : [];
+  const page = pages.find((entry) => String(entry?.name || "") === requested)
+    || pages.find((entry) => String(entry?.slug || "") === requested)
+    || pages.find((entry) => slugify(entry?.name || "") === requestedSlug)
+    || pages.find((entry) => slugify(entry?.slug || "") === requestedSlug)
+    || pages.find((entry) => slugify(entry?.id || "") === requestedSlug)
+    || null;
+  const candidates = [
+    requested,
+    page?.name,
+    page?.slug,
+    page?.id,
+  ].map((value) => String(value || "").trim()).filter(Boolean);
+  const maps = [projectLike?.pageBlocks, projectLike?.chaiData].filter((map) => map && typeof map === "object");
+  for (const candidate of candidates) {
+    if (maps.some((map) => Object.prototype.hasOwnProperty.call(map, candidate))) return candidate;
+  }
+  const keys = maps.flatMap((map) => Object.keys(map || {}));
+  return keys.find((key) => slugify(key) === requestedSlug) || requested;
 }
 
 function buildDeletedBlockTombstones(projectLike, pageName, nextBlocks) {
@@ -345,13 +417,13 @@ function logWebsiteBuilderSaveDebug(label, details = {}) {
   console.info(`[WebsiteBuilderSave] ${label}`, details);
 }
 
-// ─── Studio Loader ────────────────────────────────────────────────────────────
+// â”€â”€â”€ Studio Loader â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const STUDIO_MESSAGES = [
-  "Loading workspace…",
-  "Assembling blocks…",
-  "Fetching project…",
-  "Preparing canvas…",
-  "Almost ready…",
+  "Loading workspaceâ€¦",
+  "Assembling blocksâ€¦",
+  "Fetching projectâ€¦",
+  "Preparing canvasâ€¦",
+  "Almost readyâ€¦",
 ];
 
 function StudioLoader({ label }) {
@@ -380,7 +452,7 @@ function StudioLoader({ label }) {
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 28 }}>
           {/* Wordmark */}
           <div style={{ fontSize: 16, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,.28)", fontWeight: 600 }}>
-            🌐&nbsp; GR8 Website Studio
+            ðŸŒ&nbsp; GR8 Website Studio
           </div>
 
           {/* Ring + glow orb */}
@@ -447,7 +519,7 @@ function StudioLoader({ label }) {
     </>
   );
 }
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const PageBuilderCanvas = dynamic(() => import("../../../components/website-builder/PageBuilderCanvas"), {
   ssr: false,
@@ -595,15 +667,10 @@ function shouldUseEmergencyDraft(project, pageName, draft) {
   };
   const currentScore = scoreBlocks(currentBlocks);
   const draftScore = scoreBlocks(draft.blocks);
-  const source = String(draft.source || "").toLowerCase();
   const draftIsNewer = draftSavedAt > projectUpdatedAt;
-  const draftHasMoreBlocks = draftScore.blockCount > currentScore.blockCount;
-  const draftHasMoreText = draftScore.textChars > currentScore.textChars;
   const currentIsEmpty = currentScore.blockCount === 0;
-  const shouldRecover = currentIsEmpty
-    || (draftHasMoreBlocks && draftScore.textChars >= currentScore.textChars)
-    || (draftIsNewer && draftHasMoreText)
-    || (draftIsNewer && !source.includes("autosave") && draftScore.blockCount >= currentScore.blockCount && draftScore.typeSignature !== currentScore.typeSignature);
+  const hasCanonicalPageState = !currentIsEmpty;
+  const shouldRecover = !hasCanonicalPageState && draftIsNewer;
 
   logWebsiteBuilderSaveDebug("emergency draft recovery decision", {
     pageName,
@@ -705,20 +772,42 @@ function shouldUseLocalRepairProject(project, repairedProject) {
   });
 }
 
+function mergeRepairProjectWithCurrentGlobals(repairedProject, currentProject) {
+  if (!repairedProject || !currentProject) return repairedProject;
+  const currentGlobalPageWidthMode = hasGlobalPageWidthMode(currentProject)
+    ? resolveGlobalPageWidthMode(currentProject)
+    : "";
+  return {
+    ...repairedProject,
+    ...(Object.prototype.hasOwnProperty.call(currentProject, "globalNavBlock") ? { globalNavBlock: currentProject.globalNavBlock } : {}),
+    ...(Object.prototype.hasOwnProperty.call(currentProject, "globalHeader") ? { globalHeader: currentProject.globalHeader } : {}),
+    ...(Object.prototype.hasOwnProperty.call(currentProject, "globalFooterBlock") ? { globalFooterBlock: currentProject.globalFooterBlock } : {}),
+    ...(Object.prototype.hasOwnProperty.call(currentProject, "globalFooter") ? { globalFooter: currentProject.globalFooter } : {}),
+    ...(currentGlobalPageWidthMode ? { pageWidthMode: currentGlobalPageWidthMode, globalPageWidthMode: currentGlobalPageWidthMode } : {}),
+    ...(Object.prototype.hasOwnProperty.call(currentProject, "sharedBlockTemplates") ? { sharedBlockTemplates: currentProject.sharedBlockTemplates } : {}),
+    updatedAt: currentProject.updatedAt || repairedProject.updatedAt,
+    savedAt: currentProject.savedAt || repairedProject.savedAt,
+    projectVersion: currentProject.projectVersion || repairedProject.projectVersion,
+    contentHash: currentProject.contentHash || repairedProject.contentHash,
+    __saveBaseUpdatedAt: currentProject.__saveBaseUpdatedAt || repairedProject.__saveBaseUpdatedAt,
+  };
+}
+
 function applyEmergencyDraftToProject(project, pageName, draft) {
   if (!project?.id || !pageName || !Array.isArray(draft?.blocks)) return project;
+  const blocks = preserveExistingTestimonialAvatarUrls(draft.blocks, project?.pageBlocks?.[pageName] || []);
   const nextChaiData = draft.chaiData && typeof draft.chaiData === "object"
-    ? draft.chaiData
+    ? preserveExistingTestimonialChaiAvatarUrls(draft.chaiData, blocks, project?.chaiData?.[pageName] || null)
     : {
         ...(project?.chaiData?.[pageName] || {}),
-        blocks: draft.blocks,
+        blocks,
       };
   return {
     ...project,
     updatedAt: draft.savedAt || project.updatedAt || new Date().toISOString(),
     pageBlocks: {
       ...(project.pageBlocks || {}),
-      [pageName]: draft.blocks,
+      [pageName]: blocks,
     },
     pagesContent: {
       ...(project.pagesContent || {}),
@@ -755,9 +844,9 @@ function sanitizeDomainInput(value) {
 
 function isLegacyAiStarterProject(project) {
   if (!project || String(project?.mode || "").toLowerCase() !== "ai") return false;
-  // Already upgraded — the field is set by the upgrade itself on completion
+  // Already upgraded â€” the field is set by the upgrade itself on completion
   if (project?.brief?.aiStarterVersion) return false;
-  // User has manually saved content — never silently replace their work
+  // User has manually saved content â€” never silently replace their work
   if (project?.status === "saved") return false;
   if (project?.globalNavBlock || project?.globalFooterBlock) return false;
   const pageBlockEntries = Object.entries(project?.pageBlocks || {});
@@ -778,6 +867,7 @@ function isLegacyAiStarterProject(project) {
 
 export default function VisualBuilderPage() {
   const router = useRouter();
+  const { workspaceId } = useWorkspace();
   const { id: _idParam, projectId: _projectIdParam, page, name, mode, type, template, forceReload } = router.query;
   const projectId = _idParam || _projectIdParam;
   const [project, setProject] = useState(null);
@@ -805,6 +895,9 @@ export default function VisualBuilderPage() {
   const [customDomain, setCustomDomain] = useState("");
   const [primaryWebsite, setPrimaryWebsite] = useState(false);
   const [blockDefaults, setBlockDefaults] = useState({});
+  const [websiteLock, setWebsiteLock] = useState({ protected: false, locked: false, session: null });
+  const [unlockToken, setUnlockToken] = useState("");
+  const [unlockBusy, setUnlockBusy] = useState(false);
   const canSaveTemplates = DEVELOPER_USER_IDS.has(String(session?.user?.id || ""));
   const previewActionsRef = useRef(null);
   const syncInFlightRef = useRef(false);
@@ -814,10 +907,84 @@ export default function VisualBuilderPage() {
   // Tracks which projectId we've already resolved activePage for.
   // Prevents session token refreshes from snapping the user back to the URL's ?page= param.
   const activePageInitializedForRef = useRef(null);
+  const protectedProjectId = normalizeWebsiteProjectId(project?.id || projectId || "");
+  const isProtectedFinalWebsite = isFinalApprovedWebsiteProjectId(protectedProjectId);
+  // Editing sessions lapse after 60 minutes of inactivity. Surface that in the
+  // builder instead of letting the owner discover it when a Save is refused.
+  const [sessionExpired, setSessionExpired] = useState(false);
+  const expiryWarnedRef = useRef("");
+  const isWebsiteEditingUnlocked = !isProtectedFinalWebsite
+    || (!!unlockToken && websiteLock?.locked === false && !sessionExpired);
+  const builderReadOnly = isProtectedFinalWebsite && !isWebsiteEditingUnlocked;
+
+  useEffect(() => {
+    const expiresAt = Date.parse(websiteLock?.expiresAt || "");
+    if (!isProtectedFinalWebsite || !unlockToken || !Number.isFinite(expiresAt)) {
+      setSessionExpired(false);
+      return undefined;
+    }
+    const WARN_BEFORE_MS = 5 * 60 * 1000;
+    const tick = () => {
+      const remaining = expiresAt - Date.now();
+      if (remaining <= 0) {
+        setSessionExpired(true);
+        return;
+      }
+      setSessionExpired(false);
+      if (remaining <= WARN_BEFORE_MS && expiryWarnedRef.current !== websiteLock.expiresAt) {
+        expiryWarnedRef.current = websiteLock.expiresAt;
+        flashNotice(
+          `Editing session expires in ${Math.max(1, Math.round(remaining / 60000))} minute(s). Save and Lock Website, or keep editing to extend it.`,
+          "info",
+          9000
+        );
+      }
+    };
+    tick();
+    const timer = setInterval(tick, 30_000);
+    return () => clearInterval(timer);
+  }, [isProtectedFinalWebsite, unlockToken, websiteLock?.expiresAt]);
 
   useEffect(() => {
     setBrandAssets(getWebsiteBuilderAssets());
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const safeProjectId = normalizeWebsiteProjectId(project?.id || projectId || "");
+    if (!safeProjectId || !isFinalApprovedWebsiteProjectId(safeProjectId)) {
+      setWebsiteLock({ protected: false, locked: false, session: null });
+      setUnlockToken("");
+      return;
+    }
+    const storedToken = window.sessionStorage.getItem(`${WEBSITE_LOCK_STORAGE_PREFIX}${safeProjectId}`) || "";
+    if (storedToken && !unlockToken) setUnlockToken(storedToken);
+    const controller = new AbortController();
+    const loadStatus = async () => {
+      try {
+        const response = await fetch(`/api/website-builder/content-lock?projectId=${encodeURIComponent(safeProjectId)}${storedToken ? `&unlockToken=${encodeURIComponent(storedToken)}` : ""}`, {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        const payload = await readApiJson(response);
+        if (!response.ok || !payload?.ok) return;
+        if (storedToken && payload.locked) {
+          window.sessionStorage.removeItem(`${WEBSITE_LOCK_STORAGE_PREFIX}${safeProjectId}`);
+          setUnlockToken("");
+        }
+        setWebsiteLock({
+          protected: true,
+          locked: !!payload.locked,
+          session: payload.session || null,
+          expiresAt: payload.expiresAt || null,
+        });
+      } catch (error) {
+        if (error?.name !== "AbortError") console.warn("Could not load website lock status", error);
+      }
+    };
+    loadStatus();
+    return () => controller.abort();
+  }, [project?.id, projectId, unlockToken]);
 
   useEffect(() => {
     if (!session?.user?.id) return undefined;
@@ -857,7 +1024,7 @@ export default function VisualBuilderPage() {
       if (!data?.session) {
         authTimeoutRef.current = setTimeout(() => {
           authTimeoutRef.current = null;
-          // Still no session — redirect to login
+          // Still no session â€” redirect to login
           router.replace(`/login?next=${encodeURIComponent(router.asPath)}`);
         }, 8000);
       }
@@ -957,7 +1124,7 @@ export default function VisualBuilderPage() {
           console.warn("Could not load website draft from the server", error);
         }
       } else if (nextProject && projectId && session?.access_token) {
-        // Local cache exists — still fetch server in background to pick up newer
+        // Local cache exists â€” still fetch server in background to pick up newer
         // server-side edits and any new pages added externally. Don't block the
         // initial render.
         fetchWebsiteProjectFromServer(session, projectId, { pageName: requestedPage }).then((remoteProject) => {
@@ -1012,8 +1179,9 @@ export default function VisualBuilderPage() {
             chaiData: shouldRecoverRequestedPage && remoteProject?.chaiData?.[remotePageName]
               ? { ...(localProject?.chaiData || {}), [localPageName]: remoteProject.chaiData[remotePageName] }
               : localProject?.chaiData,
+            __saveBaseUpdatedAt: remoteProject?.__saveBaseUpdatedAt || remoteProject?.updatedAt || localProject?.__saveBaseUpdatedAt || localProject?.updatedAt || "",
           });
-          // Only update React state with the new pages — no existing blocks change,
+          // Only update React state with the new pages â€” no existing blocks change,
           // so this won't disrupt any active editing.
           const refreshed = getWebsiteProject(projectId);
           if (refreshed && !cancelled) setProject(refreshed);
@@ -1066,12 +1234,13 @@ export default function VisualBuilderPage() {
 
       if (!cancelled && nextProject?.id && !isPersistenceDiagnosticPage(nextProject.id, resolvedDraftPage)) {
         const repairedProject = await fetchLocalProjectRepair(nextProject.id || projectId);
-        if (shouldRepairCollapsedProject(nextProject) || shouldUseLocalRepairProject(nextProject, repairedProject)) {
-          const repairedPageCount = Array.isArray(repairedProject?.pages) ? repairedProject.pages.length : 0;
-          const repairedPageName = resolveProjectPageName(requestedPage, repairedProject) || resolvedDraftPage;
+        if (repairedProject && (shouldRepairCollapsedProject(nextProject) || shouldUseLocalRepairProject(nextProject, repairedProject))) {
+          const repairedWithCurrentGlobals = mergeRepairProjectWithCurrentGlobals(repairedProject, nextProject);
+          const repairedPageCount = Array.isArray(repairedWithCurrentGlobals?.pages) ? repairedWithCurrentGlobals.pages.length : 0;
+          const repairedPageName = resolveProjectPageName(requestedPage, repairedWithCurrentGlobals) || resolvedDraftPage;
           nextProject = emergencyDraft && shouldUseEmergencyDraft(repairedProject, repairedPageName, emergencyDraft)
-            ? applyEmergencyDraftToProject(repairedProject, repairedPageName, emergencyDraft)
-            : repairedProject;
+            ? applyEmergencyDraftToProject(repairedWithCurrentGlobals, repairedPageName, emergencyDraft)
+            : repairedWithCurrentGlobals;
           cacheWebsiteProject(nextProject, { onlyIfNewer: false });
           flashNotice(`Recovered ${repairedPageCount} website pages from disk`, "success", 8000);
         }
@@ -1082,7 +1251,7 @@ export default function VisualBuilderPage() {
 
       // Only reset activePage when the project itself changes (first load or different projectId).
       // Session token refreshes re-run this effect but must NOT snap the user back to the URL's
-      // ?page= param — that's what causes the "jumps to Home" bug.
+      // ?page= param â€” that's what causes the "jumps to Home" bug.
       const resolvedProjectId = nextProject?.id || projectId || "";
       if (activePageInitializedForRef.current !== resolvedProjectId) {
         activePageInitializedForRef.current = resolvedProjectId;
@@ -1108,7 +1277,7 @@ export default function VisualBuilderPage() {
     const upgradeLegacyAiProject = async () => {
       try {
         setIsUpgrading(true);
-        flashNotice("Rebuilding AI layout — this takes about 30 seconds…", "info", 60000);
+        flashNotice("Rebuilding AI layout â€” this takes about 30 secondsâ€¦", "info", 60000);
         const response = await fetch("/api/website/generate-site-content", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -1151,7 +1320,7 @@ export default function VisualBuilderPage() {
           setProject(latestProject);
           await syncProjectToServer(latestProject, { silent: true });
           setIsUpgrading(false);
-          flashNotice("AI website layout ready ✓", "success");
+          flashNotice("AI website layout ready âœ“", "success");
         }
       } catch (error) {
         console.error("Could not upgrade legacy AI project", error);
@@ -1224,9 +1393,6 @@ export default function VisualBuilderPage() {
     const remoteChai = remoteProject?.chaiData?.[remotePageName];
     const localUpdatedAt = Date.parse(localProject?.updatedAt || localProject?.createdAt || 0) || 0;
     const remoteUpdatedAt = Date.parse(remoteProject?.updatedAt || remoteProject?.createdAt || 0) || 0;
-    const remoteCleansInlineImages = containsInlineDataImage(localBlocks) && !containsInlineDataImage(remoteBlocks);
-    const remoteHasMoreMedia = countBuilderMediaReferences(remoteBlocks) > countBuilderMediaReferences(localBlocks);
-    const remoteHasMoreFullWidthSettings = countBuilderFullWidthSettings(remoteBlocks) > countBuilderFullWidthSettings(localBlocks);
     const localDurableVideoCount = (Array.isArray(localBlocks) ? localBlocks : [])
       .filter((block) => String(block?.type || "") === "video-hero")
       .filter((block) => {
@@ -1240,22 +1406,23 @@ export default function VisualBuilderPage() {
         return videoUrl && !isUnsafeVideoHeroUrl(videoUrl);
       }).length;
     const remoteWouldDropDurableVideo = localDurableVideoCount > 0 && remoteDurableVideoCount < localDurableVideoCount;
-    const shouldUseRemoteBlocks = Array.isArray(remoteBlocks) && !remoteWouldDropDurableVideo && (
-      (
-        remoteUpdatedAt > localUpdatedAt
-        || (remoteUpdatedAt >= localUpdatedAt && !blocksMatchForSave(localBlocks, remoteBlocks))
-      )
-      || localBlocks.length === 0
-      || remoteCleansInlineImages
-      || remoteHasMoreMedia
-      || remoteHasMoreFullWidthSettings
-    );
+    const shouldUseRemoteBlocks = Array.isArray(remoteBlocks);
+    if (Array.isArray(remoteBlocks) && remoteWouldDropDurableVideo) {
+      console.warn("[website-builder state] canonical remote page has fewer durable videos than local cache; using remote page anyway", {
+        projectId: remoteProject?.id || "",
+        pageName: remotePageName,
+        localDurableVideoCount,
+        remoteDurableVideoCount,
+      });
+    }
 
     const localNames = new Set(localPages.map((p) => p.name));
     const mergedPages = [
       ...localPages,
       ...remotePages.filter((p) => p?.name && !localNames.has(p.name)),
     ];
+
+    const shouldPreserveLocalGlobalWidth = hasGlobalPageWidthMode(localProject) && localUpdatedAt > remoteUpdatedAt;
 
     return {
       ...localProject,
@@ -1275,7 +1442,12 @@ export default function VisualBuilderPage() {
       },
       globalNavBlock: "globalNavBlock" in remoteProject ? remoteProject.globalNavBlock : localProject.globalNavBlock,
       globalFooterBlock: "globalFooterBlock" in remoteProject ? remoteProject.globalFooterBlock : localProject.globalFooterBlock,
+      ...(shouldPreserveLocalGlobalWidth ? {
+        pageWidthMode: resolveGlobalPageWidthMode(localProject),
+        globalPageWidthMode: resolveGlobalPageWidthMode(localProject),
+      } : {}),
       updatedAt: remoteProject?.updatedAt || localProject?.updatedAt,
+      __saveBaseUpdatedAt: remoteProject?.__saveBaseUpdatedAt || remoteProject?.updatedAt || localProject?.__saveBaseUpdatedAt || localProject?.updatedAt || "",
       deletedBlockIds,
     };
   }
@@ -1414,8 +1586,109 @@ export default function VisualBuilderPage() {
     setNoticeDuration(2400);
   }
 
+  async function refreshWebsiteLockStatus(nextToken = unlockToken) {
+    if (!isProtectedFinalWebsite || !protectedProjectId) return null;
+    const response = await fetch(`/api/website-builder/content-lock?projectId=${encodeURIComponent(protectedProjectId)}${nextToken ? `&unlockToken=${encodeURIComponent(nextToken)}` : ""}`, {
+      cache: "no-store",
+    });
+    const payload = await readApiJson(response);
+    if (response.ok && payload?.ok) {
+      setWebsiteLock({ protected: true, locked: !!payload.locked, session: payload.session || null, expiresAt: payload.expiresAt || null });
+    }
+    return payload;
+  }
+
+  async function handleUnlockForEditing() {
+    if (!isProtectedFinalWebsite || !protectedProjectId) return;
+    if (!session?.access_token) {
+      flashNotice("Log in as the site owner before unlocking this website.", "error", 6000);
+      return;
+    }
+    const confirmation = window.prompt("This approved website is protected. Type UNLOCK to edit.");
+    if (confirmation !== "UNLOCK") {
+      flashNotice("Unlock cancelled. The website remains protected.", "info", 3600);
+      return;
+    }
+    setUnlockBusy(true);
+    try {
+      const response = await fetch("/api/website-builder/content-lock", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ projectId: protectedProjectId, action: "unlock", confirmation }),
+      });
+      const payload = await readApiJson(response);
+      if (!response.ok || !payload?.ok) {
+        throw new Error(payload?.error || `Could not unlock website (HTTP ${response.status})`);
+      }
+      window.sessionStorage.setItem(`${WEBSITE_LOCK_STORAGE_PREFIX}${protectedProjectId}`, payload.unlockToken || "");
+      setUnlockToken(payload.unlockToken || "");
+      setWebsiteLock({ protected: true, locked: false, session: payload.session || null, expiresAt: payload.expiresAt || null });
+      flashNotice("Editing unlocked. Save, Preview and Publish now use this owner session.", "success", 5200);
+    } catch (error) {
+      flashNotice(error?.message || "Could not unlock website.", "error", 8000);
+    } finally {
+      setUnlockBusy(false);
+    }
+  }
+
+  async function handleRelockWebsite({ silent = false } = {}) {
+    if (!isProtectedFinalWebsite || !protectedProjectId) return true;
+    try {
+      await fetch("/api/website-builder/content-lock", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+          ...(unlockToken ? { "x-website-unlock-token": unlockToken } : {}),
+        },
+        body: JSON.stringify({ projectId: protectedProjectId, unlockToken }),
+      });
+    } catch (error) {
+      console.warn("Could not relock website session", error);
+    }
+    if (typeof window !== "undefined") window.sessionStorage.removeItem(`${WEBSITE_LOCK_STORAGE_PREFIX}${protectedProjectId}`);
+    setUnlockToken("");
+    setWebsiteLock({ protected: true, locked: true, session: null });
+    if (!silent) flashNotice("Website locked again.", "success", 3600);
+    return true;
+  }
+
+  async function handleSaveAndLockWebsite() {
+    if (builderReadOnly) return handleUnlockForEditing();
+    const saved = await Promise.resolve(previewActionsRef.current?.saveCurrent?.({ saveSource: "manual-save-lock" }));
+    if (saved?._saveError) {
+      flashNotice(saved._saveErrorMessage || "Save failed, so the website was not locked.", "error", 9000);
+      return false;
+    }
+    return handleRelockWebsite();
+  }
+
+  async function handleCancelEditing() {
+    if (!isProtectedFinalWebsite) return;
+    if (window.confirm("Cancel editing and reload the latest verified saved draft? Unsaved browser-only changes will be discarded.")) {
+      try {
+        if (session?.access_token && project?.id) {
+          const latestSavedProject = await fetchWebsiteProjectFromServer(session, project.id, { pageName: activeProjectPageName });
+          if (latestSavedProject?.id) {
+            cacheWebsiteProject(latestSavedProject, { onlyIfNewer: false });
+            setProject(latestSavedProject);
+          }
+        }
+      } catch (error) {
+        console.warn("Could not reload latest draft while cancelling editing", error);
+      }
+      await handleRelockWebsite({ silent: true });
+      flashNotice("Editing cancelled. Website locked and latest saved draft reloaded.", "success", 5200);
+    }
+  }
+
   async function syncProjectToServer(nextProject, options = {}) {
     if (!session?.access_token || !nextProject?.id) return nextProject;
+    if (isFinalApprovedWebsiteProjectId(nextProject.id) && !unlockToken) {
+      const message = "Website protected - click Unlock for Editing before saving.";
+      if (options?.force) flashNotice(message, "error", 7000);
+      return { ...(nextProject || {}), _saveError: true, _saveErrorMessage: message };
+    }
     const syncPageName = resolveProjectPageName(options?.pageName || activePage, nextProject);
     const saveSource = options?.saveSource || (options?.force ? "manual-save" : "autosave");
 
@@ -1479,6 +1752,7 @@ export default function VisualBuilderPage() {
           pageName: options?.siteOnly ? "" : syncPageName,
           siteOnly: options?.siteOnly === true,
           saveSource,
+          unlockToken,
         });
       } catch (firstError) {
         // If the token is stale (401), refresh and retry once
@@ -1490,6 +1764,7 @@ export default function VisualBuilderPage() {
                 pageName: options?.siteOnly ? "" : syncPageName,
                 siteOnly: options?.siteOnly === true,
                 saveSource,
+                unlockToken,
               });
             } else {
               throw firstError;
@@ -1549,6 +1824,7 @@ export default function VisualBuilderPage() {
         custom_domain: normalizeDomain(mergeBase?.customDomain || mergeBase?.custom_domain || syncedProject?.customDomain || syncedProject?.custom_domain || syncedProject?.publication?.customDomain || syncedProject?.publication?.custom_domain || ""),
         primaryDomain: normalizeDomain(mergeBase?.primaryDomain || mergeBase?.primary_domain || syncedProject?.primaryDomain || syncedProject?.primary_domain || syncedProject?.publication?.primaryDomain || syncedProject?.publication?.primary_domain || ""),
         primary_domain: normalizeDomain(mergeBase?.primaryDomain || mergeBase?.primary_domain || syncedProject?.primaryDomain || syncedProject?.primary_domain || syncedProject?.publication?.primaryDomain || syncedProject?.publication?.primary_domain || ""),
+        __saveBaseUpdatedAt: syncedProject?.__saveBaseUpdatedAt || syncedProject?.updatedAt || mergeBase?.__saveBaseUpdatedAt || mergeBase?.updatedAt || "",
         publication: {
           ...(syncedProject?.publication || {}),
           ...(mergeBase?.publication || {}),
@@ -1560,6 +1836,9 @@ export default function VisualBuilderPage() {
       };
 
       const cachedProject = cacheWebsiteProject(mergedProject, { onlyIfNewer: false });
+      if (isFinalApprovedWebsiteProjectId(nextProject.id)) {
+        refreshWebsiteLockStatus(unlockToken).catch((error) => console.warn("Could not refresh website lock after save", error));
+      }
       if (cachedProject?.id === project?.id) {
         setProject(cachedProject);
       }
@@ -1582,7 +1861,7 @@ export default function VisualBuilderPage() {
       // Sending it would overwrite the server's freshly-committed blocks with
       // stale data, which then races the preview tab's server fetch and can
       // cause the preview to show an older version of the page.
-      // Simply discard the queue here — the next real autosave will re-sync.
+      // Simply discard the queue here â€” the next real autosave will re-sync.
       if (options?.force) {
         syncQueuedRef.current = null;
       } else if (syncQueuedRef.current && !syncTimerRef.current) {
@@ -1666,6 +1945,11 @@ export default function VisualBuilderPage() {
       return;
     }
 
+    if (isProtectedFinalWebsite && !unlockToken) {
+      flashNotice("Website protected - click Unlock for Editing before publishing.", "error", 7000);
+      return;
+    }
+
     const normalizedSlug = slugify(siteSlug || project.name || "site");
     if (!normalizedSlug) {
       flashNotice("Add a valid site slug before publishing.", "error");
@@ -1705,11 +1989,14 @@ export default function VisualBuilderPage() {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${session.access_token}`,
+          ...(workspaceId ? { "x-workspace-id": workspaceId } : {}),
+          ...(unlockToken ? { "x-website-unlock-token": unlockToken } : {}),
         },
         body: JSON.stringify({
           slug: normalizedSlug,
           customDomain: normalizeDomain(customDomain || projectForPublish?.customDomain || projectForPublish?.custom_domain || projectForPublish?.publication?.customDomain || projectForPublish?.publication?.custom_domain || ""),
           primaryWebsite,
+          unlockToken,
           project: {
             ...projectForPublish,
             brandAssets,
@@ -1779,6 +2066,10 @@ export default function VisualBuilderPage() {
         setProject((current) => current ? { ...current, publication: nextPublication } : current);
         flashNotice("Website published", "success");
       }
+      if (isProtectedFinalWebsite) {
+        await handleRelockWebsite({ silent: true });
+        flashNotice("Website published and locked.", "success", 5200);
+      }
     } catch (error) {
       flashNotice(error?.message || "Could not publish website", "error");
     } finally {
@@ -1788,6 +2079,10 @@ export default function VisualBuilderPage() {
 
   function saveProjectPatch(patch, successMessage = "Saved changes", syncOptions = {}) {
     if (!project?.id) return null;
+    if (isProtectedFinalWebsite && !unlockToken) {
+      flashNotice("Website protected - click Unlock for Editing before changing this website.", "error", 7000);
+      return null;
+    }
 
     // If the project isn't in localStorage yet (e.g. freshly loaded from server),
     // cache it first so updateWebsiteProject can find it by id.
@@ -1804,12 +2099,12 @@ export default function VisualBuilderPage() {
     });
     const savedProject = updateWebsiteProject(project.id, nextProjectForPatch);
 
-    // Storage quota exceeded — force immediate cloud sync so nothing is lost
+    // Storage quota exceeded â€” force immediate cloud sync so nothing is lost
     if (savedProject?._localSaveFailed) {
       const projectToSync = normalizeFooterNavigationForProject({ ...currentProject, ...patch, status: "saved", _localSaveFailed: undefined });
-      flashNotice("⚠️ Storage full — saving to cloud only. Do not close this tab.", "error", 10000);
+      flashNotice("âš ï¸ Storage full â€” saving to cloud only. Do not close this tab.", "error", 10000);
       void syncProjectToServer(projectToSync, { silent: false, force: true, pageName: activePage, saveSource: "manual-save", ...syncOptions }).then((synced) => {
-        if (synced && !synced?._saveError) flashNotice("✓ Saved and verified in cloud (local storage full)", "success", 6000);
+        if (synced && !synced?._saveError) flashNotice("âœ“ Saved and verified in cloud (local storage full)", "success", 6000);
       }).catch(() => {});
       return projectToSync;
     }
@@ -1823,7 +2118,7 @@ export default function VisualBuilderPage() {
 
     if (savedProject && latest) {
       setProject(latest);
-      if (successMessage) flashNotice("Saving…", "info", 5000);
+      if (successMessage) flashNotice("Savingâ€¦", "info", 5000);
       else clearNotice();
       void syncProjectToServer(latest, { silent: true, pageName: activePage, saveSource: "autosave", ...syncOptions }).then((synced) => {
         if (successMessage && synced && !synced?._saveError) flashNotice(successMessage, "success");
@@ -1835,10 +2130,10 @@ export default function VisualBuilderPage() {
     }
 
     if (!savedProject) {
-      flashNotice("⚠️ Could not save — storage full. Please click Save to force cloud sync.", "error", 8000);
+      flashNotice("âš ï¸ Could not save â€” storage full. Please click Save to force cloud sync.", "error", 8000);
     } else {
       setProject(savedProject);
-      if (successMessage) flashNotice("Saving…", "info", 5000);
+      if (successMessage) flashNotice("Savingâ€¦", "info", 5000);
       else clearNotice();
       void syncProjectToServer(savedProject, { silent: true, pageName: activePage, saveSource: "autosave", ...syncOptions }).then((synced) => {
         if (successMessage && synced && !synced?._saveError) flashNotice(successMessage, "success");
@@ -1902,6 +2197,7 @@ export default function VisualBuilderPage() {
       name: pageName,
       title: pageName,
       slug: pageSlug,
+      pageWidthMode: resolvePageWidthMode(project, activePage || existingPages[0]?.name || ""),
       file: `${pageSlug}.json`,
       order: nextOrder,
       showInNavigation: newPageShowInNavigation,
@@ -2049,7 +2345,7 @@ export default function VisualBuilderPage() {
     );
   }
 
-  // Strip blob: URLs from block props before persisting — blobs are in-memory
+  // Strip blob: URLs from block props before persisting â€” blobs are in-memory
   // only and die on page refresh, so they must never reach the server or localStorage.
   function stripBlobUrls(blocks) {
     if (!Array.isArray(blocks)) return blocks;
@@ -2097,7 +2393,7 @@ export default function VisualBuilderPage() {
     // treats as unsafe and strips downstream in this same save pipeline. Otherwise a value that
     // looks fine here (e.g. a data: URI or a signed storage URL briefly held in panel state) sails
     // through unprotected, gets wiped a few steps later, and there's no prior durable value left
-    // to fall back to — the image is just gone.
+    // to fall back to â€” the image is just gone.
     return !text
       || /^blob:/i.test(text)
       || /^file:/i.test(text)
@@ -2108,12 +2404,28 @@ export default function VisualBuilderPage() {
   function preserveDurableMediaValues(nextValue, previousValue) {
     if (Array.isArray(nextValue)) {
       const previousItems = Array.isArray(previousValue) ? previousValue : [];
-      return nextValue.map((item, index) => preserveDurableMediaValues(item, previousItems[index]));
+      const previousById = new Map(
+        previousItems
+          .filter((item) => item && typeof item === "object" && !Array.isArray(item) && item.id !== undefined && item.id !== null)
+          .map((item) => [String(item.id), item])
+      );
+      return nextValue.map((item, index) => {
+        const previousItem = item && typeof item === "object" && !Array.isArray(item) && item.id !== undefined && item.id !== null
+          ? previousById.get(String(item.id))
+          : undefined;
+        return preserveDurableMediaValues(item, previousItem || previousItems[index]);
+      });
     }
     if (!nextValue || typeof nextValue !== "object") return nextValue;
     const previousObject = previousValue && typeof previousValue === "object" ? previousValue : {};
     const nextObject = { ...nextValue };
+    const removedMediaFields = new Set(Array.isArray(nextObject.__removedMediaFields) ? nextObject.__removedMediaFields.map((field) => String(field)) : []);
+    if (nextObject.avatarRemoved === true) removedMediaFields.add("avatarUrl");
+    if (nextObject.imageRemoved === true) {
+      ["imageUrl", "image", "imageSrc", "src", "mediaUrl"].forEach((field) => removedMediaFields.add(field));
+    }
     new Set([...Object.keys(previousObject), ...Object.keys(nextObject)]).forEach((key) => {
+      if (removedMediaFields.has(key)) return;
       if (durableMediaFieldNames.has(key) && typeof previousObject[key] === "string" && !isTemporaryMediaValue(previousObject[key]) && isTemporaryMediaValue(nextObject[key])) {
         nextObject[key] = previousObject[key];
         return;
@@ -2215,6 +2527,11 @@ export default function VisualBuilderPage() {
 
   function saveBlockPage(blocks, successMessage = `Saved ${activePage}`, options = {}) {
     const currentProject = project?.id ? (getWebsiteProject(project.id) || project) : project;
+    if (isFinalApprovedWebsiteProjectId(currentProject?.id) && !unlockToken) {
+      const message = "Website protected - click Unlock for Editing before saving.";
+      flashNotice(message, "error", 7000);
+      return { _saveError: true, _saveErrorMessage: message };
+    }
     const pageName = resolveProjectPageName(options?.pageName || activePage, currentProject);
     const imageIssues = validateImageReferences(Array.isArray(blocks) ? blocks : []);
     if (imageIssues.length) {
@@ -2236,16 +2553,25 @@ export default function VisualBuilderPage() {
   function updateActivePageSettings(patch = {}, options = {}) {
     const currentProject = project?.id ? (getWebsiteProject(project.id) || project) : project;
     const pageName = resolveProjectPageName(options?.pageName || activePage, currentProject);
+    const hasPageWidthModePatch = Object.prototype.hasOwnProperty.call(patch, "pageWidthMode");
+    const nextGlobalPageWidthMode = hasPageWidthModePatch
+      ? normalizePageWidthMode(patch.pageWidthMode)
+      : "";
+    const { pageWidthMode: _pageWidthMode, globalPageWidthMode: _globalPageWidthMode, ...pagePatch } = patch || {};
+    const hasPagePatch = Object.keys(pagePatch).length > 0;
     let matched = false;
     const nextPages = (Array.isArray(currentProject?.pages) ? currentProject.pages : []).map((page) => {
       const matches = page?.name === pageName || slugify(page?.name || "") === slugify(pageName) || slugify(page?.slug || "") === slugify(pageName);
       if (matches) matched = true;
-      return matches ? { ...page, ...patch } : page;
+      return matches && hasPagePatch ? { ...page, ...pagePatch } : page;
     });
-    const pages = matched
+    const pages = matched || !hasPagePatch
       ? nextPages
-      : [...nextPages, { name: pageName || "Home", slug: slugify(pageName || "Home") || "home", ...patch }];
-    saveProjectPatch({ pages }, "Updated page settings", { siteOnly: true, saveSource: options?.saveSource || "autosave" });
+      : [...nextPages, { name: pageName || "Home", slug: slugify(pageName || "Home") || "home", ...pagePatch }];
+    saveProjectPatch({
+      ...(hasPagePatch ? { pages } : {}),
+      ...(nextGlobalPageWidthMode ? { pageWidthMode: nextGlobalPageWidthMode, globalPageWidthMode: nextGlobalPageWidthMode } : {}),
+    }, "Updated page settings", { siteOnly: true, saveSource: options?.saveSource || "autosave" });
   }
 
   // forceSaveBlockPage: used by the manual Save button / Ctrl+S.
@@ -2256,14 +2582,19 @@ export default function VisualBuilderPage() {
       const pageName = resolveProjectPageName(options?.pageName || activePage, currentProject);
       const saveSource = options?.saveSource || "manual-save";
       const isPreviewSave = options?.saveSource === "preview-autosave";
+      if (isFinalApprovedWebsiteProjectId(currentProject?.id) && !unlockToken) {
+        const message = "Website protected - click Unlock for Editing before saving.";
+        if (!isPreviewSave) flashNotice(message, "error", 7000);
+        return { ...(currentProject || {}), _saveError: true, _saveErrorMessage: message };
+      }
       if (!currentProject?.id) {
-        console.error("[forceSaveBlockPage] project has no id — project state:", project);
-        flashNotice("Could not save — project not loaded yet. Please wait and try again.", "error");
+        console.error("[forceSaveBlockPage] project has no id â€” project state:", project);
+        flashNotice("Could not save â€” project not loaded yet. Please wait and try again.", "error");
         return null;
       }
 
       if (!isPreviewSave && syncInFlightRef.current) {
-        flashNotice("Saving…", "info", 5000);
+        flashNotice("Savingâ€¦", "info", 5000);
         await waitForActiveSaveToFinish();
         currentProject = getWebsiteProject(currentProject.id) || currentProject;
       }
@@ -2298,10 +2629,20 @@ export default function VisualBuilderPage() {
         status: "saved",
       };
 
+      let saveBaseUpdatedAt = currentProject?.__saveBaseUpdatedAt || currentProject?.baseUpdatedAt || "";
+      if (!isPreviewSave && session?.access_token) {
+        try {
+          const latestServerProject = await fetchWebsiteProjectFromServer(session, currentProject.id, { pageName });
+          saveBaseUpdatedAt = latestServerProject?.__saveBaseUpdatedAt || latestServerProject?.updatedAt || saveBaseUpdatedAt;
+        } catch (baseError) {
+          console.warn("[forceSaveBlockPage] could not refresh save base before manual save", baseError);
+        }
+      }
+
       const projectWithPatch = normalizeFooterNavigationForProject({
         ...currentProject,
         ...patch,
-        __saveBaseUpdatedAt: currentProject?.updatedAt || currentProject?.savedAt || currentProject?.createdAt || "",
+        __saveBaseUpdatedAt: saveBaseUpdatedAt || currentProject?.updatedAt || currentProject?.savedAt || currentProject?.createdAt || "",
         __saveBaseRevision: currentProject?.revision ?? currentProject?.saveRevision ?? "",
         __saveBasePageRevision: currentProject?.pageRevisions?.[pageName] ?? "",
         __saveRequestId: createWebsiteSaveRequestId(saveSource),
@@ -2330,6 +2671,7 @@ export default function VisualBuilderPage() {
       const normalizedBlocks = Array.isArray(projectToSync?.pageBlocks?.[pageName])
         ? projectToSync.pageBlocks[pageName]
         : safeBlocks;
+      const submittedPersistentBlocks = buildCanonicalSubmittedPageBlocksForSave(projectToSync, pageName, normalizedBlocks);
       if (!isPreviewSave) setProject(projectToSync);
 
       logWebsiteBuilderSaveDebug("force save payload prepared", {
@@ -2414,13 +2756,13 @@ export default function VisualBuilderPage() {
           pageName,
           updatedAt: verifiedProject?.updatedAt || "",
           stored: summarizeBuilderBlocksForSave(verifiedBlocks || []),
-          matchesPayload: blocksMatchForSave(normalizedBlocks, verifiedBlocks),
+          matchesPayload: blocksMatchForSave(submittedPersistentBlocks, verifiedBlocks),
           extraStoredBlockIds: (Array.isArray(verifiedBlocks) ? verifiedBlocks : [])
             .map((block) => String(block?.id || ""))
-            .filter((id) => id && !(new Set(normalizedBlocks.map((block) => String(block?.id || "")).filter(Boolean))).has(id)),
+            .filter((id) => id && !(new Set(submittedPersistentBlocks.map((block) => String(block?.id || "")).filter(Boolean))).has(id)),
           deletedBlockIds: normalizeDeletedBlockTombstones(verifiedProject),
         });
-        if (!blocksMatchForSave(normalizedBlocks, verifiedBlocks) && session?.access_token) {
+        if (!blocksMatchForSave(submittedPersistentBlocks, verifiedBlocks) && session?.access_token) {
           await waitForSaveVerification();
           verifiedProject = await fetchWebsiteProjectFromServer(session, currentProject.id, { pageName });
           verifiedBlocks = getSavedPageBlocks(verifiedProject, pageName);
@@ -2429,13 +2771,13 @@ export default function VisualBuilderPage() {
             pageName,
             updatedAt: verifiedProject?.updatedAt || "",
             stored: summarizeBuilderBlocksForSave(verifiedBlocks || []),
-            matchesPayload: blocksMatchForSave(normalizedBlocks, verifiedBlocks),
+            matchesPayload: blocksMatchForSave(submittedPersistentBlocks, verifiedBlocks),
             deletedBlockIds: normalizeDeletedBlockTombstones(verifiedProject),
           });
         }
-        if (!blocksMatchForSave(normalizedBlocks, verifiedBlocks)) {
+        if (!blocksMatchForSave(submittedPersistentBlocks, verifiedBlocks)) {
           const syncedBlocks = getSavedPageBlocks(serverSynced, pageName);
-          if (blocksMatchForSave(normalizedBlocks, syncedBlocks)) {
+          if (blocksMatchForSave(submittedPersistentBlocks, syncedBlocks)) {
             verifiedProject = serverSynced;
             verifiedBlocks = syncedBlocks;
             verifiedSaveMatches = true;
@@ -2444,9 +2786,11 @@ export default function VisualBuilderPage() {
             console.error("[forceSaveBlockPage] save verification mismatch after cloud sync; blocking saved status.", {
               pageName,
               editorBlockCount: normalizedBlocks.length,
+              submittedPersistentBlockCount: submittedPersistentBlocks.length,
               verifiedBlockCount: Array.isArray(verifiedBlocks) ? verifiedBlocks.length : null,
               syncedBlockCount: Array.isArray(syncedBlocks) ? syncedBlocks.length : null,
               payload: summarizeBuilderBlocksForSave(normalizedBlocks),
+              submittedPersistent: summarizeBuilderBlocksForSave(submittedPersistentBlocks),
               verified: summarizeBuilderBlocksForSave(verifiedBlocks || []),
               synced: summarizeBuilderBlocksForSave(syncedBlocks || []),
             });
@@ -2457,6 +2801,7 @@ export default function VisualBuilderPage() {
               _saveErrorMessage: message,
               _saveDebug: {
                 payload: summarizeBuilderBlocksForSave(normalizedBlocks),
+                submittedPersistent: summarizeBuilderBlocksForSave(submittedPersistentBlocks),
                 verified: summarizeBuilderBlocksForSave(verifiedBlocks || []),
                 synced: summarizeBuilderBlocksForSave(syncedBlocks || []),
               },
@@ -2468,7 +2813,7 @@ export default function VisualBuilderPage() {
       } catch (verifyErr) {
         console.error("[forceSaveBlockPage] save verification check failed after cloud save.", verifyErr);
         const syncedBlocks = getSavedPageBlocks(serverSynced, pageName);
-        if (blocksMatchForSave(normalizedBlocks, syncedBlocks)) {
+        if (blocksMatchForSave(submittedPersistentBlocks, syncedBlocks)) {
           verifiedProject = serverSynced;
           verifiedSaveMatches = true;
         } else {
@@ -2480,6 +2825,7 @@ export default function VisualBuilderPage() {
             _saveErrorMessage: message,
             _saveDebug: {
               payload: summarizeBuilderBlocksForSave(normalizedBlocks),
+              submittedPersistent: summarizeBuilderBlocksForSave(submittedPersistentBlocks),
               synced: summarizeBuilderBlocksForSave(syncedBlocks || []),
               error: verifyErr?.message || "Save verification failed",
             },
@@ -2510,12 +2856,10 @@ export default function VisualBuilderPage() {
       }
 
       const verifiedPagePatch = verifiedProject && typeof verifiedProject === "object" ? {
-        ...(Array.isArray(verifiedProject?.pageBlocks?.[pageName]) ? {
-          pageBlocks: {
-            ...(projectWithPatch.pageBlocks || {}),
-            [pageName]: verifiedProject.pageBlocks[pageName],
-          },
-        } : {}),
+        pageBlocks: {
+          ...(projectWithPatch.pageBlocks || {}),
+          [pageName]: Array.isArray(verifiedVideoBlocks) ? verifiedVideoBlocks : normalizedBlocks,
+        },
         ...(Object.prototype.hasOwnProperty.call(verifiedProject?.pagesContent || {}, pageName) ? {
           pagesContent: {
             ...(projectWithPatch.pagesContent || {}),
@@ -2525,7 +2869,10 @@ export default function VisualBuilderPage() {
         ...(Object.prototype.hasOwnProperty.call(verifiedProject?.chaiData || {}, pageName) ? {
           chaiData: {
             ...(projectWithPatch.chaiData || {}),
-            [pageName]: verifiedProject.chaiData[pageName],
+            [pageName]: {
+              ...(verifiedProject.chaiData[pageName] || {}),
+              blocks: Array.isArray(verifiedVideoBlocks) ? verifiedVideoBlocks : normalizedBlocks,
+            },
           },
         } : {}),
         updatedAt: verifiedProject.updatedAt || projectWithPatch.updatedAt,
@@ -2547,39 +2894,103 @@ export default function VisualBuilderPage() {
         matches: current?.publishedVersion ? current.publishedVersion === savedVersionSummary.projectVersion : current?.matches,
       }));
 
-      // ── THEN refresh localStorage with the server-normalized project ───────
+      // â”€â”€ THEN refresh localStorage with the server-normalized project â”€â”€â”€â”€â”€â”€â”€
       const savedProject = updateWebsiteProject(currentProject.id, projectToStore);
       const latest = savedProject && !savedProject._localSaveFailed
         ? getWebsiteProject(currentProject.id)
         : null;
 
       if (savedProject?._localSaveFailed || !savedProject) {
-        // localStorage full — data is already safe on the server, just warn
-        console.warn("[forceSaveBlockPage] localStorage full — data saved to server only");
+        // localStorage full â€” data is already safe on the server, just warn
+        console.warn("[forceSaveBlockPage] localStorage full â€” data saved to server only");
         setProject(projectToStore);
-        flashNotice(`✓ Saved to cloud — local storage full. Your work is safe.`, "success", 6000);
+        flashNotice(`âœ“ Saved to cloud â€” local storage full. Your work is safe.`, "success", 6000);
         return projectToStore;
       }
 
       if (latest) setProject(latest);
       clearNotice();
-      flashNotice(`Saved and verified ✓ ${pageName}`, "success");
+      flashNotice(`Saved and verified âœ“ ${pageName}`, "success");
       return latest || savedProject;
     } catch (unexpectedErr) {
       console.error("[forceSaveBlockPage] unexpected error:", unexpectedErr);
-      flashNotice("Save encountered an error — please try again.", "error");
+      flashNotice("Save encountered an error â€” please try again.", "error");
       return null;
     }
   }
 
   useEffect(() => {
+    if (process.env.NODE_ENV === "production" || typeof window === "undefined") return undefined;
+    window.__websiteBuilderRegressionApi = {
+      getSnapshot() {
+        const currentProject = project?.id ? (getWebsiteProject(project.id) || project) : project;
+        const pageName = resolveProjectPageName(activePage, currentProject);
+        const blocks = Array.isArray(currentProject?.pageBlocks?.[pageName]) ? currentProject.pageBlocks[pageName] : [];
+        return {
+          project: currentProject,
+          activePage,
+          resolvedPageName: pageName,
+          hasSession: !!session?.access_token,
+          blocks,
+          videoHeroes: blocks
+            .filter((block) => String(block?.type || "") === BlockTypes.VIDEO_HERO)
+            .map((block) => ({
+              id: block?.id || "",
+              videoUrl: block?.props?.videoUrl || "",
+              resolvedVideoUrl: resolveVideoHeroUrl(block?.props || {}),
+              props: block?.props || {},
+            })),
+        };
+      },
+      setActivePage(pageName) {
+        const resolved = resolveProjectPageName(pageName, project) || String(pageName || "");
+        setActivePage(resolved);
+        return resolved;
+      },
+      stagePageBlocks(pageName, blocks) {
+        const currentProject = project?.id ? (getWebsiteProject(project.id) || project) : project;
+        const resolved = resolveProjectPageName(pageName, currentProject) || String(pageName || activePage || "Home");
+        const nextProject = normalizeFooterNavigationForProject({
+          ...(currentProject || {}),
+          pageBlocks: {
+            ...(currentProject?.pageBlocks || {}),
+            [resolved]: Array.isArray(blocks) ? blocks : [],
+          },
+          chaiData: {
+            ...(currentProject?.chaiData || {}),
+            [resolved]: {
+              ...(currentProject?.chaiData?.[resolved] || {}),
+              blocks: Array.isArray(blocks) ? blocks : [],
+            },
+          },
+          updatedAt: new Date().toISOString(),
+        });
+        updateWebsiteProject(nextProject.id, nextProject);
+        setProject(nextProject);
+        return resolved;
+      },
+      async forceSavePageBlocks(pageName, blocks) {
+        const resolved = resolveProjectPageName(pageName, project) || String(pageName || activePage || "Home");
+        return forceSaveBlockPage(Array.isArray(blocks) ? blocks : [], {
+          pageName: resolved,
+          saveSource: "manual-save",
+        });
+      },
+    };
+    return () => {
+      if (window.__websiteBuilderRegressionApi) delete window.__websiteBuilderRegressionApi;
+    };
+  }, [activePage, project, session?.access_token]);
+
+  useEffect(() => {
     let cancelled = false;
 
     const syncServerDefaults = async () => {
+      if (!session?.access_token) return;
       try {
         const response = await fetch("/api/website-builder/defaults", {
           cache: "no-store",
-          headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {},
+          headers: { Authorization: `Bearer ${session.access_token}` },
         });
         const payload = await readApiJson(response);
         if (!response.ok || !payload?.ok || cancelled) return;
@@ -2705,7 +3116,7 @@ export default function VisualBuilderPage() {
     const footerPatch = role === "footer"
       ? { globalFooter: footerBlockToGlobalFooter(block, buildFooterNavigationContext({ pages: project.pages || [] })) }
       : {};
-    saveProjectPatch({ [field]: block, ...footerPatch }, `Saved as global ${role === "nav" ? "navigation" : "footer"} — shows on every page`, { siteOnly: true, saveSource: "manual-save" });
+    saveProjectPatch({ [field]: block, ...footerPatch }, `Saved as global ${role === "nav" ? "navigation" : "footer"} â€” shows on every page`, { siteOnly: true, saveSource: "manual-save" });
   }
 
   function updateGlobalBlock(role, block) {
@@ -2716,6 +3127,36 @@ export default function VisualBuilderPage() {
       ? { globalFooter: block ? footerBlockToGlobalFooter(block, buildFooterNavigationContext({ pages: project.pages || [] })) : null }
       : {};
     saveProjectPatch({ [field]: block ?? null, ...footerPatch }, `Updated global ${role === "nav" ? "navigation" : "footer"}`, { siteOnly: true, saveSource: "manual-save" });
+  }
+
+  function updateSharedTemplateBlock(sharedTemplateId, block) {
+    if (!project?.id || !sharedTemplateId || !block) return;
+    const currentProject = getWebsiteProject(project.id) || project;
+    const nextProject = updateSharedBlockTemplateFromBlock(currentProject, sharedTemplateId, block);
+    saveProjectPatch(
+      { sharedBlockTemplates: getSharedBlockTemplates(nextProject) },
+      "Updated shared template",
+      { siteOnly: true, saveSource: "manual-save" }
+    );
+  }
+
+  function detachSharedTemplateBlock(blockIndex, detachedBlock) {
+    if (!project?.id || typeof blockIndex !== "number" || !detachedBlock) return;
+    const currentProject = getWebsiteProject(project.id) || project;
+    const pageName = resolveProjectPageName(activeProjectPageName || activePage, currentProject);
+    const currentBlocks = Array.isArray(currentProject?.pageBlocks?.[pageName]) ? currentProject.pageBlocks[pageName] : [];
+    const currentBlock = currentBlocks[blockIndex];
+    if (!getSharedTemplateId(currentBlock)) return;
+    const safeDetachedBlock = detachedBlock || detachSharedBlockInstance(currentBlock, currentProject);
+    const nextBlocks = currentBlocks.map((block, index) => index === blockIndex ? safeDetachedBlock : block);
+    const nextChaiPage = {
+      ...(currentProject?.chaiData?.[pageName] || {}),
+      blocks: nextBlocks,
+    };
+    saveProjectPatch({
+      pageBlocks: { ...(currentProject?.pageBlocks || {}), [pageName]: nextBlocks },
+      chaiData: { ...(currentProject?.chaiData || {}), [pageName]: nextChaiPage },
+    }, "Detached shared template", { pageName, saveSource: "manual-save" });
   }
 
   function applyDesignPreset(presetName) {
@@ -2930,7 +3371,7 @@ export default function VisualBuilderPage() {
         <Head><title>{displayName} | GR8 Website Studio</title></Head>
         <main style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: "#05070f", padding: 24, fontFamily: "system-ui,sans-serif" }}>
           <div style={{ display: "grid", gap: 14, width: "min(580px, 100%)", borderRadius: 18, padding: 28, background: "#0d1117", border: "1px solid rgba(99,102,241,.25)", boxShadow: "0 0 40px rgba(99,102,241,.1)" }}>
-            <div style={{ fontSize: 32 }}>🌐</div>
+            <div style={{ fontSize: 32 }}>ðŸŒ</div>
             <div style={{ fontSize: 18, fontWeight: 600, color: "#f1f5f9" }}>Project not found</div>
             <div style={{ fontSize: 16, lineHeight: 1.7, color: "rgba(255,255,255,.5)", maxWidth: 520 }}>
               Project <code style={{ background: "rgba(255,255,255,.08)", padding: "2px 6px", borderRadius: 4, fontSize: 16 }}>{missingProjectId}</code> is not available in this session.
@@ -2948,25 +3389,24 @@ export default function VisualBuilderPage() {
     return (
       <>
         <Head><title>{displayName} | GR8 Website Studio</title></Head>
-        <StudioLoader label={projectId ? "Loading project…" : undefined} />
+        <StudioLoader label={projectId ? "Loading projectâ€¦" : undefined} />
       </>
     );
   }
 
   const studioProject = project;
   const activeProjectPageName = resolveProjectPageName(activePage, studioProject);
-  const activePageBlocks = Array.isArray(studioProject?.pageBlocks?.[activeProjectPageName]) && studioProject.pageBlocks[activeProjectPageName].length > 0
+  const rawActivePageBlocks = Array.isArray(studioProject?.pageBlocks?.[activeProjectPageName])
     ? studioProject.pageBlocks[activeProjectPageName]
-    : Array.isArray(studioProject?.chaiData?.[activeProjectPageName]?.blocks)
-      ? studioProject.chaiData[activeProjectPageName].blocks
-      : Array.isArray(studioProject?.pageBlocks?.[activeProjectPageName])
-        ? studioProject.pageBlocks[activeProjectPageName]
-        : [];
+    : [];
+  const activePageBlocks = (studioProject?.globalNavBlock || studioProject?.globalHeader?.enabled || studioProject?.globalHeader?.id)
+    ? rawActivePageBlocks.filter((block) => String(block?.type || "") !== BlockTypes.NAV_BAR)
+    : rawActivePageBlocks;
   // Keying on project+page only (not block content/count) is intentional: PageBuilderCanvas
   // already syncs pageBlocks prop changes internally via its own effect, which preserves
   // scroll position and the selected block. Including block ids/count here forced a full
   // remount on every edit/save (autosave, background refresh, etc.), which destroyed and
-  // recreated the canvas — causing the flash/scroll-to-top and bypassing that effect's
+  // recreated the canvas â€” causing the flash/scroll-to-top and bypassing that effect's
   // "keep the live canvas as source of truth" guard against stale background updates.
   const canvasInstanceKey = `${studioProject?.id || ""}|${activeProjectPageName}`;
   const activePageEntry = Array.isArray(studioProject?.pages)
@@ -3009,10 +3449,10 @@ export default function VisualBuilderPage() {
           <section style={styles.bannerOuter}>
             <div style={styles.bannerInner}>
               <div style={styles.bannerLeft}>
-                <div style={styles.bannerIcon} aria-hidden>🌐</div>
+                <div style={styles.bannerIcon} aria-hidden>ðŸŒ</div>
                 <div>
                   <strong style={styles.bannerTitle}>Website Studio</strong>
-                  <span style={styles.bannerSubtitle}>{displayName} · {activePage} page builder</span>
+                  <span style={styles.bannerSubtitle}>{displayName} Â· {activePage} page builder</span>
                 </div>
               </div>
               <div style={styles.bannerActions}>
@@ -3023,7 +3463,7 @@ export default function VisualBuilderPage() {
                       style={styles.secondaryLinkButton}
                       onClick={() => window.open(`/modules/website-builder/visit-report?projectId=${project.id}`, "_blank")}
                     >
-                      📊 Visitor Report
+                      ðŸ“Š Visitor Report
                     </button>
                     <button
                       type="button"
@@ -3044,7 +3484,7 @@ export default function VisualBuilderPage() {
                       style={showSetupPanel ? styles.settingsBtnActive : styles.settingsBtn}
                       onClick={() => setShowSetupPanel(v => !v)}
                     >
-                      ⚙ Site Settings
+                      âš™ Site Settings
                     </button>
                   </>
                 ) : null}
@@ -3063,10 +3503,10 @@ export default function VisualBuilderPage() {
             </div>
           </section>
 
-          {/* ── Sticky area: tabs + canvas locks to top as banner scrolls away ── */}
+          {/* â”€â”€ Sticky area: tabs + canvas locks to top as banner scrolls away â”€â”€ */}
           <div style={styles.stickyArea}>
 
-          {/* ── Persistent pages bar ── */}
+          {/* â”€â”€ Persistent pages bar â”€â”€ */}
           {project?.pages?.length > 0 && (
             <div style={styles.pagesBar}>
               <label style={styles.pagesBarPickerLabel}>
@@ -3126,7 +3566,7 @@ export default function VisualBuilderPage() {
                           title={`Delete ${entry.name}`}
                           onClick={() => handleDeletePage(entry.name)}
                           style={styles.pagesBarTabDelete}
-                        >×</button>
+                        >Ã—</button>
                       )}
                     </div>
                   )
@@ -3142,7 +3582,7 @@ export default function VisualBuilderPage() {
             <div style={styles.newPagePanel} role="dialog" aria-label="Create new website page">
               <div style={styles.newPagePanelHeader}>
                 <strong>Create New Page</strong>
-                <button type="button" onClick={() => setShowNewPagePanel(false)} style={styles.newPageCloseBtn}>×</button>
+                <button type="button" onClick={() => setShowNewPagePanel(false)} style={styles.newPageCloseBtn}>Ã—</button>
               </div>
               <div style={styles.newPageGrid}>
                 <label style={styles.newPageField}>
@@ -3194,7 +3634,7 @@ export default function VisualBuilderPage() {
             <div style={styles.setupDrawer}>
               <div style={styles.setupDrawerHeader}>
                 <strong style={styles.sectionTitle}>Site Settings</strong>
-                <button type="button" onClick={() => setShowSetupPanel(false)} style={styles.setupDrawerClose}>✕ Close</button>
+                <button type="button" onClick={() => setShowSetupPanel(false)} style={styles.setupDrawerClose}>âœ• Close</button>
               </div>
             <section style={styles.navPanel}>
             <div style={styles.navPanelHead}>
@@ -3262,7 +3702,7 @@ export default function VisualBuilderPage() {
               </div>
 
               <div style={styles.publishActionRow}>
-                <button type="button" onClick={handlePublishWebsite} style={styles.publishBtn} disabled={publishBusy || saveBusy || !session}>
+                <button type="button" onClick={handlePublishWebsite} style={styles.publishBtn} disabled={publishBusy || saveBusy || !session || builderReadOnly}>
                   {publishBusy ? "Publishing..." : saveBusy ? "Saving..." : publication?.publishedAt ? "Update Published Site" : "Publish Site"}
                 </button>
 
@@ -3316,6 +3756,7 @@ export default function VisualBuilderPage() {
               ) : null}
 
               {!session ? <span style={styles.publishAuthHint}>Log in to publish this website.</span> : null}
+              {builderReadOnly ? <span style={styles.publishAuthHint}>Website protected - unlock for editing before publishing.</span> : null}
             </div>
 
             <div style={styles.controlsPanel}>
@@ -3366,7 +3807,7 @@ export default function VisualBuilderPage() {
                             onClick={() => handleDeletePage(entry.name)}
                             style={styles.pagePillDelete}
                           >
-                            ×
+                            Ã—
                           </button>
                         )}
                       </div>
@@ -3402,7 +3843,7 @@ export default function VisualBuilderPage() {
                 <span>{activePageBlocks.length} blocks loaded</span>
               </div>
               {isUpgrading ? (
-                <StudioLoader label="Rebuilding AI layout…" />
+                <StudioLoader label="Rebuilding AI layoutâ€¦" />
               ) : (
                 <CanvasErrorBoundary resetKey={`${studioProject?.id || ""}:${activeProjectPageName}`}>
                   <PageBuilderCanvas
@@ -3422,6 +3863,8 @@ export default function VisualBuilderPage() {
                     onSaveTemplateSite={canSaveTemplates ? saveTemplateSiteToServer : null}
                     canSaveTemplates={canSaveTemplates}
                     onUpdateGlobalBlock={updateGlobalBlock}
+                    onUpdateSharedTemplate={updateSharedTemplateBlock}
+                    onDetachSharedTemplate={detachSharedTemplateBlock}
                     onUpdatePageSettings={(patch, options = {}) => updateActivePageSettings(patch, { ...options, pageName: activeProjectPageName })}
                     onUpdateSiteSettings={(patch, options = {}) => saveProjectPatch(patch, "Updated site settings", { siteOnly: true, saveSource: options?.saveSource || "autosave" })}
                     onOpenMediaLibrary={openMediaLibrary}
@@ -3430,6 +3873,16 @@ export default function VisualBuilderPage() {
                       previewActionsRef.current = actions;
                     }}
                     blockDefaults={blockDefaults}
+                    readOnly={builderReadOnly}
+                    lockStatusLabel={isProtectedFinalWebsite
+                      ? (sessionExpired
+                          ? "Editing session expired"
+                          : (builderReadOnly ? "Website Protected" : "Editing Unlocked"))
+                      : ""}
+                    onUnlockForEditing={handleUnlockForEditing}
+                    onSaveAndLockWebsite={handleSaveAndLockWebsite}
+                    onCancelEditing={handleCancelEditing}
+                    unlockBusy={unlockBusy}
                     showHeader={true}
                   />
                 </CanvasErrorBoundary>

@@ -7,6 +7,7 @@ export function PageRenderer({
   workbook = null,
   selection = null,
   editing = false,
+  showOriginal = false,
   textEditingObjectId = "",
   onSelectObject,
   onResizeObject,
@@ -39,6 +40,7 @@ export function PageRenderer({
           workbook={workbook}
           selected={selectedIds.includes(object.id)}
           editing={editing}
+          showOriginal={showOriginal}
           textEditing={textEditingObjectId === object.id}
           onSelect={onSelectObject}
           onResize={onResizeObject}

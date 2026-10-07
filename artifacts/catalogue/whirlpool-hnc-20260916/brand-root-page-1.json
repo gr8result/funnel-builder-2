@@ -1,0 +1,1030 @@
+{
+  "data": {
+    "products": {
+      "total_count": 41,
+      "page_info": {
+        "total_pages": 2,
+        "current_page": 1,
+        "page_size": 25
+      },
+      "aggregations": [
+        {
+          "attribute_code": "category_id",
+          "label": "Category",
+          "options": [
+            {
+              "label": "Products",
+              "value": "1036",
+              "count": 41
+            },
+            {
+              "label": "Kitchen",
+              "value": "16",
+              "count": 36
+            },
+            {
+              "label": "Ovens",
+              "value": "22",
+              "count": 12
+            },
+            {
+              "label": "Single Oven Electric Wall/Undermount ",
+              "value": "99",
+              "count": 12
+            },
+            {
+              "label": "Cooktops",
+              "value": "23",
+              "count": 10
+            },
+            {
+              "label": "Dishwashers",
+              "value": "28",
+              "count": 10
+            },
+            {
+              "label": "Freestanding/Built in Dishwashers ",
+              "value": "136",
+              "count": 8
+            },
+            {
+              "label": "Laundry",
+              "value": "18",
+              "count": 5
+            },
+            {
+              "label": "Washing Machines",
+              "value": "34",
+              "count": 4
+            },
+            {
+              "label": "Induction Cooktops ",
+              "value": "109",
+              "count": 4
+            },
+            {
+              "label": "Gas Cooktops ",
+              "value": "107",
+              "count": 3
+            },
+            {
+              "label": "Electric Cooktops ",
+              "value": "108",
+              "count": 3
+            },
+            {
+              "label": "Microwaves",
+              "value": "24",
+              "count": 2
+            },
+            {
+              "label": "Rangehoods",
+              "value": "25",
+              "count": 2
+            },
+            {
+              "label": "Canopy Rangehoods ",
+              "value": "115",
+              "count": 2
+            },
+            {
+              "label": "Fully integrated Dishwashers ",
+              "value": "138",
+              "count": 2
+            },
+            {
+              "label": "Topload Washers ",
+              "value": "142",
+              "count": 2
+            },
+            {
+              "label": "Frontload Washers ",
+              "value": "143",
+              "count": 2
+            },
+            {
+              "label": "Built In Microwaves",
+              "value": "941",
+              "count": 2
+            },
+            {
+              "label": "Clothes Dryers",
+              "value": "35",
+              "count": 1
+            },
+            {
+              "label": "Heat Pump Dryer",
+              "value": "145",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "attribute_code": "brand",
+          "label": "Brand",
+          "options": [
+            {
+              "label": "Whirlpool",
+              "value": "1084",
+              "count": 41
+            }
+          ]
+        },
+        {
+          "attribute_code": "colours",
+          "label": "Colour",
+          "options": [
+            {
+              "label": "Black",
+              "value": "937",
+              "count": 14
+            },
+            {
+              "label": "Black Glass",
+              "value": "938",
+              "count": 7
+            },
+            {
+              "label": "Dark Stainless Steel",
+              "value": "1107",
+              "count": 1
+            },
+            {
+              "label": "Grey",
+              "value": "939",
+              "count": 1
+            },
+            {
+              "label": "Stainless Steel",
+              "value": "943",
+              "count": 11
+            },
+            {
+              "label": "White",
+              "value": "2371",
+              "count": 5
+            }
+          ]
+        },
+        {
+          "attribute_code": "size_mm",
+          "label": "Size (mm)",
+          "options": [
+            {
+              "label": "900",
+              "value": "833",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "attribute_code": "size_cooktop",
+          "label": "Cooktop Size",
+          "options": [
+            {
+              "label": "300 - 600mm",
+              "value": "1090",
+              "count": 4
+            },
+            {
+              "label": "601 - 699mm",
+              "value": "1089",
+              "count": 1
+            },
+            {
+              "label": "700 - 890mm",
+              "value": "1088",
+              "count": 1
+            },
+            {
+              "label": "891mm +",
+              "value": "1087",
+              "count": 4
+            }
+          ]
+        },
+        {
+          "attribute_code": "size_oven",
+          "label": "Oven Size",
+          "options": [
+            {
+              "label": "551 - 600mm",
+              "value": "1102",
+              "count": 8
+            },
+            {
+              "label": "851mm +",
+              "value": "1100",
+              "count": 2
+            }
+          ]
+        },
+        {
+          "attribute_code": "stock_line_filter",
+          "label": "Stock Line",
+          "options": [
+            {
+              "label": "Yes",
+              "value": "672",
+              "count": 10
+            },
+            {
+              "label": "No",
+              "value": "673",
+              "count": 31
+            }
+          ]
+        },
+        {
+          "attribute_code": "wels_water_rating",
+          "label": "Water Rating",
+          "options": [
+            {
+              "label": "5",
+              "value": "922",
+              "count": 7
+            },
+            {
+              "label": "4.5",
+              "value": "921",
+              "count": 1
+            },
+            {
+              "label": "4",
+              "value": "920",
+              "count": 3
+            },
+            {
+              "label": "3.5",
+              "value": "919",
+              "count": 2
+            },
+            {
+              "label": "3",
+              "value": "918",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "attribute_code": "energy_rating",
+          "label": "Energy Rating",
+          "options": [
+            {
+              "label": "5",
+              "value": "1003",
+              "count": 1
+            },
+            {
+              "label": "4.5",
+              "value": "1002",
+              "count": 4
+            },
+            {
+              "label": "4",
+              "value": "1001",
+              "count": 6
+            },
+            {
+              "label": "3.5",
+              "value": "1000",
+              "count": 3
+            },
+            {
+              "label": "8",
+              "value": "1112",
+              "count": 1
+            }
+          ]
+        }
+      ],
+      "items": [
+        {
+          "id": 25132,
+          "sku": "WWPB8502IW",
+          "vendorcode": "WWPB8502IW",
+          "name": "8kg Washer & 4kg Dryer Combination",
+          "categories": [
+            {
+              "id": 18,
+              "name": "Laundry",
+              "url_path": "products/laundry"
+            },
+            {
+              "id": 34,
+              "name": "Washing Machines",
+              "url_path": "products/laundry/washing-machines"
+            },
+            {
+              "id": 143,
+              "name": "Frontload Washers ",
+              "url_path": "products/laundry/washing-machines/frontload-washers"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "__typename": "SimpleProduct"
+        },
+        {
+          "id": 25129,
+          "sku": "WT9BTAXA",
+          "vendorcode": "WT9BTAXA",
+          "name": "900mm Canopy Rangehood",
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 25,
+              "name": "Rangehoods",
+              "url_path": "products/kitchen/rangehoods"
+            },
+            {
+              "id": 115,
+              "name": "Canopy Rangehoods ",
+              "url_path": "products/kitchen/rangehoods/canopy-rangehoods"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "__typename": "SimpleProduct"
+        },
+        {
+          "id": 25128,
+          "sku": "WT9BTABC",
+          "vendorcode": "WT9BTABC",
+          "name": "900mm Canopy Rangehood",
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 25,
+              "name": "Rangehoods",
+              "url_path": "products/kitchen/rangehoods"
+            },
+            {
+              "id": 115,
+              "name": "Canopy Rangehoods ",
+              "url_path": "products/kitchen/rangehoods/canopy-rangehoods"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "__typename": "SimpleProduct"
+        },
+        {
+          "id": 25124,
+          "sku": "WRT9350AU",
+          "vendorcode": "WRT9350AU",
+          "name": "900mm Ceramic Cooktop",
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 23,
+              "name": "Cooktops",
+              "url_path": "products/kitchen/cooktops"
+            },
+            {
+              "id": 108,
+              "name": "Electric Cooktops ",
+              "url_path": "products/kitchen/cooktops/electric-cooktops"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "__typename": "SimpleProduct"
+        },
+        {
+          "id": 25117,
+          "sku": "WMP9170BLAUS",
+          "vendorcode": "WMP9170BLAUS",
+          "name": "900mm Electric Built-In Oven",
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 22,
+              "name": "Ovens",
+              "url_path": "products/kitchen/ovens"
+            },
+            {
+              "id": 99,
+              "name": "Single Oven Electric Wall/Undermount ",
+              "url_path": "products/kitchen/ovens/single-oven-electric-wall-undermount"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "__typename": "SimpleProduct"
+        },
+        {
+          "id": 25116,
+          "sku": "WIO3033PELAUS",
+          "vendorcode": "WIO3033PELAUS",
+          "name": "600mm Fully Integrated Dishwasher ",
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 28,
+              "name": "Dishwashers",
+              "url_path": "products/kitchen/dishwashers"
+            },
+            {
+              "id": 138,
+              "name": "Fully integrated Dishwashers ",
+              "url_path": "products/kitchen/dishwashers/fully-integrated-dishwashers"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "__typename": "SimpleProduct"
+        },
+        {
+          "id": 25115,
+          "sku": "WDFS3R4PIXAU",
+          "vendorcode": "WDFS3R4PIXAU",
+          "name": "600mm Freestanding Dishwasher",
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 28,
+              "name": "Dishwashers",
+              "url_path": "products/kitchen/dishwashers"
+            },
+            {
+              "id": 136,
+              "name": "Freestanding/Built in Dishwashers ",
+              "url_path": "products/kitchen/dishwashers/freestanding-built-in-dishwashers"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "__typename": "SimpleProduct"
+        },
+        {
+          "id": 25114,
+          "sku": "WDFS3R4OIXAU",
+          "vendorcode": "WDFS3R4OIXAU",
+          "name": "600mm Freestanding Dishwasher",
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 28,
+              "name": "Dishwashers",
+              "url_path": "products/kitchen/dishwashers"
+            },
+            {
+              "id": 136,
+              "name": "Freestanding/Built in Dishwashers ",
+              "url_path": "products/kitchen/dishwashers/freestanding-built-in-dishwashers"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "__typename": "SimpleProduct"
+        },
+        {
+          "id": 25113,
+          "sku": "WDFS3R4OBSAU",
+          "vendorcode": "WDFS3R4OBSAU",
+          "name": "600mm Freestanding Dishwasher",
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 28,
+              "name": "Dishwashers",
+              "url_path": "products/kitchen/dishwashers"
+            },
+            {
+              "id": 136,
+              "name": "Freestanding/Built in Dishwashers ",
+              "url_path": "products/kitchen/dishwashers/freestanding-built-in-dishwashers"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "__typename": "SimpleProduct"
+        },
+        {
+          "id": 25112,
+          "sku": "WDFS3R4NWEAU",
+          "vendorcode": "WDFS3R4NWEAU",
+          "name": "600mm Freestanding Dishwasher",
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 28,
+              "name": "Dishwashers",
+              "url_path": "products/kitchen/dishwashers"
+            },
+            {
+              "id": 136,
+              "name": "Freestanding/Built in Dishwashers ",
+              "url_path": "products/kitchen/dishwashers/freestanding-built-in-dishwashers"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "__typename": "SimpleProduct"
+        },
+        {
+          "id": 25109,
+          "sku": "WDFS3I4PBSAU",
+          "vendorcode": "WDFS3I4PBSAU",
+          "name": "600mm Fully Integrated Dishwasher ",
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 28,
+              "name": "Dishwashers",
+              "url_path": "products/kitchen/dishwashers"
+            },
+            {
+              "id": 136,
+              "name": "Freestanding/Built in Dishwashers ",
+              "url_path": "products/kitchen/dishwashers/freestanding-built-in-dishwashers"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "__typename": "SimpleProduct"
+        },
+        {
+          "id": 25105,
+          "sku": "W6OMPBSOC",
+          "vendorcode": "W6OMPBSOC",
+          "name": "600mm Electric Built-In Oven",
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 22,
+              "name": "Ovens",
+              "url_path": "products/kitchen/ovens"
+            },
+            {
+              "id": 99,
+              "name": "Single Oven Electric Wall/Undermount ",
+              "url_path": "products/kitchen/ovens/single-oven-electric-wall-undermount"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "__typename": "SimpleProduct"
+        },
+        {
+          "id": 25103,
+          "sku": "W4OMSK581RU1SBA",
+          "vendorcode": "W4OMSK581RU1SBA",
+          "name": "600mm Electric Built-In Oven",
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 22,
+              "name": "Ovens",
+              "url_path": "products/kitchen/ovens"
+            },
+            {
+              "id": 99,
+              "name": "Single Oven Electric Wall/Undermount ",
+              "url_path": "products/kitchen/ovens/single-oven-electric-wall-undermount"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "__typename": "SimpleProduct"
+        },
+        {
+          "id": 25102,
+          "sku": "W4OMK581RU1BA",
+          "vendorcode": "W4OMK581RU1BA",
+          "name": "600mm Electric Built-In Oven",
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 22,
+              "name": "Ovens",
+              "url_path": "products/kitchen/ovens"
+            },
+            {
+              "id": 99,
+              "name": "Single Oven Electric Wall/Undermount ",
+              "url_path": "products/kitchen/ovens/single-oven-electric-wall-undermount"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "__typename": "SimpleProduct"
+        },
+        {
+          "id": 25101,
+          "sku": "W4OMK581HU1XAUS",
+          "vendorcode": "W4OMK581HU1XA",
+          "name": "600mm Electric Built-In Oven",
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 22,
+              "name": "Ovens",
+              "url_path": "products/kitchen/ovens"
+            },
+            {
+              "id": 99,
+              "name": "Single Oven Electric Wall/Undermount ",
+              "url_path": "products/kitchen/ovens/single-oven-electric-wall-undermount"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "__typename": "SimpleProduct"
+        },
+        {
+          "id": 25100,
+          "sku": "W4OMK381HU0XA",
+          "vendorcode": "W4OMK381HU0XA",
+          "name": "600mm Electric Built-In Oven",
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 22,
+              "name": "Ovens",
+              "url_path": "products/kitchen/ovens"
+            },
+            {
+              "id": 99,
+              "name": "Single Oven Electric Wall/Undermount ",
+              "url_path": "products/kitchen/ovens/single-oven-electric-wall-undermount"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "__typename": "SimpleProduct"
+        },
+        {
+          "id": 25099,
+          "sku": "W4OMK381HU0BA",
+          "vendorcode": "W4OMK381HU0BA",
+          "name": "600mm Electric Built-In Oven",
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 22,
+              "name": "Ovens",
+              "url_path": "products/kitchen/ovens"
+            },
+            {
+              "id": 99,
+              "name": "Single Oven Electric Wall/Undermount ",
+              "url_path": "products/kitchen/ovens/single-oven-electric-wall-undermount"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "__typename": "SimpleProduct"
+        },
+        {
+          "id": 25098,
+          "sku": "W3OMK55HR0XC",
+          "vendorcode": "W3OMK55HR0XC",
+          "name": "600mm Electric Built-In Oven",
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 22,
+              "name": "Ovens",
+              "url_path": "products/kitchen/ovens"
+            },
+            {
+              "id": 99,
+              "name": "Single Oven Electric Wall/Undermount ",
+              "url_path": "products/kitchen/ovens/single-oven-electric-wall-undermount"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "__typename": "SimpleProduct"
+        },
+        {
+          "id": 25097,
+          "sku": "VWHD1502IG",
+          "vendorcode": "VWHD1502IG",
+          "name": "Sanipro 15kg Top Load Washer",
+          "categories": [
+            {
+              "id": 18,
+              "name": "Laundry",
+              "url_path": "products/laundry"
+            },
+            {
+              "id": 34,
+              "name": "Washing Machines",
+              "url_path": "products/laundry/washing-machines"
+            },
+            {
+              "id": 142,
+              "name": "Topload Washers ",
+              "url_path": "products/laundry/washing-machines/topload-washers"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "__typename": "SimpleProduct"
+        },
+        {
+          "id": 25096,
+          "sku": "VWED1202IG",
+          "vendorcode": "VWED1202IG",
+          "name": "12kg Top Load Washer",
+          "categories": [
+            {
+              "id": 18,
+              "name": "Laundry",
+              "url_path": "products/laundry"
+            },
+            {
+              "id": 34,
+              "name": "Washing Machines",
+              "url_path": "products/laundry/washing-machines"
+            },
+            {
+              "id": 142,
+              "name": "Topload Washers ",
+              "url_path": "products/laundry/washing-machines/topload-washers"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "__typename": "SimpleProduct"
+        },
+        {
+          "id": 24972,
+          "sku": "IWSH9051CAUS",
+          "vendorcode": "IWSH9051CAUS",
+          "name": "900mm Induction Cooktop",
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 23,
+              "name": "Cooktops",
+              "url_path": "products/kitchen/cooktops"
+            },
+            {
+              "id": 109,
+              "name": "Induction Cooktops ",
+              "url_path": "products/kitchen/cooktops/induction-cooktops"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "__typename": "SimpleProduct"
+        },
+        {
+          "id": 24971,
+          "sku": "IWHH9050CC",
+          "vendorcode": "IWHH9050CC",
+          "name": "900mm Induction Cooktop",
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 23,
+              "name": "Cooktops",
+              "url_path": "products/kitchen/cooktops"
+            },
+            {
+              "id": 109,
+              "name": "Induction Cooktops ",
+              "url_path": "products/kitchen/cooktops/induction-cooktops"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "__typename": "SimpleProduct"
+        },
+        {
+          "id": 24970,
+          "sku": "HWEC8002IW",
+          "vendorcode": "HWEC8002IW",
+          "name": "SaniCare 8kg Heat Pump Clothes Dryer",
+          "categories": [
+            {
+              "id": 18,
+              "name": "Laundry",
+              "url_path": "products/laundry"
+            },
+            {
+              "id": 35,
+              "name": "Clothes Dryers",
+              "url_path": "products/laundry/clothes-dryers"
+            },
+            {
+              "id": 145,
+              "name": "Heat Pump Dryer",
+              "url_path": "products/laundry/clothes-dryers/heat-pump-dryer"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "__typename": "SimpleProduct"
+        },
+        {
+          "id": 24948,
+          "sku": "GMWL758IXLAUS",
+          "vendorcode": "GMWL758IXLAUS",
+          "name": "750mm Gas Cooktop",
+          "categories": [
+            {
+              "id": 16,
+              "name": "Kitchen",
+              "url_path": "products/kitchen"
+            },
+            {
+              "id": 23,
+              "name": "Cooktops",
+              "url_path": "products/kitchen/cooktops"
+            },
+            {
+              "id": 107,
+              "name": "Gas Cooktops ",
+              "url_path": "products/kitchen/cooktops/gas-cooktops"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "__typename": "SimpleProduct"
+        },
+        {
+          "id": 24947,
+          "sku": "FWEB9012IW",
+          "vendorcode": "FWEB9012IW",
+          "name": "10kg Front Load Washer",
+          "categories": [
+            {
+              "id": 18,
+              "name": "Laundry",
+              "url_path": "products/laundry"
+            },
+            {
+              "id": 34,
+              "name": "Washing Machines",
+              "url_path": "products/laundry/washing-machines"
+            },
+            {
+              "id": 143,
+              "name": "Frontload Washers ",
+              "url_path": "products/laundry/washing-machines/frontload-washers"
+            },
+            {
+              "id": 1036,
+              "name": "Products",
+              "url_path": "products"
+            }
+          ],
+          "__typename": "SimpleProduct"
+        }
+      ]
+    }
+  }
+}
