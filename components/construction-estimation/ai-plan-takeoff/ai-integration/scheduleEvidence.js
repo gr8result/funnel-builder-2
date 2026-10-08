@@ -11,6 +11,7 @@ export function createAiScheduleRows(analysis, pages) {
   return {
     rooms: (analysis?.rooms || []).filter(eligible).map((item, i) => row(item, i, 'Rooms', 1, 'No', item.name)),
     customTakeoffs: [
+      ...(analysis?.geometryValidation?.passed ? analysis.scopeResult?.quantities || [] : []).filter((q) => pages.includes(q.page) && !['Tiles', 'Hybrid', 'Carpets', 'Polished Concrete', 'exposed Agg'].includes(q.category)).map((item, index) => ({ ...item, section: 'Custom Takeoffs', itemId: `ai-scope-${item.page}-${index}`, planSheet: item.page, source: 'ai', category: `${item.category}${item.room ? ` — ${item.room}` : ''}`, notes: item.evidence })),
       ...(analysis?.fixtures || []).filter(eligible).map((item, i) => row(item, i, 'Custom Takeoffs', item.quantity, 'No', `${item.type}${item.room ? ` — ${item.room}` : ''}`)),
       ...(analysis?.documentedQuantities || []).filter(eligible).map((item, i) => row(item, i, 'Drawing evidence', item.value, item.unit, item.label)),
     ],

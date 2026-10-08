@@ -68,7 +68,14 @@ export function removeRoom(existing = [], name) {
 // record that holds the Rooms schedule and nothing else.
 export function reportWithRooms(report, rooms, details = {}) {
   const base = report || { schemaVersion: 'ai-takeoff-analysis.v1', runId: ROOMS_RUN_ID, status: 'rooms', fixtures: [], documentedQuantities: [], review: [], inspections: [] };
-  return { ...base, rooms, ...(details.readAt ? { roomsReadAt: details.readAt, roomsModel: details.model || '', roomsSheets: details.sheets || [] } : {}) };
+  const scopeReview = base.scopeResult ? {
+    status: 'review', completedAt: null,
+    scopeResult: { ...base.scopeResult, complete: false, checklist: [
+      ...(base.scopeResult.checklist || []).filter((item) => item.code !== 'rooms-changed'),
+      { code: 'rooms-changed', passed: false, message: 'Rooms changed. Apply the inclusion scope again to recalculate finishes.' }
+    ] }
+  } : {};
+  return { ...base, rooms, ...scopeReview, ...(details.readAt ? { roomsReadAt: details.readAt, roomsModel: details.model || '', roomsSheets: details.sheets || [] } : {}) };
 }
 
 // [{ level, rooms }] for display, lowest level first.

@@ -138,6 +138,7 @@ export function compactPlanEvidence(evidence, defaults) {
     windowCodeOrder: evidence?.windowCodeOrder || null,
     standardDoorHeightMm: evidence?.standardDoorHeightMm || null,
     eaveWidthMm: evidence?.eaveWidthMm || defaults?.eaveWidthMm || null,
+    roofPitchDegrees: evidence?.roofPitchDegrees ?? defaults?.roofPitchDegrees ?? null,
     notes: (evidence?.notes || []).slice(0, 25),
   };
 }
