@@ -1,3 +1,4 @@
+import { assertTakeoffImportable, signatureFromSchedule } from './ai-integration/geometryValidation.js';
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useAiTakeoffBridge } from './ai-integration/useAiTakeoffBridge.js';
 import { AiTakeoffDevelopmentAction } from './ai-integration/AiTakeoffDevelopmentAction.jsx';
@@ -248,6 +249,7 @@ function buildTakeoffContentSnapshot({
   sheetLevels = {},
   aiAppliedRuns = [],
   aiAnalysis = null,
+  aiScopeProfile = null,
 }) {
   return {
     rotation,
@@ -265,7 +267,7 @@ function buildTakeoffContentSnapshot({
     completedEaves: Array.isArray(completedEaves) ? completedEaves : [],
     completedPillars: Array.isArray(completedPillars) ? completedPillars : [],
     sheetLevels: sheetLevels && typeof sheetLevels === 'object' ? sheetLevels : {},
-    ...((aiAppliedRuns.length || aiAnalysis) ? { scheduleState: { ...(aiAppliedRuns.length ? { aiAppliedRuns } : {}), ...(aiAnalysis ? { aiAnalysis } : {}) } } : {}),
+    ...((aiAppliedRuns.length || aiAnalysis || aiScopeProfile?.schedule) ? { scheduleState: { ...(aiAppliedRuns.length ? { aiAppliedRuns } : {}), ...(aiAnalysis ? { aiAnalysis } : {}), ...(aiScopeProfile?.schedule ? { aiScopeProfile } : {}) } } : {}),
   };
 }
 
@@ -712,7 +714,8 @@ export default function AIPlanTakeoffStandalone({
     sheetLevels,
     aiAppliedRuns: aiTakeoffBridge.appliedRuns,
     aiAnalysis: aiTakeoffAnalysis.report,
-  }), [rotation, pixelsPerMm, planPages, completedWallRuns, placedOpenings, completedAreas, completedFloorplans, completedMeasurements, completedEaves, completedPillars, sheetLevels, aiTakeoffBridge.appliedRuns, aiTakeoffAnalysis.report]);
+    aiScopeProfile: aiTakeoffAnalysis.scopeProfile,
+  }), [rotation, pixelsPerMm, planPages, completedWallRuns, placedOpenings, completedAreas, completedFloorplans, completedMeasurements, completedEaves, completedPillars, sheetLevels, aiTakeoffBridge.appliedRuns, aiTakeoffAnalysis.report, aiTakeoffAnalysis.scopeProfile]);
 
   const FLOORCOVERING_CONFIGS = {
     'Tiles': { fill: 'rgba(76, 175, 80, 0.35)', stroke: '#2e7d32', text: '#1b5e20' },
@@ -818,6 +821,7 @@ export default function AIPlanTakeoffStandalone({
       scheduleState: {
         aiAppliedRuns: aiTakeoffBridge.appliedRuns,
         aiAnalysis: aiTakeoffAnalysis.report,
+        aiScopeProfile: aiTakeoffAnalysis.scopeProfile,
         aiInspections: aiTakeoffAnalysis.inspections,
         sheetCalibrations: aiTakeoffAnalysis.sheetCalibrations,
         scheduleMappings,
@@ -841,6 +845,7 @@ export default function AIPlanTakeoffStandalone({
       sheetLevels,
       aiAppliedRuns: aiTakeoffBridge.appliedRuns,
       aiAnalysis: aiTakeoffAnalysis.report,
+      aiScopeProfile: aiTakeoffAnalysis.scopeProfile,
     });
     return {
       ...jobData,
@@ -1116,7 +1121,7 @@ export default function AIPlanTakeoffStandalone({
     setJobSetupPayload(takeoffJobData.scheduleState?.jobSetupPayload || null);
     setLastQuoteSyncSignature(takeoffJobData.scheduleState?.lastQuoteSyncSignature || '');
     aiTakeoffBridge.restoreAppliedRuns(takeoffJobData.scheduleState?.aiAppliedRuns);
-    aiTakeoffAnalysis.restoreReport(takeoffJobData.scheduleState?.aiAnalysis, takeoffJobData.scheduleState?.aiInspections, takeoffJobData.scheduleState?.sheetCalibrations);
+    aiTakeoffAnalysis.restoreReport(takeoffJobData.scheduleState?.aiAnalysis, takeoffJobData.scheduleState?.aiInspections, takeoffJobData.scheduleState?.sheetCalibrations, takeoffJobData.scheduleState?.aiScopeProfile);
     setPixelsPerMm(takeoffJobData.pixelsPerMm || null);
     setRotation(takeoffJobData.rotation || 0);
     setTotalPages(embeddedPages.length || takeoffJobData.totalPages || 1);
@@ -3680,6 +3685,7 @@ setSavedRevision(verifiedSave.revision);
   const selectedPillar = activePagePillars.find(p => p.id === selectedPillarId);
   const takeoffSchedule = React.useMemo(() => createTakeoffSchedule({
     aiAnalysis: aiTakeoffAnalysis.report,
+    aiScopeProfile: aiTakeoffAnalysis.scopeProfile,
     projectInfo,
     planFilename,
     totalPages,
@@ -3694,7 +3700,7 @@ setSavedRevision(verifiedSave.revision);
     completedPillars,
     sheetLevels,
     jobSetupRows: platformContext.jobSetupRows || {}
-  }), [projectInfo, planFilename, totalPages, currentPage, pixelsPerMm, completedWallRuns, placedOpenings, completedAreas, completedFloorplans, completedMeasurements, completedEaves, completedPillars, sheetLevels, platformContext.jobSetupRows, aiTakeoffAnalysis.report]);
+  }), [projectInfo, planFilename, totalPages, currentPage, pixelsPerMm, completedWallRuns, placedOpenings, completedAreas, completedFloorplans, completedMeasurements, completedEaves, completedPillars, sheetLevels, platformContext.jobSetupRows, aiTakeoffAnalysis.report, aiTakeoffAnalysis.scopeProfile]);
   const scheduleSignature = React.useMemo(() => getScheduleSignature(takeoffSchedule), [takeoffSchedule]);
   const quoteSheetOutOfDate = !!lastQuoteSyncSignature && lastQuoteSyncSignature !== scheduleSignature;
 
@@ -3742,6 +3748,7 @@ setSavedRevision(verifiedSave.revision);
   };
 
   const handleSendToJobSetup = () => {
+    try { assertTakeoffImportable(aiTakeoffAnalysis.report, signatureFromSchedule(takeoffSchedule)); } catch (error) { setPlatformSaveMessage(error.message); return; }
     if (isRecoveryPreview) {
       alert("Recovery Preview is read-only and cannot transfer data to Job Setup.");
       return;
@@ -3798,6 +3805,7 @@ setSavedRevision(verifiedSave.revision);
   };
 
   const handlePrepareQuotePreview = () => {
+    try { assertTakeoffImportable(aiTakeoffAnalysis.report, signatureFromSchedule(takeoffSchedule)); } catch (error) { setPlatformSaveMessage(error.message); return; }
     setQuotePreviewRows(createQuotePreviewRows(takeoffSchedule, quoteSheetRows, scheduleMappings));
   };
 
@@ -3808,6 +3816,7 @@ setSavedRevision(verifiedSave.revision);
   };
 
   const handleApplyQuotePreview = () => {
+    try { assertTakeoffImportable(aiTakeoffAnalysis.report, signatureFromSchedule(takeoffSchedule)); } catch (error) { setPlatformSaveMessage(error.message); return; }
     if (isRecoveryPreview) {
       alert("Recovery Preview is read-only and cannot transfer quantities to the Quote Sheet.");
       return;

@@ -109,9 +109,11 @@ export default function JobSetupTakeoffImport({ sheet, takeoffJob, projectId, jo
     onRequestConsumed?.();
   }, [request]);
 
-  const payload = useMemo(() => source?.schedule
-    ? createJobSetupPayload(source.schedule, { ...source.options, sheetLevels })
-    : source?.payload || null, [source, sheetLevels]);
+  const preparedImport = useMemo(() => {
+    try { return { payload: source?.schedule ? createJobSetupPayload(source.schedule, { ...source.options, sheetLevels }) : source?.payload || null, error: '' }; }
+    catch (cause) { return { payload: null, error: cause.message }; }
+  }, [source, sheetLevels]);
+  const payload = preparedImport.payload;
   const preview = useMemo(() => payload ? createJobSetupImportPreview(workbook, payload, { allowProjectMismatch: allowMismatch }) : { rows: [], warnings: [] }, [workbook, payload, allowMismatch]);
   useEffect(() => {
     setSelected(Object.fromEntries(preview.rows.map((row) => [row.destinationKey, Boolean(row.selected)])));
@@ -238,7 +240,7 @@ export default function JobSetupTakeoffImport({ sheet, takeoffJob, projectId, jo
       </div>
       {!jobOpen && <p>Open a job to import its takeoff quantities.</p>}
       {message && <p role="status">{message}</p>}
-      {error && <p role="alert" style={{ color: "#b91c1c" }}>{error}</p>}
+      {(error || preparedImport.error) && <p role="alert" style={{ color: "#b91c1c" }}>{error || preparedImport.error}</p>}
       {open && <div style={{ marginTop: 16 }}>
         <p style={{ margin: "0 0 12px" }}>Import into <strong>{jobName || "this job"}</strong>. Review the values below and select the fields to update.</p>
         {recent.length > 0 && <label style={{ display: "block", marginBottom: 12 }}>Saved takeoff: <select aria-label="Saved takeoff for Job Setup" disabled={busy} defaultValue={takeoffJob ? "current" : ""} onChange={(event) => loadSource(event.target.value)} style={buttonStyle}>

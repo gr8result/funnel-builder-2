@@ -76,7 +76,8 @@ function checksumSource(job = {}) {
     // Applied-run receipts prevent deleted AI objects from returning on replay.
     // Omit the optional field for legacy jobs to keep their checksums unchanged.
     ...(job.scheduleState?.aiAppliedRuns?.length ? { aiAppliedRuns: job.scheduleState.aiAppliedRuns } : {}),
-    ...(job.scheduleState?.aiAnalysis ? { aiAnalysis: job.scheduleState.aiAnalysis } : {})
+    ...(job.scheduleState?.aiAnalysis ? { aiAnalysis: job.scheduleState.aiAnalysis } : {}),
+    ...(job.scheduleState?.aiScopeProfile?.schedule ? { aiScopeProfile: job.scheduleState.aiScopeProfile } : {})
   };
 }
 

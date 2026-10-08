@@ -1,3 +1,4 @@
+import { TakeoffScopeEditor } from './TakeoffScopeEditor.jsx';
 import React, { useMemo, useState } from 'react';
 import { createJobSetupPayload } from '../takeoffSchedule.js';
 import { BUILDING_LEVELS, floorPlanSheets, roomsByLevel } from './roomSchedule.js';
@@ -88,7 +89,7 @@ export function AiTakeoffAction({ analysis, schedule, sheetLevels = {}, disabled
   // The same review Job Setup shows when these quantities are imported.
   const review = useMemo(() => {
     if (!schedule || !report || report.status === 'rooms') return { checklist: [], decisions: [], diagnostics: [] };
-    try { return createJobSetupPayload(schedule, { sheetLevels }).review; } catch { return { checklist: [], decisions: [], diagnostics: [] }; }
+    try { return createJobSetupPayload(schedule, { sheetLevels, reviewOnly: true }).review; } catch { return { checklist: [], decisions: [], diagnostics: [] }; }
   }, [schedule, sheetLevels, report]);
   const rooms = report?.rooms || [];
   const fixtures = report?.fixtures || [];
@@ -97,7 +98,8 @@ export function AiTakeoffAction({ analysis, schedule, sheetLevels = {}, disabled
     : `${scaleProposal?.source || 'Drawing evidence'} (${Number(scaleProposal?.pixelsPerMm || 0).toPrecision(6)} px/mm)`;
   return (
     <section aria-label="AI Takeoff" style={{ border: '1px solid #cbd5e1', borderRadius: 6, padding: 12, background: '#f8fafc', fontSize: 13 }}>
-      <button id="run-ai-takeoff" type="button" disabled={disabled || pending} onClick={analysis.run}
+      <TakeoffScopeEditor analysis={analysis} disabled={disabled || pending} />
+      <button id="run-ai-takeoff" type="button" disabled={disabled || pending || !analysis.scopeProfile.schedule} onClick={analysis.run}
         style={{ ...buttonStyle, width: '100%', background: disabled || pending ? '#94a3b8' : '#0f766e', color: 'white' }}>
         {busy ? 'Analysing plan…' : 'RUN AI TAKEOFF'}
       </button>
@@ -118,12 +120,22 @@ export function AiTakeoffAction({ analysis, schedule, sheetLevels = {}, disabled
       {pending && <button type="button" onClick={analysis.cancel} style={{ ...buttonStyle, display: 'block', marginTop: 8 }}>Cancel analysis</button>}
       {report && report.status !== 'rooms' && (
         <div id="ai-takeoff-result" style={{ marginTop: 12 }}>
-          <strong>{report.status === 'review' ? 'AI TAKEOFF REQUIRES REVIEW' : 'AI TAKEOFF COMPLETE'}</strong>
+          <strong>{!report.geometryValidation?.passed || !report.scopeResult?.complete ? 'AI TAKEOFF REQUIRES REVIEW' : 'AI TAKEOFF COMPLETE'}</strong>
+          {(!report.geometryValidation || report.geometryValidation.blockers.length > 0) && <div role="alert" style={{ color: '#b91c1c', marginTop: 8 }}>
+            <strong>Geometry must be corrected before estimate import.</strong>
+            {!report.geometryValidation && <p>This saved analysis predates geometry validation. Run AI Takeoff again.</p>}
+            {(report.geometryValidation?.blockers || []).map((item, i) => <p key={i}>{item.message}{item.page && <button type="button" onClick={() => onGoToPage?.(item.page)} style={reviewButton}>Show sheet {item.page}</button>}</p>)}
+          </div>}
+          {report.scopeResult && <div style={{ marginTop: 8 }}><strong>Required takeoff scope</strong>
+            {report.scopeResult.checklist.map((item, i) => <div key={i} style={{ color: item.passed ? '#166534' : '#b45309', marginTop: 4 }}>
+              {item.passed ? '✓' : '⚠'} {item.category}{item.notApplicable ? ' — confirmed not applicable' : ''}{!item.passed && <div>{item.reason}</div>}
+            </div>)}
+          </div>}
           <div style={{ marginTop: 8 }}>
             {review.checklist.map((item) => <div key={item.label} style={{ color: '#166534' }}>✓ {item.label}</div>)}
             {report.counts?.alreadyMeasured > 0 && <div style={{ color: '#475569' }}>{report.counts.alreadyMeasured} item{report.counts.alreadyMeasured === 1 ? '' : 's'} already in this takeoff {report.counts.alreadyMeasured === 1 ? 'was' : 'were'} kept, not added twice</div>}
             <div id="ai-takeoff-review-count" style={{ marginTop: 6, fontWeight: 700, color: review.decisions.length ? '#b45309' : '#166534' }}>
-              {review.decisions.length ? `⚠ ${review.decisions.length} item${review.decisions.length === 1 ? '' : 's'} require${review.decisions.length === 1 ? 's' : ''} confirmation` : '✓ Nothing needs confirmation'}
+              {review.decisions.length ? `⚠ ${review.decisions.length} item${review.decisions.length === 1 ? '' : 's'} require${review.decisions.length === 1 ? 's' : ''} confirmation` : report.geometryValidation?.passed && report.scopeResult?.complete ? '✓ Required scope is complete' : '⚠ Takeoff is incomplete'}
             </div>
           </div>
           {review.decisions.length > 0 && <div style={{ marginTop: 4 }}>

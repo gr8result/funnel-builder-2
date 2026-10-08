@@ -4,6 +4,7 @@ import { calculatePolygonAreaM2 } from '../floorplanGeometry.js';
 import { normaliseLevel, CLADDING_PRODUCTS } from '../takeoffRunData.js';
 import { resolveWallFromEvidence, parseOpeningSizeCode, findScheduleEntry, resolveOpeningSubType, establishedDoorHeight, levelFromAreaLabel, isAreaUnit } from './planEvidence.js';
 import { reviewAudience } from './reviewSummary.js';
+import { polygonIssue } from './geometryValidation.js';
 
 const AREA_TYPES = ['Footprint', 'Living', 'Garage', 'Alfresco', 'Patio', 'Porch', 'Balcony', 'Other'];
 const THICKNESSES = [70, 90, 100, 110, 140, 150, 200, 230, 270, 300, 350];
@@ -167,7 +168,7 @@ function projectOpeningToHost(point, host, page, scale, reachMm = 0) {
     const distance = Math.hypot(px - x, py - y);
     if (!closest || distance < closest.distance) closest = { x: px / page.logicalWidth, y: py / page.logicalHeight, distance };
   }
-  const tolerance = Math.max(300, host.thicknessMm * 2, reachMm) * scale;
+  const tolerance = Math.max(150, (host.thicknessMm || 0) / 2, reachMm) * scale;
   if (!closest || closest.distance > tolerance) throw new Error('Opening location is too far from its claimed host wall; association requires review.');
   return { x: closest.x, y: closest.y, distanceMm: closest.distance / scale };
 }
@@ -246,7 +247,7 @@ function coveredByExistingWalls(nodes, existingWalls, scale, toleranceMm = READ_
 export function normalizePlanAnalysis({ context, responses = [], runId, modelVersion, planEvidence = null, projectDefaults = null }) {
   if (!context || !Array.isArray(responses)) throw new Error('Analysis requires the current Takeoff context and page responses.');
   const batch = { jobId: context.jobId, takeoffId: context.takeoffId, documentHash: context.documentHash, runId, modelVersion, pixelsPerMm: context.pixelsPerMm, detections: [] };
-  const analysis = { schemaVersion: 'ai-takeoff-analysis.v1', runId, modelVersion, rooms: [], fixtures: [], documentedQuantities: [], unresolved: [], review: [], benchmarks: [], pages: [], alreadyMeasured: [], notAdded: [], openEdges: [], documentedAreas: [] };
+  const analysis = { schemaVersion: 'ai-takeoff-analysis.v1', runId, modelVersion, rooms: [], fixtures: [], documentedQuantities: [], unresolved: [], review: [], benchmarks: [], pages: [], alreadyMeasured: [], notAdded: [], openEdges: [], documentedAreas: [], roomGeometry: [], roofMeasurements: [] };
   const report = (page, item, message, code = 'review') => analysis.review.push({ page, detectionId: item?.detectionId || '', message, code, audience: reviewAudience({ code }) });
   const scale = context.pixelsPerMm;
   const pageFor = (page) => context.pages.find((item) => pageOf(item) === page);
@@ -260,6 +261,20 @@ export function normalizePlanAnalysis({ context, responses = [], runId, modelVer
     for (const item of response.review || []) report(page, null, typeof item === 'string' ? item : item.message || item.evidence || 'Review drawing evidence.');
     for (const [collection, kind] of [['walls', 'wall'], ['openings', 'opening'], ['pillars', 'pillar'], ['eaves', 'eave'], ['buildingAreas', 'floorplan']]) {
       for (const raw of response[collection] || []) all.push({ raw, page, level, kind });
+    }
+    for (const item of response.roofMeasurements || []) {
+      const nodes = item.nodes || [];
+      if (item.basis !== 'ASSUMED' && item.confidence >= 0.7 && nodes.every(normalizedPoint)
+        && ((item.type === 'Downpipes' && nodes.length === 1) || (item.type !== 'Downpipes' && nodes.length >= 2))) {
+        const dimensions = pageFor(page);
+        const pixels = nodes.map((node) => toPixels(node, dimensions));
+        analysis.roofMeasurements.push({ ...item, page, level, quantity: item.type === 'Downpipes' ? 1 : pixels.slice(1).reduce((sum, node, i) => sum + Math.hypot(node.x - pixels[i].x, node.y - pixels[i].y), 0) / scale / 1000 });
+      } else report(page, item, `${item.type} geometry requires review.`, 'withheld');
+    }
+    for (const room of response.rooms || []) if (Array.isArray(room.nodes) && room.nodes.length) {
+      const issue = polygonIssue(room.nodes);
+      if (!issue && room.nodes.every(normalizedPoint)) analysis.roomGeometry.push({ ...room, page, level });
+      else report(page, null, `${room.name}: ${issue || 'Room vertices lie outside the image.'}`, 'withheld');
     }
     for (const room of response.rooms || []) if (normalizedPoint(room) && typeof room.name === 'string') roomLabels.push({ page, name: room.name, x: room.x, y: room.y });
     for (const [collection, destination] of [['rooms', 'rooms'], ['fixtures', 'fixtures'], ['documentedQuantities', 'documentedQuantities']]) {
@@ -519,13 +534,13 @@ export function normalizePlanAnalysis({ context, responses = [], runId, modelVer
           const sameKind = hosts.filter((candidate) => !category || candidate.host.category === category);
           // A point read off a drawing is approximate: look on the wall first, then a little further out.
           const matching = reach(sameKind);
-          const candidates = matching.length ? matching : [reach(hosts), reach(sameKind, 1200), reach(hosts, 1200)].find((list) => list.length) || [];
+          const candidates = matching;
           chosen = candidates[0] || null;
           if (chosen) {
             const ambiguous = candidates[1] && candidates[1].distanceMm - chosen.distanceMm < 50;
             fields.hostWall = { basis: 'DERIVED', confidence: ambiguous || !matching.length ? Math.min(raw.confidence, 0.6) : raw.confidence,
               evidence: ambiguous ? 'Two walls meet at this opening; the nearest was used.' : `Nearest ${matching.length ? 'matching ' : ''}wall on the same calibrated page.` };
-            if (ambiguous) report(page, raw, 'Two walls are equally close to this opening; it was attached to the nearest.', 'host-ambiguous');
+            if (ambiguous) throw new Error('Two walls are equally close to this opening; host association is withheld for review.');
           }
         }
         if (chosen) {
@@ -534,11 +549,7 @@ export function normalizePlanAnalysis({ context, responses = [], runId, modelVer
             ? { basis: 'DERIVED', confidence: raw.confidence, evidence: `Observed opening point projected ${chosen.distanceMm.toFixed(1)} mm to its nearby observed host-wall trace.` }
             : provenance;
         } else {
-          // Counted regardless: an observed opening is never dropped because its wall is unclear.
-          detection.unhosted = true;
-          fields.hostWall = { basis: 'ASSUMED', confidence: 0, evidence: 'No wall close enough to this opening was traced; it is counted without a wall link.' };
-          fields.location = provenance;
-          report(page, raw, 'Opening is counted, but no nearby wall was traced to attach it to.', 'unhosted');
+          throw new Error('Opening has no unique nearby host wall; geometry is withheld for review.');
         }
         const tag = typeof raw.tag === 'string' ? raw.tag : '';
         const sizeCode = typeof raw.sizeCode === 'string' ? raw.sizeCode : (/^\d{4}$/.test(tag.trim()) ? tag.trim() : '');
@@ -644,7 +655,7 @@ export function normalizePlanAnalysis({ context, responses = [], runId, modelVer
       } else {
         if (!AREA_TYPES.includes(raw.type)) throw new Error('Named room or unsupported area category is retained as metadata, not an aggregate floor polygon.');
         const sameDrawing = (item) => item.page === page && (item.existing || item.level === level);
-        if (raw.type === 'Living' && acceptedAreas.some((item) => sameDrawing(item) && item.type === 'Footprint')) throw new Error('Living outline is retained as metadata because the accepted Footprint and ancillary areas already determine living area.');
+        if (raw.type === 'Living' && acceptedAreas.some((item) => sameDrawing(item) && item.type === 'Footprint')) { skip(raw, page, kind, 'Living outline is retained as metadata because the accepted Footprint and ancillary areas already determine living area.'); continue; }
         const clash = acceptedAreas.find((item) => sameDrawing(item) && (item.type === 'Footprint') === (raw.type === 'Footprint') && overlaps(item.nodes, raw.nodes));
         if (clash?.existing) { skip(raw, page, kind, `${raw.label || raw.type} is already measured in the takeoff; the existing area is kept and the AI outline is not added.`); continue; }
         if (clash) throw new Error('Overlapping aggregate floor polygons are withheld to prevent double-counting; existing manual polygons are preserved.');

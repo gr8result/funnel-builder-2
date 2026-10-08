@@ -1,3 +1,4 @@
+import { assertTakeoffImportable, signatureFromSchedule } from './ai-integration/geometryValidation.js';
 import { associateTakeoffMeasurements, takeoffMaterialFields, takeoffThickness, openingQuantity, openingDimensions, openingHostId, uniqueTakeoffItems, brickSillLength, windowCodeForOpening, isCavitySlider, isRobeSlider, internalDoorPurchaseType, materialRound, EXTERIOR_WALL_SYSTEM_FIELD_KEYS, windowStyleLabel, isFixedWindowOpening, doorStyleLabel, brickOrderQuantities, internalDoorJambTrace, internalDoorReconciliationTrace, TAKEOFF_LEVELS } from '../../../lib/construction-estimation/takeoffMaterialQuantities.js';
 import { absentTakeoffMaterialFields } from '../../../lib/construction-estimation/takeoffAbsentMaterialFields.js';
 import { ARCHITRAVE_DEFAULTS, ARCHITRAVE_RULES, packOpenings } from '../../../lib/construction-estimation/architraveCutting.js';
@@ -167,8 +168,10 @@ function createEaveRows(eaves = [], pixelsPerMm, sheetLevels = {}) {
       });
     }
     acc[key].eavesLengthLm = round(acc[key].eavesLengthLm + lengthM);
-    acc[key].fasciaLengthLm = round(acc[key].fasciaLengthLm + lengthM);
-    acc[key].gutterLengthLm = round(acc[key].gutterLengthLm + lengthM);
+    // AI fascia and gutters require their own measured runs in the inclusion scope.
+    const inferredEdgeLength = eave.source === 'ai' ? 0 : lengthM;
+    acc[key].fasciaLengthLm = round(acc[key].fasciaLengthLm + inferredEdgeLength);
+    acc[key].gutterLengthLm = round(acc[key].gutterLengthLm + inferredEdgeLength);
     acc[key].quantity = round(acc[key].quantity + lengthM * ((eave.widthMm || 0) / 1000));
     return acc;
   }, {}));
@@ -1187,7 +1190,7 @@ export function createWallLiningMeasurements(job = {}) {
   return uniqueTakeoffItems(associateTakeoffMeasurements(records.map((item) => ({ ...item, level: resolveTakeoffLevel(item, job.sheetLevels || {}) })), job.pixelsPerMm));
 }
 
-function createMeasurementRecords({ completedFloorplans, completedWallRuns, placedOpenings, completedAreas, completedEaves, completedMeasurements, completedPillars = [], pixelsPerMm }) {
+export function createMeasurementRecords({ completedFloorplans, completedWallRuns, placedOpenings, completedAreas, completedEaves, completedMeasurements, completedPillars = [], pixelsPerMm }) {
   const calibrated = Number.isFinite(Number(pixelsPerMm)) && Number(pixelsPerMm) > 0;
   const area = (item) => calibrated && item.nodes?.length >= 3
     ? polygonAreaM2(item.nodes, Number(pixelsPerMm)) : null;
@@ -1427,6 +1430,7 @@ function sumRows(rows = [], predicate = () => true, valueField = 'quantity') {
 }
 
 export function createJobSetupPayload(schedule, options = {}) {
+  if (!options.reviewOnly) assertTakeoffImportable(schedule.aiAnalysis, signatureFromSchedule(schedule));
   const sheetLevels = { ...(schedule.sheetLevels || {}), ...(options.sheetLevels || {}) };
   const fields = {};
   const mappingPreview = [];
