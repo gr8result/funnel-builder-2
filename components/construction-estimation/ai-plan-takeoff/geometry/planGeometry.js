@@ -4,6 +4,8 @@
 // (with their door gaps closed) enclose. Pure functions over an RGBA raster: no DOM, no network.
 // All returned coordinates are logical plan pixels, the unit the canvas and calibration use.
 
+import { detectOpeningSymbolReviewCandidates } from './openingSymbolReview.js';
+
 const STANDARD_THICKNESSES = [70, 90, 110, 150, 200, 230, 250, 270, 300, 350];
 const nearest = (value, list) => list.reduce((best, item) => (Math.abs(item - value) < Math.abs(best - value) ? item : best));
 
@@ -510,7 +512,8 @@ export function detectPlanGeometry(raster, context, overrides = {}) {
   const free = collect((p) => !wall[p] && !closed[p], false, null);
   if (options.proposeRooms) collect((p) => !wall[p] && !bridge[p], true, new Set(rooms.map((room) => room.id)));
   rooms.sort((a, b) => a.bounds.y - b.bounds.y || a.bounds.x - b.bounds.x);
-  return { engine: GEOMETRY_ENGINE_VERSION, rasterPixelsPerMm: k, walls, openings, rooms, singleFaceReviewCandidates, diagnostics, debug: { wall, bridge, closed, bandH, bandV, labels: free.labels, width, height, bounds, singleFaceDebug } };
+  const embeddedOpeningReviewCandidates = detectOpeningSymbolReviewCandidates({ ink, width, height, pixelsPerMm, logicalWidth, logicalHeight, walls });
+  return { engine: GEOMETRY_ENGINE_VERSION, rasterPixelsPerMm: k, walls, openings, rooms, singleFaceReviewCandidates, embeddedOpeningReviewCandidates, diagnostics, debug: { wall, bridge, closed, bandH, bandV, labels: free.labels, width, height, bounds, singleFaceDebug } };
 }
 
 // Is the point strictly inside the polygon (logical pixels)?

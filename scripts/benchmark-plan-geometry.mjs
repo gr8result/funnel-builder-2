@@ -214,6 +214,17 @@ for (const [pageKey, level] of Object.entries(job.sheetLevels || {})) {
     return [openingClass, { manual: indices.length, matchedWithin700mm: matched.length, matchedWithin200mm: matched.filter((item) => item.positionErrorMm <= 200).length,
       matchedWithin350mm: matched.filter((item) => item.positionErrorMm <= 350).length }];
   }));
+  const symbolCandidates = result.embeddedOpeningReviewCandidates || [];
+  const symbolCandidatePairs = symbolCandidates.flatMap((candidate, candidateIndex) => manualOpenings.map((item, referenceIndex) => ({ candidate, candidateIndex, item, referenceIndex,
+    distanceMm: Math.hypot(candidate.x - item.x, candidate.y - item.y) / ppm }))).filter((pair) => pair.distanceMm <= 700).sort((a, b) => a.distanceMm - b.distanceMm);
+  const usedSymbolCandidates = new Set(), usedSymbolReferences = new Set(), symbolCandidateMatches = [];
+  for (const pair of symbolCandidatePairs) {
+    if (usedSymbolCandidates.has(pair.candidateIndex) || usedSymbolReferences.has(pair.referenceIndex)) continue;
+    usedSymbolCandidates.add(pair.candidateIndex); usedSymbolReferences.add(pair.referenceIndex);
+    symbolCandidateMatches.push({ tag: pair.item.itemTag, openingClass: pair.item.openingClass, referenceWidthMm: pair.item.widthMm,
+      candidateWidthMm: pair.candidate.widthMm, positionErrorMm: Math.round(pair.distanceMm), hostWallId: pair.candidate.hostWallId,
+      evidence: pair.candidate.evidence });
+  }
   const positionErrors = openingMatches.map((item) => item.positionErrorMm).sort((a, b) => a - b);
   const percentile = (values, share) => values.length ? values[Math.min(values.length - 1, Math.ceil(values.length * share) - 1)] : null;
   const missingManualWallLengthLm = Object.fromEntries(Object.entries(coverage).map(([category, bucket]) => [category, +Math.max(0, bucket.tracedLm - bucket.coveredLm).toFixed(1)]));
@@ -241,6 +252,9 @@ for (const [pageKey, level] of Object.entries(job.sheetLevels || {})) {
       widthWithin100mm: widthMatches.filter((item) => item.widthErrorMm <= 100).length,
       openingClassAccuracy: 'not assessed: raster geometry returns gap candidates, not door/window classification', byManualClass: byOpeningClass,
       unmatchedManualItems: unmatchedOpeningDiagnostics, list: openingMatches.map(({ referenceIndex, ...item }) => item) },
+    embeddedFrameReview: { candidateCount: symbolCandidates.length, matchedManualWithin700mm: symbolCandidateMatches.length,
+      candidates: symbolCandidates.map((candidate) => ({ id: candidate.id, x: candidate.x, y: candidate.y, widthMm: candidate.widthMm, hostWallId: candidate.hostWallId,
+        symbolEvidence: candidate.symbolEvidence, reviewRequired: candidate.reviewRequired })), matches: symbolCandidateMatches },
     roomPolygonAccuracy: roomReferenceComparison,
   });
 

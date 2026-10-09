@@ -4,6 +4,7 @@
 import assert from 'node:assert/strict';
 import { detectPlanGeometry, pointInPolygon } from '../components/construction-estimation/ai-plan-takeoff/geometry/planGeometry.js';
 import { fuseSheetLinework } from '../components/construction-estimation/ai-plan-takeoff/geometry/lineworkFusion.js';
+import { detectOpeningSymbolReviewCandidates } from '../components/construction-estimation/ai-plan-takeoff/geometry/openingSymbolReview.js';
 import { polygonIntersectionOverUnion } from '../components/construction-estimation/ai-plan-takeoff/geometry/roomReferenceMetrics.js';
 
 const width = 1000, height = 800;
@@ -129,6 +130,20 @@ const candidateFusion = fuseSheetLinework({ page: 1, walls: [], openings: [], ro
 assert.equal(candidateFusion.response.walls.length, 0, 'a footprint-supported single face is still not measured automatically');
 assert.equal(candidateFusion.report.singleFaceReviewCandidates.length, 1, 'manual footprint overlap may surface one candidate for human review');
 assert.match(candidateFusion.report.review[0], /verify.*before measuring/i);
+
+const openingRaster = new Uint8ClampedArray(width * height * 4).fill(255);
+const openingInk = new Uint8Array(width * height);
+const inkOpeningPixel = (x, y) => { const p = (y * width + x) * 4; openingRaster[p] = openingRaster[p + 1] = openingRaster[p + 2] = 0; openingInk[y * width + x] = 1; };
+for (let y = 100; y <= 700; y += 1) for (const x of [400, 401, 423, 424]) inkOpeningPixel(x, y);
+for (const y of [300, 360]) for (let x = 400; x <= 424; x += 1) inkOpeningPixel(x, y);
+const symbolWall = { id: 'symbol-host', axis: 'v', measuredThicknessMm: 230, nodes: [{ x: 412, y: 100 }, { x: 412, y: 700 }] };
+const symbolCandidates = detectOpeningSymbolReviewCandidates({ ink: openingInk, width, height, pixelsPerMm: 0.1, logicalWidth: width, logicalHeight: height, walls: [symbolWall] });
+assert.equal(symbolCandidates.length, 1, 'two cross-wall frame marks inside a continuous band form one opening review candidate');
+assert.equal(symbolCandidates[0].openingClass, 'Unclassified Opening', 'raster frame cues do not guess window versus door');
+assert.equal(symbolCandidates[0].widthMm, 600);
+assert.equal(symbolCandidates[0].reviewRequired, true);
+const noFrameCandidates = detectOpeningSymbolReviewCandidates({ ink: new Uint8Array(width * height).fill(1), width, height, pixelsPerMm: 0.1, logicalWidth: width, logicalHeight: height, walls: [symbolWall] });
+assert.equal(noFrameCandidates.length, 0, 'a continuous wall band without frame edges yields no opening candidate');
 
 // A blank sheet reports that it found no walls.
 const blank = detectPlanGeometry({ width, height, data: new Uint8ClampedArray(width * height * 4).fill(255) }, context);

@@ -70,7 +70,8 @@ export function fuseSheetLinework(response, raster, sheet, existing = {}, overri
   ];
   const geometry = detectPlanGeometry(raster, { pixelsPerMm, logicalWidth, logicalHeight, openingEvidence: evidence }, overrides.geometry || {});
   const report = { engine: geometry.engine, measuredWalls: geometry.walls.length, wallsEmitted: 0, uncategorisedLm: 0, flaggedWalls: 0, modelWallLm: 0, modelWallWithoutLineworkLm: 0,
-    openings: { model: modelOpenings.length, onConfirmedGap: 0, onNearestWall: 0, unplaced: 0, duplicatesRemoved: 0 }, gaps: { confirmed: 0, unconfirmed: 0 }, rooms: { verified: 0, proposed: 0, adopted: 0 }, singleFaceReviewCandidates: [], review: [] };
+    openings: { model: modelOpenings.length, onConfirmedGap: 0, onNearestWall: 0, unplaced: 0, duplicatesRemoved: 0, embeddedSymbolReviewCandidates: 0 },
+    gaps: { confirmed: 0, unconfirmed: 0 }, rooms: { verified: 0, proposed: 0, adopted: 0 }, singleFaceReviewCandidates: [], review: [] };
   if (!geometry.walls.length) {
     // Nothing measurable: the plan reading is passed through untouched and says so.
     report.review.push('No wall linework could be measured on this sheet; wall positions are the plan reading\'s own and need checking.');
@@ -116,6 +117,10 @@ export function fuseSheetLinework(response, raster, sheet, existing = {}, overri
       reviewReason: 'Single-face plan linework follows the manually traced outer footprint. A second wall face and thickness are not established; verify manually before measuring.' };
     report.singleFaceReviewCandidates.push(reviewCandidate);
     report.review.push(`A ${Math.round(candidate.lengthMm / 100) / 10} m single-face line follows the manual outer footprint on sheet ${response.page}; verify it is a wall before measuring.`);
+  }
+  report.openings.embeddedSymbolReviewCandidates = geometry.embeddedOpeningReviewCandidates?.length || 0;
+  for (const candidate of geometry.embeddedOpeningReviewCandidates || []) {
+    report.review.push(`Possible unclassified opening at ${Math.round(candidate.x)}, ${Math.round(candidate.y)} on sheet ${response.page}: ${candidate.evidence}`);
   }
   for (const segment of modelSegments) {
     const lengthM = lengthPx(segment) / pixelsPerMm / 1000;
@@ -185,5 +190,6 @@ export function fuseSheetLinework(response, raster, sheet, existing = {}, overri
       evidence: `${room.evidence || ''} Boundary measured from the wall linework.`.trim() };
   });
 
-  return { response: { ...response, walls, openings: openings.map((entry) => entry.item), rooms, review: [...(response.review || []), ...report.review] }, geometry, report };
+  return { response: { ...response, walls, openings: openings.map((entry) => entry.item), rooms,
+    openingSymbolReviewCandidates: geometry.embeddedOpeningReviewCandidates || [], review: [...(response.review || []), ...report.review] }, geometry, report };
 }
