@@ -21,14 +21,14 @@ const workbookSource = readFileSync("components/estimate-builder/EstimateBuilder
 const workbookHookSource = readFileSync("hooks/estimate-builder/useEstimateBuilderWorkbook.js", "utf8");
 assert.match(workbookSource, /page:\s*"aiPlanTakeoff"/, "Project Dashboard card must target aiPlanTakeoff");
 assert.match(workbookSource, /<WorkspaceNavGroup pages=\{DASHBOARD_PROJECT_WORKFLOW_CARDS\}/, "Workspace left nav must render workflow cards");
-assert.match(workbookSource, /<AIPlanTakeoffPage \{\.\.\.takeoffEngineContext\} \/>/, "aiPlanTakeoff page must mount integrated page entry");
+assert.match(workbookSource, /<AIPlanTakeoffPage[^>]*\{\.\.\.takeoffEngineContext\}/, "aiPlanTakeoff page must mount integrated page entry with its live context");
 assert.match(workbookSource, /platformContext:\s*\{[\s\S]*projectId:/, "Takeoff page must receive current project identity");
 assert.match(workbookSource, /saveAiPlanTakeoffJob/, "Save Job must persist to the platform workbook");
 assert.equal(workbookHookSource.includes("materializeTakeoffPlanPages(savedRecord.workbook)"), true, "Takeoff save verification must materialize externalized plan pages before checking them");
 assert.doesNotMatch(workbookHookSource, /workbookRef\.current = previousWorkbook;[\s\S]{0,120}setWorkbook\(previousWorkbook\)/, "A failed takeoff verification must not roll the active takeoff back");
 assert.match(workbookSource, /initialJob:\s*selectAiPlanTakeoffJob\(sheet\.workbook\)/, "AI Plan Takeoff must restore a saved takeoff after an editor remount");
 assert.match(workbookSource, /hasRecoverablePlanPages/, "Platform selector must prefer a takeoff job with recoverable embedded plan pages");
-assert.match(workbookSource, /openJobDetails\.noJobOpen \|\| hasOpenTakeoff/, "A live takeoff must not be overwritten by an automatic restore after saving");
+assert.match(workbookSource, /openJobDetails\.noJobOpen \|\| previewMode \|\| masterTakeoffWorkspaceReady/, "Automatic workspace initialization must leave an already linked live takeoff alone");
 assert.match(workbookSource, /prepareAiPlanTakeoffJobForSave/, "Platform Save Job must create a revisioned atomic takeoff snapshot");
 assert.match(workbookSource, /RECENT TAKEOFF JOBS/, "AI Plan Takeoff File menu must show takeoff-only recent records");
 

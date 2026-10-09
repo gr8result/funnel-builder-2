@@ -352,8 +352,12 @@ async function checkManualSave({ editDuringSave = false, verified = true } = {})
 await checkManualSave();
 await checkManualSave({ editDuringSave: true });
 await checkManualSave({ verified: false });
-const normalizeSource = hookSource.slice(hookSource.indexOf('function normalizeWorkbook('), hookSource.indexOf('\nfunction normalizeProductLibrary('));
-const normalizeWorkbook = new Function('restoreCompleteWorkbook', 'createEstimateBuilderWorkbookDefaults', 'normalizeTakeoffInputSection', 'V4_DATA_SECTIONS', 'workbookHasExplicitJobIdentity', `${normalizeSource}; return normalizeWorkbook;`)(restoreCompleteWorkbook, () => workbook(), normalizeTakeoffInputSection, V4_DATA_SECTIONS, () => false);
+const normalizeSource = hookSource.slice(hookSource.indexOf('function normalizeWorkbook('), hookSource.indexOf('\nfunction withPersistedQuotationOrder('));
+const passThrough = (value) => value;
+const normalizeWorkbook = new Function('restoreCompleteWorkbook', 'createEstimateBuilderWorkbookDefaults', 'normalizeTakeoffInputSection', 'V4_DATA_SECTIONS', 'workbookHasExplicitJobIdentity', 'browserWorkspaceId', 'CURRENT_BUILDER_WORKSPACE_ID', 'normalizeJobForCurrentSchema', 'migrateWorkbookCabinetSchedules', 'withPersistedQuotationOrder', 'applyCabinetryRequirementsToQuotation', 'reconcileCabinetryQuotation', `${normalizeSource}; return normalizeWorkbook;`)(
+  restoreCompleteWorkbook, () => workbook(), normalizeTakeoffInputSection, V4_DATA_SECTIONS, () => false, () => 'material-flow-test-workspace',
+  'current-builder-workspace', passThrough, passThrough, passThrough, passThrough, passThrough,
+);
 const actualRestore = normalizeWorkbook({ data: { inputDataSheet: savedCopies } });
 assert.equal(actualRestore.data.inputDataSheet.customRows.length, 1, 'Live complete-workbook hydration removes duplicate canonical copies before row generation');
 assert.deepEqual(normalizeWorkbook(JSON.parse(JSON.stringify(actualRestore))), actualRestore, 'Live workbook restoration is idempotent');

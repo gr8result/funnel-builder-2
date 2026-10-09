@@ -14,6 +14,10 @@ export const DEFAULT_GEOMETRY_OPTIONS = {
   minWallMm: 60, maxWallMm: 360,
   faceRunMm: 450,             // a face this long establishes a wall
   nibRunMm: 110,              // shorter faces only extend an established wall
+  singleFaceReviewRunMm: 2500,
+  singleFaceAnchorReachMm: 220,
+  singleFaceJunctionReachMm: 350,
+  singleFaceThicknessAgreementMm: 80,
   maxLinePx: 7,               // thicker ink is a fill, not a face line
   doorGapMm: 1300,            // a wall end this close to another wall is an opening
   collinearGapMm: 6000,       // the same wall continuing across a gap (up to a garage door)
@@ -26,15 +30,20 @@ export const DEFAULT_GEOMETRY_OPTIONS = {
 };
 
 // Ink pixels that belong to a straight run of at least minLen along the scan direction.
-function longRuns(ink, width, height, minLen, vertical) {
+function longRuns(ink, width, height, minLen, vertical, crossTolerance = 0) {
   const out = new Uint8Array(width * height);
   const outer = vertical ? width : height, inner = vertical ? height : width;
   const step = vertical ? width : 1;
+  const crossStep = vertical ? 1 : width;
   for (let o = 0; o < outer; o += 1) {
     const base = vertical ? o : o * width;
     let start = -1;
     for (let i = 0; i <= inner; i += 1) {
-      const on = i < inner && ink[base + i * step];
+      const p = base + i * step;
+      let on = i < inner && ink[p];
+      for (let offset = 1; !on && i < inner && offset <= crossTolerance; offset += 1) {
+        on = (o >= offset && ink[p - offset * crossStep]) || (o + offset < outer && ink[p + offset * crossStep]);
+      }
       if (on && start < 0) start = i;
       else if (!on && start >= 0) {
         if (i - start >= minLen) for (let j = start; j < i; j += 1) out[base + j * step] = 1;
@@ -223,6 +232,7 @@ export function detectPlanGeometry(raster, context, overrides = {}) {
   const sx = width / logicalWidth, sy = height / logicalHeight;
   const k = pixelsPerMm * sx;                       // raster pixels per millimetre
   const px = (mm) => mm * k;
+  const toLogical = (x, y) => ({ x: x / sx, y: y / sy });
   const diagnostics = [];
   if (Math.abs(sx - sy) / sx > 0.01) diagnostics.push({ code: 'anisotropic-raster', message: 'The sheet image is not uniformly scaled; measurements need review.' });
   if (px(90) < 4) diagnostics.push({ code: 'low-resolution', message: `A 90 mm wall is only ${px(90).toFixed(1)} pixels wide in this sheet image; thin walls cannot be separated reliably.` });
@@ -231,8 +241,10 @@ export function detectPlanGeometry(raster, context, overrides = {}) {
   for (let i = 0, p = 0; i < ink.length; i += 1, p += 4) ink[i] = data[p + 3] > 127 && data[p] + data[p + 1] + data[p + 2] < options.inkThreshold ? 1 : 0;
   const tMin = px(options.minWallMm), tMax = px(options.maxWallMm);
   const strictLen = Math.max(12, Math.round(px(options.faceRunMm))), nibLen = Math.max(6, Math.round(px(options.nibRunMm)));
-  const bandH = wallBands(ink, longRuns(ink, width, height, strictLen, false), longRuns(ink, width, height, nibLen, false), width, height, false, tMin, tMax, options.maxLinePx);
-  const bandV = wallBands(ink, longRuns(ink, width, height, strictLen, true), longRuns(ink, width, height, nibLen, true), width, height, true, tMin, tMax, options.maxLinePx);
+  const strictH = longRuns(ink, width, height, strictLen, false), strictV = longRuns(ink, width, height, strictLen, true);
+  const reviewFaceH = longRuns(ink, width, height, strictLen, false, 1), reviewFaceV = longRuns(ink, width, height, strictLen, true, 1);
+  const bandH = wallBands(ink, strictH, longRuns(ink, width, height, nibLen, false), width, height, false, tMin, tMax, options.maxLinePx);
+  const bandV = wallBands(ink, strictV, longRuns(ink, width, height, nibLen, true), width, height, true, tMin, tMax, options.maxLinePx);
 
   // Keep only wall fabric that contains established faces; lettering and symbols do not.
   const full = { x0: 0, y0: 0, x1: width - 1, y1: height - 1 };
@@ -303,11 +315,83 @@ export function detectPlanGeometry(raster, context, overrides = {}) {
     for (let p = 0; p < labels.length; p += 1) if (labels[p] && drop[labels[p]]) { band[p] = 0; if (!other[p]) wall[p] = 0; }
   }
 
+  // Long single faces are only surfaced for review when both ends meet paired, orthogonal wall
+  // fabric and those junctions imply a consistent thickness. They are not measured walls.
+  const singleFaceReviewCandidates = [];
+  const singleFaceDebug = { vertical: [], horizontal: [] };
+  for (const { face, anchorBand, perpendicularFace, vertical } of [
+    { face: reviewFaceV, anchorBand: bandH, perpendicularFace: reviewFaceH, vertical: true },
+    { face: reviewFaceH, anchorBand: bandV, perpendicularFace: reviewFaceV, vertical: false },
+  ]) {
+    const { labels, components } = labelComponents((p) => face[p] && !wall[p], width, height, bounds);
+    for (const item of components) {
+      if (!item) continue;
+      const alongPx = vertical ? item.maxY - item.minY + 1 : item.maxX - item.minX + 1;
+      const crossPx = vertical ? item.maxX - item.minX + 1 : item.maxY - item.minY + 1;
+      if (alongPx < px(options.singleFaceReviewRunMm)) continue;
+      const centre = vertical ? (item.minX + item.maxX) / 2 : (item.minY + item.maxY) / 2;
+      const ends = vertical ? [item.minY, item.maxY] : [item.minX, item.maxX];
+      const probe = Math.round(px(options.singleFaceAnchorReachMm));
+      const anchorThickness = (end) => {
+        let best = null;
+        const y0 = Math.max(bounds.y0, Math.ceil(vertical ? end - probe : centre - probe));
+        const y1 = Math.min(bounds.y1, Math.floor(vertical ? end + probe : centre + probe));
+        const x0 = Math.max(bounds.x0, Math.ceil(vertical ? centre - probe : end - probe));
+        const x1 = Math.min(bounds.x1, Math.floor(vertical ? centre + probe : end + probe));
+        for (let y = y0; y <= y1; y += 1) {
+          for (let x = x0; x <= x1; x += 1) {
+            const p = y * width + x;
+            if (!anchorBand[p] || !wall[p]) continue;
+            const distance = Math.hypot(x - (vertical ? centre : end), y - (vertical ? end : centre));
+            if (!best || distance < best.distance) best = { x, y, distance };
+          }
+        }
+        if (!best) return null;
+        const p = best.y * width + best.x;
+        let low = 0, high = 0;
+        const crossStep = vertical ? width : 1;
+        while (low < tMax && anchorBand[p - (low + 1) * crossStep]) low += 1;
+        while (high < tMax && anchorBand[p + (high + 1) * crossStep]) high += 1;
+        const thicknessMm = (low + high + 1) / k;
+        return thicknessMm >= options.minWallMm && thicknessMm <= options.maxWallMm ? { thicknessMm, at: { x: best.x, y: best.y }, low, high } : null;
+      };
+      const anchors = ends.map(anchorThickness);
+      const thicknesses = anchors.map((anchor) => anchor?.thicknessMm ?? null);
+      singleFaceDebug[vertical ? 'vertical' : 'horizontal'].push({ bounds: { minX: item.minX, maxX: item.maxX, minY: item.minY, maxY: item.maxY },
+        lengthMm: alongPx / k, crossPx, rejectedAsWide: crossPx > options.maxLinePx + 3, thicknesses });
+      if (crossPx > options.maxLinePx + 3) continue;
+      const orthogonalFaceAtEnd = (end) => {
+        const reach = Math.max(2, Math.round(px(options.singleFaceJunctionReachMm)));
+        for (let y = Math.max(bounds.y0, vertical ? end - reach : centre - reach); y <= Math.min(bounds.y1, vertical ? end + reach : centre + reach); y += 1) {
+          for (let x = Math.max(bounds.x0, vertical ? centre - reach : end - reach); x <= Math.min(bounds.x1, vertical ? centre + reach : end + reach); x += 1) {
+            if (perpendicularFace[y * width + x]) return true;
+          }
+        }
+        return false;
+      };
+      const endpointFaceSupport = ends.map((end, index) => thicknesses[index] !== null || orthogonalFaceAtEnd(end));
+      const pairedThicknesses = thicknesses.filter((value) => value !== null);
+      singleFaceDebug[vertical ? 'vertical' : 'horizontal'].push({ bounds: { minX: item.minX, maxX: item.maxX, minY: item.minY, maxY: item.maxY },
+        lengthMm: alongPx / k, crossPx, rejectedAsWide: crossPx > options.maxLinePx + 3, thicknesses, endpointFaceSupport });
+      if (pairedThicknesses.length === 0 || !endpointFaceSupport.some(Boolean)) continue;
+      if (pairedThicknesses.length === 2 && Math.abs(pairedThicknesses[0] - pairedThicknesses[1]) > options.singleFaceThicknessAgreementMm) continue;
+      const start = vertical ? toLogical(centre, item.minY) : toLogical(item.minX, centre);
+      const end = vertical ? toLogical(centre, item.maxY + 1) : toLogical(item.maxX + 1, centre);
+      singleFaceReviewCandidates.push({
+        id: `g-review-${vertical ? 'v' : 'h'}-${Math.round(start.x * 10)}-${Math.round(start.y * 10)}`,
+        axis: vertical ? 'v' : 'h', nodes: [start, end], lengthMm: alongPx / k,
+        endpointAnchorThicknessesMm: thicknesses.map((value) => value === null ? null : Math.round(value)),
+        endpointFaceSupport,
+        reviewRequired: true,
+        reviewReason: 'Only one wall face was visible; endpoint junctions support continuity, but this run has no measured wall thickness. Verify manually before measuring.',
+      });
+    }
+  }
+
   const bridge = new Uint8Array(width * height);
   bridgeGaps(bandH, wall, bridge, width, height, false, Math.round(px(options.doorGapMm)), Math.round(px(options.collinearGapMm)));
   bridgeGaps(bandV, wall, bridge, width, height, true, Math.round(px(options.doorGapMm)), Math.round(px(options.collinearGapMm)));
 
-  const toLogical = (x, y) => ({ x: x / sx, y: y / sy });
   const evidence = (context.openingEvidence || []).filter((item) => Number.isFinite(item?.x) && Number.isFinite(item?.y));
 
   // Gaps: every closure is a CANDIDATE opening. A gap is treated as part of its wall only when it
@@ -426,7 +510,7 @@ export function detectPlanGeometry(raster, context, overrides = {}) {
   const free = collect((p) => !wall[p] && !closed[p], false, null);
   if (options.proposeRooms) collect((p) => !wall[p] && !bridge[p], true, new Set(rooms.map((room) => room.id)));
   rooms.sort((a, b) => a.bounds.y - b.bounds.y || a.bounds.x - b.bounds.x);
-  return { engine: GEOMETRY_ENGINE_VERSION, rasterPixelsPerMm: k, walls, openings, rooms, diagnostics, debug: { wall, bridge, closed, labels: free.labels, width, height, bounds } };
+  return { engine: GEOMETRY_ENGINE_VERSION, rasterPixelsPerMm: k, walls, openings, rooms, singleFaceReviewCandidates, diagnostics, debug: { wall, bridge, closed, bandH, bandV, labels: free.labels, width, height, bounds, singleFaceDebug } };
 }
 
 // Is the point strictly inside the polygon (logical pixels)?

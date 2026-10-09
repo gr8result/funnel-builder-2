@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "ai-takeoff-room-reference.v1",
+  "coordinateSpace": "logical-plan-pixels",
+  "source": {
+    "method": "manual-original-plan",
+    "tracedIndependentlyOfAi": true,
+    "jobPackage": "New Job 03/09 revision 2",
+    "instructions": "Trace room boundaries directly from the original plan pages. Do not copy AI or detector polygons. Keep each room ID, printed name, page and level stable. Include internal wall faces and record door openings as boundary continuations only when the original plan supports that room boundary."
+  },
+  "pages": [
+    {
+      "page": 2,
+      "level": "Ground Floor",
+      "logicalWidth": 595,
+      "logicalHeight": 842,
+      "pixelsPerMm": 0.020028322201313408
+    },
+    {
+      "page": 3,
+      "level": "Second Level",
+      "logicalWidth": 595,
+      "logicalHeight": 842,
+      "pixelsPerMm": 0.020028322201313408
+    }
+  ],
+  "rooms": [
+    {
+      "id": "manual-ref-page-3-bedroom-3",
+      "name": "Bedroom 3",
+      "level": "Second Level",
+      "page": 3,
+      "polygon": [
+        { "x": 301.1, "y": 351.6 },
+        { "x": 379.8, "y": 351.6 },
+        { "x": 379.8, "y": 424.3 },
+        { "x": 301.1, "y": 424.3 }
+      ]
+    }
+  ]
+}

@@ -3,6 +3,8 @@
 // The real-plan comparison is scripts/benchmark-plan-geometry.mjs.
 import assert from 'node:assert/strict';
 import { detectPlanGeometry, pointInPolygon } from '../components/construction-estimation/ai-plan-takeoff/geometry/planGeometry.js';
+import { fuseSheetLinework } from '../components/construction-estimation/ai-plan-takeoff/geometry/lineworkFusion.js';
+import { polygonIntersectionOverUnion } from '../components/construction-estimation/ai-plan-takeoff/geometry/roomReferenceMetrics.js';
 
 const width = 1000, height = 800;
 const data = new Uint8ClampedArray(width * height * 4).fill(255);
@@ -69,6 +71,22 @@ assert.equal(doors[0].hostWallId, result.walls.find((wall) => wall.thicknessMm =
 // convention for external walls (8 m x 6 m here = 28 lm) is not applied by the engine yet.
 within(lengthOf(result, (wall) => wall.thicknessMm === 230), 2 * (7.54 + 5.54), 0.03, 'external wall runs between corners');
 assert.ok(result.walls.every((wall) => wall.connectedEnds >= 1), 'every wall joins another wall');
+
+// A nearby AI fragment may classify a measured wall only when it supports a meaningful share of
+// that run; midpoint proximity alone must not extrapolate a tiny fragment across the whole wall.
+const measuredOuter = result.walls.find((wall) => wall.thicknessMm === 230 && wall.lengthMm > 5000);
+assert.ok(measuredOuter, 'the known plan has a measurable external run');
+const normalized = (point) => ({ x: point.x / width, y: point.y / height });
+const start = measuredOuter.nodes[0], end = measuredOuter.nodes[1];
+const at = (share) => normalized({ x: start.x + (end.x - start.x) * share, y: start.y + (end.y - start.y) * share });
+const classification = { detectionId: 'external-run', category: 'exterior', confidence: 0.9, nodes: [at(0), at(1)] };
+const fused = (wall, existing = {}) => fuseSheetLinework({ page: 1, walls: [wall], openings: [], rooms: [] }, raster,
+	{ pageNumber: 1, logicalWidth: width, logicalHeight: height, pixelsPerMm: context.pixelsPerMm }, existing);
+assert.equal(fused(classification).response.walls.length, 1, 'a trace supporting the full measured run classifies it');
+const shortTrace = { ...classification, nodes: [at(0.495), at(0.505)] };
+const unsupported = fused(shortTrace);
+assert.equal(unsupported.response.walls.length, 0, 'a short trace cannot classify the entire measured run');
+assert.ok(unsupported.report.uncategorisedLm >= measuredOuter.lengthMm / 1000, 'unsupported measured length stays out of the takeoff');
 // Evidence far from any gap confirms nothing.
 assert.equal(detectPlanGeometry(raster, { ...context, openingEvidence: [{ x: 300, y: 600 }] }).openings.filter((item) => item.confirmed).length, 0);
 
@@ -79,6 +97,39 @@ assert.deepEqual(again.walls.map((wall) => wall.id), result.walls.map((wall) => 
 
 // A sheet with no confirmed calibration is refused, never guessed.
 assert.throws(() => detectPlanGeometry(raster, { ...context, pixelsPerMm: 0 }), /calibration/);
+const referenceSquare = [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 100 }, { x: 0, y: 100 }];
+assert.equal(polygonIntersectionOverUnion(referenceSquare, referenceSquare, 1, 1).iou, 1, 'identical manual and detected room polygons have IoU 1');
+const halfOverlap = [{ x: 50, y: 0 }, { x: 150, y: 0 }, { x: 150, y: 100 }, { x: 50, y: 100 }];
+assert.ok(Math.abs(polygonIntersectionOverUnion(referenceSquare, halfOverlap, 1, 1).iou - 1 / 3) < 0.02, 'polygon overlap is measured independently of room area totals');
+assert.throws(() => polygonIntersectionOverUnion(referenceSquare, referenceSquare, 0), /positive plan scale/);
+
+const singleFaceData = new Uint8ClampedArray(width * height * 4).fill(255);
+const singleInk = (x, y) => { const p = (y * width + x) * 4; singleFaceData[p] = 0; singleFaceData[p + 1] = 0; singleFaceData[p + 2] = 0; };
+for (const y of [177, 178, 200, 201]) for (let x = 400; x <= 600; x += 1) singleInk(x, y);
+for (let x = 400; x <= 600; x += 1) singleInk(x, 600);
+for (const x of [300, 301, 323, 324]) for (let y = 177; y <= 624; y += 1) singleInk(x, y);
+for (let y = 200; y <= 600; y += 1) { const drift = Math.floor((y - 200) / 8) % 2; singleInk(500 + drift, y); singleInk(501 + drift, y); }
+for (let x = 650; x <= 950; x += 1) singleInk(x, 750);
+const singleFaceResult = detectPlanGeometry({ width, height, data: singleFaceData }, context);
+const singleFaceCandidate = singleFaceResult.singleFaceReviewCandidates.find((candidate) => candidate.axis === 'v' && candidate.lengthMm > 3000);
+assert.ok(singleFaceCandidate, 'a single face anchored by paired perpendicular walls at both ends is surfaced for review');
+assert.equal(singleFaceCandidate.reviewRequired, true);
+assert.ok(Math.abs(singleFaceCandidate.lengthMm - 4000) <= 40, 'one-pixel face drift does not fragment the measured review candidate');
+assert.equal(singleFaceCandidate.endpointAnchorThicknessesMm.filter((value) => value !== null).length, 1, 'one paired thickness anchor supports review, not thickness inference');
+assert.equal(singleFaceResult.walls.some((wall) => wall.axis === 'v' && wall.nodes[0].x > 495 && wall.nodes[0].x < 510 && wall.lengthMm > 3000), false, 'a single face never becomes a measured wall automatically');
+assert.equal(singleFaceCandidate.inferredThicknessMm, undefined, 'single-face thickness is never inferred into a wall quantity');
+assert.ok(!singleFaceResult.singleFaceReviewCandidates.some((candidate) => candidate.nodes[0].y > 700 || candidate.nodes[0].x > 640), 'an isolated long single line with no wall junction is not even a review candidate');
+const candidateStart = singleFaceCandidate.nodes[0], candidateEnd = singleFaceCandidate.nodes[1];
+const manualFootprint = { id: 'manual-footprint', page: 1, type: 'Footprint', nodes: [
+	{ x: candidateStart.x - 2, y: candidateStart.y - 2 }, { x: candidateStart.x + 2, y: candidateStart.y - 2 },
+	{ x: candidateEnd.x + 2, y: candidateEnd.y + 2 }, { x: candidateEnd.x - 2, y: candidateEnd.y + 2 },
+] };
+const candidateFusion = fuseSheetLinework({ page: 1, walls: [], openings: [], rooms: [] }, { width, height, data: singleFaceData },
+	{ pageNumber: 1, logicalWidth: width, logicalHeight: height, pixelsPerMm: context.pixelsPerMm }, { completedFloorplans: [manualFootprint] });
+assert.equal(candidateFusion.response.walls.length, 0, 'a footprint-supported single face is still not measured automatically');
+assert.equal(candidateFusion.report.singleFaceReviewCandidates.length, 1, 'manual footprint overlap may surface one candidate for human review');
+assert.match(candidateFusion.report.review[0], /verify.*before measuring/i);
+
 // A blank sheet reports that it found no walls.
 const blank = detectPlanGeometry({ width, height, data: new Uint8ClampedArray(width * height * 4).fill(255) }, context);
 assert.equal(blank.rooms.length, 0);

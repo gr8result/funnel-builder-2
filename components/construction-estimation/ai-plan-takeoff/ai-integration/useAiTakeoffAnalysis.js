@@ -369,7 +369,10 @@ export function useAiTakeoffAnalysis(options) {
             }
           }
           const fused = fuseSheetLinework(response, raster, { pageNumber, logicalWidth: planPage.logicalWidth, logicalHeight: planPage.logicalHeight, pixelsPerMm: context.pixelsPerMm },
-            { placedOpenings: (latest.current.placedOpenings || []).filter((item) => Number(item.page || item.pageId || 1) === pageNumber) });
+            {
+              placedOpenings: (latest.current.placedOpenings || []).filter((item) => Number(item.page || item.pageId || 1) === pageNumber),
+              completedFloorplans: (latest.current.completedFloorplans || []).filter((item) => Number(item.page) === pageNumber),
+            });
           responses[index] = { ...fused.response, drawingType: response.drawingType };
           linework[pageNumber] = { ...fused.report, gaps: { ...fused.report.gaps, unconfirmed: fused.geometry.openings.filter((gap) => !gap.confirmed) }, proposedRooms: fused.geometry.rooms.filter((room) => !room.verified) };
         } catch (error) {

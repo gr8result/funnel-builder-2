@@ -15,6 +15,7 @@ const CLASSIFICATION_FIELDS = ['constructionSystem', 'frameThicknessMm', 'exteri
 export const FUSION_DEFAULTS = {
   categoryReachMm: 1500,   // how far a model wall trace may be from the wall it classifies
   supportReachMm: 600,     // a model wall trace this close to linework is "the same wall"
+  minimumClassificationShare: 0.35, // at least 35% of a measured run needs aligned AI trace
   hostReachMm: 1200,       // an opening with no gap of its own is put on the nearest wall this close
   duplicateMm: 400,        // two openings of one kind this close on one wall are one opening
 };
@@ -40,6 +41,15 @@ function shareAlong(segment, pool, reachPx, stepPx) {
   return hit / (parts + 1);
 }
 
+function manualFootprintSupport(candidate, footprints, pixelsPerMm) {
+  const segment = { a: candidate.nodes[0], b: candidate.nodes[1] };
+  const edges = footprints.flatMap((area) => (area.nodes || []).map((a, index, nodes) => ({
+    wall: area, a: nodes[index], b: nodes[(index + 1) % nodes.length],
+  })));
+  const matching = edges.filter((edge) => shareAlong(segment, [edge], 250 * pixelsPerMm, 100 * pixelsPerMm) >= 0.75);
+  return { supported: matching.length > 0, footprintIds: [...new Set(matching.map((edge) => edge.wall.id))] };
+}
+
 /**
  * @param response one sheet's merged analysis ({ page, walls, openings, rooms, ... }), normalized coordinates
  * @param raster   { width, height, data } RGBA pixels of that sheet
@@ -60,7 +70,7 @@ export function fuseSheetLinework(response, raster, sheet, existing = {}, overri
   ];
   const geometry = detectPlanGeometry(raster, { pixelsPerMm, logicalWidth, logicalHeight, openingEvidence: evidence }, overrides.geometry || {});
   const report = { engine: geometry.engine, measuredWalls: geometry.walls.length, wallsEmitted: 0, uncategorisedLm: 0, flaggedWalls: 0, modelWallLm: 0, modelWallWithoutLineworkLm: 0,
-    openings: { model: modelOpenings.length, onConfirmedGap: 0, onNearestWall: 0, unplaced: 0, duplicatesRemoved: 0 }, gaps: { confirmed: 0, unconfirmed: 0 }, rooms: { verified: 0, proposed: 0, adopted: 0 }, review: [] };
+    openings: { model: modelOpenings.length, onConfirmedGap: 0, onNearestWall: 0, unplaced: 0, duplicatesRemoved: 0 }, gaps: { confirmed: 0, unconfirmed: 0 }, rooms: { verified: 0, proposed: 0, adopted: 0 }, singleFaceReviewCandidates: [], review: [] };
   if (!geometry.walls.length) {
     // Nothing measurable: the plan reading is passed through untouched and says so.
     report.review.push('No wall linework could be measured on this sheet; wall positions are the plan reading\'s own and need checking.');
@@ -73,8 +83,11 @@ export function fuseSheetLinework(response, raster, sheet, existing = {}, overri
   for (const measured of geometry.walls) {
     const segment = { a: measured.nodes[0], b: measured.nodes[1] };
     const middle = { x: (segment.a.x + segment.b.x) / 2, y: (segment.a.y + segment.b.y) / 2 };
-    const match = modelSegments.filter((other) => parallel(segment, other)).map((other) => ({ other, distance: project(middle, other.a, other.b).distance }))
-      .filter((entry) => entry.distance <= mm(options.categoryReachMm)).sort((a, b) => a.distance - b.distance)[0];
+    const match = modelSegments.filter((other) => parallel(segment, other)).map((other) => ({ other,
+      distance: project(middle, other.a, other.b).distance,
+      support: shareAlong(segment, [other], mm(options.supportReachMm), mm(100)),
+    })).filter((entry) => entry.distance <= mm(options.categoryReachMm) && entry.support >= options.minimumClassificationShare)
+      .sort((a, b) => b.support - a.support || a.distance - b.distance)[0];
     if (!match) {
       report.uncategorisedLm += measured.lengthMm / 1000;
       continue;
@@ -93,6 +106,17 @@ export function fuseSheetLinework(response, raster, sheet, existing = {}, overri
   }
   report.wallsEmitted = walls.length;
   const measuredSegments = segmentsOf(geometry.walls);
+  const footprints = (existing.completedFloorplans || []).filter((area) => Number(area.page) === Number(response.page)
+    && area.type === 'Footprint' && Array.isArray(area.nodes) && area.nodes.length >= 3);
+  for (const candidate of geometry.singleFaceReviewCandidates || []) {
+    if (candidate.lengthMm < 2000 || !footprints.length) continue;
+    const support = manualFootprintSupport(candidate, footprints, pixelsPerMm);
+    if (!support.supported) continue;
+    const reviewCandidate = { ...candidate, footprintIds: support.footprintIds,
+      reviewReason: 'Single-face plan linework follows the manually traced outer footprint. A second wall face and thickness are not established; verify manually before measuring.' };
+    report.singleFaceReviewCandidates.push(reviewCandidate);
+    report.review.push(`A ${Math.round(candidate.lengthMm / 100) / 10} m single-face line follows the manual outer footprint on sheet ${response.page}; verify it is a wall before measuring.`);
+  }
   for (const segment of modelSegments) {
     const lengthM = lengthPx(segment) / pixelsPerMm / 1000;
     report.modelWallLm += lengthM;
