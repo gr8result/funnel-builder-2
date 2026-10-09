@@ -40,7 +40,9 @@ const lengthOf = (test) => result.walls.filter(test).reduce((sum, wall) => sum +
 // Wall runs are measured between junctions (inner corner to inner corner). The takeoff's outer-face
 // convention for external walls (8 m x 6 m here = 28 lm) is not applied by the engine yet.
 within(lengthOf((wall) => wall.thicknessMm === 230), 2 * (7.54 + 5.54), 0.03, 'external wall runs between corners');
-within(lengthOf((wall) => wall.thicknessMm === 90), 5.53 - 0.82, 0.03, 'partition length');
+// A wall's run is gross: the doorway does not shorten the partition that hosts it.
+within(lengthOf((wall) => wall.thicknessMm === 90), 5.53, 0.03, 'partition gross length');
+assert.equal(doors[0].hostWallId, result.walls.find((wall) => wall.thicknessMm === 90).id, 'the doorway is attached to the partition it sits in');
 
 // Identity is geometric, so analysing the same sheet again yields the same objects.
 const again = detectPlanGeometry({ width, height, data }, context);

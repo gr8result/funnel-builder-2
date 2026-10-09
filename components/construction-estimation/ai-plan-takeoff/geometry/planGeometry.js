@@ -280,10 +280,15 @@ export function detectPlanGeometry(raster, context, overrides = {}) {
   bridgeGaps(bandV, wall, bridge, width, height, true, Math.round(px(options.doorGapMm)), Math.round(px(options.collinearGapMm)));
 
   const toLogical = (x, y) => ({ x: x / sx, y: y / sy });
-  // Walls: each band component becomes one centreline run with its measured thickness.
+  // Walls: each band, together with the openings closed along it, becomes one centreline run with
+  // its measured thickness. A wall's run is gross: doors and windows do not shorten their host.
   const walls = [];
+  const runOf = [null, null];
   for (const [band, vertical] of [[bandH, false], [bandV, true]]) {
-    const { components } = labelComponents((p) => band[p] > 0, width, height, bounds);
+    const closed = vertical ? 2 : 1;
+    const { labels: runLabels, components } = labelComponents((p) => band[p] > 0 || bridge[p] === closed, width, height, bounds);
+    const ids = new Map();
+    runOf[vertical ? 1 : 0] = { labels: runLabels, ids };
     for (const item of components) {
       if (!item) continue;
       const along = vertical ? item.maxY - item.minY + 1 : item.maxX - item.minX + 1;
@@ -294,8 +299,9 @@ export function detectPlanGeometry(raster, context, overrides = {}) {
       const cx = (item.minX + item.maxX + 1) / 2, cy = (item.minY + item.maxY + 1) / 2;
       const a = vertical ? toLogical(cx, item.minY) : toLogical(item.minX, cy);
       const b = vertical ? toLogical(cx, item.maxY + 1) : toLogical(item.maxX + 1, cy);
+      ids.set(item.id, `gw-${vertical ? 'v' : 'h'}-${Math.round(a.x * 10)}-${Math.round(a.y * 10)}`);
       walls.push({
-        id: `gw-${vertical ? 'v' : 'h'}-${Math.round(a.x * 10)}-${Math.round(a.y * 10)}`,
+        id: ids.get(item.id),
         axis: vertical ? 'v' : 'h', nodes: [a, b], lengthMm: along / k,
         measuredThicknessMm: Math.round(thicknessMm), thicknessMm: nearest(thicknessMm, STANDARD_THICKNESSES),
         // A component much wider than its mean thickness holds stacked faces: flag it.
@@ -314,7 +320,10 @@ export function detectPlanGeometry(raster, context, overrides = {}) {
       const across = value === 2 ? item.maxX - item.minX + 1 : item.maxY - item.minY + 1;
       if (along / k < options.minOpeningMm || across < tMin * 0.6) continue;
       const centre = toLogical((item.minX + item.maxX + 1) / 2, (item.minY + item.maxY + 1) / 2);
-      openings.push({ id: `go-${value === 2 ? 'v' : 'h'}-${Math.round(centre.x * 10)}-${Math.round(centre.y * 10)}`, axis: value === 2 ? 'v' : 'h', ...centre, widthMm: Math.round(along / k), hostThicknessMm: Math.round(across / k), kind: 'wall-gap', reviewRequired: true });
+      // The wall this opening was closed along is its host.
+      const host = runOf[value === 2 ? 1 : 0];
+      const hostWallId = host.ids.get(host.labels[item.seed]) || null;
+      openings.push({ hostWallId, id: `go-${value === 2 ? 'v' : 'h'}-${Math.round(centre.x * 10)}-${Math.round(centre.y * 10)}`, axis: value === 2 ? 'v' : 'h', ...centre, widthMm: Math.round(along / k), hostThicknessMm: Math.round(across / k), kind: 'wall-gap', reviewRequired: true });
     }
   }
 
