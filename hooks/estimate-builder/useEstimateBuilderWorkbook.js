@@ -1758,7 +1758,7 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     });
   }
 
-  async function saveDraft(sourceWorkbook = null) {
+  async function saveDraft(sourceWorkbook = null, options = {}) {
     if (typeof window === "undefined") return { ok: false, message: "Jobs are not available here." };
     const savedAt = new Date().toISOString();
     const workbookToSave = sourceWorkbook || workbookRef.current;
@@ -1779,7 +1779,7 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     setPersistenceStatus({ state: "saving", label: "Saving\u2026", detail: "" });
     let verification;
     try {
-      verification = await saveVerifiedStoredJob(draft, { savedAt, source: "manual" });
+      verification = await saveVerifiedStoredJob(draft, { savedAt, source: "manual", allowOlderTakeoff: options?.allowOlderTakeoff === true });
     } catch (error) {
       setPersistenceStatus({ state: "error", label: `Save failed: ${error.message}`, detail: "Previous successful revision retained." });
       return { ok: false, message: error.message };
@@ -1814,7 +1814,8 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     const restored = normalizeWorkbook(await materializeTakeoffPlanPages(previous.originalRecord?.workbook || previous.workbook));
     completedJobLoadVersionRef.current += 1;
     updateWorkbookState(restored);
-    return saveDraft(restored);
+    // Putting an earlier revision back is the one save that carries an older takeoff on purpose.
+    return saveDraft(restored, { allowOlderTakeoff: true });
   }
 
   async function closeCurrentJob() {
@@ -2462,7 +2463,9 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     const draft = prepareWorkbookForJobSave(nextWorkbook, savedAt);
     await saveJobBackup(workbookFromFile, savedAt).catch(() => {});
     saveLocalDraftMetadata(draft, savedAt);
-    await saveVerifiedStoredJob(draft, { savedAt });
+    // The file the user chose to open is the job, even when it is older than the stored copy
+    // (which stays available as the previous revision and the backup written just above).
+    await saveVerifiedStoredJob(draft, { savedAt, allowOlderTakeoff: true });
     saveExplicitActiveJobSessionKey(workbookJobKey(draft));
     const normalisedWorkbook = normalizeWorkbook(nextWorkbook);
     if (workbookLoadOperationRef.current !== loadOperationId) {
@@ -7490,7 +7493,8 @@ async function saveStoredJob(workbook, savedAt = new Date().toISOString(), optio
   const record = await persistCompleteJob({ openDatabase: openWorkspaceDatabase, storeName: JOB_STORE_NAME, key, workbook: savedWorkbook,
     name: workbookJobName(savedWorkbook), savedAt, externalize: externalizeTakeoffPlanPages,
     activePointer: createActiveJobPointer, initializeRecovery: options.initializeRecovery === true, normalizeRecovery: normalizeWorkbook,
-    baseRevision: knownJobRevision(key), writer: { tabId: currentTabId(), workspaceId: storageWorkspaceId || "" }, force: options.overwriteNewer === true });
+    baseRevision: knownJobRevision(key), writer: { tabId: currentTabId(), workspaceId: storageWorkspaceId || "" }, force: options.overwriteNewer === true,
+    allowOlderTakeoff: options.allowOlderTakeoff === true });
   rememberJobRevision(key, record?.revision);
   // SHARED STORAGE (Storage Settings): the same save is committed to the builder's own job server
   // under this job's id. Local Only mode does nothing here. The local save above has already
