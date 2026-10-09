@@ -10,7 +10,9 @@ import { ROOMS_RUN_ID, addManualRoom, floorPlanSheets, mergeRoomReadings, remove
 import { compactPlanEvidence, evidenceRotation, mergePlanEvidence, projectDefaultsFromJobSetup } from './planEvidence.js';
 import { applyReviewDecision, reviewAudience } from './reviewSummary.js';
 import { fuseSheetLinework } from '../geometry/lineworkFusion.js';
-import { readPlanRaster } from '../geometry/planRaster.js';
+import { cropPlanRegion, readPlanRaster } from '../geometry/planRaster.js';
+import { detectPlanGeometry } from '../geometry/planGeometry.js';
+import { collectRegionOpenings, planRegions } from '../geometry/planRegions.js';
 
 const RUN_ID = 'ai-takeoff-v1';
 const nextFrame = () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
@@ -346,6 +348,26 @@ export function useAiTakeoffAnalysis(options) {
           setMessage(`Measuring wall linework — sheet ${pageNumber}…`);
           const raster = await readPlanRaster(planPage?.dataUrl);
           assertCurrent(work, true);
+          const sheet = { pageNumber, logicalWidth: planPage.logicalWidth, logicalHeight: planPage.logicalHeight, pixelsPerMm: context.pixelsPerMm };
+          // Doors and windows read region by region (off unless the takeoff asks for it): each
+          // region is enlarged, read on its own and mapped back to the sheet. A sheet whose regions
+          // could not all be read keeps the whole-sheet reading as well, and says so.
+          if (latest.current.regionOpenings === true) {
+            const walls = detectPlanGeometry(raster, sheet, { proposeRooms: false }).walls.flatMap((wall) => wall.nodes);
+            if (walls.length) {
+              const bounds = { x: Math.min(...walls.map((p) => p.x)), y: Math.min(...walls.map((p) => p.y)), x2: Math.max(...walls.map((p) => p.x)), y2: Math.max(...walls.map((p) => p.y)) };
+              const regions = planRegions(bounds, sheet);
+              setMessage(`Reading doors and windows by region — sheet ${pageNumber} (${regions.length} regions)…`);
+              const prepared = work.prepared.get(pageNumber);
+              const read = await collectRegionOpenings({ regions, sheet, crop: (region) => cropPlanRegion(planPage.dataUrl, sheet, region),
+                request: (payload) => requestHalf(work, [work.documentHash, pageNumber, context.pixelsPerMm, 'openings-region', payload.region.x, payload.region.y].join('|'), payload),
+                base: { ...work.identity, pixelsPerMm: context.pixelsPerMm, planEvidence: sharedEvidence, page: { pageNumber, logicalWidth: sheet.logicalWidth, logicalHeight: sheet.logicalHeight, pdfUnits: prepared?.pdfUnits === true, drawingType: 'floor_plan', level: response.level } } });
+              assertCurrent(work, true);
+              for (const failure of read.failures) work.warnings.push({ page: pageNumber, code: 'region-failed', message: `Doors and windows in part of sheet ${pageNumber} (${failure.region}) could not be read: ${failure.message}` });
+              response.openings = read.failures.length ? [...read.openings, ...(response.openings || [])] : read.openings;
+              response.regionOpenings = read.report;
+            }
+          }
           const fused = fuseSheetLinework(response, raster, { pageNumber, logicalWidth: planPage.logicalWidth, logicalHeight: planPage.logicalHeight, pixelsPerMm: context.pixelsPerMm },
             { placedOpenings: (latest.current.placedOpenings || []).filter((item) => Number(item.page || item.pageId || 1) === pageNumber) });
           responses[index] = { ...fused.response, drawingType: response.drawingType };

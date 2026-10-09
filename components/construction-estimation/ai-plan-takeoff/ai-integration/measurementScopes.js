@@ -8,6 +8,11 @@ export const MEASUREMENT_SCOPES = ['geometry', 'items'];
 // without duplicating existing walls, openings or aggregate building-area objects.
 export const ROOMS_SCOPE = 'rooms';
 
+// A focused request for the doors and windows in ONE REGION of a floor plan. The submitted image
+// is that region only, enlarged; coordinates come back relative to it and the client maps them to
+// the sheet (geometry/planRegions.js). It returns openings and nothing else.
+export const OPENINGS_REGION_SCOPE = 'openings-region';
+
 export function mergeMeasurementScopes(geometry, items) {
   const prefix = (id) => id.startsWith('geometry:') ? id : `geometry:${id}`;
   return {
