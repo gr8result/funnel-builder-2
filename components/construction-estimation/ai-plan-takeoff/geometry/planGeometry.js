@@ -7,7 +7,7 @@
 const STANDARD_THICKNESSES = [70, 90, 110, 150, 200, 230, 250, 270, 300, 350];
 const nearest = (value, list) => list.reduce((best, item) => (Math.abs(item - value) < Math.abs(best - value) ? item : best));
 
-export const GEOMETRY_ENGINE_VERSION = 'plan-geometry-1';
+export const GEOMETRY_ENGINE_VERSION = 'plan-geometry-2';
 
 export const DEFAULT_GEOMETRY_OPTIONS = {
   inkThreshold: 630,          // r+g+b below this is linework
@@ -20,6 +20,9 @@ export const DEFAULT_GEOMETRY_OPTIONS = {
   minOpeningMm: 400,          // shorter closures are wall junctions, not openings
   minRoomM2: 0.35, minRoomSideMm: 450,
   simplifyPx: 1.6,
+  evidenceReachMm: 700,       // an opening located this close to a gap confirms it
+  isolatedRunMm: 1500,        // shorter paired linework joining no wall is not a wall
+  proposeRooms: true,         // also return spaces that enclose only through unconfirmed gaps
 };
 
 // Ink pixels that belong to a straight run of at least minLen along the scan direction.
@@ -207,7 +210,8 @@ const perimeterOf = (polygon) => polygon.reduce((sum, p, i) => { const q = polyg
 
 /**
  * @param raster { width, height, data } RGBA pixels of the whole sheet
- * @param context { pixelsPerMm, logicalWidth, logicalHeight } the sheet's confirmed calibration
+ * @param context { pixelsPerMm, logicalWidth, logicalHeight, openingEvidence? } the sheet's confirmed
+ *   calibration, and where openings are known to be ([{ x, y, ref? }] in logical pixels)
  * @returns {{ walls, openings, rooms, diagnostics, debug }} in logical plan pixels
  */
 export function detectPlanGeometry(raster, context, overrides = {}) {
@@ -275,18 +279,71 @@ export function detectPlanGeometry(raster, context, overrides = {}) {
     if (!keep[raw.labels[p]]) { bandH[p] = 0; bandV[p] = 0; } else wall[p] = 1;
   }
 
+  // A short strip of paired lines that joins no other wall is joinery, a dimension or a symbol.
+  // It is removed before gaps are looked for, so nothing is ever closed towards it.
+  for (const [band, other, vertical] of [[bandH, bandV, false], [bandV, bandH, true]]) {
+    const { labels, components } = labelComponents((p) => band[p] > 0, width, height, bounds);
+    const drop = new Uint8Array(components.length);
+    for (const item of components) {
+      if (!item) continue;
+      const along = vertical ? item.maxY - item.minY + 1 : item.maxX - item.minX + 1;
+      if (along / k >= options.isolatedRunMm) continue;
+      const probe = Math.max(3, Math.round(px(120)));
+      let joined = false;
+      for (let y = Math.max(0, item.minY - probe); y <= Math.min(height - 1, item.maxY + probe) && !joined; y += 1) {
+        for (let x = Math.max(0, item.minX - probe); x <= Math.min(width - 1, item.maxX + probe); x += 1) {
+          const p = y * width + x;
+          if (wall[p] && labels[p] !== item.id) { joined = true; break; }
+        }
+      }
+      if (joined) continue;
+      drop[item.id] = 1;
+      diagnostics.push({ code: 'isolated-linework', lengthMm: Math.round(along / k), message: 'Paired linework that joins no wall was not taken as a wall.', at: { x: (item.minX + item.maxX) / 2 / sx, y: (item.minY + item.maxY) / 2 / sy } });
+    }
+    for (let p = 0; p < labels.length; p += 1) if (labels[p] && drop[labels[p]]) { band[p] = 0; if (!other[p]) wall[p] = 0; }
+  }
+
   const bridge = new Uint8Array(width * height);
   bridgeGaps(bandH, wall, bridge, width, height, false, Math.round(px(options.doorGapMm)), Math.round(px(options.collinearGapMm)));
   bridgeGaps(bandV, wall, bridge, width, height, true, Math.round(px(options.doorGapMm)), Math.round(px(options.collinearGapMm)));
 
   const toLogical = (x, y) => ({ x: x / sx, y: y / sy });
-  // Walls: each band, together with the openings closed along it, becomes one centreline run with
-  // its measured thickness. A wall's run is gross: doors and windows do not shorten their host.
+  const evidence = (context.openingEvidence || []).filter((item) => Number.isFinite(item?.x) && Number.isFinite(item?.y));
+
+  // Gaps: every closure is a CANDIDATE opening. A gap is treated as part of its wall only when it
+  // is a junction-sized break in one wall, or something says an opening is there (a door or window
+  // the estimator placed, or one the plan reading located). Nothing is closed merely because it
+  // would complete a room.
+  const openings = [];
+  const closed = new Uint8Array(width * height);
+  for (const value of [1, 2]) {
+    const { labels, components } = labelComponents((p) => bridge[p] === value && !wall[p], width, height, bounds);
+    const verdict = new Uint8Array(components.length);
+    for (const item of components) {
+      if (!item) continue;
+      const along = value === 2 ? item.maxY - item.minY + 1 : item.maxX - item.minX + 1;
+      const across = value === 2 ? item.maxX - item.minX + 1 : item.maxY - item.minY + 1;
+      const widthMm = along / k;
+      const centre = toLogical((item.minX + item.maxX + 1) / 2, (item.minY + item.maxY + 1) / 2);
+      if (widthMm < options.minOpeningMm) { verdict[item.id] = 1; continue; }
+      if (across < tMin * 0.6) continue;
+      const reachPx = Math.max(options.evidenceReachMm, widthMm * 0.6) * pixelsPerMm;
+      const support = evidence.map((point) => ({ point, distance: Math.hypot(point.x - centre.x, point.y - centre.y) })).filter((entry) => entry.distance <= reachPx).sort((a, b) => a.distance - b.distance)[0];
+      if (support) verdict[item.id] = 1;
+      openings.push({ id: `go-${value === 2 ? 'v' : 'h'}-${Math.round(centre.x * 10)}-${Math.round(centre.y * 10)}`, axis: value === 2 ? 'v' : 'h', ...centre, widthMm: Math.round(widthMm), hostThicknessMm: Math.round(across / k), kind: 'wall-gap',
+        confirmed: Boolean(support), ...(support?.point.ref !== undefined ? { evidenceRef: support.point.ref } : {}), reviewRequired: !support, seed: item.seed, axisIndex: value - 1 });
+    }
+    for (let p = 0; p < labels.length; p += 1) if (labels[p] && verdict[labels[p]]) closed[p] = value;
+  }
+
+  // Walls: each band, with the confirmed openings along it, becomes one centreline run with its
+  // measured thickness. A wall's run is gross through a confirmed opening and stops at any other gap.
   const walls = [];
   const runOf = [null, null];
+  const fabric = (p) => wall[p] || closed[p];
   for (const [band, vertical] of [[bandH, false], [bandV, true]]) {
-    const closed = vertical ? 2 : 1;
-    const { labels: runLabels, components } = labelComponents((p) => band[p] > 0 || bridge[p] === closed, width, height, bounds);
+    const own = vertical ? 2 : 1;
+    const { labels: runLabels, components } = labelComponents((p) => band[p] > 0 || closed[p] === own, width, height, bounds);
     const ids = new Map();
     runOf[vertical ? 1 : 0] = { labels: runLabels, ids };
     for (const item of components) {
@@ -297,61 +354,79 @@ export function detectPlanGeometry(raster, context, overrides = {}) {
       const thicknessPx = Math.max(1, item.area / along);
       const thicknessMm = Math.max(options.minWallMm, (thicknessPx - 2) / k);
       const cx = (item.minX + item.maxX + 1) / 2, cy = (item.minY + item.maxY + 1) / 2;
+      // Connectivity: does other wall fabric continue beyond each end of this run?
+      const probe = Math.max(3, Math.round(px(120)));
+      const touches = (end) => {
+        for (let step = 1; step <= probe; step += 1) for (let offset = -Math.ceil(across / 2) - probe; offset <= Math.ceil(across / 2) + probe; offset += 2) {
+          const x = Math.round(vertical ? cx + offset : (end < 0 ? item.minX - step : item.maxX + step));
+          const y = Math.round(vertical ? (end < 0 ? item.minY - step : item.maxY + step) : cy + offset);
+          if (x >= 0 && y >= 0 && x < width && y < height && fabric(y * width + x) && runLabels[y * width + x] !== item.id) return true;
+        }
+        return false;
+      };
+      const connectedEnds = (touches(-1) ? 1 : 0) + (touches(1) ? 1 : 0);
+      const lengthMm = along / k;
+      // A short strip of paired lines that joins no other wall is joinery, a dimension or a symbol.
+      if (connectedEnds === 0 && lengthMm < options.isolatedRunMm) { diagnostics.push({ code: 'isolated-linework', lengthMm: Math.round(lengthMm), message: 'Paired linework that joins no wall was not taken as a wall.', at: toLogical(cx, cy) }); continue; }
       const a = vertical ? toLogical(cx, item.minY) : toLogical(item.minX, cy);
       const b = vertical ? toLogical(cx, item.maxY + 1) : toLogical(item.maxX + 1, cy);
+      const reasons = [];
+      if (across > thicknessPx * 1.6 + 3 || thicknessMm > options.maxWallMm) reasons.push('Irregular wall faces; check this wall.');
+      if (connectedEnds === 0) reasons.push('This wall joins no other wall.');
       ids.set(item.id, `gw-${vertical ? 'v' : 'h'}-${Math.round(a.x * 10)}-${Math.round(a.y * 10)}`);
       walls.push({
         id: ids.get(item.id),
-        axis: vertical ? 'v' : 'h', nodes: [a, b], lengthMm: along / k,
+        axis: vertical ? 'v' : 'h', nodes: [a, b], lengthMm, connectedEnds,
         measuredThicknessMm: Math.round(thicknessMm), thicknessMm: nearest(thicknessMm, STANDARD_THICKNESSES),
-        // A component much wider than its mean thickness holds stacked faces: flag it.
-        ...(across > thicknessPx * 1.6 + 3 ? { reviewRequired: true, reviewReason: 'Irregular wall faces; check this wall.' } : {}),
+        ...(reasons.length ? { reviewRequired: true, reviewReason: reasons.join(' ') } : {}),
       });
     }
   }
-
-  // Openings: closures long enough to be a door, measured along their wall.
-  const openings = [];
-  for (const value of [1, 2]) {
-    const { components } = labelComponents((p) => bridge[p] === value && !wall[p], width, height, bounds);
-    for (const item of components) {
-      if (!item) continue;
-      const along = value === 2 ? item.maxY - item.minY + 1 : item.maxX - item.minX + 1;
-      const across = value === 2 ? item.maxX - item.minX + 1 : item.maxY - item.minY + 1;
-      if (along / k < options.minOpeningMm || across < tMin * 0.6) continue;
-      const centre = toLogical((item.minX + item.maxX + 1) / 2, (item.minY + item.maxY + 1) / 2);
-      // The wall this opening was closed along is its host.
-      const host = runOf[value === 2 ? 1 : 0];
-      const hostWallId = host.ids.get(host.labels[item.seed]) || null;
-      openings.push({ hostWallId, id: `go-${value === 2 ? 'v' : 'h'}-${Math.round(centre.x * 10)}-${Math.round(centre.y * 10)}`, axis: value === 2 ? 'v' : 'h', ...centre, widthMm: Math.round(along / k), hostThicknessMm: Math.round(across / k), kind: 'wall-gap', reviewRequired: true });
-    }
+  // A confirmed opening is hosted by the wall run it was closed along.
+  for (const opening of openings) {
+    const host = runOf[opening.axisIndex];
+    opening.hostWallId = opening.confirmed ? host.ids.get(host.labels[opening.seed]) || null : null;
+    delete opening.seed; delete opening.axisIndex;
   }
 
-  // Rooms: the spaces the walls and their closed openings enclose.
-  const free = labelComponents((p) => !wall[p] && !bridge[p], width, height, bounds);
+  // Rooms. Verified rooms are enclosed by walls and confirmed openings alone. A space that only
+  // encloses if unconfirmed gaps are closed is returned as a proposal for the estimator, never as
+  // a measured room.
   const rooms = [];
-  for (const item of free.components) {
-    if (!item || item.border) continue;
-    const areaM2 = item.area / (k * k) / 1e6;
-    if (areaM2 < options.minRoomM2 || Math.min(item.maxX - item.minX, item.maxY - item.minY) / k < options.minRoomSideMm) continue;
-    const boundary = simplifyClosed(traceBoundary(free.labels, width, height, item.id, item.seed), options.simplifyPx);
-    if (boundary.length < 3) continue;
-    const polygon = boundary.map((p) => toLogical(p.x, p.y));
-    const polygonM2 = shoelace(polygon) / (pixelsPerMm * pixelsPerMm) / 1e6;
-    let cx = 0, cy = 0, n = 0;
-    // An interior point for labelling: mean of region pixels on the seed's scanline band.
-    for (let y = item.minY; y <= item.maxY; y += 4) for (let x = item.minX; x <= item.maxX; x += 4) if (free.labels[y * width + x] === item.id) { cx += x; cy += y; n += 1; }
-    const holesM2 = Math.max(0, polygonM2 - areaM2);
-    rooms.push({
-      id: `gr-${Math.round(item.minX / sx)}-${Math.round(item.minY / sy)}-${Math.round(item.maxX / sx)}-${Math.round(item.maxY / sy)}`,
-      polygon, areaM2: polygonM2, netAreaM2: areaM2, perimeterM: perimeterOf(polygon) / pixelsPerMm / 1000,
-      centroid: n ? toLogical(cx / n, cy / n) : toLogical((item.minX + item.maxX) / 2, (item.minY + item.maxY) / 2),
-      bounds: { ...toLogical(item.minX, item.minY), x2: (item.maxX + 1) / sx, y2: (item.maxY + 1) / sy },
-      ...(holesM2 > Math.max(0.15, polygonM2 * 0.02) ? { reviewRequired: true, reviewReason: `${holesM2.toFixed(2)} m² inside this boundary is wall or column.` } : {}),
-    });
-  }
+  const roomId = (item) => `gr-${Math.round(item.minX / sx)}-${Math.round(item.minY / sy)}-${Math.round(item.maxX / sx)}-${Math.round(item.maxY / sy)}`;
+  const collect = (test, proposed, verifiedSeeds) => {
+    const found = labelComponents(test, width, height, bounds);
+    for (const item of found.components) {
+      if (!item || item.border) continue;
+      const areaM2 = item.area / (k * k) / 1e6;
+      if (areaM2 < options.minRoomM2 || Math.min(item.maxX - item.minX, item.maxY - item.minY) / k < options.minRoomSideMm) continue;
+      // A proposal that is the same space as a verified room adds nothing.
+      if (proposed && verifiedSeeds.has(roomId(item))) continue;
+      const boundary = simplifyClosed(traceBoundary(found.labels, width, height, item.id, item.seed), options.simplifyPx);
+      if (boundary.length < 3) continue;
+      const polygon = boundary.map((p) => toLogical(p.x, p.y));
+      const polygonM2 = shoelace(polygon) / (pixelsPerMm * pixelsPerMm) / 1e6;
+      let cx = 0, cy = 0, n = 0;
+      for (let y = item.minY; y <= item.maxY; y += 4) for (let x = item.minX; x <= item.maxX; x += 4) if (found.labels[y * width + x] === item.id) { cx += x; cy += y; n += 1; }
+      const holesM2 = Math.max(0, polygonM2 - areaM2);
+      const reasons = [];
+      if (proposed) reasons.push('This boundary relies on gaps that are not confirmed as doors or windows.');
+      if (holesM2 > Math.max(0.15, polygonM2 * 0.02)) reasons.push(holesM2.toFixed(2) + ' m² inside this boundary is wall or column.');
+      rooms.push({
+        id: roomId(item),
+        polygon, areaM2: polygonM2, netAreaM2: areaM2, perimeterM: perimeterOf(polygon) / pixelsPerMm / 1000,
+        centroid: n ? toLogical(cx / n, cy / n) : toLogical((item.minX + item.maxX) / 2, (item.minY + item.maxY) / 2),
+        bounds: { ...toLogical(item.minX, item.minY), x2: (item.maxX + 1) / sx, y2: (item.maxY + 1) / sy },
+        verified: !proposed,
+        ...(reasons.length ? { reviewRequired: true, reviewReason: reasons.join(' ') } : {}),
+      });
+    }
+    return found;
+  };
+  const free = collect((p) => !wall[p] && !closed[p], false, null);
+  if (options.proposeRooms) collect((p) => !wall[p] && !bridge[p], true, new Set(rooms.map((room) => room.id)));
   rooms.sort((a, b) => a.bounds.y - b.bounds.y || a.bounds.x - b.bounds.x);
-  return { engine: GEOMETRY_ENGINE_VERSION, rasterPixelsPerMm: k, walls, openings, rooms, diagnostics, debug: { wall, bridge, labels: free.labels, width, height, bounds } };
+  return { engine: GEOMETRY_ENGINE_VERSION, rasterPixelsPerMm: k, walls, openings, rooms, diagnostics, debug: { wall, bridge, closed, labels: free.labels, width, height, bounds } };
 }
 
 // Is the point strictly inside the polygon (logical pixels)?

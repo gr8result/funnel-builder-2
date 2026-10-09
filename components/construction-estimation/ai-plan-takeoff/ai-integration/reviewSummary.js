@@ -5,7 +5,7 @@
 const LEVELS = ['Ground Floor', 'Second Level', 'Third Level'];
 const LEVEL_PREFIX = { 'Ground Floor': 'lower', 'Second Level': 'upper', 'Third Level': 'third' };
 // Analysis findings that need a person. Anything not listed is a diagnostic.
-const DECISION_CODES = new Set(['possible-missing-openings', 'possible-missing-walls', 'open-edge', 'sheet-failed', 'inspection-failed', 'duplicate-level', 'unassigned-level', 'benchmark-discrepancy', 'dimension-conflict', 'evidence-conflict', 'scale-conflict', 'unreadable']);
+const DECISION_CODES = new Set(['possible-missing-openings', 'possible-missing-walls', 'open-edge', 'sheet-failed', 'inspection-failed', 'duplicate-level', 'unassigned-level', 'benchmark-discrepancy', 'dimension-conflict', 'evidence-conflict', 'scale-conflict', 'unreadable', 'linework-failed']);
 const plural = (count, one, many = `${one}s`) => `${count} ${count === 1 ? one : many}`;
 const metres = (items) => items.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0).toFixed(1);
 const cellValue = (row) => (row && typeof row === 'object' ? row.value : row);
@@ -31,6 +31,7 @@ const ANALYSIS_TITLES = {
   'benchmark-discrepancy': 'Measured quantity differs from the figure printed on the plan',
   'dimension-conflict': 'The plan gives two different sizes for an opening', 'evidence-conflict': 'The sheets disagree',
   'scale-conflict': 'The sheets are drawn at different scales', unreadable: 'Part of the plan could not be read',
+  'linework-failed': 'Wall positions on a sheet could not be measured from the drawing',
 };
 
 /**

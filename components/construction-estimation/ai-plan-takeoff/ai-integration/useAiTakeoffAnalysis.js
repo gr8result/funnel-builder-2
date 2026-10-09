@@ -9,6 +9,8 @@ import { MEASUREMENT_SCOPES, ROOMS_SCOPE, mergeMeasurementScopes } from './measu
 import { ROOMS_RUN_ID, addManualRoom, floorPlanSheets, mergeRoomReadings, removeRoom as removeScheduleRoom, reportWithRooms } from './roomSchedule.js';
 import { compactPlanEvidence, evidenceRotation, mergePlanEvidence, projectDefaultsFromJobSetup } from './planEvidence.js';
 import { applyReviewDecision, reviewAudience } from './reviewSummary.js';
+import { fuseSheetLinework } from '../geometry/lineworkFusion.js';
+import { readPlanRaster } from '../geometry/planRaster.js';
 
 const RUN_ID = 'ai-takeoff-v1';
 const nextFrame = () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
@@ -332,6 +334,27 @@ export function useAiTakeoffAnalysis(options) {
       if (!responses.length && sheetFailures.length) {
         throw new Error(`AI Takeoff could not measure the plan. ${sheetFailures.map((item) => item.message).join(' ')}`);
       }
+      // Wall positions, lengths and thicknesses are measured from each floor plan's own linework;
+      // the plan reading classifies those walls and locates the openings. A sheet whose linework
+      // cannot be measured keeps the plan reading's positions and says so.
+      const linework = {};
+      for (const [index, response] of responses.entries()) {
+        if (response.drawingType !== 'floor_plan') continue;
+        const pageNumber = response.page || response.pageNumber;
+        const planPage = work.planPages.find((page) => page.pageNumber === pageNumber);
+        try {
+          setMessage(`Measuring wall linework — sheet ${pageNumber}…`);
+          const raster = await readPlanRaster(planPage?.dataUrl);
+          assertCurrent(work, true);
+          const fused = fuseSheetLinework(response, raster, { pageNumber, logicalWidth: planPage.logicalWidth, logicalHeight: planPage.logicalHeight, pixelsPerMm: context.pixelsPerMm },
+            { placedOpenings: (latest.current.placedOpenings || []).filter((item) => Number(item.page || item.pageId || 1) === pageNumber) });
+          responses[index] = { ...fused.response, drawingType: response.drawingType };
+          linework[pageNumber] = { ...fused.report, gaps: { ...fused.report.gaps, unconfirmed: fused.geometry.openings.filter((gap) => !gap.confirmed) }, proposedRooms: fused.geometry.rooms.filter((room) => !room.verified) };
+        } catch (error) {
+          assertCurrent(work, true);
+          work.warnings.push({ page: pageNumber, code: 'linework-failed', message: `Wall linework could not be measured on sheet ${pageNumber}: ${error.message} Wall positions on this sheet are the plan reading's own and need checking.` });
+        }
+      }
       setStage('building');
       setMessage('Building Takeoff Schedule…');
       const { batch, analysis } = normalizePlanAnalysis({
@@ -348,6 +371,7 @@ export function useAiTakeoffAnalysis(options) {
       analysis.counts.decisions = analysis.review.filter((item) => item.audience === 'decision').length;
       analysis.planEvidence = { ...planEvidence, openingSchedule: planEvidence.openingSchedule.slice(0, 150) };
       analysis.projectDefaults = projectDefaults;
+      analysis.linework = linework;
       // Nothing new to add because the estimator already measured it is a finished run, not a failed one.
       const result = batch.detections.length ? await latest.current.bridge.appendDetections(batch, { signal: work.signal })
         : { status: analysis.alreadyMeasured.length ? 'unchanged' : 'review', added: 0 };
