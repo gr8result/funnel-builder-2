@@ -1,3 +1,4 @@
+import { RoomBoundaryLayer, RoomBoundaryPanel } from './RoomBoundaries.jsx';
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useAiTakeoffBridge } from './ai-integration/useAiTakeoffBridge.js';
 import { AiTakeoffDevelopmentAction } from './ai-integration/AiTakeoffDevelopmentAction.jsx';
@@ -467,6 +468,7 @@ export default function AIPlanTakeoffStandalone({
 
   const [pdfDoc, setPdfDoc] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [editingRoomId, setEditingRoomId] = useState(null);
   const [totalPages, setTotalPages] = useState(1);
 
   const [vectorSegments, setVectorSegments] = useState([]);
@@ -676,12 +678,16 @@ export default function AIPlanTakeoffStandalone({
     takeoffId: String(openedTakeoffJob?.takeoffId || ''),
     planPages, pixelsPerMm, lifecycle: takeoffLifecycle, readOnly: isRecoveryPreview,
     bridge: aiTakeoffBridge, setPixelsPerMm, markCompleted: markTakeoffItemCompleted,
-    completedFloorplans,
+    completedFloorplans, completedWallRuns, placedOpenings,
     sheetLevels,
     // Construction defaults already entered in Job Setup resolve what the plans leave unstated.
     jobSetupRows: platformContext.jobSetupRows || {},
     // Reading rooms is a user-requested operation; save it the same way an analysis is saved.
-    onRoomsRead: async () => { if (embedded && onSaveToPlatform && platformContext.jobId) await handleSaveJob(); },
+    onRoomsRead: async (report) => {
+      setShowSchedule(false); setActiveTool('rooms');
+      if (report?.rooms?.length) setCurrentPage(report.rooms[0].page);
+      if (embedded && onSaveToPlatform && platformContext.jobId) await handleSaveJob();
+    },
     objectCount: completedWallRuns.length + placedOpenings.length + completedFloorplans.length + completedAreas.length + completedMeasurements.length + completedEaves.length + completedPillars.length,
     onDetectedLevels: (pages) => setSheetLevels((previous) => {
       const next = { ...previous };
@@ -690,8 +696,10 @@ export default function AIPlanTakeoffStandalone({
       }
       return next;
     }),
-    onCompleted: async () => {
-      setShowSchedule(true);
+    onCompleted: async (report) => {
+      const rooms = report?.rooms || [];
+      setShowSchedule(!rooms.length);
+      if (rooms.length) { setActiveTool('rooms'); setCurrentPage(rooms[0].page); }
       // Analysis is a user-requested operation. Save through the same verified
       // master-job action used by Save Takeoff, after the hook commits results.
       if (embedded && onSaveToPlatform && platformContext.jobId) await handleSaveJob();
@@ -3149,6 +3157,9 @@ setSavedRevision(verifiedSave.revision);
   };
 
   const handleMouseMove = (e) => {
+    // Room hover is local to the Konva room layer; do not update the entire
+    // takeoff or run drawing-tool snapping for every pointer position.
+    if (activeTool === 'rooms') return;
     if (stageContentPanRef.current?.active) return;
     if (stageRef.current?.isDragging?.()) return;
     const pos = getCanvasPointerPos(e);
@@ -3634,7 +3645,9 @@ setSavedRevision(verifiedSave.revision);
   );
 
   const handleStageContentPointerDown = (event) => {
+    if (event.target.closest?.('[data-testid="room-boundary-panel"]')) return;
     if (event.button !== 0 || !canStartStagePan()) return;
+    if (activeTool === 'rooms' && editingRoomId) return;
     const stage = stageRef.current;
     if (!stage) return;
     const pointerId = event.pointerId ?? 'mouse';
@@ -5641,6 +5654,9 @@ setSavedRevision(verifiedSave.revision);
             </div>
           </div>
         )}
+        {image && <RoomBoundaryPanel rooms={aiTakeoffAnalysis.report?.rooms || []} control={aiTakeoffAnalysis.rooms}
+          enabled={activeTool === 'rooms'} setEnabled={enabled => setActiveTool(enabled ? 'rooms' : 'select')}
+          editing={editingRoomId} setEditing={id => { setEditingRoomId(id); const room = aiTakeoffAnalysis.report?.rooms?.find(room => room.id === id); if (room) setCurrentPage(room.page); }} readOnly={isRecoveryPreview} />}
         <Stage
           width={canvasSize.width}
           height={canvasSize.height}
@@ -6368,11 +6384,14 @@ setSavedRevision(verifiedSave.revision);
               </React.Fragment>
             )}
 
+            <RoomBoundaryLayer key={`${openedTakeoffJob?.takeoffId}-${currentPage}-${editingRoomId || ''}`} rooms={(aiTakeoffAnalysis.report?.rooms || []).filter(room => room.page === currentPage)}
+              control={aiTakeoffAnalysis.rooms} enabled={activeTool === 'rooms' && !isRecoveryPreview} editing={editingRoomId}
+              scale={stageScale} width={logicalImageWidth} height={logicalImageHeight} suppressClick={suppressNextStageClickRef} />
             {/* Pointer crosshair. This is the last child of the layer, so it paints on top of every
                 markup, and it is pinned to the cursor - which means its hit region sits under the
                 pointer on every single click. It must never listen, or it swallows the click that
                 was meant for the wall, area or opening underneath and selection silently dies. */}
-            {mouseHoverPos && (
+            {mouseHoverPos && activeTool !== 'rooms' && (
               <Group x={mouseHoverPos.x} y={mouseHoverPos.y} listening={false}>
                 <Line
                   points={[-24 / stageScale, 0, 24 / stageScale, 0]}

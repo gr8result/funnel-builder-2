@@ -58,6 +58,7 @@ const db = {
 };
 const dependencies = {
   masterJobId,
+  rememberJobRevision: () => {},
   openTemplateDb: async () => db, JOB_STORE_NAME: "jobs",
   IDBKeyRange: { bound: (lower, upper) => ({ lower, upper }) },
   materializeTakeoffPlanPages: async (workbook) => structuredClone(workbook),

@@ -353,7 +353,7 @@ export function normalizePlanAnalysis({ context, responses = [], runId, modelVer
           if (open) {
             const lengthM = line.slice(1).reduce((sum, point, index) => sum + Math.hypot(point.x - line[index].x, point.y - line[index].y), 0) / scale / 1000;
             analysis.openEdges.push({ ...metadataOnly(raw), page, level, area: open.type, lengthM });
-            report(page, raw, `${lengthM.toFixed(1)} m along the open side of the ${open.type.toLowerCase()} was not added as a wall (posts, columns and balustrades are not walls). If it is a solid wall, draw it on the plan.`, 'open-edge');
+            report(page, raw, `${lengthM.toFixed(1)} m along the open side of the ${open.type.toLowerCase()} was not added as a wall (posts, columns and balustrades are not walls). If it is a solid wall, draw it on the plan.`, lengthM >= 1.5 ? 'open-edge' : 'open-edge-minor');
             continue;
           }
         }
@@ -549,7 +549,10 @@ export function normalizePlanAnalysis({ context, responses = [], runId, modelVer
         const scheduled = findScheduleEntry({ ...raw, tag, sizeCode }, planEvidence);
         const discrepancies = [];
         const dimension = (name) => {
-          const explicit = raw[`explicit${name[0].toUpperCase()}${name.slice(1)}`];
+          const stated = raw[`explicit${name[0].toUpperCase()}${name.slice(1)}`];
+          // "2130 STACKER DOOR" is a size code (2100 high x 3000 wide), not a 2130 mm dimension:
+          // the code's own four digits repeated as an explicit size are a misreading of the code.
+          const explicit = interpreted && stated === Number(String(sizeCode).trim().slice(0, 4)) ? null : stated;
           if (positive(explicit)) {
             if (interpreted && explicit !== interpreted[name]) discrepancies.push(`${name}: explicit ${explicit} mm takes precedence over ${sizeCode} shorthand ${interpreted[name]} mm.`);
             fields[name] = { basis: 'OBSERVED', confidence: raw.confidence, evidence: raw.dimensionEvidence || raw.evidence };

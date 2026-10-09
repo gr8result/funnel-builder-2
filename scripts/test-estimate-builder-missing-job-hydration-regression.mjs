@@ -34,6 +34,7 @@ function runStartup({ explicitJobKey, loadStoredJob, fallbackRecovered = null })
     normalizeWorkbook: (value) => value,
     resolveLastActiveWorkbookPage: () => "projectDashboard",
     jobContentSignature: () => "signature",
+    jobKeyFromLocation: () => "",
     loadRecentEstimateJobs: () => [],
     loadRecentEstimateFiles: () => [],
     setWorkbook: (workbook) => { calls.workbook = workbook; }, setActiveWorkbookPage: () => {}, setLastSavedAt: () => {},

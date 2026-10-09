@@ -85,7 +85,11 @@ await test('A current job', async () => {
   const reloaded = load(database.records.get('job:new-job-1').workbook);
   assert.deepEqual(projectData(reloaded), projectData(job));
   assert.equal(normalizeJobForCurrentSchema(reloaded), reloaded, 'a current job is not rewritten');
-  assert.equal((await save(database, reloaded, '2026-10-05T01:01:00.000Z')).revision, 2);
+  database.records.set('active-job', { key: 'job:another-job' });
+  assert.equal((await save(database, { ...reloaded, savedAt: 'later', page: 'clientSelections' }, '2026-10-05T01:01:00.000Z')).revision, 1, 'Metadata-only repeat must not allocate another revision');
+  assert.equal(database.records.get('active-job').key, 'job:new-job-1', 'A no-op save still refreshes the active job pointer');
+  const edited = { ...reloaded, clientSelectionsBook: { rooms: [{ name: 'Kitchen', rows: [{ quantity: 2 }] }] } };
+  assert.equal((await save(database, edited, '2026-10-05T01:02:00.000Z')).revision, 2, 'A real selection edit must create its own verified revision');
 });
 
 await test('B old job missing cabinetryCatalogueAudit', async () => {

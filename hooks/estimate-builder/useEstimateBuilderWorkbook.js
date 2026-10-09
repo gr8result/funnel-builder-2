@@ -2,8 +2,9 @@ import { browserTenantKey, builderLocalStorage, builderSessionStorage, scopeBrow
 import { CURRENT_BUILDER_WORKSPACE_ID } from '../../lib/builders/currentBuilderSeed.js';
 import { addCabinetryCatalogueItem } from '../../lib/construction-estimation/finalCabinetryQuotation.js';
 import { reconcileCabinetryQuotation } from '../../lib/construction-estimation/finalCabinetryQuotation.js';
-import { applyCabinetryRequirementsToQuotation, setCabinetryRequirements, migrateWorkbookCabinetSchedules } from '../../lib/construction-estimation/cabinetryRequirements.js';
+import { applyCabinetryRequirementsToQuotation, setCabinetryRequirements, migrateWorkbookCabinetSchedules, classifyLegacyCabinetLine, returnCabinetryRowToAutomatic } from '../../lib/construction-estimation/cabinetryRequirements.js';
 import { connectTenantSelectionMetadata } from '../../lib/builders/tenantSelectionQuotation.js';
+import { connectAllocatedSelectionsToQuotation } from '../../lib/builders/allocatedSelectionQuotation.js';
 import { linkInternalPaintColoursToQuotation } from '../../lib/builders/internalPaintColours.js';
 import { connectElectricalScheduleToQuotation } from '../../lib/builders/electricalSchedule.js';
 import { applySelectionProduct, applyInclusionScheduleToQuote } from '../../lib/builders/selectionQuoteEngine.js';
@@ -14,9 +15,12 @@ import { normalizeTakeoffInputSection } from '../../lib/construction-estimation/
 import { applyPersistedQuotationOrder, persistedSectionOrder, stampQuotationOrder } from "../../lib/construction-estimation/quotationOrder.js";
 import { withWallLiningMappings } from '../../lib/construction-estimation/quotationWallLinings.js';
 import { acknowledgeQuotationNotification } from '../../lib/construction-estimation/quotationNotifications.js';
-import { persistCompleteJob, jobContentSignature, restoreCompleteWorkbook, normalizeJobForCurrentSchema, isProtectedRecoveryRecord, PROTECTED_RECOVERY_JOB_KEY } from "../../lib/construction-estimation/jobPersistence.js";
+import { persistCompleteJob, jobDirtySignature, restoreCompleteWorkbook, normalizeJobForCurrentSchema, isProtectedRecoveryRecord, PROTECTED_RECOVERY_JOB_KEY } from "../../lib/construction-estimation/jobPersistence.js";
 import { externalizeTakeoffPlanPages, materializeTakeoffPlanPages } from "../../components/construction-estimation/ai-plan-takeoff/planBlobStorage.js";
+import { jobJsonByteLength } from "../../lib/construction-estimation/jobSerialization.js";
 import { getMasterProducts } from "../../lib/product-library/catalogueService.js";
+import { currentTabId, jobKeyFromLocation, knownJobRevision, rememberJobRevision, writeJobToLocation } from "../../lib/construction-estimation/jobContext.js";
+import { commitJobToSharedStorage } from "../../lib/job-storage/sharedSync.js";
 
 // Product Library lookup for the tiling connector (tile sizes, box coverage, prices).
 let masterProductIndex = null;
@@ -182,6 +186,18 @@ const RENAMED_QUOTE_SECTION_NAMES = new Map([
   ["engeineered timber", "ENGINEERED TIMBER"],
 ]);
 
+// Compare the same shape prepareWorkbookForJobSave persists. Normalising quotation
+// order on write must not make an otherwise identical live workbook dirty again.
+function jobContentSignature(workbook) {
+  if (!workbookHasExplicitJobIdentity(workbook)) return jobDirtySignature(workbook);
+  return jobDirtySignature({
+    ...withPersistedQuotationOrder(workbook),
+    templateKey: MASTER_TEMPLATE_KEY,
+    templateName: MASTER_TEMPLATE_NAME,
+    templateType: "job",
+  });
+}
+
 function estimateBuilderLog(event, details = {}) {
   if (typeof window === "undefined") return;
   console.info(`[Estimate Builder] ${event}`, details);
@@ -253,6 +269,7 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
   const completedJobLoadVersionRef = useRef(0);
   const autosavePausedRef = useRef(false);
   const autosaveInFlightRef = useRef(false);
+  const [autosaveCompletion, setAutosaveCompletion] = useState(0);
   const lastAutosaveSignatureRef = useRef("");
   const lastLinkedTemplateRef = useRef(loadLastLinkedTemplateReference());
   const allowUnlinkedJobSaveRef = useRef(loadAllowUnlinkedJobSave());
@@ -344,6 +361,8 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     const startupLoadOperationId = workbookLoadOperationRef.current;
     (async () => {
       clearActiveRegisteredEstimateJob();
+      // The job this tab's address names, read before anything can rewrite the address.
+      const urlJobKey = jobKeyFromLocation();
       const explicitJobKey = loadExplicitActiveJobSessionKey();
       let explicitLoadFailed = false;
       if (explicitJobKey) {
@@ -404,6 +423,15 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
       // itself is still safely persisted in IndexedDB. Before declaring "no job
       // open" - which also wipes the durable active-job pointer - fall back to
       // the durable record so a still-existing job is never abandoned.
+      // A tab whose address names a job opens THAT job or none. It never falls back to whichever
+      // job was last active in this browser - that would silently put this tab on another job.
+      if (urlJobKey) {
+        if (!explicitLoadFailed) setPersistenceStatus({ state: "error", label: "The job in this link is not saved in this browser. Open it from its job file or the job list.", detail: "No other job was opened in its place." });
+        setRecentJobs(loadRecentEstimateJobs());
+        setRecentEstimateFiles(loadRecentEstimateFiles());
+        setHydrated(true);
+        return;
+      }
       const fallbackRecovered = await loadLastActiveOrRecentStoredJob().catch(() => null);
       if (cancelled || workbookLoadOperationRef.current !== startupLoadOperationId) return;
       if (fallbackRecovered?.workbook && workbookHasExplicitJobIdentity(fallbackRecovered.workbook)) {
@@ -463,14 +491,17 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     }
     autosaveTimerRef.current = window.setTimeout(() => {
       if (!workbookHasExplicitJobIdentity(workbook)) return;
-      if (autosaveInFlightRef.current) return;
+      if (autosaveInFlightRef.current || clientSelectionsSaveRunningRef.current) return;
       const signature = contentSignature;
       if (!signature || signature === lastAutosaveSignatureRef.current) return;
       const saveDraftWhenIdle = () => {
         if (isProtectedRecoveryRecord({ key: workbookJobKey(workbookRef.current) })) return;
-        autosaveInFlightRef.current = true;
         const snapshot = workbookRef.current;
-        const savingSignature = snapshot === workbook ? signature : jobContentSignature(snapshot);
+        const savingSignature = jobContentSignature(snapshot);
+        // An explicit save may have completed while the idle callback waited.
+        if (autosaveInFlightRef.current || clientSelectionsSaveRunningRef.current || savingSignature === lastAutosaveSignatureRef.current) return;
+        autosaveInFlightRef.current = true;
+        window.__memoryProbe?.trace?.("autosave", Object.fromEntries(Object.entries(snapshot).map(([key, value]) => [key, jobDirtySignature({ value })])));
         // Use the same stored shape as Save Job. A manual/recovery save adds
         // template metadata to disk without replacing live edits; saving the
         // raw live workbook afterwards fails complete-record validation.
@@ -493,6 +524,7 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
           .catch((error) => setPersistenceStatus({ state: "error", label: `Save failed: ${error.message}`, detail: "Previous successful revision retained." }))
           .finally(() => {
             autosaveInFlightRef.current = false;
+            if (workbookRef.current !== snapshot) setAutosaveCompletion(value => value + 1);
           });
       };
       if (typeof window.requestIdleCallback === "function") {
@@ -508,7 +540,7 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
         autosaveIdleRef.current = null;
       }
     };
-  }, [workbook, contentSignature, previewMode, hydrated]);
+  }, [workbook, contentSignature, previewMode, hydrated, autosaveCompletion]);
 
   function setPage(page) {
     if (!ESTIMATE_BUILDER_PAGE_KEYS.has(page)) return;
@@ -2475,11 +2507,18 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
   // older book could be the one left in the job. A save still waiting when a newer one arrives
   // is superseded by it: every book is the complete selection state, so only the newest matters.
   function updateClientSelectionsBook(bookForSave = {}, options = {}) {
-    return new Promise((resolve, reject) => {
-      const waiters = [...(clientSelectionsSavePendingRef.current?.waiters || []), { resolve, reject }];
-      clientSelectionsSavePendingRef.current = { bookForSave, options, waiters };
-      drainClientSelectionsSaves();
-    });
+    const pending = clientSelectionsSavePendingRef.current;
+    if (pending) {
+      pending.bookForSave = bookForSave;
+      pending.options = options;
+      return pending.promise;
+    }
+    let resolve, reject;
+    const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
+    clientSelectionsSavePendingRef.current = { bookForSave, options, promise, resolve, reject };
+    if (typeof window !== 'undefined') window.__memoryProbe?.selectionQueue?.(Number(clientSelectionsSaveRunningRef.current), 1);
+    drainClientSelectionsSaves();
+    return promise;
   }
 
   async function drainClientSelectionsSaves() {
@@ -2487,17 +2526,20 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     clientSelectionsSaveRunningRef.current = true;
     try {
       while (clientSelectionsSavePendingRef.current) {
-        const { bookForSave, options, waiters } = clientSelectionsSavePendingRef.current;
+        const { bookForSave, options, resolve, reject } = clientSelectionsSavePendingRef.current;
         clientSelectionsSavePendingRef.current = null;
+        if (typeof window !== 'undefined') window.__memoryProbe?.selectionQueue?.(1, 0);
         try {
           const result = await saveClientSelectionsBookRef.current(bookForSave, options);
-          waiters.forEach((waiter) => waiter.resolve(result));
+          resolve(result);
         } catch (error) {
-          waiters.forEach((waiter) => waiter.reject(error));
+          reject(error);
         }
       }
     } finally {
       clientSelectionsSaveRunningRef.current = false;
+      if (typeof window !== 'undefined') window.__memoryProbe?.selectionQueue?.(0, 0);
+      setAutosaveCompletion(value => value + 1);
     }
   }
 
@@ -2574,14 +2616,14 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
       // Paint colours are a specification on the estimate's own painting lines: no rows, quantities or rates change.
       const withColours = linkInternalPaintColoursToQuotation(applyCabinetryRequirementsToQuotation(preserveQuoteQuantityOwnership(nextWorkbook, connected), owner), nextBook);
       // Electrical point quantities: one quotation row per room and point (stable ids), priced from the estimate's own electrical rates.
-      return prepareWorkbookForJobSave(connectElectricalScheduleToQuotation(withColours, nextBook), savedAt);
+      const withElectrical = connectElectricalScheduleToQuotation(withColours, nextBook);
+      return prepareWorkbookForJobSave(connectAllocatedSelectionsToQuotation(withElectrical, nextBook, { servicesOnly: true }), savedAt);
     };
     // Taken after the network wait, immediately before the write: the job as it is now.
     const savedFrom = workbookRef.current;
     const draft = withSelections(savedFrom);
     const jobKey = workbookJobKey(draft);
-    await saveStoredJob(draft, savedAt);
-    const verification = await loadStoredJob(jobKey).catch(() => null);
+    const verification = await saveStoredJob(draft, savedAt);
     const verifiedBook = verification?.workbook?.clientSelectionsBook;
     const verifiedRevision = verifiedBook?.metadata?.selectionRevision;
     const verifiedProjectId = workbookAttachedProjectId(verification?.workbook || {});
@@ -2595,6 +2637,13 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     if (workbookJobKey(live) === jobKey) {
       const applied = normalizeWorkbook(live === savedFrom ? draft : withSelections(live));
       workbookRef.current = applied;
+      // The written draft is the clean baseline. Load-time normalization may
+      // temporarily rebuild quotation rows before reconciliation settles them.
+      // Marking that intermediate display shape clean schedules a second save.
+      const appliedSignature = jobContentSignature(draft);
+      window.__memoryProbe?.trace?.("explicit-save", Object.fromEntries(Object.entries(applied).map(([key, value]) => [key, jobDirtySignature({ value })])));
+      lastAutosaveSignatureRef.current = appliedSignature;
+      setSavedContentSignature(appliedSignature);
       setWorkbook((current) => {
         if (current === live) return applied;
         if (workbookJobKey(current) !== jobKey) return current;
@@ -2704,7 +2753,10 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     applySectionCsvImport,
     restoreSectionBackup,
     addQuoteLine,
-    addCabinetryCatalogueItem: importKey => updateWorkbookState(current => addCabinetryCatalogueItem(current, importKey, browserWorkspaceId())),
+    // Review-panel actions. Each ends in the one cabinetry engine, so the quote follows at once.
+    restoreCabinetryRow: importKey => updateWorkbookState(current => applyCabinetryRequirementsToQuotation(addCabinetryCatalogueItem(current, importKey, browserWorkspaceId()), current.workspaceId || browserWorkspaceId())),
+    classifyCabinetryLine: (componentId, cabinetTypeId) => updateWorkbookState(current => applyCabinetryRequirementsToQuotation(classifyLegacyCabinetLine(current, componentId, cabinetTypeId), current.workspaceId || browserWorkspaceId())),
+    returnCabinetryRowToAutomatic: importKey => updateWorkbookState(current => returnCabinetryRowToAutomatic(current, importKey, current.workspaceId || browserWorkspaceId())),
     setCabinetryRequirements: items => updateWorkbookState(current => applyCabinetryRequirementsToQuotation(setCabinetryRequirements(current, items), current.workspaceId || browserWorkspaceId())),
     duplicateQuoteLine,
     moveQuoteLine,
@@ -7346,8 +7398,11 @@ function resolveLastActiveWorkbookPage(workbook = {}) {
 function loadExplicitActiveJobSessionKey() {
   if (typeof window === "undefined") return "";
   try {
+    // The tab's URL names its job. The stored pointers are only a hint for a tab with no jobId;
+    // another tab opening another job must never change which job this tab is on.
     return String(
-      builderSessionStorage.getItem(EXPLICIT_ACTIVE_JOB_SESSION_KEY)
+      jobKeyFromLocation()
+        || builderSessionStorage.getItem(EXPLICIT_ACTIVE_JOB_SESSION_KEY)
         || builderLocalStorage.getItem(EXPLICIT_ACTIVE_JOB_SESSION_KEY)
         || ""
     ).trim();
@@ -7360,6 +7415,7 @@ function saveExplicitActiveJobSessionKey(key = "") {
   if (typeof window === "undefined") return;
   try {
     const safeKey = String(key || "").trim();
+    writeJobToLocation(safeKey);
     if (safeKey) {
       builderSessionStorage.setItem(EXPLICIT_ACTIVE_JOB_SESSION_KEY, safeKey);
       builderLocalStorage.setItem(EXPLICIT_ACTIVE_JOB_SESSION_KEY, safeKey);
@@ -7428,16 +7484,34 @@ async function saveStoredJob(workbook, savedAt = new Date().toISOString(), optio
   // navigator.locks.request(`estimate-builder-save:${key}`, ...) - wrapping this
   // call in another lock of the *same name* self-deadlocks every save: the outer
   // lock is held while the inner request waits forever for that same name to free.
-  return persistCompleteJob({ openDatabase: openWorkspaceDatabase, storeName: JOB_STORE_NAME, key, workbook: savedWorkbook,
+  // The save names its own job (key) and the revision this tab loaded: a job another tab or user
+  // has saved since is not overwritten (JobConflictError), and this tab's base moves on only
+  // after its own save lands.
+  const record = await persistCompleteJob({ openDatabase: openWorkspaceDatabase, storeName: JOB_STORE_NAME, key, workbook: savedWorkbook,
     name: workbookJobName(savedWorkbook), savedAt, externalize: externalizeTakeoffPlanPages,
-    activePointer: createActiveJobPointer, initializeRecovery: options.initializeRecovery === true, normalizeRecovery: normalizeWorkbook });
+    activePointer: createActiveJobPointer, initializeRecovery: options.initializeRecovery === true, normalizeRecovery: normalizeWorkbook,
+    baseRevision: knownJobRevision(key), writer: { tabId: currentTabId(), workspaceId: storageWorkspaceId || "" }, force: options.overwriteNewer === true });
+  rememberJobRevision(key, record?.revision);
+  // SHARED STORAGE (Storage Settings): the same save is committed to the builder's own job server
+  // under this job's id. Local Only mode does nothing here. The local save above has already
+  // succeeded, so the work is never lost; a commit the server refuses because another user saved
+  // first surfaces as a JobConflictError and overwrites nothing of theirs.
+  if (options.skipSharedStorage !== true) await commitJobToSharedStorage(key, savedWorkbook, { name: workbookJobName(savedWorkbook) });
+  return record;
+}
+
+// A job fetched from shared storage (Storage Settings > Open), stored on this computer so the
+// application can open it by its id. It is the shared revision itself, so it is not sent back.
+export async function storeSharedJobLocally(workbook) {
+  const record = await saveStoredJob(workbook, new Date().toISOString(), { overwriteNewer: true, skipSharedStorage: true });
+  return { key: record.key, jobId: record.jobId };
 }
 
 async function saveVerifiedStoredJob(workbook, options = {}) {
   const savedAt = options.savedAt || new Date().toISOString();
   const record = await saveStoredJob(workbook, savedAt, options);
   return { ok: true, key: record.key, jobId: record.jobId, revision: record.revision,
-    checksum: record.checksum, savedAt, payloadBytes: jsonByteLength(record.workbook),
+    checksum: record.checksum, savedAt: record.savedAt || savedAt, payloadBytes: jobJsonByteLength(record.workbook),
     quotationRows: countQuotationRows(record.workbook.quotation), source: options.source || "manual" };
 }
 
@@ -7623,6 +7697,8 @@ async function loadStoredJobUnlocked(key = "", { hydrateTakeoff = true } = {}) {
       try {
         // Reading a saved record must never initialize or overwrite a working job.
         let record = request.result || await loadLatestStoredJobBackup(key);
+        // What this tab has now seen of the job: the base its next save is checked against.
+        if (request.result?.type === "job") rememberJobRevision(key, request.result.revision);
         // Adopt an existing legacy record's explicit storage identity once;
         // renaming that job must never mint a new identity on a later open.
         if (record?.workbook && !record.workbook.jobId && String(record.key || key).startsWith("job:")) {

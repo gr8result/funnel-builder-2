@@ -1273,7 +1273,13 @@ export function createTakeoffSchedule({
   return {
     generatedAt: new Date().toISOString(),
     aiAnalysis,
-    measurementRecords: createMeasurementRecords({ completedFloorplans, completedWallRuns, placedOpenings, completedAreas, completedEaves, completedMeasurements, completedPillars, pixelsPerMm }),
+    measurementRecords: [...createMeasurementRecords({ completedFloorplans, completedWallRuns, placedOpenings, completedAreas, completedEaves, completedMeasurements, completedPillars, pixelsPerMm }),
+      ...(aiAnalysis?.rooms || []).filter(room => (room.actions || []).includes('Floor Tiling')).map(room => ({
+        id: `${room.id}:floor-tiling`, roomId: room.id, page: room.page, level: room.level,
+        kind: 'floorFinish', category: 'Tiles', label: `${room.name} floor tiling`,
+        quantity: room.reviewRequired ? null : room.areaM2, unit: 'm2', source: room.source,
+        nodes: room.polygon, pixelsPerMm: room.pixelsPerMm,
+      }))],
     jobSetupRows,
     sheetLevels: { ...sheetLevels },
     project: {
@@ -1777,6 +1783,7 @@ report(floorplans.filter((item) => !['Footprint', 'Living'].includes(item.catego
     diagnostics: review.diagnostics,
     projectName: schedule.project?.projectName || '', clientName: schedule.project?.clientName || '', siteAddress: schedule.project?.siteAddress || '',
     planFilename: schedule.project?.planFilename || '',
+    roomPolygons: schedule.aiAnalysis?.rooms || [],
     floorAreas: schedule.projectTotals?.floorAreas || [], roomList: schedule.projectTotals?.rooms || [],
     basicProjectMeasurements: flattenScheduleRows(schedule, 'projectTotals'),
     schedule, sheetLevels, dataInputFields: fields, cavitySliderSchedule, pillarSchedule,

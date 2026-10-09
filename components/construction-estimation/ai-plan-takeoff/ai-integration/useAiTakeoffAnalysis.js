@@ -1,3 +1,5 @@
+import { readRoomRaster } from './roomBoundaryVision.js';
+import { detectRoomBoundary, measureRoom } from './roomGeometry.js';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { fingerprintTakeoffDocument, fingerprintTakeoffPage } from './documentIdentity.js';
 import { prepareAnalysisPage, prepareGeometryReviewImage, restoreAnalysisCoordinates } from './analysisPages.js';
@@ -89,10 +91,12 @@ export function useAiTakeoffAnalysis(options) {
     pending.current = null;
     setScaleProposal(null);
     setStage('idle');
+    setRoomsState({ busy: false, error: false, message: '' });
     setMessage('Analysis cancelled. Existing takeoff objects were preserved.');
   }, []);
 
   const restoreReport = useCallback((saved = null, savedInspections = null, savedCalibrations = null) => {
+    setRoomsState({ busy: false, error: false, message: '' });
     calibrationsRef.current = sanitizeCalibrations(savedCalibrations);
     setSheetCalibrations(calibrationsRef.current);
     controller.current?.abort();
@@ -108,9 +112,8 @@ export function useAiTakeoffAnalysis(options) {
   }, []);
 
   // ---- Rooms schedule ----------------------------------------------------------------------
-  // Reads only the room names lettered on each floor-plan sheet. Nothing is traced or measured and
-  // nothing is added to the canvas, so it is safe on a takeoff that was drawn by hand. One request
-  // per floor-plan sheet; the result replaces what was previously read from those sheets.
+  // Detect semantic room boundaries, refine against raster wall evidence, and preserve
+  // confirmed corrections. Existing wall/opening objects provide additional geometry evidence.
   const [roomsState, setRoomsState] = useState({ busy: false, message: '', error: false });
   const reportRef = useRef(null);
   reportRef.current = report;
@@ -120,32 +123,44 @@ export function useAiTakeoffAnalysis(options) {
     if (current.readOnly || !current.jobId || !current.takeoffId || !current.planPages.length) {
       setRoomsState({ busy: false, error: true, message: 'Open an editable job and upload its construction plan first.' }); return;
     }
-    const sheets = floorPlanSheets(current.sheetLevels, current.planPages);
-    if (!sheets.length) {
-      setRoomsState({ busy: false, error: true, message: 'Tell the takeoff which sheet is which level first ("Sheet 2 is which level?"). Rooms are read from the floor-plan sheets.' }); return;
-    }
+    let sheets = floorPlanSheets(current.sheetLevels, current.planPages);
     const abort = new AbortController();
     controller.current = abort;
     const work = { jobId: current.jobId, takeoffId: current.takeoffId, planPages: current.planPages, generation: current.lifecycle.hydrationVersion, signal: abort.signal };
     pending.current = work;
-    setRoomsState({ busy: true, error: false, message: 'Reading room names from the plans…' });
+    setRoomsState({ busy: true, error: false, message: 'Detecting room boundaries from the plans…' });
     try {
       const documentHash = await fingerprintTakeoffDocument(work.planPages);
+      if (!sheets.length) {
+        for (const planPage of work.planPages) {
+          assertCurrent(work);
+          setRoomsState({ busy: true, error: false, message: `Identifying floor plans and levels — sheet ${planPage.pageNumber}…` });
+          const prepared = await prepareAnalysisPage(planPage);
+          const inspected = await requestTakeoffAnalysis({ action: 'inspect', jobId: work.jobId, takeoffId: work.takeoffId, documentHash, runId: ROOMS_RUN_ID, page: prepared }, work.signal);
+          assertCurrent(work);
+          if (['floor_plan','floor-plan'].includes(inspected.analysis.drawingType)) sheets.push({ page: planPage.pageNumber, level: inspected.analysis.level || 'Unassigned' });
+        }
+        if (!sheets.length) throw new Error('No floor-plan sheets could be identified. Assign the floor-plan sheets to levels and try again.');
+        latest.current.onDetectedLevels?.(sheets);
+      }
       const readings = [];
       let model = '';
       for (const sheet of sheets) {
         assertCurrent(work);
-        setRoomsState({ busy: true, error: false, message: `Reading room names — sheet ${sheet.page} (${sheet.level})…` });
+        setRoomsState({ busy: true, error: false, message: `Detecting room boundaries — sheet ${sheet.page} (${sheet.level})…` });
         const prepared = await prepareAnalysisPage(work.planPages.find((page) => page.pageNumber === sheet.page));
         const result = await requestTakeoffAnalysis({ action: 'measure', measurementScope: ROOMS_SCOPE, jobId: work.jobId, takeoffId: work.takeoffId, documentHash, runId: ROOMS_RUN_ID,
           page: { ...prepared, drawingType: 'floor_plan', level: sheet.level }, pixelsPerMm: latest.current.pixelsPerMm > 0 ? latest.current.pixelsPerMm : 1 }, work.signal);
         assertCurrent(work);
         model = result.model || model;
-        readings.push({ page: sheet.page, level: sheet.level, rooms: result.analysis.rooms || [] });
+        const raster = await readRoomRaster(prepared.imageDataUrl);
+        assertCurrent(work);
+        readings.push({ page: sheet.page, level: sheet.level, rooms: (result.analysis.rooms || []).map((room, index) => detectRoomBoundary(room, { page: sheet.page, level: sheet.level, width: prepared.logicalWidth, height: prepared.logicalHeight, pixelsPerMm: calibrationsRef.current[sheet.page]?.pixelsPerMm || latest.current.pixelsPerMm, walls: latest.current.completedWallRuns, openings: latest.current.placedOpenings, raster }, index)) });
       }
       const rooms = mergeRoomReadings(reportRef.current?.rooms, readings);
       const next = reportWithRooms(reportRef.current, rooms, { readAt: new Date().toISOString(), model, sheets: sheets.map((sheet) => sheet.page) });
       setReport(next);
+      latest.current.markCompleted?.("room-boundaries-detected");
       pending.current = null;
       const found = readings.reduce((count, reading) => count + reading.rooms.length, 0);
       setRoomsState({ busy: false, error: !found, message: found ? `${found} room${found === 1 ? '' : 's'} read from ${sheets.length} floor-plan sheet${sheets.length === 1 ? '' : 's'}. Check the list and correct anything that is wrong.`
@@ -163,6 +178,19 @@ export function useAiTakeoffAnalysis(options) {
     setReport((current) => reportWithRooms(current, addManualRoom(current?.rooms, name, level, page)));
   };
   const removeRoom = (name) => setReport((current) => (current ? reportWithRooms(current, removeScheduleRoom(current.rooms, name)) : current));
+
+  const updateRooms = useCallback((ids, patch) => {
+    if (latest.current.readOnly) return;
+    setReport(current => reportWithRooms(current, (current?.rooms || []).map(room => ids.includes(room.id)
+      ? measureRoom({ ...room, ...patch, ...(patch.polygon ? { boundaryEdited: true, confirmed: false, boundaryClosed: false } : {}) }, calibrationsRef.current[room.page]?.pixelsPerMm || latest.current.pixelsPerMm) : room)));
+    latest.current.markCompleted?.('room-boundary-updated');
+  }, []);
+  useEffect(() => {
+    setReport(current => {
+      if (!current?.rooms?.some(room => room.polygon && room.pixelsPerMm !== (sheetCalibrations[room.page]?.pixelsPerMm || options.pixelsPerMm || null))) return current;
+      return reportWithRooms(current, current.rooms.map(room => room.polygon ? measureRoom(room, sheetCalibrations[room.page]?.pixelsPerMm || options.pixelsPerMm) : room));
+    });
+  }, [options.pixelsPerMm, sheetCalibrations]);
 
   useEffect(() => () => controller.current?.abort(), []);
 
@@ -329,6 +357,17 @@ export function useAiTakeoffAnalysis(options) {
         inspections: work.inspections, scale: work.scale, requests: work.requests,
         completedAt: new Date().toISOString(), added: result.added, status: result.status,
       };
+      completed.rooms = reportRef.current?.rooms || completed.rooms;
+      for (const response of responses) {
+        const pageNumber = response.page || response.pageNumber;
+        const planPage = work.planPages.find(page => page.pageNumber === pageNumber);
+        if (!planPage || !response.rooms?.length) continue;
+        const raster = await readRoomRaster(planPage.dataUrl);
+        assertCurrent(work, true);
+        const detected = response.rooms.map((room, index) => detectRoomBoundary(room, { page: pageNumber, level: response.level, width: planPage.logicalWidth, height: planPage.logicalHeight, pixelsPerMm: calibrationsRef.current[pageNumber]?.pixelsPerMm || work.pixelsPerMm, walls: latest.current.completedWallRuns, openings: latest.current.placedOpenings, raster }, index));
+        completed.rooms = mergeRoomReadings(completed.rooms, [{ page: pageNumber, level: response.level, rooms: detected }]);
+      }
+      completed.counts = { ...completed.counts, rooms: completed.rooms.length, roomBoundaries: completed.rooms.filter(room => room.polygon?.length >= 3).length, roomsForReview: completed.rooms.filter(room => room.reviewRequired).length };
       latest.current.onDetectedLevels?.(analysis.pages);
       setReport(completed);
       latest.current.markCompleted('ai-takeoff-analysis');
@@ -480,5 +519,5 @@ export function useAiTakeoffAnalysis(options) {
     await measure(work);
   };
 
-  return { report, inspections, sheetCalibrations, recordSheetCalibration, resolveDecision, restoreReport, stage, message, scaleProposal, rooms: { ...roomsState, read: readRooms, add: addRoom, remove: removeRoom }, run, confirmScale, cancel, useManualCalibration, continueManualCalibration, hasCalibration: options.pixelsPerMm > 0 };
+  return { report, inspections, sheetCalibrations, recordSheetCalibration, resolveDecision, restoreReport, stage, message, scaleProposal, rooms: { ...roomsState, read: readRooms, add: addRoom, remove: removeRoom, update: updateRooms }, run, confirmScale, cancel, useManualCalibration, continueManualCalibration, hasCalibration: options.pixelsPerMm > 0 };
 }

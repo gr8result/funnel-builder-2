@@ -4,7 +4,6 @@ import ClientSelectionsErrorBoundary from './ClientSelectionsErrorBoundary.jsx';
 import { safeSelectionNavigate } from "../../lib/navigation/selectionNavigation.js";
 import { masterJobId, linkTakeoffToMasterJob } from "../../lib/construction-estimation/masterJob.js";
 import EntryDoorFurnitureSchedule from './EntryDoorFurnitureSchedule.jsx';
-import CabinetryCataloguePicker from './CabinetryCataloguePicker.jsx';
 import CabinetryReconciliation from './CabinetryReconciliation.jsx';
 import { useQuotationSubgroups } from './useQuotationSubgroups.js';
 import { buildQuotationSubgroups, visibleSubgroupRows } from '../../lib/construction-estimation/quotationSubgroups.js';
@@ -18,6 +17,7 @@ import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState } fro
 import { createPortal } from "react-dom";
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import StorageStatusLink from "./StorageStatusLink.jsx";
 import { useRouter } from "next/router";
 import { DndContext, useDraggable } from "@dnd-kit/core";
 import {
@@ -1413,6 +1413,7 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
                         ] : []),
                       ]}
                     />
+                    <StorageStatusLink jobKey={sheet.workbook?.jobId || sheet.workbook?.registeredJobId || sheet.workbook?.projectId ? `job:${sheet.workbook.jobId || sheet.workbook.registeredJobId || sheet.workbook.projectId}` : ""} />
                     <button type="button" style={styles.bannerBackButton} onClick={() => navigateWorkspacePage("projectDashboard")}>Back to Project Workspace</button>
                   </div>
                   {showDeveloperControls ? (
@@ -3533,8 +3534,7 @@ function QuotationSheet({ sheet, onFormulaTarget }) {
         </div>
       )}
       <QuotationNotifications sheet={sheet} styles={styles} />
-      {!readonly && <CabinetryCataloguePicker workspaceId={sheet.workbook.workspaceId} onAdd={sheet.addCabinetryCatalogueItem} />}
-      <CabinetryReconciliation workbook={sheet.workbook} readonly={readonly} onChange={sheet.setCabinetryRequirements} />
+      <CabinetryReconciliation workbook={sheet.workbook} readonly={readonly} onChange={sheet.setCabinetryRequirements} onClassify={sheet.classifyCabinetryLine} onReturnToAutomatic={sheet.returnCabinetryRowToAutomatic} onRestoreRow={sheet.restoreCabinetryRow} />
       {orderManagerOpen && (
         <div style={styles.orderPanel}>
           <div style={styles.orderPanelHeader}>

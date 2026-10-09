@@ -214,4 +214,19 @@ assert.equal(output.analysis.benchmarks.length, 4, 'an area table printed on sev
 assert.ok(output.analysis.benchmarks.every((item) => Math.abs(item.difference) < 1e-9), 'printed sqm areas are checked against the takeoff geometry, the estimator own outlines included');
 assert.ok(!output.analysis.review.some((item) => item.code === 'benchmark-discrepancy'));
 
+// A size code repeated as an "explicit" width is a misread code, not a second, conflicting size.
+output = normalizePlanAnalysis({ context, runId: 'run', modelVersion: 'model', responses: [{ ...response, openings: [opening('stacker', { type: 'door', openingClass: 'Large Glazed/Stacker/Sliding Door', sizeCode: '2130 STACKER DOOR', explicitWidthMm: 2130 })] }] });
+const stacker = output.batch.detections.find((item) => item.kind === 'opening');
+assert.deepEqual([stacker.widthMm, stacker.heightMm], [3000, 2100]);
+assert.ok(!output.analysis.review.some((item) => item.code === 'dimension-conflict'));
+// A short stub along an outdoor area's open side is not added as wall and is not a review item.
+const outdoor = (id, type, nodes) => ({ detectionId: id, type, label: type, nodes, ...observed });
+const edges = (length) => normalizePlanAnalysis({ context, runId: 'run', modelVersion: 'model', responses: [{ ...response, openings: [], eaves: [], rooms: [],
+  walls: [wall('edge', 'exterior', [{ x: 0.1, y: 0.1 }, { x: 0.1 + length, y: 0.1 }])],
+  buildingAreas: [outdoor('fp', 'Footprint', square(0.1, 0.1, 0.8, 0.8)), outdoor('alf', 'Alfresco', square(0.1, 0.1, 0.5, 0.3))] }] });
+output = edges(0.1);
+assert.deepEqual([output.batch.detections.filter((item) => item.kind === 'wall').length, output.analysis.review.find((item) => /open side/.test(item.message)).audience], [0, 'diagnostic']);
+output = edges(0.35);
+assert.equal(output.analysis.review.find((item) => /open side/.test(item.message)).audience, 'decision', 'a real length of open edge is still put to the builder once');
+
 console.log('AI Takeoff review and evidence: cross-sheet evidence, Job Setup defaults, authoritative calibration, automatic resolution, de-duplication, builder review and floor areas passed.');
