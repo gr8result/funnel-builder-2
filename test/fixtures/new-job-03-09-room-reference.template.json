@@ -25,6 +25,18 @@
   ],
   "rooms": [
     {
+      "id": "manual-ref-page-3-bedroom-2",
+      "name": "Bedroom 2",
+      "level": "Second Level",
+      "page": 3,
+      "polygon": [
+        { "x": 203.1, "y": 353.1 },
+        { "x": 267.9, "y": 353.1 },
+        { "x": 267.9, "y": 424.3 },
+        { "x": 203.1, "y": 424.3 }
+      ]
+    },
+    {
       "id": "manual-ref-page-3-bedroom-3",
       "name": "Bedroom 3",
       "level": "Second Level",
