@@ -1,4 +1,6 @@
 import { browserTenantKey, builderLocalStorage, builderSessionStorage } from '../../lib/builders/browserTenantStorage.js';
+import { chooseJobFileAction } from "./jobFileConflictDialog.js";
+import { JOB_FILE_CHOICES } from "../../lib/construction-estimation/jobFileImportDecision.js";
 import SelectionBaselineControl from './SelectionBaselineControl.jsx';
 import ClientSelectionsErrorBoundary from './ClientSelectionsErrorBoundary.jsx';
 import { safeSelectionNavigate } from "../../lib/navigation/selectionNavigation.js";
@@ -588,7 +590,13 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
           localFileOnly: existingMeta.localFileOnly ?? !Boolean(workbookSource.commercialProjectId || workbookSource.projectId || existingMeta.workspaceId),
         },
       };
-      const loadResult = await sheet.loadJobFileData({ ...job, workbook: nextWorkbook }, fileName || "job.gr8job", options);
+      let loadResult = await sheet.loadJobFileData({ ...job, workbook: nextWorkbook }, fileName || "job.gr8job", options);
+      if (loadResult?.needsDecision) {
+        // The stored copy of this job is newer than the file: the user decides, nothing is assumed.
+        const choice = await chooseJobFileAction(loadResult, fileName || "job.gr8job");
+        if (choice === JOB_FILE_CHOICES.CANCEL) throw new Error("The job file was not opened. The stored job is unchanged.");
+        loadResult = await sheet.loadJobFileData({ ...job, workbook: nextWorkbook }, fileName || "job.gr8job", { ...options, onNewerStoredJob: choice });
+      }
       if (loadResult?.ok === false) {
         throw new Error(loadResult.message || "The selected job file could not be hydrated.");
       }

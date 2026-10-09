@@ -39,6 +39,7 @@ import { normaliseEstimateInclusions } from "../../lib/builders/estimateInclusio
 import { normaliseStandardInclusions } from "../../lib/builders/standardInclusions.js";
 import { hasRecoverablePlanPages, verifyAiPlanTakeoffSavedJob } from "../../components/construction-estimation/ai-plan-takeoff/jobPersistence.js";
 import { evaluateTakeoffOverwrite } from "../../lib/construction-estimation/takeoffOverwriteGuard.js";
+import { JOB_FILE_CHOICES, asSeparateJob, jobFileReplacesNewerStoredJob } from "../../lib/construction-estimation/jobFileImportDecision.js";
 import { applyJobSetupImport } from "../../lib/construction-estimation/jobSetupTakeoffImport.js";
 import { updateQuoteQuantityField } from "../../lib/construction-estimation/quoteQuantityFormula.js";
 import { supabase } from "../../utils/supabase-client";
@@ -2398,7 +2399,7 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
         ? recoveredWorkingCopyProjectId(parsed, workbookPayload, protectedProjectId)
         : "";
       const effectiveProjectId = recoveredProjectId || parsedIdentity.projectId;
-    const workbookFromFile = {
+    let workbookFromFile = {
       ...(workbookPayload || {}),
         jobId: recoveredProjectId || workbookPayload?.jobId || parsed?.jobId || effectiveProjectId || crypto.randomUUID(),
         projectId: effectiveProjectId || workbookPayload?.projectId || "",
@@ -2448,6 +2449,16 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
       if (workbookLoadOperationRef.current === loadOperationId) autosavePausedRef.current = false;
       throw new Error("estimate-job.json is blocked and cannot be opened.");
     }
+    // A file older than the copy of this job already stored here never replaces it on its own.
+    // Without a decision nothing is written and the caller is told what the choices are.
+    const storedForFile = await loadStoredJob(workbookJobKey(workbookFromFile)).catch(() => null);
+    const replacement = jobFileReplacesNewerStoredJob(storedForFile, workbookFromFile, parsed?.savedAt || parsed?.lastModified || workbookFromFile?.savedAt || "");
+    const fileChoice = replacement ? options?.onNewerStoredJob : "";
+    if (replacement && ![JOB_FILE_CHOICES.SEPARATE, JOB_FILE_CHOICES.RESTORE].includes(fileChoice)) {
+      if (workbookLoadOperationRef.current === loadOperationId) autosavePausedRef.current = false;
+      return { ok: false, needsDecision: true, ...replacement };
+    }
+    if (fileChoice === JOB_FILE_CHOICES.SEPARATE) workbookFromFile = asSeparateJob(workbookFromFile, `copy-${crypto.randomUUID()}`);
     const savedAt = new Date().toISOString();
     const preservedJobPackage = collectSavedJobPackageSections(workbookFromFile);
     let nextWorkbook = migrateWorkbookToMasterTemplate({
@@ -2463,9 +2474,9 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     const draft = prepareWorkbookForJobSave(nextWorkbook, savedAt);
     await saveJobBackup(workbookFromFile, savedAt).catch(() => {});
     saveLocalDraftMetadata(draft, savedAt);
-    // The file the user chose to open is the job, even when it is older than the stored copy
-    // (which stays available as the previous revision and the backup written just above).
-    await saveVerifiedStoredJob(draft, { savedAt, allowOlderTakeoff: true });
+    // Only an explicit "Restore this revision" may put an older takeoff back; the stored job it
+    // replaces is kept as the previous revision by the save itself.
+    await saveVerifiedStoredJob(draft, { savedAt, allowOlderTakeoff: fileChoice === JOB_FILE_CHOICES.RESTORE });
     saveExplicitActiveJobSessionKey(workbookJobKey(draft));
     const normalisedWorkbook = normalizeWorkbook(nextWorkbook);
     if (workbookLoadOperationRef.current !== loadOperationId) {
