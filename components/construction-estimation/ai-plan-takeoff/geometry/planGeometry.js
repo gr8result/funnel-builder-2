@@ -15,7 +15,7 @@ export const DEFAULT_GEOMETRY_OPTIONS = {
   inkThreshold: 630,          // r+g+b below this is linework
   minWallMm: 60, maxWallMm: 360,
   faceRunMm: 450,             // a face this long establishes a wall
-  nibRunMm: 110,              // shorter faces only extend an established wall
+  nibRunMm: 200,              // shorter faces only extend an established wall; tuned on the recovered plans (110 kept ~8 lm of false wall)
   singleFaceReviewRunMm: 2500,
   singleFaceAnchorReachMm: 220,
   singleFaceJunctionReachMm: 350,
