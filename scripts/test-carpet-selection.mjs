@@ -71,10 +71,16 @@ const connected = connectFlooringSelectionsToQuotation(wb, book, { productById: 
 const connectedAgain = connectFlooringSelectionsToQuotation(connected, book, { productById: byId });
 const selectedRows = connectedAgain.quotation.CARPETS.rows.filter((r) => r.source === "client-selections-flooring");
 assert.equal(selectedRows.length, 2); assert.equal(connectedAgain.procurement.items.length, connected.procurement.items.length);
-assert.equal(connectedAgain.quotation.CARPETS.rows[0].quantity, 0, "replaced allowance is not charged a second time");
+assert.equal(connectedAgain.quotation.CARPETS.rows[0].quantity, "62.7", "the estimate allowance row is never edited by the selection connector");
+assert.notEqual(connectedAgain.quotation.CARPETS.rows[0].quantityManualOverride, true, "no manufactured override");
 const calculated = calculateEstimateBuilderWorkbook(connectedAgain);
 const boq = quotationSectionsForFinalBoq(calculated.quotation).flatMap((s) => s.rows).filter((r) => r.source === "client-selections-flooring");
 assert.equal(boq.length, 2, "carpet reaches actual Project Estimate/BOQ calculation");
+const replacedAllowance = calculated.quotation.CARPETS.rows[0];
+assert.equal(replacedAllowance.selectionReplacement.status, "Replaced by Client Selection");
+assert.equal(replacedAllowance.cost, 0, "the replaced allowance is not charged in the calculated totals");
+assert.equal(quotationSectionsForFinalBoq(calculated.quotation).flatMap((s) => s.rows).some((r) => r.id === replacedAllowance.id), false, "the replaced allowance is not in the BOQ");
+assert.equal(replacedAllowance.quantity, "62.7", "the replaced allowance keeps its quantity");
 assert.equal(boq.find((r) => r.variantId === cloudy.variantId).qty, 50.3);
 assert.equal(boq.find((r) => r.variantId === cloudy.variantId).locationSchedule.length, 4);
 assert.equal(boq.find((r) => r.variantId === cloudy.variantId).sourceOfRate, "Retailer quote (allocated total)");

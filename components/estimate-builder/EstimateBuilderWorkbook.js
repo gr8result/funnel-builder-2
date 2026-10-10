@@ -15223,8 +15223,16 @@ function QuoteSelectionReferenceCell({ row, readonly, onChange, onFormulaFocus }
   const adjustment = quoteSelectionAdjustment(row);
   const formula = row.derivedQuantityFormula || "";
   const selection = quoteSelectionSpec(row);
+  const replacement = row.selectionReplacement;
   return (
     <div style={styles.selectionReferenceCell}>
+      {replacement && <div data-testid="selection-replacement-original"><strong>{replacement.status}</strong> · {replacement.replacementLabel}
+        <div>Original allowance kept: {replacement.allowanceQuantity == null ? 'no quantity recorded' : `${replacement.allowanceQuantity}`} × {replacement.allowanceRate == null ? 'no rate' : money(replacement.allowanceRate)}{replacement.allowanceCost == null ? '' : ` = ${money(replacement.allowanceCost)}`} (excluded from totals, BOQ and procurement)</div>
+        <div>Replacement ({replacement.replacementSection}): {replacement.replacementCost == null ? 'Pending price' : money(replacement.replacementCost)}{replacement.allowanceCost == null || replacement.replacementCost == null ? '' : ` · difference ${money(replacement.replacementCost - replacement.allowanceCost)} (not a variation until approved)`}</div>
+      </div>}
+      {Array.isArray(row.replacesRows) && row.replacesRows.length > 0 && <div data-testid="selection-replacement-selected"><strong>Replaces estimate allowance</strong>
+        {row.replacesRows.map((entry) => <div key={entry.rowId}>{entry.section}: {entry.item} · {entry.quantity == null ? 'no quantity' : entry.quantity} × {entry.rate == null ? 'no rate' : money(entry.rate)}</div>)}
+      </div>}
       {row.selectionSource && <details><summary>{row.selectionStatus || 'Selection'} · {row.activeProductName || row.activeProductId || 'Awaiting selection'}</summary>
         <div>Baseline: {row.baselineProductName || row.baselineProductId || 'Not recorded'} · {row.baselineUnitPrice == null ? 'Unpriced' : money(row.baselineUnitPrice)}</div>
         <div>Active: {row.activeProductName || row.activeProductId || 'None'} · {row.activeUnitPrice == null ? 'Unpriced' : money(row.activeUnitPrice)}</div>
