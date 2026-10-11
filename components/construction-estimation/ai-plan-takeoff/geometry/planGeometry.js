@@ -9,13 +9,15 @@ import { detectOpeningSymbolReviewCandidates } from './openingSymbolReview.js';
 const STANDARD_THICKNESSES = [70, 90, 110, 150, 200, 230, 250, 270, 300, 350];
 const nearest = (value, list) => list.reduce((best, item) => (Math.abs(item - value) < Math.abs(best - value) ? item : best));
 
-export const GEOMETRY_ENGINE_VERSION = 'plan-geometry-2';
+export const GEOMETRY_ENGINE_VERSION = 'plan-geometry-3';
 
 export const DEFAULT_GEOMETRY_OPTIONS = {
   inkThreshold: 630,          // r+g+b below this is linework
   minWallMm: 60, maxWallMm: 360,
   faceRunMm: 450,             // a face this long establishes a wall
-  nibRunMm: 200,              // shorter faces only extend an established wall; tuned on the recovered plans (110 kept ~8 lm of false wall)
+  nibRunMm: 200,              // wall fabric: shorter faces are lettering, symbols and joinery far more often than wall
+  doorLineReachMm: 100,       // wall-to-wall doors: the door's lines lie this close to where the opening was located
+  jambReturnRunMm: 110,       // openings: a return this short still counts when its faces line up with an established wall
   singleFaceReviewRunMm: 2500,
   singleFaceAnchorReachMm: 220,
   singleFaceJunctionReachMm: 350,
@@ -56,9 +58,30 @@ function longRuns(ink, width, height, minLen, vertical, crossTolerance = 0) {
   return out;
 }
 
+// Length of the straight ink run each ink pixel belongs to, along the scan direction.
+function runLengths(ink, width, height, vertical) {
+  const out = new Uint16Array(width * height);
+  const outer = vertical ? width : height, inner = vertical ? height : width;
+  const step = vertical ? width : 1;
+  for (let o = 0; o < outer; o += 1) {
+    const base = vertical ? o : o * width;
+    let start = -1;
+    for (let i = 0; i <= inner; i += 1) {
+      const on = i < inner && ink[base + i * step];
+      if (on && start < 0) start = i;
+      else if (!on && start >= 0) {
+        const length = Math.min(65535, i - start);
+        for (let j = start; j < i; j += 1) out[base + j * step] = length;
+        start = -1;
+      }
+    }
+  }
+  return out;
+}
+
 // Mark the band between two parallel faces. `vertical` = the wall runs vertically (faces are
 // vertical lines, scanned along each row). Value 2 where both faces are established, 1 for nibs.
-function wallBands(ink, strict, relaxed, width, height, vertical, tMin, tMax, maxLine) {
+function wallBands(ink, faceLength, strictLen, relaxedLen, width, height, vertical, tMin, tMax, maxLine) {
   const mask = new Uint8Array(width * height);
   const outer = vertical ? height : width, inner = vertical ? width : height;
   const step = vertical ? 1 : width;
@@ -80,24 +103,81 @@ function wallBands(ink, strict, relaxed, width, height, vertical, tMin, tMax, ma
       const distance = (a2 + b2) / 2 - (a1 + b1) / 2;
       if (distance < tMin || distance > tMax) continue;
       const p1 = base + a1 * step, p2 = base + a2 * step;
-      if (!relaxed[p1] || !relaxed[p2]) continue;
-      bands.push({ r, a1, b2, distance, level: strict[p1] && strict[p2] ? 2 : 1 });
+      const l1 = faceLength[p1], l2 = faceLength[p2];
+      if (l1 < relaxedLen || l2 < relaxedLen) continue;
+      bands.push({ r, a1, b2, distance, l1, l2, level: l1 >= strictLen && l2 >= strictLen ? 2 : 1 });
     }
     // Faces shared by a run of equally spaced bands are stair treads or shelving, not walls;
     // of two bands sharing a face that together exceed a wall, the thinner one is the wall.
+    // A wall with a window frame, joinery or a second leaf drawn in or against it also chains three
+    // bands, unequally spaced: there the wall is the one or two bands whose faces run furthest, and
+    // the stretch is marked (bit 4) as carrying a symbol, which is how windows are found.
     for (let i = 0; i < bands.length; i += 1) {
       let j = i;
       while (j + 1 < bands.length && bands[j + 1].r === bands[j].r + 2) j += 1;
       const chain = bands.slice(i, j + 1);
       const total = chain.reduce((sum, band) => sum + band.distance, 0);
       let keep = chain;
-      if (chain.length >= 3) keep = [];
-      else if (chain.length === 2 && total > tMax) keep = [chain[0].distance <= chain[1].distance ? chain[0] : chain[1]];
+      if (chain.length >= 3) {
+        const least = Math.min(...chain.map((band) => band.distance)), most = Math.max(...chain.map((band) => band.distance));
+        keep = [];
+        if (most - least > Math.max(2, least * 0.2)) {
+          let single = null, pair = null;
+          for (let s = 0; s < chain.length; s += 1) {
+            const own = (chain[s].l1 + chain[s].l2) / 2;
+            if (!single || own > single.score) single = { score: own, bands: [chain[s]] };
+            if (s + 1 < chain.length && chain[s].distance + chain[s + 1].distance <= tMax) {
+              const both = (chain[s].l1 + chain[s].l2 + chain[s + 1].l2) / 3;
+              if (!pair || both > pair.score) pair = { score: both, bands: [chain[s], chain[s + 1]] };
+            }
+          }
+          keep = (pair && pair.score >= single.score * 0.8 ? pair.bands : single.bands).map((band) => ({ ...band, level: band.level | 4 }));
+        }
+      } else if (chain.length === 2 && total > tMax) keep = [chain[0].distance <= chain[1].distance ? chain[0] : chain[1]];
       for (const band of keep) for (let k = band.a1; k <= band.b2; k += 1) mask[base + k * step] = band.level;
       i = j;
     }
   }
   return mask;
+}
+
+// How far the band extends either side of a pixel, across the wall: its two faces.
+function faceExtents(band, p, cross) {
+  let low = 0, high = 0;
+  while (low < 64 && band[p - (low + 1) * cross]) low += 1;
+  while (high < 64 && band[p + (high + 1) * cross]) high += 1;
+  return [low, high];
+}
+
+// Jamb returns: a strip of short paired faces is taken as wall only when the same two faces carry
+// on, along the same line, into wall already found. Lettering and symbols never line up that way.
+function admitAlignedReturns(band, loose, crossing, width, height, vertical, reach) {
+  const { labels, components } = labelComponents((p) => loose[p] && !band[p], width, height, { x0: 0, y0: 0, x1: width - 1, y1: height - 1 });
+  const cross = vertical ? 1 : width;
+  const inner = vertical ? height : width;
+  const admit = new Uint8Array(components.length);
+  for (const item of components) {
+    if (!item) continue;
+    const lowEnd = vertical ? item.minY : item.minX, highEnd = vertical ? item.maxY : item.maxX;
+    const centre = vertical ? (item.minX + item.maxX) >> 1 : (item.minY + item.maxY) >> 1;
+    const lowExtent = centre - (vertical ? item.minX : item.minY), highExtent = (vertical ? item.maxX : item.maxY) - centre;
+    for (const direction of [-1, 1]) {
+      for (let g = 1; g <= reach && !admit[item.id]; g += 1) {
+        const i = (direction < 0 ? lowEnd : highEnd) + direction * g;
+        if (i < 1 || i >= inner - 1) break;
+        const q = vertical ? i * width + centre : centre * width + i;
+        if (band[q]) {
+          const [low, high] = faceExtents(band, q, cross);
+          if (Math.abs(low - lowExtent) <= 2 && Math.abs(high - highExtent) <= 2) admit[item.id] = 1;
+          break;
+        }
+        if (crossing[q]) break;
+      }
+    }
+  }
+  let admitted = 0;
+  for (let p = 0; p < labels.length; p += 1) if (labels[p] && admit[labels[p]]) { band[p] = 1; admitted += 1; }
+  return admitted;
 }
 
 function labelComponents(test, width, height, bounds) {
@@ -130,17 +210,12 @@ function labelComponents(test, width, height, bounds) {
 }
 
 // Close the gap from each wall end to the wall it faces. `vertical` = bands that run vertically.
-function bridgeGaps(band, wall, bridge, width, height, vertical, doorGap, collinearGap) {
+function bridgeGaps(band, wall, bridge, width, height, vertical, doorGap, collinearGap, minGap, beside) {
   const outer = vertical ? width : height, inner = vertical ? height : width;
   const step = vertical ? width : 1;
   const cross = vertical ? 1 : width;
   // Both ends of one wall have their two faces on the same lines.
-  const faces = (p) => {
-    let low = 0, high = 0;
-    while (low < 64 && band[p - (low + 1) * cross]) low += 1;
-    while (high < 64 && band[p + (high + 1) * cross]) high += 1;
-    return [low, high];
-  };
+  const faces = (p) => faceExtents(band, p, cross);
   const sameFaces = (p, q) => { const a = faces(p), b = faces(q); return Math.abs(a[0] - b[0]) <= 3 && Math.abs(a[1] - b[1]) <= 3; };
   for (let o = 0; o < outer; o += 1) {
     const base = vertical ? o : o * width;
@@ -159,10 +234,70 @@ function bridgeGaps(band, wall, bridge, width, height, vertical, doorGap, collin
           if (g > 1 && (g <= doorGap || (band[q] && sameFaces(p, q)))) hit = g;
           break;
         }
+        // Two frames that project from one wall face each other along that wall: wall lies right
+        // beside the space between them, so it is not a gap in a wall.
+        if (hit > minGap) {
+          const middle = base + (i + direction * (hit >> 1)) * step;
+          for (let offset = 1; offset <= beside && hit; offset += 1) if (wall[middle - offset * cross] || wall[middle + offset * cross]) hit = 0;
+        }
         for (let g = 1; g < hit; g += 1) bridge[base + (i + direction * g) * step] = vertical ? 2 : 1;
       }
     }
   }
+}
+
+// Stretches of one wall run that are drawn differently from the wall either side of them.
+// widths: the run's thickness at each step along it; marked: steps already known to carry extra
+// lines; inkAt(step, offset): linework across the run. Returns [from, to) step pairs.
+function symbolStretches(widths, marked, inkAt, span, minPlateau, joinGap) {
+  const along = widths.length;
+  // Plateaus of near-constant thickness. Windows can take up most of a wall, so there is no
+  // "usual" thickness to compare with: a frame is a plateau wider than the wall on both sides.
+  const plateaus = [];
+  for (let index = 0; index < along; index += 1) {
+    const last = plateaus[plateaus.length - 1];
+    if (last && Math.abs(widths[index] - last.sum / (last.to - last.from)) <= 2) { last.to = index + 1; last.sum += widths[index]; }
+    else plateaus.push({ from: index, to: index + 1, sum: widths[index] });
+  }
+  const major = plateaus.filter((item) => item.to - item.from >= minPlateau).map((item) => ({ ...item, mean: item.sum / (item.to - item.from) }));
+  const bulge = new Uint8Array(along);
+  for (let index = 1; index + 1 < major.length; index += 1) {
+    const { from, to, mean } = major[index];
+    if (major[index - 1].mean > 0 && major[index + 1].mean > 0 && mean >= major[index - 1].mean + 3 && mean >= major[index + 1].mean + 3) bulge.fill(1, from, to);
+  }
+  // The wall's own line pattern across its thickness, taken from the stretches that are not
+  // frames, against which every step along the wall is compared.
+  const pattern = new Uint32Array(span);
+  let plain = 0;
+  for (let index = 0; index < along; index += 1) {
+    if (!widths[index] || bulge[index] || marked[index]) continue;
+    plain += 1;
+    for (let offset = 0; offset < span; offset += 1) pattern[offset] += inkAt(index, offset);
+  }
+  const usualInk = Array.from(pattern, (count) => (plain > 0 && count > plain * 0.5 ? 1 : 0));
+  const on = new Uint8Array(along);
+  for (let index = 0; index < along; index += 1) {
+    if (!widths[index]) continue;
+    let differs = 0, solid = 0;
+    for (let offset = 0; plain > 0 && offset < span; offset += 1) {
+      const here = inkAt(index, offset);
+      solid += here;
+      const usualNear = usualInk[offset] || (offset > 0 && usualInk[offset - 1]) || (offset + 1 < span && usualInk[offset + 1]);
+      const inkNear = here || (offset > 0 && inkAt(index, offset - 1)) || (offset + 1 < span && inkAt(index, offset + 1));
+      if (here ? !usualNear : usualInk[offset] && !inkNear) differs += 1;
+    }
+    // A line crossing the wall (a junction or a frame end) is not itself a different pattern.
+    on[index] = marked[index] || bulge[index] || (differs >= 2 && solid < span * 0.6) ? 1 : 0;
+  }
+  const stretches = [];
+  for (let index = 0, from = -1; index <= along; index += 1) {
+    if (index < along && on[index]) { if (from < 0) from = index; continue; }
+    if (from < 0) continue;
+    const last = stretches[stretches.length - 1];
+    if (last && from - last[1] <= joinGap) last[1] = index; else stretches.push([from, index]);
+    from = -1;
+  }
+  return stretches;
 }
 
 // Boundary of a labelled region as a closed polygon on pixel corners, region on the right.
@@ -243,16 +378,26 @@ export function detectPlanGeometry(raster, context, overrides = {}) {
   for (let i = 0, p = 0; i < ink.length; i += 1, p += 4) ink[i] = data[p + 3] > 127 && data[p] + data[p + 1] + data[p + 2] < options.inkThreshold ? 1 : 0;
   const tMin = px(options.minWallMm), tMax = px(options.maxWallMm);
   const strictLen = Math.max(12, Math.round(px(options.faceRunMm))), nibLen = Math.max(6, Math.round(px(options.nibRunMm)));
-  const strictH = longRuns(ink, width, height, strictLen, false), strictV = longRuns(ink, width, height, strictLen, true);
+  const returnLen = Math.min(nibLen, Math.max(6, Math.round(px(options.jambReturnRunMm))));
+  const lengthH = runLengths(ink, width, height, false), lengthV = runLengths(ink, width, height, true);
   const reviewFaceH = longRuns(ink, width, height, strictLen, false, 1), reviewFaceV = longRuns(ink, width, height, strictLen, true, 1);
-  const bandH = wallBands(ink, strictH, longRuns(ink, width, height, nibLen, false), width, height, false, tMin, tMax, options.maxLinePx);
-  const bandV = wallBands(ink, strictV, longRuns(ink, width, height, nibLen, true), width, height, true, tMin, tMax, options.maxLinePx);
+  const bandH = wallBands(ink, lengthH, strictLen, nibLen, width, height, false, tMin, tMax, options.maxLinePx);
+  const bandV = wallBands(ink, lengthV, strictLen, nibLen, width, height, true, tMin, tMax, options.maxLinePx);
+  // Each stage has its own evidence threshold: wall fabric needs faces of nibRunMm, but the short
+  // return beside a door is still a wall end when it continues an established wall's two faces.
+  if (returnLen < nibLen) {
+    const reach = Math.round(px(options.collinearGapMm));
+    const looseH = wallBands(ink, lengthH, strictLen, returnLen, width, height, false, tMin, tMax, options.maxLinePx);
+    const looseV = wallBands(ink, lengthV, strictLen, returnLen, width, height, true, tMin, tMax, options.maxLinePx);
+    const returns = admitAlignedReturns(bandH, looseH, bandV, width, height, false, reach) + admitAlignedReturns(bandV, looseV, bandH, width, height, true, reach);
+    if (returns) diagnostics.push({ code: 'jamb-returns', message: 'Short wall returns were kept because they continue an established wall.' });
+  }
 
   // Keep only wall fabric that contains established faces; lettering and symbols do not.
   const full = { x0: 0, y0: 0, x1: width - 1, y1: height - 1 };
   const raw = labelComponents((p) => bandH[p] || bandV[p], width, height, full);
   const strictCount = new Int32Array(raw.components.length);
-  for (let p = 0; p < raw.labels.length; p += 1) if (raw.labels[p] && (bandH[p] === 2 || bandV[p] === 2)) strictCount[raw.labels[p]] += 1;
+  for (let p = 0; p < raw.labels.length; p += 1) if (raw.labels[p] && ((bandH[p] & 3) === 2 || (bandV[p] & 3) === 2)) strictCount[raw.labels[p]] += 1;
   // Wall fabric is broken into pieces by door gaps and junctions. Pieces that sit together form
   // one drawing; the building is the drawing with the most established wall in it, so pairs of
   // lines elsewhere on the sheet (title block, legend, details) are left out.
@@ -391,8 +536,8 @@ export function detectPlanGeometry(raster, context, overrides = {}) {
   }
 
   const bridge = new Uint8Array(width * height);
-  bridgeGaps(bandH, wall, bridge, width, height, false, Math.round(px(options.doorGapMm)), Math.round(px(options.collinearGapMm)));
-  bridgeGaps(bandV, wall, bridge, width, height, true, Math.round(px(options.doorGapMm)), Math.round(px(options.collinearGapMm)));
+  bridgeGaps(bandH, wall, bridge, width, height, false, Math.round(px(options.doorGapMm)), Math.round(px(options.collinearGapMm)), Math.round(px(options.minOpeningMm)), Math.ceil(tMin));
+  bridgeGaps(bandV, wall, bridge, width, height, true, Math.round(px(options.doorGapMm)), Math.round(px(options.collinearGapMm)), Math.round(px(options.minOpeningMm)), Math.ceil(tMin));
 
   const evidence = (context.openingEvidence || []).filter((item) => Number.isFinite(item?.x) && Number.isFinite(item?.y));
 
@@ -402,6 +547,8 @@ export function detectPlanGeometry(raster, context, overrides = {}) {
   // would complete a room.
   const openings = [];
   const closed = new Uint8Array(width * height);
+  const fabric0 = (p) => wall[p] || closed[p];
+  const openingGap = new Uint8Array(width * height);
   for (const value of [1, 2]) {
     const { labels, components } = labelComponents((p) => bridge[p] === value && !wall[p], width, height, bounds);
     const verdict = new Uint8Array(components.length);
@@ -415,11 +562,60 @@ export function detectPlanGeometry(raster, context, overrides = {}) {
       if (across < tMin * 0.6) continue;
       const reachPx = Math.max(options.evidenceReachMm, widthMm * 0.6) * pixelsPerMm;
       const support = evidence.map((point) => ({ point, distance: Math.hypot(point.x - centre.x, point.y - centre.y) })).filter((entry) => entry.distance <= reachPx).sort((a, b) => a.distance - b.distance)[0];
-      if (support) verdict[item.id] = 1;
+      if (support) verdict[item.id] = 2;
       openings.push({ id: `go-${value === 2 ? 'v' : 'h'}-${Math.round(centre.x * 10)}-${Math.round(centre.y * 10)}`, axis: value === 2 ? 'v' : 'h', ...centre, widthMm: Math.round(widthMm), hostThicknessMm: Math.round(across / k), kind: 'wall-gap',
         confirmed: Boolean(support), ...(support?.point.ref !== undefined ? { evidenceRef: support.point.ref } : {}), reviewRequired: !support, seed: item.seed, axisIndex: value - 1 });
     }
-    for (let p = 0; p < labels.length; p += 1) if (labels[p] && verdict[labels[p]]) closed[p] = value;
+    for (let p = 0; p < labels.length; p += 1) if (labels[p] && verdict[labels[p]]) { closed[p] = value; if (verdict[labels[p]] === 2) openingGap[p] = 1; }
+  }
+
+  // Wall-to-wall doors (robe sliders): the opening takes the whole side of a space, so there is no
+  // wall fabric to find a gap in, only the door's own thin lines running from one wall to the
+  // other. Taken only where an opening is known to be and that linework is actually drawn.
+  const doorLine = new Uint8Array(width * height);
+  const confirmedRefs = new Set(openings.filter((opening) => opening.confirmed).map((opening) => opening.evidenceRef));
+  const lineBand = Math.max(3, Math.round(px(options.doorLineReachMm)));
+  for (const point of evidence) {
+    if (point.ref !== undefined && confirmedRefs.has(point.ref)) continue;
+    const ex = Math.round(point.x * sx), ey = Math.round(point.y * sy);
+    if (ex < bounds.x0 + lineBand || ey < bounds.y0 + lineBand || ex > bounds.x1 - lineBand || ey > bounds.y1 - lineBand || fabric0(ey * width + ex)) continue;
+    let best = null;
+    for (const vertical of [false, true]) {
+      const step = vertical ? width : 1, cross = vertical ? 1 : width;
+      const origin = ey * width + ex;
+      const limit = Math.round(px(options.collinearGapMm));
+      const ends = [-1, 1].map((direction) => { for (let g = 1; g <= limit; g += 1) { const q = origin + direction * g * step; if (q < 0 || q >= wall.length) return 0; if (wall[q] || closed[q]) return g; } return 0; });
+      if (!ends[0] || !ends[1]) continue;
+      const span = ends[0] + ends[1] - 1;
+      if (span < px(options.minOpeningMm) || span > limit) continue;
+      // Linework along the span: which line across the band is drawn most, and how much of the span has any.
+      const rows = new Uint32Array(lineBand * 2 + 1);
+      let drawn = 0;
+      for (let g = -ends[0] + 1; g < ends[1]; g += 1) {
+        let any = 0;
+        for (let offset = -lineBand; offset <= lineBand; offset += 1) if (ink[origin + g * step + offset * cross]) { rows[offset + lineBand] += 1; any = 1; }
+        drawn += any;
+      }
+      const share = drawn / span;
+      if (share < 0.7) continue;
+      let line = 0;
+      for (let index = 1; index < rows.length; index += 1) if (rows[index] > rows[line]) line = index;
+      if (!best || share > best.share) best = { vertical, step, cross, origin: origin + (line - lineBand) * cross, ends, span, share };
+    }
+    if (!best) continue;
+    const half = Math.max(2, Math.round(px(options.minWallMm) / 2));
+    const own = best.vertical ? 2 : 1;
+    let blocked = false;
+    for (let g = -best.ends[0] + 1; g < best.ends[1] && !blocked; g += 1) if (wall[best.origin + g * best.step]) blocked = true;
+    if (blocked) continue;
+    for (let g = -best.ends[0] + 1; g < best.ends[1]; g += 1) for (let offset = -half; offset <= half; offset += 1) {
+      const p = best.origin + g * best.step + offset * best.cross;
+      if (!wall[p] && !closed[p]) { closed[p] = own; doorLine[p] = 1; }
+    }
+    const middle = best.origin + ((best.ends[1] - best.ends[0]) >> 1) * best.step;
+    const centre = toLogical((middle % width) + 0.5, Math.floor(middle / width) + 0.5);
+    openings.push({ id: `gd-${best.vertical ? 'v' : 'h'}-${Math.round(centre.x * 10)}-${Math.round(centre.y * 10)}`, axis: best.vertical ? 'v' : 'h', ...centre, widthMm: Math.round(best.span / k), hostThicknessMm: Math.round((half * 2 + 1) / k), kind: 'door-line',
+      confirmed: true, ...(point.ref !== undefined ? { evidenceRef: point.ref } : {}), reviewRequired: false, seed: middle, axisIndex: own - 1 });
   }
 
   // Walls: each band, with the confirmed openings along it, becomes one centreline run with its
@@ -436,7 +632,7 @@ export function detectPlanGeometry(raster, context, overrides = {}) {
       if (!item) continue;
       const along = vertical ? item.maxY - item.minY + 1 : item.maxX - item.minX + 1;
       const across = vertical ? item.maxX - item.minX + 1 : item.maxY - item.minY + 1;
-      if (along < px(options.nibRunMm)) continue;
+      if (along < px(Math.min(options.nibRunMm, options.jambReturnRunMm))) continue;
       const thicknessPx = Math.max(1, item.area / along);
       const thicknessMm = Math.max(options.minWallMm, (thicknessPx - 2) / k);
       const cx = (item.minX + item.maxX + 1) / 2, cy = (item.minY + item.maxY + 1) / 2;
@@ -466,10 +662,44 @@ export function detectPlanGeometry(raster, context, overrides = {}) {
         measuredThicknessMm: Math.round(thicknessMm), thicknessMm: nearest(thicknessMm, STANDARD_THICKNESSES),
         ...(reasons.length ? { reviewRequired: true, reviewReason: reasons.join(' ') } : {}),
       });
+      // Windows: a stretch of this wall that carries extra lines across it, is drawn wider than the
+      // wall either side, or whose lines sit differently across it, is a frame drawn in the wall. The wall stays whole (its length is
+      // gross through a window); the stretch is a candidate opening on this wall, confirmed only
+      // by an opening the estimator or the plan reading located there.
+      const low = vertical ? item.minY : item.minX;
+      const widths = new Uint16Array(along), marked = new Uint8Array(along);
+      let lineOnly = 0;
+      const gapAt = new Uint8Array(along);
+      for (let y = item.minY; y <= item.maxY; y += 1) for (let x = item.minX; x <= item.maxX; x += 1) {
+        const p = y * width + x;
+        if (runLabels[p] !== item.id) continue;
+        const index = (vertical ? y : x) - low;
+        if (!gapAt[index]) widths[index] += 1;
+        if (band[p] & 4) marked[index] = 1;
+        if (doorLine[p]) lineOnly += 1;
+        // An opening already closed along this run is not also a frame drawn in it.
+        if (openingGap[p] || doorLine[p]) widths[index] = 0, gapAt[index] = 1;
+      }
+      if (lineOnly > item.area * 0.5) Object.assign(walls[walls.length - 1], { reviewRequired: true, reviewReason: [walls[walls.length - 1].reviewReason, 'This run is a wall-to-wall door opening drawn as door lines only; confirm it is measured as wall.'].filter(Boolean).join(' ') });
+      const acrossLow = vertical ? item.minX : item.minY, span = across;
+      const inkAt = (index, offset) => ink[vertical ? (low + index) * width + acrossLow + offset : (acrossLow + offset) * width + low + index];
+      const stretches = symbolStretches(widths, marked, inkAt, span, Math.max(2, Math.round(px(120))), px(150));
+      for (const [from, to] of stretches) {
+        const widthMm = (to - from) / k;
+        // A stretch that is the whole wall is the wall's own make-up, not something drawn in it.
+        if (widthMm < options.minOpeningMm || widthMm > options.collinearGapMm || to - from > along * 0.9) continue;
+        const middle = low + (from + to) / 2;
+        const centre = vertical ? toLogical(cx, middle) : toLogical(middle, cy);
+        const reachPx = Math.max(options.evidenceReachMm, widthMm * 0.6) * pixelsPerMm;
+        const support = evidence.map((point) => ({ point, distance: Math.hypot(point.x - centre.x, point.y - centre.y) })).filter((entry) => entry.distance <= reachPx).sort((p, q) => p.distance - q.distance)[0];
+        openings.push({ id: `gs-${vertical ? 'v' : 'h'}-${Math.round(centre.x * 10)}-${Math.round(centre.y * 10)}`, axis: vertical ? 'v' : 'h', ...centre, widthMm: Math.round(widthMm), hostThicknessMm: Math.round(thicknessMm), kind: 'wall-symbol',
+          confirmed: Boolean(support), ...(support?.point.ref !== undefined ? { evidenceRef: support.point.ref } : {}), reviewRequired: !support, hostWallId: ids.get(item.id) });
+      }
     }
   }
-  // A confirmed opening is hosted by the wall run it was closed along.
+  // A confirmed opening is hosted by the wall run it was closed along; a symbol by the wall it is drawn in.
   for (const opening of openings) {
+    if (opening.kind === 'wall-symbol') continue;
     const host = runOf[opening.axisIndex];
     opening.hostWallId = opening.confirmed ? host.ids.get(host.labels[opening.seed]) || null : null;
     delete opening.seed; delete opening.axisIndex;
@@ -487,7 +717,7 @@ export function detectPlanGeometry(raster, context, overrides = {}) {
       const areaM2 = item.area / (k * k) / 1e6;
       if (areaM2 < options.minRoomM2 || Math.min(item.maxX - item.minX, item.maxY - item.minY) / k < options.minRoomSideMm) continue;
       // A proposal that is the same space as a verified room adds nothing.
-      if (proposed && verifiedSeeds.has(roomId(item))) continue;
+      if (proposed && Math.abs((verifiedSeeds.get(roomId(item)) ?? -1) - areaM2) <= areaM2 * 0.02) continue;
       const boundary = simplifyClosed(traceBoundary(found.labels, width, height, item.id, item.seed), options.simplifyPx);
       if (boundary.length < 3) continue;
       const polygon = boundary.map((p) => toLogical(p.x, p.y));
@@ -510,7 +740,19 @@ export function detectPlanGeometry(raster, context, overrides = {}) {
     return found;
   };
   const free = collect((p) => !wall[p] && !closed[p], false, null);
-  if (options.proposeRooms) collect((p) => !wall[p] && !bridge[p], true, new Set(rooms.map((room) => room.id)));
+  if (options.proposeRooms) {
+    collect((p) => !wall[p] && !bridge[p] && !closed[p], true, new Map(rooms.map((room) => [room.id, room.netAreaM2])));
+    // Where unconfirmed gaps divide an enclosed space, both are returned and linked: the whole
+    // (dividedInto) is what the walls alone enclose, the parts (partOf) are for the estimator to
+    // confirm. A consumer shows one or the other, never both, so no floor is counted twice.
+    const parts = rooms.filter((room) => !room.verified);
+    for (const whole of rooms.filter((room) => room.verified)) {
+      const inside = parts.filter((part) => !part.partOf && part.netAreaM2 < whole.netAreaM2 * 0.98 && pointInPolygon(part.centroid, whole.polygon));
+      if (!inside.length) continue;
+      for (const part of inside) { if (part.id === whole.id) part.id += '-part'; part.partOf = whole.id; }
+      whole.dividedInto = inside.map((part) => part.id);
+    }
+  }
   rooms.sort((a, b) => a.bounds.y - b.bounds.y || a.bounds.x - b.bounds.x);
   const embeddedOpeningReviewCandidates = detectOpeningSymbolReviewCandidates({ ink, width, height, pixelsPerMm, logicalWidth, logicalHeight, walls });
   return { engine: GEOMETRY_ENGINE_VERSION, rasterPixelsPerMm: k, walls, openings, rooms, singleFaceReviewCandidates, embeddedOpeningReviewCandidates, diagnostics, debug: { wall, bridge, closed, bandH, bandV, labels: free.labels, width, height, bounds, singleFaceDebug } };

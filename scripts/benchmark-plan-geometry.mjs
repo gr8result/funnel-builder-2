@@ -21,7 +21,7 @@ const { job: jobPath, assets: assetsDir, out: outDir } = args;
 fs.mkdirSync(outDir, { recursive: true });
 const geometryOptions = Object.fromEntries(Object.entries({
   'ink-threshold': 'inkThreshold', 'min-wall-mm': 'minWallMm', 'face-run-mm': 'faceRunMm',
-  'nib-run-mm': 'nibRunMm', 'max-line-px': 'maxLinePx', 'isolated-run-mm': 'isolatedRunMm',
+  'nib-run-mm': 'nibRunMm', 'jamb-return-run-mm': 'jambReturnRunMm', 'max-line-px': 'maxLinePx', 'isolated-run-mm': 'isolatedRunMm',
   'single-face-review-run-mm': 'singleFaceReviewRunMm', 'single-face-anchor-reach-mm': 'singleFaceAnchorReachMm',
   'single-face-thickness-agreement-mm': 'singleFaceThicknessAgreementMm', 'single-face-junction-reach-mm': 'singleFaceJunctionReachMm',
 }).flatMap(([argument, option]) => Number.isFinite(Number(args[argument])) ? [[option, Number(args[argument])]] : []));
@@ -281,13 +281,22 @@ for (const [pageKey, level] of Object.entries(job.sheetLevels || {})) {
   }
   context.putImageData(overlay, 0, 0);
   context.strokeStyle = '#00a6a6'; context.lineWidth = Math.max(3, s * 1.4); context.lineCap = 'round';
-  for (const wall of manualWalls) {
+  for (const wall of process.argv.includes('--plain-overlay') ? [] : manualWalls) {
     context.beginPath();
     wall.nodes.forEach((point, index) => index ? context.lineTo(point.x * s, point.y * s) : context.moveTo(point.x * s, point.y * s));
     context.stroke();
   }
   context.strokeStyle = '#1d4ed8'; context.lineWidth = 3;
   for (const room of result.rooms) { context.beginPath(); room.polygon.forEach((p, i) => (i ? context.lineTo(p.x * s, p.y * s) : context.moveTo(p.x * s, p.y * s))); context.closePath(); context.stroke(); }
+  // Candidate openings: confirmed magenta, unconfirmed orange, drawn at their measured width.
+  for (const opening of result.openings) {
+    const half = opening.widthMm * ppm * s / 2;
+    context.strokeStyle = opening.confirmed ? '#c026d3' : '#f97316'; context.lineWidth = opening.kind === 'wall-symbol' ? 7 : 4;
+    context.beginPath();
+    if (opening.axis === 'v') { context.moveTo(opening.x * s, opening.y * s - half); context.lineTo(opening.x * s, opening.y * s + half); }
+    else { context.moveTo(opening.x * s - half, opening.y * s); context.lineTo(opening.x * s + half, opening.y * s); }
+    context.stroke();
+  }
   const b = result.debug.bounds;
   const crop = createCanvas(b.x1 - b.x0, b.y1 - b.y0);
   crop.getContext('2d').drawImage(canvas, b.x0, b.y0, b.x1 - b.x0, b.y1 - b.y0, 0, 0, b.x1 - b.x0, b.y1 - b.y0);
