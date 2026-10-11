@@ -48,7 +48,7 @@ if (roomReferenceSet && (roomReferenceSet.schemaVersion !== 'ai-takeoff-room-ref
   throw new Error('Room references must be manually traced from the original plans in logical-plan-pixels using ai-takeoff-room-reference.v1.');
 }
 const report = { job: job.jobName, pixelsPerMm: ppm, geometryOptions,
-  geometryInputs: { openingEvidence: 'manual opening positions from the recovered takeoff; room closure assumes correctly localized openings' }, sheets: [] };
+  geometryInputs: { openingEvidence: args.evidence === 'none' ? 'none: linework only' : 'manual opening positions from the recovered takeoff; room closure assumes correctly localized openings' }, sheets: [] };
 
 const polygonArea = (polygon) => Math.abs(polygon.reduce((sum, point, index) => {
   const next = polygon[(index + 1) % polygon.length];
@@ -108,7 +108,7 @@ for (const [pageKey, level] of Object.entries(job.sheetLevels || {})) {
   const started = Date.now();
   const manualOpenings = (job.placedOpenings || []).filter((item) => !isAi(item) && Number(item.page) === pageNumber);
   const result = detectPlanGeometry(raster, { pixelsPerMm: ppm, logicalWidth: page.logicalWidth, logicalHeight: page.logicalHeight,
-    openingEvidence: manualOpenings.filter((item) => Number.isFinite(item.x) && Number.isFinite(item.y)).map((item) => ({ x: item.x, y: item.y, ref: String(item.id) })) }, geometryOptions);
+    openingEvidence: args.evidence === 'none' ? [] : manualOpenings.filter((item) => Number.isFinite(item.x) && Number.isFinite(item.y)).map((item) => ({ x: item.x, y: item.y, ref: String(item.id) })) }, geometryOptions);
   const manualFootprints = (job.completedFloorplans || []).filter((item) => !isAi(item) && item.type === 'Footprint' && Number(item.page) === pageNumber);
   const footprintFusion = fuseSheetLinework({ page: pageNumber, walls: [], openings: [], rooms: [] }, raster,
     { pageNumber, logicalWidth: page.logicalWidth, logicalHeight: page.logicalHeight, pixelsPerMm: ppm },
@@ -153,6 +153,18 @@ for (const [pageKey, level] of Object.entries(job.sheetLevels || {})) {
       if (share < 0.6 && lengthMm > 300) missed.push({ category: item.category, lengthM: +(lengthMm / 1000).toFixed(2), covered: +share.toFixed(2), from: a, to: b });
     }
   }
+  // The same comparison, counting only detected walls the engine gave the same category.
+  const categoryCoverage = {};
+  for (const item of manualWalls) {
+    const bucket = categoryCoverage[item.category] ||= { tracedLm: 0, coveredLm: 0 };
+    const same = result.walls.filter((wall) => wall.category === item.category).map((wall) => ({ a: wall.nodes[0], b: wall.nodes[1] }));
+    for (let i = 1; i < item.nodes.length; i += 1) {
+      const a = item.nodes[i - 1], b = item.nodes[i];
+      const lengthMm = Math.hypot(b.x - a.x, b.y - a.y) / ppm;
+      bucket.tracedLm += lengthMm / 1000; bucket.coveredLm += lengthMm / 1000 * alignedCoverage({ a, b }, same);
+    }
+  }
+  for (const bucket of Object.values(categoryCoverage)) { bucket.share = +(bucket.coveredLm / bucket.tracedLm).toFixed(3); bucket.tracedLm = +bucket.tracedLm.toFixed(1); bucket.coveredLm = +bucket.coveredLm.toFixed(1); }
   for (const bucket of Object.values(coverage)) { bucket.share = +(bucket.coveredLm / bucket.tracedLm).toFixed(3); bucket.tracedLm = +bucket.tracedLm.toFixed(1); bucket.coveredLm = +bucket.coveredLm.toFixed(1); }
 
   const manualSegments = manualWalls.flatMap((item) => item.nodes.slice(1).map((end, index) => ({ a: item.nodes[index], b: end })));
@@ -239,7 +251,7 @@ for (const [pageKey, level] of Object.entries(job.sheetLevels || {})) {
       endpointFaceSupport: candidate.endpointFaceSupport,
       footprintIds: candidate.footprintIds, nodes: candidate.nodes, reviewReason: candidate.reviewReason })),
     singleFaceCandidateChecks: result.debug.singleFaceDebug,
-    manualWallCoverage: coverage, missingManualWallLengthLm,
+    manualWallCoverage: coverage, manualWallCoverageSameCategory: categoryCoverage, missingManualWallLengthLm,
     missedManualSegments: missed.length, missed: missed.slice(0, 12),
     rooms: { detected: rooms.length, labelled: rooms.filter((room) => room.labels.length).length, unlabelledLabels: labels.filter((label) => !result.rooms.some((room) => pointInPolygon({ x: label.x * page.logicalWidth, y: label.y * page.logicalHeight }, room.polygon))).map((label) => label.name), list: rooms },
     sumRoomAreaM2: +rooms.reduce((sum, room) => sum + room.areaM2, 0).toFixed(2), manualAreas,

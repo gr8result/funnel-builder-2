@@ -68,6 +68,11 @@ export function validateRoomSet(rooms=[]) {
 }
 export function detectRoomBoundary(raw, {page,level,width,height,pixelsPerMm,walls=[],openings=[],raster=null}, index=0) {
   const nodes=(Array.isArray(raw.polygon)?raw.polygon:Array.isArray(raw.nodes)?raw.nodes:[]).map(p=>({x:p.x*width,y:p.y*height}));
+  // A boundary measured from the wall linework is already on the wall faces: it is used as it is.
+  if(raw.lineworkRoomId&&nodes.length>=3) {
+    const dimensionReferences=(raw.dimensionReferences||[]).map(d=>({...d,p1:{x:d.p1.x*width,y:d.p1.y*height},p2:{x:d.p2.x*width,y:d.p2.y*height}}));
+    return measureRoom({...raw,dimensionReferences,pageWidth:width,pageHeight:height,openingIds:[],edgeSupport:[],geometryReview:raw.boundaryClosed?'':(raw.lineworkReview||'This boundary relies on gaps that are not confirmed as doors or windows'),id:raw.id||`room-${page}-${String(raw.name).toLowerCase().replace(/[^a-z0-9]+/g,'-')}-${raw.lineworkRoomId}`,page,level,levelId:level,name:raw.name,type:raw.type||roomType(raw.name),polygon:nodes,source:'plan',detectionMethod:'wall-linework',selected:false,actions:[],coordinateSpace:'logical-plan'},pixelsPerMm);
+  }
   // Reuse nearby wall junctions, but never manufacture a bounding rectangle around a label.
   const junctions=walls.filter(w=>Number(w.page||1)===page).flatMap(w=>w.nodes||[]);
   const tolerance=Math.min(width,height)*0.002;

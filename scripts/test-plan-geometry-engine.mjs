@@ -83,11 +83,23 @@ const at = (share) => normalized({ x: start.x + (end.x - start.x) * share, y: st
 const classification = { detectionId: 'external-run', category: 'exterior', confidence: 0.9, nodes: [at(0), at(1)] };
 const fused = (wall, existing = {}) => fuseSheetLinework({ page: 1, walls: [wall], openings: [], rooms: [] }, raster,
 	{ pageNumber: 1, logicalWidth: width, logicalHeight: height, pixelsPerMm: context.pixelsPerMm }, existing);
-assert.equal(fused(classification).response.walls.length, 1, 'a trace supporting the full measured run classifies it');
-const shortTrace = { ...classification, nodes: [at(0.495), at(0.505)] };
+// Every measured wall is returned, external or internal by where the outside lies, whatever the
+// plan reading traced; its construction details are taken only from a trace that supports the run.
+const classified = fused({ ...classification, constructionSystem: 'Brick Veneer' });
+assert.equal(classified.response.walls.length, classified.geometry.walls.length, 'every measured wall is returned');
+const fusedOuter = classified.response.walls.find((wall) => wall.lineworkWallId === measuredOuter.id);
+assert.equal(fusedOuter.category, 'exterior', 'a wall with the outside against its face is external');
+assert.equal(fusedOuter.constructionSystem, 'Brick Veneer', 'a trace supporting the full measured run supplies its construction');
+assert.equal(result.walls.filter((wall) => wall.category === 'exterior').length, 4, 'the four shell walls are external');
+assert.ok(result.walls.filter((wall) => wall.category === 'interior').length >= 1 && result.walls.filter((wall) => wall.category === 'interior').every((wall) => wall.outsideShare < 0.25), 'the partition is internal');
+const shortTrace = { ...classification, constructionSystem: 'Brick Veneer', nodes: [at(0.495), at(0.505)] };
 const unsupported = fused(shortTrace);
-assert.equal(unsupported.response.walls.length, 0, 'a short trace cannot classify the entire measured run');
-assert.ok(unsupported.report.uncategorisedLm >= measuredOuter.lengthMm / 1000, 'unsupported measured length stays out of the takeoff');
+assert.equal(unsupported.response.walls.length, unsupported.geometry.walls.length, 'a short trace does not remove a measured wall');
+assert.equal(unsupported.response.walls.find((wall) => wall.lineworkWallId === measuredOuter.id).constructionSystem, undefined, 'a short trace cannot describe the entire measured run');
+// The plan reading calling an external wall internal does not change what the drawing shows.
+const contradicted = fused({ ...classification, category: 'interior' });
+assert.equal(contradicted.response.walls.find((wall) => wall.lineworkWallId === measuredOuter.id).category, 'exterior');
+assert.ok(contradicted.report.categoryDisagreementLm >= measuredOuter.lengthMm / 1000 - 0.01, 'the disagreement is reported');
 // Evidence far from any gap confirms nothing.
 assert.equal(detectPlanGeometry(raster, { ...context, openingEvidence: [{ x: 300, y: 600 }] }).openings.filter((item) => item.confirmed).length, 0);
 
@@ -127,7 +139,8 @@ const manualFootprint = { id: 'manual-footprint', page: 1, type: 'Footprint', no
 ] };
 const candidateFusion = fuseSheetLinework({ page: 1, walls: [], openings: [], rooms: [] }, { width, height, data: singleFaceData },
 	{ pageNumber: 1, logicalWidth: width, logicalHeight: height, pixelsPerMm: context.pixelsPerMm }, { completedFloorplans: [manualFootprint] });
-assert.equal(candidateFusion.response.walls.length, 0, 'a footprint-supported single face is still not measured automatically');
+assert.equal(candidateFusion.response.walls.length, candidateFusion.geometry.walls.length, 'only walls with two measured faces are returned');
+assert.ok(candidateFusion.report.singleFaceReviewCandidates.every((candidate) => !candidateFusion.response.walls.some((wall) => wall.lineworkWallId === candidate.id)), 'a footprint-supported single face is still not measured automatically');
 assert.equal(candidateFusion.report.singleFaceReviewCandidates.length, 1, 'manual footprint overlap may surface one candidate for human review');
 assert.match(candidateFusion.report.review[0], /verify.*before measuring/i);
 

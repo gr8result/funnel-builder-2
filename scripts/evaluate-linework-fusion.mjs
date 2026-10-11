@@ -15,6 +15,7 @@ import { normalizePlanAnalysis } from '../components/construction-estimation/ai-
 import { restoreAnalysisCoordinates } from '../components/construction-estimation/ai-plan-takeoff/ai-integration/analysisPages.js';
 import { mergeMeasurementScopes } from '../components/construction-estimation/ai-plan-takeoff/ai-integration/measurementScopes.js';
 import { mergePlanEvidence, projectDefaultsFromJobSetup } from '../components/construction-estimation/ai-plan-takeoff/ai-integration/planEvidence.js';
+import { detectRoomBoundary } from '../components/construction-estimation/ai-plan-takeoff/ai-integration/roomGeometry.js';
 import { convertAiTakeoffDetections } from '../components/construction-estimation/ai-plan-takeoff/ai-integration/adapter.js';
 
 const args = Object.fromEntries(process.argv.slice(2).map((arg, index, all) => (arg.startsWith('--') ? [arg.slice(2), all[index + 1]] : null)).filter(Boolean));
@@ -63,7 +64,11 @@ for (const pageNumber of sheets) {
   const started = Date.now();
   const result = fuseSheetLinework(response, raster, { pageNumber, logicalWidth: page.logicalWidth, logicalHeight: page.logicalHeight, pixelsPerMm: ppm });
   fused.push(result.response);
-  fusionReports[pageNumber] = { ms: Date.now() - started, ...result.report, review: undefined, reviewNotes: result.report.review };
+  // Rooms exactly as the takeoff screen builds them from this sheet's fused reading.
+  const roomList = (result.response.rooms || []).map((room, index) => detectRoomBoundary(room, { page: pageNumber, level: response.level, width: page.logicalWidth, height: page.logicalHeight, pixelsPerMm: ppm, walls: [], openings: [], raster: null }, index))
+    .map((room) => ({ name: room.name, areaM2: room.areaM2 === null ? null : +room.areaM2.toFixed(2), corners: room.polygon?.length || 0, method: room.polygon?.length ? room.detectionMethod : 'no boundary',
+      measured: Boolean(room.lineworkRoomId), verified: Boolean(room.lineworkVerified), review: room.reviewRequired ? room.reviewReasons : [], shared: room.sharedSpaceId ? true : undefined, id: room.id }));
+  fusionReports[pageNumber] = { ms: Date.now() - started, ...result.report, review: undefined, reviewNotes: result.report.review, roomList };
 }
 
 function run(responses, existing) {
@@ -111,6 +116,10 @@ function measure(label, responses) {
         doors: { handPlaced: doors.length, foundWithin1500mm: count(doors, (entry) => entry.match), within600mm: count(doors, (entry) => entry.match?.mm <= 600), within300mm: count(doors, (entry) => entry.match?.mm <= 300) },
         medianPositionErrorMm: found.length ? Math.round(found.map((entry) => entry.match.mm).sort((x, y) => x - y)[found.length >> 1]) : null,
         widthAgreesWithHandPlaced: `${count(found, (entry) => Number(entry.match.other.widthMm) === Number(entry.item.widthMm))} of ${found.length}`,
+        widthWithin100mm: `${count(found, (entry) => Math.abs(Number(entry.match.other.widthMm) - Number(entry.item.widthMm)) <= 100)} of ${found.length}`,
+        list: matches.map((entry) => ({ tag: entry.item.itemTag, class: entry.item.openingClass, widthMm: entry.item.widthMm,
+          found: entry.match ? { class: entry.match.other.openingClass, widthMm: entry.match.other.widthMm, mm: Math.round(entry.match.mm), from: String(entry.match.other.ai?.detectionId || entry.match.other.id).slice(0, 40) } : null })),
+        extras: produced.filter((item) => !used.has(item.id)).map((item) => ({ class: item.openingClass, widthMm: item.widthMm, x: Math.round(item.x), y: Math.round(item.y), from: String(item.ai?.detectionId || item.id).slice(0, 40) })),
         attachedToAWall: `${count(produced, (item) => item.hostWallId !== '' && item.hostWallId != null)} of ${produced.length}`,
         producedWithNoHandPlacedCounterpart: produced.length - used.size,
         sizeCodesKept: `${count(produced, (item) => item.ai?.analysisEvidence?.rawSizeCode)} carry their original code`,
