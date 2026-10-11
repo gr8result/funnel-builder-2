@@ -1,0 +1,7 @@
+{
+  "description": "Floors for the New Job 03/09 plan benchmark (scripts/benchmark-plan-geometry.mjs, estimator's hand trace as reference, 300 mm wall tolerance, 700 mm opening tolerance). A geometry change may improve on these but must not fall below them; update only with a reviewed reason. Rooms counts every returned room record (wholes and their parts). Bedroom 3's reference polygon includes its robe, which the engine returns as a separate room, hence its wider area limit.",
+  "sheets": {
+    "2": { "level": "Ground Floor", "minRooms": 15, "minOpeningsMatched700mm": 20, "minOpeningsMatched200mm": 10, "requiredOpenings": ["D9: 2448-PANELLIFT", "D4: 2082-INTERNAL"], "maxMissingExteriorLm": 0.5, "maxMissingInteriorLm": 6.2, "minWallCoverageExterior": 0.99, "minWallCoverageInterior": 0.9, "maxWallNotOnTraceLm": 10 },
+    "3": { "level": "Second Level", "minRooms": 28, "minOpeningsMatched700mm": 22, "minOpeningsMatched200mm": 16, "requiredOpenings": ["W13: 1806-DH", "D12: 2082-ROBE"], "maxMissingExteriorLm": 0.3, "maxMissingInteriorLm": 2.6, "minWallCoverageExterior": 0.99, "minWallCoverageInterior": 0.95, "maxWallNotOnTraceLm": 7.2, "minMeanRoomIoU": 0.89, "maxRoomAreaErrorPercent": { "Bedroom 2": 6, "Bedroom 3": 17 } }
+  }
+}
