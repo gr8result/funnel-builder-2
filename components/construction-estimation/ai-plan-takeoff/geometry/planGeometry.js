@@ -398,6 +398,15 @@ function diagonalWallRuns(ink, width, height, bounds, mirror, { tMin, tMax, stri
     if (!ink[(bounds.y0 + y) * width + bounds.x0 + (mirror ? w - 1 - x : x)]) continue;
     rot[(y - x + w - 1) * rw + ((x + y) >> 1)] = 1;
   }
+  // A line that has been resampled (a page stored at another resolution) steps between two
+  // neighbouring diagonals and drops single pixels: each diagonal takes its neighbours' ink where
+  // it has none of its own between two inked places, so the run stays whole.
+  for (let v = 1; v < rh - 1; v += 1) for (let u = 1; u < rw - 1; u += 1) {
+    const p = v * rw + u;
+    if (rot[p]) continue;
+    if ((rot[p - 1] & 1) && (rot[p + 1] & 1)) rot[p] = 2;
+    else if (((rot[p - rw] & 1) || (rot[p + rw] & 1)) && ((rot[p - 1] & 1) || (rot[p + 1] & 1))) rot[p] = 2;
+  }
   const root2 = Math.SQRT2;
   const lengths = runLengths(rot, rw, rh, false);
   const face = Math.max(8, Math.round(strictLen / root2));
@@ -1002,6 +1011,7 @@ export function detectPlanGeometry(raster, context, overrides = {}) {
         id: roomId(item),
         polygon, areaM2: polygonM2, netAreaM2: areaM2, perimeterM: perimeterOf(polygon) / pixelsPerMm / 1000,
         centroid: n ? toLogical(cx / n, cy / n) : toLogical((item.minX + item.maxX) / 2, (item.minY + item.maxY) / 2),
+        inner: toLogical((item.seed % width) + 0.5, Math.floor(item.seed / width) + 0.5),
         bounds: { ...toLogical(item.minX, item.minY), x2: (item.maxX + 1) / sx, y2: (item.maxY + 1) / sy },
         verified: !proposed,
         ...(reasons.length ? { reviewRequired: true, reviewReason: reasons.join(' ') } : {}),
@@ -1017,12 +1027,17 @@ export function detectPlanGeometry(raster, context, overrides = {}) {
     // confirm. A consumer shows one or the other, never both, so no floor is counted twice.
     const parts = rooms.filter((room) => !room.verified);
     for (const whole of rooms.filter((room) => room.verified)) {
-      const inside = parts.filter((part) => !part.partOf && part.netAreaM2 < whole.netAreaM2 * 0.98 && pointInPolygon(part.centroid, whole.polygon));
+      // A part lies inside its whole; its centroid need not (an L-shaped space), a point in it does.
+      const inside = parts.filter((part) => !part.partOf && part.netAreaM2 < whole.netAreaM2 * 0.98 && pointInPolygon(part.inner, whole.polygon));
       if (!inside.length) continue;
       for (const part of inside) { if (part.id === whole.id) part.id += '-part'; part.partOf = whole.id; }
       whole.dividedInto = inside.map((part) => part.id);
     }
   }
+  // Ids come from each space's extent; two spaces with one extent are told apart.
+  const seenIds = new Map();
+  for (const room of rooms) { const count = (seenIds.get(room.id) || 0) + 1; seenIds.set(room.id, count); if (count > 1) room.id += `-${count}`; }
+  for (const whole of rooms) if (whole.dividedInto) whole.dividedInto = rooms.filter((part) => part.partOf === whole.id).map((part) => part.id);
   rooms.sort((a, b) => a.bounds.y - b.bounds.y || a.bounds.x - b.bounds.x);
   const embeddedOpeningReviewCandidates = detectOpeningSymbolReviewCandidates({ ink, width, height, pixelsPerMm, logicalWidth, logicalHeight, walls });
   return { engine: GEOMETRY_ENGINE_VERSION, rasterPixelsPerMm: k, walls, openings, rooms, singleFaceReviewCandidates, embeddedOpeningReviewCandidates, diagnostics, debug: { wall, bridge, closed, outside, diagonal, bandH, bandV, labels: free.labels, width, height, bounds, singleFaceDebug } };

@@ -178,3 +178,39 @@ Tests: `scripts/test-takeoff-review-and-evidence.mjs`, `scripts/test-takeoff-rev
 (both need the extensionless and JSON loaders). `scripts/run-ai-takeoff-plan-set.mjs` runs the real
 pipeline against a saved takeoff's plan set outside the browser; it spends provider credit unless
 `--replay --offline` is given.
+
+## Geometry from the drawing, plan reading as labels (plan-geometry-4)
+
+Where a wall, opening or room boundary *is* comes from the sheet's own linework
+(`geometry/planGeometry.js`); the plan reading supplies what the lines cannot say. `geometry/lineworkFusion.js`
+joins the two for one sheet and returns a response in the contract's own shape, so the contract, the
+adapter and the canvas are unchanged.
+
+1. **Raster** (`geometry/planRaster.js`). A calibrated sheet is brought to about 0.09 image pixels per
+   millimetre, up or down, before it is measured. Pages are stored at whatever the screen's pixel
+   ratio gave when the plan was loaded; without this the same plan read differently on two machines.
+2. **Walls.** Two long parallel faces a wall-thickness apart. Walls drawn at 45 degrees are found by
+   re-indexing the sheet along its diagonals and kept only where they meet other wall.
+3. **External or internal.** The outside is what a 1.5 m disc can reach from the edge of the drawing
+   without crossing wall fabric or a gap in it. A wall with the outside against a face is external.
+   The plan reading's own external/internal call is not used; a disagreement is reported.
+4. **Openings.** A gap is a doorway when a door swing is drawn at it (the leaf is the swing radius) or
+   an opening is located there. A frame drawn in an external wall is a window. The plan reading locates
+   openings only to a metre or two, so its openings are matched to gaps and frames one to one by
+   distance and width; what it missed but the drawing shows is added, flagged for class and height.
+5. **Rooms.** A space the walls and confirmed openings enclose is measured (inside faces). Room names
+   are assigned to spaces by least total distance, with size sanity (a WC is never 20 m2); names that
+   share one unwalled space are returned as one open-plan room. The takeoff screen uses these
+   boundaries as measured (`detectRoomBoundary`, `detectionMethod: 'wall-linework'`). "Re-measure from
+   linework" in the rooms panel repeats this without a provider request, keeping confirmed and
+   hand-edited boundaries.
+
+Not measured from linework: walls at angles other than 0, 45 and 90 degrees, curved walls, door and
+window heights and types, and outdoor areas (alfresco, patio, balcony), which have no enclosing walls.
+Walls and openings use the takeoff's one shared calibration; only rooms follow a sheet's own.
+
+Tests: `scripts/test-plan-geometry-engine.mjs`, `-stages.mjs`, `-fusion.mjs` (drawings with known
+measurements), `scripts/test-takeoff-three-levels.mjs`, and on the recovered New Job 03/09 plans (skipped
+when the recovery folder is absent): `scripts/test-plan-geometry-regression.mjs`,
+`scripts/evaluate-linework-fusion.mjs` (saved provider responses, offline) and
+`scripts/test-takeoff-real-plan-replay-browser.mjs` (the actual screen with those responses replayed).

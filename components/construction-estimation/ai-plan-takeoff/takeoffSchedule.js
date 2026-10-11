@@ -3,6 +3,7 @@ import { absentTakeoffMaterialFields } from '../../../lib/construction-estimatio
 import { ARCHITRAVE_DEFAULTS, ARCHITRAVE_RULES, packOpenings } from '../../../lib/construction-estimation/architraveCutting.js';
 import { INPUT_DATA_SHEET_TEMPLATE } from '../../../lib/construction-estimation/inputDataSheetTemplate.js';
 import { createAiScheduleRows, documentedInputCandidates } from './ai-integration/scheduleEvidence.js';
+import { roomFloorFinish } from './ai-integration/roomGeometry.js';
 import { buildTakeoffReview, reviewAudience, reviewText } from './ai-integration/reviewSummary.js';
 import { EXTERIOR_WALL_CLASSES, normaliseLevel, explicitLevel, resolveTakeoffLevel, importWallCategory, resolveExteriorClass, runLengthM, createExteriorClassificationTotals, resolveConstructionSystem, legacyExteriorClassFromSystem, EXTERIOR_CONSTRUCTION_SYSTEMS, INTERIOR_CONSTRUCTION_SYSTEMS, CONSTRUCTION_SYSTEM_LABELS, resolveOpeningRoom, resolvePostColumnCore, POST_SURROUND_TYPE_LABELS } from './takeoffRunData.js';
 
@@ -1274,9 +1275,10 @@ export function createTakeoffSchedule({
     generatedAt: new Date().toISOString(),
     aiAnalysis,
     measurementRecords: [...createMeasurementRecords({ completedFloorplans, completedWallRuns, placedOpenings, completedAreas, completedEaves, completedMeasurements, completedPillars, pixelsPerMm }),
-      ...(aiAnalysis?.rooms || []).filter(room => (room.actions || []).includes('Floor Tiling')).map(room => ({
-        id: `${room.id}:floor-tiling`, roomId: room.id, page: room.page, level: room.level,
-        kind: 'floorFinish', category: 'Tiles', label: `${room.name} floor tiling`,
+      // One floor-finish record per room: its chosen finish, or tiles where it was marked for floor tiling.
+      ...(aiAnalysis?.rooms || []).filter(room => roomFloorFinish(room)).map(room => ({
+        id: room.floorFinish ? `${room.id}:floor-finish` : `${room.id}:floor-tiling`, roomId: room.id, page: room.page, level: room.level,
+        kind: 'floorFinish', category: roomFloorFinish(room), label: room.floorFinish ? `${room.name} floor - ${room.floorFinish}` : `${room.name} floor tiling`,
         quantity: room.reviewRequired ? null : room.areaM2, unit: 'm2', source: room.source,
         nodes: room.polygon, pixelsPerMm: room.pixelsPerMm,
       }))],

@@ -314,7 +314,7 @@ export function fuseSheetLinework(response, raster, sheet, existing = {}, overri
     }
   }
   const measuredRoom = (space, extra = {}) => {
-    const reasons = [space.reviewReason, space.verified ? null : null, extra.review].filter(Boolean);
+    const reasons = [space.reviewReason, extra.review].filter(Boolean);
     return { polygon: reduceBoundary(space.polygon, options.maxRoomCorners, mm(25)).map(toNormal), boundaryClosed: Boolean(space.verified) && !space.reviewRequired && !extra.review,
       lineworkRoomId: space.id, lineworkVerified: Boolean(space.verified), lineworkAreaM2: +space.netAreaM2.toFixed(2), ...(reasons.length ? { lineworkReview: reasons.join(' ') } : {}) };
   };
@@ -323,10 +323,10 @@ export function fuseSheetLinework(response, raster, sheet, existing = {}, overri
   for (const entry of labelled) {
     const found = spaceOf.get(entry.index);
     if (!found) { if (entry.at && roomSizeClass(entry.room.name) !== 'outdoor') report.rooms.withoutBoundary += 1; rooms.push(entry.room); continue; }
-    const together = labelled.filter((other) => spaceOf.get(other.index)?.space.id === found.space.id);
+    const together = labelled.filter((other) => spaceOf.get(other.index)?.space === found.space);
     if (together.length > 1) {
       // One open space under several names: no wall separates them, so no boundary is invented.
-      if (!shared.has(found.space.id)) shared.set(found.space.id, together);
+      if (!shared.has(found.space)) shared.set(found.space, together);
       rooms.push({ ...entry.room, sharedSpaceId: found.space.id, evidence: `${entry.room.evidence || ''} Shares one open space with ${together.filter((other) => other !== entry).map((other) => other.room.name).join(', ')}; no wall separates them on the drawing.`.trim() });
       continue;
     }
@@ -336,8 +336,7 @@ export function fuseSheetLinework(response, raster, sheet, existing = {}, overri
       confidence: found.space.verified && !found.byProximity ? Math.max(Number(entry.room.confidence) || 0, 0.9) : Math.min(Number(entry.room.confidence) || 0.6, 0.7),
       evidence: `${entry.room.evidence || ''} Boundary and ${found.space.netAreaM2.toFixed(2)} m² floor area measured from the wall linework${found.space.verified ? '' : ', closing gaps that are not confirmed as doors or windows'}.`.trim() });
   }
-  for (const [spaceId, together] of shared) {
-    const space = geometry.rooms.find((candidate) => candidate.id === spaceId);
+  for (const [space, together] of shared) {
     const names = together.map((entry) => entry.room.name);
     report.rooms.sharedSpaces += 1;
     rooms.push({ page: response.page, name: names.join(' / ').slice(0, 60), x: Math.min(1, Math.max(0, space.centroid.x / logicalWidth)), y: Math.min(1, Math.max(0, space.centroid.y / logicalHeight)),

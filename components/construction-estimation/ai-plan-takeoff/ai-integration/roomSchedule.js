@@ -55,7 +55,7 @@ export function mergeRoomReadings(existing = [], readings = []) {
   const matched = read.filter(room => !protectedRooms.some(old => old.page === room.page && (old.id === room.id || (nameKey(old.label || old.name) === nameKey(room.name) && Math.hypot(old.x-room.x,old.y-room.y)<0.04))))
     .map(room => {
       const old = existing?.find(old => old.page === room.page && (old.id === room.id || (nameKey(old.label || old.name) === nameKey(room.name) && Math.hypot(old.x-room.x,old.y-room.y)<0.04)));
-      return old ? {...room,id:old.id||room.id,selected:old.selected||false,actions:old.actions||[],wallHeightM:old.wallHeightM} : room;
+      return old ? {...room,id:old.id||room.id,selected:old.selected||false,actions:old.actions||[],wallHeightM:old.wallHeightM,...(old.floorFinish?{floorFinish:old.floorFinish}:{})} : room;
     });
   // A room the estimator already added by hand is not added again when the plan names it too.
   return validateRoomSet(uniquelyNamed(sorted([...kept, ...matched.filter((room) => !manualNames.has(nameKey(room.name)))])));

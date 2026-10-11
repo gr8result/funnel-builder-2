@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Group, Line, Circle, Text, Rect } from 'react-konva';
-import { ROOM_ACTIONS } from './ai-integration/roomGeometry.js';
-import { BUILDING_LEVELS } from './ai-integration/roomSchedule.js';
+import { ROOM_ACTIONS, ROOM_FLOOR_FINISHES } from './ai-integration/roomGeometry.js';
+import { BUILDING_LEVELS } from './ai-integration/roomSchedule.js';
 
 export function RoomBoundaryPanel({ rooms, control, enabled, setEnabled, editing, setEditing, readOnly }) {
   const selected=rooms.filter(r=>r.selected);
@@ -11,6 +11,7 @@ export function RoomBoundaryPanel({ rooms, control, enabled, setEnabled, editing
     <strong>Interactive rooms</strong>
     <label style={{display:'block',margin:'8px 0'}}><input type="checkbox" checked={enabled} disabled={readOnly} onChange={e=>{setEnabled(e.target.checked);setEditing(null);}} /> Select rooms on plan</label>
     <button disabled={control.busy||readOnly} onClick={()=>{setEnabled(true);control.read();}}>{control.busy?'Detecting…':'Detect room boundaries'}</button>
+    {control.remeasure&&<button data-testid="remeasure-rooms" style={{marginLeft:6}} disabled={control.busy||readOnly||!rooms.some(r=>r.source!=='manual')} title="Measure the rooms again from the plan's wall linework, using the doors and windows now placed. Confirmed and edited boundaries are kept. No AI request is made." onClick={()=>{setEnabled(true);control.remeasure();}}>Re-measure from linework</button>}
     {control.message&&<p role="status">{control.message}</p>}
     <p>{selected.length} rooms selected · {selected.reduce((n,r)=>n+(r.areaM2||0),0).toFixed(2)} m²</p>
     <div style={{display:'flex',flexWrap:'wrap',gap:5}}>{ROOM_ACTIONS.map(action=><button key={action} disabled={!selected.length||readOnly} onClick={()=>apply(action)}>{action}</button>)}</div>
@@ -21,9 +22,11 @@ export function RoomBoundaryPanel({ rooms, control, enabled, setEnabled, editing
       <label><input type="checkbox" checked={!!room.selected} disabled={!room.id||readOnly} onChange={()=>control.update([room.id],{selected:!room.selected})} /> {room.name}</label>
       <div>{room.level} · {room.areaM2?.toFixed(2)??'—'} m² · {room.perimeterM?.toFixed(2)??'—'} m</div>
       <small style={{color:room.reviewRequired||!room.polygon?.length?'#a16207':'#166534'}}>{!room.polygon?.length?'Review: detect or redraw this boundary':room.reviewRequired?`Review: ${(room.reviewReasons||[]).join('; ')}`:`Confirmed geometry · ${Math.round((room.confidence||0)*100)}% confidence`}</small>
+      {room.polygon?.length>=3&&<small data-testid={`room-source:${room.id}`} style={{display:'block',color:'#475569'}}>{room.boundaryEdited?'Boundary edited by hand':room.detectionMethod==='wall-linework'?(room.lineworkVerified?'Measured from the plan\'s wall linework':'Measured from wall linework, closing unconfirmed gaps'):'Boundary from the plan reading'}{room.floorFinish?` · Floor: ${room.floorFinish}`:''}</small>}
       {room.selected&&<div>
         <label style={{display:'block'}}>Room name <input aria-label={`Name for ${room.name}`} defaultValue={room.name} disabled={readOnly} onBlur={event=>{const name=event.target.value.trim().slice(0,60);if(name&&name!==room.name)control.update([room.id],{name});}} /></label>
         <label style={{display:'block'}}>Level <select aria-label={`Level for ${room.name}`} value={room.level||'Unassigned'} disabled={readOnly} onChange={event=>control.update([room.id],{level:event.target.value,levelId:event.target.value})}><option value="Unassigned">Confirm level</option>{BUILDING_LEVELS.map(level=><option key={level}>{level}</option>)}</select></label>
+        <label style={{display:'block'}}>Floor finish <select aria-label={`Floor finish for ${room.name}`} value={room.floorFinish||''} disabled={readOnly} onChange={event=>control.update([room.id],{floorFinish:event.target.value||null})}><option value="">Not set</option>{ROOM_FLOOR_FINISHES.map(finish=><option key={finish} value={finish}>{finish==='exposed Agg'?'Exposed aggregate':finish}</option>)}</select></label>
         <button disabled={readOnly} onClick={()=>{setEnabled(true);setEditing(editing===room.id?null:room.id);}}>{editing===room.id?'Finish editing':'Adjust / redraw'}</button>
         <button disabled={readOnly} onClick={()=>{setEditing(room.id);setEnabled(true);control.update([room.id],{polygon:[],confirmed:false});}}>Redraw boundary</button>
         <button disabled={!room.polygon?.length||readOnly} onClick={()=>control.update([room.id],{confirmed:true,boundaryClosed:true})}>Confirm boundary</button>
@@ -43,7 +46,7 @@ export function RoomBoundaryLayer({ rooms, enabled, editing, control, scale, wid
   const stop=e=>{e.cancelBubble=true;};
   const local=e=>e.target.getParent().getRelativePointerPosition();
   return <Group listening={enabled} name="room-boundaries">
-    {rooms.filter(r=>r.polygon?.length>=3).map(room=><Group key={room.id}>
+    {rooms.filter(r=>r.polygon?.length>=3).sort((a,b)=>(b.areaM2||0)-(a.areaM2||0)).map(room=><Group key={room.id}>
       <Line name={`room-boundary:${room.id}`} points={room.polygon.flatMap(p=>[p.x,p.y])} closed
         fill={room.selected?'rgba(37,99,235,0.35)':hovered===room.id?'rgba(14,165,233,0.28)':'rgba(255,255,255,0.01)'}
         stroke={room.reviewRequired?'#d97706':'#0284c7'} strokeWidth={(room.selected?3:1.5)/scale} dash={room.reviewRequired?[6/scale,4/scale]:[]}

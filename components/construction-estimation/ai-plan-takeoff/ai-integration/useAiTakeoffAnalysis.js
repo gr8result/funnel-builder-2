@@ -121,6 +121,67 @@ export function useAiTakeoffAnalysis(options) {
   const [roomsState, setRoomsState] = useState({ busy: false, message: '', error: false });
   const reportRef = useRef(null);
   reportRef.current = report;
+  const measuredSheetRooms = async (planPage, level, named) => {
+    const pageNumber = planPage.pageNumber;
+    const pixelsPerMm = calibrationsRef.current[pageNumber]?.pixelsPerMm || latest.current.pixelsPerMm;
+    const context = { page: pageNumber, level, width: planPage.logicalWidth, height: planPage.logicalHeight, pixelsPerMm, walls: latest.current.completedWallRuns, openings: latest.current.placedOpenings };
+    let rooms = named, raster = null, linework = null;
+    if (pixelsPerMm > 0) {
+      try {
+        const planRaster = await readPlanRaster(planPage.dataUrl, undefined, { logicalWidth: planPage.logicalWidth, pixelsPerMm });
+        const fused = fuseSheetLinework({ page: pageNumber, walls: [], openings: [], rooms: named }, planRaster,
+          { pageNumber, logicalWidth: planPage.logicalWidth, logicalHeight: planPage.logicalHeight, pixelsPerMm },
+          { placedOpenings: (latest.current.placedOpenings || []).filter((item) => Number(item.page || item.pageId || 1) === pageNumber) });
+        rooms = fused.response.rooms;
+        linework = fused.report.rooms;
+      } catch { rooms = named; }
+    }
+    // A name the linework gave no space keeps the plan reading's own boundary, checked against the sheet image.
+    if (rooms.some((room) => !room.lineworkRoomId && (room.polygon?.length || room.nodes?.length))) raster = await readRoomRaster(planPage.dataUrl);
+    return { rooms: rooms.map((room, index) => detectRoomBoundary(room, { ...context, raster }, index)), linework };
+  };
+  // Measure the rooms again from the plan linework, keeping their names: after openings were placed
+  // or corrected, or a sheet was recalibrated. Confirmed and hand-edited boundaries are left alone.
+  const remeasureRooms = async () => {
+    if (pending.current || roomsState.busy) return;
+    const current = latest.current;
+    const existing = reportRef.current?.rooms || [];
+    const pages = [...new Set(existing.filter((room) => room.source !== 'manual' && Number.isFinite(room.x) && Number.isFinite(room.y)).map((room) => room.page))];
+    if (current.readOnly || !pages.length) { setRoomsState({ busy: false, error: true, message: 'There are no rooms read from the plans to measure again. Detect room boundaries first.' }); return; }
+    const abort = new AbortController();
+    controller.current = abort;
+    const work = { jobId: current.jobId, takeoffId: current.takeoffId, planPages: current.planPages, generation: current.lifecycle.hydrationVersion, signal: abort.signal };
+    pending.current = work;
+    try {
+      const readings = [];
+      let measured = 0;
+      for (const pageNumber of pages) {
+        assertCurrent(work);
+        const planPage = work.planPages.find((page) => page.pageNumber === pageNumber);
+        if (!planPage) continue;
+        setRoomsState({ busy: true, error: false, message: `Measuring rooms from the wall linework — sheet ${pageNumber}…` });
+        await nextFrame();
+        // The names as first read; an open-plan room is rebuilt from the names it was made of.
+        const named = existing.filter((room) => room.page === pageNumber && room.source !== 'manual' && !room.openPlanOf && Number.isFinite(room.x) && Number.isFinite(room.y))
+          .map((room) => ({ page: pageNumber, name: room.label || room.name, x: room.x, y: room.y, basis: room.basis, confidence: room.confidence, evidence: String(room.evidence || '').split(' Boundary and ')[0].split(' Shares one open space')[0], id: room.sharedSpaceId || room.lineworkRoomId ? undefined : room.id }));
+        const level = existing.find((room) => room.page === pageNumber)?.level || current.sheetLevels?.[pageNumber] || 'Unassigned';
+        const result = await measuredSheetRooms(planPage, level, named);
+        assertCurrent(work);
+        measured += result.rooms.filter((room) => room.lineworkRoomId).length;
+        readings.push({ page: pageNumber, level, rooms: result.rooms });
+      }
+      const next = reportWithRooms(reportRef.current, mergeRoomReadings(reportRef.current?.rooms, readings));
+      setReport(next);
+      latest.current.markCompleted?.('room-boundaries-detected');
+      pending.current = null;
+      setRoomsState({ busy: false, error: false, message: `${measured} room${measured === 1 ? '' : 's'} measured from the wall linework on ${pages.length} sheet${pages.length === 1 ? '' : 's'}. Boundaries you confirmed or edited were kept.` });
+      await nextFrame();
+      await latest.current.onRoomsRead?.(next);
+    } catch (error) {
+      if (pending.current === work) pending.current = null;
+      setRoomsState(work.signal.aborted ? { busy: false, error: false, message: '' } : { busy: false, error: true, message: error.message || 'The rooms could not be measured again. Nothing was changed.' });
+    }
+  };
   const readRooms = async () => {
     if (pending.current || roomsState.busy) return;
     const current = latest.current;
@@ -157,9 +218,10 @@ export function useAiTakeoffAnalysis(options) {
           page: { ...prepared, drawingType: 'floor_plan', level: sheet.level }, pixelsPerMm: latest.current.pixelsPerMm > 0 ? latest.current.pixelsPerMm : 1 }, work.signal);
         assertCurrent(work);
         model = result.model || model;
-        const raster = await readRoomRaster(prepared.imageDataUrl);
+        // Names from the plan reading; boundaries from the sheet's own wall linework wherever it encloses the room.
+        const sheetRooms = await measuredSheetRooms(work.planPages.find((page) => page.pageNumber === sheet.page), sheet.level, result.analysis.rooms || []);
         assertCurrent(work);
-        readings.push({ page: sheet.page, level: sheet.level, rooms: (result.analysis.rooms || []).map((room, index) => detectRoomBoundary(room, { page: sheet.page, level: sheet.level, width: prepared.logicalWidth, height: prepared.logicalHeight, pixelsPerMm: calibrationsRef.current[sheet.page]?.pixelsPerMm || latest.current.pixelsPerMm, walls: latest.current.completedWallRuns, openings: latest.current.placedOpenings, raster }, index)) });
+        readings.push({ page: sheet.page, level: sheet.level, rooms: sheetRooms.rooms });
       }
       const rooms = mergeRoomReadings(reportRef.current?.rooms, readings);
       const next = reportWithRooms(reportRef.current, rooms, { readAt: new Date().toISOString(), model, sheets: sheets.map((sheet) => sheet.page) });
@@ -346,9 +408,10 @@ export function useAiTakeoffAnalysis(options) {
         const planPage = work.planPages.find((page) => page.pageNumber === pageNumber);
         try {
           setMessage(`Measuring wall linework — sheet ${pageNumber}…`);
-          const raster = await readPlanRaster(planPage?.dataUrl);
+          const raster = await readPlanRaster(planPage?.dataUrl, undefined, { logicalWidth: planPage?.logicalWidth, pixelsPerMm: calibrationsRef.current[pageNumber]?.pixelsPerMm || context.pixelsPerMm });
           assertCurrent(work, true);
-          const sheet = { pageNumber, logicalWidth: planPage.logicalWidth, logicalHeight: planPage.logicalHeight, pixelsPerMm: context.pixelsPerMm };
+          const sheetPixelsPerMm = calibrationsRef.current[pageNumber]?.pixelsPerMm || context.pixelsPerMm;
+          const sheet = { pageNumber, logicalWidth: planPage.logicalWidth, logicalHeight: planPage.logicalHeight, pixelsPerMm: sheetPixelsPerMm };
           // Doors and windows read region by region (off unless the takeoff asks for it): each
           // region is enlarged, read on its own and mapped back to the sheet. A sheet whose regions
           // could not all be read keeps the whole-sheet reading as well, and says so.
@@ -368,7 +431,7 @@ export function useAiTakeoffAnalysis(options) {
               response.regionOpenings = read.report;
             }
           }
-          const fused = fuseSheetLinework(response, raster, { pageNumber, logicalWidth: planPage.logicalWidth, logicalHeight: planPage.logicalHeight, pixelsPerMm: context.pixelsPerMm },
+          const fused = fuseSheetLinework(response, raster, sheet,
             {
               placedOpenings: (latest.current.placedOpenings || []).filter((item) => Number(item.page || item.pageId || 1) === pageNumber),
               completedFloorplans: (latest.current.completedFloorplans || []).filter((item) => Number(item.page) === pageNumber),
@@ -568,5 +631,5 @@ export function useAiTakeoffAnalysis(options) {
     await measure(work);
   };
 
-  return { report, inspections, sheetCalibrations, recordSheetCalibration, resolveDecision, restoreReport, stage, message, scaleProposal, rooms: { ...roomsState, read: readRooms, add: addRoom, remove: removeRoom, update: updateRooms }, run, confirmScale, cancel, useManualCalibration, continueManualCalibration, hasCalibration: options.pixelsPerMm > 0 };
+  return { report, inspections, sheetCalibrations, recordSheetCalibration, resolveDecision, restoreReport, stage, message, scaleProposal, rooms: { ...roomsState, read: readRooms, remeasure: remeasureRooms, add: addRoom, remove: removeRoom, update: updateRooms }, run, confirmScale, cancel, useManualCalibration, continueManualCalibration, hasCalibration: options.pixelsPerMm > 0 };
 }

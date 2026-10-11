@@ -1,5 +1,9 @@
 import { refineRoomEdges } from './roomBoundaryVision.js';
 // Room coordinates are logical plan pixels, independent of viewport and render resolution.
+// Floor finishes a room can be given; each is a Floor Finishes category of the Takeoff Schedule.
+export const ROOM_FLOOR_FINISHES = ['Tiles', 'Carpets', 'Hybrid', 'Polished Concrete', 'exposed Agg'];
+// The finish a room's floor area is measured under: the one chosen for it, else tiles where it was marked for floor tiling.
+export const roomFloorFinish = (room) => (ROOM_FLOOR_FINISHES.includes(room?.floorFinish) ? room.floorFinish : (room?.actions || []).includes('Floor Tiling') ? 'Tiles' : null);
 export const ROOM_ACTIONS = ['Mark as Wet Area', 'Floor Tiling', 'Wall Tiling', 'Flooring', 'Painting', 'Include in Takeoff'];
 export function roomType(name='') {
   return Object.entries({Bedroom:/\b(?:bed(?:room)?\s*\d*|master)\b/i,Kitchen:/\bkitchen\b/i,Bathroom:/\bbath(?:room)?\b/i,Ensuite:/\bens(?:uite)?\b/i,Laundry:/\b(?:laundry|ldry)\b/i,Garage:/\bgarage\b/i,Alfresco:/\balfresco\b/i,Patio:/\bpatio\b/i}).find(([,pattern])=>pattern.test(name))?.[0] || 'Other';
