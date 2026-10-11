@@ -43,17 +43,31 @@ const measurement = {
   ],
   pillars: [], eaves: [],
   buildingAreas: [{ detectionId: 'A01', ...evidence('Living area inside outer walls.'), type: 'Living', label: 'Living', nodes: [{ x: 0.2, y: 0.25 }, { x: 0.8, y: 0.25 }, { x: 0.8, y: 0.75 }, { x: 0.2, y: 0.75 }] }],
-  rooms: [{ page: 1, name: 'BED 1', x: 0.35, y: 0.5, basis: 'OBSERVED', confidence: 0.95, evidence: 'Label BED 1.' }, { page: 1, name: 'LIVING', x: 0.65, y: 0.5, basis: 'OBSERVED', confidence: 0.95, evidence: 'Label LIVING.' }],
+  rooms: [
+    { page: 1, name: 'BED 1', x: 0.35, y: 0.5, polygon: [], boundaryClosed: false, printedAreaM2: null, dimensionReferences: [], basis: 'OBSERVED', confidence: 0.95, evidence: 'Label BED 1.' },
+    { page: 1, name: 'LIVING', x: 0.65, y: 0.5, polygon: [], boundaryClosed: false, printedAreaM2: null, dimensionReferences: [], basis: 'OBSERVED', confidence: 0.95, evidence: 'Label LIVING.' },
+  ],
   fixtures: [], documentedQuantities: [], review: [],
 };
 const providerCalls = [];
+const planSetEvidence = {
+  page: 1,
+  levels: [],
+  openingSchedule: [],
+  windowCodeConvention: { order: 'unknown', basis: 'OBSERVED', confidence: 0.9, evidence: 'No window code convention is documented.' },
+  standardDoorHeight: { valueMm: null, basis: 'OBSERVED', confidence: 0.9, evidence: 'No standard door height is documented.' },
+  eaveWidth: { valueMm: null, basis: 'OBSERVED', confidence: 0.9, evidence: 'No eave width is documented.' },
+  roofPitch: { degrees: null, basis: 'OBSERVED', confidence: 0.9, evidence: 'No roof pitch is documented.' },
+  notes: [],
+  review: [],
+};
 const fakeOpenAi = async (url, options) => {
   const body = JSON.parse(options.body);
   const format = body.text.format.name;
   const scopeText = body.input[0].content.map((item) => item.text || '').join('\n');
   const scope = /Return only walls/.test(scopeText) ? 'geometry' : /Return only openings/.test(scopeText) ? 'items' : null;
   providerCalls.push({ url, format, scope, model: body.model });
-  let analysis = format === 'takeoff_inspect_v1' ? inspection : structuredClone(measurement);
+  let analysis = format === 'takeoff_inspect_v1' ? inspection : format === 'takeoff_evidence_v1' ? structuredClone(planSetEvidence) : structuredClone(measurement);
   if (scope === 'geometry') Object.assign(analysis, { openings: [], rooms: [], fixtures: [], documentedQuantities: [] });
   if (scope === 'items') Object.assign(analysis, { walls: [], buildingAreas: [], pillars: [], eaves: [] });
   return { ok: true, status: 200, headers: { get: () => 'stub-provider-request' },
@@ -62,7 +76,7 @@ const fakeOpenAi = async (url, options) => {
 const unconfiguredHandler = createTakeoffAnalysisHandler({ env: {}, fetchImpl: async () => { throw new Error('Provider must not be called when unconfigured.'); } });
 const configuredHandler = createTakeoffAnalysisHandler({ env: { OPENAI_API_KEY: 'stub-not-a-real-key' }, fetchImpl: fakeOpenAi });
 // Provider accepts inspection but rejects measurement (HTTP 500): the real error must be shown.
-const measureFailsHandler = createTakeoffAnalysisHandler({ env: { OPENAI_API_KEY: 'stub-not-a-real-key' }, fetchImpl: async (url, options) => JSON.parse(options.body).text.format.name === 'takeoff_inspect_v1'
+const measureFailsHandler = createTakeoffAnalysisHandler({ env: { OPENAI_API_KEY: 'stub-not-a-real-key' }, fetchImpl: async (url, options) => JSON.parse(options.body).text.format.name !== 'takeoff_measure_v1'
   ? fakeOpenAi(url, options) : { ok: false, status: 500, headers: { get: () => 'stub-failed-request' }, json: async () => ({ error: { code: 'server_error', type: 'server_error' } }) } });
 let serverMode = 'unconfigured';
 const apiRequests = [];
@@ -170,7 +184,7 @@ window.harness={snapshot,saveResults:()=>saveResults,saveInputs:()=>saveInputs,r
  setView({zoom,pan}){value('sheetViewStateRef').current[value('currentPage')]={scale:zoom,pos:pan};dispatch('stageScale',zoom);dispatch('stagePos',pan);},
  viewSize(){return {width:value('stageRef').current.width(),height:value('stageRef').current.height()};},
  point(point){const stage=value('stageRef').current,layer=value('layerRef').current,rect=stage.content.getBoundingClientRect(),visible=layer.getAbsoluteTransform().point(point);return {x:rect.left+visible.x*rect.width/stage.width(),y:rect.top+visible.y*rect.height/stage.height()};},
- async stored(){const db=await new Promise((resolve,reject)=>{const request=indexedDB.open('estimate-builder-template-db',2);request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});const record=await new Promise((resolve,reject)=>{const request=db.transaction('jobs','readonly').objectStore('jobs').get('job:'+jobId);request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});db.close();const materialized=await materializeTakeoffPlanPages(record.workbook);return JSON.parse(JSON.stringify({job:materialized.aiPlanTakeoffJob}));}
+ async stored(){const openDb=(name)=>new Promise((resolve,reject)=>{const request=indexedDB.open(name);request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});let record;for(const {name} of await indexedDB.databases()){if(!String(name).startsWith('estimate-builder-template-db'))continue;const db=await openDb(name);if(db.objectStoreNames.contains('jobs'))record=await new Promise((resolve,reject)=>{const request=db.transaction('jobs','readonly').objectStore('jobs').get('job:'+jobId);request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});db.close();if(record)break;}const materialized=await materializeTakeoffPlanPages(record.workbook);return JSON.parse(JSON.stringify({job:materialized.aiPlanTakeoffJob}));}
 };
 reactRoot.render(React.createElement(Shell));
 `);
@@ -290,8 +304,8 @@ try {
   report.cases.measureFailedMessage = await page.$eval('#ai-takeoff-status', (element) => element.textContent);
   assert.match(report.cases.measureFailedMessage, /could not measure the plan.*HTTP 500/, report.cases.measureFailedMessage);
   assert.equal((await snapshot()).completedWallRuns.length, 1, 'Failed measurement inserted nothing');
-  assert.deepEqual(apiRequests.filter((item) => item.mode === 'measure-fails').map((item) => `${item.action}:${item.scope || ''}`), ['inspect:', 'measure:geometry', 'measure:geometry'],
-    'Failed geometry half is retried once; the items half is never paid for after it fails.');
+  assert.deepEqual(apiRequests.filter((item) => item.mode === 'measure-fails').map((item) => `${item.action}:${item.scope || ''}`), ['inspect:', 'evidence:', 'measure:geometry', 'measure:geometry'],
+    'Plan-set evidence succeeds before the failed geometry half is retried; the items half is never paid for after it fails.');
 
   // 7. Configured (fake provider): click RUN AI TAKEOFF and observe the busy state.
   serverMode = 'configured';
@@ -306,7 +320,7 @@ try {
   report.cases.completedMessage = await page.$eval('#ai-takeoff-status', (element) => element.textContent);
   assert.equal(report.cases.completedMessage, 'AI TAKEOFF COMPLETE', report.cases.completedMessage);
   assert.deepEqual(apiRequests.filter((item) => item.mode === 'configured').map((item) => `${item.action}:${item.scope || ''}`), ['measure:geometry', 'measure:items', 'refine:geometry', 'refine:items'],
-    'Unchanged page is not re-inspected; halves run one at a time.');
+    'Plan-set evidence was already collected for this document in the failed-measurement run and is reused; unchanged page is not re-inspected and halves run one at a time.');
   assert.deepEqual(providerCalls.slice(-4).map((item) => `${item.format}:${item.scope}`), ['takeoff_measure_v1:geometry', 'takeoff_measure_v1:items', 'takeoff_refine_v1:geometry', 'takeoff_refine_v1:items']);
   assert.ok(apiRequests.every((item) => item.authorization && item.imageBytes > 1000), 'Authenticated requests carry the rendered page image');
   await settle();

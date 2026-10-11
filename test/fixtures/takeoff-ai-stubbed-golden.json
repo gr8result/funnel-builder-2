@@ -17,11 +17,6 @@
           "confidence": 0.92,
           "evidence": "North and east outer wall.",
           "fields": {
-            "thicknessMm": {
-              "basis": "ASSUMED",
-              "confidence": 0,
-              "evidence": "230 mm is the existing manual tool display default; wall thickness was not documented."
-            },
             "lengthMm": {
               "basis": "DERIVED",
               "confidence": 0.92,
@@ -41,6 +36,11 @@
               "basis": "ASSUMED",
               "confidence": 0,
               "evidence": "Construction system is not established from the drawing."
+            },
+            "thicknessMm": {
+              "basis": "ASSUMED",
+              "confidence": 0,
+              "evidence": "230 mm is the existing manual tool display default; wall thickness was not documented."
             },
             "exteriorType": {
               "basis": "ASSUMED",
@@ -97,11 +97,6 @@
           "confidence": 0.92,
           "evidence": "South and west outer wall.",
           "fields": {
-            "thicknessMm": {
-              "basis": "ASSUMED",
-              "confidence": 0,
-              "evidence": "230 mm is the existing manual tool display default; wall thickness was not documented."
-            },
             "lengthMm": {
               "basis": "DERIVED",
               "confidence": 0.92,
@@ -121,6 +116,11 @@
               "basis": "ASSUMED",
               "confidence": 0,
               "evidence": "Construction system is not established from the drawing."
+            },
+            "thicknessMm": {
+              "basis": "ASSUMED",
+              "confidence": 0,
+              "evidence": "230 mm is the existing manual tool display default; wall thickness was not documented."
             },
             "exteriorType": {
               "basis": "ASSUMED",
@@ -177,11 +177,6 @@
           "confidence": 0.92,
           "evidence": "Internal wall between Bed 1 and Living.",
           "fields": {
-            "thicknessMm": {
-              "basis": "ASSUMED",
-              "confidence": 0,
-              "evidence": "70 mm is the existing manual tool display default; wall thickness was not documented."
-            },
             "lengthMm": {
               "basis": "DERIVED",
               "confidence": 0.92,
@@ -201,6 +196,11 @@
               "basis": "ASSUMED",
               "confidence": 0,
               "evidence": "Construction system is not established from the drawing."
+            },
+            "thicknessMm": {
+              "basis": "ASSUMED",
+              "confidence": 0,
+              "evidence": "70 mm is the existing manual tool display default; wall thickness was not documented."
             },
             "alignment": {
               "basis": "DERIVED",
@@ -253,7 +253,7 @@
             "hostWall": {
               "basis": "DERIVED",
               "confidence": 0.92,
-              "evidence": "Unique nearby wall on the same calibrated page, with matching internal/external classification."
+              "evidence": "Nearest matching wall on the same calibrated page."
             },
             "location": {
               "basis": "OBSERVED",
@@ -289,13 +289,13 @@
       "widthMm": 1800,
       "heightMm": 1200,
       "itemTag": "1218",
-      "subType": "Window",
+      "subType": "standard",
       "glassType": "",
       "frameMaterial": "",
       "frameColour": "",
       "sillType": "",
       "brickSillRequired": false,
-      "location": "",
+      "location": "BED 1",
       "frameJambDetails": ""
     },
     {
@@ -318,7 +318,7 @@
             "hostWall": {
               "basis": "DERIVED",
               "confidence": 0.92,
-              "evidence": "Unique nearby wall on the same calibrated page, with matching internal/external classification."
+              "evidence": "Nearest matching wall on the same calibrated page."
             },
             "location": {
               "basis": "OBSERVED",
@@ -354,13 +354,13 @@
       "widthMm": null,
       "heightMm": null,
       "itemTag": "D1",
-      "subType": "External Door",
+      "subType": "Entry",
       "glassType": "",
       "frameMaterial": "",
       "frameColour": "",
       "sillType": "",
       "brickSillRequired": false,
-      "location": "",
+      "location": "LIVING",
       "frameJambDetails": ""
     }
   ],
