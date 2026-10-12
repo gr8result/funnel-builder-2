@@ -1,3 +1,4 @@
+import { sheetPixelsPerMm } from '../sheetScale.js';
 import { convertAiTakeoffDetections } from './adapter.js';
 import { validateAnalysisEvidence } from './analysisEvidence.js';
 import { calculatePolygonAreaM2 } from '../floorplanGeometry.js';
@@ -114,7 +115,11 @@ export function resolveAnalysisScale({ pages = [], inspections = [], existingPix
   }
   if (!selected.length && !conflicts.length && positive(existingPixelsPerMm)) selected.push({ pixelsPerMm: existingPixelsPerMm, source: 'existing-calibration' });
   const first = selected[0];
-  if (first && selected.some((item) => !closeScale(item.pixelsPerMm, first.pixelsPerMm))) conflicts.push({ message: 'Relevant sheets have different scales. The existing Takeoff supports one shared calibration; review these sheets separately.' });
+  const ownScale = (item) => positive(Number(sheetCalibrations?.[item.page]?.pixelsPerMm ?? sheetCalibrations?.[item.page]));
+  const mixed = Boolean(first && selected.some((item) => !closeScale(item.pixelsPerMm, first.pixelsPerMm)));
+  // Sheets at different scales are each measured at their own, provided each was calibrated on its own sheet.
+  if (mixed && selected.some((item) => !closeScale(item.pixelsPerMm, first.pixelsPerMm) && !ownScale(item) && !ownScale(first))) conflicts.push({ message: 'Relevant sheets have different scales and are not each calibrated. Calibrate each floor-plan sheet with the Calibrate tool, then run AI Takeoff again.' });
+  else if (mixed) review.push('The floor-plan sheets are at different scales; each is measured at its own calibration.');
   const value = conflicts.length ? null : first?.pixelsPerMm || null;
   return {
     pixelsPerMm: value, source: first?.source || null, denominator: first?.denominator || null,
@@ -248,7 +253,9 @@ export function normalizePlanAnalysis({ context, responses = [], runId, modelVer
   const batch = { jobId: context.jobId, takeoffId: context.takeoffId, documentHash: context.documentHash, runId, modelVersion, pixelsPerMm: context.pixelsPerMm, detections: [] };
   const analysis = { schemaVersion: 'ai-takeoff-analysis.v1', runId, modelVersion, rooms: [], fixtures: [], documentedQuantities: [], unresolved: [], review: [], benchmarks: [], pages: [], alreadyMeasured: [], notAdded: [], openEdges: [], documentedAreas: [] };
   const report = (page, item, message, code = 'review') => analysis.review.push({ page, detectionId: item?.detectionId || '', message, code, audience: reviewAudience({ code }) });
-  const scale = context.pixelsPerMm;
+  // Each sheet is measured at its own scale (sheetScale.js); `scale` is the scale of the sheet being worked on.
+  const scaleOfPage = (page) => sheetPixelsPerMm(page, context.pixelsPerMm, context.sheetCalibrations);
+  let scale = context.pixelsPerMm;
   const pageFor = (page) => context.pages.find((item) => pageOf(item) === page);
   const all = [];
   const roomLabels = [];
@@ -292,6 +299,7 @@ export function normalizePlanAnalysis({ context, responses = [], runId, modelVer
   const tally = (map, key, amount) => map.set(key, (map.get(key) || 0) + amount);
   const found = new Map(), measured = new Map();
   for (const { raw, page, kind } of all) {
+    scale = scaleOfPage(page);
     if (kind === 'wall' && Array.isArray(raw?.nodes) && raw.nodes.every(normalizedPoint)) tally(found, `wall:${page}:${raw.category}`, runLengthMm(raw.nodes.map((point) => toPixels(point, pageFor(page)))));
     else if (kind === 'opening') tally(found, `opening:${page}:${family(raw)}`, 1);
     else if (kind === 'eave') tally(found, `eave:${page}`, 1);
@@ -325,6 +333,7 @@ export function normalizePlanAnalysis({ context, responses = [], runId, modelVer
   const skip = (raw, page, kind, message) => { analysis.alreadyMeasured.push({ ...metadataOnly(raw), page, kind }); report(page, raw, message, 'already-measured'); };
   const hold = (raw, page, kind, message, extra = {}) => { analysis.notAdded.push({ ...metadataOnly(raw), page, kind, ...extra }); report(page, raw, message, 'not-added'); };
   for (const { raw, page, level, kind } of ordered) {
+    scale = scaleOfPage(page);
     try {
       const provenance = evidence(raw);
       if (!raw.detectionId || typeof raw.detectionId !== 'string' || idCounts.get(`${page}:${raw.detectionId}`) !== 1) throw new Error('Detection ID must be unique within its sheet.');
@@ -716,7 +725,7 @@ export function normalizePlanAnalysis({ context, responses = [], runId, modelVer
       const { type } = matching;
       comparisonNote = matching.reason;
       if (type) {
-        const sum = (items) => items.reduce((total, area) => total + calculatePolygonAreaM2(area.nodes, context.pixelsPerMm), 0);
+        const sum = (items) => items.reduce((total, area) => total + calculatePolygonAreaM2(area.nodes, scaleOfPage(Number(area.page || 1))), 0);
         measured = comparisonNote ? null : type === 'Living' && !polygons.some((area) => area.type === 'Living') && polygons.some((area) => area.type === 'Footprint')
           ? Math.max(0, sum(polygons.filter((area) => area.type === 'Footprint')) - sum(polygons.filter((area) => !['Footprint', 'Living'].includes(area.type))))
           : matching.polygons.length ? sum(matching.polygons) : null;

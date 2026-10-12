@@ -44,7 +44,10 @@ assert.ok(Math.abs(partition[0].lengthMm - 5530) <= 120, `partition length ${Mat
 
 // The same doorway with no swing drawn is a candidate only.
 const plainDoor = drawing(({ hline, vline }) => { vline(500, 125, 299); vline(509, 125, 299); hline(298, 500, 510); vline(500, 383, 675); vline(509, 383, 675); hline(383, 500, 510); });
-assert.equal(detectPlanGeometry(plainDoor, context).openings.find((opening) => opening.kind === 'wall-gap').confirmed, false, 'a bare gap is not confirmed on its own');
+const plain = detectPlanGeometry(plainDoor, context).openings.find((opening) => opening.kind === 'wall-gap');
+assert.deepEqual([plain.confirmed, plain.basis, plain.reviewRequired], [true, 'aligned-wall-ends', true], 'a door-width gap between two ends of one wall is a doorway, flagged for its type');
+assert.equal(detectPlanGeometry(plainDoor, context).rooms.filter((room) => room.verified).length, 2, 'and it closes its rooms');
+assert.equal(detectPlanGeometry(plainDoor, context, { alignedDoorways: false }).openings.find((opening) => opening.kind === 'wall-gap').confirmed, false);
 
 // --- A window that breaks the shell's linework does not let the outside in --------------------------
 const brokenShell = drawing(({ hline, vline }) => {

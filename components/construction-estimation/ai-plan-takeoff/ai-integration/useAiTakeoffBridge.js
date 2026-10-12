@@ -1,3 +1,4 @@
+import { jobPixelsPerMm } from '../sheetScale.js';
 import { useCallback, useRef, useState } from 'react';
 import { convertAiTakeoffDetections } from './adapter.js';
 import { fingerprintTakeoffDocument } from './documentIdentity.js';
@@ -15,6 +16,11 @@ export function useAiTakeoffBridge(options) {
   const latest = useRef(options);
   latest.current = options;
   const receiptsRef = useRef([]);
+  // Sheets calibrated on their own (sheetScale.js); set by the analysis hook, which owns them.
+  const sheetCalibrationsRef = useRef({});
+  // The canvas's working scale follows the sheet on screen; the job scale does not change with it.
+  const jobScale = (state) => jobPixelsPerMm(state.pixelsPerMm, sheetCalibrationsRef.current);
+  const setSheetCalibrations = useCallback((value) => { sheetCalibrationsRef.current = value && typeof value === 'object' ? value : {}; }, []);
   const [appliedRuns, setAppliedRuns] = useState([]);
 
   const restoreAppliedRuns = useCallback((receipts = []) => {
@@ -33,13 +39,15 @@ export function useAiTakeoffBridge(options) {
     const documentHash = await fingerprintTakeoffDocument(initial.planPages);
     const current = latest.current;
     if (current.readOnly || current.jobId !== initial.jobId || current.takeoffId !== initial.takeoffId
-      || current.planPages !== initial.planPages || current.pixelsPerMm !== initial.pixelsPerMm
+      || current.planPages !== initial.planPages || jobScale(current) !== jobScale(initial)
       || current.lifecycle.hydrationVersion !== generation) {
       throw new Error('The takeoff changed while verifying the AI import. Run it again for the current plan.');
     }
     return {
       jobId: current.jobId, takeoffId: current.takeoffId, documentHash,
-      pixelsPerMm: current.pixelsPerMm,
+      pixelsPerMm: jobScale(current),
+      // Sheets calibrated on their own are measured at their own scale.
+      sheetCalibrations: sheetCalibrationsRef.current,
       pages: current.planPages.map(({ pageNumber, logicalWidth, logicalHeight }) => ({ pageNumber, logicalWidth, logicalHeight })),
       completedWallRuns: current.collections.completedWallRuns,
       // What is already in the takeoff is authoritative: the analysis never re-adds it.
@@ -73,7 +81,7 @@ export function useAiTakeoffBridge(options) {
     assertNotCancelled();
     const current = latest.current;
     if (current.readOnly || current.jobId !== context.jobId || current.takeoffId !== context.takeoffId
-      || current.planPages !== initial.planPages || current.pixelsPerMm !== context.pixelsPerMm
+      || current.planPages !== initial.planPages || jobScale(current) !== context.pixelsPerMm
       || current.lifecycle.hydrationVersion !== generation) {
       throw new Error('The takeoff changed before the AI import could be committed.');
     }
@@ -100,5 +108,5 @@ export function useAiTakeoffBridge(options) {
     return { status: 'appended', added: additions.length };
   }, [getContext]);
 
-  return { getContext, appendDetections, updateObjects, appliedRuns, restoreAppliedRuns };
+  return { getContext, appendDetections, updateObjects, appliedRuns, restoreAppliedRuns, setSheetCalibrations };
 }

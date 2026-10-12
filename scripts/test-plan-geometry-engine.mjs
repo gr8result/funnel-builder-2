@@ -28,8 +28,14 @@ const raster = { width, height, data };
 const within = (actual, expected, share, label) => assert.ok(Math.abs(actual - expected) / expected <= share, `${label}: ${actual.toFixed(2)} vs ${expected.toFixed(2)}`);
 const lengthOf = (result, test) => result.walls.filter(test).reduce((sum, wall) => sum + wall.lengthMm, 0) / 1000;
 
-// --- Without any evidence of an opening, the gap in the partition is a gap, not a door. ---------
-const bare = detectPlanGeometry(raster, context);
+// --- A door-width gap between two ends of one wall is a doorway on the drawing's own evidence ---
+const doorway = detectPlanGeometry(raster, context).openings.filter((item) => item.widthMm >= 600);
+assert.equal(doorway.length, 1);
+assert.deepEqual([doorway[0].confirmed, doorway[0].basis, doorway[0].reviewRequired], [true, 'aligned-wall-ends', true], 'a doorway with nothing drawn in it is taken as an opening, flagged for its type');
+assert.ok(doorway[0].hostWallId, 'and attached to its wall');
+
+// --- With that rule off, and no evidence of an opening, the gap in the partition is only a gap. ---
+const bare = detectPlanGeometry(raster, context, { alignedDoorways: false });
 const gap = bare.openings.filter((item) => item.widthMm >= 600);
 assert.equal(gap.length, 1, `one candidate opening (found ${gap.map((item) => item.widthMm).join(', ')})`);
 assert.ok(Math.abs(gap[0].widthMm - 820) <= 80, `gap width ${gap[0].widthMm} mm`);
@@ -101,7 +107,7 @@ const contradicted = fused({ ...classification, category: 'interior' });
 assert.equal(contradicted.response.walls.find((wall) => wall.lineworkWallId === measuredOuter.id).category, 'exterior');
 assert.ok(contradicted.report.categoryDisagreementLm >= measuredOuter.lengthMm / 1000 - 0.01, 'the disagreement is reported');
 // Evidence far from any gap confirms nothing.
-assert.equal(detectPlanGeometry(raster, { ...context, openingEvidence: [{ x: 300, y: 600 }] }).openings.filter((item) => item.confirmed).length, 0);
+assert.equal(detectPlanGeometry(raster, { ...context, openingEvidence: [{ x: 300, y: 600 }] }, { alignedDoorways: false }).openings.filter((item) => item.confirmed).length, 0);
 
 // Identity is geometric, so analysing the same sheet again yields the same objects.
 const again = detectPlanGeometry(raster, { ...context, openingEvidence: [{ x: 480, y: 330 }] });

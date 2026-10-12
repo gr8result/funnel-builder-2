@@ -10,6 +10,7 @@ import { ROOMS_RUN_ID, addManualRoom, floorPlanSheets, mergeRoomReadings, remove
 import { compactPlanEvidence, evidenceRotation, mergePlanEvidence, projectDefaultsFromJobSetup } from './planEvidence.js';
 import { applyReviewDecision, reviewAudience } from './reviewSummary.js';
 import { fuseSheetLinework } from '../geometry/lineworkFusion.js';
+import { JOB_SCALE_KEY, jobPixelsPerMm, sheetPixelsPerMm as scaleOfSheet } from '../sheetScale.js';
 import { cropPlanRegion, readPlanRaster } from '../geometry/planRaster.js';
 import { detectPlanGeometry } from '../geometry/planGeometry.js';
 import { collectRegionOpenings, planRegions } from '../geometry/planRegions.js';
@@ -27,7 +28,7 @@ const imageBytes = (page) => Math.ceil(String(page?.imageDataUrl || '').length *
 
 function sanitizeCalibrations(saved) {
   if (!saved || typeof saved !== 'object' || Array.isArray(saved)) return {};
-  return Object.fromEntries(Object.entries(saved).filter(([page, entry]) => Number.isInteger(Number(page)) && Number(page) > 0
+  return Object.fromEntries(Object.entries(saved).filter(([page, entry]) => Number.isInteger(Number(page)) && Number(page) >= JOB_SCALE_KEY
     && Number.isFinite(Number(entry?.pixelsPerMm)) && Number(entry.pixelsPerMm) > 0)
     .map(([page, entry]) => [page, { pixelsPerMm: Number(entry.pixelsPerMm), calibratedAt: String(entry.calibratedAt || '') }]));
 }
@@ -85,9 +86,19 @@ export function useAiTakeoffAnalysis(options) {
   const [sheetCalibrations, setSheetCalibrations] = useState({});
   const recordSheetCalibration = useCallback((page, pixelsPerMm) => {
     if (!(Number(page) > 0) || !(Number(pixelsPerMm) > 0)) return;
-    calibrationsRef.current = { ...calibrationsRef.current, [Number(page)]: { pixelsPerMm: Number(pixelsPerMm), calibratedAt: new Date().toISOString() } };
+    const now = new Date().toISOString(), existing = calibrationsRef.current;
+    // The first calibration of any sheet also fixes the job scale: what the takeoff already measured
+    // with, or this calibration. Sheets never calibrated on their own keep it from then on.
+    const jobScale = existing[JOB_SCALE_KEY] || { pixelsPerMm: scaleOfSheet(JOB_SCALE_KEY, latest.current.pixelsPerMm, existing) || Number(pixelsPerMm), calibratedAt: now };
+    // A sheet that had been measuring at the job scale and is the only one in use carries the job scale with it.
+    const onlyThisSheet = !Object.keys(existing).some((key) => Number(key) !== JOB_SCALE_KEY && Number(key) !== Number(page));
+    calibrationsRef.current = { ...existing, [JOB_SCALE_KEY]: onlyThisSheet ? { pixelsPerMm: Number(pixelsPerMm), calibratedAt: jobScale.calibratedAt } : jobScale,
+      [Number(page)]: { pixelsPerMm: Number(pixelsPerMm), calibratedAt: existing[Number(page)]?.calibratedAt || now } };
+    latest.current.bridge?.setSheetCalibrations?.(calibrationsRef.current);
     setSheetCalibrations(calibrationsRef.current);
+    return calibrationsRef.current;
   }, []);
+  const sheetScale = (page) => scaleOfSheet(page, latest.current.pixelsPerMm, calibrationsRef.current);
 
   const cancel = useCallback(() => {
     controller.current?.abort();
@@ -102,6 +113,7 @@ export function useAiTakeoffAnalysis(options) {
   const restoreReport = useCallback((saved = null, savedInspections = null, savedCalibrations = null) => {
     setRoomsState({ busy: false, error: false, message: '' });
     calibrationsRef.current = sanitizeCalibrations(savedCalibrations);
+    latest.current.bridge?.setSheetCalibrations?.(calibrationsRef.current);
     setSheetCalibrations(calibrationsRef.current);
     controller.current?.abort();
     controller.current = null;
@@ -123,7 +135,7 @@ export function useAiTakeoffAnalysis(options) {
   reportRef.current = report;
   const measuredSheetRooms = async (planPage, level, named) => {
     const pageNumber = planPage.pageNumber;
-    const pixelsPerMm = calibrationsRef.current[pageNumber]?.pixelsPerMm || latest.current.pixelsPerMm;
+    const pixelsPerMm = sheetScale(pageNumber);
     const context = { page: pageNumber, level, width: planPage.logicalWidth, height: planPage.logicalHeight, pixelsPerMm, walls: latest.current.completedWallRuns, openings: latest.current.placedOpenings };
     let rooms = named, raster = null, linework = null;
     if (pixelsPerMm > 0) {
@@ -248,13 +260,14 @@ export function useAiTakeoffAnalysis(options) {
   const updateRooms = useCallback((ids, patch) => {
     if (latest.current.readOnly) return;
     setReport(current => reportWithRooms(current, (current?.rooms || []).map(room => ids.includes(room.id)
-      ? measureRoom({ ...room, ...patch, ...(patch.polygon ? { boundaryEdited: true, confirmed: false, boundaryClosed: false } : {}) }, calibrationsRef.current[room.page]?.pixelsPerMm || latest.current.pixelsPerMm) : room)));
+      ? measureRoom({ ...room, ...patch, ...(patch.polygon ? { boundaryEdited: true, confirmed: false, boundaryClosed: false } : {}) }, sheetScale(room.page)) : room)));
     latest.current.markCompleted?.('room-boundary-updated');
   }, []);
   useEffect(() => {
     setReport(current => {
-      if (!current?.rooms?.some(room => room.polygon && room.pixelsPerMm !== (sheetCalibrations[room.page]?.pixelsPerMm || options.pixelsPerMm || null))) return current;
-      return reportWithRooms(current, current.rooms.map(room => room.polygon ? measureRoom(room, sheetCalibrations[room.page]?.pixelsPerMm || options.pixelsPerMm) : room));
+      const scale = (page) => scaleOfSheet(page, options.pixelsPerMm, sheetCalibrations) || null;
+      if (!current?.rooms?.some(room => room.polygon && room.pixelsPerMm !== scale(room.page))) return current;
+      return reportWithRooms(current, current.rooms.map(room => room.polygon ? measureRoom(room, scale(room.page)) : room));
     });
   }, [options.pixelsPerMm, sheetCalibrations]);
 
@@ -265,7 +278,7 @@ export function useAiTakeoffAnalysis(options) {
     if (pending.current !== work || work.signal.aborted || current.readOnly
       || current.jobId !== work.jobId || current.takeoffId !== work.takeoffId
       || current.planPages !== work.planPages || current.lifecycle.hydrationVersion !== work.generation
-      || (requireScale && !closeScale(current.pixelsPerMm, work.pixelsPerMm))) {
+      || (requireScale && !closeScale(jobPixelsPerMm(current.pixelsPerMm, calibrationsRef.current), work.pixelsPerMm))) {
       throw new Error('The job, plan or calibration changed. Run AI Takeoff again for the current plan.');
     }
     return current;
@@ -333,6 +346,7 @@ export function useAiTakeoffAnalysis(options) {
   const measure = async (work) => {
     try {
       const current = assertCurrent(work);
+      current.bridge.setSheetCalibrations?.(calibrationsRef.current);
       const context = await current.bridge.getContext();
       if (context.documentHash !== work.documentHash) throw new Error('The plan document changed. Run AI Takeoff again.');
       work.pixelsPerMm = context.pixelsPerMm;
@@ -357,7 +371,7 @@ export function useAiTakeoffAnalysis(options) {
           });
         const primary = { ...prepared, drawingType: inspection.drawingType, level: inspection.level };
         const scoped = (action, measurementScope, extra = {}) => ({
-          action, measurementScope, ...work.identity, page: primary, pixelsPerMm: context.pixelsPerMm,
+          action, measurementScope, ...work.identity, page: primary, pixelsPerMm: sheetScale(inspection.page),
           ...(measurementScope === 'items' ? { contextPages } : {}), planEvidence: sharedEvidence, ...extra,
         });
         const halfKey = (action, scope, previous = '') => [work.documentHash, inspection.page, rotation, context.pixelsPerMm, action, scope, previous].join('|');
@@ -408,9 +422,9 @@ export function useAiTakeoffAnalysis(options) {
         const planPage = work.planPages.find((page) => page.pageNumber === pageNumber);
         try {
           setMessage(`Measuring wall linework — sheet ${pageNumber}…`);
-          const raster = await readPlanRaster(planPage?.dataUrl, undefined, { logicalWidth: planPage?.logicalWidth, pixelsPerMm: calibrationsRef.current[pageNumber]?.pixelsPerMm || context.pixelsPerMm });
+          const raster = await readPlanRaster(planPage?.dataUrl, undefined, { logicalWidth: planPage?.logicalWidth, pixelsPerMm: sheetScale(pageNumber) });
           assertCurrent(work, true);
-          const sheetPixelsPerMm = calibrationsRef.current[pageNumber]?.pixelsPerMm || context.pixelsPerMm;
+          const sheetPixelsPerMm = sheetScale(pageNumber);
           const sheet = { pageNumber, logicalWidth: planPage.logicalWidth, logicalHeight: planPage.logicalHeight, pixelsPerMm: sheetPixelsPerMm };
           // Doors and windows read region by region (off unless the takeoff asks for it): each
           // region is enlarged, read on its own and mapped back to the sheet. A sheet whose regions
@@ -424,7 +438,7 @@ export function useAiTakeoffAnalysis(options) {
               const prepared = work.prepared.get(pageNumber);
               const read = await collectRegionOpenings({ regions, sheet, crop: (region) => cropPlanRegion(planPage.dataUrl, sheet, region),
                 request: (payload) => requestHalf(work, [work.documentHash, pageNumber, context.pixelsPerMm, 'openings-region', payload.region.x, payload.region.y].join('|'), payload),
-                base: { ...work.identity, pixelsPerMm: context.pixelsPerMm, planEvidence: sharedEvidence, page: { pageNumber, logicalWidth: sheet.logicalWidth, logicalHeight: sheet.logicalHeight, pdfUnits: prepared?.pdfUnits === true, drawingType: 'floor_plan', level: response.level } } });
+                base: { ...work.identity, pixelsPerMm: sheetScale(pageNumber), planEvidence: sharedEvidence, page: { pageNumber, logicalWidth: sheet.logicalWidth, logicalHeight: sheet.logicalHeight, pdfUnits: prepared?.pdfUnits === true, drawingType: 'floor_plan', level: response.level } } });
               assertCurrent(work, true);
               for (const failure of read.failures) work.warnings.push({ page: pageNumber, code: 'region-failed', message: `Doors and windows in part of sheet ${pageNumber} (${failure.region}) could not be read: ${failure.message}` });
               response.openings = read.failures.length ? [...read.openings, ...(response.openings || [])] : read.openings;
@@ -476,7 +490,7 @@ export function useAiTakeoffAnalysis(options) {
         if (!planPage || !response.rooms?.length) continue;
         const raster = await readRoomRaster(planPage.dataUrl);
         assertCurrent(work, true);
-        const detected = response.rooms.map((room, index) => detectRoomBoundary(room, { page: pageNumber, level: response.level, width: planPage.logicalWidth, height: planPage.logicalHeight, pixelsPerMm: calibrationsRef.current[pageNumber]?.pixelsPerMm || work.pixelsPerMm, walls: latest.current.completedWallRuns, openings: latest.current.placedOpenings, raster }, index));
+        const detected = response.rooms.map((room, index) => detectRoomBoundary(room, { page: pageNumber, level: response.level, width: planPage.logicalWidth, height: planPage.logicalHeight, pixelsPerMm: sheetScale(pageNumber), walls: latest.current.completedWallRuns, openings: latest.current.placedOpenings, raster }, index));
         completed.rooms = mergeRoomReadings(completed.rooms, [{ page: pageNumber, level: response.level, rooms: detected }]);
       }
       completed.counts = { ...completed.counts, rooms: completed.rooms.length, roomBoundaries: completed.rooms.filter(room => room.polygon?.length >= 3).length, roomsForReview: completed.rooms.filter(room => room.reviewRequired).length };
@@ -565,7 +579,7 @@ export function useAiTakeoffAnalysis(options) {
           work.warnings.push({ page: item.page, code: 'duplicate-level', message: `Another floor-plan sheet describes ${item.level}. Sheet ${item.page} is supporting evidence only to avoid double-counting; verify which revision should be measured.` });
         } else levels.add(item.level);
       }
-      const scale = resolveAnalysisScale({ pages: work.planPages, inspections: work.inspections, existingPixelsPerMm: latest.current.pixelsPerMm, sheetCalibrations: calibrationsRef.current });
+      const scale = resolveAnalysisScale({ pages: work.planPages, inspections: work.inspections, existingPixelsPerMm: jobPixelsPerMm(latest.current.pixelsPerMm, calibrationsRef.current), sheetCalibrations: calibrationsRef.current });
       work.scale = scale;
       if (scale.conflicts?.length) {
         const explanation = scale.conflicts.map((item) => typeof item === 'string' ? item : item.message || JSON.stringify(item)).join(' ');

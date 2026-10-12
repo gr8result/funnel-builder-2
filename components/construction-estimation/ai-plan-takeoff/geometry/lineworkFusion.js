@@ -20,6 +20,7 @@ export const FUSION_DEFAULTS = {
   minimumClassificationShare: 0.35, // at least 35% of a measured run needs aligned AI trace
   hostReachMm: 1200,       // an opening with no gap of its own is put on the nearest wall this close
   modelOpeningReachMm: 2000, // the plan reading locates an opening only roughly: it may be this far from the gap or frame it is
+  modelOpeningFarReachMm: 3500, // and this far where its width matches exactly
   roomLabelReachMm: 2500,  // the plan reading places a room name only roughly: it may be this far outside the space it names
   smallRoomMaxM2: 10, largeRoomMinM2: 6, // a wet area, robe or store is no bigger; a bedroom or living space no smaller
   shareRatherThanMoveMm: 1500, // a name inside a large space shares it unless a free space of its own is nearer than this
@@ -94,6 +95,8 @@ const DOOR_LEAVES = [520, 620, 720, 770, 820, 870, 920, 1020, 1200];
 // What the plan reading says an opening is, for matching it to a gap (door) or a frame drawn in a wall (window).
 const openingKind = (item) => (item?.type === 'window' && item?.openingClass === 'Window' ? 'window' : ['Internal Door', 'External Door', 'Garage Door'].includes(item?.openingClass) ? 'door' : undefined);
 const openingWidth = (item) => [item?.explicitWidthMm, item?.widthMm].map(Number).find((value) => value > 0) || 0;
+// A four-digit size code is height then width or width then height (2130 is 2100 x 3000 either way round): both are possible widths.
+const codeWidths = (item) => { const match = String(item?.sizeCode || '').trim().match(/^([0-9]{2})([0-9]{2})/); return match ? [Number(match[1]) * 100, Number(match[2]) * 100].filter((value) => value >= 300) : []; };
 
 // Share of a segment that runs along (parallel to, within reach of) any segment of the pool.
 function shareAlong(segment, pool, reachPx, stepPx) {
@@ -130,12 +133,12 @@ export function fuseSheetLinework(response, raster, sheet, existing = {}, overri
   const mm = (value) => value * pixelsPerMm;
   const modelOpenings = (response.openings || []).map((item, index) => ({ item, index, at: Number.isFinite(item?.x) && Number.isFinite(item?.y) ? toPixels(item) : null }));
   const evidence = [
-    ...modelOpenings.filter((entry) => entry.at).map((entry) => ({ ...entry.at, ref: `model:${entry.index}`, reachMm: options.modelOpeningReachMm, kind: openingKind(entry.item), widthMm: openingWidth(entry.item) })),
+    ...modelOpenings.filter((entry) => entry.at).map((entry) => ({ ...entry.at, ref: `model:${entry.index}`, reachMm: options.modelOpeningReachMm, farReachMm: options.modelOpeningFarReachMm, kind: openingKind(entry.item), widthMm: codeWidths(entry.item).length ? 0 : openingWidth(entry.item), widths: codeWidths(entry.item) })),
     ...(existing.placedOpenings || []).filter((item) => Number.isFinite(item?.x) && Number.isFinite(item?.y)).map((item) => ({ x: item.x, y: item.y, ref: `placed:${item.id}` })),
   ];
   const geometry = detectPlanGeometry(raster, { pixelsPerMm, logicalWidth, logicalHeight, openingEvidence: evidence }, overrides.geometry || {});
   const report = { engine: geometry.engine, measuredWalls: geometry.walls.length, wallsEmitted: 0, uncategorisedLm: 0, categoryFromLineworkOnlyLm: 0, categoryDisagreementLm: 0, flaggedWalls: 0, modelWallLm: 0, modelWallWithoutLineworkLm: 0,
-    openings: { model: modelOpenings.length, onConfirmedGap: 0, onNearestWall: 0, unplaced: 0, duplicatesRemoved: 0, embeddedSymbolReviewCandidates: 0, fromDoorSwing: 0, fromExternalFrame: 0 },
+    openings: { model: modelOpenings.length, onConfirmedGap: 0, onNearestWall: 0, unplaced: 0, duplicatesRemoved: 0, embeddedSymbolReviewCandidates: 0, fromDoorSwing: 0, fromExternalFrame: 0, fromDoorway: 0, held: [] },
     gaps: { confirmed: 0, unconfirmed: 0 }, rooms: { verified: 0, proposed: 0, adopted: 0, adoptedByProximity: 0, sharedSpaces: 0, withoutBoundary: 0 }, singleFaceReviewCandidates: [], review: [] };
   if (!geometry.walls.length) {
     // Nothing measurable: the plan reading is passed through untouched and says so.
@@ -199,67 +202,118 @@ export function fuseSheetLinework(response, raster, sheet, existing = {}, overri
   // ---- Openings: on the confirmed gap they explain, else on the nearest measured wall --------
   const emitted = new Map(walls.map((wall) => [wall.lineworkWallId, wall]));
   const emittedSegments = segmentsOf(geometry.walls.filter((wall) => emitted.has(wall.id)));
-  const gapByRef = new Map(geometry.openings.filter((gap) => gap.confirmed && gap.evidenceRef).map((gap) => [gap.evidenceRef, gap]));
   report.gaps.confirmed = geometry.openings.filter((gap) => gap.confirmed).length;
   report.gaps.unconfirmed = geometry.openings.length - report.gaps.confirmed;
+  // Which measured opening each reported opening is: one assignment over the whole sheet, so a
+  // reported entry door goes to the door swing drawn in the external wall rather than to whichever
+  // gap happens to lie nearest the position the plan reading gave it. Cost is distance, plus what
+  // disagrees: a window on a doorway, a door on a frame, the wrong side of the building, the width.
+  const wallOf = new Map(geometry.walls.map((wall) => [wall.id, wall]));
+  const hostOf = (found) => {
+    if (found.hostWallId && wallOf.has(found.hostWallId)) return wallOf.get(found.hostWallId);
+    // An unconfirmed gap lies between two wall ends: the nearer of them is its wall.
+    const near = emittedSegments.map((segment) => ({ segment, ...project(found, segment.a, segment.b) })).filter((entry) => entry.distance <= mm(found.widthMm / 2 + 300)).sort((a, b) => a.distance - b.distance)[0];
+    return near ? near.segment.wall : null;
+  };
+  const candidates = geometry.openings.map((found) => ({ found, host: hostOf(found) }));
+  const located = modelOpenings.filter((entry) => entry.at);
+  const FAR = 1e7;
+  const matchCost = (entry, candidate) => {
+    const { found, host } = candidate;
+    const distanceMm = Math.hypot(found.x - entry.at.x, found.y - entry.at.y) / pixelsPerMm;
+    if (distanceMm > options.modelOpeningFarReachMm) return FAR;
+    const kind = openingKind(entry.item), widths = codeWidths(entry.item).length ? codeWidths(entry.item) : [openingWidth(entry.item)].filter(Boolean);
+    const isFrame = found.kind === 'wall-symbol', isDoorway = !isFrame;
+    let cost = distanceMm;
+    if (kind === 'window' && isDoorway) cost += found.aligned && host?.category === 'exterior' ? 400 : 1500;
+    if (kind === 'door' && isFrame) cost += 1500;
+    if (isFrame && !found.inExternalWall) cost += 600;
+    // A measured width that agrees pulls an opening to its place; one that disagrees pushes it away.
+    const measuredWidth = found.kind === 'wall-swing' || found.basis === 'door-swing' ? (found.leafMm || found.widthMm) : found.widthMm;
+    if (widths.length) {
+      const off = Math.min(...widths.map((value) => Math.abs(value - measuredWidth) / value));
+      // An opening twice the size of what is drawn, or half it, is another opening.
+      if (off > 0.45) return FAR;
+      if (off <= 0.08) cost -= 500; else if (off > 0.3) cost += Math.min(1800, off * 2000);
+    }
+    const outside = ['External Door', 'Garage Door', 'Window', 'Large Glazed/Stacker/Sliding Door'].includes(entry.item.openingClass);
+    if (host) { if (outside !== (host.category === 'exterior')) cost += 1500; } else cost += 300;
+    if (found.basis === 'door-swing' && kind === 'door') cost -= 300;
+    if (isFrame && found.inExternalWall && kind === 'window') cost -= 300;
+    if (distanceMm > options.modelOpeningReachMm && !(widths.length && Math.min(...widths.map((value) => Math.abs(value - measuredWidth) / value)) <= 0.08)) return FAR;
+    return cost;
+  };
+  const assignedTo = new Map();
+  if (located.length && candidates.length) {
+    const cost = located.map((entry) => [...candidates.map((candidate) => matchCost(entry, candidate)), // Left unplaced: dearer than any acceptable place for an opening whose size is known; an opening reported with no size is only worth a close match.
+      ...located.map((other) => (other === entry ? (codeWidths(entry.item).length || openingWidth(entry.item) ? options.modelOpeningFarReachMm + 1500 : 1800) : FAR))]);
+    assign(cost).forEach((column, row) => { if (column >= 0 && column < candidates.length && cost[row][column] < FAR) assignedTo.set(located[row].index, candidates[column]); });
+    // How each reported opening was resolved, for diagnostics.
+    report.openings.assignments = located.map((entry, row) => { const best = cost[row].slice(0, candidates.length).map((value, column) => ({ value, column })).sort((p, q) => p.value - q.value).slice(0, 3); const got = assignedTo.get(entry.index);
+      return { detectionId: entry.item.detectionId, openingClass: entry.item.openingClass, at: { x: Math.round(entry.at.x), y: Math.round(entry.at.y) }, widths: codeWidths(entry.item).length ? codeWidths(entry.item) : [openingWidth(entry.item)].filter(Boolean), to: got ? got.found.id : null,
+        nearest: best.filter((item) => item.value < FAR).map((item) => `${candidates[item.column].found.id}:${candidates[item.column].found.kind}:${candidates[item.column].found.widthMm}:${Math.round(item.value)}`) }; });
+  }
+  const claimedIds = new Set([...assignedTo.values()].map((candidate) => candidate.found.id));
   const placed = [];
   for (const { item, index, at } of modelOpenings) {
-    if (!at) { placed.push({ item, wallId: null, at: null }); report.openings.unplaced += 1; continue; }
-    const gap = gapByRef.get(`model:${index}`);
-    if (gap) {
+    if (!at) { report.openings.unplaced += 1; report.openings.held.push({ detectionId: item.detectionId, openingClass: item.openingClass, type: item.type, sizeCode: item.sizeCode || null, widthMm: openingWidth(item) || null, heightMm: Number(item.heightMm) || null, near: null, evidence: item.evidence || '' }); continue; }
+    const match = assignedTo.get(index);
+    if (match) {
+      const gap = match.found;
       report.openings.onConfirmedGap += 1;
-      const hosted = gap.hostWallId && emitted.has(gap.hostWallId);
-      placed.push({ wallId: hosted ? gap.hostWallId : null, at: { x: gap.x, y: gap.y }, item: { ...item, ...toNormal(gap), hostDetectionId: hosted ? gap.hostWallId : null, lineworkGapId: gap.id, measuredGapMm: gap.widthMm,
-        evidence: `${item.evidence || ''} Positioned on a ${gap.widthMm} mm gap measured in the wall linework.`.trim() } });
+      const hosted = match.host && emitted.has(match.host.id) ? match.host.id : null;
+      const what = gap.kind === 'wall-symbol' ? `a ${gap.widthMm} mm frame drawn in the wall` : gap.kind === 'wall-swing' ? `a door drawn with its swing (${gap.leafMm} mm)` : gap.kind === 'door-line' ? `a ${gap.widthMm} mm door line` : `a ${gap.widthMm} mm gap measured in the wall linework`;
+      placed.push({ wallId: hosted, at: { x: gap.x, y: gap.y }, item: { ...item, ...toNormal(gap), hostDetectionId: hosted, lineworkGapId: gap.id, measuredGapMm: gap.widthMm, positionBasis: 'linework',
+        ...(gap.confirmed ? {} : { confidence: Math.min(Number(item.confidence) || 0.7, 0.7) }),
+        evidence: `${item.evidence || ''} Positioned on ${what}.`.trim() } });
       continue;
     }
-    const host = emittedSegments.map((segment) => ({ segment, ...project(at, segment.a, segment.b) })).filter((entry) => entry.distance <= mm(options.hostReachMm)).sort((a, b) => a.distance - b.distance)[0];
-    if (host) {
-      report.openings.onNearestWall += 1;
-      placed.push({ wallId: host.segment.wall.id, at: { x: host.x, y: host.y }, item: { ...item, ...toNormal(host), hostDetectionId: host.segment.wall.id,
-        // The wall is measured; where along it the opening sits is still the plan reading's estimate.
-        confidence: Math.min(Number(item.confidence) || 0, 0.7), positionBasis: 'plan-reading',
-        evidence: `${item.evidence || ''} Attached to the nearest measured wall (${Math.round(host.distance / pixelsPerMm)} mm from the reported position); its position along the wall needs checking.`.trim() } });
-      continue;
-    }
+    // Nothing in the wall linework is this opening. The plan reading's own position is good to a
+    // metre or two at best, so it is not placed there: it is held for the estimator to place.
     report.openings.unplaced += 1;
-    placed.push({ wallId: null, at, item: { ...item, hostDetectionId: null } });
+    report.openings.held.push({ detectionId: item.detectionId, openingClass: item.openingClass, type: item.type, sizeCode: item.sizeCode || null, widthMm: openingWidth(item) || null, heightMm: Number(item.heightMm) || null,
+      near: toNormal(at), evidence: item.evidence || '' });
   }
   // Openings the drawing shows on its own evidence, which the plan reading did not locate: a door
   // whose swing is drawn at a gap, and a frame drawn in an external wall. Their class and height
   // are not known from the linework, so each is added for the estimator to confirm.
   const wallById = new Map(geometry.walls.map((wall) => [wall.id, wall]));
   for (const found of geometry.openings) {
-    if (found.evidenceRef !== undefined) continue;
-    const swing = found.kind === 'wall-gap' && found.basis === 'door-swing';
+    if (claimedIds.has(found.id) || String(found.evidenceRef || '').startsWith('placed:')) continue;
+    const swing = (found.kind === 'wall-gap' || found.kind === 'wall-swing') && found.basis === 'door-swing';
     const frame = found.kind === 'wall-symbol' && found.inExternalWall && found.widthMm >= options.minFrameOpeningMm;
-    if (!swing && !frame) continue;
+    // A door-width opening in an internal wall with no swing drawn. In an external wall the frames already say what is there.
+    const doorway = found.kind === 'wall-gap' && found.basis === 'aligned-wall-ends' && found.confirmed && wallById.get(found.hostWallId)?.category === 'interior';
+    if (!swing && !frame && !doorway) continue;
     const hosted = found.hostWallId && emitted.has(found.hostWallId) ? found.hostWallId : null;
     const external = wallById.get(found.hostWallId)?.category === 'exterior';
     const leaf = swing ? nearest(found.leafMm || found.widthMm, DOOR_LEAVES) : null;
     const widthMm = swing ? (Math.abs(leaf - (found.leafMm || found.widthMm)) <= 60 ? leaf : Math.round((found.leafMm || found.widthMm) / 10) * 10) : Math.round(found.widthMm / 10) * 10;
-    if (swing) report.openings.fromDoorSwing += 1; else report.openings.fromExternalFrame += 1;
+    if (swing) report.openings.fromDoorSwing += 1; else if (frame) report.openings.fromExternalFrame += 1; else report.openings.fromDoorway += 1;
     placed.push({ wallId: hosted, at: { x: found.x, y: found.y }, fromLinework: true, item: {
-      detectionId: `linework:${found.id}`, page: response.page, basis: 'OBSERVED', confidence: swing ? 0.75 : 0.6,
+      detectionId: `linework:${found.id}`, page: response.page, basis: 'OBSERVED', confidence: swing ? 0.75 : frame ? 0.6 : 0.55,
       evidence: swing
-        ? `A door swing is drawn at a ${found.widthMm} mm gap in the wall linework; the leaf measures ${found.leafMm} mm. Not located by the plan reading: confirm its type and height.`
-        : `A frame ${found.widthMm} mm long is drawn in an external wall. Not located by the plan reading: confirm it is a window or glazed door, and its size.`,
-      ...toNormal(found), type: swing ? 'door' : 'window', openingClass: swing ? (external ? 'External Door' : 'Internal Door') : 'Window',
+        ? (found.kind === 'wall-swing'
+          ? `A door is drawn closed in this wall with its swing; the swing radius measures ${found.leafMm} mm. Not located by the plan reading: confirm its type, width and height.`
+          : `A door swing is drawn at a ${found.widthMm} mm gap in the wall linework; the leaf measures ${found.leafMm} mm. Not located by the plan reading: confirm its type and height.`)
+        : frame ? `A frame ${found.widthMm} mm long is drawn in an external wall. Not located by the plan reading: confirm it is a window or glazed door, and its size.`
+          : `A ${found.widthMm} mm opening lies between two ends of one internal wall, with no door swing drawn: a sliding door, a cavity slider or an open doorway. Confirm what it is.`,
+      ...toNormal(found), type: frame ? 'window' : 'door', openingClass: frame ? 'Window' : (external ? 'External Door' : 'Internal Door'),
       hostDetectionId: hosted, tag: null, sizeCode: null, explicitWidthMm: null, explicitHeightMm: null, widthMm, heightMm: null,
-      dimensionBasis: 'OBSERVED', dimensionEvidence: `Width measured from the sheet linework (${swing ? 'door swing radius' : 'frame length'}).`,
+      dimensionBasis: 'OBSERVED', dimensionEvidence: `Width measured from the sheet linework (${swing ? 'door swing radius' : frame ? 'frame length' : 'gap between the wall ends'}).`,
+      lineworkBasis: swing ? 'door-swing' : frame ? 'frame-in-external-wall' : 'aligned-wall-ends',
       subType: null, quantity: 1, glassType: 'Unspecified', scheduleGlassType: 'Unspecified',
       lineworkGapId: found.id, measuredGapMm: found.widthMm, positionBasis: 'linework', needsClassification: true,
     } });
   }
-  const lineworkOnly = report.openings.fromDoorSwing + report.openings.fromExternalFrame;
-  if (lineworkOnly) report.review.push(`${lineworkOnly} opening${lineworkOnly === 1 ? ' was' : 's were'} added from the drawing's own linework (${report.openings.fromDoorSwing} door swing${report.openings.fromDoorSwing === 1 ? '' : 's'}, ${report.openings.fromExternalFrame} frame${report.openings.fromExternalFrame === 1 ? '' : 's'} in external walls) on sheet ${response.page}; confirm each one's type and height.`);
+  // (the note is written after duplicates are removed, below)
   // The same opening reported twice (overlapping readings) is one opening: same kind, same wall, same place.
   const openings = [];
   for (const entry of placed.sort((a, b) => (a.fromLinework ? 1 : 0) - (b.fromLinework ? 1 : 0) || (Number(b.item.confidence) || 0) - (Number(a.item.confidence) || 0))) {
     const twin = entry.at && openings.find((kept) => kept.at && (entry.fromLinework
       ? Math.hypot(kept.at.x - entry.at.x, kept.at.y - entry.at.y) <= Math.max(mm(options.duplicateMm), mm(entry.item.measuredGapMm || 0) * 0.5)
       : entry.wallId && kept.wallId === entry.wallId && kept.item.openingClass === entry.item.openingClass && Math.hypot(kept.at.x - entry.at.x, kept.at.y - entry.at.y) <= mm(options.duplicateMm)));
-    if (twin && entry.fromLinework) { if (entry.item.type === 'door') report.openings.fromDoorSwing -= 1; else report.openings.fromExternalFrame -= 1; continue; }
+    if (twin && entry.fromLinework) { report.openings[{ 'door-swing': 'fromDoorSwing', 'frame-in-external-wall': 'fromExternalFrame', 'aligned-wall-ends': 'fromDoorway' }[entry.item.lineworkBasis]] -= 1; continue; }
     if (twin) {
       report.openings.duplicatesRemoved += 1;
       // Keep whatever the dropped reading knew that the kept one did not (a size code, a tag).
@@ -268,9 +322,10 @@ export function fuseSheetLinework(response, raster, sheet, existing = {}, overri
     }
     openings.push(entry);
   }
-  const nearestWallNote = report.openings.onNearestWall;
-  if (nearestWallNote) report.review.push(`${nearestWallNote} opening${nearestWallNote === 1 ? ' is' : 's are'} attached to a measured wall but positioned from the plan reading; check where each sits along its wall.`);
-  if (report.openings.unplaced) report.review.push(`${report.openings.unplaced} opening${report.openings.unplaced === 1 ? '' : 's'} could not be placed on any measured wall.`);
+  const lineworkOnly = report.openings.fromDoorSwing + report.openings.fromExternalFrame + report.openings.fromDoorway;
+  const plural = (count, word) => `${count} ${word}${count === 1 ? '' : 's'}`;
+  if (lineworkOnly) report.review.push(`${plural(lineworkOnly, 'opening')} on sheet ${response.page} ${lineworkOnly === 1 ? 'was' : 'were'} added from the drawing's own linework (${plural(report.openings.fromDoorSwing, 'door swing')}, ${plural(report.openings.fromExternalFrame, 'frame')} in external walls, ${plural(report.openings.fromDoorway, 'doorway')} with no swing); confirm each one's type and height.`);
+  if (report.openings.held.length) report.review.push(`${plural(report.openings.held.length, 'opening')} the plan reading reported on sheet ${response.page} ${report.openings.held.length === 1 ? 'is' : 'are'} not in the wall linework where it put ${report.openings.held.length === 1 ? 'it' : 'them'} and ${report.openings.held.length === 1 ? 'was' : 'were'} not added: ${report.openings.held.map((item) => `${item.openingClass.toLowerCase()}${item.sizeCode ? ` ${item.sizeCode}` : item.widthMm ? ` ${item.widthMm} wide` : ''}`).join(', ')}. Place ${report.openings.held.length === 1 ? 'it' : 'them'} on the plan if ${report.openings.held.length === 1 ? 'it exists' : 'they exist'}.`);
   if (report.gaps.unconfirmed) report.review.push(`${report.gaps.unconfirmed} gap${report.gaps.unconfirmed === 1 ? '' : 's'} in the wall linework ${report.gaps.unconfirmed === 1 ? 'is' : 'are'} not confirmed as a door or window; walls stop at ${report.gaps.unconfirmed === 1 ? 'it' : 'them'}.`);
 
   // ---- Rooms: each named room takes the measured space its name is printed in ----------------

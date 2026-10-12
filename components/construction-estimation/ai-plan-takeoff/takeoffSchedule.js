@@ -4,6 +4,7 @@ import { ARCHITRAVE_DEFAULTS, ARCHITRAVE_RULES, packOpenings } from '../../../li
 import { INPUT_DATA_SHEET_TEMPLATE } from '../../../lib/construction-estimation/inputDataSheetTemplate.js';
 import { createAiScheduleRows, documentedInputCandidates } from './ai-integration/scheduleEvidence.js';
 import { roomFloorFinish } from './ai-integration/roomGeometry.js';
+import { sheetPixelsPerMm, toCommonScale } from './sheetScale.js';
 import { buildTakeoffReview, reviewAudience, reviewText } from './ai-integration/reviewSummary.js';
 import { EXTERIOR_WALL_CLASSES, normaliseLevel, explicitLevel, resolveTakeoffLevel, importWallCategory, resolveExteriorClass, runLengthM, createExteriorClassificationTotals, resolveConstructionSystem, legacyExteriorClassFromSystem, EXTERIOR_CONSTRUCTION_SYSTEMS, INTERIOR_CONSTRUCTION_SYSTEMS, CONSTRUCTION_SYSTEM_LABELS, resolveOpeningRoom, resolvePostColumnCore, POST_SURROUND_TYPE_LABELS } from './takeoffRunData.js';
 
@@ -151,7 +152,7 @@ function createFloorFinishRows(finishes = [], pixelsPerMm) {
   });
 }
 
-function createEaveRows(eaves = [], pixelsPerMm, sheetLevels = {}) {
+function createEaveRows(eaves = [], pixelsPerMm, sheetLevels = {}, scheduleState = {}, sheetCalibrations = scheduleState?.sheetCalibrations || {}) {
   return Object.values(eaves.reduce((acc, eave) => {
     const widthLabel = eave.widthOption === 'Special' ? `${eave.widthMm}mm Special` : `${eave.widthMm || eave.widthOption}mm`;
     const level = resolveTakeoffLevel(eave, sheetLevels);
@@ -422,7 +423,7 @@ function pillarCoreLabel(pillar, coreWidthMm, coreDepthMm) {
 // Groups pillars/posts/columns by level, only merging rows whose full specification matches
 // exactly (core type/size, surround type/size, height) - "Where identical posts/columns exist,
 // group them only when all relevant specification fields match."
-export function createPillarSchedule(pillars = [], pixelsPerMm, sheetLevels = {}) {
+export function createPillarSchedule(pillars = [], pixelsPerMm, sheetLevels = {}, scheduleState = {}, sheetCalibrations = scheduleState?.sheetCalibrations || {}) {
   const rows = [];
   const buckets = new Map();
   pillars.forEach((pillar) => {
@@ -489,9 +490,9 @@ export function createPillarSchedule(pillars = [], pixelsPerMm, sheetLevels = {}
 // Exported so a saved takeoff job (placedOpenings + completedWallRuns + sheetLevels) can be
 // rebuilt into this schedule directly, the same way Client Selections already rebuilds
 // createWindowAndDoorSchedules from placedOpenings alone.
-export function createJobSetupWindowSchedule({ completedWallRuns = [], placedOpenings = [], pixelsPerMm, sheetLevels = {}, jobSetupRows = {} } = {}) {
+export function createJobSetupWindowSchedule({ completedWallRuns = [], placedOpenings = [], pixelsPerMm, sheetLevels = {}, scheduleState = {}, sheetCalibrations = scheduleState?.sheetCalibrations || {}, jobSetupRows = {} } = {}) {
   const records = createMeasurementRecords({
-    completedWallRuns, placedOpenings, pixelsPerMm,
+    completedWallRuns, placedOpenings, pixelsPerMm, sheetCalibrations,
     completedFloorplans: [], completedAreas: [], completedEaves: [], completedMeasurements: [],
   });
   // An opening's own recorded page can disagree with its host wall's page (the wall is the
@@ -662,9 +663,9 @@ function buildCavitySliderSchedule(cavitySliderOpenings) {
 // EstimateBuilderWorkbook can show the frame/cage order list the same way it shows the Window
 // Schedule - straight from placedOpenings + completedWallRuns, without going through the full
 // createJobSetupPayload pipeline (which needs project options this display does not).
-export function createCavitySliderCageSchedule({ completedWallRuns = [], placedOpenings = [], pixelsPerMm, sheetLevels = {} } = {}) {
+export function createCavitySliderCageSchedule({ completedWallRuns = [], placedOpenings = [], pixelsPerMm, sheetLevels = {}, scheduleState = {}, sheetCalibrations = scheduleState?.sheetCalibrations || {} } = {}) {
   const records = createMeasurementRecords({
-    completedWallRuns, placedOpenings, pixelsPerMm,
+    completedWallRuns, placedOpenings, pixelsPerMm, sheetCalibrations,
     completedFloorplans: [], completedAreas: [], completedEaves: [], completedMeasurements: [],
   });
   // See createJobSetupWindowSchedule above: an opening's own page can disagree with its host
@@ -689,9 +690,9 @@ export function createCavitySliderCageSchedule({ completedWallRuns = [], placedO
 // the openings linked to that wall - the same linkedWallId relationship and Internal Door exclusion
 // takeoffMaterialFields applies to linkedOpeningAreaM2. Read-only: builds nothing new into the
 // Takeoff itself.
-export function createCladdingProductWallSchedule({ completedWallRuns = [], placedOpenings = [], pixelsPerMm, sheetLevels = {}, exteriorFinish = '' } = {}) {
+export function createCladdingProductWallSchedule({ completedWallRuns = [], placedOpenings = [], pixelsPerMm, sheetLevels = {}, scheduleState = {}, sheetCalibrations = scheduleState?.sheetCalibrations || {}, exteriorFinish = '' } = {}) {
   const records = createMeasurementRecords({
-    completedWallRuns, placedOpenings, pixelsPerMm,
+    completedWallRuns, placedOpenings, pixelsPerMm, sheetCalibrations,
     completedFloorplans: [], completedAreas: [], completedEaves: [], completedMeasurements: [],
   });
   // Same level resolution as createJobSetupWindowSchedule above.
@@ -731,9 +732,9 @@ export function createCladdingProductWallSchedule({ completedWallRuns = [], plac
 // Door - 4"-style duplication this was written to fix). Frame thickness still correctly drives a
 // separate, unaffected calculation: the jamb stock quantity (takeoffMaterialFields /
 // internalDoorJambTrace), which reads wallThicknessMm off the same openings directly.
-export function createInternalDoorSizeSchedule({ completedWallRuns = [], placedOpenings = [], pixelsPerMm, sheetLevels = {} } = {}) {
+export function createInternalDoorSizeSchedule({ completedWallRuns = [], placedOpenings = [], pixelsPerMm, sheetLevels = {}, scheduleState = {}, sheetCalibrations = scheduleState?.sheetCalibrations || {} } = {}) {
   const records = createMeasurementRecords({
-    completedWallRuns, placedOpenings, pixelsPerMm,
+    completedWallRuns, placedOpenings, pixelsPerMm, sheetCalibrations,
     completedFloorplans: [], completedAreas: [], completedEaves: [], completedMeasurements: [],
   });
   const measurements = associateTakeoffMeasurements(records.map((item) => ({
@@ -752,9 +753,9 @@ export function createInternalDoorSizeSchedule({ completedWallRuns = [], placedO
 // and labour need: each internal-door opening classified (internalDoorPurchaseType), the existing
 // jamb trace (internalDoorJambTrace - the one jamb rule) and the existing cavity-cage grouping
 // (buildCavitySliderSchedule - size + host frame thickness). Read-only.
-export function createInternalDoorPurchaseSchedule({ completedWallRuns = [], placedOpenings = [], pixelsPerMm, sheetLevels = {} } = {}) {
+export function createInternalDoorPurchaseSchedule({ completedWallRuns = [], placedOpenings = [], pixelsPerMm, sheetLevels = {}, scheduleState = {}, sheetCalibrations = scheduleState?.sheetCalibrations || {} } = {}) {
   const records = createMeasurementRecords({
-    completedWallRuns, placedOpenings, pixelsPerMm,
+    completedWallRuns, placedOpenings, pixelsPerMm, sheetCalibrations,
     completedFloorplans: [], completedAreas: [], completedEaves: [], completedMeasurements: [],
   });
   const measurements = associateTakeoffMeasurements(records.map((item) => ({
@@ -796,9 +797,9 @@ export function createInternalDoorPurchaseSchedule({ completedWallRuns = [], pla
 // double-counts into this schedule and the cavity-slider-cage schedule at once. Grouped by width x
 // height only, for the same reason createInternalDoorSizeSchedule is: the door leaf product does
 // not change with the host wall's frame thickness.
-export function createRobeSlidingDoorSchedule({ completedWallRuns = [], placedOpenings = [], pixelsPerMm, sheetLevels = {} } = {}) {
+export function createRobeSlidingDoorSchedule({ completedWallRuns = [], placedOpenings = [], pixelsPerMm, sheetLevels = {}, scheduleState = {}, sheetCalibrations = scheduleState?.sheetCalibrations || {} } = {}) {
   const records = createMeasurementRecords({
-    completedWallRuns, placedOpenings, pixelsPerMm,
+    completedWallRuns, placedOpenings, pixelsPerMm, sheetCalibrations,
     completedFloorplans: [], completedAreas: [], completedEaves: [], completedMeasurements: [],
   });
   const measurements = associateTakeoffMeasurements(records.map((item) => ({
@@ -820,9 +821,9 @@ export function createRobeSlidingDoorSchedule({ completedWallRuns = [], placedOp
 // opening (host wall now linked, so wallThicknessMm is populated exactly as takeoffMaterialFields
 // sees it) to internalDoorJambTrace, which applies the exact same rule that function uses. Not
 // wired into any UI - used by the jamb regression test and by ad-hoc diagnostics.
-export function createInternalDoorJambTrace({ completedWallRuns = [], placedOpenings = [], pixelsPerMm, sheetLevels = {} } = {}) {
+export function createInternalDoorJambTrace({ completedWallRuns = [], placedOpenings = [], pixelsPerMm, sheetLevels = {}, scheduleState = {}, sheetCalibrations = scheduleState?.sheetCalibrations || {} } = {}) {
   const records = createMeasurementRecords({
-    completedWallRuns, placedOpenings, pixelsPerMm,
+    completedWallRuns, placedOpenings, pixelsPerMm, sheetCalibrations,
     completedFloorplans: [], completedAreas: [], completedEaves: [], completedMeasurements: [],
   });
   const measurements = associateTakeoffMeasurements(records.map((item) => ({
@@ -842,9 +843,9 @@ export function createInternalDoorJambTrace({ completedWallRuns = [], placedOpen
 // standard-door and robe-door schedules use - so this trace and those schedules can never disagree
 // about which opening belongs where. Not wired into any UI - used for diagnostics and regression
 // tests that need to prove why a specific opening was or was not included in a given schedule.
-export function createInternalDoorReconciliationTrace({ completedWallRuns = [], placedOpenings = [], pixelsPerMm, sheetLevels = {} } = {}) {
+export function createInternalDoorReconciliationTrace({ completedWallRuns = [], placedOpenings = [], pixelsPerMm, sheetLevels = {}, scheduleState = {}, sheetCalibrations = scheduleState?.sheetCalibrations || {} } = {}) {
   const records = createMeasurementRecords({
-    completedWallRuns, placedOpenings, pixelsPerMm,
+    completedWallRuns, placedOpenings, pixelsPerMm, sheetCalibrations,
     completedFloorplans: [], completedAreas: [], completedEaves: [], completedMeasurements: [],
   });
   const measurements = associateTakeoffMeasurements(records.map((item) => ({
@@ -883,7 +884,7 @@ const wallSystemRowKey = (system, frame) => (system === 'custom' ? 'custom' : `$
  * it, unclassified or not, so a review action can navigate straight to them; nothing here recomputes
  * length or level differently to the rest of the schedule; it is a regrouping of the same walls.
  */
-function createWallSystemSchedule(walls = [], pixelsPerMm, sheetLevels = {}) {
+function createWallSystemSchedule(walls = [], pixelsPerMm, sheetLevels = {}, scheduleState = {}, sheetCalibrations = scheduleState?.sheetCalibrations || {}) {
   const byLevel = new Map();
   walls.forEach((wall) => {
     const isExterior = importWallCategory(wall) === 'exterior';
@@ -1076,7 +1077,12 @@ function createWallSchedules(walls = [], openings = [], pixelsPerMm, jobSetupRow
   };
 }
 
-function buildForPages({ pages, completedFloorplans, completedWallRuns, placedOpenings, completedAreas, completedMeasurements, completedEaves, completedPillars = [], pixelsPerMm, jobSetupRows, sheetLevels = {}, aiAnalysis }) {
+function buildForPages(input) {
+  const { pages, pixelsPerMm, jobSetupRows, sheetLevels = {}, aiAnalysis, sheetCalibrations = {} } = input;
+  // Each sheet is measured at its own scale: see sheetScale.js.
+  const atScale = (items) => toCommonScale(items || [], Number(pixelsPerMm), sheetCalibrations);
+  const completedFloorplans = atScale(input.completedFloorplans), completedWallRuns = atScale(input.completedWallRuns), placedOpenings = atScale(input.placedOpenings),
+    completedAreas = atScale(input.completedAreas), completedMeasurements = atScale(input.completedMeasurements), completedEaves = atScale(input.completedEaves), completedPillars = atScale(input.completedPillars);
   const include = (item) => pages.includes(item.page);
   const floorplans = completedFloorplans.filter(include);
   const walls = completedWallRuns.filter(include);
@@ -1184,11 +1190,15 @@ function buildForPages({ pages, completedFloorplans, completedWallRuns, placedOp
 // Keep source measurements alongside display summaries. Importing summaries alone
 // loses the sheet/level distinction and counts their subtotal rows a second time.
 export function createWallLiningMeasurements(job = {}) {
-  const records = createMeasurementRecords({ completedFloorplans: [], completedWallRuns: job.completedWallRuns || [], placedOpenings: job.placedOpenings || [], completedAreas: [], completedEaves: [], completedMeasurements: [], pixelsPerMm: job.pixelsPerMm });
+  const records = createMeasurementRecords({ completedFloorplans: [], completedWallRuns: job.completedWallRuns || [], placedOpenings: job.placedOpenings || [], completedAreas: [], completedEaves: [], completedMeasurements: [], pixelsPerMm: job.pixelsPerMm, sheetCalibrations: job.scheduleState?.sheetCalibrations || {} });
   return uniqueTakeoffItems(associateTakeoffMeasurements(records.map((item) => ({ ...item, level: resolveTakeoffLevel(item, job.sheetLevels || {}) })), job.pixelsPerMm));
 }
 
-function createMeasurementRecords({ completedFloorplans, completedWallRuns, placedOpenings, completedAreas, completedEaves, completedMeasurements, completedPillars = [], pixelsPerMm }) {
+function createMeasurementRecords(input) {
+  const { pixelsPerMm, sheetCalibrations = {} } = input;
+  const atScale = (items) => toCommonScale(items || [], Number(pixelsPerMm), sheetCalibrations);
+  const completedFloorplans = atScale(input.completedFloorplans), completedWallRuns = atScale(input.completedWallRuns), placedOpenings = atScale(input.placedOpenings),
+    completedAreas = atScale(input.completedAreas), completedEaves = atScale(input.completedEaves), completedMeasurements = atScale(input.completedMeasurements), completedPillars = atScale(input.completedPillars);
   const calibrated = Number.isFinite(Number(pixelsPerMm)) && Number(pixelsPerMm) > 0;
   const area = (item) => calibrated && item.nodes?.length >= 3
     ? polygonAreaM2(item.nodes, Number(pixelsPerMm)) : null;
@@ -1268,13 +1278,14 @@ export function createTakeoffSchedule({
   jobSetupRows = {},
   sheetLevels = {},
   scheduleState = {},
-  aiAnalysis = scheduleState.aiAnalysis || null
+  aiAnalysis = scheduleState.aiAnalysis || null,
+  sheetCalibrations = scheduleState.sheetCalibrations || {}
 }) {
   const projectPages = Array.from({ length: totalPages || 1 }, (_, index) => index + 1);
   return {
     generatedAt: new Date().toISOString(),
     aiAnalysis,
-    measurementRecords: [...createMeasurementRecords({ completedFloorplans, completedWallRuns, placedOpenings, completedAreas, completedEaves, completedMeasurements, completedPillars, pixelsPerMm }),
+    measurementRecords: [...createMeasurementRecords({ completedFloorplans, completedWallRuns, placedOpenings, completedAreas, completedEaves, completedMeasurements, completedPillars, pixelsPerMm, sheetCalibrations }),
       // One floor-finish record per room: its chosen finish, or tiles where it was marked for floor tiling.
       ...(aiAnalysis?.rooms || []).filter(room => roomFloorFinish(room)).map(room => ({
         id: room.floorFinish ? `${room.id}:floor-finish` : `${room.id}:floor-tiling`, roomId: room.id, page: room.page, level: room.level,
@@ -1291,7 +1302,7 @@ export function createTakeoffSchedule({
       planFilename,
       numberOfPlanSheets: totalPages || 1,
       storeyOrLevelName: projectInfo.storeyOrLevelName || `Sheet ${currentPage}`,
-      calibratedScaleBySheet: projectPages.map((page) => ({ page, pixelsPerMm: pixelsPerMm || null }))
+      calibratedScaleBySheet: projectPages.map((page) => ({ page, pixelsPerMm: sheetPixelsPerMm(page, pixelsPerMm, sheetCalibrations) || null }))
     },
     currentSheet: {
       page: currentPage,
@@ -1306,7 +1317,8 @@ export function createTakeoffSchedule({
         completedPillars,
         pixelsPerMm,
         jobSetupRows,
-        sheetLevels
+        sheetLevels,
+        sheetCalibrations
       })
     },
     projectTotals: buildForPages({
@@ -1320,7 +1332,8 @@ export function createTakeoffSchedule({
       completedPillars,
       pixelsPerMm,
       jobSetupRows,
-      sheetLevels
+      sheetLevels,
+      sheetCalibrations
     })
   };
 }

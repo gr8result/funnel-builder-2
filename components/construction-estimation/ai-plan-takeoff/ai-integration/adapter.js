@@ -1,3 +1,4 @@
+import { sheetPixelsPerMm } from '../sheetScale.js';
 import { EXTERIOR_WALL_CLASSES, EXTERIOR_CONSTRUCTION_SYSTEMS, INTERIOR_CONSTRUCTION_SYSTEMS, CLADDING_PRODUCTS, CLADDING_PRODUCT_CUSTOM, POST_CORE_TYPES, TIMBER_POST_SIZE_OPTIONS, STEEL_SECTION_TYPES, POST_SURROUND_TYPES, POST_BRICK_FINISH_OPTIONS } from '../takeoffRunData.js';
 
 // Which exteriorFinish values are valid for a given constructionSystem. A wall system with no
@@ -83,7 +84,7 @@ function optionalFrameThicknessMm(value, label) {
 function sameScale(value, scale, label) {
   if (value === undefined) return;
   positive(value, label);
-  requireValue(value === scale, `${label} differs from the job calibration; mixed scales are not supported.`);
+  requireValue(Math.abs(value - scale) <= Math.max(value, scale) * 1e-9, `${label} differs from that sheet's calibration.`);
 }
 
 function samePoint(a, b) { return a.x === b.x && a.y === b.y; }
@@ -156,7 +157,8 @@ function coordinateConverter(detection, page) {
  * Validate an entire detection batch, then return only canonical canvas objects.
  * This function has no state, storage, network, timestamps, or mutation side effects.
  * Normalized coordinates are fractions [0, 1]; image coordinates require raster
- * width/height. Every page uses the existing job's single pixelsPerMm calibration.
+ * width/height. Each page is measured at its own sheet's calibration (context.sheetCalibrations),
+ * or the job's pixelsPerMm where the sheet was not calibrated on its own.
  */
 export function convertAiTakeoffDetections(batch, context) {
   requireValue(batch && typeof batch === 'object' && context && typeof context === 'object', 'batch and context are required.');
@@ -168,8 +170,9 @@ export function convertAiTakeoffDetections(batch, context) {
   const runId = text(batch.runId, 'runId');
   const modelVersion = text(batch.modelVersion, 'modelVersion');
   const scale = positive(context.pixelsPerMm, 'pixelsPerMm calibration');
+  const scaleOfPage = (page) => positive(sheetPixelsPerMm(page, scale, context.sheetCalibrations), `Page ${page} calibration`);
   sameScale(batch.pixelsPerMm, scale, 'Batch pixelsPerMm');
-  requireValue(!batch.pageScales && !batch.calibrations, 'Per-page calibration is not supported.');
+  requireValue(!batch.pageScales && !batch.calibrations, 'A batch cannot set sheet calibrations; they come from the takeoff.');
   requireValue(Array.isArray(context.pages) && context.pages.length > 0, 'Context needs loaded page dimensions.');
   const pages = new Map();
   for (const page of context.pages) {
@@ -177,7 +180,7 @@ export function convertAiTakeoffDetections(batch, context) {
     requireValue(!pages.has(page.pageNumber), `Duplicate context page ${page.pageNumber}.`);
     positive(page.logicalWidth, `Page ${page.pageNumber} logicalWidth`);
     positive(page.logicalHeight, `Page ${page.pageNumber} logicalHeight`);
-    sameScale(page.pixelsPerMm, scale, `Page ${page.pageNumber} pixelsPerMm`);
+    sameScale(page.pixelsPerMm, scaleOfPage(page.pageNumber), `Page ${page.pageNumber} pixelsPerMm`);
     pages.set(page.pageNumber, page);
   }
   requireValue(Array.isArray(batch.detections), 'detections must be an array.');
@@ -191,7 +194,7 @@ export function convertAiTakeoffDetections(batch, context) {
     requireValue(Number.isInteger(detection.page) && pages.has(detection.page), `Detection ${detectionId} must reference a loaded numeric page.`);
     requireValue(typeof detection.confidence === 'number' && Number.isFinite(detection.confidence)
       && detection.confidence >= 0 && detection.confidence <= 1, `Detection ${detectionId} confidence must be between 0 and 1.`);
-    sameScale(detection.pixelsPerMm, scale, `Detection ${detectionId} pixelsPerMm`);
+    sameScale(detection.pixelsPerMm, scaleOfPage(detection.page), `Detection ${detectionId} pixelsPerMm`);
     // Encoding each component separately makes the delimiter unambiguous even if IDs contain it.
     const id = `ai:${[identity.jobId, identity.takeoffId, identity.documentHash, runId, detection.kind, detectionId].map(encodeURIComponent).join(':')}`;
     detections.set(detectionId, detection);
@@ -235,7 +238,7 @@ export function convertAiTakeoffDetections(batch, context) {
         requireValue(!samePoint(nodes[i - 1], nodes[i]), `${label} wall has a zero-length segment.`);
         lengthPx += Math.hypot(nodes[i].x - nodes[i - 1].x, nodes[i].y - nodes[i - 1].y);
       }
-      const lengthMm = positive(lengthPx / scale, `${label} computed wall length`);
+      const lengthMm = positive(lengthPx / scaleOfPage(detection.page), `${label} computed wall length`);
       if (category === 'interior') requireValue(detection.exteriorType === undefined || detection.exteriorType === '', `${label} interior wall cannot carry an exterior type.`);
       if (category === 'interior') requireValue(detection.exteriorFinish === undefined, `${label} interior wall cannot carry an exterior finish.`);
       // Canonical construction-system fields (Phase 2A). All optional and additive: a detection
@@ -313,7 +316,7 @@ export function convertAiTakeoffDetections(batch, context) {
     } else if (detection.kind === 'eave') {
       const nodes = nodesFor(detection.nodes);
       requireValue(nodes.length >= 2, `${label} eave needs at least two vertices.`);
-      const lengthMm = positive(nodes.slice(1).reduce((sum, node, i) => sum + Math.hypot(node.x - nodes[i].x, node.y - nodes[i].y), 0) / scale, `${label} eave length`);
+      const lengthMm = positive(nodes.slice(1).reduce((sum, node, i) => sum + Math.hypot(node.x - nodes[i].x, node.y - nodes[i].y), 0) / scaleOfPage(detection.page), `${label} eave length`);
       const widthMm = optionalPositive(detection.widthMm, `${label} widthMm`);
       result.completedEaves.push({ ...base, nodes, lengthMm, widthMm, widthOption: widthMm && [450, 600, 900, 1200].includes(widthMm) ? String(widthMm) : 'Special', alignment: 'outer' });
     } else if (detection.kind === 'floorplan') {

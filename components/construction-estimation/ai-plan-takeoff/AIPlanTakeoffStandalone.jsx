@@ -1,4 +1,5 @@
 import { RoomBoundaryLayer, RoomBoundaryPanel } from './RoomBoundaries.jsx';
+import { rescaleRunLengths, sameSheetScale, sheetPixelsPerMm } from './sheetScale.js';
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useAiTakeoffBridge } from './ai-integration/useAiTakeoffBridge.js';
 import { AiTakeoffDevelopmentAction } from './ai-integration/AiTakeoffDevelopmentAction.jsx';
@@ -2684,6 +2685,15 @@ setSavedRevision(verifiedSave.revision);
     sheetViewStateRef.current[currentPage] = nextView;
   }, [currentPage, stagePos.x, stagePos.y, stageScale]);
 
+  // The working scale is the scale of the sheet on screen: a sheet calibrated on its own measures
+  // with its own calibration, every other sheet with the job's.
+  const recordedSheetCalibrations = aiTakeoffAnalysis.sheetCalibrations;
+  useEffect(() => {
+    if (!recordedSheetCalibrations || !Object.keys(recordedSheetCalibrations).length) return;
+    const scale = sheetPixelsPerMm(currentPage, pixelsPerMm, recordedSheetCalibrations);
+    if (scale && !sameSheetScale(scale, pixelsPerMm)) setPixelsPerMm(scale);
+  }, [currentPage, recordedSheetCalibrations, pixelsPerMm]);
+
   const goToSheet = useCallback((nextPageOrUpdater) => {
     rememberCurrentSheetView();
     setCurrentPage((current) => {
@@ -2856,9 +2866,15 @@ setSavedRevision(verifiedSave.revision);
           const realMm = prompt("Enter known dimension in millimeters (e.g. 5000 for 5m):", "5000");
           if (realMm && parseFloat(realMm) > 0) {
             const ratio = distPx / parseFloat(realMm);
+            // The calibration belongs to this sheet. Lengths already measured follow their own sheet's
+            // scale: runs on this sheet are restated, runs on a sheet with its own calibration are not.
+            const previousCalibrations = aiTakeoffAnalysis.sheetCalibrations || {};
+            const before = (page) => sheetPixelsPerMm(page, pixelsPerMm, previousCalibrations);
             setPixelsPerMm(ratio);
-            // Remember which sheet this calibration was measured on; AI Takeoff treats it as authoritative.
-            aiTakeoffAnalysis.recordSheetCalibration(currentPage, ratio);
+            const nextCalibrations = aiTakeoffAnalysis.recordSheetCalibration(currentPage, ratio) || previousCalibrations;
+            const after = (page) => sheetPixelsPerMm(page, ratio, nextCalibrations);
+            setCompletedWallRuns((runs) => rescaleRunLengths(runs, before, after));
+            setCompletedEaves((runs) => rescaleRunLengths(runs, before, after));
             markTakeoffItemCompleted('calibration');
             alert(`Scale calibrated: ${ratio.toFixed(4)} px/mm`);
           }
@@ -3706,8 +3722,9 @@ setSavedRevision(verifiedSave.revision);
     completedEaves,
     completedPillars,
     sheetLevels,
+    sheetCalibrations: aiTakeoffAnalysis.sheetCalibrations,
     jobSetupRows: platformContext.jobSetupRows || {}
-  }), [projectInfo, planFilename, totalPages, currentPage, pixelsPerMm, completedWallRuns, placedOpenings, completedAreas, completedFloorplans, completedMeasurements, completedEaves, completedPillars, sheetLevels, platformContext.jobSetupRows, aiTakeoffAnalysis.report]);
+  }), [aiTakeoffAnalysis.sheetCalibrations, projectInfo, planFilename, totalPages, currentPage, pixelsPerMm, completedWallRuns, placedOpenings, completedAreas, completedFloorplans, completedMeasurements, completedEaves, completedPillars, sheetLevels, platformContext.jobSetupRows, aiTakeoffAnalysis.report]);
   const scheduleSignature = React.useMemo(() => getScheduleSignature(takeoffSchedule), [takeoffSchedule]);
   const quoteSheetOutOfDate = !!lastQuoteSyncSignature && lastQuoteSyncSignature !== scheduleSignature;
 

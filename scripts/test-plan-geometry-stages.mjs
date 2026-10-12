@@ -95,7 +95,7 @@ assert.ok(lineWall?.reviewRequired && /door opening/.test(lineWall.reviewReason)
 assert.ok(!detectPlanGeometry(robe, { ...context, openingEvidence: [{ x: 600, y: 400 }] }).openings.some((opening) => opening.kind === 'door-line'));
 
 // --- Divided spaces are linked, never returned as two independent rooms ---------------------------
-const divided = detectPlanGeometry(returns, context);
+const divided = detectPlanGeometry(returns, context, { alignedDoorways: false });
 const whole = divided.rooms.filter((room) => room.dividedInto);
 assert.equal(whole.length, 1, 'the space behind an unconfirmed doorway is returned once as a whole');
 const parts = divided.rooms.filter((room) => room.partOf === whole[0].id);

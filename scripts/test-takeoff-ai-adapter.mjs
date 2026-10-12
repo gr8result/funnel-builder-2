@@ -75,8 +75,8 @@ assert.equal(payload.dataInputFields.floorFinishTilesM2, 7.75, 'existing exclusi
 
 for (const key of ['jobId', 'takeoffId', 'documentHash']) assert.throws(() => convertAiTakeoffDetections({ ...batch, [key]: 'wrong' }, context), /does not match/);
 for (const value of [0, -1, NaN, Infinity, '0.1']) assert.throws(() => convertAiTakeoffDetections(batch, { ...context, pixelsPerMm: value }), /positive finite/);
-assert.throws(() => convertAiTakeoffDetections({ ...batch, pixelsPerMm: 0.2 }, context), /mixed scales/);
-assert.throws(() => convertAiTakeoffDetections(batch, { ...context, pages: [{ ...context.pages[0], pixelsPerMm: 0.2 }] }), /mixed scales/);
+assert.throws(() => convertAiTakeoffDetections({ ...batch, pixelsPerMm: 0.2 }, context), /calibration/);
+assert.throws(() => convertAiTakeoffDetections(batch, { ...context, pages: [{ ...context.pages[0], pixelsPerMm: 0.2 }] }), /calibration/);
 for (const page of ['1', 0, -1, 1.5, 3, NaN]) rejects({ ...wall, page }, /loaded numeric page/);
 for (const x of [NaN, Infinity, '100', -1, 1001]) rejects({ ...wall, nodes: [{ x, y: 100 }, { x: 500, y: 100 }] }, /finite numbers|outside page bounds/);
 for (const confidence of [-0.1, 1.1, '0.5', NaN]) rejects({ ...wall, confidence }, /confidence/);

@@ -9,7 +9,7 @@ import { detectOpeningSymbolReviewCandidates } from './openingSymbolReview.js';
 const STANDARD_THICKNESSES = [70, 90, 110, 150, 200, 230, 250, 270, 300, 350];
 const nearest = (value, list) => list.reduce((best, item) => (Math.abs(item - value) < Math.abs(best - value) ? item : best));
 
-export const GEOMETRY_ENGINE_VERSION = 'plan-geometry-4';
+export const GEOMETRY_ENGINE_VERSION = 'plan-geometry-5';
 
 export const DEFAULT_GEOMETRY_OPTIONS = {
   inkThreshold: 630,          // r+g+b below this is linework
@@ -29,7 +29,10 @@ export const DEFAULT_GEOMETRY_OPTIONS = {
   minRoomM2: 0.35, minRoomSideMm: 450,
   simplifyPx: 1.6,
   evidenceReachMm: 700,       // an opening located this close to a gap confirms it
-  swingDoorMinMm: 500, swingDoorMaxMm: 1300, // a hinged door leaf is this wide
+  swingDoorMinMm: 500, swingDoorMaxMm: 1450, // a hinged door leaf is this wide (an entry door with its frame at the top end)
+  closedDoorMinMm: 600,       // a door drawn closed is found by its swing alone, so short arcs (basins, pans) are left out
+  alignedDoorways: true,      // a door-width gap between two ends of one wall is an opening in that wall
+  closedDoorSwings: true,     // also look for the swing of a door drawn closed in its wall
   swingArcShare: 0.95,        // this much of a door's quarter-circle swing has to be drawn
   isolatedRunMm: 1500,        // shorter paired linework joining no wall is not a wall
   diagonalWalls: true, diagonalMinMm: 500, diagonalJoinMm: 250, diagonalSideReachMm: 400, // walls drawn at 45 degrees
@@ -86,17 +89,20 @@ function runLengths(ink, width, height, vertical) {
 
 // Mark the band between two parallel faces. `vertical` = the wall runs vertically (faces are
 // vertical lines, scanned along each row). Value 2 where both faces are established, 1 for nibs.
-function wallBands(ink, faceLength, strictLen, relaxedLen, width, height, vertical, tMin, tMax, maxLine) {
+function wallBands(ink, faceLength, strictLen, relaxedLen, width, height, vertical, tMin, tMax, maxLine, window = null) {
   const mask = new Uint8Array(width * height);
   const outer = vertical ? height : width, inner = vertical ? width : height;
   const step = vertical ? 1 : width;
   const runs = [];
-  for (let o = 0; o < outer; o += 1) {
+  // An optional window limits the scan to part of the sheet.
+  const oFrom = window ? (vertical ? window.y0 : window.x0) : 0, oTo = window ? (vertical ? window.y1 : window.x1) : outer - 1;
+  const iFrom = window ? (vertical ? window.x0 : window.y0) : 0, iTo = window ? (vertical ? window.x1 : window.y1) : inner - 1;
+  for (let o = oFrom; o <= oTo; o += 1) {
     const base = vertical ? o * width : o;
     runs.length = 0;
     let start = -1;
-    for (let i = 0; i <= inner; i += 1) {
-      const on = i < inner && ink[base + i * step];
+    for (let i = iFrom; i <= iTo + 1; i += 1) {
+      const on = i <= iTo && ink[base + i * step];
       if (on && start < 0) start = i;
       else if (!on && start >= 0) { runs.push(start, i - 1); start = -1; }
     }
@@ -237,7 +243,7 @@ function labelComponents(test, width, height, bounds) {
 }
 
 // Close the gap from each wall end to the wall it faces. `vertical` = bands that run vertically.
-function bridgeGaps(band, wall, bridge, width, height, vertical, doorGap, collinearGap, minGap, beside, diagonal = null, sideReach = 0) {
+function bridgeGaps(band, wall, bridge, width, height, vertical, doorGap, collinearGap, minGap, beside, diagonal = null, sideReach = 0, aligned = null) {
   const outer = vertical ? width : height, inner = vertical ? height : width;
   const step = vertical ? width : 1;
   const cross = vertical ? 1 : width;
@@ -251,7 +257,7 @@ function bridgeGaps(band, wall, bridge, width, height, vertical, doorGap, collin
       if (!band[p]) continue;
       for (const direction of [1, -1]) {
         if (wall[p + direction * step]) continue;
-        let hit = 0, met = 0;
+        let hit = 0, met = 0, sameWall = false;
         for (let g = 1; g <= collinearGap; g += 1) {
           const j = i + direction * g;
           if (j < 0 || j >= inner) break;
@@ -259,7 +265,8 @@ function bridgeGaps(band, wall, bridge, width, height, vertical, doorGap, collin
           if (!wall[q]) continue;
           met = g;
           // Reached another wall: one crossing close by, or the same wall continuing further on.
-          if (g > 1 && (g <= doorGap || (band[q] && sameFaces(p, q)))) hit = g;
+          sameWall = Boolean(band[q]) && sameFaces(p, q);
+          if (g > 1 && (g <= doorGap || sameWall)) hit = g;
           break;
         }
         // A doorway that ends against the tip of a 45 degree wall: the tip rarely lies exactly on
@@ -286,7 +293,7 @@ function bridgeGaps(band, wall, bridge, width, height, vertical, doorGap, collin
           const middle = base + (i + direction * (hit >> 1)) * step;
           for (let offset = 1; offset <= beside && hit; offset += 1) if (wall[middle - offset * cross] || wall[middle + offset * cross]) hit = 0;
         }
-        for (let g = 1; g < hit; g += 1) bridge[base + (i + direction * g) * step] = vertical ? 2 : 1;
+        for (let g = 1; g < hit; g += 1) { const q = base + (i + direction * g) * step; bridge[q] = vertical ? 2 : 1; if (aligned && sameWall) aligned[q] = 1; }
       }
     }
   }
@@ -349,16 +356,9 @@ function symbolStretches(widths, marked, inkAt, span, minPlateau, joinGap) {
 // A hinged door is drawn as a quarter circle from one jamb, with the door's width as its radius.
 // Looks for that arc on either side of a gap, from either jamb. Returns the best share of the arc
 // that is actually drawn (0..1) and the radius it was found at, which is the door leaf.
-function doorSwingShare(ink, width, height, item, vertical) {
+function doorSwingShare(inkFat, width, height, item, vertical) {
   const along = vertical ? item.maxY - item.minY + 1 : item.maxX - item.minX + 1;
-  const inkNear = (x, y) => {
-    const cx = Math.round(x), cy = Math.round(y);
-    for (let dy = -1; dy <= 1; dy += 1) for (let dx = -1; dx <= 1; dx += 1) {
-      const qx = cx + dx, qy = cy + dy;
-      if (qx >= 0 && qy >= 0 && qx < width && qy < height && ink[qy * width + qx]) return true;
-    }
-    return false;
-  };
+  const inkNear = (x, y) => { const cx = Math.round(x), cy = Math.round(y); return cx >= 0 && cy >= 0 && cx < width && cy < height && inkFat[cy * width + cx] === 1; };
   let best = 0, radii = [];
   // The gap as bridged can start a little short of the drawn wall end, so the hinge is looked for
   // over the first part of the gap from each end, and the leaf may be narrower than the gap.
@@ -370,12 +370,15 @@ function doorSwingShare(ink, width, height, item, vertical) {
       const hingeAlong = endAlong + endSign * shift, hingeAcross = faceAcross + sideSign * lift;
       for (let radius = Math.round(along * 0.6); radius <= Math.round(along * 1.05); radius += 1) {
         let drawn = 0, samples = 0;
-        for (let degrees = 12; degrees <= 78; degrees += 3) {
+        // No better than what is already found once more points are missing than that allows.
+        const allowed = Math.floor(23 * (1 - best));
+        for (let degrees = 12; degrees <= 78 && samples - drawn <= allowed; degrees += 3) {
           const angle = degrees * Math.PI / 180;
           const a = hingeAlong + endSign * radius * Math.cos(angle), c = hingeAcross + sideSign * radius * Math.sin(angle);
           samples += 1;
           if (inkNear(vertical ? c : a, vertical ? a : c)) drawn += 1;
         }
+        if (samples < 23) continue;
         // Every radius that fits equally well is kept: the line has width, so several do.
         if (drawn / samples > best) { best = drawn / samples; radii = [radius]; } else if (drawn / samples === best) radii.push(radius);
       }
@@ -410,8 +413,16 @@ function diagonalWallRuns(ink, width, height, bounds, mirror, { tMin, tMax, stri
   const root2 = Math.SQRT2;
   const lengths = runLengths(rot, rw, rh, false);
   const face = Math.max(8, Math.round(strictLen / root2));
-  const band = wallBands(rot, lengths, face, face, rw, rh, false, tMin * root2, tMax * root2, Math.ceil(maxLine * root2) + 1);
-  const { labels, components } = labelComponents((p) => (band[p] & 3) === 2, rw, rh, { x0: 0, y0: 0, x1: rw - 1, y1: rh - 1 });
+  // Most sheets have few diagonal lines that long, and none is the usual answer.
+  const window = { x0: rw, y0: rh, x1: -1, y1: -1 };
+  for (let v = 0; v < rh; v += 1) for (let u = 0; u < rw; u += 1) if (lengths[v * rw + u] >= face) {
+    if (u < window.x0) window.x0 = u; if (u > window.x1) window.x1 = u; if (v < window.y0) window.y0 = v; if (v > window.y1) window.y1 = v;
+  }
+  if (window.x1 < 0) return [];
+  const pad = Math.ceil(tMax * root2) + 4;
+  window.x0 = Math.max(0, window.x0 - pad); window.y0 = Math.max(0, window.y0 - pad); window.x1 = Math.min(rw - 1, window.x1 + pad); window.y1 = Math.min(rh - 1, window.y1 + pad);
+  const band = wallBands(rot, lengths, face, face, rw, rh, false, tMin * root2, tMax * root2, Math.ceil(maxLine * root2) + 1, window);
+  const { labels, components } = labelComponents((p) => (band[p] & 3) === 2, rw, rh, window);
   const back = (u, v) => {
     // Inverse of the indexing above; of the two pixels sharing (u, v) parity picks the real one.
     const d = v - (w - 1);
@@ -434,6 +445,56 @@ function diagonalWallRuns(ink, width, height, bounds, mirror, { tMin, tMax, stri
     runs.push({ pixels, a: back(item.minX, Math.round(mid)), b: back(item.maxX, Math.round(mid)), lengthPx, thicknessPx });
   }
   return runs;
+}
+
+// A door drawn closed lies in its wall's line, so there is no gap to find: only its swing, a quarter
+// circle hinged on the wall's face with the leaf along the wall. Looks along both faces of one wall
+// run. Returns [{ along, across, direction, side, radius, share }] in raster pixels.
+function closedDoorSwings(inkFat, width, height, item, vertical, minRadius, maxRadius, needShare) {
+  const low = vertical ? item.minY : item.minX, high = vertical ? item.maxY : item.maxX;
+  const faces = [[vertical ? item.minX : item.minY, -1], [vertical ? item.maxX : item.maxY, 1]];
+  const at = (a, c) => { const x = Math.round(vertical ? c : a), y = Math.round(vertical ? a : c); return x >= 1 && y >= 1 && x < width - 1 && y < height - 1 ? y * width + x : -1; };
+  const inkNear = (a, c) => { const p = at(a, c); return p >= 0 && inkFat[p] === 1; };
+  const found = [];
+  const thickness = Math.abs(faces[1][0] - faces[0][0]);
+  for (const [edge, side] of faces) for (let inset = 0; inset <= thickness; inset += 2) for (const direction of [1, -1]) {
+    const face = edge - side * inset;
+    for (let hinge = low; hinge <= high; hinge += 2) {
+      for (let radius = minRadius; radius <= maxRadius; radius += 1) {
+        // The leaf has to lie along this wall, and the middle of the swing has to be drawn.
+        const leafEnd = hinge + direction * radius;
+        if (leafEnd < low - 3 || leafEnd > high + 3) break;
+        if (!inkNear(hinge + direction * radius * 0.7071, face + side * (1 + radius * 0.7071))) continue;
+        let drawn = 0, samples = 0, missed = 0;
+        for (let degrees = 12; degrees <= 78 && missed <= 2; degrees += 3) {
+          const angle = degrees * Math.PI / 180;
+          samples += 1;
+          if (inkNear(hinge + direction * radius * Math.cos(angle), face + side * (1 + radius * Math.sin(angle)))) drawn += 1; else missed += 1;
+        }
+        if (missed > 2 || drawn / 23 < needShare) continue;
+        // A door's swing is a quarter circle and no more: a basin, a pan, a column or hatching carries on round.
+        let beyond = 0;
+        for (const degrees of [-18, -12, -6, 96, 102, 108]) {
+          const angle = degrees * Math.PI / 180;
+          if (inkNear(hinge + direction * radius * Math.cos(angle), face + side * (1 + radius * Math.sin(angle)))) beyond += 1;
+        }
+        if (beyond > 2) continue;
+        // And it is one thin line through clear floor: lettering, a cooktop or a bath has linework either side of it.
+        let crowded = 0;
+        for (let degrees = 12; degrees <= 78; degrees += 3) {
+          const angle = degrees * Math.PI / 180, cos = Math.cos(angle), sin = Math.sin(angle);
+          for (const offset of [-5, 5]) if (inkNear(hinge + direction * (radius + offset) * cos, face + side * (1 + (radius + offset) * sin))) crowded += 1;
+        }
+        if (crowded > 46 * 0.3) continue;
+        found.push({ along: hinge + direction * radius / 2, across: face, direction, side, radius, share: drawn / 23, hinge });
+      }
+    }
+  }
+  // One door per place: the best-drawn arc among those that overlap.
+  found.sort((a, b) => b.share - a.share);
+  const kept = [];
+  for (const swing of found) if (!kept.some((other) => Math.abs(other.along - swing.along) < (other.radius + swing.radius) / 2)) kept.push(swing);
+  return kept;
 }
 
 // Boundary of a labelled region as a closed polygon on pixel corners, region on the right.
@@ -512,6 +573,12 @@ export function detectPlanGeometry(raster, context, overrides = {}) {
 
   const ink = new Uint8Array(width * height);
   for (let i = 0, p = 0; i < ink.length; i += 1, p += 4) ink[i] = data[p + 3] > 127 && data[p] + data[p + 1] + data[p + 2] < options.inkThreshold ? 1 : 0;
+  // Linework thickened by a pixel each way, for tests that ask "is a line drawn about here".
+  const inkFat = new Uint8Array(width * height);
+  for (let y = 1; y < height - 1; y += 1) for (let x = 1; x < width - 1; x += 1) {
+    const p = y * width + x;
+    if (ink[p] || ink[p - 1] || ink[p + 1] || ink[p - width] || ink[p + width] || ink[p - width - 1] || ink[p - width + 1] || ink[p + width - 1] || ink[p + width + 1]) inkFat[p] = 1;
+  }
   const tMin = px(options.minWallMm), tMax = px(options.maxWallMm);
   const strictLen = Math.max(12, Math.round(px(options.faceRunMm))), nibLen = Math.max(6, Math.round(px(options.nibRunMm)));
   const returnLen = Math.min(nibLen, Math.max(6, Math.round(px(options.jambReturnRunMm))));
@@ -704,8 +771,10 @@ export function detectPlanGeometry(raster, context, overrides = {}) {
   }
 
   const bridge = new Uint8Array(width * height);
-  bridgeGaps(bandH, wall, bridge, width, height, false, Math.round(px(options.doorGapMm)), Math.round(px(options.collinearGapMm)), Math.round(px(options.minOpeningMm)), Math.ceil(tMin), diagonalRuns.length ? diagonal : null, Math.round(px(options.diagonalSideReachMm)));
-  bridgeGaps(bandV, wall, bridge, width, height, true, Math.round(px(options.doorGapMm)), Math.round(px(options.collinearGapMm)), Math.round(px(options.minOpeningMm)), Math.ceil(tMin), diagonalRuns.length ? diagonal : null, Math.round(px(options.diagonalSideReachMm)));
+  // Where a gap lies between two ends of one wall (the same two faces either side of it).
+  const alignedGap = new Uint8Array(width * height);
+  bridgeGaps(bandH, wall, bridge, width, height, false, Math.round(px(options.doorGapMm)), Math.round(px(options.collinearGapMm)), Math.round(px(options.minOpeningMm)), Math.ceil(tMin), diagonalRuns.length ? diagonal : null, Math.round(px(options.diagonalSideReachMm)), alignedGap);
+  bridgeGaps(bandV, wall, bridge, width, height, true, Math.round(px(options.doorGapMm)), Math.round(px(options.collinearGapMm)), Math.round(px(options.minOpeningMm)), Math.ceil(tMin), diagonalRuns.length ? diagonal : null, Math.round(px(options.diagonalSideReachMm)), alignedGap);
 
   const evidence = (context.openingEvidence || []).filter((item) => Number.isFinite(item?.x) && Number.isFinite(item?.y));
 
@@ -729,8 +798,13 @@ export function detectPlanGeometry(raster, context, overrides = {}) {
       if (usedEvidence.has(index)) return;
       const distance = Math.hypot(point.x - centre.x, point.y - centre.y);
       let allowed = distance <= preciseReach;
-      if (!allowed && point.reachMm > 0 && distance <= point.reachMm * pixelsPerMm && (!point.kind || point.kind === kind)) {
-        allowed = !(point.widthMm > 0) || Math.abs(point.widthMm - widthMm) <= Math.max(150, point.widthMm * 0.25);
+      // The widths an opening may have: its stated width, or either reading of its size code.
+      const widths = [point.widthMm, ...(point.widths || [])].filter((value) => value > 0);
+      const agrees = (tolerance, share) => widths.some((value) => Math.abs(value - widthMm) <= Math.max(tolerance, value * share));
+      if (!allowed && (!point.kind || point.kind === kind)) {
+        if (point.reachMm > 0 && distance <= point.reachMm * pixelsPerMm) allowed = !widths.length || agrees(150, 0.25);
+        // Further away only on an exact width: the reading shifted the opening along its wall.
+        else if (point.farReachMm > 0 && distance <= point.farReachMm * pixelsPerMm) allowed = widths.length > 0 && agrees(80, 0.06);
       }
       if (allowed && (!best || distance < best.distance)) best = { point, index, distance };
     });
@@ -752,20 +826,24 @@ export function detectPlanGeometry(raster, context, overrides = {}) {
       if (widthMm < options.minOpeningMm) { verdict[item.id] = 1; continue; }
       if (across < tMin * 0.6) continue;
       // A door's swing drawn at the gap is the drawing itself saying this gap is a doorway.
-      const swing = widthMm >= options.swingDoorMinMm && widthMm <= options.swingDoorMaxMm ? doorSwingShare(ink, width, height, item, value === 2) : { share: 0, radius: 0 };
-      candidates.push({ item, value, widthMm, across, centre, swing });
+      const swing = widthMm >= options.swingDoorMinMm && widthMm <= options.swingDoorMaxMm ? doorSwingShare(inkFat, width, height, item, value === 2) : { share: 0, radius: 0 };
+      let alignedPixels = 0;
+      for (let y = item.minY; y <= item.maxY; y += 1) for (let x = item.minX; x <= item.maxX; x += 1) { const p = y * width + x; if (labels[p] === item.id && alignedGap[p]) alignedPixels += 1; }
+      candidates.push({ item, value, widthMm, across, centre, swing, aligned: alignedPixels >= item.area * 0.6 });
     }
     gapSets.push({ value, labels, verdict, candidates });
   }
   // Nearest pairs first, so a roughly located opening goes to the candidate it most plausibly is.
   const gapCandidates = gapSets.flatMap((set) => set.candidates.map((candidate) => ({ ...candidate, set, nearest: nearestEvidence(candidate.centre) }))).sort((a, b) => a.nearest - b.nearest);
-  for (const { item, value, widthMm, across, centre, swing, set } of gapCandidates) {
+  for (const { item, value, widthMm, across, centre, swing, set, aligned } of gapCandidates) {
     const support = claim(centre, widthMm, 'door');
     const swung = swing.share >= options.swingArcShare;
-    if (support || swung) set.verdict[item.id] = 2;
+    const doorway = options.alignedDoorways && aligned && widthMm >= options.swingDoorMinMm && widthMm <= options.doorGapMm;
+    if (support || swung || doorway) set.verdict[item.id] = 2;
     openings.push({ id: `go-${value === 2 ? 'v' : 'h'}-${Math.round(centre.x * 10)}-${Math.round(centre.y * 10)}`, axis: value === 2 ? 'v' : 'h', ...centre, widthMm: Math.round(widthMm), hostThicknessMm: Math.round(across / k), kind: 'wall-gap',
-      confirmed: Boolean(support) || swung, basis: support ? 'located' : swung ? 'door-swing' : 'none', swingShare: +swing.share.toFixed(2), ...(swung ? { leafMm: Math.round(swing.radius / k) } : {}),
+      confirmed: Boolean(support) || swung || doorway, basis: support ? 'located' : swung ? 'door-swing' : aligned ? 'aligned-wall-ends' : 'none', aligned, swingShare: +swing.share.toFixed(2), ...(swung ? { leafMm: Math.round(swing.radius / k) } : {}),
       ...(support?.point.ref !== undefined ? { evidenceRef: support.point.ref } : {}), reviewRequired: !support && !swung, seed: item.seed, axisIndex: value - 1 });
+    if (doorway && !support && !swung) openings[openings.length - 1].reviewReason = 'A door-width opening between two ends of one wall, with no door swing drawn: a sliding door, a cavity slider or an open doorway.';
   }
   for (const { value, labels, verdict } of gapSets) {
     for (let p = 0; p < labels.length; p += 1) if (labels[p] && verdict[labels[p]]) { closed[p] = value; if (verdict[labels[p]] === 2) openingGap[p] = 1; }
@@ -825,6 +903,7 @@ export function detectPlanGeometry(raster, context, overrides = {}) {
   // measured thickness. A wall's run is gross through a confirmed opening and stops at any other gap.
   const walls = [];
   const symbolQueue = [];
+  const swingQueue = [];
   const runOf = [null, null];
   const fabric = (p) => wall[p] || closed[p];
   // Outside: the open sheet around the building. It is everything a large disc can reach from
@@ -912,6 +991,22 @@ export function detectPlanGeometry(raster, context, overrides = {}) {
         measuredThicknessMm: Math.round(thicknessMm), thicknessMm: nearest(thicknessMm, STANDARD_THICKNESSES),
         ...(reasons.length ? { reviewRequired: true, reviewReason: reasons.join(' ') } : {}),
       });
+      // Doors drawn closed in this wall, known by their swing.
+      if (options.closedDoorSwings) for (const swing of closedDoorSwings(inkFat, width, height, item, vertical, Math.round(px(options.closedDoorMinMm)), Math.round(px(options.swingDoorMaxMm)), options.swingArcShare)) {
+        // Where the leaf would lie closed if it is drawn open here: square to this wall, from the hinge.
+        let fabricSteps = 0;
+        for (let step = 2; step <= swing.radius; step += 1) {
+          const a = swing.hinge, c = swing.across + swing.side * step;
+          const x = Math.round(vertical ? c : a), y = Math.round(vertical ? a : c);
+          if (x >= 0 && y >= 0 && x < width && y < height && (wall[y * width + x] || bridge[y * width + x])) fabricSteps += 1;
+        }
+        // An external wall keeps its own door: an entry door is not moved into the partition its open leaf lies along.
+        const drawnOpen = outsideShare < 0.5 && fabricSteps >= swing.radius * 0.6;
+        const mid = swing.across + swing.side * swing.radius / 2;
+        const centre = drawnOpen ? (vertical ? toLogical(mid, swing.hinge) : toLogical(swing.hinge, mid)) : (vertical ? toLogical(cx, swing.along) : toLogical(swing.along, cy));
+        swingQueue.push({ centre, widthMm: swing.radius / k, vertical: drawnOpen ? !vertical : vertical, thicknessMm, hostWallId: drawnOpen ? null : ids.get(item.id), drawnOpen,
+          probe: drawnOpen ? (vertical ? { x: Math.round(mid), y: Math.round(swing.hinge) } : { x: Math.round(swing.hinge), y: Math.round(mid) }) : null, external: outsideShare >= 0.5, share: swing.share });
+      }
       // Windows: a stretch of this wall that carries extra lines across it, is drawn wider than the
       // wall either side, or whose lines sit differently across it, is a frame drawn in the wall. The wall stays whole (its length is
       // gross through a window); the stretch is a candidate opening on this wall, confirmed only
@@ -974,9 +1069,30 @@ export function detectPlanGeometry(raster, context, overrides = {}) {
       confirmed: Boolean(support), basis: support ? 'located' : external ? 'frame-in-external-wall' : 'none', inExternalWall: external,
       ...(support?.point.ref !== undefined ? { evidenceRef: support.point.ref } : {}), reviewRequired: !support, hostWallId });
   }
+  // Doors drawn closed. One that lies on a doorway already found is that doorway's own swing.
+  for (const swing of swingQueue.sort((a, b) => b.share - a.share)) {
+    const { centre, widthMm, vertical, thicknessMm, external } = swing;
+    let { hostWallId } = swing;
+    let inExternal = external;
+    if (swing.drawnOpen) {
+      // The wall the doorway is in: the run of the other direction at the leaf's closed position.
+      const host = runOf[vertical ? 1 : 0];
+      const p = swing.probe.y * width + swing.probe.x;
+      hostWallId = host?.ids.get(host.labels[p]) || null;
+      const hostWall = walls.find((item) => item.id === hostWallId);
+      if (!hostWall) continue;
+      inExternal = hostWall.category === 'exterior';
+    }
+    const reach = widthMm * 1.15 * pixelsPerMm;
+    if (openings.some((other) => other.kind !== 'wall-symbol' && other.confirmed && other.basis === 'door-swing' && Math.hypot(other.x - centre.x, other.y - centre.y) <= Math.max(reach, other.widthMm * 0.6 * pixelsPerMm))) continue;
+    const support = claim(centre, widthMm, 'door');
+    openings.push({ id: `gd-${vertical ? 'v' : 'h'}-${Math.round(centre.x * 10)}-${Math.round(centre.y * 10)}`, axis: vertical ? 'v' : 'h', ...centre, widthMm: Math.round(widthMm), leafMm: Math.round(widthMm), hostThicknessMm: Math.round(thicknessMm), kind: 'wall-swing',
+      confirmed: true, basis: 'door-swing', inExternalWall: inExternal, swingShare: +swing.share.toFixed(2),
+      ...(support?.point.ref !== undefined ? { evidenceRef: support.point.ref } : {}), reviewRequired: false, hostWallId });
+  }
   // A confirmed opening is hosted by the wall run it was closed along; a symbol by the wall it is drawn in.
   for (const opening of openings) {
-    if (opening.kind === 'wall-symbol') continue;
+    if (opening.kind === 'wall-symbol' || opening.kind === 'wall-swing') continue;
     const host = runOf[opening.axisIndex];
     opening.hostWallId = opening.confirmed ? host.ids.get(host.labels[opening.seed]) || null : null;
     delete opening.seed; delete opening.axisIndex;
