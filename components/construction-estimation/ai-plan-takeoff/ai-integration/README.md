@@ -214,3 +214,30 @@ measurements), `scripts/test-takeoff-three-levels.mjs`, and on the recovered New
 when the recovery folder is absent): `scripts/test-plan-geometry-regression.mjs`,
 `scripts/evaluate-linework-fusion.mjs` (saved provider responses, offline) and
 `scripts/test-takeoff-real-plan-replay-browser.mjs` (the actual screen with those responses replayed).
+
+## plan-geometry-5: per-sheet scale, doors from the drawing, review grading (2026-10-13)
+
+- **Scale per sheet** (`sheetScale.js`). A sheet calibrated on its own is measured at that scale; every
+  other sheet at the job scale, recorded as sheet 0 the first time any sheet is calibrated. The canvas
+  works at the scale of the sheet on screen. The schedule and Job Setup builders restate geometry on a
+  differently scaled sheet before measuring (`toCommonScale`), so nothing depends on which sheet is on
+  screen. Recalibrating a sheet restates the stored run lengths of the sheets that follow that scale and
+  no others. The contract and adapter measure each detection at its sheet's scale.
+- **Doors.** A swing drawn at a gap confirms a doorway; a door drawn closed in its wall is found by its
+  swing alone (a quarter circle and no more, one thin line through clear floor); a door-width gap
+  between two ends of one wall is an opening whatever fills it (`basis: 'aligned-wall-ends'`).
+- **Assignment.** Reported openings are assigned to measured gaps, frames and swings in one pass over
+  the sheet (distance, kind, side of the building, either reading of a size code). An opening the
+  linework does not show is **held**, never placed at the plan reading's coordinates or snapped to the
+  nearest wall. A room the linework gives no boundary keeps its name only: a boundary the plan reading
+  drew is not passed on.
+- **Outdoor areas.** An alfresco, patio or balcony drawn as a closed outline is measured to that outline
+  (`traceOutlinedArea`, `detectionMethod: 'drawn-outline'`), always flagged; an open-sided one gets none.
+- **Built-in robes** carry `robeOf` (their bedroom) and take its floor finish unless given their own.
+- **Review.** Fusion findings carry codes; `groupReviewItems` merges identical findings and grades each
+  `critical` (geometry to correct), `uncertain` (to confirm) or `informational`.
+
+Known errors on New Job 03/09, kept visible by the reference fixtures rather than tuned away: the
+laundry measures 57 % small (its tub bench reads as wall); cavity sliders and robe sliders are found only
+where an opening is located on them; walls at angles other than 0, 45 and 90 degrees and curved walls
+are not measured.

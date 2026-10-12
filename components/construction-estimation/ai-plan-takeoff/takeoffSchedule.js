@@ -1287,9 +1287,11 @@ export function createTakeoffSchedule({
     aiAnalysis,
     measurementRecords: [...createMeasurementRecords({ completedFloorplans, completedWallRuns, placedOpenings, completedAreas, completedEaves, completedMeasurements, completedPillars, pixelsPerMm, sheetCalibrations }),
       // One floor-finish record per room: its chosen finish, or tiles where it was marked for floor tiling.
-      ...(aiAnalysis?.rooms || []).filter(room => roomFloorFinish(room)).map(room => ({
-        id: room.floorFinish ? `${room.id}:floor-finish` : `${room.id}:floor-tiling`, roomId: room.id, page: room.page, level: room.level,
-        kind: 'floorFinish', category: roomFloorFinish(room), label: room.floorFinish ? `${room.name} floor - ${room.floorFinish}` : `${room.name} floor tiling`,
+      // A built-in robe measured on its own takes its bedroom's finish unless it has its own; each room's floor is one record.
+      ...(aiAnalysis?.rooms || []).filter(room => roomFloorFinish(room, aiAnalysis.rooms)).map(room => ({
+        id: room.floorFinish || room.robeOf ? `${room.id}:floor-finish` : `${room.id}:floor-tiling`, roomId: room.id, page: room.page, level: room.level,
+        kind: 'floorFinish', category: roomFloorFinish(room, aiAnalysis.rooms),
+        label: room.floorFinish ? `${room.name} floor - ${room.floorFinish}` : room.robeOf && !(room.actions || []).includes('Floor Tiling') ? `${room.robeOf} robe floor - ${roomFloorFinish(room, aiAnalysis.rooms)}` : `${room.name} floor tiling`,
         quantity: room.reviewRequired ? null : room.areaM2, unit: 'm2', source: room.source,
         nodes: room.polygon, pixelsPerMm: room.pixelsPerMm,
       }))],

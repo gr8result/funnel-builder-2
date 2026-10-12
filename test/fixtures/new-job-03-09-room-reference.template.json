@@ -5,7 +5,8 @@
     "method": "manual-original-plan",
     "tracedIndependentlyOfAi": true,
     "jobPackage": "New Job 03/09 revision 2",
-    "instructions": "Trace room boundaries directly from the original plan pages. Do not copy AI or detector polygons. Keep each room ID, printed name, page and level stable. Include internal wall faces and record door openings as boundary continuations only when the original plan supports that room boundary."
+    "instructions": "Trace room boundaries directly from the original plan pages. Do not copy AI or detector polygons. Keep each room ID, printed name, page and level stable. Include internal wall faces and record door openings as boundary continuations only when the original plan supports that room boundary.",
+    "groundFloorNote": "Ground Floor rooms were traced on 2026-10-13 by reading inside wall faces from the original sheet image with a coordinate grid, not from detector output. Accuracy of the trace itself is about one logical pixel (50 mm) per face."
   },
   "pages": [
     {
@@ -30,10 +31,22 @@
       "level": "Second Level",
       "page": 3,
       "polygon": [
-        { "x": 203.1, "y": 353.1 },
-        { "x": 267.9, "y": 353.1 },
-        { "x": 267.9, "y": 424.3 },
-        { "x": 203.1, "y": 424.3 }
+        {
+          "x": 203.1,
+          "y": 353.1
+        },
+        {
+          "x": 267.9,
+          "y": 353.1
+        },
+        {
+          "x": 267.9,
+          "y": 424.3
+        },
+        {
+          "x": 203.1,
+          "y": 424.3
+        }
       ]
     },
     {
@@ -42,11 +55,183 @@
       "level": "Second Level",
       "page": 3,
       "polygon": [
-        { "x": 301.1, "y": 351.6 },
-        { "x": 379.8, "y": 351.6 },
-        { "x": 379.8, "y": 424.3 },
-        { "x": 301.1, "y": 424.3 }
+        {
+          "x": 301.1,
+          "y": 351.6
+        },
+        {
+          "x": 379.8,
+          "y": 351.6
+        },
+        {
+          "x": 379.8,
+          "y": 424.3
+        },
+        {
+          "x": 301.1,
+          "y": 424.3
+        }
       ]
+    },
+    {
+      "id": "manual-ref-page-2-garage-workshop",
+      "name": "Garage / Workshop",
+      "level": "Ground Floor",
+      "page": 2,
+      "polygon": [
+        {
+          "x": 199.4,
+          "y": 325.8
+        },
+        {
+          "x": 315.6,
+          "y": 325.8
+        },
+        {
+          "x": 315.6,
+          "y": 384.4
+        },
+        {
+          "x": 353.1,
+          "y": 384.4
+        },
+        {
+          "x": 353.1,
+          "y": 417.8
+        },
+        {
+          "x": 341.9,
+          "y": 429.4
+        },
+        {
+          "x": 317,
+          "y": 429.4
+        },
+        {
+          "x": 304.1,
+          "y": 442.4
+        },
+        {
+          "x": 199.4,
+          "y": 442
+        },
+        {
+          "x": 199.4,
+          "y": 431.9
+        },
+        {
+          "x": 195,
+          "y": 431.9
+        },
+        {
+          "x": 195,
+          "y": 335.8
+        },
+        {
+          "x": 199.4,
+          "y": 335.8
+        }
+      ],
+      "tracedFrom": "Inside wall faces read off the original sheet with a coordinate grid; garage door and the 820 cavity slider taken as boundary. Garage and workshop are one space on the drawing: no wall separates them."
+    },
+    {
+      "id": "manual-ref-page-2-media",
+      "name": "Media",
+      "level": "Ground Floor",
+      "page": 2,
+      "polygon": [
+        {
+          "x": 226.9,
+          "y": 477.4
+        },
+        {
+          "x": 335,
+          "y": 477.4
+        },
+        {
+          "x": 335,
+          "y": 546.7
+        },
+        {
+          "x": 226.9,
+          "y": 546.7
+        }
+      ],
+      "tracedFrom": "Inside wall faces read off the original sheet with a coordinate grid."
+    },
+    {
+      "id": "manual-ref-page-2-laundry",
+      "name": "Laundry",
+      "level": "Ground Floor",
+      "page": 2,
+      "polygon": [
+        {
+          "x": 317,
+          "y": 325.8
+        },
+        {
+          "x": 353.1,
+          "y": 325.8
+        },
+        {
+          "x": 353.1,
+          "y": 382.2
+        },
+        {
+          "x": 317,
+          "y": 382.2
+        }
+      ],
+      "tracedFrom": "Inside wall faces read off the original sheet with a coordinate grid; includes the floor under the tub bench."
+    },
+    {
+      "id": "manual-ref-page-2-open-plan-living",
+      "name": "Dining / Kitchen / Family",
+      "level": "Ground Floor",
+      "page": 2,
+      "polygon": [
+        {
+          "x": 385.2,
+          "y": 356.9
+        },
+        {
+          "x": 457,
+          "y": 356.9
+        },
+        {
+          "x": 457,
+          "y": 431.4
+        },
+        {
+          "x": 555.1,
+          "y": 431.4
+        },
+        {
+          "x": 555.1,
+          "y": 544.2
+        },
+        {
+          "x": 392.9,
+          "y": 544.2
+        },
+        {
+          "x": 392.9,
+          "y": 513.3
+        },
+        {
+          "x": 378.8,
+          "y": 513.3
+        },
+        {
+          "x": 378.8,
+          "y": 457
+        },
+        {
+          "x": 385.2,
+          "y": 457
+        }
+      ],
+      "tracedFrom": "Inside wall faces read off the original sheet with a coordinate grid. Dining, kitchen and family are one open space: no wall separates them. The space is also open to the hall on its west side; it is closed there along the line of the linen/display-niche wall (x = 385.2, y 431 to 457), which is a tracing convention, not a wall. Includes floor under kitchen joinery."
     }
   ]
 }

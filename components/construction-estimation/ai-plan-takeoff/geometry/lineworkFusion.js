@@ -8,7 +8,7 @@
 // Input and output are one sheet's analysis response in the shape normalizePlanAnalysis already
 // takes (normalized 0..1 coordinates on the unrotated sheet), so the contract, the adapter and
 // everything downstream are unchanged. Pure functions.
-import { detectPlanGeometry, pointInPolygon } from './planGeometry.js';
+import { detectPlanGeometry, pointInPolygon, traceOutlinedArea } from './planGeometry.js';
 
 const CONTRACT_THICKNESSES = [70, 90, 100, 110, 140, 150, 200, 230, 270, 300, 350];
 const nearest = (value, list) => list.reduce((best, item) => (Math.abs(item - value) < Math.abs(best - value) ? item : best));
@@ -44,13 +44,16 @@ function reduceBoundary(polygon, limit, tolerance) {
   let points = polygon;
   const offLine = (list, i) => { const a = list[(i + list.length - 1) % list.length], b = list[(i + 1) % list.length]; return project(list[i], a, b).distance; };
   for (let allowed = tolerance; ; allowed *= 1.5) {
+    const kept = new Set();
     for (;;) {
       let least = Infinity, index = -1;
-      for (let i = 0; i < points.length; i += 1) { const d = offLine(points, i); if (d < least) { least = d; index = i; } }
+      for (let i = 0; i < points.length; i += 1) { if (kept.has(points[i])) continue; const d = offLine(points, i); if (d < least) { least = d; index = i; } }
       if (index < 0 || least > allowed || points.length <= 4) break;
-      points = points.filter((_, i) => i !== index);
+      const without = points.filter((_, i) => i !== index);
+      if (crossesItself(without)) { kept.add(points[index]); continue; }
+      points = without;
     }
-    if (points.length <= limit) return points;
+    if (points.length <= limit || allowed > tolerance * 60) return points;
   }
 }
 // What kind of space a printed room name is, as far as its size goes: a wet area, robe or store is
@@ -59,10 +62,14 @@ function reduceBoundary(polygon, limit, tolerance) {
 function roomSizeClass(name = '') {
   const text = String(name).toLowerCase();
   if (/\b(alfresco|patio|balcony|porch|verandah|veranda|deck|terrace|courtyard|portico)\b/.test(text)) return 'outdoor';
-  if (/\b(ens|ensuite|bath|bathroom|wc|toilet|pwd|powder|ldry|laundry|l'dry|pan|pantry|robe|wir|linen|store|storage|cupboard|cpd|broom)\b/.test(text)) return 'small';
+  if (/\b(ens|ensuite|bath|bathroom|wc|toilet|pwd|powder|ldry|laundry|l'dry|pan|pantry|robe|wir|linen|store|storage|cupboard|cpd|broom|void|duct|riser)\b/.test(text)) return 'small';
   if (/\b(bed|bedroom|master|rumpus|media|theatre|family|living|lounge|dining|meals|kitchen|garage|study|office|w\/shop|workshop|foyer|entry|games|retreat|sitting)\b/.test(text)) return 'large';
   return 'any';
 }
+
+// A built-in robe (not a walk-in one) belongs to a bedroom.
+const isBuiltInRobe = (name = '') => /\brobe\b/i.test(name) && !/\b(w\.?i\.?r|walk)/i.test(name);
+const isBedroom = (name = '') => /\b(bed|bedroom|master|guest)\b/i.test(name);
 
 // Minimum-cost assignment of rows to columns (rows <= columns), the Hungarian method.
 function assign(cost) {
@@ -90,6 +97,16 @@ function assign(cost) {
   const result = new Array(n).fill(-1);
   for (let j = 1; j <= m; j += 1) if (p[j]) result[p[j] - 1] = j - 1;
   return result;
+}
+// True when two sides of a closed boundary that are not neighbours cross.
+function crossesItself(polygon) {
+  const side = (a, b, c) => (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+  for (let i = 0; i < polygon.length; i += 1) for (let j = i + 2; j < polygon.length; j += 1) {
+    if (i === 0 && j === polygon.length - 1) continue;
+    const a = polygon[i], b = polygon[(i + 1) % polygon.length], c = polygon[j], d = polygon[(j + 1) % polygon.length];
+    if (side(a, b, c) * side(a, b, d) < 0 && side(c, d, a) * side(c, d, b) < 0) return true;
+  }
+  return false;
 }
 const DOOR_LEAVES = [520, 620, 720, 770, 820, 870, 920, 1020, 1200];
 // What the plan reading says an opening is, for matching it to a gap (door) or a frame drawn in a wall (window).
@@ -139,12 +156,14 @@ export function fuseSheetLinework(response, raster, sheet, existing = {}, overri
   const geometry = detectPlanGeometry(raster, { pixelsPerMm, logicalWidth, logicalHeight, openingEvidence: evidence }, overrides.geometry || {});
   const report = { engine: geometry.engine, measuredWalls: geometry.walls.length, wallsEmitted: 0, uncategorisedLm: 0, categoryFromLineworkOnlyLm: 0, categoryDisagreementLm: 0, flaggedWalls: 0, modelWallLm: 0, modelWallWithoutLineworkLm: 0,
     openings: { model: modelOpenings.length, onConfirmedGap: 0, onNearestWall: 0, unplaced: 0, duplicatesRemoved: 0, embeddedSymbolReviewCandidates: 0, fromDoorSwing: 0, fromExternalFrame: 0, fromDoorway: 0, held: [] },
-    gaps: { confirmed: 0, unconfirmed: 0 }, rooms: { verified: 0, proposed: 0, adopted: 0, adoptedByProximity: 0, sharedSpaces: 0, withoutBoundary: 0 }, singleFaceReviewCandidates: [], review: [] };
+    gaps: { confirmed: 0, unconfirmed: 0 }, rooms: { verified: 0, proposed: 0, adopted: 0, adoptedByProximity: 0, sharedSpaces: 0, withoutBoundary: 0, outdoorOutlined: 0, builtInRobes: 0, readingBoundariesWithheld: 0 }, singleFaceReviewCandidates: [], review: [] };
   if (!geometry.walls.length) {
     // Nothing measurable: the plan reading is passed through untouched and says so.
-    report.review.push('No wall linework could be measured on this sheet; wall positions are the plan reading\'s own and need checking.');
+    report.review.push({ code: 'linework-failed', message: 'No wall linework could be measured on this sheet; wall positions are the plan reading\'s own and need checking.' });
     return { response: { ...response, review: [...(response.review || []), ...report.review] }, geometry, report };
   }
+  // Findings are coded so the review can say which are errors to correct, which need confirming and which are notes.
+  const note = (code, message) => report.review.push({ code, message });
 
   // ---- Walls: measured geometry and category; construction details from the nearest model trace
   const modelSegments = segmentsOf((response.walls || []).filter((wall) => Array.isArray(wall?.nodes) && wall.nodes.length >= 2).map((wall) => ({ ...wall, nodes: wall.nodes.map(toPixels) })));
@@ -183,21 +202,19 @@ export function fuseSheetLinework(response, raster, sheet, existing = {}, overri
     const reviewCandidate = { ...candidate, footprintIds: support.footprintIds,
       reviewReason: 'Single-face plan linework follows the manually traced outer footprint. A second wall face and thickness are not established; verify manually before measuring.' };
     report.singleFaceReviewCandidates.push(reviewCandidate);
-    report.review.push(`A ${Math.round(candidate.lengthMm / 100) / 10} m single-face line follows the manual outer footprint on sheet ${response.page}; verify it is a wall before measuring.`);
+    note('single-face-line', `A ${Math.round(candidate.lengthMm / 100) / 10} m single-face line follows the manual outer footprint on sheet ${response.page}; verify it is a wall before measuring.`);
   }
   report.openings.embeddedSymbolReviewCandidates = geometry.embeddedOpeningReviewCandidates?.length || 0;
-  for (const candidate of geometry.embeddedOpeningReviewCandidates || []) {
-    // A frame the engine already returns as a candidate opening is reported once, as that opening.
-    if (geometry.openings.some((opening) => Math.hypot(opening.x - candidate.x, opening.y - candidate.y) <= mm(700))) continue;
-    report.review.push(`Possible unclassified opening at ${Math.round(candidate.x)}, ${Math.round(candidate.y)} on sheet ${response.page}: ${candidate.evidence}`);
-  }
+  // Frame marks across a wall that are not already a candidate opening: listed together, once per sheet.
+  const frameMarks = (geometry.embeddedOpeningReviewCandidates || []).filter((candidate) => !geometry.openings.some((opening) => Math.hypot(opening.x - candidate.x, opening.y - candidate.y) <= mm(700)));
+  if (frameMarks.length) note('unclassified-opening', `${frameMarks.length} place${frameMarks.length === 1 ? '' : 's'} on sheet ${response.page} ${frameMarks.length === 1 ? 'has' : 'have'} frame marks drawn across a wall that may be a door, window or wall detail (${frameMarks.map((candidate) => `${candidate.widthMm} mm at ${Math.round(candidate.x)}, ${Math.round(candidate.y)}`).join('; ')}); check each on the plan.`);
   for (const segment of modelSegments) {
     const lengthM = lengthPx(segment) / pixelsPerMm / 1000;
     report.modelWallLm += lengthM;
     report.modelWallWithoutLineworkLm += lengthM * (1 - shareAlong(segment, measuredSegments, mm(options.supportReachMm), mm(100)));
   }
-  if (report.categoryDisagreementLm >= 0.5) report.review.push(`${report.categoryDisagreementLm.toFixed(1)} m of wall on sheet ${response.page} is external or internal by its position on the drawing where the plan reading had it the other way; the drawing was followed.`);
-  if (report.modelWallWithoutLineworkLm >= 0.5) report.review.push(`${report.modelWallWithoutLineworkLm.toFixed(1)} m of wall reported by the plan reading has no matching wall linework and was not added.`);
+  if (report.categoryDisagreementLm >= 0.5) note('wall-category-check', `${report.categoryDisagreementLm.toFixed(1)} m of wall on sheet ${response.page} is external or internal by its position on the drawing where the plan reading had it the other way; the drawing was followed.`);
+  if (report.modelWallWithoutLineworkLm >= 0.5) note('reading-not-in-linework', `${report.modelWallWithoutLineworkLm.toFixed(1)} m of wall reported by the plan reading has no matching wall linework and was not added.`);
 
   // ---- Openings: on the confirmed gap they explain, else on the nearest measured wall --------
   const emitted = new Map(walls.map((wall) => [wall.lineworkWallId, wall]));
@@ -324,9 +341,9 @@ export function fuseSheetLinework(response, raster, sheet, existing = {}, overri
   }
   const lineworkOnly = report.openings.fromDoorSwing + report.openings.fromExternalFrame + report.openings.fromDoorway;
   const plural = (count, word) => `${count} ${word}${count === 1 ? '' : 's'}`;
-  if (lineworkOnly) report.review.push(`${plural(lineworkOnly, 'opening')} on sheet ${response.page} ${lineworkOnly === 1 ? 'was' : 'were'} added from the drawing's own linework (${plural(report.openings.fromDoorSwing, 'door swing')}, ${plural(report.openings.fromExternalFrame, 'frame')} in external walls, ${plural(report.openings.fromDoorway, 'doorway')} with no swing); confirm each one's type and height.`);
-  if (report.openings.held.length) report.review.push(`${plural(report.openings.held.length, 'opening')} the plan reading reported on sheet ${response.page} ${report.openings.held.length === 1 ? 'is' : 'are'} not in the wall linework where it put ${report.openings.held.length === 1 ? 'it' : 'them'} and ${report.openings.held.length === 1 ? 'was' : 'were'} not added: ${report.openings.held.map((item) => `${item.openingClass.toLowerCase()}${item.sizeCode ? ` ${item.sizeCode}` : item.widthMm ? ` ${item.widthMm} wide` : ''}`).join(', ')}. Place ${report.openings.held.length === 1 ? 'it' : 'them'} on the plan if ${report.openings.held.length === 1 ? 'it exists' : 'they exist'}.`);
-  if (report.gaps.unconfirmed) report.review.push(`${report.gaps.unconfirmed} gap${report.gaps.unconfirmed === 1 ? '' : 's'} in the wall linework ${report.gaps.unconfirmed === 1 ? 'is' : 'are'} not confirmed as a door or window; walls stop at ${report.gaps.unconfirmed === 1 ? 'it' : 'them'}.`);
+  if (lineworkOnly) note('opening-needs-classification', `${plural(lineworkOnly, 'opening')} on sheet ${response.page} ${lineworkOnly === 1 ? 'was' : 'were'} added from the drawing's own linework (${plural(report.openings.fromDoorSwing, 'door swing')}, ${plural(report.openings.fromExternalFrame, 'frame')} in external walls, ${plural(report.openings.fromDoorway, 'doorway')} with no swing); confirm each one's type and height.`);
+  if (report.openings.held.length) note('opening-not-in-linework', `${plural(report.openings.held.length, 'opening')} the plan reading reported on sheet ${response.page} ${report.openings.held.length === 1 ? 'is' : 'are'} not in the wall linework where it put ${report.openings.held.length === 1 ? 'it' : 'them'} and ${report.openings.held.length === 1 ? 'was' : 'were'} not added: ${report.openings.held.map((item) => `${item.openingClass.toLowerCase()}${item.sizeCode ? ` ${item.sizeCode}` : item.widthMm ? ` ${item.widthMm} wide` : ''}`).join(', ')}. Place ${report.openings.held.length === 1 ? 'it' : 'them'} on the plan if ${report.openings.held.length === 1 ? 'it exists' : 'they exist'}.`);
+  if (report.gaps.unconfirmed) note('unconfirmed-gaps', `${report.gaps.unconfirmed} gap${report.gaps.unconfirmed === 1 ? '' : 's'} in the wall linework ${report.gaps.unconfirmed === 1 ? 'is' : 'are'} not confirmed as a door or window; walls stop at ${report.gaps.unconfirmed === 1 ? 'it' : 'them'}.`);
 
   // ---- Rooms: each named room takes the measured space its name is printed in ----------------
   // The engine measures spaces; the plan reading supplies names. A name goes to the smallest
@@ -375,19 +392,45 @@ export function fuseSheetLinework(response, raster, sheet, existing = {}, overri
   };
   const rooms = [];
   const shared = new Map();
+  // A room the drawing gives no boundary keeps its name and nothing else: a boundary the plan
+  // reading drew is good to a metre or two, so it is not passed on as a measured room.
+  const unmeasured = (room, extra = {}) => {
+    const had = (Array.isArray(room.polygon) && room.polygon.length >= 3) || (Array.isArray(room.nodes) && room.nodes.length >= 3);
+    const { polygon, nodes, ...rest } = room;
+    if (had) report.rooms.readingBoundariesWithheld += 1;
+    return { ...rest, ...extra, ...(had ? { boundaryWithheld: true } : {}) };
+  };
   for (const entry of labelled) {
     const found = spaceOf.get(entry.index);
-    if (!found) { if (entry.at && roomSizeClass(entry.room.name) !== 'outdoor') report.rooms.withoutBoundary += 1; rooms.push(entry.room); continue; }
+    if (!found && entry.at && roomSizeClass(entry.room.name) === 'outdoor') {
+      // Outdoor areas have no enclosing walls. One drawn as a closed outline is measured to that outline;
+      // one left open on a side is given no boundary rather than an invented one.
+      const outlined = traceOutlinedArea(raster, { pixelsPerMm, logicalWidth, logicalHeight }, entry.at);
+      const insideARoom = outlined && geometry.rooms.some((space) => pointInPolygon(entry.at, space.polygon));
+      if (outlined && !insideARoom) {
+        report.rooms.outdoorOutlined += 1;
+        rooms.push({ ...entry.room, polygon: reduceBoundary(outlined.polygon, options.maxRoomCorners, mm(25)).map(toNormal), boundaryClosed: false, lineworkRoomId: `outline-${Math.round(entry.at.x)}-${Math.round(entry.at.y)}`,
+          lineworkVerified: false, lineworkAreaM2: +outlined.areaM2.toFixed(2), outdoorArea: true, confidence: Math.min(Number(entry.room.confidence) || 0.6, 0.7),
+          lineworkReview: 'An outdoor area measured to its drawn outline, not to walls; check the outline is the edge of the paving or slab.',
+          evidence: `${entry.room.evidence || ''} Measured to the outline drawn round it (${outlined.areaM2.toFixed(2)} m²); it is not enclosed by walls.`.trim() });
+        continue;
+      }
+      rooms.push(unmeasured(entry.room, { outdoorArea: true }));
+      continue;
+    }
+    if (!found) { if (entry.at) report.rooms.withoutBoundary += 1; rooms.push(unmeasured(entry.room)); continue; }
     const together = labelled.filter((other) => spaceOf.get(other.index)?.space === found.space);
     if (together.length > 1) {
       // One open space under several names: no wall separates them, so no boundary is invented.
       if (!shared.has(found.space)) shared.set(found.space, together);
-      rooms.push({ ...entry.room, sharedSpaceId: found.space.id, evidence: `${entry.room.evidence || ''} Shares one open space with ${together.filter((other) => other !== entry).map((other) => other.room.name).join(', ')}; no wall separates them on the drawing.`.trim() });
+      rooms.push({ ...unmeasured(entry.room), sharedSpaceId: found.space.id, evidence: `${entry.room.evidence || ''} Shares one open space with ${together.filter((other) => other !== entry).map((other) => other.room.name).join(', ')}; no wall separates them on the drawing.`.trim() });
       continue;
     }
     report.rooms.adopted += 1;
     if (found.byProximity) report.rooms.adoptedByProximity += 1;
-    rooms.push({ ...entry.room, ...measuredRoom(found.space, found.byProximity ? { review: 'The room name is printed beside this space, not inside it; check it is the right room.' } : {}),
+    // The measured boundary replaces whatever boundary the plan reading drew for this room.
+    const { polygon: readingPolygon, nodes: readingNodes, ...namedRoom } = entry.room;
+    rooms.push({ ...namedRoom, ...measuredRoom(found.space, found.byProximity ? { review: 'The room name is printed beside this space, not inside it; check it is the right room.' } : {}),
       confidence: found.space.verified && !found.byProximity ? Math.max(Number(entry.room.confidence) || 0, 0.9) : Math.min(Number(entry.room.confidence) || 0.6, 0.7),
       evidence: `${entry.room.evidence || ''} Boundary and ${found.space.netAreaM2.toFixed(2)} m² floor area measured from the wall linework${found.space.verified ? '' : ', closing gaps that are not confirmed as doors or windows'}.`.trim() });
   }
@@ -397,9 +440,22 @@ export function fuseSheetLinework(response, raster, sheet, existing = {}, overri
     rooms.push({ page: response.page, name: names.join(' / ').slice(0, 60), x: Math.min(1, Math.max(0, space.centroid.x / logicalWidth)), y: Math.min(1, Math.max(0, space.centroid.y / logicalHeight)),
       basis: 'OBSERVED', ...measuredRoom(space), confidence: space.verified ? 0.9 : 0.7, openPlanOf: names,
       evidence: `One open space of ${space.netAreaM2.toFixed(2)} m² measured from the wall linework; the drawing names ${names.join(', ')} in it with no wall between them.` });
-    report.review.push(`${names.join(', ')} on sheet ${response.page} are one open space of ${space.netAreaM2.toFixed(1)} m² with no wall between them; it is measured as one room. Draw each room's boundary if they are to be measured separately.`);
+    note('open-plan-space', `${names.join(', ')} on sheet ${response.page} are one open space of ${space.netAreaM2.toFixed(1)} m² with no wall between them; it is measured as one room. Draw each room's boundary if they are to be measured separately.`);
   }
-  if (report.rooms.withoutBoundary) report.review.push(`${report.rooms.withoutBoundary} room name${report.rooms.withoutBoundary === 1 ? '' : 's'} on sheet ${response.page} ${report.rooms.withoutBoundary === 1 ? 'is' : 'are'} not inside any space the wall linework encloses; draw ${report.rooms.withoutBoundary === 1 ? 'its' : 'their'} boundary.`);
+  // A built-in robe stays with its bedroom: it is measured on its own where the drawing separates it
+  // (so its floor can be finished or left out on its own) and is named as that bedroom's robe. The
+  // bedroom's own boundary then stops at the robe front, so no floor is counted twice.
+  const bedrooms = rooms.filter((room) => isBedroom(room.name) && Array.isArray(room.polygon) && room.polygon.length >= 3);
+  for (const room of rooms) {
+    if (!isBuiltInRobe(room.name) || !Array.isArray(room.polygon) || room.polygon.length < 3 || !bedrooms.length) continue;
+    const centre = room.polygon.reduce((sum, p) => ({ x: sum.x + p.x * logicalWidth / room.polygon.length, y: sum.y + p.y * logicalHeight / room.polygon.length }), { x: 0, y: 0 });
+    const nearest = bedrooms.map((bedroom) => ({ bedroom, distance: bedroom.polygon.reduce((least, a, i) => Math.min(least, project(centre, toPixels(a), toPixels(bedroom.polygon[(i + 1) % bedroom.polygon.length])).distance), Infinity) }))
+      .sort((a, b) => a.distance - b.distance)[0];
+    if (!nearest || nearest.distance > mm(1500)) continue;
+    room.robeOf = nearest.bedroom.name;
+    report.rooms.builtInRobes += 1;
+  }
+  if (report.rooms.withoutBoundary) note('room-without-boundary', `${report.rooms.withoutBoundary} room name${report.rooms.withoutBoundary === 1 ? '' : 's'} on sheet ${response.page} ${report.rooms.withoutBoundary === 1 ? 'is' : 'are'} not inside any space the wall linework encloses; draw ${report.rooms.withoutBoundary === 1 ? 'its' : 'their'} boundary.`);
 
   return { response: { ...response, walls, openings: openings.map((entry) => entry.item), rooms,
     openingSymbolReviewCandidates: geometry.embeddedOpeningReviewCandidates || [], review: [...(response.review || []), ...report.review] }, geometry, report };

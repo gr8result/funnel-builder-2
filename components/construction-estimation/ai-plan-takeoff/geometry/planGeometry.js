@@ -552,6 +552,60 @@ const shoelace = (polygon) => Math.abs(polygon.reduce((sum, p, i) => { const q =
 const perimeterOf = (polygon) => polygon.reduce((sum, p, i) => { const q = polygon[(i + 1) % polygon.length]; return sum + Math.hypot(q.x - p.x, q.y - p.y); }, 0);
 
 /**
+ * An area drawn as an outline rather than enclosed by walls: an alfresco, a patio, a balcony.
+ * Starting at `point` (logical pixels, anywhere inside it) the clear paper is filled out to the
+ * solid lines round it. Dashed lines (a bulkhead or roof line overhead) do not stop it; lettering
+ * inside it is part of it. Returns null when the outline is not closed (the fill reaches the edge
+ * of the sheet or grows beyond `maxAreaM2`), so an open-sided area is never given a made-up edge.
+ * @returns {{ polygon, areaM2, perimeterM } | null} in logical plan pixels
+ */
+export function traceOutlinedArea(raster, context, point, { inkThreshold = DEFAULT_GEOMETRY_OPTIONS.inkThreshold, maxAreaM2 = 150, minAreaM2 = 2, startReachMm = 400, simplifyPx = DEFAULT_GEOMETRY_OPTIONS.simplifyPx } = {}) {
+  const { width, height, data } = raster;
+  const { pixelsPerMm, logicalWidth, logicalHeight } = context;
+  if (!(pixelsPerMm > 0) || !(width > 0 && height > 0) || !point) return null;
+  const sx = width / logicalWidth, sy = height / logicalHeight, k = pixelsPerMm * sx;
+  const inkAt = (p) => data[p * 4 + 3] > 127 && data[p * 4] + data[p * 4 + 1] + data[p * 4 + 2] < inkThreshold;
+  // A line stops the fill with a pixel to spare each side, so a one-pixel break in it does not leak.
+  const blocked = (x, y) => { const p = y * width + x; return inkAt(p) || (x > 0 && inkAt(p - 1)) || (x < width - 1 && inkAt(p + 1)) || (y > 0 && inkAt(p - width)) || (y < height - 1 && inkAt(p + width)); };
+  let startX = Math.round(point.x * sx), startY = Math.round(point.y * sy);
+  if (startX < 1 || startY < 1 || startX >= width - 1 || startY >= height - 1) return null;
+  // The name may be read on top of its own lettering: begin on the nearest clear paper.
+  if (blocked(startX, startY)) {
+    const reach = Math.round(startReachMm * k);
+    let best = null;
+    for (let r = 2; r <= reach && !best; r += 2) for (let a = 0; a < 16 && !best; a += 1) {
+      const x = Math.round(startX + r * Math.cos(a * Math.PI / 8)), y = Math.round(startY + r * Math.sin(a * Math.PI / 8));
+      if (x >= 1 && y >= 1 && x < width - 1 && y < height - 1 && !blocked(x, y)) best = { x, y };
+    }
+    if (!best) return null;
+    startX = best.x; startY = best.y;
+  }
+  const limit = Math.ceil(maxAreaM2 * 1e6 * k * k);
+  const labels = new Int32Array(width * height);
+  const stack = [startY * width + startX];
+  labels[stack[0]] = 1;
+  let area = 0, seed = stack[0];
+  while (stack.length) {
+    const p = stack.pop();
+    area += 1;
+    if (area > limit) return null;
+    if (p < seed) seed = p;
+    const x = p % width, y = (p - x) / width;
+    if (x === 0 || y === 0 || x === width - 1 || y === height - 1) return null;
+    for (const [nx, ny] of [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]]) {
+      const q = ny * width + nx;
+      if (!labels[q] && !blocked(nx, ny)) { labels[q] = 1; stack.push(q); }
+    }
+  }
+  const boundary = simplifyClosed(traceBoundary(labels, width, height, 1, seed), simplifyPx);
+  if (boundary.length < 3) return null;
+  const polygon = boundary.map((p) => ({ x: p.x / sx, y: p.y / sy }));
+  const areaM2 = shoelace(polygon) / (pixelsPerMm * pixelsPerMm) / 1e6;
+  if (areaM2 < minAreaM2 || areaM2 > maxAreaM2) return null;
+  return { polygon, areaM2, perimeterM: perimeterOf(polygon) / pixelsPerMm / 1000 };
+}
+
+/**
  * @param raster { width, height, data } RGBA pixels of the whole sheet
  * @param context { pixelsPerMm, logicalWidth, logicalHeight, openingEvidence? } the sheet's confirmed
  *   calibration, and where openings are known to be ([{ x, y, ref? }] in logical pixels)

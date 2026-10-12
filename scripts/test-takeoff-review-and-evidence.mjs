@@ -84,7 +84,9 @@ assert.equal(scale.requiresConfirmation, false);
 scale = resolveAnalysisScale({ pages, inspections: [inspected(1), inspected(2)], existingPixelsPerMm: 0.02, sheetCalibrations: { 2: { pixelsPerMm: 0.02 } } });
 assert.equal(scale.pixelsPerMm, 0.02, 'a sheet calibrated on its own agrees with the takeoff calibration');
 scale = resolveAnalysisScale({ pages, inspections: [inspected(1), inspected(2)], existingPixelsPerMm: 0.02, sheetCalibrations: { 2: { pixelsPerMm: 0.04 } } });
-assert.equal(scale.pixelsPerMm, null, 'two sheets calibrated to different scales are a genuine conflict, never averaged');
+assert.equal(scale.pixelsPerMm, 0.02, 'a sheet calibrated to its own scale is measured at it and the others at the takeoff calibration: never averaged, no longer refused');
+assert.ok(scale.review.some((message) => /different scales/i.test(message)), 'and the estimator is told the sheets differ');
+assert.deepEqual(scale.conflicts, []);
 scale = resolveAnalysisScale({ pages: [pages[0]], inspections: [inspected(1)] });
 assert.ok(scale.review.some((message) => /cannot determine image pixels\/mm/.test(message)), 'an uncalibrated raster still says why its printed scale is not enough');
 

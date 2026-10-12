@@ -30,7 +30,8 @@ const jobId = 'real-plan-replay-job';
 const supabaseUrl = 'https://stubbedtakeoff.supabase.invalid';
 fs.mkdirSync(out, { recursive: true });
 const recovered = JSON.parse(fs.readFileSync(path.join(recoveryDir, 'takeoff-with-ai-run.decoded.json'), 'utf8')).job;
-const responsesDir = path.join(recoveryDir, 'rerun');
+// GR8_TAKEOFF_RESPONSES replays another saved set of provider responses for the same sheets (for example a later live run).
+const responsesDir = process.env.GR8_TAKEOFF_RESPONSES ? path.resolve(process.env.GR8_TAKEOFF_RESPONSES) : path.join(recoveryDir, 'rerun');
 const assets = fs.readdirSync(path.join(recoveryDir, 'plan-pages')).map((name) => ({ file: path.join(recoveryDir, 'plan-pages', name), size: fs.statSync(path.join(recoveryDir, 'plan-pages', name)).size }));
 // What this run has to reach at least (hand trace as reference, 300 mm wall tolerance); a change may improve on these.
 const floors = JSON.parse(fs.readFileSync(path.join(root, 'test/fixtures/new-job-03-09-replay-floor.json'), 'utf8')).levels;
@@ -313,15 +314,19 @@ try {
   report.cases.linework = state.aiAnalysis?.linework && Object.fromEntries(Object.entries(state.aiAnalysis.linework).map(([key, value]) => [key, { engine: value.engine, wallsEmitted: value.wallsEmitted, openings: value.openings, rooms: value.rooms }]));
   for (const [pageNumber, level] of [[2, 'Ground Floor'], [3, 'Second Level']]) {
     const result = report.cases.accuracy[level];
+    // The accuracy floors belong to the saved 2026-10-06 responses; another response set is measured and reported, not held to them.
+    if (!process.env.GR8_TAKEOFF_RESPONSES) {
     assert.ok(result.externalFound >= floors[level].externalFound, `${level}: external wall found ${result.externalFound} fell below ${floors[level].externalFound}`);
     assert.ok(result.internalFound >= floors[level].internalFound, `${level}: internal wall found ${result.internalFound} fell below ${floors[level].internalFound}`);
     assert.ok(result.openingsWithin600mm >= floors[level].openingsWithin600mm, `${level}: openings within 600 mm ${result.openingsWithin600mm} fell below ${floors[level].openingsWithin600mm}`);
+    }
     const walls = state.completedWallRuns.filter((wall) => Number(wall.page) === pageNumber);
     assert.ok(walls.every((wall) => wall.source === 'ai' && ['exterior', 'interior'].includes(wall.category) && Number(wall.lengthMm) > 0), `${level}: every wall is classified and measured`);
     assert.equal(new Set(walls.map((wall) => wall.id)).size, walls.length, `${level}: no wall is in the takeoff twice`);
     const sheetRooms = (await rooms()).filter((room) => room.page === pageNumber && room.polygon?.length >= 3);
     assert.ok(sheetRooms.length >= floors[level].measuredRooms, `${level}: ${sheetRooms.length} rooms have a measured boundary`);
-    assert.ok(sheetRooms.every((room) => room.detectionMethod === 'wall-linework' && room.level === level), `${level}: boundaries come from the wall linework and carry the sheet's level`);
+    assert.ok(sheetRooms.every((room) => ['wall-linework', 'drawn-outline'].includes(room.detectionMethod) && room.level === level), `${level}: boundaries come from the drawing (wall linework, or the drawn outline of an outdoor area) and carry the sheet's level`);
+    assert.ok(sheetRooms.filter((room) => room.detectionMethod === 'drawn-outline').every((room) => room.reviewRequired), `${level}: an outdoor area measured to its outline is always flagged`);
     assert.ok(Math.max(...sheetRooms.map((room) => room.areaM2 || 0)) < floors[level].largestRoomM2, `${level}: no room swallows the floor`);
     await goToPage(pageNumber);
     await fit();
@@ -423,6 +428,16 @@ try {
   report.cases.levels = { sheetLevels: levels.sheetLevels, sheetCalibrations: levels.sheetCalibrations, upperRoom: upper[0] && { name: upper[0].name, areaM2: upper[0].areaM2, was: previousUpper.find((room) => room.id === upper[0].id)?.areaM2 } };
   for (const room of upper) { const was = previousUpper.find((item) => item.id === room.id); assert.ok(Math.abs(room.areaM2 / was.areaM2 - 4) < 0.1, `${room.name}: area follows its own sheet's calibration (${was.areaM2} -> ${room.areaM2})`); }
   for (const room of lower) assert.equal(room.areaM2, remeasured.find((item) => item.id === room.id).areaM2, 'the other sheet is not rescaled');
+  // Walls follow their own sheet's calibration too: the recalibrated sheet's walls double, the other sheet's do not move.
+  for (const wall of levels.completedWallRuns) {
+    const was = again.completedWallRuns.find((item) => item.id === wall.id);
+    if (Number(wall.page) === 3) assert.ok(Math.abs(wall.lengthMm / was.lengthMm - 2) < 0.02, 'a wall on the recalibrated sheet follows it: ' + was.lengthMm + ' -> ' + wall.lengthMm);
+    else assert.equal(wall.lengthMm, was.lengthMm, 'a wall on another sheet is unchanged');
+  }
+  assert.ok(Math.abs(levels.pixelsPerMm - ppmTrue / 2) / ppmTrue < 0.02, 'the working scale on the recalibrated sheet is its own');
+  await goToPage(2);
+  assert.ok(Math.abs((await snapshot()).pixelsPerMm - ppmTrue) / ppmTrue < 0.02, 'and returns to the scale of the other sheet when that sheet is shown');
+  await goToPage(3);
   await save();
   const stored = await page.evaluate(() => harness.stored());
   assert.equal(stored.job.sheetLevels['3'], 'Third Level', 'the Third Level assignment is saved');

@@ -8,7 +8,7 @@ import { normalizePlanAnalysis, resolveAnalysisScale } from './analysisContract.
 import { MEASUREMENT_SCOPES, ROOMS_SCOPE, mergeMeasurementScopes } from './measurementScopes.js';
 import { ROOMS_RUN_ID, addManualRoom, floorPlanSheets, mergeRoomReadings, removeRoom as removeScheduleRoom, reportWithRooms } from './roomSchedule.js';
 import { compactPlanEvidence, evidenceRotation, mergePlanEvidence, projectDefaultsFromJobSetup } from './planEvidence.js';
-import { applyReviewDecision, reviewAudience } from './reviewSummary.js';
+import { applyReviewDecision, groupReviewItems, reviewAudience } from './reviewSummary.js';
 import { fuseSheetLinework } from '../geometry/lineworkFusion.js';
 import { JOB_SCALE_KEY, jobPixelsPerMm, sheetPixelsPerMm as scaleOfSheet } from '../sheetScale.js';
 import { cropPlanRegion, readPlanRaster } from '../geometry/planRaster.js';
@@ -469,8 +469,12 @@ export function useAiTakeoffAnalysis(options) {
         ...planEvidence.review.map((message) => ({ message, code: 'plan-evidence' })),
         ...work.inspections.flatMap((item) => (item.review || []).map((message) => ({ page: item.page, message, code: 'inspection' })))]
         .map((item) => ({ ...item, audience: reviewAudience(item) }));
+      // The same finding on many walls or openings is listed once, and each carries how much it matters.
+      analysis.counts.reviewFindings = analysis.review.length;
+      analysis.review = groupReviewItems(analysis.review);
       analysis.counts.review = analysis.review.length;
       analysis.counts.decisions = analysis.review.filter((item) => item.audience === 'decision').length;
+      analysis.counts.reviewBySeverity = analysis.review.reduce((map, item) => ({ ...map, [item.severity]: (map[item.severity] || 0) + 1 }), {});
       analysis.planEvidence = { ...planEvidence, openingSchedule: planEvidence.openingSchedule.slice(0, 150) };
       analysis.projectDefaults = projectDefaults;
       analysis.linework = linework;

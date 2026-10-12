@@ -16,10 +16,47 @@ export function reviewAudience(entry) {
   return DECISION_CODES.has(entry.code) ? 'decision' : 'diagnostic';
 }
 
+// How much a finding matters to the estimator:
+//  critical      - geometry that is wrong, missing or could not be measured, and has to be corrected
+//  uncertain     - something measured whose type, size or room is not established and needs confirming
+//  informational - how a value was arrived at, or something noted and already handled
+const CRITICAL_CODES = new Set(['sheet-failed', 'linework-failed', 'region-failed', 'evidence-failed', 'refinement-failed', 'benchmark-discrepancy', 'scale-review', 'duplicate-level', 'opening-not-in-linework', 'room-without-boundary']);
+const UNCERTAIN_CODES = new Set(['missing-dimension', 'host-ambiguous', 'possible-missing-openings', 'opening-needs-classification', 'room-name-beside-space', 'open-plan-space', 'unconfirmed-gaps', 'unclassified-opening', 'withheld', 'single-face-line', 'wall-category-check', 'assumption']);
+export function reviewSeverity(entry) {
+  if (!entry || typeof entry === 'string') return 'informational';
+  if (['critical', 'uncertain', 'informational'].includes(entry.severity)) return entry.severity;
+  // A measured area within a tenth of the printed one is worth a look; further out, something is wrong.
+  if (entry.code === 'benchmark-discrepancy') { const percent = Number(String(entry.message || '').match(/\(([\d.]+)% difference\)/)?.[1]); return percent > 10 ? 'critical' : 'uncertain'; }
+  if (CRITICAL_CODES.has(entry.code)) return 'critical';
+  if (UNCERTAIN_CODES.has(entry.code) || entry.audience === 'decision') return 'uncertain';
+  return 'informational';
+}
+
+/**
+ * The same finding on forty walls is one finding. Items with the same code, sheet and wording are
+ * merged into one that says how many things it applies to and which; nothing is dropped. A count
+ * inside the wording ("3 openings ...") is left alone: only identical findings are merged.
+ */
+export function groupReviewItems(review = []) {
+  const groups = new Map();
+  for (const raw of review || []) {
+    const item = typeof raw === 'string' ? { message: raw } : raw;
+    if (!item) continue;
+    const key = [item.code || 'review', item.page ?? '', item.audience || '', String(item.message || '').trim()].join('|');
+    const existing = groups.get(key);
+    if (!existing) { groups.set(key, { ...item, severity: reviewSeverity(item), count: item.count || 1, detectionIds: [...(item.detectionIds || []), ...(item.detectionId ? [item.detectionId] : [])] }); continue; }
+    existing.count += item.count || 1;
+    for (const id of [...(item.detectionIds || []), ...(item.detectionId ? [item.detectionId] : [])]) if (!existing.detectionIds.includes(id)) existing.detectionIds.push(id);
+  }
+  const order = { critical: 0, uncertain: 1, informational: 2 };
+  return [...groups.values()].sort((a, b) => order[a.severity] - order[b.severity] || (a.page ?? 0) - (b.page ?? 0));
+}
+
 export function reviewText(entry) {
   if (typeof entry === 'string') return entry;
   const message = entry?.message || entry?.reason || entry?.evidence || '';
-  return entry?.page ? `Sheet ${entry.page}: ${message}` : message;
+  const times = entry?.count > 1 ? ` (${entry.count} items)` : '';
+  return entry?.page ? `Sheet ${entry.page}: ${message}${times}` : `${message}${times}`;
 }
 
 const ANALYSIS_TITLES = {

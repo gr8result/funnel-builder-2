@@ -3,7 +3,13 @@ import { refineRoomEdges } from './roomBoundaryVision.js';
 // Floor finishes a room can be given; each is a Floor Finishes category of the Takeoff Schedule.
 export const ROOM_FLOOR_FINISHES = ['Tiles', 'Carpets', 'Hybrid', 'Polished Concrete', 'exposed Agg'];
 // The finish a room's floor area is measured under: the one chosen for it, else tiles where it was marked for floor tiling.
-export const roomFloorFinish = (room) => (ROOM_FLOOR_FINISHES.includes(room?.floorFinish) ? room.floorFinish : (room?.actions || []).includes('Floor Tiling') ? 'Tiles' : null);
+// A built-in robe with no finish of its own takes its bedroom's (`rooms` is the whole room list).
+export const roomFloorFinish = (room, rooms = []) => {
+  if (ROOM_FLOOR_FINISHES.includes(room?.floorFinish)) return room.floorFinish;
+  if ((room?.actions || []).includes('Floor Tiling')) return 'Tiles';
+  if (room?.robeOf) { const bedroom = rooms.find((item) => item !== room && item.page === room.page && item.name === room.robeOf); if (bedroom && !bedroom.robeOf) return roomFloorFinish(bedroom); }
+  return null;
+};
 export const ROOM_ACTIONS = ['Mark as Wet Area', 'Floor Tiling', 'Wall Tiling', 'Flooring', 'Painting', 'Include in Takeoff'];
 export function roomType(name='') {
   return Object.entries({Bedroom:/\b(?:bed(?:room)?\s*\d*|master)\b/i,Kitchen:/\bkitchen\b/i,Bathroom:/\bbath(?:room)?\b/i,Ensuite:/\bens(?:uite)?\b/i,Laundry:/\b(?:laundry|ldry)\b/i,Garage:/\bgarage\b/i,Alfresco:/\balfresco\b/i,Patio:/\bpatio\b/i}).find(([,pattern])=>pattern.test(name))?.[0] || 'Other';
@@ -75,7 +81,7 @@ export function detectRoomBoundary(raw, {page,level,width,height,pixelsPerMm,wal
   // A boundary measured from the wall linework is already on the wall faces: it is used as it is.
   if(raw.lineworkRoomId&&nodes.length>=3) {
     const dimensionReferences=(raw.dimensionReferences||[]).map(d=>({...d,p1:{x:d.p1.x*width,y:d.p1.y*height},p2:{x:d.p2.x*width,y:d.p2.y*height}}));
-    return measureRoom({...raw,dimensionReferences,pageWidth:width,pageHeight:height,openingIds:[],edgeSupport:[],geometryReview:raw.boundaryClosed?'':(raw.lineworkReview||'This boundary relies on gaps that are not confirmed as doors or windows'),id:raw.id||`room-${page}-${String(raw.name).toLowerCase().replace(/[^a-z0-9]+/g,'-')}-${raw.lineworkRoomId}`,page,level,levelId:level,name:raw.name,type:raw.type||roomType(raw.name),polygon:nodes,source:'plan',detectionMethod:'wall-linework',selected:false,actions:[],coordinateSpace:'logical-plan'},pixelsPerMm);
+    return measureRoom({...raw,dimensionReferences,pageWidth:width,pageHeight:height,openingIds:[],edgeSupport:[],geometryReview:raw.boundaryClosed?'':(raw.lineworkReview||'This boundary relies on gaps that are not confirmed as doors or windows'),id:raw.id||`room-${page}-${String(raw.name).toLowerCase().replace(/[^a-z0-9]+/g,'-')}-${raw.lineworkRoomId}`,page,level,levelId:level,name:raw.name,type:raw.type||roomType(raw.name),polygon:nodes,source:'plan',detectionMethod:raw.outdoorArea?'drawn-outline':'wall-linework',selected:false,actions:[],coordinateSpace:'logical-plan'},pixelsPerMm);
   }
   // Reuse nearby wall junctions, but never manufacture a bounding rectangle around a label.
   const junctions=walls.filter(w=>Number(w.page||1)===page).flatMap(w=>w.nodes||[]);

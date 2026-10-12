@@ -16,6 +16,7 @@ import { restoreAnalysisCoordinates } from '../components/construction-estimatio
 import { mergeMeasurementScopes } from '../components/construction-estimation/ai-plan-takeoff/ai-integration/measurementScopes.js';
 import { mergePlanEvidence, projectDefaultsFromJobSetup } from '../components/construction-estimation/ai-plan-takeoff/ai-integration/planEvidence.js';
 import { detectRoomBoundary } from '../components/construction-estimation/ai-plan-takeoff/ai-integration/roomGeometry.js';
+import { groupReviewItems, reviewAudience } from '../components/construction-estimation/ai-plan-takeoff/ai-integration/reviewSummary.js';
 import { convertAiTakeoffDetections } from '../components/construction-estimation/ai-plan-takeoff/ai-integration/adapter.js';
 
 const args = Object.fromEntries(process.argv.slice(2).map((arg, index, all) => (arg.startsWith('--') ? [arg.slice(2), all[index + 1]] : null)).filter(Boolean));
@@ -127,7 +128,14 @@ function measure(label, responses) {
       externalOutlineSizeMm: a && b ? { handTrace: `${Math.round(a.w)} x ${Math.round(a.h)}`, produced: `${Math.round(b.w)} x ${Math.round(b.h)}`, difference: `${Math.round(b.w - a.w)} x ${Math.round(b.h - a.h)}` } : null,
     };
   }
+  const grouped = groupReviewItems(analysis.review.map((item) => ({ ...item, audience: reviewAudience(item) })));
+  out.reviewGrouped = grouped.length;
+  out.reviewBySeverity = grouped.reduce((map, item) => ({ ...map, [item.severity]: (map[item.severity] || 0) + 1 }), {});
+  out.reviewGroupedList = grouped.map((item) => item.severity + ' | ' + (item.code || 'review') + (item.count > 1 ? ' x' + item.count : '') + ' | ' + String(item.message).slice(0, 150));
   out.reviewItems = analysis.review.length;
+  out.reviewByCode = analysis.review.reduce((map, item) => ({ ...map, [item.code || 'review']: (map[item.code || 'review'] || 0) + 1 }), {});
+  out.reviewByAudience = analysis.review.reduce((map, item) => ({ ...map, [item.audience || 'unset']: (map[item.audience || 'unset'] || 0) + 1 }), {});
+  out.reviewSamples = Object.fromEntries(Object.keys(out.reviewByCode).map((code) => [code, analysis.review.filter((item) => (item.code || 'review') === code).slice(0, 3).map((item) => String(item.message).slice(0, 170))]));
   out.withheld = analysis.unresolved.length;
   return out;
 }

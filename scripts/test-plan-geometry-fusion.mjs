@@ -126,6 +126,14 @@ const shared = openRooms.find((item) => item.name === 'KITCHEN / DINING');
 assert.ok(shared, 'the shared space is returned once under both names');
 assert.ok(Math.abs(shared.areaM2 - 3.67 * 5.53) <= 0.5);
 assert.ok(openRooms.filter((item) => ['KITCHEN', 'DINING'].includes(item.name)).every((item) => !item.polygon?.length), 'neither name is given a boundary the drawing does not show');
+// A boundary the plan reading drew is never passed on as measured: not for a room the linework
+// measures (its own boundary replaces it), and not for a room the linework gives nothing.
+const readingBox = [normal(560, 200), normal(860, 200), normal(860, 620), normal(560, 620)];
+const withBoxes = fuse({ rooms: [{ ...room('BED 1', 300, 400), polygon: [normal(150, 150), normal(480, 150), normal(480, 650), normal(150, 650)] }, { ...room('KITCHEN', 650, 300), polygon: readingBox }, { ...room('DINING', 700, 520), polygon: readingBox }] });
+const boxed = asScreen(withBoxes);
+assert.ok(Math.abs(boxed.find((item) => item.name === 'BED 1').areaM2 - 3.77 * 5.53) <= 0.5, 'a measured room uses the measured boundary, not the reading\'s box');
+assert.ok(boxed.filter((item) => ['KITCHEN', 'DINING'].includes(item.name)).every((item) => !item.polygon?.length && item.boundaryWithheld), 'names sharing a space do not keep the reading\'s own boxes');
+assert.equal(withBoxes.report.rooms.readingBoundariesWithheld, 2);
 // A wet area is never given a 20 m2 room, and an outdoor area is never given an indoor one.
 const mismatched = asScreen(fuse({ rooms: [room('BED 1', 300, 400), room('WC', 650, 300), room('PATIO', 700, 500)] }));
 assert.ok(!mismatched.find((item) => item.name === 'WC').polygon?.length && !mismatched.find((item) => item.name === 'PATIO').polygon?.length);
@@ -136,3 +144,67 @@ assert.deepEqual(again.response.walls.map((wall) => wall.detectionId), shifted.r
 assert.deepEqual(asScreen(again).map((item) => item.id), beds.map((item) => item.id), 'room identities are stable across runs');
 
 console.log('plan geometry fusion: classification, door swings, diagonal walls, linework openings and room naming ok');
+
+// --- A door drawn closed in its wall is known by its swing ------------------------------------------
+const closedDoor = drawing(({ ink, vline }) => {
+  vline(500, 125, 675); vline(509, 125, 675);
+  // Quarter circle hinged on the partition's east face at y = 300, leaf lying down the wall to y = 382.
+  for (let degrees = 0; degrees <= 90; degrees += 0.25) { const a = degrees * Math.PI / 180; ink(511 + 82 * Math.sin(a), 300 + 82 * Math.cos(a)); }
+});
+const closed = detectPlanGeometry(closedDoor, context);
+const swung = closed.openings.filter((opening) => opening.kind === 'wall-swing');
+assert.equal(swung.length, 1, `a door drawn closed is found by its swing (found ${closed.openings.map((opening) => opening.kind).join(', ')})`);
+assert.ok(Math.abs(swung[0].leafMm - 820) <= 40 && Math.abs(swung[0].y - 341) <= 8, `leaf ${swung[0].leafMm} mm at y ${swung[0].y}`);
+assert.ok(swung[0].confirmed && swung[0].hostWallId, 'it is a confirmed opening in the wall it is drawn in');
+assert.equal(closed.walls.filter((wall) => wall.category === 'interior').length, 1, 'the wall stays whole through it');
+const closedFused = fuse({}, closedDoor);
+assert.equal(closedFused.response.openings.length, 1);
+assert.equal(closedFused.response.openings[0].widthMm, 820);
+// A full circle against a wall (a basin, a column) is not a door.
+const basin = drawing(({ ink, vline }) => { vline(500, 125, 675); vline(509, 125, 675); for (let degrees = 0; degrees < 360; degrees += 0.25) { const a = degrees * Math.PI / 180; ink(511 + 82 + 82 * Math.sin(a), 382 + 82 * Math.cos(a)); } });
+assert.equal(detectPlanGeometry(basin, context).openings.filter((opening) => opening.kind === 'wall-swing').length, 0, 'a circle is not a door swing');
+
+// --- An opening the linework does not show is held, not placed where the plan reading put it ------
+const phantom = fuse({ openings: [{ detectionId: 'items:w9', page: 1, basis: 'OBSERVED', confidence: 0.9, evidence: 'Window in the south wall.', ...normal(300, 690), type: 'window', openingClass: 'Window', sizeCode: '1218', widthMm: 1800, heightMm: 1200 }] });
+assert.ok(!phantom.response.openings.some((opening) => opening.detectionId === 'items:w9'), 'a reported window with no frame or gap in the linework is not added');
+assert.equal(phantom.report.openings.held.length, 1);
+assert.ok(phantom.report.review.some((item) => item.code === 'opening-not-in-linework' && /not in the wall linework/.test(item.message)), 'and the estimator is told to place it');
+
+// --- An outdoor area is measured to its drawn outline, and only if the outline is closed ----------
+const { traceOutlinedArea } = await import('../components/construction-estimation/ai-plan-takeoff/geometry/planGeometry.js');
+const outdoor = (closedOutline) => drawing(({ hline, vline }) => {
+  // A 0.8 m x 4 m slab outside the east wall, drawn as single lines.
+  hline(200, 902, width - 20); hline(600, 902, width - 20);
+  if (closedOutline) vline(width - 20, 200, 601);
+});
+const slab = traceOutlinedArea(outdoor(true), context, { x: 940, y: 400 });
+assert.ok(slab, 'a closed outline is measured');
+assert.ok(Math.abs(slab.areaM2 - 0.78 * 3.98) <= 0.2, `outlined area ${slab.areaM2.toFixed(2)} m2`);
+assert.equal(traceOutlinedArea(outdoor(false), context, { x: 940, y: 400 }), null, 'an outline open on one side is not given an invented edge');
+const patio = fuse({ rooms: [room('BED 1', 300, 400), room('PATIO', 940, 400)] }, outdoor(true));
+const patioRoom = asScreen(patio).find((item) => item.name === 'PATIO');
+assert.equal(patioRoom.detectionMethod, 'drawn-outline');
+assert.ok(patioRoom.areaM2 > 2.8 && patioRoom.reviewRequired, 'an outdoor area is measured and always flagged for confirmation');
+
+// --- A built-in robe keeps to its bedroom; its floor is counted once -------------------------------
+const { roomFloorFinish } = await import('../components/construction-estimation/ai-plan-takeoff/ai-integration/roomGeometry.js');
+const bedroom = { page: 1, name: 'BED 2', floorFinish: 'Carpets' }, robe = { page: 1, name: 'robe', robeOf: 'BED 2' }, walkIn = { page: 1, name: 'WIR' };
+assert.equal(roomFloorFinish(robe, [bedroom, robe, walkIn]), 'Carpets', 'a built-in robe takes its bedroom\'s finish');
+assert.equal(roomFloorFinish({ ...robe, floorFinish: 'Tiles' }, [bedroom, robe]), 'Tiles', 'unless it is given its own');
+assert.equal(roomFloorFinish(walkIn, [bedroom, robe, walkIn]), null, 'a walk-in robe is its own room');
+
+// --- The same finding on many walls is one review item, graded by how much it matters --------------
+const { groupReviewItems } = await import('../components/construction-estimation/ai-plan-takeoff/ai-integration/reviewSummary.js');
+const grouped = groupReviewItems([
+  ...Array.from({ length: 30 }, (_, index) => ({ page: 2, code: 'assumption', message: 'Frame thickness uses the 70 mm default; verify on the drawing.', detectionId: `w${index}` })),
+  { page: 2, code: 'opening-not-in-linework', message: '1 opening the plan reading reported is not in the wall linework.' },
+  { page: 2, code: 'benchmark-discrepancy', message: 'Geometry for PATIO AREA measures 23.20 sqm; the drawing documents 18.06 sqm (28.5% difference).' },
+  { page: 2, code: 'benchmark-discrepancy', message: 'Geometry for GARAGE AREA measures 42.54 sqm; the drawing documents 40.23 sqm (5.7% difference).' },
+  { page: 2, code: 'review', message: 'Mixed ceiling heights are printed on this page.' },
+]);
+assert.equal(grouped.length, 5, 'thirty identical findings are one item');
+assert.deepEqual(grouped.map((item) => item.severity), ['critical', 'critical', 'uncertain', 'uncertain', 'informational'], 'critical first, then what needs confirming, then notes');
+const frames = grouped.find((item) => item.code === 'assumption');
+assert.deepEqual([frames.count, frames.detectionIds.length], [30, 30], 'the grouped item says how many things it covers and which');
+
+console.log('plan geometry fusion: closed doors, held openings, outdoor outlines, robes and review grouping ok');

@@ -148,7 +148,8 @@ const candidateFusion = fuseSheetLinework({ page: 1, walls: [], openings: [], ro
 assert.equal(candidateFusion.response.walls.length, candidateFusion.geometry.walls.length, 'only walls with two measured faces are returned');
 assert.ok(candidateFusion.report.singleFaceReviewCandidates.every((candidate) => !candidateFusion.response.walls.some((wall) => wall.lineworkWallId === candidate.id)), 'a footprint-supported single face is still not measured automatically');
 assert.equal(candidateFusion.report.singleFaceReviewCandidates.length, 1, 'manual footprint overlap may surface one candidate for human review');
-assert.match(candidateFusion.report.review[0], /verify.*before measuring/i);
+assert.match(candidateFusion.report.review[0].message, /verify.*before measuring/i);
+assert.equal(candidateFusion.report.review[0].code, 'single-face-line');
 
 const openingRaster = new Uint8ClampedArray(width * height * 4).fill(255);
 const openingInk = new Uint8Array(width * height);

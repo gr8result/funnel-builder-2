@@ -264,7 +264,7 @@ export function normalizePlanAnalysis({ context, responses = [], runId, modelVer
     if (!context.pages.some((item) => pageOf(item) === page)) throw new Error(`Analysis references unloaded sheet ${page}.`);
     const level = normaliseLevel(response.level);
     analysis.pages.push({ page, level, drawingType: response.drawingType || 'floor-plan' });
-    for (const item of response.review || []) report(page, null, typeof item === 'string' ? item : item.message || item.evidence || 'Review drawing evidence.');
+    for (const item of response.review || []) report(page, null, typeof item === 'string' ? item : item.message || item.evidence || 'Review drawing evidence.', (item && typeof item === 'object' && item.code) || 'review');
     for (const [collection, kind] of [['walls', 'wall'], ['openings', 'opening'], ['pillars', 'pillar'], ['eaves', 'eave'], ['buildingAreas', 'floorplan']]) {
       for (const raw of response[collection] || []) all.push({ raw, page, level, kind });
     }
