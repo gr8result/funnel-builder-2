@@ -226,4 +226,34 @@ assert.deepEqual([frames.count, frames.detectionIds.length], [30, 30], 'the grou
   assert.equal(coarse.response.openings.length, 1, 'the reading is passed through untouched');
 }
 
+// --- Joinery does not enclose a room ---------------------------------------------------------------
+// The right-hand room has a bench in its corner, drawn like two short walls: one strip down from the
+// top wall, one in from the side wall, 910 mm apart with nothing drawn between them. The gap is
+// closed as a possible opening, which cuts a 1.2 m2 pocket off the room. No door is drawn there and
+// no name is in the pocket, so the pocket is the room's floor. The strips themselves stay walls.
+// (The room's own entry is a 1500 mm opening with no door drawn, so the room is a proposal too.)
+const bench = drawing(({ hline, vline }) => {
+  vline(500, 125, 299); vline(509, 125, 299); hline(298, 500, 510);
+  vline(500, 450, 675); vline(509, 450, 675); hline(450, 500, 510);
+  vline(700, 125, 205); vline(709, 125, 205); hline(205, 700, 710);
+  hline(200, 800, 875); hline(209, 800, 875); vline(800, 200, 210);
+});
+const plainWalls = detectPlanGeometry(swingDoor, context).walls.length;
+const benchGeometry = detectPlanGeometry(bench, context);
+assert.ok(benchGeometry.walls.length > plainWalls, 'the short strips are still measured as walls: nothing is deleted');
+const benchGap = benchGeometry.openings.find((opening) => opening.kind === 'wall-gap' && Math.hypot(opening.x - 755, opening.y - 203) <= 30);
+assert.ok(benchGap && !benchGap.confirmed, 'the gap between the strips is a candidate, not a confirmed opening');
+const withBench = fuse({ rooms: [room('BED 1', 300, 400), room('RUMPUS', 700, 450)] }, bench);
+const laundry = asScreen(withBench).find((item) => item.name === 'RUMPUS');
+assert.equal(withBench.report.rooms.pocketsAbsorbed, 1);
+assert.ok(Math.abs(laundry.areaM2 - 3.67 * 5.53) <= 0.6, `the room is measured wall to wall, bench pocket included: ${laundry.areaM2}`);
+assert.ok(laundry.pocketsAbsorbedM2 > 0.9 && laundry.pocketsAbsorbedM2 < 1.5, `pocket ${laundry.pocketsAbsorbedM2} m2`);
+assert.ok(laundry.reviewRequired && laundry.reviewReasons.some((reason) => /joinery or unconfirmed gaps/.test(reason)), 'and says so for the estimator to check');
+// The same pocket with its own name on the drawing is its own room, and is not counted twice.
+const withCupboard = fuse({ rooms: [room('BED 1', 300, 400), room('RUMPUS', 700, 450), room('linen', 790, 160)] }, bench);
+const [laundryBesideCupboard, cupboard] = ['RUMPUS', 'linen'].map((name) => asScreen(withCupboard).find((item) => item.name === name));
+assert.equal(withCupboard.report.rooms.pocketsAbsorbed, 0);
+assert.ok(cupboard.areaM2 > 0.9 && cupboard.areaM2 < 1.5, `the named pocket is measured on its own: ${cupboard.areaM2}`);
+assert.ok(laundryBesideCupboard.areaM2 + cupboard.areaM2 <= 3.67 * 5.53 + 0.1, 'no floor is counted twice');
+
 console.log('plan geometry fusion: closed doors, held openings, outdoor outlines, robes and review grouping ok');

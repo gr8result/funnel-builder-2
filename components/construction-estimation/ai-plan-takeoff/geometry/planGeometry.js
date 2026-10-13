@@ -1236,15 +1236,16 @@ export function detectPlanGeometry(raster, context, overrides = {}) {
         centroid: n ? toLogical(cx / n, cy / n) : toLogical((item.minX + item.maxX) / 2, (item.minY + item.maxY) / 2),
         inner: toLogical((item.seed % width) + 0.5, Math.floor(item.seed / width) + 0.5),
         bounds: { ...toLogical(item.minX, item.minY), x2: (item.maxX + 1) / sx, y2: (item.maxY + 1) / sy },
-        verified: !proposed,
+        verified: !proposed, spaceLabel: item.id,
         ...(reasons.length ? { reviewRequired: true, reviewReason: reasons.join(' ') } : {}),
       });
     }
     return found;
   };
   const free = collect((p) => !wall[p] && !closed[p] && !outside[p], false, null);
+  let proposedSpaces = null;
   if (options.proposeRooms) {
-    collect((p) => !wall[p] && !bridge[p] && !closed[p] && !outside[p], true, new Map(rooms.map((room) => [room.id, room.netAreaM2])));
+    proposedSpaces = collect((p) => !wall[p] && !bridge[p] && !closed[p] && !outside[p], true, new Map(rooms.map((room) => [room.id, room.netAreaM2])));
     // Where unconfirmed gaps divide an enclosed space, both are returned and linked: the whole
     // (dividedInto) is what the walls alone enclose, the parts (partOf) are for the estimator to
     // confirm. A consumer shows one or the other, never both, so no floor is counted twice.
@@ -1263,7 +1264,93 @@ export function detectPlanGeometry(raster, context, overrides = {}) {
   for (const whole of rooms) if (whole.dividedInto) whole.dividedInto = rooms.filter((part) => part.partOf === whole.id).map((part) => part.id);
   rooms.sort((a, b) => a.bounds.y - b.bounds.y || a.bounds.x - b.bounds.x);
   const embeddedOpeningReviewCandidates = detectOpeningSymbolReviewCandidates({ ink, width, height, pixelsPerMm, logicalWidth, logicalHeight, walls });
-  return { engine: GEOMETRY_ENGINE_VERSION, rasterPixelsPerMm: k, walls, openings, rooms, singleFaceReviewCandidates, embeddedOpeningReviewCandidates, diagnostics, debug: { wall, bridge, closed, outside, diagonal, bandH, bandV, labels: free.labels, width, height, bounds, singleFaceDebug } };
+  return { engine: GEOMETRY_ENGINE_VERSION, rasterPixelsPerMm: k, walls, openings, rooms, singleFaceReviewCandidates, embeddedOpeningReviewCandidates, diagnostics, debug: { wall, bridge, closed, outside, diagonal, bandH, bandV, labels: free.labels, width, height, bounds, singleFaceDebug, sx, sy, simplifyPx: options.simplifyPx, proposed: proposedSpaces && { labels: proposedSpaces.labels, components: proposedSpaces.components } } };
+}
+
+/**
+ * Joinery does not enclose a room. A bench, a tub, a vanity or a robe shelf is drawn with paired
+ * lines like a short wall, and the gaps closed from it cut small pockets off the room it stands
+ * in. Nothing in the linework alone tells such a strip from a wall return, so the pockets are
+ * judged instead: a space smaller than `pocketMaxM2` that no room name was given to, and that is
+ * separated from the room only by closures no door or window confirms (never by a wall or a
+ * confirmed opening), is part of that room. Returns the room with its pockets, or null when it
+ * has none. `taken` holds the space labels that already belong to a room.
+ */
+export function absorbPockets(geometry, roomId, taken = new Set(), { pocketMaxM2 = 1.5, reachMm = 2500 } = {}) {
+  const d = geometry?.debug;
+  const room = (geometry?.rooms || []).find((item) => item.id === roomId);
+  if (!d?.proposed || !room || room.verified || !room.spaceLabel) return null;
+  const { labels, components } = d.proposed;
+  const { wall, bridge, closed, width, height, sx, sy } = d;
+  const k = geometry.rasterPixelsPerMm;
+  const base = components[room.spaceLabel];
+  if (!base) return null;
+  const reach = Math.round(reachMm * k);
+  const x0 = Math.max(1, base.minX - reach), y0 = Math.max(1, base.minY - reach), x1 = Math.min(width - 2, base.maxX + reach), y1 = Math.min(height - 2, base.maxY + reach);
+  const w = x1 - x0 + 1, h = y1 - y0 + 1;
+  const isGap = (p) => bridge[p] && !wall[p] && !closed[p];
+  // Unconfirmed closures in reach of the room, each with the spaces it lies between.
+  const gapOf = new Int32Array(w * h);
+  const gaps = [null];
+  const stack = [];
+  for (let y = y0; y <= y1; y += 1) for (let x = x0; x <= x1; x += 1) {
+    const start = y * width + x;
+    if (!isGap(start) || gapOf[(y - y0) * w + (x - x0)]) continue;
+    const info = { between: new Set(), open: false };
+    const id = gaps.length;
+    gapOf[(y - y0) * w + (x - x0)] = id; stack.push(start);
+    while (stack.length) {
+      const p = stack.pop();
+      const px = p % width, py = (p - px) / width;
+      if (px === x0 || px === x1 || py === y0 || py === y1) info.open = true;
+      for (const q of [p - 1, p + 1, p - width, p + width]) {
+        const qx = q % width, qy = (q - qx) / width;
+        if (qx < x0 || qx > x1 || qy < y0 || qy > y1) continue;
+        if (isGap(q)) { const index = (qy - y0) * w + (qx - x0); if (!gapOf[index]) { gapOf[index] = id; stack.push(q); } }
+        else if (labels[q]) info.between.add(labels[q]);
+      }
+    }
+    gaps.push(info);
+  }
+  const maxArea = pocketMaxM2 * k * k * 1e6;
+  const joined = new Set([room.spaceLabel]);
+  for (let changed = true; changed;) {
+    changed = false;
+    for (const gap of gaps) {
+      if (!gap || gap.open || ![...gap.between].some((label) => joined.has(label))) continue;
+      // The closure goes with the room only when everything it lies between does: the room, its
+      // pockets and nothing else. One that also borders another room stays a division.
+      const pocket = (label) => { const space = components[label]; return space && !taken.has(label) && !space.border && space.area <= maxArea; };
+      if (![...gap.between].every((label) => joined.has(label) || pocket(label))) continue;
+      for (const label of gap.between) if (!joined.has(label)) { joined.add(label); changed = true; }
+    }
+  }
+  if (joined.size === 1) return null;
+  const candidate = new Uint8Array(w * h);
+  for (let y = y0; y <= y1; y += 1) for (let x = x0; x <= x1; x += 1) {
+    const p = y * width + x, index = (y - y0) * w + (x - x0);
+    const gap = gapOf[index] ? gaps[gapOf[index]] : null;
+    const inside = gap ? !gap.open && gap.between.size > 0 && [...gap.between].every((label) => joined.has(label)) : joined.has(labels[p]);
+    if (inside) candidate[index] = 1;
+  }
+  // One connected floor, grown from the room itself.
+  const region = new Int32Array(w * h);
+  let area = 0, seed = -1;
+  const from = ((base.seed - (base.seed % width)) / width - y0) * w + ((base.seed % width) - x0);
+  const queue = [from]; region[from] = 1;
+  while (queue.length) {
+    const index = queue.pop();
+    area += 1;
+    if (seed < 0 || index < seed) seed = index;
+    const ix = index % w;
+    for (const next of [ix > 0 ? index - 1 : -1, ix < w - 1 ? index + 1 : -1, index - w, index + w]) if (next >= 0 && next < region.length && candidate[next] && !region[next]) { region[next] = 1; queue.push(next); }
+  }
+  const boundary = simplifyClosed(traceBoundary(region, w, h, 1, seed), d.simplifyPx);
+  if (boundary.length < 3) return null;
+  const polygon = boundary.map((p) => ({ x: (p.x + x0) / sx, y: (p.y + y0) / sy }));
+  const pockets = [...joined].filter((label) => label !== room.spaceLabel && region[((components[label].seed - (components[label].seed % width)) / width - y0) * w + ((components[label].seed % width) - x0)]);
+  if (!pockets.length) return null;
+  return { polygon, netAreaM2: area / (k * k) / 1e6, labels: pockets, pocketsM2: pockets.reduce((sum, label) => sum + components[label].area, 0) / (k * k) / 1e6 };
 }
 
 // Is the point strictly inside the polygon (logical pixels)?

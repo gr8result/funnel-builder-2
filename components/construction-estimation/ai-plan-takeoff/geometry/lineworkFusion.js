@@ -8,7 +8,7 @@
 // Input and output are one sheet's analysis response in the shape normalizePlanAnalysis already
 // takes (normalized 0..1 coordinates on the unrotated sheet), so the contract, the adapter and
 // everything downstream are unchanged. Pure functions.
-import { detectPlanGeometry, pointInPolygon, traceOutlinedArea } from './planGeometry.js';
+import { absorbPockets, detectPlanGeometry, pointInPolygon, traceOutlinedArea } from './planGeometry.js';
 
 const CONTRACT_THICKNESSES = [70, 90, 100, 110, 140, 150, 200, 230, 270, 300, 350];
 const nearest = (value, list) => list.reduce((best, item) => (Math.abs(item - value) < Math.abs(best - value) ? item : best));
@@ -18,6 +18,7 @@ export const FUSION_DEFAULTS = {
   minimumStoredPixelsPerMm: 0.05, // below this a 70 mm wall is under 3.5 stored pixels: its two faces are one blur
   externalWallMinMm: 180,  // a door across a gap this thick, with no host wall of its own, is in an external wall
   garageDoorMinMm: 2200,   // and at least this wide it is a garage door
+  pocketMaxM2: 1.5,        // an unnamed space this small, cut off from a room only by unconfirmed gaps, is part of that room
   categoryReachMm: 1500,   // how far a model wall trace may be from the wall it classifies
   supportReachMm: 600,     // a model wall trace this close to linework is "the same wall"
   minimumClassificationShare: 0.35, // at least 35% of a measured run needs aligned AI trace
@@ -175,7 +176,7 @@ export function fuseSheetLinework(response, raster, sheet, existing = {}, overri
   const geometry = detectPlanGeometry(raster, { pixelsPerMm, logicalWidth, logicalHeight, openingEvidence: evidence }, overrides.geometry || {});
   const report = { engine: geometry.engine, measuredWalls: geometry.walls.length, wallsEmitted: 0, uncategorisedLm: 0, categoryFromLineworkOnlyLm: 0, categoryDisagreementLm: 0, flaggedWalls: 0, modelWallLm: 0, modelWallWithoutLineworkLm: 0,
     openings: { model: modelOpenings.length, onConfirmedGap: 0, onNearestWall: 0, unplaced: 0, duplicatesRemoved: 0, embeddedSymbolReviewCandidates: 0, fromDoorSwing: 0, fromExternalFrame: 0, fromDoorway: 0, fromDoorLine: 0, held: [] },
-    gaps: { confirmed: 0, unconfirmed: 0 }, rooms: { verified: 0, proposed: 0, adopted: 0, adoptedByProximity: 0, sharedSpaces: 0, withoutBoundary: 0, outdoorOutlined: 0, builtInRobes: 0, readingBoundariesWithheld: 0 }, singleFaceReviewCandidates: [], review: [] };
+    gaps: { confirmed: 0, unconfirmed: 0 }, rooms: { verified: 0, proposed: 0, adopted: 0, adoptedByProximity: 0, sharedSpaces: 0, withoutBoundary: 0, outdoorOutlined: 0, builtInRobes: 0, readingBoundariesWithheld: 0, pocketsAbsorbed: 0 }, singleFaceReviewCandidates: [], review: [] };
   if (!geometry.walls.length) {
     // Nothing measurable: the plan reading is passed through untouched and says so.
     report.review.push({ code: 'linework-failed', message: 'No wall linework could be measured on this sheet; wall positions are the plan reading\'s own and need checking.' });
@@ -469,6 +470,23 @@ export function fuseSheetLinework(response, raster, sheet, existing = {}, overri
     rooms.push({ ...namedRoom, ...measuredRoom(found.space, found.byProximity ? { review: 'The room name is printed beside this space, not inside it; check it is the right room.' } : {}),
       confidence: found.space.verified && !found.byProximity ? Math.max(Number(entry.room.confidence) || 0, 0.9) : Math.min(Number(entry.room.confidence) || 0.6, 0.7),
       evidence: `${entry.room.evidence || ''} Boundary and ${found.space.netAreaM2.toFixed(2)} m² floor area measured from the wall linework${found.space.verified ? '' : ', closing gaps that are not confirmed as doors or windows'}.`.trim() });
+  }
+  // Joinery does not enclose: small spaces no name was given to, cut off from a named room only by
+  // closures that no door or window confirms, are that room's (behind a bench, a tub, a vanity).
+  // Smallest rooms first, so a wet area takes its own fixtures before the room beside it is looked at.
+  const spaceLabel = new Map(geometry.rooms.map((space) => [space.id, space.spaceLabel]));
+  const takenLabels = new Set(rooms.map((room) => spaceLabel.get(room.lineworkRoomId)).filter(Boolean));
+  for (const room of rooms.filter((item) => item.lineworkRoomId && !item.lineworkVerified && item.polygon?.length >= 3).sort((a, b) => a.lineworkAreaM2 - b.lineworkAreaM2)) {
+    const whole = absorbPockets(geometry, room.lineworkRoomId, takenLabels, { pocketMaxM2: options.pocketMaxM2 });
+    if (!whole) continue;
+    whole.labels.forEach((label) => takenLabels.add(label));
+    report.rooms.pocketsAbsorbed += whole.labels.length;
+    const said = `Includes ${plural(whole.labels.length, 'small space')} (${whole.pocketsM2.toFixed(2)} m²) that only joinery or unconfirmed gaps cut off from it, such as the floor under a bench, tub or vanity; check they are part of this room.`;
+    room.polygon = reduceBoundary(whole.polygon, options.maxRoomCorners, mm(25)).map(toNormal);
+    room.lineworkAreaM2 = +whole.netAreaM2.toFixed(2);
+    room.pocketsAbsorbedM2 = +whole.pocketsM2.toFixed(2);
+    room.lineworkReview = [room.lineworkReview, said].filter(Boolean).join(' ');
+    room.evidence = `${room.evidence || ''} ${said}`.trim();
   }
   // A built-in robe stays with its bedroom: it is measured on its own where the drawing separates it
   // (so its floor can be finished or left out on its own) and is named as that bedroom's robe. The
