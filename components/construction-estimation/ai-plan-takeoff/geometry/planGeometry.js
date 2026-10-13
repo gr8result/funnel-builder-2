@@ -33,6 +33,8 @@ export const DEFAULT_GEOMETRY_OPTIONS = {
   closedDoorMinMm: 600,       // a door drawn closed is found by its swing alone, so short arcs (basins, pans) are left out
   sheetFrameShare: 0.9,       // paired linework spanning this much of the sheet is its frame
   wideDoorLineShare: 0.85,    // a gap wider than a doorway is a door where one unbroken line is drawn along this much of it
+  slidingTracks: true, trackPanelMm: 400, trackMinMm: 900, trackMaxMm: 3800, trackMaxThicknessMm: 160, trackDoubledShare: 0.5, trackEndReachMm: 180, trackRecessMinMm: 400, trackRecessMaxMm: 900,
+  cavitySliders: true, cavityPocketMinMm: 150, cavityLeafMinMm: 60,
   alignedDoorways: true,      // a door-width gap between two ends of one wall is an opening in that wall
   closedDoorSwings: true,     // also look for the swing of a door drawn closed in its wall
   swingArcShare: 0.95,        // this much of a door's quarter-circle swing has to be drawn
@@ -1054,25 +1056,53 @@ export function detectPlanGeometry(raster, context, overrides = {}) {
           if (count > line.share * along) line = { share: count / along, unbroken: longest / along };
         }
       }
-      candidates.push({ item, value, widthMm, across, centre, swing, aligned, line });
+      // A cavity slider: the wall beside the opening is drawn thinner (the pocket), and the door's
+      // leaf is drawn part way out of it into an otherwise empty opening. The clear opening is the
+      // stretch between the pockets. One pocket with its leaf is a single slider, two a double.
+      let cavity = null;
+      if (aligned && options.cavitySliders && widthMm >= options.swingDoorMinMm) {
+        const vertical = value === 2;
+        const a0 = vertical ? item.minY : item.minX, mid = vertical ? (item.minX + item.maxX) >> 1 : (item.minY + item.maxY) >> 1;
+        const at = (a, c) => (vertical ? a * width + c : c * width + a);
+        const solid = (a) => wall[at(a, mid)] || wall[at(a, mid - 1)] || wall[at(a, mid + 1)];
+        const inked = (a) => ink[at(a, mid)] || ink[at(a, mid - 1)] || ink[at(a, mid + 1)];
+        // The pocket begins at the thick wall's end, give or take the line that ends that wall.
+        let lead = 0, trail = 0;
+        for (let skip = 0; skip <= 4 && !lead; skip += 1) if (solid(a0 + skip)) { lead = skip; while (lead < along && solid(a0 + lead)) lead += 1; }
+        for (let skip = 0; skip <= 4 && !trail; skip += 1) if (solid(a0 + along - 1 - skip)) { trail = skip; while (trail < along - lead && solid(a0 + along - 1 - trail)) trail += 1; }
+        const leaf = (from, direction) => { let n = 0; while (n < along && inked(from + direction * n) && !solid(from + direction * n)) n += 1; return n; };
+        const leaf0 = lead ? leaf(a0 + lead, 1) : 0, leaf1 = trail ? leaf(a0 + along - 1 - trail, -1) : 0;
+        const clear = along - lead - trail, minPocket = px(options.cavityPocketMinMm), minLeaf = px(options.cavityLeafMinMm);
+        const ends = (lead >= minPocket && leaf0 >= minLeaf ? 1 : 0) + (trail >= minPocket && leaf1 >= minLeaf ? 1 : 0);
+        const open = clear - leaf0 - leaf1;
+        let empty = 0;
+        for (let a = a0 + lead + leaf0; a < a0 + along - trail - leaf1; a += 1) if (!inked(a)) empty += 1;
+        if (ends && clear / k >= options.swingDoorMinMm && open > 0 && empty >= open * 0.8 && leaf0 + leaf1 <= clear * 0.6) cavity = { ends, clear, shift: lead + clear / 2 - along / 2, vertical };
+      }
+      candidates.push({ item, value, widthMm, across, centre, swing, aligned, line, cavity });
     }
     gapSets.push({ value, labels, verdict, candidates });
   }
   // Nearest pairs first, so a roughly located opening goes to the candidate it most plausibly is.
   const gapCandidates = gapSets.flatMap((set) => set.candidates.map((candidate) => ({ ...candidate, set, nearest: nearestEvidence(candidate.centre) }))).sort((a, b) => a.nearest - b.nearest);
-  for (const { item, value, widthMm, across, centre, swing, set, aligned, line } of gapCandidates) {
+  for (const { item, value, across, swing, set, aligned, line, cavity, ...measured } of gapCandidates) {
+    // A cavity slider's opening is the clear stretch between its pockets, not the whole gap in the thick wall.
+    const widthMm = cavity ? cavity.clear / k : measured.widthMm;
+    const centre = cavity ? { x: measured.centre.x + (cavity.vertical ? 0 : cavity.shift / sx), y: measured.centre.y + (cavity.vertical ? cavity.shift / sy : 0) } : measured.centre;
     const support = claim(centre, widthMm, 'door');
     const swung = swing.share >= options.swingArcShare;
     const doorway = options.alignedDoorways && aligned && widthMm >= options.swingDoorMinMm && widthMm <= options.doorGapMm;
     // Wider than a doorway, with the door drawn across it from one wall end to the other: a robe
     // slider, a cavity slider, a garage door. A dashed bulkhead line over an open-plan opening is not one.
     const drawnAcross = !support && aligned && widthMm > options.doorGapMm && line.unbroken >= options.wideDoorLineShare;
-    if (support || swung || doorway || drawnAcross) set.verdict[item.id] = 2;
+    const pocketed = Boolean(cavity) && !swung;
+    if (support || swung || doorway || drawnAcross || pocketed) set.verdict[item.id] = 2;
     openings.push({ id: `go-${value === 2 ? 'v' : 'h'}-${Math.round(centre.x * 10)}-${Math.round(centre.y * 10)}`, axis: value === 2 ? 'v' : 'h', ...centre, widthMm: Math.round(widthMm), hostThicknessMm: Math.round(across / k), kind: 'wall-gap',
-      confirmed: Boolean(support) || swung || doorway || drawnAcross, basis: support ? 'located' : swung ? 'door-swing' : drawnAcross ? 'door-line-across' : aligned ? 'aligned-wall-ends' : 'none', aligned, swingShare: +swing.share.toFixed(2), ...(line.share ? { lineShare: +line.share.toFixed(2), lineUnbrokenShare: +line.unbroken.toFixed(2) } : {}), ...(swung ? { leafMm: Math.round(swing.radius / k) } : {}),
+      confirmed: Boolean(support) || swung || doorway || drawnAcross || pocketed, basis: support ? 'located' : swung ? 'door-swing' : pocketed ? 'cavity-pocket' : drawnAcross ? 'door-line-across' : aligned ? 'aligned-wall-ends' : 'none', aligned, ...(pocketed ? { cavityLeaves: cavity.ends } : {}), swingShare: +swing.share.toFixed(2), ...(line.share ? { lineShare: +line.share.toFixed(2), lineUnbrokenShare: +line.unbroken.toFixed(2) } : {}), ...(swung ? { leafMm: Math.round(swing.radius / k) } : {}),
       ...(support?.point.ref !== undefined ? { evidenceRef: support.point.ref } : {}), reviewRequired: !support && !swung, seed: item.seed, axisIndex: value - 1 });
-    if (drawnAcross) openings[openings.length - 1].reviewReason = 'A door is drawn from one wall end to the other across an opening wider than a doorway: a sliding robe door, a cavity slider or a garage door.';
-    if (doorway && !support && !swung) openings[openings.length - 1].reviewReason = 'A door-width opening between two ends of one wall, with no door swing drawn: a sliding door, a cavity slider or an open doorway.';
+    if (pocketed) openings[openings.length - 1].reviewReason = `A door leaf is drawn part way out of a pocket in the wall ${cavity.ends === 2 ? 'at each side of' : 'beside'} this opening: a ${cavity.ends === 2 ? 'double ' : ''}cavity sliding door.`;
+    else if (drawnAcross) openings[openings.length - 1].reviewReason = 'A door is drawn from one wall end to the other across an opening wider than a doorway: a sliding robe door, a cavity slider or a garage door.';
+    if (doorway && !support && !swung && !pocketed) openings[openings.length - 1].reviewReason = 'A door-width opening between two ends of one wall, with no door swing drawn: a sliding door, a cavity slider or an open doorway.';
   }
   for (const { value, labels, verdict } of gapSets) {
     for (let p = 0; p < labels.length; p += 1) if (labels[p] && verdict[labels[p]]) { closed[p] = value; if (verdict[labels[p]] === 2) openingGap[p] = 1; }
@@ -1126,6 +1156,89 @@ export function detectPlanGeometry(raster, context, overrides = {}) {
     openings.push({ id: `gd-${best.vertical ? 'v' : 'h'}-${Math.round(centre.x * 10)}-${Math.round(centre.y * 10)}`, axis: best.vertical ? 'v' : 'h', ...centre, widthMm: Math.round(best.span / k), hostThicknessMm: Math.round((half * 2 + 1) / k), kind: 'door-line',
       confirmed: true, basis: 'located', ...(point.ref !== undefined ? { evidenceRef: point.ref } : {}), reviewRequired: false, seed: middle, axisIndex: own - 1 });
     usedEvidence.add(evidenceIndex);
+  }
+
+  // Sliding doors across a recess (a built-in robe's front). The doors are drawn as two thin
+  // panels, one behind the other, running from wall to wall: far too thin to be wall, so the recess
+  // is open to its room. Taken as a door only on all of this together: a thin structure that is
+  // more than one line (a shelf edge or a hanging rail is one line), drawn nearly the whole way,
+  // with wall at both ends, and a wall parallel to it a robe's depth behind on one side only.
+  if (options.slidingTracks) {
+    const panel = Math.max(12, Math.round(px(options.trackPanelMm))), endReach = Math.max(4, Math.round(px(options.trackEndReachMm)));
+    const minDepth = px(options.trackRecessMinMm), maxDepth = px(options.trackRecessMaxMm);
+    for (const vertical of [false, true]) {
+      const lengthAlong = vertical ? lengthV : lengthH;
+      const cross = vertical ? 1 : width, step = vertical ? width : 1;
+      const thin = (p) => ink[p] && !wall[p] && !closed[p] && lengthAlong[p] >= panel;
+      const { labels, components } = labelComponents((p) => thin(p) || thin(p - cross) || thin(p + cross) || thin(p - 2 * cross) || thin(p + 2 * cross), width, height, bounds);
+      const at = (a, c) => (vertical ? a * width + c : c * width + a);
+      const limitA = vertical ? height : width, limitC = vertical ? width : height;
+      const fabric = (p) => wall[p] || closed[p];
+      for (const item of components) {
+        if (!item) continue;
+        let a0 = vertical ? item.minY : item.minX, a1 = vertical ? item.maxY : item.maxX;
+        const c0 = (vertical ? item.minX : item.minY) + 2, c1 = (vertical ? item.maxX : item.maxY) - 2;
+        const along = a1 - a0 + 1;
+        if (c1 < c0 || along / k < options.trackMinMm || along / k > options.trackMaxMm || (c1 - c0 + 1) / k > options.trackMaxThicknessMm) continue;
+        // Drawn nearly all the way, and for most of the way as more than a single line.
+        let drawn = 0, doubled = 0;
+        for (let a = a0; a <= a1; a += 1) {
+          let rows = 0;
+          for (let c = c0; c <= c1; c += 1) if (ink[at(a, c)] && !wall[at(a, c)]) rows += 1;
+          if (rows) drawn += 1;
+          if (rows >= 3 || (rows === 2 && c1 - c0 >= 2)) doubled += 1;
+        }
+        if (drawn < along * 0.85 || doubled < along * options.trackDoubledShare) continue;
+        // Wall at both ends.
+        const ends = [-1, 1].map((direction) => {
+          for (let g = 0; g <= endReach; g += 1) {
+            const a = (direction < 0 ? a0 : a1) + direction * g;
+            if (a < 0 || a >= limitA) return -1;
+            // (the wall it stops against may end a line or two short of it: a return's end cap)
+            for (let away = 0; away <= endReach; away += 1) for (const c of away ? [c0 - away, c1 + away] : [(c0 + c1) >> 1]) {
+              if (away === 0) { for (let own = c0; own <= c1; own += 1) if (fabric(at(a, own))) return { g, c: own }; continue; }
+              if (c >= 0 && c < limitC && fabric(at(a, c))) return { g, c };
+            }
+          }
+          return null;
+        });
+        if (!ends[0] || !ends[1]) continue;
+        const meets = ends;
+        // A wall parallel to it, a robe's depth away, on one side only.
+        const behind = [-1, 1].map((side) => {
+          let within = 0, samples = 0, total = 0;
+          for (let a = a0; a <= a1; a += 2) {
+            samples += 1;
+            for (let g = 1; g <= maxDepth + 2; g += 1) {
+              const c = (side < 0 ? c0 : c1) + side * g;
+              if (c < 0 || c >= limitC) break;
+              if (fabric(at(a, c))) { if (g >= minDepth && g <= maxDepth) { within += 1; total += g; } break; }
+            }
+          }
+          return { share: within / samples, depth: within ? total / within : 0 };
+        });
+        const sides = behind.filter((side) => side.share >= 0.7);
+        if (sides.length !== 1) continue;
+        a0 -= meets[0].g; a1 += meets[1].g;
+        const middle = at((a0 + a1) >> 1, (c0 + c1) >> 1);
+        const centre = toLogical(((middle % width)) + 0.5, Math.floor(middle / width) + 0.5);
+        if (openings.some((opening) => opening.confirmed && Math.hypot(opening.x - centre.x, opening.y - centre.y) * sx <= (a1 - a0) / 2)) continue;
+        const half = Math.max(2, Math.round(px(options.minWallMm) / 2));
+        const own = vertical ? 2 : 1;
+        for (let a = a0; a <= a1; a += 1) for (let offset = -half; offset <= half; offset += 1) {
+          const p = at(a, ((c0 + c1) >> 1) + offset);
+          if (p >= 0 && p < wall.length && !wall[p] && !closed[p]) { closed[p] = own; doorLine[p] = 1; }
+        }
+        // Where the wall it stops against ends a little to one side of it, the corner between them is closed too.
+        for (const [end, meet] of [[a0, meets[0]], [a1, meets[1]]]) for (let a = end - 1; a <= end + 1; a += 1) for (let c = Math.min(meet.c, c0); c <= Math.max(meet.c, c1); c += 1) {
+          const p = at(a, c);
+          if (a >= 0 && a < limitA && !wall[p] && !closed[p]) closed[p] = own;
+        }
+        openings.push({ id: `gt-${vertical ? 'v' : 'h'}-${Math.round(centre.x * 10)}-${Math.round(centre.y * 10)}`, axis: vertical ? 'v' : 'h', ...centre, widthMm: Math.round((a1 - a0 + 1) / k), hostThicknessMm: Math.round((half * 2 + 1) / k), kind: 'door-line',
+          confirmed: true, basis: 'track-across-recess', recessDepthMm: Math.round(sides[0].depth / k), doubledShare: +(doubled / along).toFixed(2), reviewRequired: true,
+          reviewReason: 'Two thin door panels are drawn from wall to wall across a recess a robe deep: sliding robe doors. Confirm the door type and height.', seed: middle, axisIndex: own - 1 });
+      }
+    }
   }
 
   // Walls: each band, with the confirmed openings along it, becomes one centreline run with its

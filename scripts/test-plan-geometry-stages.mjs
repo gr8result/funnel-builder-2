@@ -158,4 +158,42 @@ for (const [degrees, startX] of [[30, 600], [150, 400], [62, 760], [20, 450]]) {
 const loose = drawing(({ ink }) => { for (const offset of [0, 12]) for (let along = 0; along <= 200; along += 0.5) { const x = 400 + 0.866 * along - 0.5 * offset, y = 300 + 0.5 * along + 0.866 * offset; ink(Math.round(x), Math.round(y)); ink(Math.round(x) + 1, Math.round(y)); } });
 assert.equal(detectPlanGeometry(loose, context).walls.filter((wall) => wall.axis === 'd').length, 0, 'angled linework joining no wall is not a wall');
 
+// --- Sliding robe doors: two thin panels across a recess -------------------------------------------
+// A 650 mm deep recess in the top right corner (a return wall down from the top wall), with its front
+// drawn as two thin staggered panels from the return to the side wall. A shelf edge is one line.
+const recess = (front) => drawing(({ ink, hline, vline }) => {
+  vline(700, 125, 189); vline(709, 125, 189); hline(189, 700, 710);
+  front(ink);
+});
+const panels = (ink) => { for (let x = 711; x <= 796; x += 1) { ink(x, 192); ink(x, 195); } for (let x = 790; x <= 875; x += 1) { ink(x, 195); ink(x, 198); } for (const y of [193, 194]) { ink(711, y); ink(796, y); } for (const y of [196, 197]) { ink(790, y); ink(875, y); } };
+const robed = detectPlanGeometry(recess(panels), context);
+const track = robed.openings.find((opening) => opening.basis === 'track-across-recess');
+assert.ok(track, 'sliding panels across a recess are found without anything locating them');
+assert.deepEqual([track.kind, track.confirmed, track.reviewRequired], ['door-line', true, true], 'a door, still to be confirmed');
+assert.ok(Math.abs(track.widthMm - 1660) <= 80, `its width is the recess from wall to wall: ${track.widthMm} mm`);
+assert.ok(Math.abs(track.recessDepthMm - 670) <= 60, `the recess depth is measured: ${track.recessDepthMm} mm`);
+const robeSpace = robed.rooms.filter((room) => room.verified).sort((a, b) => a.netAreaM2 - b.netAreaM2)[0];
+assert.ok(Math.abs(robeSpace.netAreaM2 - 1.66 * 0.66) <= 0.15, `the robe is its own space: ${robeSpace.netAreaM2.toFixed(2)} m2`);
+const shelf = detectPlanGeometry(recess((ink) => { for (let x = 711; x <= 875; x += 1) { ink(x, 194); ink(x, 195); } }), context);
+assert.ok(!shelf.openings.some((opening) => opening.basis === 'track-across-recess'), 'a single line across a recess (a shelf edge, a hanging rail) is not a door');
+const rail = detectPlanGeometry(drawing(({ ink }) => panels(ink)), context);
+assert.ok(!rail.openings.some((opening) => opening.basis === 'track-across-recess'), 'the same panels with no wall at one end are not a door');
+
+// --- A double cavity slider: the pockets and the leaves drawn in the wall --------------------------
+// A 240 mm wall with a 2040 mm clear opening. Either side of it the wall is drawn thinner for 400 mm
+// (the pocket) and a leaf is drawn 300 mm out of each pocket; the middle of the opening is empty.
+// (A slider with a pocket on one side only is not recognised by this rule.)
+const pocketWall = (leaves) => drawing(({ ink, hline, vline }) => {
+  vline(500, 125, 300); vline(523, 125, 300); hline(300, 500, 524);
+  vline(506, 302, 340); vline(517, 302, 340); hline(340, 506, 518);
+  vline(506, 544, 582); vline(517, 544, 582); hline(543, 506, 518);
+  hline(583, 500, 524); vline(500, 584, 675); vline(523, 584, 675);
+  if (leaves) for (const [from, to] of [[342, 370], [514, 542]]) for (let y = from; y <= to; y += 1) { ink(511, y); ink(513, y); }
+});
+const cavityDoor = detectPlanGeometry(pocketWall(true), context).openings.find((opening) => opening.basis === 'cavity-pocket');
+assert.ok(cavityDoor, 'leaves drawn in wall pockets are a cavity slider');
+assert.deepEqual([cavityDoor.confirmed, cavityDoor.cavityLeaves, cavityDoor.reviewRequired], [true, 2, true]);
+assert.ok(Math.abs(cavityDoor.widthMm - 2040) <= 80, `the opening is the clear width between the pockets: ${cavityDoor.widthMm} mm`);
+assert.ok(!detectPlanGeometry(pocketWall(false), context).openings.some((opening) => opening.basis === 'cavity-pocket'), 'thinner wall either side of an opening with no leaf drawn is not a cavity slider');
+
 console.log('plan geometry stages: returns, windows, door lines and divided spaces ok');

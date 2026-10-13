@@ -323,20 +323,25 @@ export function fuseSheetLinework(response, raster, sheet, existing = {}, overri
     const doorway = found.kind === 'wall-gap' && found.basis === 'aligned-wall-ends' && found.confirmed && wallById.get(found.hostWallId)?.category === 'interior';
     // A door drawn across an opening wider than a doorway.
     const wide = found.kind === 'wall-gap' && found.basis === 'door-line-across';
-    if (!swing && !frame && !doorway && !wide) continue;
+    // Sliding panels drawn across a recess a robe deep.
+    const track = found.kind === 'door-line' && found.basis === 'track-across-recess';
+    // A leaf drawn in a wall pocket: a cavity slider, single or double.
+    const cavity = found.kind === 'wall-gap' && found.basis === 'cavity-pocket';
+    if (!swing && !frame && !doorway && !wide && !track && !cavity) continue;
     const hosted = found.hostWallId && emitted.has(found.hostWallId) ? found.hostWallId : null;
     const hostCategory = wallById.get(found.hostWallId)?.category;
     const external = hostCategory === 'exterior' || (wide && !hostCategory && found.hostThicknessMm >= options.externalWallMinMm);
     const garage = wide && external && found.widthMm >= options.garageDoorMinMm;
     const leaf = swing ? nearest(found.leafMm || found.widthMm, DOOR_LEAVES) : null;
     const widthMm = swing ? (Math.abs(leaf - (found.leafMm || found.widthMm)) <= 60 ? leaf : Math.round((found.leafMm || found.widthMm) / 10) * 10) : Math.round(found.widthMm / 10) * 10;
-    if (swing) report.openings.fromDoorSwing += 1; else if (frame) report.openings.fromExternalFrame += 1; else if (wide) report.openings.fromDoorLine += 1; else report.openings.fromDoorway += 1;
+    if (swing) report.openings.fromDoorSwing += 1; else if (frame) report.openings.fromExternalFrame += 1; else if (wide || track || cavity) report.openings.fromDoorLine += 1; else report.openings.fromDoorway += 1;
     placed.push({ wallId: hosted, at: { x: found.x, y: found.y }, fromLinework: true, item: {
-      detectionId: `linework:${found.id}`, page: response.page, basis: 'OBSERVED', confidence: swing ? 0.75 : frame || wide ? 0.6 : 0.55,
+      detectionId: `linework:${found.id}`, page: response.page, basis: 'OBSERVED', confidence: swing ? 0.75 : track ? 0.7 : frame || wide ? 0.6 : 0.55,
       evidence: swing
         ? (found.kind === 'wall-swing'
           ? `A door is drawn closed in this wall with its swing; the swing radius measures ${found.leafMm} mm. Not located by the plan reading: confirm its type, width and height.`
           : `A door swing is drawn at a ${found.widthMm} mm gap in the wall linework; the leaf measures ${found.leafMm} mm. Not located by the plan reading: confirm its type and height.`)
+        : track ? `Two thin door panels are drawn from wall to wall across a recess ${found.recessDepthMm} mm deep, ${found.widthMm} mm wide: sliding robe doors. Not located by the plan reading: confirm the door type and height.`
         : wide ? (garage
           ? `A door is drawn across a ${found.widthMm} mm opening in an external wall, from one wall end to the other: a garage door. Not located by the plan reading: confirm its type and height.`
           : `A door is drawn across a ${found.widthMm} mm opening, from one wall end to the other: a sliding robe door or a cavity slider. Not located by the plan reading: confirm its type and height.`)
@@ -345,19 +350,36 @@ export function fuseSheetLinework(response, raster, sheet, existing = {}, overri
       ...toNormal(found), type: frame ? 'window' : 'door', openingClass: frame ? 'Window' : garage ? 'Garage Door' : (external ? 'External Door' : 'Internal Door'),
       hostDetectionId: hosted, tag: null, sizeCode: null, explicitWidthMm: null, explicitHeightMm: null, widthMm, heightMm: null,
       dimensionBasis: 'OBSERVED', dimensionEvidence: `Width measured from the sheet linework (${swing ? 'door swing radius' : frame ? 'frame length' : 'gap between the wall ends'}).`,
-      lineworkBasis: swing ? 'door-swing' : frame ? 'frame-in-external-wall' : wide ? 'door-line-across' : 'aligned-wall-ends',
+      lineworkBasis: swing ? 'door-swing' : frame ? 'frame-in-external-wall' : wide ? 'door-line-across' : track ? 'track-across-recess' : 'aligned-wall-ends',
+      ...(track ? { subType: 'Robe sliding door' } : {}),
       subType: null, quantity: 1, glassType: 'Unspecified', scheduleGlassType: 'Unspecified',
       lineworkGapId: found.id, measuredGapMm: found.widthMm, positionBasis: 'linework', needsClassification: true,
     } });
+    if (cavity) {
+      // One door per leaf: a double cavity slider is two leaves meeting in the middle of the opening.
+      const entry = placed.pop();
+      const leaves = found.cavityLeaves === 2 ? 2 : 1;
+      const each = found.widthMm / leaves, standard = nearest(each, DOOR_LEAVES);
+      const leafMm = Math.abs(standard - each) <= 60 ? standard : Math.round(each / 10) * 10;
+      const quarter = mm(found.widthMm / 4);
+      for (const side of leaves === 2 ? [-1, 1] : [0]) {
+        const at = { x: found.x + (found.axis === 'h' ? side * quarter : 0), y: found.y + (found.axis === 'h' ? 0 : side * quarter) };
+        placed.push({ ...entry, at, item: { ...entry.item, ...toNormal(at), detectionId: `linework:${found.id}${side ? (side < 0 ? ':a' : ':b') : ''}`, widthMm: leafMm, confidence: 0.7,
+          subType: 'Cavity sliding door', lineworkBasis: 'cavity-pocket', measuredGapMm: Math.round(each),
+          dimensionEvidence: 'Width measured from the sheet linework (clear opening between the wall pockets).',
+          evidence: `A door leaf is drawn part way out of a pocket in the wall ${leaves === 2 ? 'at each side of' : 'beside'} a ${found.widthMm} mm clear opening: ${leaves === 2 ? 'one leaf of a double cavity sliding door' : 'a cavity sliding door'}. Not located by the plan reading: confirm its type and height.` } });
+      }
+      if (leaves === 2) report.openings.fromDoorLine += 1;
+    }
   }
   // (the note is written after duplicates are removed, below)
   // The same opening reported twice (overlapping readings) is one opening: same kind, same wall, same place.
   const openings = [];
   for (const entry of placed.sort((a, b) => (a.fromLinework ? 1 : 0) - (b.fromLinework ? 1 : 0) || (Number(b.item.confidence) || 0) - (Number(a.item.confidence) || 0))) {
     const twin = entry.at && openings.find((kept) => kept.at && (entry.fromLinework
-      ? Math.hypot(kept.at.x - entry.at.x, kept.at.y - entry.at.y) <= (entry.item.lineworkBasis === 'door-line-across' ? mm(options.duplicateMm) : Math.max(mm(options.duplicateMm), mm(entry.item.measuredGapMm || 0) * 0.5))
+      ? Math.hypot(kept.at.x - entry.at.x, kept.at.y - entry.at.y) <= (['door-line-across', 'track-across-recess', 'cavity-pocket'].includes(entry.item.lineworkBasis) ? mm(options.duplicateMm) : Math.max(mm(options.duplicateMm), mm(entry.item.measuredGapMm || 0) * 0.5))
       : entry.wallId && kept.wallId === entry.wallId && kept.item.openingClass === entry.item.openingClass && Math.hypot(kept.at.x - entry.at.x, kept.at.y - entry.at.y) <= mm(options.duplicateMm)));
-    if (twin && entry.fromLinework) { report.openings[{ 'door-swing': 'fromDoorSwing', 'frame-in-external-wall': 'fromExternalFrame', 'aligned-wall-ends': 'fromDoorway', 'door-line-across': 'fromDoorLine' }[entry.item.lineworkBasis]] -= 1; continue; }
+    if (twin && entry.fromLinework) { report.openings[{ 'door-swing': 'fromDoorSwing', 'frame-in-external-wall': 'fromExternalFrame', 'aligned-wall-ends': 'fromDoorway', 'door-line-across': 'fromDoorLine', 'track-across-recess': 'fromDoorLine', 'cavity-pocket': 'fromDoorLine' }[entry.item.lineworkBasis]] -= 1; continue; }
     if (twin) {
       report.openings.duplicatesRemoved += 1;
       // Keep whatever the dropped reading knew that the kept one did not (a size code, a tag).
