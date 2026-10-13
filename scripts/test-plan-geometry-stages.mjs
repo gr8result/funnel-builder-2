@@ -105,4 +105,22 @@ assert.equal(new Set(divided.rooms.map((room) => room.id)).size, divided.rooms.l
 const partsArea = parts.reduce((sum, room) => sum + room.netAreaM2, 0);
 assert.ok(Math.abs(partsArea - whole[0].netAreaM2) / whole[0].netAreaM2 < 0.03, 'the parts make up the whole');
 
+// --- A door drawn across an opening wider than a doorway ------------------------------------------
+// A 90 mm partition with a 2400 mm opening. With the door's panels drawn from one wall end to the
+// other it is a sliding door; with a dashed bulkhead line over it, it is an opening and stays one.
+const wideGap = (across) => drawing(({ hline, vline }) => {
+  vline(500, 125, 249); vline(509, 125, 249); hline(249, 500, 510);
+  vline(500, 490, 675); vline(509, 490, 675); hline(490, 500, 510);
+  across(vline);
+});
+const drawnDoor = detectPlanGeometry(wideGap((vline) => vline(504, 251, 489)), context).openings.find((opening) => opening.kind === 'wall-gap' && near(opening, 505, 370, 40));
+assert.ok(drawnDoor, 'the wide opening is found');
+assert.deepEqual([drawnDoor.confirmed, drawnDoor.basis, drawnDoor.reviewRequired], [true, 'door-line-across', true], 'a door drawn across the opening makes it a door, still to be confirmed');
+assert.ok(Math.abs(drawnDoor.widthMm - 2400) <= 60, `its width is the gap between the wall ends: ${drawnDoor.widthMm} mm`);
+assert.ok(drawnDoor.lineUnbrokenShare >= 0.85);
+const dashedOver = detectPlanGeometry(wideGap((vline) => { for (let y = 255; y < 480; y += 60) vline(504, y, y + 29); }), context).openings.find((opening) => opening.kind === 'wall-gap' && near(opening, 505, 370, 40));
+assert.ok(dashedOver && !dashedOver.confirmed && dashedOver.basis === 'aligned-wall-ends', 'a dashed line over an opening does not make it a door');
+const openGap = detectPlanGeometry(wideGap(() => {}), context).openings.find((opening) => opening.kind === 'wall-gap' && near(opening, 505, 370, 40));
+assert.ok(openGap && !openGap.confirmed, 'an opening with nothing drawn across it is not a door');
+
 console.log('plan geometry stages: returns, windows, door lines and divided spaces ok');

@@ -241,3 +241,44 @@ Known errors on New Job 03/09, kept visible by the reference fixtures rather tha
 laundry measures 57 % small (its tub bench reads as wall); cavity sliders and robe sliders are found only
 where an opening is located on them; walls at angles other than 0, 45 and 90 degrees and curved walls
 are not measured.
+
+## Completion phase: open-plan rooms, doors drawn across wide openings, coarse sheets, save order (2026-10-13)
+
+- **Open-plan rooms.** Several names in one space with no wall between them no longer produce an
+  extra combined room. The first name carries the measured boundary and the whole floor once
+  (`openPlanWith: [other names]`); each other name stays in the room list with no boundary and no
+  area (`openPlanIn: <first name>`). Room names and floor areas are therefore unique downstream.
+- **Smallest room for a name** (`roomMinimumM2`): an ensuite, bathroom or laundry is not given a
+  pocket under 1.8 m2, a WC/powder/pantry/WIR under 0.8 m2, a robe/linen/store under 0.3 m2.
+- **Doors drawn across wide openings** (`basis: 'door-line-across'`). A gap wider than a doorway
+  between two ends of one wall is a door where one unbroken line is drawn along at least 85% of it
+  (`wideDoorLineShare`): a robe slider, a cavity slider, a garage door. A dashed bulkhead line or an
+  empty open-plan opening is not. Measured on New Job 03/09: robe slider 0.95, garage door 1.00,
+  the four other wide gaps 0.04-0.54. Emitted from linework as `Internal Door`, or `Garage Door`
+  where the gap is in an external wall and at least 2200 mm, always with `needsClassification`.
+- **Sheets stored too coarsely.** `readPlanRaster` records what the stored image resolves
+  (`raster.storedPixelsPerMm`). Below `minimumStoredPixelsPerMm` (0.05: a 70 mm wall under 3.5
+  pixels) the sheet is not measured at all; the review carries a critical `linework-failed` item
+  saying to import the sheet at a higher resolution. Enlarging a coarse image adds no wall faces.
+- **Building selection.** The drawing with the most wall linework is chosen with each piece's
+  contribution capped, so a title block or border with long ruled lines is not taken for the plan.
+- **Sheet scales in saved objects.** `stampSheetScales` marks each saved object that is on a sheet
+  whose scale differs from the saved `pixelsPerMm` with `sheetPixelsPerMm`; `toCommonScale` uses
+  that mark when no calibration record is passed. Takeoffs whose sheets share one scale are saved
+  exactly as before.
+- **Save order.** A manual Save waits for an autosave that is already writing, so the newer copy
+  is always written last.
+
+### What other modules need to do (not changed here)
+
+1. `lib/builders/carpetSelection.js` `measuredFlooringRooms`: the "unsynchronised plan polygons"
+   branch divides by `job.pixelsPerMm` only. On a takeoff with differently scaled sheets it must
+   use `item.sheetPixelsPerMm || job.pixelsPerMm` for each saved area.
+2. Any module that measures saved takeoff objects itself (not through `takeoffSchedule.js`) must do
+   the same. The schedule builders already do.
+3. Rooms with `openPlanIn` have `areaM2: null`. A module listing rooms with areas should show them
+   as part of the named room, not as a room with a missing measurement.
+4. Openings with `needsClassification` are measured positions and widths with an unconfirmed type;
+   they should not be priced until confirmed in the takeoff.
+
+Pinned by `scripts/test-takeoff-output-contract.mjs`.

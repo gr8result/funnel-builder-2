@@ -26,7 +26,10 @@ export async function readPlanRaster(dataUrl, maxSide = LINEWORK_RASTER_MAX_SIDE
     context.fillRect(0, 0, canvas.width, canvas.height);
     context.imageSmoothingQuality = 'high';
     context.drawImage(image, 0, 0, canvas.width, canvas.height);
-    return context.getImageData(0, 0, canvas.width, canvas.height);
+    const raster = context.getImageData(0, 0, canvas.width, canvas.height);
+    // What the stored image itself resolves, before any enlargement: enlarging adds no detail.
+    if (stored > 0) raster.storedPixelsPerMm = stored;
+    return raster;
   } finally {
     // Release the temporary raster; the stored plan image is untouched.
     canvas.width = 1; canvas.height = 1; image.src = '';

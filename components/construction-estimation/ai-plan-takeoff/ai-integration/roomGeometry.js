@@ -26,6 +26,12 @@ export function roomContains(polygon, p) {
 }
 export function measureRoom(room, pixelsPerMm) {
   const polygon = room.polygon || [];
+  // A name in an open-plan space whose floor is measured under another name has no boundary of its
+  // own by design: that is not a missing boundary. Drawing one for it measures it separately.
+  if (room.openPlanIn && !polygon.length) {
+    const unassigned = !room.level || room.level==='Unassigned';
+    return {...room,areaM2:null,perimeterM:null,pixelsPerMm:Number(pixelsPerMm)||null,reviewRequired:unassigned,reviewReasons:unassigned?['Confirm the room level']:[]};
+  }
   const issues = [];
   let area=0, perimeter=0;
   if (polygon.length<3 || polygon.length>100 || polygon.some(p=>!Number.isFinite(p.x)||!Number.isFinite(p.y))) issues.push('Boundary is missing or invalid');

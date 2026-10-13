@@ -31,6 +31,8 @@ export const DEFAULT_GEOMETRY_OPTIONS = {
   evidenceReachMm: 700,       // an opening located this close to a gap confirms it
   swingDoorMinMm: 500, swingDoorMaxMm: 1450, // a hinged door leaf is this wide (an entry door with its frame at the top end)
   closedDoorMinMm: 600,       // a door drawn closed is found by its swing alone, so short arcs (basins, pans) are left out
+  sheetFrameShare: 0.9,       // paired linework spanning this much of the sheet is its frame
+  wideDoorLineShare: 0.85,    // a gap wider than a doorway is a door where one unbroken line is drawn along this much of it
   alignedDoorways: true,      // a door-width gap between two ends of one wall is an opening in that wall
   closedDoorSwings: true,     // also look for the swing of a door drawn closed in its wall
   swingArcShare: 0.95,        // this much of a door's quarter-circle swing has to be drawn
@@ -118,6 +120,26 @@ function wallBands(ink, faceLength, strictLen, relaxedLen, width, height, vertic
       if (l1 < relaxedLen || l2 < relaxedLen) continue;
       bands.push({ r, a1, b2, distance, l1, l2, level: l1 >= strictLen && l2 >= strictLen ? 2 : 1 });
     }
+    // Hatched walls (masonry drawn with hatching between its faces): two long faces a masonry
+    // wall's thickness apart with only short strokes between them. The strokes are the hatch, so
+    // the faces are paired across them. Lettering never sits between two such faces: a ruled table
+    // row is far taller than a wall is thick.
+    for (let r = 0; r + 5 < runs.length; r += 2) {
+      const a1 = runs[r], b1 = runs[r + 1];
+      if (b1 - a1 >= maxLine || faceLength[base + a1 * step] < strictLen) continue;
+      for (let far = r + 4; far + 1 < runs.length && far <= r + 10; far += 2) {
+        const a2 = runs[far], b2 = runs[far + 1];
+        const distance = (a2 + b2) / 2 - (a1 + b1) / 2;
+        if (distance > tMax) break;
+        const between = runs[far - 2];
+        // Everything between has to be a short stroke; a long line in between is a face of its own.
+        if (faceLength[base + between * step] >= relaxedLen) break;
+        if (b2 - a2 >= maxLine || faceLength[base + a2 * step] < strictLen || distance < tMin * 2.2) continue;
+        if (!bands.some((band) => band.a1 <= b2 && band.b2 >= a1)) bands.push({ r: -10 - r, a1, b2, distance, l1: faceLength[base + a1 * step], l2: faceLength[base + a2 * step], level: 2 });
+        break;
+      }
+    }
+    bands.sort((p, q) => p.a1 - q.a1);
     // Faces shared by a run of equally spaced bands are stair treads or shelving, not walls;
     // of two bands sharing a face that together exceed a wall, the thinner one is the wall.
     // A wall with a window frame, joinery or a second leaf drawn in or against it also chains three
@@ -659,7 +681,13 @@ export function detectPlanGeometry(raster, context, overrides = {}) {
   // one drawing; the building is the drawing with the most established wall in it, so pairs of
   // lines elsewhere on the sheet (title block, legend, details) are left out.
   const gap = (a, b) => Math.max(0, a.minX - b.maxX, b.minX - a.maxX, a.minY - b.maxY, b.minY - a.maxY);
-  const pieces = raw.components.filter((item) => item && item.area >= 12);
+  // The sheet's own frame and title block are ruled with double lines too, and on a small-scale
+  // sheet they are bigger than the building. Paired linework running the length or breadth of the
+  // sheet is its frame, not a wall, and is left out before the building is looked for.
+  const frame = new Uint8Array(raw.components.length);
+  for (const item of raw.components) if (item && (item.maxX - item.minX >= width * options.sheetFrameShare || item.maxY - item.minY >= height * options.sheetFrameShare)) frame[item.id] = 1;
+  if (frame.some(Boolean)) diagnostics.push({ code: 'sheet-frame', message: 'Double lines running the length of the sheet (its frame or title block) were not taken as walls.' });
+  const pieces = raw.components.filter((item) => item && item.area >= 12 && !frame[item.id]);
   const established = pieces.filter((item) => strictCount[item.id] > 0);
   const parent = new Map(established.map((item) => [item.id, item.id]));
   const find = (id) => { while (parent.get(id) !== id) { parent.set(id, parent.get(parent.get(id))); id = parent.get(id); } return id; };
@@ -668,16 +696,20 @@ export function detectPlanGeometry(raster, context, overrides = {}) {
     if (gap(established[i], established[j]) <= link) parent.set(find(established[i].id), find(established[j].id));
   }
   const drawings = new Map();
+  const pieceCap = px(4000) * tMin;
   for (const item of established) {
     const root = find(item.id);
-    const drawing = drawings.get(root) || { strict: 0, minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity };
+    const drawing = drawings.get(root) || { strict: 0, weight: 0, minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity };
     drawing.strict += strictCount[item.id];
+    // A building is many walls; a title block or border is a few long double rules. No one piece
+    // counts for more than a few metres of wall, so a border cannot outweigh a house.
+    drawing.weight += Math.min(strictCount[item.id], pieceCap);
     drawing.minX = Math.min(drawing.minX, item.minX); drawing.maxX = Math.max(drawing.maxX, item.maxX);
     drawing.minY = Math.min(drawing.minY, item.minY); drawing.maxY = Math.max(drawing.maxY, item.maxY);
     drawings.set(root, drawing);
   }
   let building = null, buildingRoot = null;
-  for (const [root, drawing] of drawings) if (!building || drawing.strict > building.strict) { building = drawing; buildingRoot = root; }
+  for (const [root, drawing] of drawings) if (!building || drawing.weight > building.weight) { building = drawing; buildingRoot = root; }
   if (!building || building.strict < px(3000) * tMin) return { walls: [], openings: [], rooms: [], diagnostics: [...diagnostics, { code: 'no-walls', message: 'No wall linework was found on this sheet at the confirmed calibration.' }], engine: GEOMETRY_ENGINE_VERSION };
   const keep = new Uint8Array(raw.components.length);
   for (const item of established) if (find(item.id) === buildingRoot) keep[item.id] = 1;
@@ -883,20 +915,41 @@ export function detectPlanGeometry(raster, context, overrides = {}) {
       const swing = widthMm >= options.swingDoorMinMm && widthMm <= options.swingDoorMaxMm ? doorSwingShare(inkFat, width, height, item, value === 2) : { share: 0, radius: 0 };
       let alignedPixels = 0;
       for (let y = item.minY; y <= item.maxY; y += 1) for (let x = item.minX; x <= item.maxX; x += 1) { const p = y * width + x; if (labels[p] === item.id && alignedGap[p]) alignedPixels += 1; }
-      candidates.push({ item, value, widthMm, across, centre, swing, aligned: alignedPixels >= item.area * 0.6 });
+      const aligned = alignedPixels >= item.area * 0.6;
+      // A gap wider than a doorway between two ends of one wall: what is drawn along it. A sliding
+      // door's panels are lines from one end to the other; an open-plan opening has none, or a dashed
+      // bulkhead line. Measured as the most-drawn line along the gap and its longest unbroken piece.
+      let line = { share: 0, unbroken: 0 };
+      if (aligned && widthMm > options.doorGapMm) {
+        const vertical = value === 2;
+        const c0 = vertical ? item.minX : item.minY, c1 = vertical ? item.maxX : item.maxY, a0 = vertical ? item.minY : item.minX;
+        for (let c = c0; c <= c1; c += 1) {
+          let count = 0, run = 0, longest = 0;
+          for (let a = 0; a < along; a += 1) {
+            const p = vertical ? (a0 + a) * width + c : c * width + a0 + a;
+            if (ink[p]) { count += 1; run += 1; if (run > longest) longest = run; } else run = 0;
+          }
+          if (count > line.share * along) line = { share: count / along, unbroken: longest / along };
+        }
+      }
+      candidates.push({ item, value, widthMm, across, centre, swing, aligned, line });
     }
     gapSets.push({ value, labels, verdict, candidates });
   }
   // Nearest pairs first, so a roughly located opening goes to the candidate it most plausibly is.
   const gapCandidates = gapSets.flatMap((set) => set.candidates.map((candidate) => ({ ...candidate, set, nearest: nearestEvidence(candidate.centre) }))).sort((a, b) => a.nearest - b.nearest);
-  for (const { item, value, widthMm, across, centre, swing, set, aligned } of gapCandidates) {
+  for (const { item, value, widthMm, across, centre, swing, set, aligned, line } of gapCandidates) {
     const support = claim(centre, widthMm, 'door');
     const swung = swing.share >= options.swingArcShare;
     const doorway = options.alignedDoorways && aligned && widthMm >= options.swingDoorMinMm && widthMm <= options.doorGapMm;
-    if (support || swung || doorway) set.verdict[item.id] = 2;
+    // Wider than a doorway, with the door drawn across it from one wall end to the other: a robe
+    // slider, a cavity slider, a garage door. A dashed bulkhead line over an open-plan opening is not one.
+    const drawnAcross = !support && aligned && widthMm > options.doorGapMm && line.unbroken >= options.wideDoorLineShare;
+    if (support || swung || doorway || drawnAcross) set.verdict[item.id] = 2;
     openings.push({ id: `go-${value === 2 ? 'v' : 'h'}-${Math.round(centre.x * 10)}-${Math.round(centre.y * 10)}`, axis: value === 2 ? 'v' : 'h', ...centre, widthMm: Math.round(widthMm), hostThicknessMm: Math.round(across / k), kind: 'wall-gap',
-      confirmed: Boolean(support) || swung || doorway, basis: support ? 'located' : swung ? 'door-swing' : aligned ? 'aligned-wall-ends' : 'none', aligned, swingShare: +swing.share.toFixed(2), ...(swung ? { leafMm: Math.round(swing.radius / k) } : {}),
+      confirmed: Boolean(support) || swung || doorway || drawnAcross, basis: support ? 'located' : swung ? 'door-swing' : drawnAcross ? 'door-line-across' : aligned ? 'aligned-wall-ends' : 'none', aligned, swingShare: +swing.share.toFixed(2), ...(line.share ? { lineShare: +line.share.toFixed(2), lineUnbrokenShare: +line.unbroken.toFixed(2) } : {}), ...(swung ? { leafMm: Math.round(swing.radius / k) } : {}),
       ...(support?.point.ref !== undefined ? { evidenceRef: support.point.ref } : {}), reviewRequired: !support && !swung, seed: item.seed, axisIndex: value - 1 });
+    if (drawnAcross) openings[openings.length - 1].reviewReason = 'A door is drawn from one wall end to the other across an opening wider than a doorway: a sliding robe door, a cavity slider or a garage door.';
     if (doorway && !support && !swung) openings[openings.length - 1].reviewReason = 'A door-width opening between two ends of one wall, with no door swing drawn: a sliding door, a cavity slider or an open doorway.';
   }
   for (const { value, labels, verdict } of gapSets) {

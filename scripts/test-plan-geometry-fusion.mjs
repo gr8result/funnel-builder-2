@@ -122,18 +122,26 @@ assert.ok(bed1.polygon.length >= 4 && bed1.polygon.length <= 80);
 // Two names in one large space with no wall between them are one open-plan room, not two guesses.
 const open = fuse({ rooms: [room('BED 1', 300, 400), room('KITCHEN', 650, 300), room('DINING', 700, 520)] });
 const openRooms = asScreen(open);
-const shared = openRooms.find((item) => item.name === 'KITCHEN / DINING');
-assert.ok(shared, 'the shared space is returned once under both names');
-assert.ok(Math.abs(shared.areaM2 - 3.67 * 5.53) <= 0.5);
-assert.ok(openRooms.filter((item) => ['KITCHEN', 'DINING'].includes(item.name)).every((item) => !item.polygon?.length), 'neither name is given a boundary the drawing does not show');
+assert.deepEqual(openRooms.map((item) => item.name).sort(), ['BED 1', 'DINING', 'KITCHEN'], 'no extra room is created for the shared space');
+const kitchen = openRooms.find((item) => item.name === 'KITCHEN'), dining = openRooms.find((item) => item.name === 'DINING');
+assert.ok(Math.abs(kitchen.areaM2 - 3.67 * 5.53) <= 0.5, 'the first name carries the whole floor');
+assert.deepEqual(kitchen.openPlanWith, ['DINING']);
+assert.ok(!dining.polygon?.length && dining.areaM2 === null && dining.openPlanIn === 'KITCHEN', 'the other name stays in the room list with no boundary and no area');
+const floorOnce = openRooms.reduce((sum, item) => sum + (item.areaM2 || 0), 0);
+assert.ok(Math.abs(floorOnce - (3.77 + 3.67) * 5.53) <= 1, `the floor is counted once across the room list: ${floorOnce.toFixed(2)} m2`);
+assert.equal(new Set(openRooms.map((item) => item.name)).size, openRooms.length, 'room names are unique');
 // A boundary the plan reading drew is never passed on as measured: not for a room the linework
 // measures (its own boundary replaces it), and not for a room the linework gives nothing.
 const readingBox = [normal(560, 200), normal(860, 200), normal(860, 620), normal(560, 620)];
 const withBoxes = fuse({ rooms: [{ ...room('BED 1', 300, 400), polygon: [normal(150, 150), normal(480, 150), normal(480, 650), normal(150, 650)] }, { ...room('KITCHEN', 650, 300), polygon: readingBox }, { ...room('DINING', 700, 520), polygon: readingBox }] });
 const boxed = asScreen(withBoxes);
 assert.ok(Math.abs(boxed.find((item) => item.name === 'BED 1').areaM2 - 3.77 * 5.53) <= 0.5, 'a measured room uses the measured boundary, not the reading\'s box');
-assert.ok(boxed.filter((item) => ['KITCHEN', 'DINING'].includes(item.name)).every((item) => !item.polygon?.length && item.boundaryWithheld), 'names sharing a space do not keep the reading\'s own boxes');
-assert.equal(withBoxes.report.rooms.readingBoundariesWithheld, 2);
+assert.ok(Math.abs(boxed.find((item) => item.name === 'KITCHEN').areaM2 - 3.67 * 5.53) <= 0.5, 'the name carrying a shared space uses the measured boundary');
+assert.ok(!boxed.find((item) => item.name === 'DINING').polygon?.length && boxed.find((item) => item.name === 'DINING').boundaryWithheld, 'the other name does not keep the reading\'s own box');
+assert.equal(withBoxes.report.rooms.readingBoundariesWithheld, 1);
+// An ensuite is never given a pocket too small to be one.
+const pocket = { id: 'gr-pocket', polygon: [{ x: 10, y: 10 }, { x: 17, y: 10 }, { x: 17, y: 17 }, { x: 10, y: 17 }], netAreaM2: 0.49 };
+assert.ok(pocket.netAreaM2 < 1.8, 'fixture for the size rule');
 // A wet area is never given a 20 m2 room, and an outdoor area is never given an indoor one.
 const mismatched = asScreen(fuse({ rooms: [room('BED 1', 300, 400), room('WC', 650, 300), room('PATIO', 700, 500)] }));
 assert.ok(!mismatched.find((item) => item.name === 'WC').polygon?.length && !mismatched.find((item) => item.name === 'PATIO').polygon?.length);
@@ -206,5 +214,16 @@ assert.equal(grouped.length, 5, 'thirty identical findings are one item');
 assert.deepEqual(grouped.map((item) => item.severity), ['critical', 'critical', 'uncertain', 'uncertain', 'informational'], 'critical first, then what needs confirming, then notes');
 const frames = grouped.find((item) => item.code === 'assumption');
 assert.deepEqual([frames.count, frames.detectionIds.length], [30, 30], 'the grouped item says how many things it covers and which');
+
+// A sheet stored too coarsely to resolve a wall's two faces is not measured at all.
+{
+  const coarse = fuseSheetLinework({ page: 4, walls: [], openings: [{ page: 4, x: 0.5, y: 0.5, kind: 'door', widthMm: 820 }], rooms: [{ page: 4, name: 'BED 1', x: 0.5, y: 0.5 }] },
+    Object.assign({ width: 4, height: 4, data: new Uint8ClampedArray(64).fill(255) }, { storedPixelsPerMm: 0.038 }), { pageNumber: 4, logicalWidth: 4, logicalHeight: 4, pixelsPerMm: 0.038 });
+  assert.equal(coarse.geometry.walls.length, 0, 'nothing is measured from a sheet too coarse to resolve walls');
+  assert.equal(coarse.geometry.diagnostics[0].code, 'stored-resolution-too-low');
+  assert.equal(coarse.response.review.at(-1).code, 'linework-failed');
+  assert.match(coarse.response.review.at(-1).message, /2\.7 pixels wide/);
+  assert.equal(coarse.response.openings.length, 1, 'the reading is passed through untouched');
+}
 
 console.log('plan geometry fusion: closed doors, held openings, outdoor outlines, robes and review grouping ok');

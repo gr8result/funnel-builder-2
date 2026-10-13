@@ -89,3 +89,22 @@ assert.ok(resolved.pixelsPerMm > 0, `differently scaled sheets that are each cal
 assert.ok(resolved.review.some((message) => /different scales/i.test(typeof message === 'string' ? message : message.message)), 'and the estimator is told');
 
 console.log('takeoff sheet calibration: per-sheet scale for walls, areas, rooms and AI import ok');
+
+// --- A module handed the saved objects and one pixelsPerMm, without the calibration record --------
+// (Estimate Builder and the builders libraries call the schedule builders this way.) Saved objects
+// carry their own sheet's scale, so a differently scaled sheet is still measured correctly.
+const { stampSheetScales } = await import('../components/construction-estimation/ai-plan-takeoff/sheetScale.js');
+const stamped = (items, workingScale) => stampSheetScales(items, workingScale, calibrations);
+assert.deepEqual(stamped(drawn.map((item) => item.floorplan), 0.05).map((item) => item.sheetPixelsPerMm), [0.1, undefined, 0.1], 'a saved object on a sheet at another scale carries that sheet\'s scale');
+assert.deepEqual(stamped(stamped(drawn.map((item) => item.floorplan), 0.05), 0.1).map((item) => item.sheetPixelsPerMm), [undefined, 0.05, undefined], 'and the mark follows the scale the takeoff is saved with');
+for (const workingScale of [0.1, 0.05]) {
+  const savedFloorplans = stamped(drawn.map((item) => item.floorplan), workingScale), savedWalls = stamped(drawn.map((item) => item.wall), workingScale), savedAreas = stamped(drawn.map((item) => item.tiles), workingScale);
+  // No sheetCalibrations and no scheduleState: only the objects and whichever scale the takeoff was saved with.
+  const downstream = createTakeoffSchedule({ projectInfo: {}, planFilename: 'plans.pdf', totalPages: 3, currentPage: 1, pixelsPerMm: workingScale, completedFloorplans: savedFloorplans, completedWallRuns: savedWalls, completedAreas: savedAreas, sheetLevels });
+  for (const page of [1, 2, 3]) close(areaOn(downstream, page), 80, `sheet ${page} floor area measured downstream at working scale ${workingScale}`, 1e-6);
+  for (const page of [1, 2, 3]) close(tilesOn(downstream, page), 20, `sheet ${page} tiled area measured downstream at working scale ${workingScale}`, 1e-6);
+}
+const untouched = drawn.map((item) => item.wall);
+assert.equal(stampSheetScales(untouched, 0.1, {}), untouched, 'a takeoff with no sheet calibrations is saved exactly as before');
+assert.equal(stampSheetScales(untouched, 0.1, { 0: { pixelsPerMm: 0.1 } }), untouched, 'and so is one whose sheets share a single scale');
+console.log('takeoff sheet calibration: saved objects carry their sheet scale for downstream modules ok');

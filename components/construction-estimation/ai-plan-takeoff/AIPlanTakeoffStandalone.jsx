@@ -1,5 +1,5 @@
 import { RoomBoundaryLayer, RoomBoundaryPanel } from './RoomBoundaries.jsx';
-import { rescaleRunLengths, sameSheetScale, sheetPixelsPerMm } from './sheetScale.js';
+import { rescaleRunLengths, sameSheetScale, sheetPixelsPerMm, stampSheetScales } from './sheetScale.js';
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useAiTakeoffBridge } from './ai-integration/useAiTakeoffBridge.js';
 import { AiTakeoffDevelopmentAction } from './ai-integration/AiTakeoffDevelopmentAction.jsx';
@@ -792,6 +792,9 @@ export default function AIPlanTakeoffStandalone({
 
   // Save / Load Job functionality
   const buildJobData = (name) => {
+    // Each object is saved with the scale of its own sheet, so a module handed these objects and one
+    // pixelsPerMm still measures a differently scaled sheet correctly (sheetScale.js).
+    const atSheetScale = (items) => stampSheetScales(items, pixelsPerMm, aiTakeoffAnalysis.sheetCalibrations);
     const jobData = createJobData({
       name,
       currentPage,
@@ -799,13 +802,13 @@ export default function AIPlanTakeoffStandalone({
       rotation,
       pixelsPerMm,
       planPages,
-      completedWallRuns,
-      placedOpenings,
-      completedAreas,
-      completedFloorplans,
-      completedMeasurements,
-      completedEaves,
-      completedPillars,
+      completedWallRuns: atSheetScale(completedWallRuns),
+      placedOpenings: atSheetScale(placedOpenings),
+      completedAreas: atSheetScale(completedAreas),
+      completedFloorplans: atSheetScale(completedFloorplans),
+      completedMeasurements: atSheetScale(completedMeasurements),
+      completedEaves: atSheetScale(completedEaves),
+      completedPillars: atSheetScale(completedPillars),
       sheetLevels,
       projectInfo,
       planFilename,
@@ -1677,6 +1680,9 @@ export default function AIPlanTakeoffStandalone({
     }
     manualSaveInFlightRef.current = true;
     try {
+      // An autosave already writing holds an older copy of the takeoff. Let it land first, so the
+      // two writes cannot overlap and this one, the newer, is always the last.
+      for (let waited = 0; autosaveInFlightRef.current && waited < 60000; waited += 50) await new Promise((resolve) => window.setTimeout(resolve, 50));
       const result = await Promise.resolve(onSaveToPlatform(jobData));
       const verifiedSave = requireVerifiedSave(result, jobData);
       if (!verifiedSave.ok) {

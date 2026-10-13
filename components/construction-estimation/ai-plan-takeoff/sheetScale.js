@@ -52,14 +52,43 @@ function scaleItem(item, factor) {
  * Only for measuring: the result is never drawn or saved.
  */
 export function toCommonScale(items = [], pixelsPerMm, sheetCalibrations = {}) {
-  if (!Array.isArray(items) || !positive(pixelsPerMm) || !sheetCalibrations || !Object.keys(sheetCalibrations).length) return items;
+  if (!Array.isArray(items) || !positive(pixelsPerMm)) return items;
+  const recorded = Boolean(sheetCalibrations && Object.keys(sheetCalibrations).length);
+  // Without the takeoff's calibration record, an item still knows its own sheet's scale (stampSheetScales).
+  if (!recorded && !items.some((item) => positive(item?.sheetPixelsPerMm))) return items;
   let changed = false;
   const next = items.map((item) => {
     const page = Number(item?.page || item?.pageId || 1);
-    const scale = sheetPixelsPerMm(page, pixelsPerMm, sheetCalibrations);
+    const scale = recorded ? sheetPixelsPerMm(page, pixelsPerMm, sheetCalibrations) : positive(item?.sheetPixelsPerMm);
     if (!scale || sameSheetScale(scale, pixelsPerMm)) return item;
     changed = true;
     return { ...scaleItem(item, pixelsPerMm / scale), measuredAtSheetScale: scale };
+  });
+  return changed ? next : items;
+}
+
+/**
+ * Each item on a sheet whose scale is not the one the takeoff is saved with (`pixelsPerMm`) marked
+ * with its own sheet's scale, for whoever measures it without the takeoff's calibration record: a
+ * module that is handed walls and openings and one `pixelsPerMm`. Done as the takeoff is saved.
+ * Items at the saved scale carry no mark, so a takeoff whose sheets share one scale is saved
+ * exactly as before.
+ */
+export function stampSheetScales(items = [], pixelsPerMm, sheetCalibrations = {}) {
+  if (!Array.isArray(items) || !positive(pixelsPerMm) || !sheetCalibrations || !Object.keys(sheetCalibrations).length) return items;
+  let changed = false;
+  const next = items.map((item) => {
+    const scale = sheetPixelsPerMm(Number(item?.page || item?.pageId || 1), pixelsPerMm, sheetCalibrations);
+    const marked = positive(item?.sheetPixelsPerMm);
+    if (!scale || sameSheetScale(scale, pixelsPerMm)) {
+      if (!marked) return item;
+      changed = true;
+      const { sheetPixelsPerMm: stale, ...rest } = item;
+      return rest;
+    }
+    if (marked && sameSheetScale(item.sheetPixelsPerMm, scale)) return item;
+    changed = true;
+    return { ...item, sheetPixelsPerMm: scale };
   });
   return changed ? next : items;
 }
