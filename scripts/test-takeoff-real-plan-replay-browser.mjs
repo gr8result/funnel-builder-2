@@ -373,6 +373,41 @@ try {
   await button('Finish editing');
   report.cases.correction = { room: target.name, before: target.areaM2, after: edited.areaM2 };
 
+  // 4b. The laundry. Its tub bench is drawn like a short wall, so the detected boundary is not the
+  // room (independent reference: 5.08 m2). The estimator sees the boundary over the drawing, throws
+  // it away, clicks the room's four corners and has the right area at once.
+  const laundryCorners = [{ x: 317.0, y: 325.8 }, { x: 353.1, y: 325.8 }, { x: 353.1, y: 382.2 }, { x: 317.0, y: 382.2 }];
+  await goToPage(2);
+  await page.evaluate(() => { const size = harness.viewSize(); const zoom = 5; harness.setView({ zoom, pan: { x: size.width / 2 - 335 * zoom, y: size.height / 2 - 354 * zoom } }); });
+  await settle(); await new Promise((resolve) => setTimeout(resolve, 600));
+  const laundryDetected = (await rooms()).find((room) => room.page === 2 && /^(ldry|laundry|l'dry)$/i.test(room.name));
+  assert.ok(laundryDetected, 'the laundry is in the room list');
+  assert.ok((await snapshot()).roomNodes.some((node) => node.name === `room-boundary:${laundryDetected.id}`), 'its detected boundary is drawn over the plan');
+  await page.screenshot({ path: path.join(out, '3-laundry-detected.png') });
+  const laundryButton = (label) => page.evaluate(({ id, label }) => { const row = document.querySelector(`[data-room-id="${id}"]`); const element = row && [...row.querySelectorAll('button')].find((item) => item.textContent.trim() === label); if (!element) return false; element.click(); return true; }, { id: laundryDetected.id, label });
+  // Selecting the room in the list opens its controls.
+  await page.evaluate((id) => { const box = document.querySelector('[data-room-id="' + id + '"] input[type="checkbox"]'); if (box && !box.checked) box.click(); }, laundryDetected.id);
+  await settle();
+  assert.ok(await laundryButton('Redraw boundary'), 'the laundry has a Redraw boundary button');
+  await settle();
+  assert.equal((await rooms()).find((room) => room.id === laundryDetected.id).areaM2, null, 'the wrong boundary is gone and nothing is measured from it');
+  for (const corner of laundryCorners) await clickPlan(corner);
+  const last = await page.evaluate((point) => harness.point(point), laundryCorners.at(-1));
+  // A double-click on the last corner closes the boundary.
+  await page.mouse.click(last.x, last.y); await page.mouse.click(last.x, last.y);
+  await settle(); await new Promise((resolve) => setTimeout(resolve, 600));
+  const laundryCorrected = (await rooms()).find((room) => room.id === laundryDetected.id);
+  assert.ok(laundryCorrected?.polygon?.length === 4, 'the redrawn boundary is the laundry\'s');
+  assert.ok(Math.abs(laundryCorrected.areaM2 - 5.08) / 5.08 <= 0.03, `the corrected laundry measures ${laundryCorrected.areaM2} m2 against the 5.08 m2 reference, straight away`);
+  assert.ok(await laundryButton('Confirm boundary'));
+  await settle();
+  if (await laundryButton('Finish editing')) await settle();
+  const laundryKept = (list, when) => { const room = list.find((item) => item.id === laundryDetected.id); assert.ok(room && room.name === laundryDetected.name && room.polygon?.length === 4 && Math.abs(room.areaM2 - laundryCorrected.areaM2) < 0.005, `the corrected laundry is kept ${when}: ${room?.areaM2}`); };
+  assert.equal((await rooms()).filter((room) => /^(ldry|laundry|l'dry)$/i.test(room.name) && room.page === 2).length, 1, 'there is still one laundry');
+  await page.screenshot({ path: path.join(out, '4-laundry-corrected.png') });
+  report.cases.laundry = { referenceM2: 5.08, detectedM2: laundryDetected.areaM2, correctedM2: laundryCorrected.areaM2 };
+  await goToPage(3);
+
   // 5. Save and reopen: geometry, the corrected room and its finish come back unchanged.
   const beforeSave = await snapshot();
   await save();
@@ -385,6 +420,7 @@ try {
   const reopenedRoom = (reopened.aiAnalysis?.rooms || []).find((room) => room.id === target.id);
   assert.ok(reopenedRoom && reopenedRoom.areaM2 === edited.areaM2 && reopenedRoom.floorFinish === 'Carpets' && reopenedRoom.boundaryEdited, 'the corrected room, its area and finish survive save and reopen');
   assert.equal((reopened.aiAnalysis?.rooms || []).length, (beforeSave.aiAnalysis?.rooms || []).length, 'reopened rooms');
+  laundryKept(reopened.aiAnalysis?.rooms || [], 'after save and reopen');
 
   // 6. Run the analysis again on the reopened job: nothing is duplicated and the correction is kept.
   const second = await run('secondRun');
@@ -398,6 +434,7 @@ try {
   assert.equal(againRooms.length, (beforeSave.aiAnalysis?.rooms || []).length, 'repeated analysis adds no rooms');
   assert.equal(new Set(againRooms.map((room) => room.id)).size, againRooms.length, 'room identities are unique');
   assert.equal(againRooms.find((room) => room.id === target.id)?.areaM2, edited.areaM2, 'the hand-corrected boundary is not replaced');
+  laundryKept(againRooms, 'when AI Takeoff is run again');
 
   // 7. Re-measure from linework (no request): same rooms, correction kept.
   const requestsBefore = apiRequests.length;
@@ -408,6 +445,7 @@ try {
   assert.equal(apiRequests.length, requestsBefore, 're-measuring makes no provider request');
   assert.equal(remeasured.length, againRooms.length, 're-measuring adds no rooms');
   assert.equal(remeasured.find((room) => room.id === target.id)?.areaM2, edited.areaM2, 're-measuring keeps the corrected room');
+  laundryKept(remeasured, 'when rooms are re-measured from the linework');
 
   // 8. Levels and per-sheet calibration: the upper sheet becomes the Third Level with its own scale.
   await goToPage(3);

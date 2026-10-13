@@ -31,7 +31,6 @@ export const DEFAULT_GEOMETRY_OPTIONS = {
   evidenceReachMm: 700,       // an opening located this close to a gap confirms it
   swingDoorMinMm: 500, swingDoorMaxMm: 1450, // a hinged door leaf is this wide (an entry door with its frame at the top end)
   closedDoorMinMm: 600,       // a door drawn closed is found by its swing alone, so short arcs (basins, pans) are left out
-  sheetFrameShare: 0.9,       // paired linework spanning this much of the sheet is its frame
   wideDoorLineShare: 0.85,    // a gap wider than a doorway is a door where one unbroken line is drawn along this much of it
   slidingTracks: true, trackPanelMm: 400, trackMinMm: 900, trackMaxMm: 3800, trackMaxThicknessMm: 160, trackDoubledShare: 0.5, trackEndReachMm: 180, trackRecessMinMm: 400, trackRecessMaxMm: 900,
   cavitySliders: true, cavityPocketMinMm: 150, cavityLeafMinMm: 60,
@@ -123,26 +122,6 @@ function wallBands(ink, faceLength, strictLen, relaxedLen, width, height, vertic
       if (l1 < relaxedLen || l2 < relaxedLen) continue;
       bands.push({ r, a1, b2, distance, l1, l2, level: l1 >= strictLen && l2 >= strictLen ? 2 : 1 });
     }
-    // Hatched walls (masonry drawn with hatching between its faces): two long faces a masonry
-    // wall's thickness apart with only short strokes between them. The strokes are the hatch, so
-    // the faces are paired across them. Lettering never sits between two such faces: a ruled table
-    // row is far taller than a wall is thick.
-    for (let r = 0; r + 5 < runs.length; r += 2) {
-      const a1 = runs[r], b1 = runs[r + 1];
-      if (b1 - a1 >= maxLine || faceLength[base + a1 * step] < strictLen) continue;
-      for (let far = r + 4; far + 1 < runs.length && far <= r + 10; far += 2) {
-        const a2 = runs[far], b2 = runs[far + 1];
-        const distance = (a2 + b2) / 2 - (a1 + b1) / 2;
-        if (distance > tMax) break;
-        const between = runs[far - 2];
-        // Everything between has to be a short stroke; a long line in between is a face of its own.
-        if (faceLength[base + between * step] >= relaxedLen) break;
-        if (b2 - a2 >= maxLine || faceLength[base + a2 * step] < strictLen || distance < tMin * 2.2) continue;
-        if (!bands.some((band) => band.a1 <= b2 && band.b2 >= a1)) bands.push({ r: -10 - r, a1, b2, distance, l1: faceLength[base + a1 * step], l2: faceLength[base + a2 * step], level: 2 });
-        break;
-      }
-    }
-    bands.sort((p, q) => p.a1 - q.a1);
     // Faces shared by a run of equally spaced bands are stair treads or shelving, not walls;
     // of two bands sharing a face that together exceed a wall, the thinner one is the wall.
     // A wall with a window frame, joinery or a second leaf drawn in or against it also chains three
@@ -793,13 +772,7 @@ export function detectPlanGeometry(raster, context, overrides = {}) {
   // one drawing; the building is the drawing with the most established wall in it, so pairs of
   // lines elsewhere on the sheet (title block, legend, details) are left out.
   const gap = (a, b) => Math.max(0, a.minX - b.maxX, b.minX - a.maxX, a.minY - b.maxY, b.minY - a.maxY);
-  // The sheet's own frame and title block are ruled with double lines too, and on a small-scale
-  // sheet they are bigger than the building. Paired linework running the length or breadth of the
-  // sheet is its frame, not a wall, and is left out before the building is looked for.
-  const frame = new Uint8Array(raw.components.length);
-  for (const item of raw.components) if (item && (item.maxX - item.minX >= width * options.sheetFrameShare || item.maxY - item.minY >= height * options.sheetFrameShare)) frame[item.id] = 1;
-  if (frame.some(Boolean)) diagnostics.push({ code: 'sheet-frame', message: 'Double lines running the length of the sheet (its frame or title block) were not taken as walls.' });
-  const pieces = raw.components.filter((item) => item && item.area >= 12 && !frame[item.id]);
+  const pieces = raw.components.filter((item) => item && item.area >= 12);
   const established = pieces.filter((item) => strictCount[item.id] > 0);
   const parent = new Map(established.map((item) => [item.id, item.id]));
   const find = (id) => { while (parent.get(id) !== id) { parent.set(id, parent.get(parent.get(id))); id = parent.get(id); } return id; };

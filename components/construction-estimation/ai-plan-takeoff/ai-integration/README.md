@@ -282,3 +282,25 @@ are not measured.
    they should not be priced until confirmed in the takeoff.
 
 Pinned by `scripts/test-takeoff-output-contract.mjs`.
+
+## Remaining-defects phase (2026-10-14)
+
+- **Joinery does not enclose a room** (`absorbPockets`, fusion `pocketMaxM2` 1.5). Nothing in the
+  linework alone separates a bench end or tub from a short wall return (six local rules were tried
+  and removed: each either did nothing or broke real rooms). The pockets are judged instead: an
+  unnamed space under 1.5 m2 cut off from a named room only by unconfirmed closures (never a wall
+  or a confirmed opening) is part of that room, and the room says so in its review. No wall is
+  deleted. The laundry on New Job 03/09 goes from 2.18 to 3.3-4.3 m2 (reference 5.08); the rest is
+  corrected by the estimator with Redraw boundary, which the browser acceptance test now does.
+- **Sliding robe doors** (`basis: 'track-across-recess'`): two thin staggered panels drawn wall to
+  wall across a recess 400-900 mm deep on one side only. One line (shelf edge, hanging rail) is not
+  a door. The recess becomes its own space, so a robe label is given its own boundary.
+- **Double cavity sliders** (`basis: 'cavity-pocket'`): the wall drawn thinner either side of the
+  opening with a leaf part way out of each pocket and an empty middle. Width is the clear opening
+  between the pockets; fusion emits one door per leaf. A pocket on one side only is not recognised.
+- **Walls at any straight angle** (`angledWallRuns`): direction from a Hough vote on paired lines a
+  wall's thickness apart, then measured in a turned frame. Not within about 6 degrees of
+  horizontal/vertical. Verified on synthetic fixtures only (20, 30, 62, 150 degrees); no real plan
+  with such walls has been tested. Curved walls are not measured.
+- **Removed**: the sheet-border exclusion and the hatched-wall pairing (no measured benefit).
+- All openings added from linework carry `needsClassification` and must not be priced until confirmed.
