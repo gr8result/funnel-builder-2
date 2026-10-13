@@ -37,6 +37,7 @@ export const DEFAULT_GEOMETRY_OPTIONS = {
   closedDoorSwings: true,     // also look for the swing of a door drawn closed in its wall
   swingArcShare: 0.95,        // this much of a door's quarter-circle swing has to be drawn
   isolatedRunMm: 1500,        // shorter paired linework joining no wall is not a wall
+  angledWalls: true, angledFaceMm: 700, // walls at other angles: two parallel lines at least this long, a wall's thickness apart
   diagonalWalls: true, diagonalMinMm: 500, diagonalJoinMm: 250, diagonalSideReachMm: 400, // walls drawn at 45 degrees
   outsideReachMm: 700,        // the outside lies this close to the face of an external wall
   outsideDiscMm: 1500,        // the outside is what a disc this big can reach from the edge of the drawing
@@ -469,6 +470,115 @@ function diagonalWallRuns(ink, width, height, bounds, mirror, { tMin, tMax, stri
   return runs;
 }
 
+// Walls at any other angle. The angle is read from the drawing: linework that is neither
+// horizontal nor vertical is gathered, and a direction counts where two long parallel lines lie a
+// wall's thickness apart along it (a Hough vote on line direction and offset). That part of the
+// sheet is then turned so those lines are horizontal and measured exactly as an orthogonal wall is.
+// Returns the same runs as diagonalWallRuns. Walls within a few degrees of horizontal or vertical
+// are drawn as long level steps and are left to the orthogonal stage.
+function angledWallRuns(ink, lengthH, lengthV, width, height, bounds, { tMin, tMax, strictLen, maxLine, minLen, minFace, skip = [45, 135], maxAngles = 4, maxPoints = 600000 }) {
+  const w = bounds.x1 - bounds.x0 + 1, h = bounds.y1 - bounds.y0 + 1;
+  const level = Math.max(16, Math.round(minFace / 3));
+  const xs = [], ys = [];
+  for (let y = 0; y < h; y += 1) for (let x = 0; x < w; x += 1) {
+    const p = (bounds.y0 + y) * width + bounds.x0 + x;
+    if (ink[p] && lengthH[p] < level && lengthV[p] < level) { xs.push(x); ys.push(y); }
+  }
+  if (xs.length < minFace * 2 || xs.length > maxPoints) return [];
+  const reach = Math.ceil(Math.hypot(w, h)) + 2;
+  const votes = new Int32Array(reach * 2 + 3);
+  const paired = (degrees) => {
+    const normal = (degrees + 90) * Math.PI / 180, c = Math.cos(normal), s = Math.sin(normal);
+    votes.fill(0);
+    for (let i = 0; i < xs.length; i += 1) votes[Math.round(xs[i] * c + ys[i] * s) + reach + 1] += 1;
+    const lines = [];
+    for (let r = 1; r < votes.length - 1; r += 1) {
+      const count = votes[r] + Math.max(votes[r - 1], votes[r + 1]);
+      if (count >= minFace && votes[r] >= votes[r - 1] && votes[r] >= votes[r + 1]) lines.push({ r, count });
+    }
+    let best = 0;
+    for (let i = 0; i < lines.length; i += 1) for (let j = i + 1; j < lines.length && lines[j].r - lines[i].r <= tMax + 2; j += 1) {
+      if (lines[j].r - lines[i].r >= tMin - 1) best = Math.max(best, Math.min(lines[i].count, lines[j].count));
+    }
+    return best;
+  };
+  const found = [];
+  for (let degrees = 6; degrees <= 174; degrees += 0.5) {
+    if (Math.abs(degrees - 90) < 6 || skip.some((angle) => Math.abs(degrees - angle) < 2)) continue;
+    const score = paired(degrees);
+    if (score) found.push({ degrees, score });
+  }
+  found.sort((a, b) => b.score - a.score);
+  const angles = [];
+  for (const item of found) {
+    if (angles.length >= maxAngles) break;
+    if (angles.some((kept) => Math.abs(kept - item.degrees) < 6)) continue;
+    // The exact direction is where the votes are most concentrated: every pixel of a line then falls on one offset.
+    let best = { degrees: item.degrees, sharp: 0 };
+    for (let degrees = item.degrees - 0.6; degrees <= item.degrees + 0.601; degrees += 0.05) {
+      if (!paired(degrees)) continue;
+      let sharp = 0;
+      for (let r = 0; r < votes.length; r += 1) sharp += votes[r] * votes[r];
+      if (sharp > best.sharp) best = { degrees, sharp };
+    }
+    angles.push(best.degrees);
+  }
+  const runs = [];
+  const cx = w / 2, cy = h / 2, side = reach + 1, size = side * 2 + 1;
+  for (const degrees of angles) {
+    const turn = degrees * Math.PI / 180, c = Math.cos(turn), s = Math.sin(turn);
+    // (u, v) in the turned sheet is (x, y) = centre + u * (c, s) + v * (-s, c) in this one.
+    const turned = new Uint8Array(size * size);
+    for (let v = -side; v <= side; v += 1) for (let u = -side; u <= side; u += 1) {
+      const x = Math.round(cx + u * c - v * s), y = Math.round(cy + u * s + v * c);
+      if (x >= 0 && y >= 0 && x < w && y < h && ink[(bounds.y0 + y) * width + bounds.x0 + x]) turned[(v + side) * size + u + side] = 1;
+    }
+    // Turning a thin line drops single pixels along it.
+    for (let p = 1; p < turned.length - 1; p += 1) if (!turned[p] && (turned[p - 1] & 1) && (turned[p + 1] & 1)) turned[p] = 2;
+    // A turned line wanders a pixel either side of level. Thickened by a pixel each way it has an
+    // unbroken level run through it, which is what a face is measured by.
+    const source = turned.slice();
+    for (let p = size; p < turned.length - size; p += 1) if (!source[p] && (source[p - size] || source[p + size])) turned[p] = 2;
+    const lengths = runLengths(turned, size, size, false);
+    // A face is as long as the longest level run anywhere through its thickness, not only along its edge.
+    for (let u = 0; u < size; u += 1) for (let v = 0; v < size; v += 1) {
+      if (!turned[v * size + u]) continue;
+      let end = v, longest = 0;
+      while (end < size && turned[end * size + u]) { if (lengths[end * size + u] > longest) longest = lengths[end * size + u]; end += 1; }
+      for (let row = v; row < end; row += 1) lengths[row * size + u] = longest;
+      v = end;
+    }
+    const window = { x0: size, y0: size, x1: -1, y1: -1 };
+    for (let v = 0; v < size; v += 1) for (let u = 0; u < size; u += 1) if (lengths[v * size + u] >= strictLen) {
+      if (u < window.x0) window.x0 = u; if (u > window.x1) window.x1 = u; if (v < window.y0) window.y0 = v; if (v > window.y1) window.y1 = v;
+    }
+    if (window.x1 < 0) continue;
+    const pad = Math.ceil(tMax) + 4;
+    window.x0 = Math.max(0, window.x0 - pad); window.y0 = Math.max(0, window.y0 - pad); window.x1 = Math.min(size - 1, window.x1 + pad); window.y1 = Math.min(size - 1, window.y1 + pad);
+    const band = wallBands(turned, lengths, strictLen, strictLen, size, size, false, tMin, tMax + 2, maxLine + 4, window);
+    const { labels, components } = labelComponents((p) => (band[p] & 3) === 2, size, size, window);
+    const back = (u, v) => ({ x: bounds.x0 + Math.round(cx + (u - side) * c - (v - side) * s), y: bounds.y0 + Math.round(cy + (u - side) * s + (v - side) * c) });
+    for (const item of components) {
+      if (!item) continue;
+      const lengthPx = item.maxX - item.minX + 1, across = item.maxY - item.minY + 1;
+      if (lengthPx < minLen || across > tMax * 1.3) continue;
+      const thicknessPx = Math.max(tMin, item.area / lengthPx - 2);   // less the pixel each face was thickened by
+      if (lengthPx < thicknessPx * 2.5) continue;
+      const seen = new Set(), pixels = [];
+      for (let v = item.minY; v <= item.maxY; v += 1) for (let u = item.minX; u <= item.maxX; u += 1) {
+        if (labels[v * size + u] !== item.id) continue;
+        const point = back(u, v);
+        if (point.x < 0 || point.y < 0 || point.x >= width || point.y >= height) continue;
+        const key = point.y * width + point.x;
+        if (!seen.has(key)) { seen.add(key); pixels.push(point); }
+      }
+      const mid = (item.minY + item.maxY) / 2;
+      runs.push({ pixels, a: back(item.minX, Math.round(mid)), b: back(item.maxX, Math.round(mid)), lengthPx, thicknessPx, degrees });
+    }
+  }
+  return runs;
+}
+
 // A door drawn closed lies in its wall's line, so there is no gap to find: only its swing, a quarter
 // circle hinged on the wall's face with the leaf along the wall. Looks along both faces of one wall
 // run. Returns [{ along, across, direction, side, radius, share }] in raster pixels.
@@ -837,14 +947,23 @@ export function detectPlanGeometry(raster, context, overrides = {}) {
       }
       return false;
     };
-    for (const mirror of [false, true]) {
-      for (const run of diagonalWallRuns(ink, width, height, bounds, mirror, { tMin, tMax, strictLen, maxLine: options.maxLinePx, minLen: px(options.diagonalMinMm) })) {
+    const slanted = [];
+    for (const mirror of [false, true]) slanted.push(...diagonalWallRuns(ink, width, height, bounds, mirror, { tMin, tMax, strictLen, maxLine: options.maxLinePx, minLen: px(options.diagonalMinMm) }));
+    const fortyFive = slanted.length;
+    if (options.angledWalls) slanted.push(...angledWallRuns(ink, lengthH, lengthV, width, height, bounds, { tMin, tMax, strictLen, maxLine: options.maxLinePx, minLen: px(options.diagonalMinMm), minFace: Math.round(px(options.angledFaceMm)) }));
+    {
+      // One wall is measured once: a run lying along one already taken (the same two lines read at a
+      // slightly different angle) is not a second wall.
+      const taken = new Uint8Array(width * height);
+      for (const [index, run] of slanted.entries()) {
+        if (index >= fortyFive) run.angled = true;
         // Mostly new fabric: a strip lying along wall already found is that wall's own hatching.
-        const fresh = run.pixels.filter((point) => !wall[point.y * width + point.x]).length;
+        const fresh = run.pixels.filter((point) => !wall[point.y * width + point.x] && !taken[point.y * width + point.x]).length;
         if (fresh < run.pixels.length * 0.6) continue;
         const joined = (meetsWall(run.a) ? 1 : 0) + (meetsWall(run.b) ? 1 : 0);
         if (joined === 0) { diagnostics.push({ code: 'isolated-linework', lengthMm: Math.round(run.lengthPx / k), message: 'Paired diagonal linework that joins no wall was not taken as a wall.', at: toLogical((run.a.x + run.b.x) / 2, (run.a.y + run.b.y) / 2) }); continue; }
         diagonalRuns.push({ ...run, joined });
+        for (const point of run.pixels) taken[point.y * width + point.x] = 1;
       }
     }
     for (const run of diagonalRuns) for (const point of run.pixels) {
@@ -852,8 +971,11 @@ export function detectPlanGeometry(raster, context, overrides = {}) {
       wall[p] = 1; diagonal[p] = 1;
       // A diagonal chain of pixels is sealed against four-way filling.
       if (point.x + 1 < width) { wall[p + 1] = 1; diagonal[p + 1] = 1; }
+      if (run.angled && point.y + 1 < height) { wall[p + width] = 1; diagonal[p + width] = 1; }
     }
-    if (diagonalRuns.length) diagnostics.push({ code: 'diagonal-walls', message: `${diagonalRuns.length} wall${diagonalRuns.length === 1 ? '' : 's'} drawn at 45 degrees ${diagonalRuns.length === 1 ? 'was' : 'were'} measured.` });
+    const atAngle = diagonalRuns.filter((run) => run.angled).length;
+    if (diagonalRuns.length - atAngle) diagnostics.push({ code: 'diagonal-walls', message: `${diagonalRuns.length - atAngle} wall${diagonalRuns.length - atAngle === 1 ? '' : 's'} drawn at 45 degrees ${diagonalRuns.length - atAngle === 1 ? 'was' : 'were'} measured.` });
+    if (atAngle) diagnostics.push({ code: 'angled-walls', angles: [...new Set(diagonalRuns.filter((run) => run.angled).map((run) => +run.degrees.toFixed(1)))], message: `${atAngle} wall${atAngle === 1 ? '' : 's'} drawn at an angle ${atAngle === 1 ? 'was' : 'were'} measured.` });
   }
 
   const bridge = new Uint8Array(width * height);

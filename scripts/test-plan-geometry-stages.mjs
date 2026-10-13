@@ -123,4 +123,39 @@ assert.ok(dashedOver && !dashedOver.confirmed && dashedOver.basis === 'aligned-w
 const openGap = detectPlanGeometry(wideGap(() => {}), context).openings.find((opening) => opening.kind === 'wall-gap' && near(opening, 505, 370, 40));
 assert.ok(openGap && !openGap.confirmed, 'an opening with nothing drawn across it is not a door');
 
+// --- Walls at angles other than 0, 45 and 90 degrees -----------------------------------------------
+// A 120 mm wall leaves the top wall and runs to a side wall at a stated angle, cutting a triangle
+// off the room. Its length is the run between the two walls and the triangle's area follows from
+// the angle, so both are checked against the trigonometry, not against a traced answer.
+function slantedWall(degrees, startX) {
+  const turn = degrees * Math.PI / 180, dx = Math.cos(turn), dy = Math.sin(turn);
+  const run = degrees < 90 ? (876 - startX) / dx : (startX - 125) / -dx;       // pixels from the top wall's face to the side wall's
+  const raster = drawing(({ ink }) => {
+    for (const offset of [0, 12]) for (let along = -40; along <= run + 40; along += 0.5) {
+      const side = dx >= 0 ? offset : -offset;                              // the second face lies on the room side
+      const x = startX + dx * along - dy * side, y = 125 + dy * along + dx * side;
+      if (y < 125 || x > 876 || x < 125) continue;
+      for (const [ox, oy] of [[0, 0], [1, 0], [0, 1]]) ink(Math.round(x) + ox, Math.round(y) + oy);
+    }
+  });
+  return { raster, lengthMm: run * 10, cornerM2: 0.5 * (run * Math.abs(dx)) * (run * dy) / 1e4 };
+}
+for (const [degrees, startX] of [[30, 600], [150, 400], [62, 760], [20, 450]]) {
+  const fixture = slantedWall(degrees, startX);
+  const result = detectPlanGeometry(fixture.raster, context);
+  const slanted = result.walls.filter((wall) => wall.axis === 'd');
+  assert.equal(slanted.length, 1, `${degrees} degrees: one angled wall is measured (${slanted.length})`);
+  const measured = result.diagnostics.find((item) => item.code === 'angled-walls');
+  assert.ok(measured && Math.abs(measured.angles[0] - degrees) <= 0.6, `${degrees} degrees: the angle is read from the drawing (${measured?.angles})`);
+  assert.ok(Math.abs(slanted[0].lengthMm - fixture.lengthMm) <= 300, `${degrees} degrees: length ${Math.round(slanted[0].lengthMm)} mm against ${Math.round(fixture.lengthMm)} mm`);
+  assert.ok(Math.abs(slanted[0].thicknessMm - 120) <= 40, `${degrees} degrees: thickness ${Math.round(slanted[0].thicknessMm)} mm`);
+  const enclosed = result.rooms.filter((room) => room.verified).sort((a, b) => a.netAreaM2 - b.netAreaM2);
+  assert.equal(enclosed.length, 2, `${degrees} degrees: the wall divides the room`);
+  // The corner is the triangle less the half of the wall's thickness that lies in it.
+  assert.ok(enclosed[0].netAreaM2 <= fixture.cornerM2 + 0.05 && enclosed[0].netAreaM2 >= fixture.cornerM2 * 0.8 - 0.1, `${degrees} degrees: corner ${enclosed[0].netAreaM2.toFixed(2)} m2 against a ${fixture.cornerM2.toFixed(2)} m2 triangle`);
+}
+// The same two lines standing free in the room join no wall and are not one.
+const loose = drawing(({ ink }) => { for (const offset of [0, 12]) for (let along = 0; along <= 200; along += 0.5) { const x = 400 + 0.866 * along - 0.5 * offset, y = 300 + 0.5 * along + 0.866 * offset; ink(Math.round(x), Math.round(y)); ink(Math.round(x) + 1, Math.round(y)); } });
+assert.equal(detectPlanGeometry(loose, context).walls.filter((wall) => wall.axis === 'd').length, 0, 'angled linework joining no wall is not a wall');
+
 console.log('plan geometry stages: returns, windows, door lines and divided spaces ok');
