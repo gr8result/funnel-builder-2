@@ -15,6 +15,7 @@ import { createRequire } from 'node:module';
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { extractPdfLinework } from '../components/construction-estimation/ai-plan-takeoff/geometry/pdfLinework.js';
 import { fuseSheetLinework } from '../components/construction-estimation/ai-plan-takeoff/geometry/lineworkFusion.js';
+import { detectVectorWalls } from '../components/construction-estimation/ai-plan-takeoff/geometry/vectorWalls.js';
 import { levelFromLinework, openingKindOf } from '../components/construction-estimation/ai-plan-takeoff/geometry/planModelAdapter.js';
 import { computeRooms, describeLevel, openingPosition, wallCategories, wallPoints } from '../components/construction-estimation/ai-plan-takeoff/geometry/planModel.js';
 import { compareJunctions, compareOpenings, compareRooms, compareWalls, referenceJunctions } from '../components/construction-estimation/ai-plan-takeoff/geometry/planAccuracy.js';
@@ -46,11 +47,12 @@ async function readPage(pageSpec) {
   const raster = g.getImageData(0, 0, canvas.width, canvas.height);
   raster.storedPixelsPerMm = k * pageSpec.pixelsPerMm;
   const operatorList = await page.getOperatorList();
-  const linework = extractPdfLinework(operatorList, pdfjs.OPS, logical.transform).filter((s) => Math.hypot(s.x2 - s.x1, s.y2 - s.y1) >= 1)
+  const fullLinework = extractPdfLinework(operatorList, pdfjs.OPS, logical.transform);
+  const linework = fullLinework.filter((s) => Math.hypot(s.x2 - s.x1, s.y2 - s.y1) >= 1)
     .map(({ x1, y1, x2, y2, path: pathId, subpath, curve }) => ({ x1, y1, x2, y2, path: pathId, subpath, ...(curve ? { curve: true } : {}) }));
   const sheet = { pageNumber: pageSpec.page, logicalWidth: logical.width, logicalHeight: logical.height, pixelsPerMm: pageSpec.pixelsPerMm };
   const fused = fuseSheetLinework({ page: pageSpec.page, walls: [], openings: [], rooms: [] }, raster, sheet, { vectorLinework: linework });
-  return { page, logical, fused, linework };
+  return { page, logical, fused, linework, fullLinework, raster };
 }
 
 function engineReading(geometry, ppm) {
@@ -111,32 +113,38 @@ for (const pageSpec of reference.pages) {
     rooms: reference.rooms.filter((item) => item.page === pageSpec.page).map((room) => ({ ...room, polygon: room.polygon.map(mm) })),
   };
   const started = Date.now();
-  const { page, fused } = await readPage(pageSpec);
+  const { page, fused, fullLinework, raster, logical } = await readPage(pageSpec);
   const engineMs = Date.now() - started;
+  const vectorStarted = Date.now();
+  const vector = detectVectorWalls(fullLinework, { pixelsPerMm: ppm, logicalWidth: logical.width, logicalHeight: logical.height, raster });
+  const vectorBuilt = levelFromLinework(vector, { id: pageSpec.level || `page-${pageSpec.page}`, name: pageSpec.level, page: pageSpec.page, pixelsPerMm: ppm }, { bridgeUnconfirmedMaxMm: 6200 });
+  const vectorMs = Date.now() - vectorStarted;
+  fs.writeFileSync(path.join(args.out, `page-${pageSpec.page}-vector-geometry.json`), JSON.stringify({ walls: vector.walls, openings: vector.openings, stats: vector.stats, rejected: vector.rejected }));
   const modelStarted = Date.now();
   const built = levelFromLinework(fused.geometry, { id: pageSpec.level || `page-${pageSpec.page}`, name: pageSpec.level, page: pageSpec.page, pixelsPerMm: ppm }, { bridgeUnconfirmedMaxMm: Number(args['bridge-unconfirmed-mm']) || 0 });
   const modelMs = Date.now() - modelStarted;
-  const readings = { engine: engineReading(fused.geometry, ppm), model: modelReading(built.level) };
-  const scores = { engine: score(referenceMm, readings.engine), model: score(referenceMm, readings.model) };
+  const readings = { engine: engineReading(fused.geometry, ppm), model: modelReading(built.level), vector: modelReading(vectorBuilt.level) };
+  const scores = { engine: score(referenceMm, readings.engine), model: score(referenceMm, readings.model), vector: score(referenceMm, readings.vector) };
   fs.writeFileSync(path.join(args.out, `page-${pageSpec.page}-engine-geometry.json`), JSON.stringify({ engine: fused.geometry.engine, walls: fused.geometry.walls, openings: fused.geometry.openings,
     rooms: fused.geometry.rooms.map(({ id, polygon, areaM2, verified, partOf }) => ({ id, polygon, areaM2, verified, partOf })), junctions: fused.geometry.junctions }));
-  report.pages.push({ page: pageSpec.page, level: pageSpec.level, engineMs, modelMs, engineVersion: fused.geometry.engine, model: { ...describeLevel(built.level), build: built.report }, scores });
+  report.pages.push({ page: pageSpec.page, level: pageSpec.level, engineMs, modelMs, engineVersion: fused.geometry.engine, vectorMs, vectorStats: vector.stats, model: { ...describeLevel(built.level), build: built.report }, vectorModel: { ...describeLevel(vectorBuilt.level), build: vectorBuilt.report }, scores });
 
-  // Walls overlay (model reading).
   const P = (p) => [p.x * ppm * DRAW_SCALE, p.y * ppm * DRAW_SCALE];
+  for (const name of ['engine', 'model', 'vector']) {
   const { canvas, g } = await drawBase(page);
   for (const wall of referenceMm.walls) { g.strokeStyle = 'rgba(22,163,74,0.35)'; g.lineWidth = Math.max(4, wall.thicknessMm * ppm * DRAW_SCALE); g.beginPath(); g.moveTo(...P(wall.a)); g.lineTo(...P(wall.b)); g.stroke(); }
-  for (const wall of readings.model.walls) { g.strokeStyle = wall.category === 'exterior' ? '#1d4ed8' : '#c026d3'; g.lineWidth = 2; g.beginPath(); wall.points.forEach((p, i) => (i ? g.lineTo(...P(p)) : g.moveTo(...P(p)))); g.stroke(); }
-  for (const run of scores.model.walls.missed) { g.strokeStyle = 'rgba(220,38,38,0.85)'; g.lineWidth = 7; g.beginPath(); g.moveTo(...P(run.a)); g.lineTo(...P(run.b)); g.stroke(); }
-  for (const run of scores.model.walls.extra) { g.strokeStyle = 'rgba(234,88,12,0.85)'; g.lineWidth = 7; g.beginPath(); g.moveTo(...P(run.a)); g.lineTo(...P(run.b)); g.stroke(); }
-  for (const junction of scores.model.junctions.missed) { g.strokeStyle = '#dc2626'; g.lineWidth = 3; g.beginPath(); g.arc(...P(junction), 12, 0, Math.PI * 2); g.stroke(); }
+  for (const wall of readings[name].walls) { g.strokeStyle = wall.category === 'exterior' ? '#1d4ed8' : '#c026d3'; g.lineWidth = 2; g.beginPath(); wall.points.forEach((p, i) => (i ? g.lineTo(...P(p)) : g.moveTo(...P(p)))); g.stroke(); }
+  for (const run of scores[name].walls.missed) { g.strokeStyle = 'rgba(220,38,38,0.85)'; g.lineWidth = 7; g.beginPath(); g.moveTo(...P(run.a)); g.lineTo(...P(run.b)); g.stroke(); }
+  for (const run of scores[name].walls.extra) { g.strokeStyle = 'rgba(234,88,12,0.85)'; g.lineWidth = 7; g.beginPath(); g.moveTo(...P(run.a)); g.lineTo(...P(run.b)); g.stroke(); }
+  for (const junction of scores[name].junctions.missed) { g.strokeStyle = '#dc2626'; g.lineWidth = 3; g.beginPath(); g.arc(...P(junction), 12, 0, Math.PI * 2); g.stroke(); }
   for (const item of referenceMm.openings) { const [x, y] = P(item); g.strokeStyle = '#15803d'; g.lineWidth = 3; g.strokeRect(x - 9, y - 9, 18, 18); }
-  for (const item of readings.model.openings) { const [x, y] = P(item); g.strokeStyle = '#2563eb'; g.lineWidth = 3; g.beginPath(); g.moveTo(x - 8, y - 8); g.lineTo(x + 8, y + 8); g.moveTo(x + 8, y - 8); g.lineTo(x - 8, y + 8); g.stroke(); }
-  legend(g, [['reference wall', 'rgba(22,163,74,0.6)'], ['model wall: external / internal', '#1d4ed8'], ['reference wall the model missed', '#dc2626'], ['model wall not in the reference', '#ea580c'], ['opening: reference box, model cross', '#2563eb']]);
-  fs.writeFileSync(path.join(args.out, `page-${pageSpec.page}-walls.png`), canvas.toBuffer('image/png'));
+  for (const item of readings[name].openings) { const [x, y] = P(item); g.strokeStyle = '#2563eb'; g.lineWidth = 3; g.beginPath(); g.moveTo(x - 8, y - 8); g.lineTo(x + 8, y + 8); g.moveTo(x + 8, y - 8); g.lineTo(x - 8, y + 8); g.stroke(); }
+  legend(g, [['reference wall', 'rgba(22,163,74,0.6)'], [`${name} wall: external / internal`, '#1d4ed8'], ['reference wall the model missed', '#dc2626'], ['model wall not in the reference', '#ea580c'], ['opening: reference box, model cross', '#2563eb']]);
+  fs.writeFileSync(path.join(args.out, `page-${pageSpec.page}-walls-${name}.png`), canvas.toBuffer('image/png'));
+  }
 
   // Rooms overlays.
-  for (const name of ['engine', 'model']) {
+  for (const name of ['engine', 'model', 'vector']) {
     const { canvas: roomCanvas, g: rg } = await drawBase(page);
     const rows = scores[name].rooms.rows;
     const iouOf = new Map();
@@ -167,27 +175,31 @@ for (const pageSpec of reference.pages) {
 // Markdown summary.
 const md = [`# Plan accuracy: ${report.plan}`, '', `Reference: ${path.basename(args.reference)}. Generated ${report.generated}. No provider called.`, ''];
 for (const pageReport of report.pages) {
-  md.push(`## Page ${pageReport.page} (${pageReport.level})`, '', '| Measure | Engine today | Plan model |', '|---|---|---|');
-  const e = pageReport.scores.engine, m = pageReport.scores.model;
-  const row = (label, a, b) => md.push(`| ${label} | ${a} | ${b} |`);
-  row('Reference wall length found (recall)', `${pct(e.walls.recall)} of ${num(e.walls.referenceLm)} lm`, `${pct(m.walls.recall)} of ${num(m.walls.referenceLm)} lm`);
-  row('Read wall length that is a reference wall (precision)', `${pct(e.walls.precision)} of ${num(e.walls.detectedLm)} lm`, `${pct(m.walls.precision)} of ${num(m.walls.detectedLm)} lm`);
-  row('Centreline offset, median', `${num(e.walls.centrelineOffsetMedianMm)} mm`, `${num(m.walls.centrelineOffsetMedianMm)} mm`);
-  row('Thickness error, median', `${num(e.walls.thicknessErrorMedianMm)} mm`, `${num(m.walls.thicknessErrorMedianMm)} mm`);
-  row('External/internal agreement (by length)', pct(e.walls.categoryAgreement), pct(m.walls.categoryAgreement));
-  row('Reference junctions found (within 150 mm)', `${e.junctions.found} / ${e.junctions.reference} (${pct(e.junctions.share)})`, `${m.junctions.found} / ${m.junctions.reference} (${pct(m.junctions.share)})`);
-  row('Junction position error, median', `${num(e.junctions.errorMedianMm)} mm`, `${num(m.junctions.errorMedianMm)} mm`);
-  row('Openings found (within 400 mm)', `${e.openings.matched} / ${e.openings.reference} (${pct(e.openings.recall)}), ${e.openings.detected} read`, `${m.openings.matched} / ${m.openings.reference} (${pct(m.openings.recall)}), ${m.openings.detected} read`);
-  row('Opening width error, median', pct(e.openings.widthErrorMedian), pct(m.openings.widthErrorMedian));
-  row('Rooms matched (overlap >= 0.5)', `${e.rooms.matched} / ${e.rooms.reference}`, `${m.rooms.matched} / ${m.rooms.reference}`);
-  row('Room overlap, median', num(e.rooms.iouMedian, 3), num(m.rooms.iouMedian, 3));
-  row('Matched room area error, median', pct(e.rooms.areaErrorMedianAbs), pct(m.rooms.areaErrorMedianAbs));
-  md.push('', '| Room | Reference m² | Engine IoU | Engine area | Model IoU | Model area |', '|---|---|---|---|---|---|');
-  e.rooms.rows.forEach((row, index) => {
-    const mr = m.rooms.rows[index];
-    md.push(`| ${row.name} | ${row.referenceM2.toFixed(2)} | ${row.iou.toFixed(2)} | ${row.detectedM2 === null ? '-' : row.detectedM2.toFixed(2)} | ${mr.iou.toFixed(2)} | ${mr.detectedM2 === null ? '-' : mr.detectedM2.toFixed(2)} |`);
-  });
-  md.push('', `Model: ${pageReport.model.walls} walls, ${pageReport.model.nodes} nodes, ${pageReport.model.freeEnds} free wall ends of ${pageReport.model.wallEnds}, ${pageReport.model.rooms} rooms, ${pageReport.model.build.bridges} confirmed gaps bridged. Engine ${pageReport.engineMs} ms, model ${pageReport.modelMs} ms.`, '');
+  md.push(`## Page ${pageReport.page} (${pageReport.level})`, '', '| Measure | Engine today | Engine + plan model | Vector detection + plan model |', '|---|---|---|---|');
+  const e = pageReport.scores.engine, m = pageReport.scores.model, v = pageReport.scores.vector;
+  const row = (label, cell) => md.push(`| ${label} | ${cell(e)} | ${cell(m)} | ${cell(v)} |`);
+  const lm = (list) => num(list.reduce((t, w) => t + w.lengthMm, 0) / 1000);
+  row('Wall recall: reference wall length found', (x) => `${pct(x.walls.recall)} of ${num(x.walls.referenceLm)} lm`);
+  row('Wall precision: read wall length on a reference wall', (x) => `${pct(x.walls.precision)} of ${num(x.walls.detectedLm)} lm`);
+  row('Missing walls (reference walls under half found)', (x) => `${x.walls.missingWalls.length} of ${x.walls.referenceWalls} (${lm(x.walls.missingWalls)} lm)`);
+  row('False walls (read walls under half on a reference wall)', (x) => `${x.walls.falseWalls.length} of ${x.walls.readWalls} (${lm(x.walls.falseWalls)} lm)`);
+  row('Centreline offset, median', (x) => `${num(x.walls.centrelineOffsetMedianMm)} mm`);
+  row('Thickness error, median', (x) => `${num(x.walls.thicknessErrorMedianMm)} mm`);
+  row('External/internal agreement (by length)', (x) => pct(x.walls.categoryAgreement));
+  row('Reference junctions found (within 150 mm)', (x) => `${x.junctions.found} / ${x.junctions.reference} (${pct(x.junctions.share)})`);
+  row('Junction position error, median', (x) => `${num(x.junctions.errorMedianMm)} mm`);
+  row('Opening recall (within 400 mm)', (x) => `${x.openings.matched} / ${x.openings.reference} (${pct(x.openings.recall)})`);
+  row('Opening precision', (x) => `${pct(x.openings.precision)} of ${x.openings.detected} read`);
+  row('Opening type agreement (door / window / opening)', (x) => pct(x.openings.kindAgreement));
+  row('Opening width error, median', (x) => pct(x.openings.widthErrorMedian));
+  row('Rooms recognised (overlap >= 0.5)', (x) => `${x.rooms.matched} / ${x.rooms.reference}`);
+  row('Room overlap, median', (x) => num(x.rooms.iouMedian, 3));
+  row('Matched room area error, median', (x) => pct(x.rooms.areaErrorMedianAbs));
+  md.push('', '| Room | Reference m² | Engine IoU / m² | Engine + model IoU / m² | Vector + model IoU / m² |', '|---|---|---|---|---|');
+  const cell = (r) => `${r.iou.toFixed(2)} / ${r.detectedM2 === null ? '-' : r.detectedM2.toFixed(2)}`;
+  e.rooms.rows.forEach((row, index) => md.push(`| ${row.name} | ${row.referenceM2.toFixed(2)} | ${cell(row)} | ${cell(m.rooms.rows[index])} | ${cell(v.rooms.rows[index])} |`));
+  md.push('', `Model: ${pageReport.model.walls} walls, ${pageReport.model.nodes} nodes, ${pageReport.model.freeEnds} free wall ends of ${pageReport.model.wallEnds}, ${pageReport.model.rooms} rooms, ${pageReport.model.build.bridges} confirmed gaps bridged. Engine ${pageReport.engineMs} ms, model ${pageReport.modelMs} ms.`, '',
+    `Vector detection: directions ${pageReport.vectorStats.directionsDeg.join(', ')} deg, wall thicknesses learnt ${pageReport.vectorStats.thicknessModesMm.join(', ')} mm, ${pageReport.vectorStats.candidates} candidates, ${pageReport.vectorStats.accepted} walls kept, ${pageReport.vectorStats.rejected} rejected; plan model ${pageReport.vectorModel.walls} walls, ${pageReport.vectorModel.freeEnds} free ends, ${pageReport.vectorModel.rooms} rooms. ${pageReport.vectorMs} ms.`, '');
 }
 fs.writeFileSync(path.join(args.out, 'report.md'), md.join('\n'));
 fs.writeFileSync(path.join(args.out, 'report.json'), JSON.stringify(report, (key, value) => (typeof value === 'number' ? Math.round(value * 1000) / 1000 : value), 2));

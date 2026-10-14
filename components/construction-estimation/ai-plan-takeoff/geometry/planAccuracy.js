@@ -105,11 +105,26 @@ export function compareWalls(reference, detected, overrides = {}) {
     }
   }
   const offsets = ref.flatMap(({ samples }) => samples.filter((sample) => sample.match).map((sample) => sample.match.distance));
+  // Per wall: a reference wall is missing when under half of it is found; a read wall is false when
+  // under half of it lies on a reference wall.
+  const perWall = (sampled) => {
+    const walls = new Map();
+    for (const { piece, length, samples } of sampled) {
+      const entry = walls.get(piece.wall.id) || { id: piece.wall.id, total: 0, hit: 0 };
+      const unit = length / samples.length;
+      entry.total += length; entry.hit += samples.filter((sample) => sample.match).length * unit;
+      walls.set(piece.wall.id, entry);
+    }
+    return [...walls.values()].map((entry) => ({ id: entry.id, lengthMm: entry.total, share: entry.total ? entry.hit / entry.total : 0 }));
+  };
+  const referenceWalls = perWall(ref), readWalls = perWall(det);
   return {
     referenceLm: recall.total / 1000, foundLm: recall.hit / 1000, recall: recall.total ? recall.hit / recall.total : null,
     detectedLm: precision.total / 1000, supportedLm: precision.hit / 1000, precision: precision.total ? precision.hit / precision.total : null,
     centrelineOffsetMedianMm: median(offsets), thicknessErrorMedianMm: median(thicknessErrors),
     categoryAgreement: categoryChecked ? categoryAgreed / categoryChecked : null,
+    referenceWalls: referenceWalls.length, missingWalls: referenceWalls.filter((wall) => wall.share < 0.5).map((wall) => ({ id: wall.id, lengthMm: Math.round(wall.lengthMm), foundShare: wall.share })),
+    readWalls: readWalls.length, falseWalls: readWalls.filter((wall) => wall.share < 0.5).map((wall) => ({ id: wall.id, lengthMm: Math.round(wall.lengthMm), supportedShare: wall.share })),
     missed: stretches(ref, (sample) => sample.match, options),
     extra: stretches(det, (sample) => sample.match, options),
   };

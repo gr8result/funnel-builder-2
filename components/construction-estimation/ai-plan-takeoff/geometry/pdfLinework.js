@@ -26,15 +26,20 @@ const MIN_SEGMENT = 0.05;
  * @param {Record<string, number>} OPS  pdfjsLib.OPS
  * @param {number[]} viewportTransform  viewport.transform (PDF user space -> viewport units)
  * @param {{curveSteps?: number}} options  curves are flattened into this many chords and flagged
- * @returns {{x1:number,y1:number,x2:number,y2:number,widthPx:number,paint:'stroke'|'fill',curve:boolean,path:number,subpath:number}[]}
+ * @returns {{x1:number,y1:number,x2:number,y2:number,widthPx:number,paint:'stroke'|'fill',curve:boolean,path:number,subpath:number,color:string,dashed:boolean,layer:string|null}[]}
  *   `path` is the operator index of the path a segment belongs to and `subpath` a page-wide count of its
- *   moveTo, so a polyline (a door swing drawn as chords) can be read back as one figure.
+ *   moveTo, so a polyline (a door swing drawn as chords) can be read back as one figure. `color` is the
+ *   stroke (or fill) colour as #rrggbb, `dashed` whether a dash pattern was in force, and `layer` the
+ *   optional-content group the segment was drawn in (null outside any).
  */
 export function extractPdfLinework(operatorList, OPS, viewportTransform = IDENTITY, { curveSteps = 6 } = {}) {
   const segments = [];
   const stack = [];
   let ctm = [...viewportTransform];
-  let lineWidth = 1;
+  let lineWidth = 1, strokeColor = '#000000', fillColor = '#000000', dashed = false;
+  const layers = [];
+  const hex = (args) => (typeof args?.[0] === 'string' ? args[0] : Array.isArray(args) || ArrayBuffer.isView(args)
+    ? `#${Array.from(args).slice(0, 3).map((v) => Math.round(Number(v) || 0).toString(16).padStart(2, '0')).join('')}` : '#000000');
   const strokeOps = new Set([OPS.stroke, OPS.closeStroke, OPS.fillStroke, OPS.eoFillStroke, OPS.closeFillStroke, OPS.closeEOFillStroke].filter((op) => op !== undefined));
   const fillOps = new Set([OPS.fill, OPS.eoFill].filter((op) => op !== undefined));
   let pathIndex = -1, subpath = -1;
@@ -42,20 +47,27 @@ export function extractPdfLinework(operatorList, OPS, viewportTransform = IDENTI
     if (Math.hypot(b.x - a.x, b.y - a.y) < MIN_SEGMENT) return;
     // A stroke's drawn width in viewport units: the line width scaled by the matrix (uniform scale assumed).
     const scale = Math.sqrt(Math.abs(ctm[0] * ctm[3] - ctm[1] * ctm[2])) || 1;
-    segments.push({ x1: a.x, y1: a.y, x2: b.x, y2: b.y, widthPx: Math.max(lineWidth, 0) * scale, paint, curve, path: pathIndex, subpath });
+    segments.push({ x1: a.x, y1: a.y, x2: b.x, y2: b.y, widthPx: Math.max(lineWidth, 0) * scale, paint, curve, path: pathIndex, subpath,
+      color: paint === 'fill' ? fillColor : strokeColor, dashed, layer: layers.length ? layers[layers.length - 1] : null });
   };
   const { fnArray, argsArray } = operatorList;
   for (let i = 0; i < fnArray.length; i += 1) {
     const fn = fnArray[i];
     const args = argsArray[i];
-    if (fn === OPS.save) stack.push({ ctm, lineWidth });
-    else if (fn === OPS.restore) { const state = stack.pop(); if (state) ({ ctm, lineWidth } = state); }
+    if (fn === OPS.save) stack.push({ ctm, lineWidth, strokeColor, fillColor, dashed });
+    else if (fn === OPS.restore) { const state = stack.pop(); if (state) ({ ctm, lineWidth, strokeColor, fillColor, dashed } = state); }
+    else if (fn === OPS.setStrokeRGBColor) strokeColor = hex(args);
+    else if (fn === OPS.setFillRGBColor) fillColor = hex(args);
+    else if (fn === OPS.setDash) dashed = Array.isArray(args?.[0]) ? args[0].some((value) => Number(value) > 0) : false;
+    else if (fn === OPS.beginMarkedContentProps) layers.push(args?.[0] === 'OC' ? String(args?.[1]?.id ?? args?.[1] ?? 'oc') : (layers.length ? layers[layers.length - 1] : null));
+    else if (fn === OPS.beginMarkedContent) layers.push(layers.length ? layers[layers.length - 1] : null);
+    else if (fn === OPS.endMarkedContent) layers.pop();
     else if (fn === OPS.transform) ctm = multiply(ctm, args);
     else if (fn === OPS.setLineWidth) lineWidth = Number(args[0]) || 0;
     else if (fn === OPS.paintFormXObjectBegin) {
-      stack.push({ ctm, lineWidth });
+      stack.push({ ctm, lineWidth, strokeColor, fillColor, dashed });
       if (Array.isArray(args?.[0]) || ArrayBuffer.isView(args?.[0])) ctm = multiply(ctm, Array.from(args[0]));
-    } else if (fn === OPS.paintFormXObjectEnd) { const state = stack.pop(); if (state) ({ ctm, lineWidth } = state); }
+    } else if (fn === OPS.paintFormXObjectEnd) { const state = stack.pop(); if (state) ({ ctm, lineWidth, strokeColor, fillColor, dashed } = state); }
     else if (fn === OPS.constructPath) {
       const paintOp = args[0];
       const paint = strokeOps.has(paintOp) ? 'stroke' : fillOps.has(paintOp) ? 'fill' : null;

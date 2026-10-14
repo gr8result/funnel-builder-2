@@ -10,8 +10,14 @@ import { createLevel, mergeDetections } from './planModel.js';
 
 const toMm = (point, pixelsPerMm) => ({ x: point.x / pixelsPerMm, y: point.y / pixelsPerMm });
 
+// Door types the vector detector names; all are doors for quantities, the type is kept as an attribute.
+const DOOR_TYPES = new Set(['door', 'cavity-slider', 'sliding-door', 'garage-door', 'barn-door']);
+
 // What a measured opening is.
 export function openingKindOf(found) {
+  if (found.kind === 'window') return 'window';
+  if (DOOR_TYPES.has(found.kind)) return 'door';
+  if (found.kind === 'opening') return 'opening';
   if (found.kind === 'wall-symbol') return 'window';
   if (/glaz/i.test(String(found.basis || '')) || found.glazed) return 'window';
   return found.confirmed === false ? 'opening' : 'door';
@@ -39,14 +45,16 @@ export function levelFromLinework(geometry, spec, { level = null, labels = [], b
     const centre = toMm(found, ppm);
     const kind = openingKindOf(found);
     const bridge = found.confirmed !== false || (bridgeUnconfirmedMaxMm > 0 && found.widthMm <= bridgeUnconfirmedMaxMm);
-    if (bridge && (found.axis === 'h' || found.axis === 'v') && found.widthMm > 0) {
+    const direction = found.direction || (found.axis === 'h' ? { x: 1, y: 0 } : found.axis === 'v' ? { x: 0, y: 1 } : null);
+    if (bridge && direction && found.widthMm > 0 && !found.inWall) {
       const half = found.widthMm / 2 + 30;
-      const a = found.axis === 'h' ? { x: centre.x - half, y: centre.y } : { x: centre.x, y: centre.y - half };
-      const b = found.axis === 'h' ? { x: centre.x + half, y: centre.y } : { x: centre.x, y: centre.y + half };
+      const a = { x: centre.x - direction.x * half, y: centre.y - direction.y * half };
+      const b = { x: centre.x + direction.x * half, y: centre.y + direction.y * half };
       bridges.push({ a, b, thicknessMm: Math.round(found.hostThicknessMm || 90), detectionKey: `linework-bridge:${found.id}`, attributes: { spansOpening: true } });
     }
-    if (!bridge) continue;
-    openings.push({ ...centre, widthMm: Math.round(found.leafMm || found.widthMm || 0), kind, detectionKey: `linework-opening:${found.id}`, ...(found.confirmed === false ? { attributes: { unconfirmed: true } } : {}) });
+    if (!bridge || found.bridgeOnly) continue;
+    openings.push({ ...centre, widthMm: Math.round(found.leafMm || found.widthMm || 0), kind, detectionKey: `linework-opening:${found.id}`,
+      attributes: { ...(found.confirmed === false ? { unconfirmed: true } : {}), ...(found.kind && found.kind !== kind ? { type: found.kind } : {}), ...(found.evidence ? { evidence: found.evidence } : {}) } });
   }
   const base = level || createLevel(spec);
   const merged = mergeDetections(base, { walls: [...walls, ...bridges], openings, rooms: labels.map((label) => ({ ...toMm(label, ppm), name: label.name })) });
