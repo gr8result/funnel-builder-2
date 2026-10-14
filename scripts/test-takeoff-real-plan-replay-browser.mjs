@@ -408,6 +408,52 @@ try {
   report.cases.laundry = { referenceM2: 5.08, detectedM2: laundryDetected.areaM2, correctedM2: laundryCorrected.areaM2 };
   await goToPage(3);
 
+  // 4c. The other corrections an estimator makes on the Second Level: confirm a sliding door found
+  // from the linework, reclassify a wall, and rename a room whose name was read wrongly.
+  await fit();
+  await button('Select');
+  await settle();
+  const pickAt = async (point) => { const client = await page.evaluate((value) => harness.point(value), point); await page.mouse.click(client.x, client.y); await settle(); await new Promise((resolve) => setTimeout(resolve, 500)); };
+  const robeDoor = (await snapshot()).placedOpenings.find((item) => Number(item.page) === 3 && item.needsClassification && String(item.itemTag).startsWith('linework:gt-'));   // sliding panels across a recess
+  assert.ok(robeDoor, 'a robe sliding door found from the linework is waiting to be confirmed: ' + JSON.stringify((await snapshot()).placedOpenings.filter((item) => Number(item.page) === 3).map((item) => [item.itemTag, item.subType, item.needsClassification, item.openingClass, item.widthMm])));
+  await pickAt(robeDoor);
+  assert.ok(await page.$('[data-testid="opening-needs-confirmation"]'), 'selecting it says its type is not confirmed and why');
+  await page.click('[data-testid="confirm-opening-type"]');
+  await settle();
+  const confirmedDoor = (await snapshot()).placedOpenings.find((item) => item.id === robeDoor.id);
+  assert.ok(confirmedDoor && !confirmedDoor.needsClassification && confirmedDoor.typeConfirmedAt, 'the door is confirmed');
+  const reclassified = (await snapshot()).completedWallRuns.filter((wall) => Number(wall.page) === 3 && wall.category === 'interior' && wall.nodes?.length === 2)
+    .sort((a, b) => Math.hypot(b.nodes[1].x - b.nodes[0].x, b.nodes[1].y - b.nodes[0].y) - Math.hypot(a.nodes[1].x - a.nodes[0].x, a.nodes[1].y - a.nodes[0].y))[0];
+  assert.ok(reclassified, 'an internal wall to reclassify');
+  await page.keyboard.press('Escape');
+  await pickAt({ x: (reclassified.nodes[0].x * 3 + reclassified.nodes[1].x) / 4, y: (reclassified.nodes[0].y * 3 + reclassified.nodes[1].y) / 4 });
+  assert.ok(await page.$('[data-testid="selected-wall-category"]'), 'clicking the wall selects it');
+  await page.select('[data-testid="selected-wall-category"]', 'exterior');
+  await settle();
+  const selectedWallNow = await page.$eval('[data-testid="selected-wall-category"]', (element) => element.value);
+  const changedWall = (await snapshot()).completedWallRuns.find((wall) => wall.category === 'exterior' && Number(wall.page) === 3 && wall.id === reclassified.id);
+  assert.ok(selectedWallNow === 'exterior' && changedWall, 'the wall is reclassified');
+  const misnamed = (await rooms()).find((room) => room.page === 3 && room.name === 'down');
+  assert.ok(misnamed, 'the stair landing was read as "down"');
+  await page.evaluate((id) => { const box = document.querySelector('[data-room-id="' + id + '"] input[type="checkbox"]'); if (box && !box.checked) box.click(); }, misnamed.id);
+  await settle();
+  await page.click('[aria-label="Name for down"]', { clickCount: 3 });
+  await page.keyboard.type('Landing');
+  await page.keyboard.press('Tab');
+  await settle();
+  const renamed = (await rooms()).find((room) => room.id === misnamed.id);
+  assert.equal(renamed?.name, 'Landing', 'the room is renamed and keeps its identity');
+  const correctionsKept = (state, when) => {
+    const door = state.placedOpenings.find((item) => item.id === robeDoor.id);
+    assert.ok(door && !door.needsClassification, `the confirmed door stays confirmed ${when}`);
+    assert.equal(state.placedOpenings.filter((item) => item.id === robeDoor.id).length, 1, `the confirmed door is not duplicated ${when}`);
+    assert.equal(state.completedWallRuns.find((wall) => wall.id === reclassified.id)?.category, 'exterior', `the reclassified wall stays exterior ${when}`);
+    const list = state.aiAnalysis?.rooms || [];
+    assert.equal(list.find((room) => room.id === misnamed.id)?.name, 'Landing', `the renamed room keeps its name ${when}`);
+    assert.equal(list.filter((room) => room.page === 3 && room.name === 'down').length, 0, `the wrong name does not come back ${when}`);
+  };
+  report.cases.corrections = { confirmedDoor: robeDoor.id, reclassifiedWall: reclassified.id, renamedRoom: misnamed.id };
+
   // 5. Save and reopen: geometry, the corrected room and its finish come back unchanged.
   const beforeSave = await snapshot();
   await save();
@@ -421,6 +467,7 @@ try {
   assert.ok(reopenedRoom && reopenedRoom.areaM2 === edited.areaM2 && reopenedRoom.floorFinish === 'Carpets' && reopenedRoom.boundaryEdited, 'the corrected room, its area and finish survive save and reopen');
   assert.equal((reopened.aiAnalysis?.rooms || []).length, (beforeSave.aiAnalysis?.rooms || []).length, 'reopened rooms');
   laundryKept(reopened.aiAnalysis?.rooms || [], 'after save and reopen');
+  correctionsKept(reopened, 'after save and reopen');
 
   // 6. Run the analysis again on the reopened job: nothing is duplicated and the correction is kept.
   const second = await run('secondRun');
@@ -435,6 +482,7 @@ try {
   assert.equal(new Set(againRooms.map((room) => room.id)).size, againRooms.length, 'room identities are unique');
   assert.equal(againRooms.find((room) => room.id === target.id)?.areaM2, edited.areaM2, 'the hand-corrected boundary is not replaced');
   laundryKept(againRooms, 'when AI Takeoff is run again');
+  correctionsKept(again, 'when AI Takeoff is run again');
 
   // 7. Re-measure from linework (no request): same rooms, correction kept.
   const requestsBefore = apiRequests.length;
@@ -446,6 +494,7 @@ try {
   assert.equal(remeasured.length, againRooms.length, 're-measuring adds no rooms');
   assert.equal(remeasured.find((room) => room.id === target.id)?.areaM2, edited.areaM2, 're-measuring keeps the corrected room');
   laundryKept(remeasured, 'when rooms are re-measured from the linework');
+  correctionsKept(await snapshot(), 'when rooms are re-measured from the linework');
 
   // 8. Levels and per-sheet calibration: the upper sheet becomes the Third Level with its own scale.
   await goToPage(3);

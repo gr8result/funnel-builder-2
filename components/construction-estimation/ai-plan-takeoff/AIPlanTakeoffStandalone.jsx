@@ -4681,7 +4681,7 @@ setSavedRevision(verifiedSave.revision);
               <div style={{ border: '1px solid #cbd5e1', borderRadius: '6px', padding: '8px', display: 'grid', gap: '6px' }}>
                 <strong style={{ fontSize: '12px' }}>Selected wall</strong>
                 <label style={{ fontSize: '12px' }}>Category
-                  <select value={selectedWall.category || 'exterior'} onChange={(e) => { updateWallRunCategory(selectedWall.id, e.target.value); markTakeoffItemCompleted('wall-category-edit'); }} style={{ width: '100%', padding: '6px', marginTop: '4px' }}>
+                  <select data-testid="selected-wall-category" value={selectedWall.category || 'exterior'} onChange={(e) => { updateWallRunCategory(selectedWall.id, e.target.value); markTakeoffItemCompleted('wall-category-edit'); }} style={{ width: '100%', padding: '6px', marginTop: '4px' }}>
                     <option value="exterior">Exterior</option>
                     <option value="interior">Interior</option>
                   </select>
@@ -4810,6 +4810,13 @@ setSavedRevision(verifiedSave.revision);
                   const opening = activePageOpenings.find((item) => item.id === selectedOpeningId);
                   return (
                     <>
+                      {opening?.needsClassification && (
+                        <div data-testid="opening-needs-confirmation" style={{ fontSize: '12px', background: '#fef3c7', border: '1px solid #f59e0b', borderRadius: '4px', padding: '6px' }}>
+                          <div><strong>Type not confirmed.</strong> Found from the drawing's linework; it is left out of quantities until confirmed.</div>
+                          {opening.typeEvidence && <div style={{ color: '#475569', marginTop: '4px' }}>{opening.typeEvidence}</div>}
+                          <button type="button" data-testid="confirm-opening-type" disabled={isRecoveryPreview} style={{ marginTop: '6px' }} onClick={() => { setPlacedOpenings((prev) => prev.map((item) => { if (item.id !== opening.id) return item; const { needsClassification, ...confirmed } = item; return { ...confirmed, typeConfirmedAt: new Date().toISOString() }; })); markTakeoffItemCompleted('opening-type-confirmed'); }}>Confirm opening type</button>
+                        </div>
+                      )}
                       <label style={{ fontSize: '12px' }}>Opening class
                         <select value={opening?.openingClass || classifyOpeningValue(opening)} onChange={(e) => { setPlacedOpenings((prev) => prev.map((item) => item.id === opening.id ? { ...item, openingClass: e.target.value } : item)); markTakeoffItemCompleted('opening-class-edit'); }} style={{ width: '100%', padding: '6px', marginTop: '4px' }}>
                           {OPENING_CLASS_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}

@@ -614,6 +614,8 @@ export function normalizePlanAnalysis({ context, responses = [], runId, modelVer
           x: chosen ? chosen.x : raw.x, y: chosen ? chosen.y : raw.y, type: raw.type, openingClass: raw.openingClass, widthMm, heightMm,
           itemTag: tag || sizeCode || raw.detectionId, subType: resolveOpeningSubType({ ...raw, tag, sizeCode }), glassType,
           ...(location ? { location } : {}),
+          // Found from the drawing's linework with its type not yet known: kept out of quantities until confirmed.
+          ...(raw.needsClassification ? { needsClassification: true, typeEvidence: String(raw.evidence || '').slice(0, 600) } : {}),
         });
         detection.analysisEvidence = { ...provenance, fields, originalTag: tag, rawSizeCode: sizeCode, discrepancies };
         discrepancies.forEach((message) => report(page, raw, message, 'dimension-conflict'));

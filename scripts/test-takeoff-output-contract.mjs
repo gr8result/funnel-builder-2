@@ -84,4 +84,20 @@ assert.deepEqual([first.sheetPixelsPerMm, second.sheetPixelsPerMm], [undefined, 
 assert.deepEqual([areaM2(first), areaM2(second)].map((value) => +value.toFixed(6)), [4, 16], 'the same drawn square is 4 m2 at 1:100 and 16 m2 on the smaller-scale sheet');
 pass('saved objects carry their own sheet scale');
 
+// --- Nothing unconfirmed becomes a quantity ------------------------------------------------------
+// A room whose detected boundary still needs review (the laundry with its tub bench) has an area on
+// screen but no floor quantity; once corrected and confirmed it has one. An opening found from the
+// linework with its type unconfirmed is listed for review and counted nowhere until confirmed.
+const draft = { ...bed, id: 'laundry', name: 'LDRY', floorFinish: 'Tiles', reviewRequired: true, areaM2: 3.34 };
+const confirmedLaundry = { ...draft, reviewRequired: false, areaM2: 5.09 };
+const finishOf = (room) => createTakeoffSchedule({ projectInfo: {}, planFilename: 'plans.pdf', totalPages: 1, currentPage: 1, pixelsPerMm, aiAnalysis: { rooms: [room] }, sheetLevels: { 1: 'Ground Floor' } }).measurementRecords.find((record) => record.roomId === 'laundry' && record.kind === 'floorFinish');
+assert.equal(finishOf(draft).quantity, null, 'an unconfirmed 3.34 m2 boundary is not a floor quantity');
+assert.equal(finishOf(confirmedLaundry).quantity, 5.09, 'the corrected, confirmed 5.09 m2 is');
+const door = { id: 'd1', page: 1, type: 'door', openingClass: 'Internal Door', x: 600, y: 300, widthMm: 2400, heightMm: 2100, itemTag: 'linework:gt-1', subType: 'Robe sliding door', needsClassification: true, typeEvidence: 'Two thin door panels across a recess.' };
+const unconfirmedSchedule = createTakeoffSchedule({ projectInfo: {}, planFilename: 'plans.pdf', totalPages: 1, currentPage: 1, pixelsPerMm, placedOpenings: [door], sheetLevels: { 1: 'Ground Floor' } });
+const confirmedSchedule = createTakeoffSchedule({ projectInfo: {}, planFilename: 'plans.pdf', totalPages: 1, currentPage: 1, pixelsPerMm, placedOpenings: [{ ...door, needsClassification: undefined }], sheetLevels: { 1: 'Ground Floor' } });
+assert.deepEqual(unconfirmedSchedule.unconfirmedOpenings.map((item) => item.id), ['d1'], 'the unconfirmed door is listed for review');
+assert.ok(!JSON.stringify(unconfirmedSchedule.measurementRecords).includes('"d1"') && JSON.stringify(confirmedSchedule.measurementRecords).includes('d1'), 'and counted only once confirmed');
+pass('unconfirmed room boundaries and opening types are never quantities');
+
 console.log('takeoff output contract: rooms, floor areas, schedule records and sheet scales ok');

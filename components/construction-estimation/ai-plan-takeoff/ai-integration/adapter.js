@@ -312,6 +312,7 @@ export function convertAiTakeoffDetections(batch, context) {
         brickSillRequired: optionalBoolean(detection.brickSillRequired, `${label} brickSillRequired`, false),
         location: optionalText(detection.location, `${label} location`),
         frameJambDetails: optionalText(detection.frameJambDetails, `${label} frameJambDetails`),
+        ...(detection.needsClassification ? { needsClassification: true, typeEvidence: optionalText(detection.typeEvidence, `${label} typeEvidence`) } : {}),
       });
     } else if (detection.kind === 'eave') {
       const nodes = nodesFor(detection.nodes);

@@ -1269,7 +1269,7 @@ export function createTakeoffSchedule({
   currentPage = 1,
   pixelsPerMm,
   completedWallRuns = [],
-  placedOpenings = [],
+  placedOpenings: allPlacedOpenings = [],
   completedAreas = [],
   completedFloorplans = [],
   completedMeasurements = [],
@@ -1281,10 +1281,15 @@ export function createTakeoffSchedule({
   aiAnalysis = scheduleState.aiAnalysis || null,
   sheetCalibrations = scheduleState.sheetCalibrations || {}
 }) {
+  // An opening found from the linework whose type the estimator has not confirmed is listed for
+  // review but counted in no quantity: an unconfirmed robe slider is not priced as a door.
+  const placedOpenings = allPlacedOpenings.filter((item) => !item?.needsClassification);
+  const unconfirmedOpenings = allPlacedOpenings.filter((item) => item?.needsClassification);
   const projectPages = Array.from({ length: totalPages || 1 }, (_, index) => index + 1);
   return {
     generatedAt: new Date().toISOString(),
     aiAnalysis,
+    unconfirmedOpenings: unconfirmedOpenings.map((item) => ({ id: item.id, page: item.page, openingClass: item.openingClass, subType: item.subType || null, widthMm: item.widthMm ?? null, evidence: item.typeEvidence || '' })),
     measurementRecords: [...createMeasurementRecords({ completedFloorplans, completedWallRuns, placedOpenings, completedAreas, completedEaves, completedMeasurements, completedPillars, pixelsPerMm, sheetCalibrations }),
       // One floor-finish record per room: its chosen finish, or tiles where it was marked for floor tiling.
       // A built-in robe measured on its own takes its bedroom's finish unless it has its own; each room's floor is one record.
