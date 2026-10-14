@@ -9,6 +9,11 @@
 // takes (normalized 0..1 coordinates on the unrotated sheet), so the contract, the adapter and
 // everything downstream are unchanged. Pure functions.
 import { absorbPockets, detectPlanGeometry, pointInPolygon, traceOutlinedArea } from './planGeometry.js';
+import { fitWallsToVectorLinework } from './vectorWallFit.js';
+import { connectWallJunctions } from './wallJunctions.js';
+import { detectVectorDoorSwings, swingEvidence } from './vectorDoorSwings.js';
+import { snapRoomToWallFaces } from './roomWallFaces.js';
+import { gapGlazingEvidence } from './vectorGapEvidence.js';
 
 const CONTRACT_THICKNESSES = [70, 90, 100, 110, 140, 150, 200, 230, 270, 300, 350];
 const nearest = (value, list) => list.reduce((best, item) => (Math.abs(item - value) < Math.abs(best - value) ? item : best));
@@ -166,6 +171,10 @@ export function fuseSheetLinework(response, raster, sheet, existing = {}, overri
     ...modelOpenings.filter((entry) => entry.at).map((entry) => ({ ...entry.at, ref: `model:${entry.index}`, reachMm: options.modelOpeningReachMm, farReachMm: options.modelOpeningFarReachMm, kind: openingKind(entry.item), widthMm: codeWidths(entry.item).length ? 0 : openingWidth(entry.item), widths: codeWidths(entry.item) })),
     ...(existing.placedOpenings || []).filter((item) => Number.isFinite(item?.x) && Number.isFinite(item?.y)).map((item) => ({ x: item.x, y: item.y, ref: `placed:${item.id}` })),
   ];
+  // A vector PDF draws each hinged door's swing: the doorway it spans is drawing evidence, as a placed door is.
+  const vectorLinework = existing.vectorLinework || sheet.vectorLinework || [];
+  const vectorSwings = detectVectorDoorSwings(vectorLinework, pixelsPerMm);
+  evidence.push(...swingEvidence(vectorSwings));
   const storedPixelsPerMm = Number(raster?.storedPixelsPerMm ?? sheet.storedPixelsPerMm) || 0;
   if (storedPixelsPerMm > 0 && storedPixelsPerMm < options.minimumStoredPixelsPerMm) {
     // The stored image is too coarse to tell a wall's two faces apart. Nothing is measured from
@@ -173,8 +182,21 @@ export function fuseSheetLinework(response, raster, sheet, existing = {}, overri
     const review = [{ code: 'linework-failed', message: `Sheet ${response.page} is stored too coarsely to measure walls from: a 70 mm wall is ${(70 * storedPixelsPerMm).toFixed(1)} pixels wide on it and at least ${(70 * options.minimumStoredPixelsPerMm).toFixed(1)} are needed. Nothing was measured from its linework. Import the sheet again at a higher resolution, or use a larger-scale drawing of this level.` }];
     return { response: { ...response, review: [...(response.review || []), ...review] }, geometry: { engine: 'not-run', walls: [], openings: [], rooms: [], diagnostics: [{ code: 'stored-resolution-too-low', storedPixelsPerMm }] }, report: { engine: 'not-run', measuredWalls: 0, storedPixelsPerMm, review } };
   }
-  const geometry = detectPlanGeometry(raster, { pixelsPerMm, logicalWidth, logicalHeight, openingEvidence: evidence }, overrides.geometry || {});
-  const report = { engine: geometry.engine, measuredWalls: geometry.walls.length, wallsEmitted: 0, uncategorisedLm: 0, categoryFromLineworkOnlyLm: 0, categoryDisagreementLm: 0, flaggedWalls: 0, modelWallLm: 0, modelWallWithoutLineworkLm: 0,
+  let geometry = detectPlanGeometry(raster, { pixelsPerMm, logicalWidth, logicalHeight, openingEvidence: evidence }, overrides.geometry || {});
+  // A gap with frame and glass lines drawn across it is a window (or slider) on the drawing's own
+  // evidence. Gaps are only known once measured, so the sheet is measured again with that evidence.
+  const glazing = gapGlazingEvidence(geometry.openings.filter((opening) => opening.kind === 'wall-gap'), vectorLinework, pixelsPerMm);
+  if (glazing.length) {
+    evidence.push(...glazing);
+    geometry = detectPlanGeometry(raster, { pixelsPerMm, logicalWidth, logicalHeight, openingEvidence: evidence }, overrides.geometry || {});
+  }
+  // On a vector PDF the drawn face lines say exactly where each wall is (raster faces are a line-width
+  // or two out); then every wall that meets another shares the point where their centrelines cross.
+  const vectorFit = fitWallsToVectorLinework(geometry.walls, vectorLinework, pixelsPerMm, overrides.vectorFit || {});
+  const connected = connectWallJunctions(vectorFit.walls, pixelsPerMm, overrides.junctions || {});
+  geometry.walls = connected.walls;
+  geometry.junctions = connected.junctions;
+  const report = { engine: geometry.engine, vectorFit: { ...vectorFit.report, doorSwings: vectorSwings.length, glazedGaps: glazing.length }, junctions: connected.report, measuredWalls: geometry.walls.length, wallsEmitted: 0, uncategorisedLm: 0, categoryFromLineworkOnlyLm: 0, categoryDisagreementLm: 0, flaggedWalls: 0, modelWallLm: 0, modelWallWithoutLineworkLm: 0,
     openings: { model: modelOpenings.length, onConfirmedGap: 0, onNearestWall: 0, unplaced: 0, duplicatesRemoved: 0, embeddedSymbolReviewCandidates: 0, fromDoorSwing: 0, fromExternalFrame: 0, fromDoorway: 0, fromDoorLine: 0, held: [] },
     gaps: { confirmed: 0, unconfirmed: 0 }, rooms: { verified: 0, proposed: 0, adopted: 0, adoptedByProximity: 0, sharedSpaces: 0, withoutBoundary: 0, outdoorOutlined: 0, builtInRobes: 0, readingBoundariesWithheld: 0, pocketsAbsorbed: 0 }, singleFaceReviewCandidates: [], review: [] };
   if (!geometry.walls.length) {
@@ -436,8 +458,12 @@ export function fuseSheetLinework(response, raster, sheet, existing = {}, overri
   }
   const measuredRoom = (space, extra = {}) => {
     const reasons = [space.reviewReason, extra.review].filter(Boolean);
-    return { polygon: reduceBoundary(space.polygon, options.maxRoomCorners, mm(25)).map(toNormal), boundaryClosed: Boolean(space.verified) && !space.reviewRequired && !extra.review,
-      lineworkRoomId: space.id, lineworkVerified: Boolean(space.verified), lineworkAreaM2: +space.netAreaM2.toFixed(2), ...(reasons.length ? { lineworkReview: reasons.join(' ') } : {}) };
+    // The outline runs to the measured wall faces; the area moves with it (deductions kept).
+    const outline = reduceBoundary(space.polygon, options.maxRoomCorners, mm(25));
+    const onFaces = snapRoomToWallFaces(outline, geometry.walls, pixelsPerMm);
+    report.rooms.edgesOnWallFaces = (report.rooms.edgesOnWallFaces || 0) + onFaces.movedEdges;
+    return { polygon: onFaces.polygon.map(toNormal), boundaryClosed: Boolean(space.verified) && !space.reviewRequired && !extra.review,
+      lineworkRoomId: space.id, lineworkVerified: Boolean(space.verified), lineworkAreaM2: +(space.netAreaM2 + onFaces.areaChangeM2).toFixed(2), ...(reasons.length ? { lineworkReview: reasons.join(' ') } : {}) };
   };
   const rooms = [];
   const shared = new Map();

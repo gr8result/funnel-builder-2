@@ -13,6 +13,8 @@ import { getPlanDisplayIdentity, getTakeoffLifecycle, loadTakeoffPlanImage, crea
 import { Stage, Layer, Image as KonvaImage, Line, Circle, Text, Rect, Group } from 'react-konva';
 import { RotateCw, Ruler, ChevronLeft, ChevronRight, DoorOpen, Square, Layers, Trash2, Home, Compass, Download, Upload, MousePointer2, RectangleVertical } from 'lucide-react';
 import { calculatePolygonAreaM2, findFloorplanCornerSnapPoint, resolveFloorplanFreePoint } from './floorplanGeometry';
+import { readPdfPageLinework } from './geometry/pdfLinework.js';
+import { reconcileDrawnWall, snapWallPoint } from './manualWallEdit.js';
 import { AI_PLAN_TAKEOFF_EXTENSION, filenameWithoutKnownGr8Extension } from '../../../lib/gr8FileTypes.js';
 const AI_PLAN_TAKEOFF_FILE_DESCRIPTION = 'Gr8 Result AI Plan Takeoff';
 import { EXTERIOR_WALL_CLASSES, normaliseLevel, resolveTakeoffLevel, resolveExteriorClass, runLengthM, createExteriorClassificationTotals, resolveConstructionSystem, EXTERIOR_CONSTRUCTION_SYSTEMS, INTERIOR_CONSTRUCTION_SYSTEMS, CONSTRUCTION_SYSTEM_LABELS, CLADDING_PRODUCTS, CLADDING_PRODUCT_CUSTOM, ROOM_LOCATION_OPTIONS, ROOM_LOCATION_CUSTOM_KEY, resolveOpeningRoom, POST_CORE_TYPES, POST_CORE_TYPE_LABELS, TIMBER_POST_SIZE_OPTIONS, STEEL_SECTION_TYPES, POST_SURROUND_TYPES, POST_SURROUND_TYPE_LABELS, POST_BRICK_FINISH_OPTIONS, resolvePostColumnCore } from './takeoffRunData.js';
@@ -473,6 +475,8 @@ export default function AIPlanTakeoffStandalone({
   const [totalPages, setTotalPages] = useState(1);
 
   const [vectorSegments, setVectorSegments] = useState([]);
+  // Curves (door swings, fixtures) are kept for the linework engine but are not snap targets.
+  const snapSegments = useMemo(() => vectorSegments.filter((segment) => !segment.curve), [vectorSegments]);
   // Which building level each plan sheet represents, keyed by sheet number. Job Setup's wall and
   // area fields are all per level, so a measurement whose sheet has no level assigned has nowhere
   // to import to. A sheet's position in the PDF cannot stand in for this - sheet 3 of a two-storey
@@ -2293,11 +2297,18 @@ setSavedRevision(verifiedSave.revision);
       wallHeightM: null
     };
 
-    setCompletedWallRuns((prev) => [...prev, newRun]);
+    // Which walls the drawn wall corrects is read from the walls on screen; the update itself is
+    // applied to the latest list so a wall added in the same turn is not lost.
+    const reconciled = reconcileDrawnWall(newRun, completedWallRuns, pixelsPerMm);
+    setCompletedWallRuns((prev) => reconcileDrawnWall(newRun, prev, pixelsPerMm).walls);
+    if (reconciled.replacedIds.length) {
+      const replaced = new Set(reconciled.replacedIds.map(String));
+      setPlacedOpenings((prev) => prev.map((opening) => (replaced.has(String(opening.hostWallId)) ? { ...opening, hostWallId: newRun.id } : opening)));
+    }
     selectOnly('wall', newRun.id);
     setActivePolyline([]);
     markTakeoffItemCompleted('wall-run');
-  }, [activePolyline, pixelsPerMm, currentPage, wallCategory, exteriorWallType, detectedWallThicknessMm, alignment, getWallRunLengthMm, markTakeoffItemCompleted]);
+  }, [activePolyline, pixelsPerMm, currentPage, wallCategory, exteriorWallType, detectedWallThicknessMm, alignment, getWallRunLengthMm, markTakeoffItemCompleted, completedWallRuns]);
 
   const finalizeCurrentEaveRun = useCallback(() => {
     if (eavePoints.length < 2 || !pixelsPerMm) {
@@ -2389,36 +2400,16 @@ setSavedRevision(verifiedSave.revision);
     }
   }, [openingType]);
 
+  // The drawing's straight lines in logical plan pixels, for snapping and for the linework engine.
+  // Stroked lettering shorter than a pixel is left out; curves (door swings, fixtures) are not snap targets.
   const extractPdfVectors = async (page, viewport) => {
     try {
-      const opList = await page.getOperatorList();
-      const segments = [];
-      let currentPoint = { x: 0, y: 0 };
-
-      for (let i = 0; i < opList.fnArray.length; i++) {
-        const fn = opList.fnArray[i];
-        const args = opList.argsArray[i];
-
-        if (fn === pdfjsLib.OPS.moveTo) {
-          currentPoint = { x: args[0], y: viewport.height - args[1] };
-        } else if (fn === pdfjsLib.OPS.lineTo) {
-          const nextPoint = { x: args[0], y: viewport.height - args[1] };
-          segments.push({ x1: currentPoint.x, y1: currentPoint.y, x2: nextPoint.x, y2: nextPoint.y });
-          currentPoint = nextPoint;
-        } else if (fn === pdfjsLib.OPS.rectangle) {
-          const rx = args[0], ry = args[1], rw = args[2], rh = args[3];
-          const p1 = { x: rx, y: viewport.height - ry };
-          const p2 = { x: rx + rw, y: viewport.height - ry };
-          const p3 = { x: rx + rw, y: viewport.height - (ry + rh) };
-          const p4 = { x: rx, y: viewport.height - (ry + rh) };
-
-          segments.push({ x1: p1.x, y1: p1.y, x2: p2.x, y2: p2.y });
-          segments.push({ x1: p2.x, y1: p2.y, x2: p3.x, y2: p3.y });
-          segments.push({ x1: p3.x, y1: p3.y, x2: p4.x, y2: p4.y });
-          segments.push({ x1: p4.x, y1: p4.y, x2: p1.x, y2: p1.y });
-        }
-      }
-      return segments;
+      const linework = await readPdfPageLinework(page, viewport, pdfjsLib.OPS);
+      const round = (value) => Math.round(value * 100) / 100;
+      // Saved with the page: coordinates to 0.01 px plus the path a segment belongs to (door swings are
+      // read back as whole arcs) keeps a 1:100 sheet near half a megabyte.
+      return linework.filter((segment) => Math.hypot(segment.x2 - segment.x1, segment.y2 - segment.y1) >= 1)
+        .map(({ x1, y1, x2, y2, path, subpath, curve }) => ({ x1: round(x1), y1: round(y1), x2: round(x2), y2: round(y2), path, subpath, ...(curve ? { curve: true } : {}) }));
     } catch (err) {
       console.warn("Vector extraction fallback:", err);
       return [];
@@ -2713,7 +2704,7 @@ setSavedRevision(verifiedSave.revision);
     let bestSnap = null;
     let minDistance = nodeSnapRadius;
 
-    for (let seg of vectorSegments) {
+    for (let seg of snapSegments) {
       const d1 = Math.hypot(seg.x1 - rawX, seg.y1 - rawY);
       if (d1 < minDistance) {
         minDistance = d1;
@@ -2755,8 +2746,12 @@ setSavedRevision(verifiedSave.revision);
     return { x: rawX, y: rawY, snapped: false, nearestSegment: null };
   };
 
+  const getWallToolSnapPoint = (rawX, rawY) => snapWallPoint({ x: rawX, y: rawY }, {
+    walls: completedWallRuns, page: currentPage, segments: snapSegments, radiusPx: SNAP_RADIUS_SCREEN_PX / stageScale,
+  });
+
   const getFloorplanCornerSnapPoint = (rawX, rawY) => {
-    return findFloorplanCornerSnapPoint(vectorSegments, { x: rawX, y: rawY }, SNAP_RADIUS_SCREEN_PX / stageScale);
+    return findFloorplanCornerSnapPoint(snapSegments, { x: rawX, y: rawY }, SNAP_RADIUS_SCREEN_PX / stageScale);
   };
 
   const autoDetectWallThickness = (clickX, clickY, nearestSegment) => {
@@ -2770,7 +2765,7 @@ setSavedRevision(verifiedSave.revision);
 
     let minThicknessPx = Infinity;
 
-    for (let seg of vectorSegments) {
+    for (let seg of snapSegments) {
       if (seg === nearestSegment) continue;
 
       const segDx = seg.x2 - seg.x1;
@@ -2922,7 +2917,7 @@ setSavedRevision(verifiedSave.revision);
     }
 
     if (activeTool === 'wall') {
-      const snap = getStrictWallSnapPoint(pos.x, pos.y);
+      const snap = getWallToolSnapPoint(pos.x, pos.y);
       let pX = snap.x;
       let pY = snap.y;
       if (snap.nearestSegment) {
@@ -3284,7 +3279,9 @@ setSavedRevision(verifiedSave.revision);
       return;
     }
 
-    let snap = activeTool === 'wall' || activeTool === 'eaves'
+    let snap = activeTool === 'wall'
+      ? getWallToolSnapPoint(pos.x, pos.y)
+      : activeTool === 'eaves'
       ? getStrictWallSnapPoint(pos.x, pos.y)
       : activeTool === 'floorplan'
         ? getFloorplanCornerSnapPoint(pos.x, pos.y)

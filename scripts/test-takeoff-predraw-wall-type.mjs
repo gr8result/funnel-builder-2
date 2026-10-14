@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { EXTERIOR_WALL_CLASSES, resolveExteriorClass } from '../components/construction-estimation/ai-plan-takeoff/takeoffRunData.js';
 import { createTakeoffSchedule, createJobSetupPayload } from '../components/construction-estimation/ai-plan-takeoff/takeoffSchedule.js';
+import { reconcileDrawnWall } from '../components/construction-estimation/ai-plan-takeoff/manualWallEdit.js';
 
 // The construction an exterior wall is drawn as is chosen before the first point and stamped onto
 // the run when it is finalised. These checks execute the real finaliser and the real schedule, so
@@ -47,6 +48,9 @@ function makeFinalizer({ wallCategory, exteriorWallType, thicknessMm = 230 }) {
     setSelectedWallId: () => {},
     selectOnly: () => {},
     setCompletedWallRuns: (updater) => { completed.push(...updater([])); },
+    completedWallRuns: [],
+    reconcileDrawnWall,
+    setPlacedOpenings: () => {},
   };
   const run = new Function(...Object.keys(env), `${body}\nreturn finalizeCurrentWallRun;`)(...Object.values(env));
   run();

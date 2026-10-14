@@ -143,7 +143,7 @@ export function useAiTakeoffAnalysis(options) {
         const planRaster = await readPlanRaster(planPage.dataUrl, undefined, { logicalWidth: planPage.logicalWidth, pixelsPerMm });
         const fused = fuseSheetLinework({ page: pageNumber, walls: [], openings: [], rooms: named }, planRaster,
           { pageNumber, logicalWidth: planPage.logicalWidth, logicalHeight: planPage.logicalHeight, pixelsPerMm },
-          { placedOpenings: (latest.current.placedOpenings || []).filter((item) => Number(item.page || item.pageId || 1) === pageNumber) });
+          { placedOpenings: (latest.current.placedOpenings || []).filter((item) => Number(item.page || item.pageId || 1) === pageNumber), vectorLinework: planPage.vectorSegments || [] });
         rooms = fused.response.rooms;
         linework = fused.report.rooms;
       } catch { rooms = named; }
@@ -449,6 +449,8 @@ export function useAiTakeoffAnalysis(options) {
             {
               placedOpenings: (latest.current.placedOpenings || []).filter((item) => Number(item.page || item.pageId || 1) === pageNumber),
               completedFloorplans: (latest.current.completedFloorplans || []).filter((item) => Number(item.page) === pageNumber),
+              // A vector PDF sheet carries its own drawn lines: wall faces are fitted to them.
+              vectorLinework: planPage?.vectorSegments || [],
             });
           responses[index] = { ...fused.response, drawingType: response.drawingType };
           linework[pageNumber] = { ...fused.report, gaps: { ...fused.report.gaps, unconfirmed: fused.geometry.openings.filter((gap) => !gap.confirmed) }, proposedRooms: fused.geometry.rooms.filter((room) => !room.verified) };
