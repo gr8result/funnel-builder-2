@@ -18,6 +18,7 @@ import {
   benchRunFromSchedule, benchtopAreaLm, benchtopAreasFor, benchtopDepthsForRoom, benchtopLocationPatch, benchtopProfile, benchtopQuantitySummary, benchtopRangeByKey,
   benchtopRangeKeyFor, benchtopSetupComplete, benchtopSetupFor, laminateSurfaceForArea, newBenchtopArea, stoneSurfaceForArea,
 } from "../../lib/builders/benchtopSelection.js";
+import { isIslandArea, islandInheritsMain, mainBenchtopArea, setIslandSameAsMain, surfaceName } from "../../lib/builders/benchtopInheritance.js";
 
 const PAGE_SIZE = 24;
 const UNCLASSIFIED = "unclassified";
@@ -42,8 +43,11 @@ export default function BenchtopSelectionWorkflow({ location, scheduleLines = []
   const [shown, setShown] = useState(PAGE_SIZE);
   const [custom, setCustom] = useState(null);
   const [overriding, setOverriding] = useState("");
+  const [linkWarning, setLinkWarning] = useState(null);
   const chooser = useRef(null);
   const target = areas.find((area) => area.id === targetId) || areas.find((area) => !area.surface) || areas[0];
+  const main = mainBenchtopArea(areas);
+  const linked = Boolean(target && islandInheritsMain(target) && main);
 
   // save: a deliberate choice is stored on the job straight away (without leaving this screen);
   // typing into a field is stored with the next choice or with Save Draft / Next.
@@ -79,6 +83,13 @@ export default function BenchtopSelectionWorkflow({ location, scheduleLines = []
     setTargetId(target.id);
   }
   const applyToAll = (from) => commit(setup, areas.map((area) => ({ ...area, surface: { ...from.surface, applications: [area.label] } })));
+  // Island link: ON follows the main benchtop; OFF keeps what it has as the starting point; ON again warns before replacing an independent choice.
+  function toggleIslandLink(on, force = false) {
+    const result = setIslandSameAsMain(areas, on, { force });
+    if (result.blocked) { setLinkWarning({ replacing: result.replacing, with: result.with }); return; }
+    setLinkWarning(null);
+    commit(setup, result.areas);
+  }
   function changeSurface(area) {
     setTargetId(area.id);
     chooser.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
@@ -160,6 +171,23 @@ export default function BenchtopSelectionWorkflow({ location, scheduleLines = []
         {setupDone ? (
           <>
             {areas.length > 1 ? <div className="bts-targets" role="tablist" aria-label="Benchtop being chosen" data-testid="benchtop-targets">{areas.map((area) => <button key={area.id} type="button" role="tab" aria-selected={target?.id === area.id} className={target?.id === area.id ? "active" : ""} onClick={() => setTargetId(area.id)} data-testid="benchtop-target" data-area={area.label}>{area.label}<small>{area.surface ? `${area.surface.supplier || ""} ${area.surface.colourName || area.surface.range || ""}`.trim() : "Not chosen"}</small></button>)}</div> : null}
+            {target && isIslandArea(target) && main ? (
+              <div className="bts-link-panel" data-testid="benchtop-island-link" data-linked={linked ? "true" : "false"}>
+                <label className="bts-check"><input type="checkbox" checked={linked} onChange={(event) => toggleIslandLink(event.target.checked)} data-testid="benchtop-island-same-as-main" /><span>Use same benchtop as Main Benchtop</span></label>
+                {linked ? <p className="bts-muted" data-testid="benchtop-island-inherited">{main.surface ? `The island follows the Main benchtop: ${surfaceName(main.surface)}. Change the Main benchtop and the island changes with it. Length and depth stay separate.` : "The island will take the Main benchtop's selection as soon as one is chosen."}</p>
+                  : <p className="bts-muted">The island has its own selection. The Main benchtop no longer changes it.</p>}
+                {!linked && target.surface ? (
+                  <label className="bts-inline"><span>Island edge profile</span><select value={target.edgeProfile || setup.edgeProfile} onChange={(event) => changeArea(target.id, { edgeProfile: event.target.value })} data-testid="benchtop-island-edge">{profile.edgeProfiles.map((value) => <option key={value}>{value}</option>)}</select></label>
+                ) : null}
+                {linkWarning ? (
+                  <div className="bts-note warn" role="alertdialog" data-testid="benchtop-island-link-warning">
+                    <p>Turning this on replaces the island's own selection ({linkWarning.replacing}) with the Main benchtop ({linkWarning.with}).</p>
+                    <div className="bts-actions start"><button type="button" className="bts-secondary" onClick={() => setLinkWarning(null)} data-testid="benchtop-island-link-keep">Keep the island's own selection</button><button type="button" className="bts-primary" onClick={() => toggleIslandLink(true, true)} data-testid="benchtop-island-link-replace">Replace with the Main benchtop</button></div>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+            {linked ? null : <>
             <div className="bts-filters" data-testid="benchtop-filters">
               <label><span>Material</span><select value={filters.material} onChange={setFilter("material")} data-testid="benchtop-filter-material"><option value="">All materials</option>{materials.map((range) => <option key={range.key} value={range.key}>{range.label}</option>)}{surfaces.some((surface) => !surface.rangeKey) ? <option value={UNCLASSIFIED}>Range not yet set</option> : null}</select></label>
               <label><span>Brand</span><select value={filters.brand} onChange={setFilter("brand")} data-testid="benchtop-filter-brand"><option value="">All brands</option>{unique(surfaces.map((surface) => surface.brand)).map((value) => <option key={value}>{value}</option>)}</select></label>
@@ -196,6 +224,7 @@ export default function BenchtopSelectionWorkflow({ location, scheduleLines = []
                 <div className="bts-actions"><button type="button" className="bts-secondary" onClick={() => setCustom(null)}>Cancel</button><button type="button" className="bts-primary" disabled={!custom.name.trim()} onClick={saveCustom}>Use this surface{target && areas.length > 1 ? ` for ${target.label}` : ""}</button></div>
               </div>
             ) : <button type="button" className="bts-link" onClick={() => setCustom({ supplier: "", name: "", rangeKey: "" })} data-testid="benchtop-custom-open">The surface is not listed</button>}
+            </>}
           </>
         ) : null}
       </section>
@@ -213,7 +242,7 @@ export default function BenchtopSelectionWorkflow({ location, scheduleLines = []
                 <article key={area.id} className="bts-summary" data-testid="benchtop-summary" data-area={area.label} data-product-name={surface.colourName || surface.range || ""} data-range-key={surface.rangeKey || ""} data-range-source={surface.rangeSource || ""}>
                   {surface.slabImage ? <img src={surface.slabImage} alt={`${surface.supplier} ${surface.colourName}`} /> : <div className="bts-noImage">{surface.materialChoice === "laminate" ? "Laminate" : "No image"}</div>}
                   <div className="bts-summaryBody">
-                    <span className="bts-eyebrow">{area.label}</span>
+                    <span className="bts-eyebrow">{area.label}{surface.inheritedFromAreaId && islandInheritsMain(area) ? " (same as Main benchtop)" : ""}</span>
                     <strong className="bts-name">{surface.supplier} {surface.colourName || surface.range}</strong>
                     <dl>
                       <div><dt>Range</dt><dd>{surface.collection || surface.range || "Not recorded"}</dd></div>
@@ -296,4 +325,7 @@ const BENCHTOP_CSS = `
 .bts-summary dl div { display: grid; gap: 2px; } .bts-summary dt { font-weight: 700; color: #475569; } .bts-summary dd { font-size: 17px; }
 .bts-sample { color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 10px; }
 @media (max-width: 720px) { .bts-summary { grid-template-columns: 1fr; } }
+.bts-link-panel { border: 1px solid #99f6e4; background: #f0fdfa; border-radius: 10px; padding: 14px 16px; display: grid; gap: 10px; }
+.bts-shell label.bts-check { display: flex; align-items: center; gap: 10px; }
+.bts-shell label.bts-check input { min-height: 0; width: 22px; height: 22px; }
 `;

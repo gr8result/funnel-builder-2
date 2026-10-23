@@ -9,6 +9,12 @@ import { ALL_GUIDED_REQUIREMENTS } from '../lib/builders/clientSelectionWorkflow
 import { paintableRoomNames } from '../lib/builders/internalPaintColours.js';
 import { plumbingLocationsForRequirement } from '../lib/builders/plumbingFixtureAllocation.js';
 
+assert.deepEqual(plumbingLocationsForRequirement('basin-mixer', []), [], 'missing job evidence never creates default rooms');
+assert.deepEqual(plumbingLocationsForRequirement('ceiling-fan', []), [], 'missing service-room evidence never creates default rooms');
+const savedOnlyLocations = plumbingLocationsForRequirement('basin-mixer', [], [{ allocations: [{ location: 'Existing Ensuite', quantity: 2 }] }]);
+assert.deepEqual(savedOnlyLocations.map(location => location.label), ['Existing Ensuite'], 'saved allocations remain editable without inventing other locations');
+assert.equal(savedOnlyLocations[0].source, 'saved-allocation');
+
 // Manage Rooms: add / rename / remove / merge on the project's ONE room list
 // (lib/builders/projectRoomModel.js over projectLocations.js), with stable room ids and the records
 // each module holds against a room carried along.
@@ -70,9 +76,11 @@ const setPoints = (schedule, name, points, extra = {}) => ({ ...schedule, rooms:
 saveElectrical(schedule => setPoints(setPoints(setPoints(schedule, 'Pantry', { 'double-gpo': 2, data: 1 }, { notes: 'Bench height' }), "Butler's Pantry", { 'double-gpo': 4 }), 'Media Room', { 'double-gpo': 6, tv: 1 }));
 const quotation = { 'ELECTRICAL (84)': { rows: [{ id: 'q1', item: 'DOUBLE POWER POINT', unit: 'ITEM', excelRate: '$50.00' }] } };
 let quoted = connectElectricalScheduleToQuotation({ quotation }, book);
-const quoteRows = w => w.quotation['ELECTRICAL - CLIENT SELECTIONS'].rows;
+const electricalSection = w => Object.keys(w.quotation).find(name => (w.quotation[name].rows || []).some(row => row.source === 'client-selections-electrical-schedule')) || 'ELECTRICAL';
+const quoteRows = w => w.quotation[electricalSection(w)].rows.filter(row => row.source === 'client-selections-electrical-schedule');
 const mediaRowId = quoteRows(quoted).find(row => row.location === 'Media Room' && row.electricalPointKey === 'double-gpo').id;
-quoted = { ...quoted, quotation: { ...quoted.quotation, 'ELECTRICAL - CLIENT SELECTIONS': { rows: quoteRows(quoted).map(row => (row.id === mediaRowId ? { ...row, manualRate: '$65.00' } : row)) } } };
+const quoteSection = electricalSection(quoted);
+quoted = { ...quoted, quotation: { ...quoted.quotation, [quoteSection]: { ...quoted.quotation[quoteSection], rows: quoted.quotation[quoteSection].rows.map(row => (row.id === mediaRowId ? { ...row, manualRate: '$65.00' } : row)) } } };
 
 // ---- RENAME: same room, same id, every record follows ------------------------------------------
 const mediaId = room('Media Room').id;

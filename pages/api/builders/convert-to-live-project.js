@@ -1,5 +1,5 @@
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
-import { withWorkspace } from "../../../lib/withWorkspace";
+import { withWorkspace, INTERNAL_COMMERCIAL_ROLES } from "../../../lib/withWorkspace";
 
 const PROGRAMME_STAGES = [
   "Pre-Construction",
@@ -52,7 +52,7 @@ async function handler(req, res) {
   }
 }
 
-export default withWorkspace(handler);
+export default withWorkspace(handler, { roles: INTERNAL_COMMERCIAL_ROLES });
 
 async function handlePreflight(req, res) {
   const workspaceId = req.workspaceId;
