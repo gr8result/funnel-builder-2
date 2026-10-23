@@ -5,7 +5,9 @@ const moduleUrl = source => `data:text/javascript;base64,${Buffer.from(source).t
 const read = name => fs.readFileSync(name, 'utf8');
 const workspaceSource = read('lib/withWorkspace.js')
   .replace(/import .*supabaseAdmin.*;/, 'const supabaseAdmin = globalThis.__selectionSecurityDb;')
-  .replace(/import .*getWorkspaceDemoState.*;/, 'const getWorkspaceDemoState = async () => ({});');
+  .replace(/import .*getWorkspaceDemoState.*;/, 'const getWorkspaceDemoState = async () => ({});')
+  .replace(/import \{ INTERNAL_COMMERCIAL_ROLES \} from .*;/, `export const INTERNAL_COMMERCIAL_ROLES = ${JSON.stringify(['owner', 'admin', 'builder', 'builder_admin', 'builder_staff', 'estimator', 'interior_designer', 'sales'])};`)
+  .replace(/export \{ INTERNAL_COMMERCIAL_ROLES \} from .*;/, '');
 const response = () => ({ code: 200, status(code) { this.code = code; return this; }, json(body) { this.body = body; return this; }, setHeader() {} });
 let role = 'client';
 let membershipWorkspace = 'workspace-a';
@@ -58,6 +60,19 @@ const routes = [
   'pages/api/builders/publish-client-selections.js',
 ];
 for (const name of routes) assert.match(read(name), /export default withWorkspace\(\w+, \{ roles: INTERNAL_COMMERCIAL_ROLES \}\)/, `${name} enforces the tested server policy`);
+
+const workbookUi = read('components/estimate-builder/EstimateBuilderWorkbook.js');
+const clientSelectionsRender = workbookUi.slice(
+  workbookUi.indexOf('{activePageKey === "clientSelections"'),
+  workbookUi.indexOf('{activePageKey === "budgetVsActual"'),
+);
+assert.doesNotMatch(clientSelectionsRender, /SelectionBaselineControl|SelectionReconcilePanel|ProductSelectionIntegrityPanel|commercial-selection-review/, 'normal Client Selections never renders commercial reconciliation controls');
+assert.match(workbookUi, /activePageKey === "quotation" && hasInternalCommercialAccess\(workspaceRole\)/, 'commercial selection review is isolated to Quotation and gated by the active internal role');
+
+const commercialAccessSource = read('lib/commercialAccess.js');
+const { hasInternalCommercialAccess } = await import(moduleUrl(commercialAccessSource.replace(/export /g, 'export ')));
+for (const allowed of INTERNAL_COMMERCIAL_ROLES) assert.equal(hasInternalCommercialAccess(allowed), true, `${allowed} can open commercial review`);
+for (const denied of ['client', 'customer', 'guest', 'member', '', null]) assert.equal(hasInternalCommercialAccess(denied), false, `${denied || 'empty role'} cannot open commercial review`);
 
 const portalSource = read('client-portal/serverShared.js')
   .replace(/import \{ supabaseAdmin \} from .*;/, 'const supabaseAdmin = globalThis.__portalSecurityDb;');
