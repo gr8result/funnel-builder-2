@@ -31,10 +31,33 @@ const book = {
     rows: [
       guided("toilet-suite", [line("icon-line", "icon", [allocation("Main Bathroom", 4)]), line("origin-line", "origin", [allocation("Main Bathroom", 4)])]),
       guided("bath", [line("riviere-line", "riviere", [allocation("Main Bathroom", 1)]), line("chios-line", "chios", [allocation("Unallocated", 1)])]),
-      guided("ceiling-fan", [
-        line("aeroflow-line", "aeroflow", [allocation("DOWNSTAIRS", 2), allocation("UPSTAIRS", 5)]),
-        line("spyda-line", "spyda", [allocation("Alfresco", 1), allocation("Balcony", 1)]),
-        line("stanza-line", "stanza", [allocation("Bedroom 1", 1)]),
+      {
+        ...guided("ceiling-fan", [
+          line("aeroflow-line", "aeroflow", [allocation("DOWNSTAIRS", 2), allocation("UPSTAIRS", 5)]),
+          line("spyda-line", "spyda", [allocation("Alfresco", 1), allocation("Balcony", 1)]),
+          line("stanza-line", "stanza", [allocation("Bedroom 1", 1)]),
+        ]),
+        description: "aeroflow: DOWNSTAIRS x2, UPSTAIRS x5",
+        guidedSelection: {
+          ...guided("ceiling-fan", [
+            line("aeroflow-line", "aeroflow", [allocation("DOWNSTAIRS", 2), allocation("UPSTAIRS", 5)]),
+            line("spyda-line", "spyda", [allocation("Alfresco", 1), allocation("Balcony", 1)]),
+            line("stanza-line", "stanza", [allocation("Bedroom 1", 1)]),
+          ]).guidedSelection,
+          requirementLabel: "Ceiling Fans",
+          locationAllocations: [allocation("DOWNSTAIRS", 2), allocation("UPSTAIRS", 5)],
+          plumbingAllocation: {
+            lines: [
+              line("aeroflow-line", "aeroflow", [allocation("DOWNSTAIRS", 2), allocation("UPSTAIRS", 5)]),
+              line("spyda-line", "spyda", [allocation("Alfresco", 1), allocation("Balcony", 1)]),
+              line("stanza-line", "stanza", [allocation("Bedroom 1", 1)]),
+            ],
+            locationSchedule: [allocation("DOWNSTAIRS", 2), allocation("UPSTAIRS", 5)],
+          },
+        },
+      },
+      guided("balustrades", [
+        line("balustrade-line", "balustrade", [allocation("Internal stairs", 3)]),
       ]),
       {
         id: "cabinetry",
@@ -60,10 +83,15 @@ assert.deepEqual(selection("toilet-suite").plumbingAllocation.lines.map(item => 
 assert.deepEqual(selection("bath").plumbingAllocation.lines.map(item => item.productId), ["riviere"]);
 assert.deepEqual(selection("ceiling-fan").plumbingAllocation.lines.map(item => item.productId), ["spyda"]);
 assert.deepEqual(selection("ceiling-fan").plumbingAllocation.lines[0].allocations.map(item => item.location), ["Alfresco", "Balcony"]);
+assert.deepEqual(selection("ceiling-fan").locationAllocations.map(item => item.location), ["Alfresco", "Balcony"]);
+assert.deepEqual(selection("ceiling-fan").plumbingAllocation.locationSchedule.map(item => item.location), ["Alfresco", "Balcony"]);
+assert(!corrected.rooms[0].rows.find(row => row.guidedRequirementKey === "ceiling-fan").description.match(/upstairs|downstairs/i));
+assert.deepEqual(selection("balustrades").plumbingAllocation.lines[0].allocations.map(item => item.location), ["Staircase"]);
+assert.deepEqual(selection("balustrades").locationAllocations.map(item => item.location), ["Staircase"]);
 assert.deepEqual(selection("cabinetry").cabinetrySelection.locations.map(item => item.location), ["Butler's Pantry"]);
 assert.equal(selection("cabinetry").cabinetrySelection.locations[0].areaSelections.lowerDoorsDrawers.productId, "kitchen-master");
 assert.equal(selection("cabinetry").cabinetrySelection.locations[0].areaSelections.endPanels.productId, "pantry-panel");
-assert.equal(selection("cabinetry").cabinetrySelection.schedule[0].location, "Butler's Pantry");
+assert(!JSON.stringify(selection("cabinetry").cabinetrySelection).match(/\"location\":\"Pantry\"/));
 assert.deepEqual(applyConfirmedClientSelectionCorrections(corrected), corrected, "confirmed corrections are idempotent");
 
 const canonicalCabinetry = normaliseCabinetrySelection({

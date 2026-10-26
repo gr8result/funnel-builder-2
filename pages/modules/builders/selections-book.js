@@ -282,6 +282,7 @@ const CABINETRY_COLOUR_PAGE_SIZE = 60;
 
 const STATUS_OPTIONS = ["pending", "selected", "approved", "ordered"];
 const EMBEDDED_SELECTIONS_BOOK_STORAGE_KEY = "gr8:embedded-selections-book";
+const EMPTY_SELECTION_LIST = Object.freeze([]);
 // Long enough to coalesce a run of clicks, short enough that a refresh loses nothing.
 const SELECTION_AUTOSAVE_DELAY_MS = 1200;
 
@@ -1828,13 +1829,14 @@ function BuilderSelectionsBookPageContent({
   }, [workspaceId, databaseCatalogue.revision]);
   // The contract schedule body: Exterior Selections, Interior Selections, Painting Schedule - one
   // continuous document paginated by page capacity (lib/builders/selectionsScheduleDocument.js).
+  const scheduleExteriorWalls = embeddedWorkbook?.takeoffEngine?.lastJobSetupSync?.payload?.schedule?.projectTotals?.exteriorWalls || EMPTY_SELECTION_LIST;
   const selectionsSchedule = useMemo(() => buildSelectionsSchedule(scheduleSourceBook({ persistedSelections: reviewablePersistedProjectSelections, book }), {
     productLookup: scheduleProductLookup,
     firstPageNumber: 3,
-    exteriorWalls: embeddedWorkbook?.takeoffEngine?.lastJobSetupSync?.payload?.schedule?.projectTotals?.exteriorWalls || [],
+    exteriorWalls: scheduleExteriorWalls,
     isHidden: (row, guided) => exteriorWallConstruction?.brickApplicable === false
       && /\bbrick/i.test([row.guidedRequirementKey, guided.requirementKey, guided.familyKey, guided.productName].filter(Boolean).join(" ")) && !/\bexposed\b/i.test(String(guided.productName || "")),
-  }), [book, reviewablePersistedProjectSelections, scheduleProductLookup, exteriorWallConstruction, embeddedWorkbook]);
+  }), [book, reviewablePersistedProjectSelections, scheduleProductLookup, exteriorWallConstruction, scheduleExteriorWalls]);
   const effectiveScheduleItems = useMemo(() => selectionsSchedule.rows.map((row) => ({ id: row.id, sourceRowId: row.sourceRowId, selectionId: row.id, category: row.item, area: row.qtyLocation, title: row.product,
     imageUrl: row.imageUrl, statusLabel: row.status, priceLabel: "", fields: [] })), [selectionsSchedule]);
   const currentSelectionsRevisionLabel = useMemo(() => {
@@ -1890,11 +1892,16 @@ function BuilderSelectionsBookPageContent({
   // the builder added, e.g. "Ensuite 2") plus the project's Cabinetry locations.
   // Physical locations only (projectLocations.js): the category containers the book keeps its
   // guided rows in ("Bathroom Accessories", "Plumbing Fixtures", ...) are never project locations.
+  const roomSourceWorkbook = useMemo(() => ({
+    aiPlanTakeoffJob: embeddedWorkbook?.aiPlanTakeoffJob || null,
+    takeoffEngine: { aiPlanTakeoffJob: embeddedWorkbook?.takeoffEngine?.aiPlanTakeoffJob || null },
+    projectRoomModel: embeddedWorkbook?.projectRoomModel || null,
+  }), [embeddedWorkbook?.aiPlanTakeoffJob, embeddedWorkbook?.takeoffEngine?.aiPlanTakeoffJob, embeddedWorkbook?.projectRoomModel]);
   const projectLocationList = useMemo(() => projectLocations({
     book,
     cabinetryLocations: guidedSelectionMap.get("cabinetry")?.selected_details?.cabinetrySelection?.locations || [],
-    workbook: embeddedWorkbook,
-  }), [book.rooms, book.projectRoomModel, guidedSelectionMap, embeddedWorkbook]); // eslint-disable-line react-hooks/exhaustive-deps
+    workbook: roomSourceWorkbook,
+  }), [book.rooms, book.projectRoomModel, guidedSelectionMap, roomSourceWorkbook]); // eslint-disable-line react-hooks/exhaustive-deps
   const plumbingProjectLocationNames = useMemo(() => projectLocationList.map((location) => location.name), [projectLocationList]);
   // Tiles & Stone room-by-room workflow: saved rooms, or (first time) the project's tiled rooms plus
   // any saved Floor Wastes & Drains migrated into their rooms; earlier per-m² tile picks are kept.
@@ -1980,11 +1987,11 @@ function BuilderSelectionsBookPageContent({
     }, 0));
   }
   const projectRoomManager = useMemo(() => {
-    const model = projectRoomModel(book, embeddedWorkbook);
-    const takeoff = takeoffRoomEvidence(embeddedWorkbook || {});
+    const model = projectRoomModel(book, roomSourceWorkbook);
+    const takeoff = takeoffRoomEvidence(roomSourceWorkbook);
     return {
       removed: removedProjectRooms(model),
-      levels: [...new Set(Object.values(embeddedWorkbook?.aiPlanTakeoffJob?.sheetLevels || embeddedWorkbook?.takeoffEngine?.aiPlanTakeoffJob?.sheetLevels || {}).map((level) => String(level || "").trim()).filter(Boolean))],
+      levels: [...new Set(Object.values(roomSourceWorkbook.aiPlanTakeoffJob?.sheetLevels || roomSourceWorkbook.takeoffEngine?.aiPlanTakeoffJob?.sheetLevels || {}).map((level) => String(level || "").trim()).filter(Boolean))],
       usageFor: (location) => projectRoomUsage(book, location, { rooms: projectLocationList, takeoff, sourceKeys: model.rooms.find((entry) => entry.id === location.id)?.sourceKeys || [] }),
       onAdd: (room) => changeProjectRooms("add", null, room),
       onRename: (location, name) => changeProjectRooms("rename", location, name),
@@ -2005,7 +2012,7 @@ function BuilderSelectionsBookPageContent({
       confirmedAt: model.confirmedAt || "",
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [book, embeddedWorkbook, projectLocationList]);
+  }, [book, roomSourceWorkbook, projectLocationList]);
   const requireProjectRoomConfirmation = !projectRoomManager.confirmed && !["areas", "review"].includes(guidedScreen);
   // Electrical: a room-by-room quantity schedule over the project's own rooms. No products; the
   // Quotation Builder prices each point (electricalSchedule.js).
@@ -2647,6 +2654,10 @@ function BuilderSelectionsBookPageContent({
       const latestPayload = JSON.parse(window.localStorage.getItem(latestEmbeddedBookStorageKey()) || "null");
       // The "latest" slot holds whichever job saved last. It is only ever used for the SAME job.
       if (latestPayload?.book && selectedProjectId && latestPayload.projectId === selectedProjectId) return { book: latestPayload.book, savedAt: latestPayload.savedAt || "" };
+      if (latestPayload?.storageKey && selectedProjectId && latestPayload.projectId === selectedProjectId) {
+        const pointedPayload = JSON.parse(window.localStorage.getItem(latestPayload.storageKey) || "null");
+        if (pointedPayload?.book && pointedPayload.projectId === selectedProjectId) return { book: pointedPayload.book, savedAt: pointedPayload.savedAt || latestPayload.savedAt || "" };
+      }
       const prefix = `${EMBEDDED_SELECTIONS_BOOK_STORAGE_KEY}:${workspaceId}:`;
       const payloads = Object.keys(window.localStorage)
         .filter((key) => key.startsWith(prefix) && !key.endsWith(":latest"))
@@ -2672,7 +2683,12 @@ function BuilderSelectionsBookPageContent({
         book: nextBook,
       });
       window.localStorage.setItem(embeddedBookStorageKey(), payload);
-      window.localStorage.setItem(latestEmbeddedBookStorageKey(), payload);
+      window.localStorage.setItem(latestEmbeddedBookStorageKey(), JSON.stringify({
+        workspaceId,
+        projectId: selectedProjectId,
+        savedAt: new Date().toISOString(),
+        storageKey: embeddedBookStorageKey(),
+      }));
     } catch (storageError) {
       console.warn("Client Selections draft cache could not be written. Saved project data was not changed.", storageError);
     }
@@ -5248,6 +5264,9 @@ function BuilderSelectionsBookPageContent({
     setError("");
     setSuccess("");
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token || "";
+      const userId = sessionData?.session?.user?.id || null;
       const bookForGeneration = {
         ...book,
         cover: { ...book.cover, ...displayCover, ...brochureCover, suburbPostcode: brochureCover.locality },
@@ -5258,10 +5277,7 @@ function BuilderSelectionsBookPageContent({
       if (!savedBookId || savedBookId === "embedded-local") {
         throw new Error("Save the Client Selections book to the active job before generating the schedule PDF.");
       }
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token || "";
-      const { data: authData } = await supabase.auth.getUser();
-      const syncResult = await syncBookToProjectSelections({ bookForSync: bookForGeneration, savedBookId, userId: authData?.user?.id || null });
+      const syncResult = await syncBookToProjectSelections({ bookForSync: bookForGeneration, savedBookId, userId });
       if (syncResult.error) throw new Error(syncResult.error);
       const response = await fetch("/api/builders/final-inclusions-schedule/generate", {
         method: "POST",
