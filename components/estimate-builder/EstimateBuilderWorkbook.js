@@ -902,17 +902,11 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
     }
   }
 
-  async function openLocalJobFilePicker() {
+  function openLocalJobFilePicker() {
     if (openingLocalJobFile) return;
     setJobFileError("");
     setOpenWorkbookMenu("");
-    setOpeningLocalJobFile(true);
-    try {
-      const result = await jobFile.open();
-      if (result?.ok === false && result.message) setJobFileError(result.message);
-    } finally {
-      setOpeningLocalJobFile(false);
-    }
+    localJobFileInputRef.current?.click();
   }
 
   async function closeActiveJob() {
@@ -927,6 +921,7 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
     const file = event.target.files?.[0] || null;
     event.target.value = "";
     if (!file) return;
+    setOpeningLocalJobFile(true);
     setJobFileError("");
     setLocalJobFilePrompt(null);
     try {
@@ -964,6 +959,8 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
     } catch (error) {
       const message = `${file?.name || "Selected file"}: ${error?.message || "This job file could not be opened."}`;
       setJobFileError(message);
+    } finally {
+      setOpeningLocalJobFile(false);
     }
   }
 

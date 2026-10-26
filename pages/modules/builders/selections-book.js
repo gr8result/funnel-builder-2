@@ -33,7 +33,7 @@ import ProjectRoomManager from "../../../components/client-selections/ProjectRoo
 import { getBuilderBenchtopRangeMapping, saveBuilderBenchtopRangeMapping, supplierPriceGroups } from "../../../lib/builders/benchtopRangeMapping.js";
 import { ROOM_LOCATION_OPTIONS } from "../../../components/construction-estimation/ai-plan-takeoff/takeoffRunData.js";
 import { benchtopLocationPatch } from "../../../lib/builders/benchtopSelection.js";
-import { addProjectRoom, confirmProjectRooms, keepRoomsSeparate, mergeProjectRooms, possibleDuplicateRooms, projectRoomModel, projectRoomUsage, projectRoomsConfirmed, removeProjectRoom, removeRoomRecords, removedProjectRooms, renameProjectRoom, renameRoomRecords, restoreProjectRoom, roomMergeConflicts, unlistedSelectionLocations, updateProjectRoom } from "../../../lib/builders/projectRoomModel.js";
+import { addProjectRoom, assignSelectionAllocationToRoom, confirmProjectRooms, keepRoomsSeparate, keepSelectionAllocationUnallocated, mergeProjectRooms, possibleDuplicateRooms, projectRoomModel, projectRoomUsage, projectRoomsConfirmed, removeDuplicateSelectionAllocation, removeProjectRoom, removeRoomRecords, removedProjectRooms, renameProjectRoom, renameRoomRecords, restoreProjectRoom, roomMergeConflicts, unlistedSelectionLocations, updateProjectRoom } from "../../../lib/builders/projectRoomModel.js";
 import { ELECTRICAL_SCHEDULE_REQUIREMENT_KEY, electricalEstimateCounts, electricalInclusionBaseline, electricalScheduleLines, electricalScheduleProgress, electricalSelectionPatch, normaliseElectricalSchedule } from "../../../lib/builders/electricalSchedule.js";
 import { choiceSwatch, colourLabel, internalPaintScheduleLines, internalPaintSchemeStatus, internalPaintSummary, normaliseInternalPaintScheme } from "../../../lib/builders/internalPaintColours.js";
 import { serviceProjectRequirement, serviceQuoteRequirements, RESIDENTIAL_SERVICE_KEYS } from '../../../lib/builders/residentialServices.js';
@@ -189,6 +189,7 @@ import {
   normaliseCabinetrySelection,
   overrideCabinetryArea,
 } from "../../../lib/builders/cabinetryWorkflow";
+import { applyConfirmedClientSelectionCorrections } from "../../../lib/builders/clientSelectionCorrections";
 import { roundMoney } from "../../../lib/builders/selectionBudget";
 import {
   STONE_BENCHTOP_CATALOGUE,
@@ -246,7 +247,7 @@ import {
   selectionGroupsForRequirement,
   variantForOptions,
 } from "../../../lib/product-library/showerScreenMirrorCatalogue.js";
-import { SELECTIONS_BOOK_TEMPLATE_ROOMS, houseRoomNames, houseRooms, isSelectionCategoryName, projectLocations, takeoffRoomCounts } from "../../../lib/builders/projectLocations.js";
+import { SELECTIONS_BOOK_TEMPLATE_ROOMS, houseRoomNames, houseRooms, isSelectionCategoryName, projectLocations, takeoffRoomEvidence } from "../../../lib/builders/projectLocations.js";
 import { isGenericBuildingLevelLocation } from "../../../lib/builders/buildingLevels.js";
 import ProjectLocationMultiSelect from "../../../components/product-library/ProjectLocationMultiSelect";
 import {
@@ -1948,6 +1949,18 @@ function BuilderSelectionsBookPageContent({
         result = mergeProjectRooms(model, location, into);
         if (!result.error) records = renameRoomRecords(current, location, into, { rooms, merge: true, resolutions: payload?.resolutions || {} });
       }
+      if (kind === "assign-selection") {
+        records = assignSelectionAllocationToRoom(current, location, payload?.into, payload?.detail, payload?.quantity);
+        result = { model };
+      }
+      if (kind === "resolve-selection-duplicate") {
+        records = removeDuplicateSelectionAllocation(current, location, payload?.detail);
+        result = { model };
+      }
+      if (kind === "keep-selection-unallocated") {
+        records = keepSelectionAllocationUnallocated(current, location, payload?.detail);
+        result = { model };
+      }
       if (kind === "separate") result = keepRoomsSeparate(model, location, payload);
       if (kind === "confirm") result = confirmProjectRooms(model, rooms);
       if (kind === "remove") {
@@ -1968,7 +1981,7 @@ function BuilderSelectionsBookPageContent({
   }
   const projectRoomManager = useMemo(() => {
     const model = projectRoomModel(book, embeddedWorkbook);
-    const takeoff = takeoffRoomCounts(embeddedWorkbook || {});
+    const takeoff = takeoffRoomEvidence(embeddedWorkbook || {});
     return {
       removed: removedProjectRooms(model),
       levels: [...new Set(Object.values(embeddedWorkbook?.aiPlanTakeoffJob?.sheetLevels || embeddedWorkbook?.takeoffEngine?.aiPlanTakeoffJob?.sheetLevels || {}).map((level) => String(level || "").trim()).filter(Boolean))],
@@ -1978,6 +1991,9 @@ function BuilderSelectionsBookPageContent({
       onUpdate: (location, patch) => changeProjectRooms("update", location, patch),
       onRemove: (location) => changeProjectRooms("remove", location),
       onMerge: (from, into, resolutions = {}) => changeProjectRooms("merge", from, { into, resolutions }),
+      onAssignSelection: (from, into, detail, quantity) => changeProjectRooms("assign-selection", from, { into, detail, quantity }),
+      onRemoveFloorDuplicate: (from, detail) => changeProjectRooms("resolve-selection-duplicate", from, { detail }),
+      onKeepFloorUnallocated: (from, detail) => changeProjectRooms("keep-selection-unallocated", from, { detail }),
       onRestore: (entry) => changeProjectRooms("restore", null, entry),
       // Room setup review: names that may be one room, and locations selections use that are not rooms.
       possibleDuplicates: possibleDuplicateRooms(projectLocationList, model),
@@ -14936,6 +14952,7 @@ function createDocumentBook({ project = null, snapshot = null, template = null, 
 }
 
 function normaliseDocumentBook(value, context) {
+  value = applyConfirmedClientSelectionCorrections(value);
   // Bath Mixers + Shower Mixers are one category now; merge any saved Shower Mixer selection into it.
   if (Array.isArray(value?.rooms)) {
     const rooms = migrateBathShowerMixerRooms(value.rooms);

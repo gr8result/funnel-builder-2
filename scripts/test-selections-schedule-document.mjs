@@ -131,6 +131,42 @@ check("IMAGES WHERE THE PRODUCT HAS ONE, NO EMPTY IMAGE DATA", () => {
     { productLookup: (productId) => (productId === "master-T1" ? { imageUrl: "/images/tiles/t1.webp", brand: "National Tiles" } : null) });
   assert.deepEqual([tiles.rows[0].imageUrl, tiles.rows[0].brandSupplier, tiles.rows[0].qtyLocation], ["/images/tiles/t1.webp", "National Tiles", "6.8m² - Kitchen, Laundry"]);
 });
+check("CABINETRY PRINTS COMPONENTS AND EXPLICIT REVIEW REQUIREMENTS", () => {
+  const cabinetry = buildSelectionsSchedule({ rooms: [{ rows: [guided("cabinetry", {
+    area: "cabinetry",
+    requirementLabel: "Cabinetry",
+    cabinetrySelection: {
+      locations: [{
+        location: "Kitchen",
+        included: true,
+        areaSelections: {
+          lowerDoorsDrawers: { supplier: "Polytec", productName: "Arcadia Oak Woodmatt", colourName: "Arcadia Oak", finish: "Woodmatt", thickness: "16mm" },
+          overheadDoors: { supplier: "Polytec", productName: "Arabica Smooth", colourName: "Arabica", finish: "Smooth", thickness: "16mm" },
+          kickPanels: { material: "Aluminium", finish: "Brushed aluminium" },
+          bulkheads: { material: "Raw MDF", finish: "Painted to match walls" },
+        },
+        benchtopAreas: [{ label: "Main benchtop", surface: { supplier: "Stone Ambassador", material: "stone", colour: "Eclipse", thickness: "20 mm" } }],
+        handles: { base: { productName: "Sharkfin" }, overhead: { productName: "Handleless" } },
+      }],
+      schedule: [
+        { componentId: "base-1", location: "Kitchen", unitType: "2 door base unit - 1200mm", quantity: 2 },
+        { componentId: "overhead-1", location: "Kitchen", unitType: "Overhead cabinet - 2 door", quantity: 2 },
+        { componentId: "bulkhead-1", location: "Kitchen", unitType: "MDF bulkhead - 300mm - LM", quantity: 1 },
+      ],
+    },
+  })] }] });
+  const item = label => cabinetry.rows.find(row => row.item === `Kitchen — ${label}`);
+  assert.equal(item("Base cabinets").qtyLocation, "Qty 2");
+  assert.match(item("Base cabinets").product, /Arcadia Oak/);
+  assert.equal(item("Overhead cupboards").qtyLocation, "Qty 2");
+  assert.match(item("Bulkheads").qtyLocation, /linear measurement to confirm/);
+  assert.equal(item("Cabinet carcasses").status, SCHEDULE_STATUS.tbc);
+  assert.match(item("Cabinet carcasses").product, /review required/i);
+  assert.match(item("Benchtops").product, /Stone Ambassador.*Eclipse.*20 mm/);
+  assert.match(item("Handles \/ handleless system").product, /Sharkfin.*Handleless/);
+  assert.equal(item("Hinges, drawer runners and hardware").status, SCHEDULE_STATUS.tbc);
+  assert.equal(item("Splashback").status, SCHEDULE_STATUS.tbc);
+});
 check("RECONCILIATION: EVERY SELECTION IS RENDERED OR CONSOLIDATED", () => {
   const rec = schedule.reconciliation;
   assert.equal(rec.ok, true, JSON.stringify({ missing: rec.missing, duplicated: rec.duplicated.map((row) => row.id), unrendered: rec.unrendered.length, sparse: rec.sparsePages }));

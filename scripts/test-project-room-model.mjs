@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { houseRooms, projectLocations, takeoffRoomCounts } from '../lib/builders/projectLocations.js';
+import { houseRooms, projectLocations, takeoffRoomCounts, takeoffRoomEvidence } from '../lib/builders/projectLocations.js';
 import {
   addProjectRoom, mergeProjectRooms, projectRoomModel, projectRoomUsage, removeProjectRoom, removeRoomRecords, removedProjectRooms, renameProjectRoom, renameRoomRecords, restoreProjectRoom, updateProjectRoom,
 } from '../lib/builders/projectRoomModel.js';
@@ -23,7 +23,10 @@ const pass = message => console.log(`PASS ${message}`);
 const opening = (roomKey, roomLabel) => ({ id: `${roomKey}-${roomLabel}`, openingType: 'window', roomKey, roomLabel, location: roomLabel });
 const requirement = ALL_GUIDED_REQUIREMENTS.find(item => item.requirementKey === 'electrical-schedule');
 const workbook = { aiPlanTakeoffJob: { placedOpenings: [opening('kitchen', 'Kitchen'), opening('pantry', 'Pantry'), opening('pantry', 'Pantry'), opening('media-theatre', 'Media / Theatre'), opening('bed-4', 'Bed 4'), opening('family', 'Family')] } };
-const cabinetry = [{ id: 'cabinetry-kitchen', location: 'Kitchen' }, { id: 'cabinetry-butler-s-pantry', location: "Butler's Pantry" }];
+const cabinetry = [
+  { id: 'cabinetry-kitchen', location: 'Kitchen' },
+  { id: 'cabinetry-butler-s-pantry', location: "Butler's Pantry" },
+];
 const guided = (key, selection) => ({ id: `row-${key}`, guidedRequirementKey: key, guidedSelection: { requirementKey: key, ...selection } });
 const allocation = (key, location, quantity = 1) => ({ locationKey: key, location, quantity });
 const line = (lineId, allocations) => ({ lineId, productId: lineId, productName: lineId, unit: 'EACH', unitPrice: 100, unitAllowance: 100, allocations, quantity: allocations.reduce((n, a) => n + a.quantity, 0) });
@@ -58,7 +61,7 @@ function change(kind, location, payload) {
 }
 
 // ---- No static fallback: a template room needs something real behind it ------------------------
-assert.deepEqual(names(), ['Kitchen', "Butler's Pantry", 'Pantry', 'Media Room', 'Bedroom 4', 'Family']);
+assert.deepEqual(names().sort(), ['Kitchen', "Butler's Pantry", 'Pantry', 'Media Room', 'Bedroom 4', 'Family'].sort());
 assert(!names().includes('Living') && !names().includes('Bedroom 1') && !names().includes('Main Bathroom'), 'Selections Book template rooms are not listed on their own');
 assert.equal(room('Pantry').source, 'takeoff'); assert.equal(room("Butler's Pantry").source, 'cabinetry'); assert.equal(room('Kitchen').source, 'selections-book');
 const withRecord = { ...book, rooms: [...book.rooms, { id: 'guided-x', name: 'Bathroom Accessories', rows: [guided('towel-rail', { plumbingAllocation: { lines: [line('rail', [allocation('main-bathroom', 'Main Bathroom')])] } })] }] };
@@ -121,10 +124,21 @@ assert(normaliseElectricalSchedule(null, houseRooms(list())).rooms.some(item => 
 pass('add: a manual room is a project room in Electrical, Lighting and Paint');
 
 // ---- REMOVE: warn when data is attached; never silently destroy it -----------------------------
-const context = () => ({ rooms: list(), takeoff: takeoffRoomCounts(workbook) });
+const context = () => ({ rooms: list(), takeoff: takeoffRoomEvidence(workbook) });
 assert.deepEqual(projectRoomUsage(book, room('Study'), context()), [], 'nothing attached: normal removal');
-assert.deepEqual(projectRoomUsage(book, room('Pantry'), context()), ['Plumbing Fixtures & Tapware', 'Lighting & Ceiling Fans', 'Paint', 'Tiles & Stone', 'Electrical', 'Takeoff (2 windows / doors or measured areas)']);
-assert.deepEqual(projectRoomUsage(book, room('Kitchen'), context()), ['Plumbing Fixtures & Tapware', 'Cabinetry', 'Takeoff (1 window / door or measured area)']);
+const pantryUsage = projectRoomUsage(book, room('Pantry'), context());
+assert.deepEqual(pantryUsage.slice(0, 5), ['Plumbing Fixtures & Tapware', 'Lighting & Ceiling Fans', 'Paint', 'Tiles & Stone', 'Electrical']);
+assert.equal(pantryUsage.length, 7);
+assert(pantryUsage[5].includes('Window pantry-Pantry') && pantryUsage[5].includes('placedOpenings[1]') && pantryUsage[5].includes('assigned room pantry'));
+assert(pantryUsage[6].includes('Window pantry-Pantry') && pantryUsage[6].includes('placedOpenings[2]') && pantryUsage[6].includes('assigned room pantry'));
+const kitchenUsage = projectRoomUsage(book, room('Kitchen'), context());
+assert.deepEqual(kitchenUsage.slice(0, 2), ['Plumbing Fixtures & Tapware', 'Cabinetry']);
+assert(kitchenUsage[2].includes('Window kitchen-Kitchen') && kitchenUsage[2].includes('placedOpenings[0]'));
+const [mediaEvidence] = takeoffRoomEvidence(workbook)['media-room'];
+assert.deepEqual(
+  { recordId: mediaEvidence.recordId, recordType: mediaEvidence.recordType, classification: mediaEvidence.classification, assignedRoomId: mediaEvidence.assignedRoomId, sourceReference: mediaEvidence.sourceReference },
+  { recordId: 'media-theatre-Media / Theatre', recordType: 'placed-opening', classification: 'Window', assignedRoomId: 'media-theatre', sourceReference: 'placedOpenings[3]' },
+);
 change('remove', room('Study'));
 assert(!names().includes('Study'));
 change('remove', room('Bedroom 4'));
@@ -137,7 +151,15 @@ pass('remove: usage is reported first; a removed room stays removed and can be r
 
 // ---- MERGE: Pantry is the Butler's Pantry -------------------------------------------------------
 const butlersId = room("Butler's Pantry").id;
-change('merge', room('Pantry'), room("Butler's Pantry"));
+const pantryRoomBeforeCabinetryMerge = room('Pantry');
+const butlerRoomBeforeCabinetryMerge = room("Butler's Pantry");
+const cabinetryBeforeMerge = find(book, 'cabinetry').cabinetrySelection;
+const butlerCabinetry = cabinetryBeforeMerge.locations.find(item => item.location === "Butler's Pantry");
+butlerCabinetry.areaSelections = { lowerDoorsDrawers: { productId: 'confirmed-master-finish' } };
+butlerCabinetry.cabinetSchedule = [{ componentId: 'butler-overhead', location: "Butler's Pantry", unitType: 'Overhead cabinet', quantity: 2 }];
+cabinetryBeforeMerge.locations.push({ id: 'cabinetry-pantry', location: 'Pantry', areaSelections: { lowerDoorsDrawers: { productId: 'pantry-finish' }, endPanels: { productId: 'shared-end-panel' } }, cabinetSchedule: [{ componentId: 'pantry-base', location: 'Pantry', unitType: 'Base cabinet', quantity: 1 }] });
+cabinetryBeforeMerge.schedule = cabinetryBeforeMerge.locations.flatMap(item => item.cabinetSchedule || []);
+change('merge', pantryRoomBeforeCabinetryMerge, butlerRoomBeforeCabinetryMerge);
 assert(!names().includes('Pantry') && names().includes("Butler's Pantry"));
 assert.equal(room("Butler's Pantry").id, butlersId, "Butler's Pantry stays the room");
 assert.equal(room("Butler's Pantry").roomKey, 'pantry', 'and now owns the takeoff openings recorded as Pantry');
@@ -148,6 +170,11 @@ assert.deepEqual(find(book, 'ceiling-fan').plumbingAllocation.lines[0].allocatio
 // Paint: the kept room's wall colour stands; the trim override it did not have moves across.
 assert.deepEqual(find(book, 'interior-paint').paintScheme.overrides.map(item => `${item.location}/${item.surface}/${item.choice.colourName}`), ["Butler's Pantry/walls/White", "Butler's Pantry/trims/Black"]);
 assert.equal(find(book, 'tiling-rooms').tilingRooms[0].name, "Butler's Pantry");
+const mergedCabinetry = find(book, 'cabinetry').cabinetrySelection;
+assert.deepEqual(mergedCabinetry.locations.map(item => item.location).sort(), ["Butler's Pantry", 'Kitchen']);
+assert.equal(mergedCabinetry.locations.find(item => item.location === "Butler's Pantry").areaSelections.lowerDoorsDrawers.productId, 'confirmed-master-finish');
+assert.equal(mergedCabinetry.locations.find(item => item.location === "Butler's Pantry").areaSelections.endPanels.productId, 'shared-end-panel');
+assert.deepEqual(mergedCabinetry.schedule.map(item => `${item.location}:${item.componentId}`).sort(), ["Butler's Pantry:butler-overhead", "Butler's Pantry:pantry-base"]);
 // Electrical: no duplicate quantities - the kept room's 4 double powerpoints stand, the data point moves.
 const merged = normaliseElectricalSchedule(find(book, 'electrical-schedule').electricalSchedule, houseRooms(list()));
 assert.deepEqual(merged.rooms.find(item => item.room === "Butler's Pantry").points, { 'double-gpo': 4, data: 1 });

@@ -1,8 +1,11 @@
 // Room setup review, safe merging and the "requires your attention" list.
 // Run: node --import ./scripts/register-extensionless-loader.mjs --import ./scripts/register-json-loader.mjs scripts/test-client-selections-room-review.mjs
 import assert from "node:assert/strict";
-import { confirmProjectRooms, keepRoomsSeparate, possibleDuplicateRooms, projectRoomModel, projectRoomsConfirmed, roomRecordKeys, unlistedSelectionLocations } from "../lib/builders/projectRoomModel.js";
-import { plumbingLocationKey } from "../lib/builders/plumbingFixtureAllocation.js";
+import fs from "node:fs";
+import { assignSelectionAllocationToRoom, confirmProjectRooms, keepRoomsSeparate, keepSelectionAllocationUnallocated, possibleDuplicateRooms, projectRoomModel, projectRoomsConfirmed, removeDuplicateSelectionAllocation, renameRoomRecords, roomRecordKeys, unlistedSelectionLocations } from "../lib/builders/projectRoomModel.js";
+import { canonicalSelectionLocation, normaliseAllocations, plumbingLocationKey } from "../lib/builders/plumbingFixtureAllocation.js";
+import { levelIdOf } from "../lib/builders/buildingLevels.js";
+import { houseRooms } from "../lib/builders/projectLocations.js";
 import { overlappingAssignments, selectionAttention } from "../lib/builders/selectionAttention.js";
 import { buildSelectionsSchedule } from "../lib/builders/selectionsScheduleDocument.js";
 
@@ -44,7 +47,8 @@ const book = { rooms: [{ name: "Selections", rows: [
   guided("bathroom-basin", "Bathroom Basin", [line("Riviere Basin", [{ location: "Main Bathroom", quantity: 1 }, { location: "Ensuite", quantity: 2 }, { location: "Bed 2 Ensuite", quantity: 1 }])]),
   guided("bath-mixer", "Bath & Shower Mixer", [line("O.Novo Mixer", [{ location: "Ensuite Shower", quantity: 1 }, { location: "2nd Bedroom Ensuite Shower", quantity: 1 }])]),
   guided("toilet-suite", "Toilet Suite", [line("ICON Toilet", [{ location: "Main Bathroom", quantity: 1 }, { location: "B2 Ensuite", quantity: 1 }]), line("Origin Toilet", [{ location: "Main Bathroom", quantity: 1 }, { location: "2nd BEDROOM ENSUITE", quantity: 1 }])]),
-  guided("ceiling-fan", "Ceiling Fans", [line("AeroFlow Fan", [{ location: "DOWNSTAIRS", quantity: 2 }, { location: "UPSTAIRS", quantity: 5 }]), line("Spyda Fan", [{ location: "ALFRESCO", quantity: 1 }]), line("Stanza Fan", [{ location: "Bedroom 1", quantity: 1 }, { location: "Bedroom 2", quantity: 1 }, { location: "Alfresco", quantity: 1 }])]),
+  guided("ceiling-fan", "Ceiling Fans", [line("AeroFlow Fan", [{ location: "DOWNSTAIRS", quantity: 3 }, { location: "UPSTAIRS", quantity: 5 }]), line("Spyda Fan", [{ location: "ALFRESCO", quantity: 1 }]), line("Stanza Fan", [{ location: "Bedroom 1", quantity: 1 }, { location: "Bedroom 2", quantity: 1 }, { location: "Alfresco", quantity: 1 }])]),
+  guided("balustrades", "Balustrades", [line("Oak Balustrade", [{ location: "Internal stairs", quantity: 1 }])]),
   guided("bath", "Bath", [line("Chios Bath", [{ location: "Unallocated", quantity: 1 }])], { priceStatus: "Quote Required" }),
   guided("hot-water-system", "Hot Water System", [line("Infinity 32", [{ location: "outside", quantity: 1 }])]),
   { id: "row-paint", guidedRequirementKey: "interior-paint", guidedSelection: { requirementKey: "interior-paint", requirementLabel: "Internal Paint Colours", productName: "Internal paint colours", selectionStatus: "pending", paintScheme: {} } },
@@ -53,11 +57,84 @@ const book = { rooms: [{ name: "Selections", rows: [
 
 check("NUMBERED ENSUITE ALIASES RESOLVE TO THE EXISTING PROJECT ROOM", () => {
   const unlisted = unlistedSelectionLocations(book, projectRooms, empty);
-  assert.deepEqual(unlisted.map((item) => [item.name, item.suggestion?.name || ""]), [["DOWNSTAIRS", ""], ["UPSTAIRS", ""], ["outside", ""]]);
+  assert.deepEqual(unlisted.map((item) => [item.name, item.suggestion?.name || ""]), [["Ground Floor", ""], ["Upper Floor", ""]]);
   assert.equal(roomRecordKeys(book).has(plumbingLocationKey("B2 Ensuite")), true);
   assert.equal(plumbingLocationKey("2nd BEDROOM ENSUITE"), plumbingLocationKey("B2 Ensuite"));
   // Fixture positions in the aliased ensuite stay attached to that same project room.
   assert(!unlisted.some((item) => /shower/i.test(item.name)));
+});
+check("STAIRS ARE A CANONICAL NON-ROOM LOCATION", () => {
+  assert.deepEqual(canonicalSelectionLocation("Internal stairs"), { location: "Staircase", locationKey: "staircase", locationType: "staircase" });
+  assert.deepEqual(normaliseAllocations([{ location: "Internal stairs", quantity: 1 }]), [{ locationKey: "staircase", location: "Staircase", quantity: 1, locationType: "staircase", legacyLocation: "Internal stairs" }]);
+  assert(!houseRooms([{ name: "Staircase" }, ...projectRooms]).some((item) => item.name === "Staircase"));
+  assert(!unlistedSelectionLocations(book, projectRooms, empty).some((item) => /stairs|staircase/i.test(item.name)), "Staircase is valid and does not require room reconciliation");
+});
+check("OUTSIDE IS A NON-ROOM HOT WATER LOCATION", () => {
+  assert.deepEqual(canonicalSelectionLocation("outside"), { location: "Outside", locationKey: "outside", locationType: "exterior" });
+  assert(!unlistedSelectionLocations(book, projectRooms, empty).some((item) => /outside/i.test(item.name)));
+});
+check("FLOOR LABELS REQUIRE LEVEL-SCOPED ROOM REASSIGNMENT", () => {
+  assert.equal(levelIdOf("DOWNSTAIRS"), "ground");
+  assert.equal(levelIdOf("UPSTAIRS"), "upper");
+  const unlisted = unlistedSelectionLocations(book, projectRooms, empty).filter((item) => item.floorAllocation);
+  assert.deepEqual(unlisted.map((item) => [item.name, item.levelId, item.details.map((detail) => [detail.productName, detail.quantity, detail.unitPrice])]), [
+    ["Ground Floor", "ground", [["AeroFlow Fan", 3, 10]]],
+    ["Upper Floor", "upper", [["AeroFlow Fan", 5, 10]]],
+  ]);
+  const moved = renameRoomRecords(book, unlisted[0], { ...projectRooms.at(-2), levelId: "ground", identityKey: `${projectRooms.at(-2).key}@ground`, displayName: `${projectRooms.at(-2).name} · Ground Floor` }, { rooms: projectRooms });
+  const fan = moved.rooms[0].rows.find((row) => row.guidedRequirementKey === "ceiling-fan").guidedSelection.plumbingAllocation.lines[0];
+  assert.equal(fan.productName, "AeroFlow Fan");
+  assert.equal(fan.quantity, 8);
+  assert.deepEqual(fan.allocations.map((allocation) => [allocation.location, allocation.quantity]), [["Upper Floor", 5], ["Bedroom 1 · Ground Floor", 3]]);
+  const targets = ["Living Room", "Dining", "Media Room"].map((name) => ({ id: `room-${plumbingLocationKey(name)}`, key: plumbingLocationKey(name), identityKey: `${plumbingLocationKey(name)}@ground`, name, displayName: `${name} · Ground Floor`, levelId: "ground" }));
+  const detail = unlisted[0].details[0];
+  const distributed = targets.reduce((current, target) => assignSelectionAllocationToRoom(current, unlisted[0], target, detail, 1), book);
+  const distributedFan = distributed.rooms[0].rows.find((row) => row.guidedRequirementKey === "ceiling-fan").guidedSelection.plumbingAllocation.lines[0];
+  assert.deepEqual(distributedFan.allocations.map((allocation) => [allocation.location, allocation.quantity]), [
+    ["Upper Floor", 5],
+    ["Living Room · Ground Floor", 1],
+    ["Dining · Ground Floor", 1],
+    ["Media Room · Ground Floor", 1],
+  ]);
+  assert.equal(distributedFan.quantity, 8);
+  const withExistingDiningFan = {
+    ...book,
+    rooms: [{ ...book.rooms[0], rows: book.rooms[0].rows.map((row) => row.guidedRequirementKey !== "ceiling-fan" ? row : {
+      ...row,
+      guidedSelection: {
+        ...row.guidedSelection,
+        plumbingAllocation: {
+          ...row.guidedSelection.plumbingAllocation,
+          lines: [...row.guidedSelection.plumbingAllocation.lines, line("Dining Fan", [{ location: "Dining", quantity: 1 }])],
+        },
+      },
+    }) }],
+  };
+  const reconciliationDetail = { ...detail, quantity: 1, duplicateProven: false, roomEvidence: [{ roomId: "room-dining", roomName: "Dining", productId: "id-Dining Fan", quantity: 1, sameStableProduct: false }] };
+  const deduplicated = removeDuplicateSelectionAllocation(withExistingDiningFan, unlisted[0], reconciliationDetail);
+  const deduplicatedSelection = deduplicated.rooms[0].rows.find((row) => row.guidedRequirementKey === "ceiling-fan").guidedSelection;
+  assert.equal(deduplicatedSelection.plumbingAllocation.lines[0].quantity, 7);
+  assert.equal(deduplicatedSelection.plumbingAllocation.lines.at(-1).quantity, 1);
+  assert.deepEqual(deduplicatedSelection.allocationReconciliationHistory.at(-1), {
+    action: "remove-floor-duplicate", requirementKey: "ceiling-fan", productId: detail.productId, lineId: detail.lineId, productName: detail.productName,
+    sourceLocation: "Ground Floor", sourceLevelId: "ground", quantity: 1, duplicateProven: false, roomEvidence: reconciliationDetail.roomEvidence,
+    at: deduplicatedSelection.allocationReconciliationHistory.at(-1).at,
+  });
+  const kept = keepSelectionAllocationUnallocated(book, unlisted[0], { ...detail, quantity: 3 });
+  const keptSelection = kept.rooms[0].rows.find((row) => row.guidedRequirementKey === "ceiling-fan").guidedSelection;
+  assert(keptSelection.plumbingAllocation.lines[0].allocations.some((allocation) => allocation.location === "Unallocated" && allocation.quantity === 3 && allocation.intendedLevelId === "ground"));
+});
+check("ROOM MANAGER NEVER OFFERS FLOOR LABELS AS NEW ROOMS", () => {
+  const source = fs.readFileSync("components/client-selections/ProjectRoomManager.jsx", "utf8");
+  assert.match(source, /!location\.floorAllocation \? <button/);
+  assert.match(source, /data-testid="room-unlisted-add"/);
+  assert.match(source, /rooms\.filter\(\(room\) => room\.levelId === location\.levelId\)/);
+  assert.match(source, /data-testid="room-floor-quantity"/);
+  assert.match(source, /onAssignSelection\(location/);
+  assert.match(source, /data-testid="room-floor-keep-unallocated"/);
+  assert.match(source, /data-testid="room-floor-confirm-duplicate"/);
+  assert.match(source, /HISTORICAL FLOOR-LEVEL ALLOCATIONS AWAITING RECONCILIATION/);
+  assert.match(source, /this review does not block confirmation of the actual rooms/);
 });
 check("SAME ROOM ALIASES ARE NOT OFFERED AS A MANUAL MERGE", () => {
   assert.equal(projectRooms[3].key, plumbingLocationKey("2nd BEDROOM ENSUITE"));
@@ -71,7 +148,7 @@ check("OVERLAPPING ASSIGNMENTS ARE REPORTED, NOT DELETED", () => {
   assert.deepEqual(overlaps.filter((item) => item.kind === "two-products").map((item) => [item.requirementLabel, item.location, item.products.map((product) => product.name)]),
     [["Toilet Suite", "Main Bathroom", ["ICON Toilet", "Origin Toilet"]], ["Toilet Suite", "B2 Ensuite", ["ICON Toilet", "Origin Toilet"]], ["Ceiling Fans", "ALFRESCO", ["Spyda Fan", "Stanza Fan"]]]);
   const [grouped] = overlaps.filter((item) => item.kind === "grouped-and-by-room");
-  assert.deepEqual([grouped.requirementLabel, grouped.grouped, grouped.byRoomQuantity, grouped.total], ["Ceiling Fans", [{ location: "DOWNSTAIRS", quantity: 2 }, { location: "UPSTAIRS", quantity: 5 }], 4, 11]);
+  assert.deepEqual([grouped.requirementLabel, grouped.grouped, grouped.byRoomQuantity, grouped.total], ["Ceiling Fans", [{ location: "DOWNSTAIRS", quantity: 3 }, { location: "UPSTAIRS", quantity: 5 }], 4, 12]);
 });
 check("ATTENTION ITEMS SAY WHAT, WHERE, WHAT TO DO AND WHETHER IT BLOCKS", () => {
   const schedule = buildSelectionsSchedule(book);
@@ -82,8 +159,8 @@ check("ATTENTION ITEMS SAY WHAT, WHERE, WHAT TO DO AND WHETHER IT BLOCKS", () =>
   assert.deepEqual(group("decisions").map((item) => [item.title, item.action.label]), [["Internal Paint Colours", "REVIEW SELECTION"], ["Wardrobe Systems", "CHOOSE SELECTION"]]);
   assert(group("duplicates").some((item) => item.title === "Toilet Suite — B2 Ensuite" && item.action.label === "RESOLVE DUPLICATE" && item.action.kind === "selection"));
   assert(group("duplicates").some((item) => item.title === "Ceiling Fans — ALFRESCO" && /Spyda Fan × 1 and Stanza Fan × 1/.test(item.detail) && item.action.rowId));
-  assert(group("duplicates").some((item) => /DOWNSTAIRS × 2, UPSTAIRS × 5/.test(item.title) && /11 in total/.test(item.detail)));
-  assert.deepEqual(group("specifications").map((item) => [item.title, item.action.label]), [["Hot Water System — outside", "CHOOSE ROOM"], ["Bath — Chios Bath", "CHOOSE ROOM"]]);
+  assert(group("duplicates").some((item) => /DOWNSTAIRS × 3, UPSTAIRS × 5/.test(item.title) && /12 in total/.test(item.detail)));
+  assert.deepEqual(group("specifications").map((item) => [item.title, item.action.label]), [["Ceiling Fans — Ground Floor", "CHOOSE ROOM"], ["Ceiling Fans — Upper Floor", "CHOOSE ROOM"], ["Bath — Chios Bath", "CHOOSE ROOM"]]);
   assert.deepEqual(group("pricing").map((item) => [item.title, item.blocking]), [["Bath — Chios Bath", false]]);
   assert.deepEqual(group("project").map((item) => [item.title, item.action.label, item.blocking]), [["Project rooms", "CONFIRM ROOMS", false], ["Project Details — Builder logo", "UPLOAD LOGO", true]]);
   // Completion counts client decisions only; a price or image never makes a chosen product incomplete.

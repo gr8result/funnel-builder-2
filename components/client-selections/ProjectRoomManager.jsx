@@ -19,7 +19,7 @@ const isNumberedEnsuite = (name) => /\bensuite\b/i.test(name) && (/\b(?:b|bed|be
 const distinctEnsuiteRooms = (left, right) => (isBareEnsuite(left) && isNumberedEnsuite(right)) || (isBareEnsuite(right) && isNumberedEnsuite(left));
 
 export default function ProjectRoomManager({ rooms = [], removed = [], levels = [], roomTypes = [], usageFor = () => [], possibleDuplicates = [], unlistedLocations = [], conflictsFor = () => [], confirmed = false, confirmedAt = "", requireConfirmation = false,
-  onAdd, onRename, onUpdate, onRemove, onMerge, onRestore, onKeepSeparate, onConfirm, onClose }) {
+  onAdd, onRename, onUpdate, onRemove, onMerge, onAssignSelection, onRemoveFloorDuplicate, onKeepFloorUnallocated, onRestore, onKeepSeparate, onConfirm, onClose }) {
   const [action, setAction] = useState(null); // { kind: "rename" | "merge" | "remove", id }
   const [value, setValue] = useState("");
   const [adding, setAdding] = useState(false);
@@ -29,6 +29,7 @@ export default function ProjectRoomManager({ rooms = [], removed = [], levels = 
   // A merge that collides on a selection waits here for the builder's answer to each collision.
   const [pendingMerge, setPendingMerge] = useState(null); // { from, into, conflicts, answers }
   const [assignTo, setAssignTo] = useState({}); // unlisted location id -> room id
+  const [assignQuantity, setAssignQuantity] = useState({}); // saved allocation detail -> quantity
   useEffect(() => {
     const onKey = (event) => { if (event.key === "Escape") { if (!requireConfirmation || confirmed) onClose?.(); } };
     window.addEventListener("keydown", onKey);
@@ -137,21 +138,80 @@ export default function ProjectRoomManager({ rooms = [], removed = [], levels = 
 
         {!pendingMerge && unlistedLocations.length ? (
           <div className="prm-review" data-testid="room-unlisted-locations">
-            <strong>LOCATIONS USED BY SELECTIONS THAT ARE NOT PROJECT ROOMS</strong>
-            <p>Selections were saved against these names. Say which room each one is, or add it as its own room or location. Until then it can show as a second copy of a room.</p>
+            {unlistedLocations.some((location) => location.floorAllocation) ? (
+              <div className="prm-reviewHeading" data-testid="room-floor-allocation-review">
+                <strong>HISTORICAL FLOOR-LEVEL ALLOCATIONS AWAITING RECONCILIATION</strong>
+                <p>These are saved selection allocations, not rooms. Ground Floor and Upper Floor never appear in the project room list, and this review does not block confirmation of the actual rooms.</p>
+              </div>
+            ) : null}
+            {unlistedLocations.some((location) => !location.floorAllocation) ? (
+              <div className="prm-reviewHeading">
+                <strong>OTHER SAVED LOCATIONS THAT ARE NOT PROJECT ROOMS</strong>
+                <p>Say which room each location is, or add it as its own applicable location. Nothing is reassigned automatically.</p>
+              </div>
+            ) : null}
             <ul>
               {unlistedLocations.map((location) => {
                 const target = assignTo[location.id] ?? location.suggestion?.id ?? "";
+                const targetRooms = location.levelId ? rooms.filter((room) => room.levelId === location.levelId) : rooms;
+                if (location.floorAllocation) {
+                  return (
+                    <li key={location.id} data-testid="room-unlisted-location" data-location={location.name}>
+                      <div><b>{location.name}</b><span>{(location.legacyNames || []).join(" / ")} is a floor label, not a room. Assign each saved selection to a real {location.name} room.</span></div>
+                      {(location.details || []).map((detail) => {
+                        const detailKey = `${location.id}|${detail.requirementKey}|${detail.lineId}|${detail.productId}`;
+                        const detailTarget = assignTo[detailKey] || "";
+                        const quantity = Math.min(detail.quantity, Math.max(1, Number(assignQuantity[detailKey]) || 1));
+                        const targetRoom = rooms.find((room) => room.id === detailTarget);
+                        return (
+                          <div className="prm-allocationAssignment" key={detailKey} data-testid="room-floor-allocation">
+                            <div><strong>{detail.productName}</strong> × {detail.quantity}{detail.unitPrice === null ? " · Quote Required" : ` · $${Number(detail.unitPrice).toLocaleString("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${detail.priceIncludesGst === true ? " inc GST" : detail.priceIncludesGst === false ? " ex GST" : " · GST basis unconfirmed"}`}</div>
+                            <div className={`prm-duplicateEvidence ${detail.duplicateProven ? "proven" : "review"}`} data-testid="room-floor-duplicate-evidence" data-proven={detail.duplicateProven ? "true" : "false"}>
+                              <strong>{detail.duplicateProven ? "Duplicate summary verified by stable product identity and quantity." : "This floor summary cannot be proven as a duplicate automatically."}</strong>
+                              {detail.roomEvidence?.length ? (
+                                <ul>{detail.roomEvidence.map((item) => <li key={`${item.roomId}|${item.lineId}|${item.productId}`}>{item.roomName}: {item.productName} × {item.quantity}{item.sameStableProduct ? " · same stable product" : " · different stable product"}</li>)}</ul>
+                              ) : <span>No saved room-level fan allocation was found on this floor.</span>}
+                            </div>
+                            <div className="prm-floorChoices">
+                              <button type="button" className="prm-secondary" disabled={busy} onClick={() => run(
+                                () => onKeepFloorUnallocated(location, detail),
+                                `${detail.quantity} × ${detail.productName} kept as additional unallocated fans for ${location.name}.`,
+                              )} data-testid="room-floor-keep-unallocated">Keep as additional unallocated fans</button>
+                              <button type="button" className="prm-secondary danger" disabled={busy} onClick={() => run(
+                                () => onRemoveFloorDuplicate(location, detail),
+                                `${detail.quantity} redundant floor-level ${detail.productName} removed. Existing room fans were preserved.`,
+                              )} data-testid="room-floor-confirm-duplicate">Confirm duplicates and remove floor allocation</button>
+                            </div>
+                            <span>Or assign some or all of these as additional fans to a room:</span>
+                            <div className="prm-rowActions">
+                              <select aria-label={`Room for ${detail.productName} from ${location.name}`} value={detailTarget} onChange={(event) => setAssignTo({ ...assignTo, [detailKey]: event.target.value })} data-testid="room-floor-target">
+                                <option value="">Choose the actual room…</option>
+                                {targetRooms.map((room) => <option key={room.id} value={room.id}>{room.name}</option>)}
+                              </select>
+                              <input type="number" min="1" max={detail.quantity} value={quantity} aria-label={`Quantity of ${detail.productName} to assign`} onChange={(event) => setAssignQuantity({ ...assignQuantity, [detailKey]: event.target.value })} data-testid="room-floor-quantity" />
+                              <button type="button" className="prm-secondary" disabled={busy || !detailTarget} onClick={() => run(
+                                () => onAssignSelection(location, targetRoom, detail, quantity),
+                                `${quantity} × ${detail.productName} assigned.`,
+                              )} data-testid="room-floor-assign">Assign quantity</button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </li>
+                  );
+                }
                 return (
                   <li key={location.id} data-testid="room-unlisted-location" data-location={location.name}>
-                    <div><b>{location.name}</b><span>Used by: {location.usedBy.join(", ")}{location.suggestion ? ` · Looks like ${location.suggestion.name}` : ""}</span></div>
+                    <div><b>{location.name}</b><span>{location.floorAllocation ? `${(location.legacyNames || []).join(" / ")} is a floor label, not a room. Assign each saved selection to a real ${location.name} room.` : `Used by: ${location.usedBy.join(", ")}${location.suggestion ? ` · Looks like ${location.suggestion.name}` : ""}`}</span>
+                      {location.details?.length ? <ul className="prm-allocationDetails" data-testid="room-unlisted-details">{location.details.map((detail) => <li key={`${detail.lineId}|${detail.productId}`}><strong>{detail.productName}</strong> × {detail.quantity}{detail.unitPrice === null ? " · Quote Required" : ` · $${Number(detail.unitPrice).toLocaleString("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${detail.priceIncludesGst === true ? " inc GST" : detail.priceIncludesGst === false ? " ex GST" : " · GST basis unconfirmed"}`}</li>)}</ul> : null}
+                    </div>
                     <div className="prm-rowActions">
                       <select aria-label={`Room that ${location.name} is`} value={target} onChange={(event) => setAssignTo({ ...assignTo, [location.id]: event.target.value })} data-testid="room-unlisted-target">
                         <option value="">This is the room…</option>
-                        {rooms.map((room) => <option key={room.id} value={room.id}>{room.name}</option>)}
+                        {targetRooms.map((room) => <option key={room.id} value={room.id}>{room.name}</option>)}
                       </select>
                       <button type="button" className="prm-secondary" disabled={busy || !target} onClick={() => requestMerge(location, rooms.find((room) => room.id === target))} data-testid="room-unlisted-assign">Use that room</button>
-                      <button type="button" className="prm-secondary" disabled={busy} onClick={() => run(() => onAdd({ name: location.name, level: "", roomType: "" }), `${location.name} added as its own room.`)} data-testid="room-unlisted-add">Add as its own room</button>
+                      {!location.floorAllocation ? <button type="button" className="prm-secondary" disabled={busy} onClick={() => run(() => onAdd({ name: location.name, level: "", roomType: "" }), `${location.name} added as its own room.`)} data-testid="room-unlisted-add">Add as its own room</button> : null}
                     </div>
                   </li>
                 );
@@ -315,6 +375,14 @@ const ROOM_MANAGER_CSS = `
 .prm-row { display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; }
 .prm-rowText { display: grid; gap: 2px; } .prm-rowText strong { font-size: 19px; font-weight: 900; } .prm-rowText span { color: #475569; }
 .prm-rowActions, .prm-panelActions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.prm-allocationDetails { margin-top: 8px !important; padding-left: 20px; color: #334155; }
+.prm-allocationAssignment { display: grid; gap: 8px; margin-top: 10px; padding: 12px; border: 1px solid #cbd5e1; border-radius: 10px; background: #f8fafc; }
+.prm-allocationAssignment input { width: 88px; min-height: 46px; padding: 8px 10px; border: 1px solid #94a3b8; border-radius: 8px; }
+.prm-duplicateEvidence { display: grid; gap: 6px; padding: 10px 12px; border-radius: 8px; border: 1px solid #f59e0b; background: #fffbeb; color: #78350f; }
+.prm-duplicateEvidence.proven { border-color: #22c55e; background: #f0fdf4; color: #14532d; }
+.prm-duplicateEvidence ul { margin: 0; padding-left: 20px; }
+.prm-floorChoices { display: flex; gap: 10px; flex-wrap: wrap; }
+.prm-secondary.danger { border-color: #dc2626; color: #991b1b; }
 .prm-rowActions select { min-height: 44px; width: auto !important; margin: 0 !important; }
 .prm-panelActions { justify-content: flex-end; }
 .prm-primary, .prm-secondary { min-height: 44px; padding: 8px 18px; border-radius: 10px; font-weight: 800; cursor: pointer; }
