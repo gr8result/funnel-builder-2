@@ -157,7 +157,7 @@ function overlaps(a, b) {
   return a.length === b.length && a.every((point) => b.some((other) => point.x === other.x && point.y === other.y));
 }
 
-function projectOpeningToHost(point, host, page, scale, reachMm = 0) {
+function projectOpeningToHost(point, host, page, scale) {
   if (!normalizedPoint(point)) throw new Error('Opening location must lie on the submitted drawing.');
   const x = point.x * page.logicalWidth, y = point.y * page.logicalHeight;
   let closest = null;
@@ -172,7 +172,7 @@ function projectOpeningToHost(point, host, page, scale, reachMm = 0) {
     const distance = Math.hypot(px - x, py - y);
     if (!closest || distance < closest.distance) closest = { x: px / page.logicalWidth, y: py / page.logicalHeight, distance };
   }
-  const tolerance = Math.max(300, host.thicknessMm * 2, reachMm) * scale;
+  const tolerance = Math.max(150, (Number(host.thicknessMm) || 0) / 2) * scale;
   if (!closest || closest.distance > tolerance) throw new Error('Opening location is too far from its claimed host wall; association requires review.');
   return { x: closest.x, y: closest.y, distanceMm: closest.distance / scale };
 }
@@ -469,14 +469,14 @@ export function normalizePlanAnalysis({ context, responses = [], runId, modelVer
         else if (resolved.wallHeightM) fields.wallHeightM = fromSource(resolved.wallHeightM);
         else report(page, raw, 'Wall height is not documented; existing downstream height defaults require review.', 'missing-height');
         Object.assign(detection, {
-          nodes: raw.nodes, category: raw.category, thicknessMm: thickness, alignment: 'outer',
+          nodes: raw.nodes, category: raw.category, thicknessMm: thickness, alignment: raw.alignment === 'center' ? 'center' : 'outer',
           exteriorType, wallHeightM, linedFaces: 2, openingDeductionsEnabled: true,
           constructionSystem, frameThicknessMm,
           ...(frameAssumed ? { frameAssumed: true } : {}),
           ...(exteriorFinish ? { exteriorFinish } : {}),
           ...(constructionSystem === 'custom' && typeof raw.customSystemLabel === 'string' ? { customSystemLabel: raw.customSystemLabel } : {}),
         });
-        fields.alignment = { basis: 'DERIVED', confidence: raw.confidence, evidence: 'Trace is the outer wall face; the adapter uses the existing outer alignment convention.' };
+        fields.alignment = { basis: 'DERIVED', confidence: raw.confidence, evidence: raw.alignment === 'center' ? 'Trace is the measured centreline between the paired wall faces.' : 'Trace is the outer wall face; the adapter uses the existing outer alignment convention.' };
         const forward = JSON.stringify(raw.nodes), reversed = JSON.stringify([...(raw.nodes || [])].reverse());
         const shape = `${page}:${raw.category}:${forward < reversed ? forward : reversed}`;
         if (wallShapes.has(shape)) throw new Error('Duplicate wall geometry is withheld to avoid double-counting.');
@@ -514,27 +514,26 @@ export function normalizePlanAnalysis({ context, responses = [], runId, modelVer
           ...batch.detections.filter((item) => item.kind === 'wall' && item.page === page).map((host) => ({ host, batch: true })),
           ...existingWalls.filter((wall) => wall.page === page).map((wall) => ({ batch: false, host: { ...wall, nodes: wall.nodes.map((point) => ({ x: point.x / targetPage.logicalWidth, y: point.y / targetPage.logicalHeight })) } })),
         ];
-        const reach = (list, reachMm = 0) => list.flatMap((candidate) => {
-          try { return [{ ...candidate, ...projectOpeningToHost(raw, candidate.host, targetPage, scale, reachMm) }]; }
+        const reach = (list) => list.flatMap((candidate) => {
+          try { return [{ ...candidate, ...projectOpeningToHost(raw, candidate.host, targetPage, scale) }]; }
           catch { return []; }
         }).sort((a, b) => a.distanceMm - b.distanceMm);
         let chosen = null;
         if (raw.hostDetectionId) {
           const claimed = hosts.find((candidate) => candidate.batch && candidate.host.detectionId === `page-${page}:${raw.hostDetectionId}` && acceptedWalls.has(candidate.host.detectionId));
           chosen = claimed ? reach([claimed])[0] || null : null;
-          if (!chosen) report(page, raw, claimed ? 'Opening location is too far from its claimed host wall; another wall was looked for.' : 'Opening host wall was not reliably established in this analysis; another wall was looked for.', 'host-reassigned');
+          if (!chosen) throw new Error('The explicit opening host is missing or does not contain this opening. Correct its wall association before accepting it.');
         }
         if (!chosen) {
           const sameKind = hosts.filter((candidate) => !category || candidate.host.category === category);
-          // A point read off a drawing is approximate: look on the wall first, then a little further out.
+          // Only nearby walls of the expected category are eligible; never search across rooms.
           const matching = reach(sameKind);
-          const candidates = matching.length ? matching : [reach(hosts), reach(sameKind, 1200), reach(hosts, 1200)].find((list) => list.length) || [];
+          const candidates = matching;
           chosen = candidates[0] || null;
           if (chosen) {
             const ambiguous = candidates[1] && candidates[1].distanceMm - chosen.distanceMm < 50;
-            fields.hostWall = { basis: 'DERIVED', confidence: ambiguous || !matching.length ? Math.min(raw.confidence, 0.6) : raw.confidence,
-              evidence: ambiguous ? 'Two walls meet at this opening; the nearest was used.' : `Nearest ${matching.length ? 'matching ' : ''}wall on the same calibrated page.` };
-            if (ambiguous) report(page, raw, 'Two walls are equally close to this opening; it was attached to the nearest.', 'host-ambiguous');
+            if (ambiguous) throw new Error('Two walls are equally close to this opening. Confirm its host wall before accepting it.');
+            fields.hostWall = { basis: 'DERIVED', confidence: raw.confidence, evidence: 'Unique nearby matching wall on the same calibrated page.' };
           }
         }
         if (chosen) {
@@ -543,11 +542,7 @@ export function normalizePlanAnalysis({ context, responses = [], runId, modelVer
             ? { basis: 'DERIVED', confidence: raw.confidence, evidence: `Observed opening point projected ${chosen.distanceMm.toFixed(1)} mm to its nearby observed host-wall trace.` }
             : provenance;
         } else {
-          // Counted regardless: an observed opening is never dropped because its wall is unclear.
-          detection.unhosted = true;
-          fields.hostWall = { basis: 'ASSUMED', confidence: 0, evidence: 'No wall close enough to this opening was traced; it is counted without a wall link.' };
-          fields.location = provenance;
-          report(page, raw, 'Opening is counted, but no nearby wall was traced to attach it to.', 'unhosted');
+          throw new Error('No matching wall contains this opening. Resolve its position and host before accepting its quantity.');
         }
         const tag = typeof raw.tag === 'string' ? raw.tag : '';
         const sizeCode = typeof raw.sizeCode === 'string' ? raw.sizeCode : (/^\d{4}$/.test(tag.trim()) ? tag.trim() : '');

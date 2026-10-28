@@ -504,8 +504,12 @@ function nearestWall(level, point, options, filter = () => true) {
 }
 
 function placeOpening(level, spec, options) {
-  const host = spec.wallId && level.walls[spec.wallId]
-    ? { wall: level.walls[spec.wallId], hit: locateOnWall(level, level.walls[spec.wallId], spec) }
+  const detectedHost = spec.hostWallDetectionKey && Object.values(level.walls).find((wall) => wall.detectionKey === spec.hostWallDetectionKey
+    || (wall.absorbedKeys || []).includes(spec.hostWallDetectionKey));
+  if (spec.hostWallDetectionKey && !detectedHost) return null;
+  const explicitHost = spec.wallId && level.walls[spec.wallId] ? level.walls[spec.wallId] : detectedHost;
+  const host = explicitHost
+    ? { wall: explicitHost, hit: locateOnWall(level, explicitHost, spec) }
     : nearestWall(level, spec, options);
   if (!host) return null;
   const id = spec.id && !level.openings[spec.id] ? spec.id : nextId(level, 'o');
@@ -644,7 +648,7 @@ function isTombstonedOpening(level, detection, options) {
 // A detection already covered by a wall is recorded on that wall, so deleting the wall rejects the
 // detection too (it would otherwise come back as soon as the wall covering it was gone).
 function absorb(level, detection, segments, options) {
-  if (!detection.detectionKey) return;
+  if (!detection.detectionKey) return null;
   const half = thicknessOf(detection.thicknessMm) / 2;
   let best = null;
   for (const wall of Object.values(level.walls)) {
@@ -653,6 +657,7 @@ function absorb(level, detection, segments, options) {
     if (share > 0 && (!best || share > best.share)) best = { wall, share };
   }
   if (best && !(best.wall.absorbedKeys || []).includes(detection.detectionKey)) best.wall.absorbedKeys = [...(best.wall.absorbedKeys || []), detection.detectionKey];
+  return best ? { modelWallId: best.wall.id, share: best.share } : null;
 }
 
 /**
@@ -667,15 +672,45 @@ function absorb(level, detection, segments, options) {
 export function mergeDetections(level, detections = {}, overrides = {}) {
   const options = { ...PLAN_MODEL_DEFAULTS, ...overrides };
   const next = clone(level);
-  const report = { wallsAdded: 0, wallsAlreadyPresent: 0, wallsRejectedBefore: 0, openingsAdded: 0, openingsAlreadyPresent: 0, openingsRejectedBefore: 0, openingsWithoutWall: 0, roomsNamed: 0 };
+  const report = { wallsAdded: 0, wallsAlreadyPresent: 0, wallsRejectedBefore: 0, wallOutcomes: [], openingsAdded: 0, openingsAlreadyPresent: 0, openingsRejectedBefore: 0, openingsWithoutWall: 0, roomsNamed: 0 };
   for (const detection of detections.walls || []) {
-    if (isTombstonedWall(next, detection, options)) { report.wallsRejectedBefore += 1; continue; }
-    if (detection.detectionKey && Object.values(next.walls).some((wall) => wall.detectionKey === detection.detectionKey || (wall.absorbedKeys || []).includes(detection.detectionKey))) { report.wallsAlreadyPresent += 1; continue; }
+    const outcome = { detectionKey: detection.detectionKey || '', status: '', modelWallIds: [], reason: '' };
+    if (isTombstonedWall(next, detection, options)) {
+      report.wallsRejectedBefore += 1;
+      outcome.status = 'rejected-before'; outcome.reason = 'Matches a user-deleted or replaced wall tombstone.';
+      report.wallOutcomes.push(outcome); continue;
+    }
+    const sameDetectionOwners = detection.detectionKey ? Object.values(next.walls).filter((wall) => wall.detectionKey === detection.detectionKey || (wall.absorbedKeys || []).includes(detection.detectionKey)) : [];
+    if (sameDetectionOwners.length) {
+      report.wallsAlreadyPresent += 1;
+      outcome.status = 'already-present'; outcome.modelWallIds = sameDetectionOwners.map((wall) => wall.id);
+      outcome.reason = 'Detection key is already owned or absorbed by the connected model.';
+      report.wallOutcomes.push(outcome); continue;
+    }
     const half = thicknessOf(detection.thicknessMm) / 2;
     const segments = networkSegments(next, { separators: false });
-    if (shareAlong(detection.a, detection.b, half, segments, options) >= options.replaceShare) { absorb(next, detection, segments, options); report.wallsAlreadyPresent += 1; continue; }
+    const existingShare = shareAlong(detection.a, detection.b, half, segments, options);
+    if (existingShare >= options.replaceShare) {
+      const owner = absorb(next, detection, segments, options);
+      report.wallsAlreadyPresent += 1;
+      outcome.status = 'merged-or-covered'; outcome.modelWallIds = owner ? [owner.modelWallId] : [];
+      outcome.reason = `At least ${(options.replaceShare * 100).toFixed(0)}% overlaps an existing wall in the connected model (observed ${Math.round(existingShare * 100)}%).`;
+      report.wallOutcomes.push(outcome); continue;
+    }
     const ids = insertWall(next, { ...detection, source: 'detected' }, options);
-    if (ids.length) report.wallsAdded += 1; else { absorb(next, detection, segments, options); report.wallsAlreadyPresent += 1; }
+    if (ids.length) {
+      report.wallsAdded += 1;
+      outcome.status = 'inserted'; outcome.modelWallIds = ids;
+      outcome.reason = 'At least one uncovered wall interval met the model minimum and was inserted.';
+    } else {
+      const owner = absorb(next, detection, segments, options);
+      report.wallsAlreadyPresent += 1;
+      outcome.status = owner ? 'merged-or-covered' : 'not-inserted'; outcome.modelWallIds = owner ? [owner.modelWallId] : [];
+      outcome.reason = owner
+        ? 'Uncovered intervals were below the model minimum; geometry is absorbed by the best existing wall.'
+        : 'No uncovered interval met the model minimum wall length.';
+    }
+    report.wallOutcomes.push(outcome);
   }
   for (const detection of detections.openings || []) {
     if (isTombstonedOpening(next, detection, options)) { report.openingsRejectedBefore += 1; continue; }
@@ -868,6 +903,40 @@ export function wallCategories(level) {
 }
 
 /** Set a wall's thickness or category by hand; the wall becomes locked. */
+/**
+ * Walls the closed-face rule cannot classify, but whose own geometry shows they are internal: the wall
+ * stands wholly inside the outer boundary traced around the connected network, and at least one end
+ * meets another wall. Only the measured network is read; nothing outside the drawing is consulted.
+ * @returns {Map<string, { evidence: string }>} wall id -> why it is internal
+ */
+export function inferInteriorWalls(level, categories, { reachMm = 150 } = {}) {
+  const { faces } = networkFaces(level);
+  const outside = faces.filter((face) => Math.sign(face.signedArea) !== BOUNDED_SIGN)
+    .sort((a, b) => Math.abs(b.signedArea) - Math.abs(a.signedArea))[0];
+  const inferred = new Map();
+  if (!outside || outside.nodeIds.length < 3) return inferred;
+  const envelope = outside.nodeIds.map((id) => level.nodes[id]);
+  const walls = Object.values(level.walls);
+  for (const wall of walls) {
+    if (categories[wall.id] || wall.categorySource === 'manual') continue;
+    const points = wallPoints(level, wall);
+    const a = points[0], b = points[points.length - 1];
+    const length = dist(a, b);
+    if (length < PLAN_MODEL_DEFAULTS.minWallMm) continue;
+    const inside = [0.2, 0.5, 0.8].every((t) => pointInPolygon(add(a, mul(sub(b, a), t)), envelope));
+    if (!inside) continue;
+    const reach = Math.max(reachMm, (wall.thicknessMm || 0) * 1.5);
+    const meets = (end) => walls.some((other) => {
+      if (other.id === wall.id) return false;
+      const otherPoints = wallPoints(level, other);
+      return project(end, otherPoints[0], otherPoints[otherPoints.length - 1]).distance <= reach;
+    });
+    if (!meets(a) && !meets(b)) continue;
+    inferred.set(wall.id, { evidence: 'Stands wholly inside the outer wall boundary and meets other measured walls; classified internal from the drawing\'s own geometry.' });
+  }
+  return inferred;
+}
+
 export function updateWall(level, wallId, changes = {}) {
   const next = clone(level);
   const wall = next.walls[wallId];

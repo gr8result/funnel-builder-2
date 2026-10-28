@@ -18,6 +18,28 @@ export const ACCURACY_DEFAULTS = {
   iouStepMm: 25,
 };
 
+export function canonicalPlanReading(canonical, rooms, pixelsPerMm) {
+  const toMm = point => ({ x: point.x / pixelsPerMm, y: point.y / pixelsPerMm });
+  const wallNodes = canonical.completedWallRuns.flatMap(wall => {
+    const uniqueNodes = [];
+    for (const point of wall.nodes) if (!uniqueNodes.some(other => Math.hypot(point.x - other.x, point.y - other.y) < 0.01)) uniqueNodes.push(point);
+    return uniqueNodes.map(point => ({ wallId: wall.id, point }));
+  });
+  const junctions = [];
+  for (const { wallId, point } of wallNodes) {
+    let junction = junctions.find(item => Math.hypot(point.x - item.x, point.y - item.y) < 0.01);
+    if (!junction) { junction = { ...point, wallIds: new Set() }; junctions.push(junction); }
+    junction.wallIds.add(wallId);
+  }
+  return {
+    walls: canonical.completedWallRuns.map(wall => ({ id: wall.ai?.detectionId || wall.id, points: wall.nodes.map(toMm), thicknessMm: wall.thicknessMm, category: wall.category })),
+    openings: canonical.placedOpenings.map(opening => ({ id: opening.ai?.detectionId || opening.id, ...toMm(opening), widthMm: opening.widthMm, kind: opening.type, hostWallId: opening.hostWallId })),
+    rooms: rooms.map(room => ({ id: room.id, name: room.name, polygon: room.polygon.map(toMm) })),
+    junctions: junctions.filter(junction => junction.wallIds.size >= 2)
+      .map(junction => ({ ...toMm(junction), walls: junction.wallIds.size })),
+  };
+}
+
 const dist = (p, q) => Math.hypot(p.x - q.x, p.y - q.y);
 const median = (values) => { if (!values.length) return null; const sorted = [...values].sort((a, b) => a - b); const mid = sorted.length >> 1; return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2; };
 function project(point, a, b) {

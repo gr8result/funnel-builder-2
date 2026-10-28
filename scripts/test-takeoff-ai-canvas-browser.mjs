@@ -109,7 +109,7 @@ function hooks(){const values=[];let hook=findFiber(reactRoot._internalRoot.curr
 function value(name){return hooks()[indexes[name]]?.memoizedState;}
 function dispatch(name,next){const hook=hooks()[indexes[name]];if(!hook?.queue?.dispatch)throw Error('Missing state hook '+name);hook.queue.dispatch(next);}
 function snapshot(){
- const result={};for(const name of ['currentPage','totalPages','pixelsPerMm','rotation','stageScale','stagePos','activeTool','activePolyline','selectedWallId','selectedOpeningId','completedWallRuns','placedOpenings','completedAreas','completedFloorplans','completedMeasurements','completedEaves','sheetLevels','savedRevision','hasUnsavedChanges','platformSaveMessage','planLoadError'])result[name]=value(name);
+ const result={};for(const name of ['currentPage','totalPages','pixelsPerMm','rotation','stageScale','stagePos','activeTool','activePolyline','selectedWallId','selectedOpeningId','hoveredWallId','completedWallRuns','placedOpenings','completedAreas','completedFloorplans','completedMeasurements','completedEaves','sheetLevels','savedRevision','hasUnsavedChanges','platformSaveMessage','planLoadError'])result[name]=value(name);
  result.imageReady=Boolean(value('image'));result.mounted=Boolean(findFiber(reactRoot._internalRoot.current));
  result.planPages=(value('planPages')||[]).map(p=>({pageNumber:p.pageNumber,hasImage:Boolean(p.dataUrl),dataUrlAssetId:p.dataUrlAssetId||null}));
  result.schedule=createTakeoffSchedule({...result});
@@ -132,7 +132,7 @@ window.harness={snapshot,saveResults:()=>saveResults,ready:()=>Boolean(currentSh
  reopen:()=>control.reopen(),
  setView({zoom,pan}){value('sheetViewStateRef').current[2]={scale:zoom,pos:pan};dispatch('stageScale',zoom);dispatch('stagePos',pan);},
  point(point){const stage=value('stageRef').current,layer=value('layerRef').current,rect=stage.content.getBoundingClientRect(),visible=layer.getAbsoluteTransform().point(point);return {x:rect.left+visible.x*rect.width/stage.width(),y:rect.top+visible.y*rect.height/stage.height()};},
- async stored(){const db=await new Promise((resolve,reject)=>{const request=indexedDB.open('estimate-builder-template-db',2);request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});const record=await new Promise((resolve,reject)=>{const request=db.transaction('jobs','readonly').objectStore('jobs').get('job:'+jobId);request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});db.close();const materialized=await materializeTakeoffPlanPages(record.workbook);return {key:record.key,revision:record.revision,checksum:record.checksum,raw:record.workbook.aiPlanTakeoffJob,job:materialized.aiPlanTakeoffJob,mirror:materialized.takeoffEngine.aiPlanTakeoffJob};}
+ async stored(){const openDb=name=>new Promise((resolve,reject)=>{const request=indexedDB.open(name);request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});let record;for(const {name} of await indexedDB.databases()){if(!String(name).startsWith('estimate-builder-template-db'))continue;const db=await openDb(name);if(db.objectStoreNames.contains('jobs'))record=await new Promise((resolve,reject)=>{const request=db.transaction('jobs','readonly').objectStore('jobs').get('job:'+jobId);request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});db.close();if(record)break;}if(!record)throw Error('Disposable Takeoff job was not found in the isolated IndexedDB.');const materialized=await materializeTakeoffPlanPages(record.workbook);return {key:record.key,revision:record.revision,checksum:record.checksum,raw:record.workbook.aiPlanTakeoffJob,job:materialized.aiPlanTakeoffJob,mirror:materialized.takeoffEngine.aiPlanTakeoffJob};}
 };
 reactRoot.render(React.createElement(Shell));
 `);
@@ -189,6 +189,10 @@ try {
   await button('Select');
   await clickPlan({ x: 170, y: 80 });
   await page.waitForFunction(id => harness.snapshot().selectedWallId === id, {}, manualId);
+  const hoverPoint = await page.evaluate(() => harness.point({ x: 190, y: 80 }));
+  await page.mouse.move(hoverPoint.x, hoverPoint.y);
+  await page.waitForFunction(id => harness.snapshot().hoveredWallId === id, {}, manualId);
+  report.cases.wallHover = { wallId: manualId, highlighted: true };
   await dragPlan({ x: 300, y: 80 }, { x: 340, y: 80 });
   let state = await snapshot();
   close(state.completedWallRuns[0].nodes[1].x, 340, 'Manual vertex moved');
@@ -290,7 +294,8 @@ try {
   assertSchedule(state);
   await clickPlan({ x: opening.x, y: opening.y });
   await page.waitForFunction(id => harness.snapshot().selectedOpeningId === id, {}, opening.id);
-  await editLabelInput('Location / room', 'Reviewed study window');
+  await selectLabelValue('Room / Location', 'other');
+  await editLabelInput('Custom room name', 'Reviewed study window');
   const editedOpening = (await snapshot()).placedOpenings[0];
   assert.equal(editedOpening.location, 'Reviewed study window');
   const interior = aiWalls.find(wall => wall.category === 'interior');
@@ -382,6 +387,17 @@ async function clickPlan(point) { const client = await page.evaluate(point => ha
 async function dragPlan(from, to) { const points = await page.evaluate(({ from, to }) => [harness.point(from), harness.point(to)], { from, to }); await page.mouse.move(points[0].x, points[0].y); await page.mouse.down(); await page.mouse.move(points[1].x, points[1].y, { steps: 12 }); await page.mouse.up(); await settle(); }
 async function save() { const count = await page.evaluate(() => harness.saveResults().length); await page.evaluate(() => document.getElementById('ai-plan-takeoff-save-button').click()); await page.waitForFunction(count => harness.saveResults().length > count, { timeout: 60000 }, count); const result = await page.evaluate(() => harness.saveResults().at(-1)); assert.equal(result.ok, true, result.message); assert.equal(result.verification?.ok, true, 'Existing verification confirms saved payload'); await page.waitForFunction(() => !harness.snapshot().hasUnsavedChanges); }
 async function reopen() { await page.evaluate(() => harness.reopen()); await ready(); }
+async function selectLabelValue(label, value) {
+  const found = await page.evaluate(({ label, value }) => {
+    const field = [...document.querySelectorAll('label')].find(element => element.textContent.trim().startsWith(label))?.querySelector('select');
+    if (!field) return false;
+    Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(field, value);
+    field.dispatchEvent(new Event('change', { bubbles: true }));
+    return true;
+  }, { label, value });
+  assert.ok(found, `Find and set select for label ${label}`);
+  await settle();
+}
 async function editLabelInput(label, text) { const input = await page.evaluateHandle(label => [...document.querySelectorAll('label')].find(element => element.textContent.trim().startsWith(label))?.querySelector('input'), label); assert.ok(input.asElement(), `Find input ${label}`); await input.asElement().click({ clickCount: 3 }); await page.keyboard.type(text); await page.keyboard.press('Tab'); await settle(); await input.dispose(); }
 function assertSchedule(state) {
   const records = state.schedule.measurementRecords;

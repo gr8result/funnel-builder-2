@@ -14,8 +14,34 @@ import { JOB_SCALE_KEY, jobPixelsPerMm, sheetPixelsPerMm as scaleOfSheet } from 
 import { cropPlanRegion, readPlanRaster } from '../geometry/planRaster.js';
 import { detectPlanGeometry } from '../geometry/planGeometry.js';
 import { collectRegionOpenings, planRegions } from '../geometry/planRegions.js';
+import { detectVectorWalls } from '../geometry/vectorWalls.js';
+import { buildLocalVectorAnalysis, roomLabelsFromText } from './localVectorAnalysis.js';
+import { localVectorReadiness } from './localVectorReadiness.js';
+import { reviewCandidateResponse, reviewWallCovered, roomsFromWallRuns } from '../geometry/planModelAdapter.js';
 
 const RUN_ID = 'ai-takeoff-v1';
+const LOCAL_VECTOR_RUN_ID = 'ai-takeoff-vector-v1';
+const VECTOR_REVIEW_CODES = ['vector-unclassified-walls', 'vector-openings-on-review-walls', 'vector-room-review'];
+
+// The review list of a local vector report, recomputed from what is still unresolved: walls awaiting a
+// classification, their openings, and rooms not yet confirmed. Other review items are left alone.
+function refreshVectorReview(report) {
+  if (!report || !Array.isArray(report.wallReviewCandidates)) return report;
+  const walls = report.wallReviewCandidates.length;
+  const openings = (report.openingReviewCandidates || []).length;
+  const rooms = (report.rooms || []).filter((room) => room.reviewRequired || !room.confirmed).length;
+  const issue = (code, count, message) => (count > 0 ? [{ code, count, audience: 'builder', message }] : []);
+  const review = [
+    ...(report.review || []).filter((item) => !VECTOR_REVIEW_CODES.includes(item.code)),
+    ...issue('vector-unclassified-walls', walls, `${walls} measured wall segments remain visible as review-only candidates; classify them before including them in quantities.`),
+    ...issue('vector-openings-on-review-walls', openings, `${openings} measured openings remain review-only because their host wall classification is unresolved.`),
+    ...issue('vector-room-review', rooms, `${rooms} room boundaries or labels require confirmation.`),
+  ];
+  const needsReview = review.length > 0 || (report.unresolved || []).length > 0;
+  const status = needsReview ? 'review' : (report.status === 'review' ? 'complete' : report.status);
+  return { ...report, review, status, completedAt: needsReview ? null : (report.completedAt || new Date().toISOString()),
+    counts: report.counts ? { ...report.counts, review: review.length } : report.counts };
+}
 const nextFrame = () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 const closeScale = (a, b) => a > 0 && b > 0 && Math.abs(a - b) / b < 0.000001;
 const CONTEXT_TEXT_CHARS = 20000;
@@ -68,6 +94,7 @@ export function useAiTakeoffAnalysis(options) {
   const latest = useRef(options);
   latest.current = options;
   const pending = useRef(null);
+  const localVectorRunSequence = useRef(0);
   const controller = useRef(null);
   const [report, setReport] = useState(null);
   const [stage, setStage] = useState('idle');
@@ -259,10 +286,79 @@ export function useAiTakeoffAnalysis(options) {
 
   const updateRooms = useCallback((ids, patch) => {
     if (latest.current.readOnly) return;
-    setReport(current => reportWithRooms(current, (current?.rooms || []).map(room => ids.includes(room.id)
-      ? measureRoom({ ...room, ...patch, ...(patch.polygon ? { boundaryEdited: true, confirmed: false, boundaryClosed: false } : {}) }, sheetScale(room.page)) : room)));
+    setReport(current => refreshVectorReview(reportWithRooms(current, (current?.rooms || []).map(room => ids.includes(room.id)
+      ? measureRoom({ ...room, ...patch, ...(patch.polygon ? { boundaryEdited: true, confirmed: false, boundaryClosed: false } : {}) }, sheetScale(room.page)) : room))));
     latest.current.markCompleted?.('room-boundary-updated');
   }, []);
+
+  // Rooms as the closed faces of the walls now on the sheets (detected, accepted or drawn by hand).
+  const measureRoomsFromWalls = async () => {
+    const current = latest.current;
+    if (current.readOnly || pending.current) return;
+    const runs = current.completedWallRuns || [];
+    const pages = [...new Set(runs.map((run) => Number(run.page) || 1))].filter((page) => current.planPages.some((item) => item.pageNumber === page));
+    if (!pages.length) { setRoomsState({ busy: false, error: true, message: 'There are no walls on the plan to measure rooms from.' }); return; }
+    let merged = reportRef.current?.rooms || [];
+    let count = 0;
+    for (const page of pages) {
+      const planPage = current.planPages.find((item) => item.pageNumber === page);
+      const pixelsPerMm = sheetScale(page);
+      if (!(pixelsPerMm > 0)) { setRoomsState({ busy: false, error: true, message: `Sheet ${page} has no calibration, so its rooms were not measured.` }); return; }
+      const level = current.sheetLevels?.[page] || merged.find((room) => room.page === page)?.level || 'Unassigned';
+      const sheetRuns = runs.filter((run) => (Number(run.page) || 1) === page);
+      const spec = { id: `page-${page}`, name: level, page, pixelsPerMm, logicalWidth: planPage.logicalWidth, logicalHeight: planPage.logicalHeight };
+      const detected = roomsFromWallRuns(sheetRuns, spec, roomLabelsFromText(planPage))
+        .map((room, index) => detectRoomBoundary(room, { page, level, width: planPage.logicalWidth, height: planPage.logicalHeight, pixelsPerMm, walls: sheetRuns, openings: current.placedOpenings }, index));
+      count += detected.length;
+      merged = mergeRoomReadings(merged, [{ page, level, rooms: detected }]);
+    }
+    setReport((previous) => refreshVectorReview(reportWithRooms(previous || reportRef.current, merged)));
+    current.markCompleted?.('room-boundaries-detected');
+    setRoomsState({ busy: false, error: false, message: `${count} room${count === 1 ? '' : 's'} measured from the walls now on the plan. Confirm each boundary before relying on it.` });
+  };
+
+  // The estimator's answer for one review-only wall: Internal or External adds it (with the openings hosted
+  // on it) to the takeoff; Reject removes it and remembers it so a re-run does not bring it back.
+  const reviewBusy = useRef(false);
+  const resolveReviewWall = async (candidateId, decision) => {
+    const current = latest.current;
+    const base = reportRef.current;
+    if (current.readOnly || pending.current || reviewBusy.current || !base) return;
+    const candidate = (base.wallReviewCandidates || []).find((item) => item.id === candidateId);
+    if (!candidate || !['interior', 'exterior', 'reject'].includes(decision)) return;
+    const hosted = (base.openingReviewCandidates || []).filter((item) => item.hostModelWallId === candidate.modelWallId);
+    const hostedIds = new Set(hosted.map((item) => item.id));
+    const settle = (extra, text) => {
+      setReport((previous) => refreshVectorReview({ ...previous,
+        wallReviewCandidates: (previous.wallReviewCandidates || []).filter((item) => item.id !== candidateId),
+        openingReviewCandidates: (previous.openingReviewCandidates || []).filter((item) => !hostedIds.has(item.id)), ...extra(previous) }));
+      latest.current.markCompleted?.('ai-takeoff-review');
+      setMessage(text);
+    };
+    reviewBusy.current = true;
+    try {
+      if (decision === 'reject') {
+        settle((previous) => ({ rejectedWallCandidates: [...(previous.rejectedWallCandidates || []), { id: candidate.id, page: candidate.page, nodes: candidate.nodes }] }),
+          `Wall rejected${hosted.length ? ` with ${hosted.length} opening${hosted.length === 1 ? '' : 's'} on it` : ''}. It stays out of the takeoff.`);
+        return;
+      }
+      const identity = await current.bridge.getContext();
+      const level = latest.current.sheetLevels?.[candidate.page] || 'Unassigned';
+      const context = { ...identity, completedFloorplans: latest.current.completedFloorplans || [], sheetLevels: latest.current.sheetLevels || {} };
+      const runId = `${LOCAL_VECTOR_RUN_ID}-review-${Date.now()}-${++localVectorRunSequence.current}`;
+      const { batch } = normalizePlanAnalysis({ context, runId, modelVersion: base.modelVersion || 'ai-takeoff-vector',
+        responses: [{ page: candidate.page, level, drawingType: 'floor_plan', ...reviewCandidateResponse(candidate, hosted, decision) }] });
+      if (!batch.detections.some((item) => item.kind === 'wall')) {
+        settle(() => ({}), 'That wall is already in the takeoff, so it was removed from the review list.');
+        return;
+      }
+      const result = await latest.current.bridge.appendDetections(batch);
+      const openings = batch.detections.filter((item) => item.kind === 'opening').length;
+      settle(() => ({}), `Wall added as ${decision === 'interior' ? 'internal' : 'external'}${openings ? ` with ${openings} opening${openings === 1 ? '' : 's'}` : ''} (${result.added} objects).`);
+    } catch (error) {
+      setMessage(error.message || 'The wall could not be added. Nothing was changed.');
+    } finally { reviewBusy.current = false; }
+  };
   useEffect(() => {
     setReport(current => {
       const scale = (page) => scaleOfSheet(page, options.pixelsPerMm, sheetCalibrations) || null;
@@ -517,6 +613,88 @@ export function useAiTakeoffAnalysis(options) {
     } catch (error) { fail(error, work); }
   };
 
+  const runVectorTakeoff = async (pageNumber) => {
+    if (pending.current) return;
+    const runId = `${LOCAL_VECTOR_RUN_ID}-${Date.now()}-${++localVectorRunSequence.current}`;
+    const current = latest.current;
+    if (current.readOnly || !current.jobId || !current.takeoffId) {
+      setStage('error'); setMessage('Open an editable takeoff job before running the local vector engine.'); return;
+    }
+    const planPage = current.planPages.find((page) => page.pageNumber === Number(pageNumber));
+    if (!planPage?.vectorSegments?.length) {
+      setStage('error'); setMessage('This sheet has no saved PDF vector linework. Re-import the PDF into this disposable takeoff.'); return;
+    }
+    if (!planPage.vectorSegments.some((segment) => segment.paint === 'stroke' && Number.isFinite(segment.widthPx) && typeof segment.color === 'string')) {
+      setStage('error'); setMessage('This saved sheet predates vector style evidence. Re-import the PDF to run the local vector engine.'); return;
+    }
+    if (!(sheetScale(planPage.pageNumber) > 0)) {
+      setStage('error'); setMessage('Calibrate this sheet with the existing Takeoff calibration tool before measuring it.'); return;
+    }
+    const abort = new AbortController();
+    controller.current = abort;
+    const work = { jobId: current.jobId, takeoffId: current.takeoffId, planPages: current.planPages,
+      generation: current.lifecycle.hydrationVersion, signal: abort.signal, pixelsPerMm: null };
+    pending.current = work;
+    setStage('measuring'); setMessage(`Running GR8 Result local vector takeoff on sheet ${planPage.pageNumber}…`);
+    try {
+      const identity = await current.bridge.getContext();
+      work.pixelsPerMm = identity.pixelsPerMm;
+      assertCurrent(work);
+      const pixelsPerMm = scaleOfSheet(planPage.pageNumber, identity.pixelsPerMm, identity.sheetCalibrations);
+      if (!(pixelsPerMm > 0)) throw new Error('This sheet has no confirmed calibration. Nothing was measured.');
+      const raster = await readPlanRaster(planPage.dataUrl, undefined, { logicalWidth: planPage.logicalWidth, pixelsPerMm });
+      assertCurrent(work, true);
+      const detected = detectVectorWalls(planPage.vectorSegments, {
+        pixelsPerMm, logicalWidth: planPage.logicalWidth, logicalHeight: planPage.logicalHeight, raster,
+      });
+      const level = current.sheetLevels?.[planPage.pageNumber] || 'Unassigned';
+      const context = { ...identity, completedFloorplans: current.completedFloorplans || [], sheetLevels: current.sheetLevels || {} };
+      const built = buildLocalVectorAnalysis({ planPage, detected, pixelsPerMm, level, context, runId });
+      const { batch, analysis, rooms: readings } = built;
+      // A wall already accepted, drawn or rejected is not offered for review again.
+      const settledLines = [...(current.completedWallRuns || []).filter((run) => (Number(run.page) || 1) === planPage.pageNumber).map((run) => run.nodes),
+        ...(reportRef.current?.rejectedWallCandidates || []).filter((item) => item.page === planPage.pageNumber).map((item) => item.nodes)];
+      const reach = 100 * pixelsPerMm;
+      const reviewWalls = built.vector.reviewWallCandidates.filter((item) => !reviewWallCovered(item, settledLines, reach));
+      const keptWallIds = new Set(reviewWalls.map((item) => item.modelWallId));
+      const reviewOpenings = built.vector.reviewOpeningCandidates.filter((item) => keptWallIds.has(item.hostModelWallId));
+      const vector = { ...built.vector, reviewWallCandidates: reviewWalls, reviewOpeningCandidates: reviewOpenings,
+        report: { ...built.vector.report, unclassifiedWalls: reviewWalls.length, openingsOnUnclassifiedWalls: reviewOpenings.length } };
+      const admission = batch.detections.length
+        ? await current.bridge.appendDetections(batch, { signal: work.signal })
+        : { status: 'review', added: 0 };
+      assertCurrent(work, true);
+      const rooms = mergeRoomReadings(reportRef.current?.rooms, [{ page: planPage.pageNumber, level, rooms: readings }]);
+      const readiness = localVectorReadiness({ analysis, vector, detected, rooms, admission });
+      const completed = {
+        ...analysis, review: [...analysis.review, ...readiness.issues], provider: 'GR8 Result local vector engine', modelVersion: detected.engine, runId,
+        wallReviewCandidates: vector.reviewWallCandidates,
+        rejectedWallCandidates: (reportRef.current?.rejectedWallCandidates || []),
+        bridgeReviewCandidates: vector.reviewBridgeCandidates,
+        openingReviewCandidates: vector.reviewOpeningCandidates,
+        wallLineage: vector.wallLineage,
+        documentHash: identity.documentHash, requests: [],
+        inspections: [{ page: planPage.pageNumber, level, drawingType: 'floor_plan', localOnly: true }],
+        linework: { [planPage.pageNumber]: { ...vector.report, detector: detected.stats, openings: detected.openings.length, rooms: vector.rooms.length } },
+        rooms, analysedAt: new Date().toISOString(), completedAt: readiness.needsReview ? null : new Date().toISOString(), added: admission.added,
+        status: readiness.needsReview ? 'review' : admission.status,
+      };
+      completed.counts = { ...analysis.counts, rooms: rooms.length, roomBoundaries: rooms.filter((room) => room.polygon?.length >= 3).length,
+        roomsForReview: rooms.filter((room) => room.reviewRequired).length, review: completed.review.length };
+      latest.current.onDetectedLevels?.([{ page: planPage.pageNumber, level }]);
+      setReport(completed);
+      latest.current.markCompleted('ai-takeoff-local-vector');
+      setStage(completed.status === 'review' ? 'review' : 'complete');
+      setMessage(readiness.needsReview
+        ? `Sheet ${planPage.pageNumber} measured — review required. Resolve withheld walls, opening associations and room boundaries before accepting quantities.`
+        : `Local vector takeoff complete on sheet ${planPage.pageNumber}. No external AI requests were made.`);
+      await nextFrame();
+      assertCurrent(work, true);
+      await latest.current.onCompleted?.(completed);
+      pending.current = null;
+    } catch (error) { fail(error, work); }
+  };
+
   const run = async () => {
     if (pending.current) return;
     const current = latest.current;
@@ -651,5 +829,5 @@ export function useAiTakeoffAnalysis(options) {
     await measure(work);
   };
 
-  return { report, inspections, sheetCalibrations, recordSheetCalibration, resolveDecision, restoreReport, stage, message, scaleProposal, rooms: { ...roomsState, read: readRooms, remeasure: remeasureRooms, add: addRoom, remove: removeRoom, update: updateRooms }, run, confirmScale, cancel, useManualCalibration, continueManualCalibration, hasCalibration: options.pixelsPerMm > 0 };
+  return { report, inspections, sheetCalibrations, recordSheetCalibration, resolveDecision, restoreReport, stage, message, scaleProposal, rooms: { ...roomsState, read: readRooms, remeasure: remeasureRooms, fromWalls: measureRoomsFromWalls, add: addRoom, remove: removeRoom, update: updateRooms }, run, runVectorTakeoff, resolveReviewWall, confirmScale, cancel, useManualCalibration, continueManualCalibration, hasCalibration: options.pixelsPerMm > 0 };
 }

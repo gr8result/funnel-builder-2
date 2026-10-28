@@ -111,3 +111,13 @@ export async function readPdfPageLinework(page, viewport, OPS, options) {
   const operatorList = await page.getOperatorList();
   return extractPdfLinework(operatorList, OPS, viewport.transform, options);
 }
+
+export function compactPdfLinework(linework = []) {
+  const round = (value) => Math.round(value * 100) / 100;
+  return linework.filter((segment) => Math.hypot(segment.x2 - segment.x1, segment.y2 - segment.y1) >= 1)
+    .map(({ x1, y1, x2, y2, widthPx, paint, color, dashed, layer, path, subpath, curve }) => ({
+      x1: round(x1), y1: round(y1), x2: round(x2), y2: round(y2), path, subpath,
+      widthPx: round(widthPx), paint, color, dashed,
+      ...(layer ? { layer } : {}), ...(curve ? { curve: true } : {}),
+    }));
+}

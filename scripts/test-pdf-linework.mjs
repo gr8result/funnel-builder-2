@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import { PDFDocument, pushGraphicsState, popGraphicsState, concatTransformationMatrix, moveTo, lineTo, closePath, stroke, setLineWidth, appendBezierCurve } from 'pdf-lib';
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
-import { extractPdfLinework, readPdfPageLinework } from '../components/construction-estimation/ai-plan-takeoff/geometry/pdfLinework.js';
+import { compactPdfLinework, extractPdfLinework, readPdfPageLinework } from '../components/construction-estimation/ai-plan-takeoff/geometry/pdfLinework.js';
 
 const near = (a, b, tolerance = 1e-3) => Math.abs(a - b) <= tolerance;
 const has = (segments, x1, y1, x2, y2, tolerance = 1e-3) => segments.some((s) => (near(s.x1, x1, tolerance) && near(s.y1, y1, tolerance) && near(s.x2, x2, tolerance) && near(s.y2, y2, tolerance))
@@ -51,6 +51,12 @@ assert.ok(has(straight, 500, 300, 500, 200), 'restore returns to the page matrix
 const inner = straight.find((s) => has([s], 100, 350, 200, 350));
 assert.ok(near(inner.widthPx, 8 * 0.125, 1e-6), `line width scales with the matrix (got ${inner.widthPx})`);
 assert.ok(straight.every((s) => s.paint === 'stroke'), 'stroked paths are marked stroke');
+const compact = compactPdfLinework([{ ...inner, color: '#123456', dashed: true, layer: 'walls' }])[0];
+assert.equal(compact.paint, 'stroke', 'compact linework retains the paint operation');
+assert.equal(compact.widthPx, inner.widthPx, 'compact linework retains scaled stroke width');
+assert.equal(compact.color, '#123456', 'compact linework retains its pen color');
+assert.equal(compact.dashed, true, 'compact linework retains dash state');
+assert.equal(compact.layer, 'walls', 'compact linework retains optional-content layer');
 
 // Scaled viewport (as the canvas renders at 6x): every point scales with it.
 const big = loaded.getViewport({ scale: 6 });

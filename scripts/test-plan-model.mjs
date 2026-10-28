@@ -6,6 +6,10 @@ import {
   addWall, addOpening, addSeparator, computeRooms, createLevel, createPlanModel, addLevelToModel, withLevel, deleteWall, deleteOpening,
   describeLevel, drawWall, mergeDetections, moveNode, nameRoomAt, openingPosition, updateWall, wallCategories, wallLengthMm, wallNetLengthMm,
 } from '../components/construction-estimation/ai-plan-takeoff/geometry/planModel.js';
+import { levelFromLinework, vectorAnalysisFromLinework } from '../components/construction-estimation/ai-plan-takeoff/geometry/planModelAdapter.js';
+import { detectVectorWalls } from '../components/construction-estimation/ai-plan-takeoff/geometry/vectorWalls.js';
+import { normalizePlanAnalysis } from '../components/construction-estimation/ai-plan-takeoff/ai-integration/analysisContract.js';
+import { convertAiTakeoffDetections } from '../components/construction-estimation/ai-plan-takeoff/ai-integration/adapter.js';
 
 const near = (a, b, tolerance = 1e-6) => Math.abs(a - b) <= tolerance;
 const build = (walls, level = createLevel({ id: 'ground' })) => walls.reduce((current, spec) => addWall(current, spec).level, level);
@@ -123,6 +127,75 @@ const box = () => build([
   level = moveNode(level, nodeAt(level, 4000, 3000).id, { x: 4500, y: 3000 });
   assert.ok(near(openingPosition(level, door).x, 4500), 'the door moves with its wall');
   assert.equal(computeRooms(level).length, 2, 'a door does not open a room into its neighbour (floor runs to the wall faces)');
+}
+
+// ---- Vector opening parent wall is authoritative at a junction --------------------------------------
+{
+  const { level } = levelFromLinework({
+    walls: [
+      { id: 'cross-wall', nodes: [{ x: 500, y: -500 }, { x: 500, y: 500 }], measuredThicknessMm: 90 },
+      { id: 'host-wall', nodes: [{ x: 0, y: 0 }, { x: 1000, y: 0 }], measuredThicknessMm: 90 },
+    ],
+    openings: [{ id: 'junction-door', x: 500, y: 0, axis: 'h', direction: { x: 1, y: 0 }, widthMm: 820, hostThicknessMm: 90, kind: 'door', confirmed: true, hostWallIds: ['host-wall'] }],
+  }, { id: 'ground', pixelsPerMm: 1 });
+  const opening = Object.values(level.openings)[0];
+  assert.equal(level.walls[opening.wallId].detectionKey, 'linework:host-wall', 'the vector-confirmed parent wins over a perpendicular wall at the same point');
+}
+
+// ---- Vector openings identify their measured parent wall -------------------------------------------
+{
+  const line = (x1, y1, x2, y2, path) => ({ x1, y1, x2, y2, path, subpath: path, paint: 'stroke', widthPx: 0.5, color: '#000000' });
+  const segments = [
+    line(0, 0, 200, 0, 1), line(282, 0, 500, 0, 2), line(0, 9, 200, 9, 3), line(282, 9, 500, 9, 4),
+    line(0, 300, 500, 300, 5), line(0, 309, 500, 309, 6),
+    line(0, 0, 0, 300, 7), line(9, 0, 9, 300, 8), line(500, 0, 500, 300, 9), line(509, 0, 509, 300, 10),
+  ];
+  const detected = detectVectorWalls(segments, { pixelsPerMm: 0.1, logicalWidth: 600, logicalHeight: 400 });
+  const doorway = detected.openings.find((opening) => opening.widthMm === 820);
+  assert.ok(doorway, 'the vector wall gap is recognized as an opening');
+  assert.ok(doorway.hostWallIds?.length, 'the opening identifies its parent wall segments');
+  assert.ok(doorway.hostWallIds.every((id) => detected.walls.find((wall) => wall.id === id)?.axis === 'h'), 'the opening is hosted by the horizontal wall, not a crossing wall');
+}
+
+// ---- Short glazing inside a wider wall gap is a window at its drawn span -----------------------
+{
+  const line = (x1, y1, x2, y2, path) => ({ x1, y1, x2, y2, path, subpath: path, paint: 'stroke', widthPx: 0.5, color: '#000000' });
+  const segments = [
+    line(0, 0, 200, 0, 1), line(500, 0, 700, 0, 2), line(0, 9, 200, 9, 3), line(500, 9, 700, 9, 4),
+    line(0, 300, 700, 300, 5), line(0, 309, 700, 309, 6),
+    line(0, 0, 0, 300, 7), line(9, 0, 9, 300, 8), line(700, 0, 700, 300, 9), line(709, 0, 709, 300, 10),
+    line(260, 3, 380, 3, 11), line(260, 6, 380, 6, 12),
+  ];
+  const detected = detectVectorWalls(segments, { pixelsPerMm: 0.1, logicalWidth: 800, logicalHeight: 400 });
+  const opening = detected.openings.find((item) => item.widthMm === 1200);
+  assert.ok(opening, 'the two frame lines produce one opening');
+  assert.equal(opening.kind, 'window', 'frame width, not the wider wall gap, distinguishes this window from a slider');
+  assert.ok(Math.abs(opening.x - 320) < 1, 'the opening is centered on the drawn frame span');
+  assert.equal(opening.bridgeWidthMm, 3000, 'the connected wall model retains the full wall gap');
+  assert.ok(Math.abs(opening.bridgeX - 350) < 1, 'the connected wall bridge remains centered on the full gap');
+  const { level } = levelFromLinework({ walls: detected.walls, openings: [opening] }, { id: 'ground', pixelsPerMm: 0.1 });
+  const bridge = Object.values(level.walls).find((wall) => wall.attributes?.spansOpening);
+  assert.ok(bridge, 'the full-width opening bridge is present in the connected wall model');
+  assert.ok(Math.abs(wallLengthMm(level, bridge) - 3000) < 1, 'opening display width remains separate from gross wall bridge length');
+  const local = vectorAnalysisFromLinework(detected, { id: 'ground', name: 'Ground Floor', page: 1, pixelsPerMm: 0.1, logicalWidth: 800, logicalHeight: 400 });
+  const context = { jobId: 'local-vector-job', takeoffId: 'local-vector-takeoff', documentHash: 'local-vector-document', pixelsPerMm: 0.1,
+    pages: [{ pageNumber: 1, logicalWidth: 800, logicalHeight: 400 }], completedWallRuns: [], placedOpenings: [], completedFloorplans: [], sheetLevels: { 1: 'Ground Floor' } };
+  const normalized = normalizePlanAnalysis({ context, responses: [local.response], runId: 'local-vector-test', modelVersion: 'gr8-vector-walls-1' });
+  const canonical = convertAiTakeoffDetections(normalized.batch, context);
+  assert.ok(canonical.completedWallRuns.length >= 4, 'local vector walls pass through the current application detection contract');
+  assert.equal(canonical.placedOpenings.length, 1, 'the measured window is imported through the existing opening contract');
+  assert.ok(canonical.placedOpenings[0].hostWallId, 'the local window remains hosted on its measured wall');
+  assert.ok(local.rooms.length > 0 && local.rooms.every((room) => room.lineworkRoomId), 'closed connected wall faces produce reviewable room boundaries');
+  const labeled = vectorAnalysisFromLinework({ walls: [
+    { id: 'north', nodes: [{ x: 1000, y: 1000 }, { x: 6000, y: 1000 }], measuredThicknessMm: 90, category: 'exterior' },
+    { id: 'east', nodes: [{ x: 6000, y: 1000 }, { x: 6000, y: 6000 }], measuredThicknessMm: 90, category: 'exterior' },
+    { id: 'south', nodes: [{ x: 6000, y: 6000 }, { x: 1000, y: 6000 }], measuredThicknessMm: 90, category: 'exterior' },
+    { id: 'west', nodes: [{ x: 1000, y: 6000 }, { x: 1000, y: 1000 }], measuredThicknessMm: 90, category: 'exterior' },
+  ], openings: [] }, { id: 'ground', name: 'Ground Floor', page: 1, pixelsPerMm: 1, logicalWidth: 7000, logicalHeight: 7000 }, {
+    labels: [{ x: 3500, y: 3500, name: 'Living' }, { x: 6500, y: 6500, name: 'Outside label' }],
+  });
+  assert.ok(labeled.rooms.some((room) => room.name === 'Living'), `a PDF room label inside a computed wall face is retained (named=${labeled.report.roomsNamed}, labels=${JSON.stringify(labeled.level.roomNames)}, modelRooms=${JSON.stringify(computeRooms(labeled.level).map((room) => ({ name: room.name, wallIds: room.wallIds })))}, rooms=${JSON.stringify(labeled.rooms.map((room) => ({ name: room.name, polygon: room.polygon })))} )`);
+  assert.ok(labeled.rooms.every((room) => room.name !== 'Outside label'), 'a label outside computed wall faces is not assigned by proximity');
 }
 
 // ---- Drawing over a wrong wall replaces it; the wrong one never comes back ----------------------------------

@@ -253,7 +253,7 @@
             "hostWall": {
               "basis": "DERIVED",
               "confidence": 0.92,
-              "evidence": "Nearest matching wall on the same calibrated page."
+              "evidence": "Unique nearby matching wall on the same calibrated page."
             },
             "location": {
               "basis": "OBSERVED",
@@ -318,7 +318,7 @@
             "hostWall": {
               "basis": "DERIVED",
               "confidence": 0.92,
-              "evidence": "Nearest matching wall on the same calibrated page."
+              "evidence": "Unique nearby matching wall on the same calibrated page."
             },
             "location": {
               "basis": "OBSERVED",

@@ -255,7 +255,7 @@ export function convertAiTakeoffDetections(batch, context) {
       result.completedWallRuns.push({
         ...base, category, nodes, lengthMm,
         thicknessMm: option(detection.thicknessMm, WALL_THICKNESSES, `${label} thicknessMm`),
-        alignment: option(detection.alignment, ['outer', 'inner'], `${label} alignment`),
+        alignment: option(detection.alignment, ['outer', 'inner', 'center'], `${label} alignment`),
         exteriorType: category === 'exterior' ? option(detection.exteriorType ?? 'Other', EXTERIOR_WALL_CLASSES, `${label} exteriorType`) : '',
         ...(constructionSystem === undefined ? {} : { constructionSystem }),
         ...(frameThicknessMm === undefined ? {} : { frameThicknessMm }),

@@ -177,7 +177,7 @@ export function detectVectorWalls(segments, context, overrides = {}) {
   const onPage = (s) => !(W > 0 && H > 0) || [[s.x1, s.y1], [s.x2, s.y2]].every(([x, y]) => x >= -1 && y >= -1 && x <= W + 1 && y <= H + 1);
   const straight = (segments || []).filter((s) => !s.curve && !s.dashed && len(s) >= mmPx && onPage(s));
   // Door swings: drawn as curves, or (from many CAD programs) as a run of short straight chords.
-  const curves = (segments || []).filter((s) => onPage(s) && (s.curve || len(s) <= 250 * mmPx));
+  const curves = (segments || []).filter((s) => !s.dashed && onPage(s) && (s.curve || len(s) <= 250 * mmPx));
   const ink = rasterInk(context.raster, context.logicalWidth);
   const directions = dominantDirections(straight, mmPx, options);
   const rejected = [];
@@ -287,9 +287,30 @@ export function detectVectorWalls(segments, context, overrides = {}) {
   const sameLine = (p, q) => p.angle === q.angle && Math.abs(p.c - q.c) <= 10 * mmPx && Math.abs(p.thicknessMm - q.thicknessMm) <= 15;
   const crossingIn = (candidate, lo, hi) => pool.some((other) => other.angle !== candidate.angle && (() => {
     const u = { x: Math.cos(candidate.angle), y: Math.sin(candidate.angle) };
+    const n = { x: -u.y, y: u.x };
     const ends = endpoints(other);
-    return [ends.a, ends.b].some((p) => { const s = p.x * u.x + p.y * u.y; return s >= lo - 20 * mmPx && s <= hi + 20 * mmPx; })
-      || (() => { const s0 = ends.a.x * u.x + ends.a.y * u.y, s1 = ends.b.x * u.x + ends.b.y * u.y; return Math.min(s0, s1) <= lo && Math.max(s0, s1) >= hi; })();
+    const c0 = ends.a.x * n.x + ends.a.y * n.y, c1 = ends.b.x * n.x + ends.b.y * n.y;
+    if (Math.abs(c1 - c0) < 1e-9) return false;
+    const t = (candidate.c - c0) / (c1 - c0);
+    // A T may stop at the other wall's face. Its finite run must still reach
+    // this centreline; projection along the gap alone admits distant walls.
+    const reach = (candidate.thicknessMm / 2 + 20) * mmPx;
+    if (candidate.c < Math.min(c0, c1) - reach || candidate.c > Math.max(c0, c1) + reach) return false;
+    const s0 = ends.a.x * u.x + ends.a.y * u.y, s1 = ends.b.x * u.x + ends.b.y * u.y;
+    const intersection = s0 + t * (s1 - s0);
+    return intersection >= lo - 20 * mmPx && intersection <= hi + 20 * mmPx;
+  })());
+  const sharedFaceContinues = (current, next) => current.faces.some((face) =>
+    face.lo <= current.hi && face.hi >= next.lo
+    && next.faces.some((other) => Math.abs(face.c - other.c) <= options.collinearMm * mmPx
+      && other.lo <= current.hi && other.hi >= next.lo));
+  const crossingProjectsIn = (candidate, lo, hi) => pool.some((other) => other.angle !== candidate.angle && (() => {
+    const direction = { x: Math.cos(candidate.angle), y: Math.sin(candidate.angle) };
+    const ends = endpoints(other);
+    const start = ends.a.x * direction.x + ends.a.y * direction.y;
+    const end = ends.b.x * direction.x + ends.b.y * direction.y;
+    return [start, end].some((position) => position >= lo - 20 * mmPx && position <= hi + 20 * mmPx)
+      || (Math.min(start, end) <= lo && Math.max(start, end) >= hi);
   })());
   const byLine = [];
   for (const candidate of pool.sort((p, q) => p.angle - q.angle || p.c - q.c || p.lo - q.lo)) {
@@ -305,7 +326,8 @@ export function detectVectorWalls(segments, context, overrides = {}) {
     for (let k = 1; k < group.length; k += 1) {
       const next = group[k];
       const gapMm = (next.lo - current.hi) / mmPx;
-      if (gapMm <= options.continueGapMm && crossingIn(current, current.hi, next.lo)) {
+      if (gapMm <= 0 || (gapMm <= options.continueGapMm && (crossingIn(current, current.hi, next.lo)
+        || (crossingProjectsIn(current, current.hi, next.lo) && sharedFaceContinues(current, next))))) {
         current = { ...current, hi: Math.max(current.hi, next.hi), lengthMm: (Math.max(current.hi, next.hi) - current.lo) / mmPx };
         continue;
       }
@@ -368,18 +390,29 @@ export function detectVectorWalls(segments, context, overrides = {}) {
     const across = lines.filter((line) => Math.abs(line.c - gap.c) <= half + 30 * mmPx && Math.min(line.hi, gap.hi) - Math.max(line.lo, gap.lo) >= 0.6 * (gap.hi - gap.lo));
     const partial = lines.filter((line) => Math.abs(line.c - gap.c) <= half + 30 * mmPx && (line.hi - line.lo) >= 0.25 * (gap.hi - gap.lo) && (line.hi - line.lo) <= 0.75 * (gap.hi - gap.lo) && line.lo >= gap.lo - 50 * mmPx && line.hi <= gap.hi + 50 * mmPx);
     const outside = lines.filter((line) => Math.abs(line.c - gap.c) > half && Math.abs(line.c - gap.c) <= half + 150 * mmPx && Math.min(line.hi, gap.hi) - Math.max(line.lo, gap.lo) >= 0.8 * (gap.hi - gap.lo) && (line.hi - line.lo) <= (gap.hi - gap.lo) * 2.2);
+    let openingCentre = centre, openingWidthMm = widthMm, bridgeCentre = null, bridgeWidthMm = null;
     // Cavity slider: a line down the middle of the wall beside the gap, about as long as the gap is wide.
     const pocket = lines.filter((line) => Math.abs(line.c - gap.c) < half - 5 * mmPx && Math.abs(line.c - gap.c) <= half
       && (Math.abs(line.lo - gap.hi) <= 120 * mmPx || Math.abs(line.hi - gap.lo) <= 120 * mmPx || (line.lo < gap.lo && line.hi > gap.lo) || (line.lo < gap.hi && line.hi > gap.hi))
       && (line.hi - line.lo) / mmPx >= widthMm * 0.6 && (line.hi - line.lo) / mmPx <= widthMm * 2.3);
     if (kind === 'opening' && pocket.length) { kind = 'cavity-slider'; evidence.push('door leaf drawn in a wall pocket'); }
-    if (kind === 'opening' && partial.length >= 2) { kind = 'sliding-door'; evidence.push(`${partial.length} sliding panels across the gap`); }
+    if (kind === 'opening' && partial.length >= 2) {
+      const spanLo = Math.max(gap.lo, Math.min(...partial.map((line) => line.lo)));
+      const spanHi = Math.min(gap.hi, Math.max(...partial.map((line) => line.hi)));
+      openingWidthMm = (spanHi - spanLo) / mmPx;
+      openingCentre = toXY(gap.angle, (spanLo + spanHi) / 2, gap.c);
+      bridgeCentre = centre;
+      bridgeWidthMm = widthMm;
+      kind = openingWidthMm >= 2000 ? 'sliding-door' : 'window';
+      evidence.push(`${partial.length} frame or glass lines across ${Math.round(openingWidthMm)} mm`);
+    }
     if (kind === 'opening' && across.length >= 2) { kind = widthMm >= 2000 ? 'sliding-door' : 'window'; evidence.push(`${across.length} frame or glass lines across the gap`); }
     if (kind === 'opening' && across.length === 1 && widthMm >= options.garageMinMm) { kind = 'garage-door'; evidence.push('a single door line across a wide gap'); }
     if (kind === 'opening' && across.length === 1) { kind = 'window'; evidence.push('a glass line across the gap'); }
     if (kind === 'opening' && outside.length) { kind = 'barn-door'; evidence.push('a door hung across the wall face'); }
-    openings.push({ id: `vo-${openings.length + 1}`, ...centre, axis: Math.abs(Math.cos(gap.angle)) > 0.999 ? 'h' : Math.abs(Math.sin(gap.angle)) > 0.999 ? 'v' : 'd',
-      direction: { x: Math.cos(gap.angle), y: Math.sin(gap.angle) }, widthMm: Math.round(widthMm), ...(leafMm ? { leafMm } : {}), hostThicknessMm: Math.round(gap.thicknessMm),
+    openings.push({ id: `vo-${openings.length + 1}`, ...openingCentre, axis: Math.abs(Math.cos(gap.angle)) > 0.999 ? 'h' : Math.abs(Math.sin(gap.angle)) > 0.999 ? 'v' : 'd',
+      direction: { x: Math.cos(gap.angle), y: Math.sin(gap.angle) }, widthMm: Math.round(openingWidthMm), ...(leafMm ? { leafMm } : {}), hostThicknessMm: Math.round(gap.thicknessMm),
+      ...(bridgeCentre ? { bridgeX: bridgeCentre.x, bridgeY: bridgeCentre.y, bridgeWidthMm: Math.round(bridgeWidthMm) } : {}),
       kind, confirmed: kind !== 'opening', evidence: evidence.join('; ') || 'a gap in the wall line with nothing drawn to say what it is' });
   }
   // Windows drawn as a frame along a continuous wall (the frame was set aside as lying beside the wall).
@@ -480,6 +513,26 @@ export function detectVectorWalls(segments, context, overrides = {}) {
     return { id: `vw-${index + 1}`, nodes: [a, b], axis: horizontal ? 'h' : vertical ? 'v' : 'd', angle: wall.angle, measuredThicknessMm: Math.round(wall.thicknessMm * 10) / 10,
       lengthMm: Math.round(wall.lengthMm), pens: [...new Set(wall.faces.map((face) => face.style))] };
   });
+  const hostIdsFor = (opening) => {
+    const direction = opening.direction || { x: Math.cos(opening.angle || 0), y: Math.sin(opening.angle || 0) };
+    const angle = Math.atan2(direction.y, direction.x);
+    const halfWidth = Math.max(0, opening.widthMm || 0) * mmPx / 2;
+    const candidates = accepted.map((wall, index) => {
+      const angleDiff = Math.abs(wall.angle - angle) % Math.PI;
+      const parallelError = Math.min(angleDiff, Math.PI - angleDiff);
+      if (parallelError > 2 * deg) return null;
+      const u = { x: Math.cos(wall.angle), y: Math.sin(wall.angle) }, n = { x: -u.y, y: u.x };
+      const s = opening.x * u.x + opening.y * u.y, c = opening.x * n.x + opening.y * n.y;
+      const offset = Math.abs(c - wall.c);
+      const along = s < wall.lo ? wall.lo - s : s > wall.hi ? s - wall.hi : 0;
+      const offsetReach = (wall.thicknessMm + (opening.hostThicknessMm || wall.thicknessMm)) * mmPx / 2 + 100 * mmPx;
+      const alongReach = (opening.inWall ? 100 : halfWidth + options.meetReachMm * mmPx);
+      if (offset > offsetReach || along > alongReach) return null;
+      return { index, score: offset + along };
+    }).filter(Boolean).sort((a, b) => a.score - b.score);
+    return candidates.slice(0, opening.inWall ? 1 : 2).map(({ index }) => out[index].id);
+  };
+  for (const opening of openings) opening.hostWallIds = hostIdsFor(opening);
   return {
     engine: 'vector-walls-1', walls: out, openings, rejected,
     stats: { directionsDeg: directions.map((value) => Math.round(value / deg * 10) / 10), thicknessModesMm: modes.map((value) => Math.round(value)), wallPens: [...wallPens], candidates: all.length, accepted: out.length, rejected: rejected.length },

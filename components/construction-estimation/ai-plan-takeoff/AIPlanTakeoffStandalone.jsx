@@ -13,7 +13,7 @@ import { getPlanDisplayIdentity, getTakeoffLifecycle, loadTakeoffPlanImage, crea
 import { Stage, Layer, Image as KonvaImage, Line, Circle, Text, Rect, Group } from 'react-konva';
 import { RotateCw, Ruler, ChevronLeft, ChevronRight, DoorOpen, Square, Layers, Trash2, Home, Compass, Download, Upload, MousePointer2, RectangleVertical } from 'lucide-react';
 import { calculatePolygonAreaM2, findFloorplanCornerSnapPoint, resolveFloorplanFreePoint } from './floorplanGeometry';
-import { readPdfPageLinework } from './geometry/pdfLinework.js';
+import { compactPdfLinework, readPdfPageLinework } from './geometry/pdfLinework.js';
 import { reconcileDrawnWall, snapWallPoint } from './manualWallEdit.js';
 import { AI_PLAN_TAKEOFF_EXTENSION, filenameWithoutKnownGr8Extension } from '../../../lib/gr8FileTypes.js';
 const AI_PLAN_TAKEOFF_FILE_DESCRIPTION = 'Gr8 Result AI Plan Takeoff';
@@ -314,7 +314,10 @@ function generateOffsetPolygon(nodes, thicknessMm, alignment) {
 
   let offsetLeft = 0;
   let offsetRight = 0;
-  if (alignment === 'outer') {
+  if (alignment === 'center') {
+    offsetLeft = -thick / 2;
+    offsetRight = thick / 2;
+  } else if (alignment === 'outer') {
     offsetLeft = 0;
     offsetRight = thick;
   } else {
@@ -505,6 +508,8 @@ export default function AIPlanTakeoffStandalone({
   const [activePolyline, setActivePolyline] = useState([]);
   const [completedWallRuns, setCompletedWallRuns] = useState([]);
   const [selectedWallId, setSelectedWallId] = useState(null);
+  const [reviewWallId, setReviewWallId] = useState(null);
+  const [hoveredWallId, setHoveredWallId] = useState(null);
 
   // Opening state
   const [openingHeightMm, setOpeningHeightMm] = useState(1800);
@@ -2405,11 +2410,10 @@ setSavedRevision(verifiedSave.revision);
   const extractPdfVectors = async (page, viewport) => {
     try {
       const linework = await readPdfPageLinework(page, viewport, pdfjsLib.OPS);
-      const round = (value) => Math.round(value * 100) / 100;
       // Saved with the page: coordinates to 0.01 px plus the path a segment belongs to (door swings are
-      // read back as whole arcs) keeps a 1:100 sheet near half a megabyte.
-      return linework.filter((segment) => Math.hypot(segment.x2 - segment.x1, segment.y2 - segment.y1) >= 1)
-        .map(({ x1, y1, x2, y2, path, subpath, curve }) => ({ x1: round(x1), y1: round(y1), x2: round(x2), y2: round(y2), path, subpath, ...(curve ? { curve: true } : {}) }));
+      // read back as whole arcs) keeps a 1:100 sheet compact. Pen, dash and layer metadata let the
+      // local wall detector distinguish architectural walls from dimensions and symbols.
+      return compactPdfLinework(linework);
     } catch (err) {
       console.warn("Vector extraction fallback:", err);
       return [];
@@ -3182,6 +3186,22 @@ setSavedRevision(verifiedSave.revision);
     const pos = getCanvasPointerPos(e);
     if (!pos) return;
     const shiftKey = !!e?.evt?.shiftKey;
+    if (activeTool === 'select') {
+      let nearest = null;
+      const reach = 14 / Math.max(stageScale, 0.05);
+      for (const wall of activePageWalls) {
+        for (let index = 1; index < (wall.nodes || []).length; index += 1) {
+          const a = wall.nodes[index - 1], b = wall.nodes[index];
+          const dx = b.x - a.x, dy = b.y - a.y, lengthSq = dx * dx + dy * dy;
+          const t = lengthSq ? Math.max(0, Math.min(1, ((pos.x - a.x) * dx + (pos.y - a.y) * dy) / lengthSq)) : 0;
+          const distance = Math.hypot(pos.x - (a.x + t * dx), pos.y - (a.y + t * dy));
+          if (distance <= reach && (!nearest || distance < nearest.distance)) nearest = { id: wall.id, distance };
+        }
+      }
+      setHoveredWallId((current) => current === (nearest?.id || null) ? current : nearest?.id || null);
+    } else {
+      setHoveredWallId(null);
+    }
 
     if (draggingMeasureId || draggingEaveId) {
       const updateOffsetLine = (m) => {
@@ -3665,7 +3685,24 @@ setSavedRevision(verifiedSave.revision);
 
   const handleStageContentPointerDown = (event) => {
     if (event.target.closest?.('[data-testid="room-boundary-panel"]')) return;
-    if (event.button !== 0 || !canStartStagePan()) return;
+    if (event.button === 0 && activeTool === 'select' && !event.target.closest?.('button,input,select,textarea')) {
+      const point = getCanvasPointerPos(event);
+      if (point) {
+        const reach = 18 / Math.max(stageScale, 0.05);
+        let nearest = null;
+        for (const wall of activePageWalls) for (let index = 1; index < (wall.nodes || []).length; index += 1) {
+          const start = wall.nodes[index - 1], end = wall.nodes[index];
+          const dx = end.x - start.x, dy = end.y - start.y, lengthSq = dx * dx + dy * dy;
+          const t = lengthSq ? Math.max(0, Math.min(1, ((point.x - start.x) * dx + (point.y - start.y) * dy) / lengthSq)) : 0;
+          const distance = Math.hypot(point.x - start.x - t * dx, point.y - start.y - t * dy);
+          if (distance <= reach && (!nearest || distance < nearest.distance)) nearest = { id: wall.id, distance };
+        }
+        if (nearest) selectOnly('wall', nearest.id);
+      }
+    }
+    if (event.button !== 0) return;
+    suppressNextStageClickRef.current = false;
+    if (!canStartStagePan()) return;
     if (activeTool === 'rooms' && editingRoomId) return;
     const stage = stageRef.current;
     if (!stage) return;
@@ -4233,7 +4270,7 @@ setSavedRevision(verifiedSave.revision);
           onReview={() => setShowSchedule(true)} onSave={handleSaveJob}
           onGoToPage={(page) => { if (page >= 1 && page <= totalPages) setCurrentPage(page); }}
           onCalibrate={() => { setCalibrationMode(true); setCalibPoints([]); setActivePolyline([]); setActiveAreaPolyline([]); }} />
-        <AiTakeoffDevelopmentAction bridge={aiTakeoffBridge} currentPage={currentPage} enabled={enableAiTakeoffDevelopment} disabled={isRecoveryPreview || !image || !pixelsPerMm} />
+        <AiTakeoffDevelopmentAction bridge={aiTakeoffBridge} currentPage={currentPage} onRunLocalVectors={aiTakeoffAnalysis.runVectorTakeoff} enabled={enableAiTakeoffDevelopment} disabled={isRecoveryPreview || !image || !pixelsPerMm} />
         {attachDialogOpen && (
           <div
             onClick={() => !attachSaving && setAttachDialogOpen(false)}
@@ -4387,6 +4424,7 @@ setSavedRevision(verifiedSave.revision);
 
         <div style={{ display: 'flex', background: '#e0e0e0', borderRadius: '6px', padding: '4px' }}>
           <button
+            data-testid="takeoff-select-tool"
             onClick={() => { setActiveTool('select'); setActivePolyline([]); setActiveAreaPolyline([]); setMeasurePoints([]); setEavePoints([]); }}
             style={{ flex: 1, padding: '8px', fontSize: '12px', fontWeight: 'bold', border: 'none', borderRadius: '4px', cursor: 'pointer', background: activeTool === 'select' ? '#fff' : 'transparent', color: activeTool === 'select' ? '#1976d2' : '#555' }}
           >
@@ -4548,6 +4586,7 @@ setSavedRevision(verifiedSave.revision);
                   onChange={(e) => updateWallRun(selectedWall.id, { alignment: e.target.value })}
                   style={{ padding: '6px', fontSize: '12px', fontWeight: 'bold' }}
                 >
+                  <option value="center">Centreline</option>
                   <option value="outer">Outer Face</option>
                   <option value="inner">Inner Face</option>
                 </select>
@@ -5684,6 +5723,41 @@ setSavedRevision(verifiedSave.revision);
         {image && <RoomBoundaryPanel rooms={aiTakeoffAnalysis.report?.rooms || []} control={aiTakeoffAnalysis.rooms}
           enabled={activeTool === 'rooms'} setEnabled={enabled => setActiveTool(enabled ? 'rooms' : 'select')}
           editing={editingRoomId} setEditing={id => { setEditingRoomId(id); const room = aiTakeoffAnalysis.report?.rooms?.find(room => room.id === id); if (room) setCurrentPage(room.page); }} readOnly={isRecoveryPreview} />}
+        {image && ((aiTakeoffAnalysis.report?.wallReviewCandidates || []).some(candidate => candidate.page === currentPage)
+          || (aiTakeoffAnalysis.report?.bridgeReviewCandidates || []).some(candidate => candidate.page === currentPage)
+          || (aiTakeoffAnalysis.report?.openingReviewCandidates || []).some(candidate => candidate.page === currentPage)) && (() => {
+          const wallCandidates = (aiTakeoffAnalysis.report?.wallReviewCandidates || []).filter(candidate => candidate.page === currentPage);
+          const bridgeCandidates = (aiTakeoffAnalysis.report?.bridgeReviewCandidates || []).filter(candidate => candidate.page === currentPage);
+          const openingCandidates = (aiTakeoffAnalysis.report?.openingReviewCandidates || []).filter(candidate => candidate.page === currentPage);
+          return (
+            <div data-testid="takeoff-wall-review-candidates" data-count={wallCandidates.length} data-bridge-count={bridgeCandidates.length} data-opening-count={openingCandidates.length} role="status" aria-live="polite" style={{ position: 'absolute', top: 12, left: 12, zIndex: 3, maxWidth: 'min(360px, calc(100% - 24px))', padding: '8px 10px', background: 'rgba(255, 251, 235, 0.96)', border: '1px solid #d97706', borderLeft: '4px solid #d97706', color: '#713f12', fontSize: 12, lineHeight: 1.4, pointerEvents: 'none' }}>
+              {wallCandidates.length > 0 && <><strong>{wallCandidates.length} measured wall segments need classification</strong><div>Dashed amber lines are review-only and excluded from quantities. Click one to classify it.</div></>}
+              {bridgeCandidates.length > 0 && <><strong>{bridgeCandidates.length} confirmed-opening spans need wall classification</strong><div>Teal dotted spans support topology only and are not wall quantities.</div></>}
+              {openingCandidates.length > 0 && <><strong>{openingCandidates.length} openings have review-only hosts</strong><div>Amber circles mark openings excluded from quantities until their host wall is classified.</div></>}
+            </div>
+          );
+        })()}
+        {image && (() => {
+          const candidate = (aiTakeoffAnalysis.report?.wallReviewCandidates || []).find(item => item.id === reviewWallId && item.page === currentPage);
+          if (!candidate) return null;
+          const hosted = (aiTakeoffAnalysis.report?.openingReviewCandidates || []).filter(item => item.hostModelWallId === candidate.modelWallId);
+          const first = candidate.nodes[0], last = candidate.nodes[candidate.nodes.length - 1];
+          const lengthMm = pixelsPerMm > 0 ? Math.round(Math.hypot(last.x - first.x, last.y - first.y) / pixelsPerMm) : null;
+          const decide = (decision) => { setReviewWallId(null); aiTakeoffAnalysis.resolveReviewWall(candidate.id, decision); };
+          return (
+            <div data-testid="review-wall-panel" data-candidate-id={candidate.id} role="dialog" aria-label="Classify measured wall" style={{ position: 'absolute', top: 12, left: 12, zIndex: 5, width: 'min(320px, calc(100% - 24px))', padding: 12, background: '#fff', border: '1px solid #d97706', borderRadius: 8, boxShadow: '0 2px 12px #0003', fontSize: 13 }}>
+              <strong>Classify this wall</strong>
+              <div style={{ margin: '6px 0', color: '#475569' }}>{lengthMm !== null ? `${(lengthMm / 1000).toFixed(2)} m` : ''} · {candidate.thicknessMm} mm thick · {hosted.length} opening{hosted.length === 1 ? '' : 's'} on it</div>
+              <div style={{ marginBottom: 8, color: '#713f12' }}>{candidate.reason}</div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                <button type="button" data-testid="review-wall-internal" disabled={isRecoveryPreview} onClick={() => decide('interior')}>Internal</button>
+                <button type="button" data-testid="review-wall-external" disabled={isRecoveryPreview} onClick={() => decide('exterior')}>External</button>
+                <button type="button" data-testid="review-wall-reject" disabled={isRecoveryPreview} onClick={() => decide('reject')}>Reject</button>
+                <button type="button" data-testid="review-wall-cancel" onClick={() => setReviewWallId(null)}>Close</button>
+              </div>
+            </div>
+          );
+        })()}
         <Stage
           width={canvasSize.width}
           height={canvasSize.height}
@@ -5920,20 +5994,49 @@ setSavedRevision(verifiedSave.revision);
             })}
 
             {/* Walls & Vertex Handles */}
+            {(aiTakeoffAnalysis.report?.wallReviewCandidates || []).filter(candidate => candidate.page === currentPage).map(candidate => (
+              <Line
+                key={candidate.id}
+                name="wall-review-candidate"
+                points={candidate.nodes.flatMap(node => [node.x, node.y])}
+                stroke={candidate.id === reviewWallId ? '#dc2626' : '#d97706'}
+                strokeWidth={(candidate.id === reviewWallId ? 4 : 2.5) / stageScale}
+                dash={[8 / stageScale, 5 / stageScale]}
+                opacity={0.95}
+                listening={markupListening}
+                hitStrokeWidth={18 / stageScale}
+                onClick={(e) => {
+                  if (!selectModeActive) return;
+                  e.cancelBubble = true;
+                  setReviewWallId(candidate.id);
+                }}
+              />
+            ))}
+            {(aiTakeoffAnalysis.report?.bridgeReviewCandidates || []).filter(candidate => candidate.page === currentPage).map(candidate => (
+              <Line key={candidate.id} name="bridge-review-candidate" points={candidate.nodes.flatMap(node => [node.x, node.y])}
+                stroke="#0f766e" strokeWidth={2.5 / stageScale} dash={[2 / stageScale, 6 / stageScale]} opacity={0.95} listening={false} />
+            ))}
+            {(aiTakeoffAnalysis.report?.openingReviewCandidates || []).filter(candidate => candidate.page === currentPage).map(candidate => (
+              <Circle key={candidate.id} name="opening-review-candidate" x={candidate.nodes[0].x} y={candidate.nodes[0].y}
+                radius={8 / stageScale} stroke="#d97706" strokeWidth={2.5 / stageScale} listening={false} />
+            ))}
             {activePageWalls.map((run) => {
               const polyPoints = generateOffsetPolygon(run.nodes, run.thicknessMm * (pixelsPerMm || 1), run.alignment);
               const isSelected = run.id === selectedWallId;
+              const isHovered = run.id === hoveredWallId;
               return (
                 <React.Fragment key={run.id}>
                   {polyPoints.length > 0 && (
                     <Line
                       points={polyPoints.flatMap((p) => [p.x, p.y])}
                       fill={run.category === 'exterior' ? EXTERIOR_WALL_CLASS_COLOURS[resolveExteriorClass(run)] : "rgba(171, 71, 188, 0.4)"}
-                      stroke={isSelected ? "#d32f2f" : (run.category === 'exterior' ? "#0033aa" : "#7b1fa2")}
-                      strokeWidth={(isSelected ? 2.5 : 1.5) / stageScale}
+                      stroke={isSelected ? "#d32f2f" : isHovered ? "#fb8c00" : (run.category === 'exterior' ? "#0033aa" : "#7b1fa2")}
+                      strokeWidth={(isSelected ? 2.5 : isHovered ? 2.25 : 1.5) / stageScale}
                       closed
                       listening={markupListening}
                       hitStrokeWidth={20 / stageScale}
+                      onMouseEnter={() => setHoveredWallId(run.id)}
+                      onMouseLeave={() => setHoveredWallId((current) => current === run.id ? null : current)}
                       onClick={(e) => {
                         if (!selectModeActive) return;
                         e.cancelBubble = true;
@@ -5943,11 +6046,13 @@ setSavedRevision(verifiedSave.revision);
                   )}
                   <Line
                     points={run.nodes.flatMap((n) => [n.x, n.y])}
-                    stroke={isSelected ? "#d32f2f" : "#111"}
-                    strokeWidth={(isSelected ? 2 : 1) / stageScale}
+                    stroke={isSelected ? "#d32f2f" : isHovered ? "#fb8c00" : "#111"}
+                    strokeWidth={(isSelected ? 2 : isHovered ? 1.75 : 1) / stageScale}
                     dash={[3 / stageScale, 3 / stageScale]}
                     listening={markupListening}
                     hitStrokeWidth={24 / stageScale}
+                    onMouseEnter={() => setHoveredWallId(run.id)}
+                    onMouseLeave={() => setHoveredWallId((current) => current === run.id ? null : current)}
                     onClick={(e) => {
                       if (!selectModeActive) return;
                       e.cancelBubble = true;

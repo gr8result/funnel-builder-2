@@ -17,11 +17,13 @@ import { createTakeoffAnalysisHandler } from '../lib/construction-estimation/aiT
 // -> RUN AI TAKEOFF (unconfigured server first, then configured) -> save -> reopen.
 const require = createRequire(import.meta.url);
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const out = path.join(root, 'artifacts/test-artifacts/takeoff-ai-stubbed');
+const localVectorLiberty = process.env.GR8_TAKEOFF_LOCAL_VECTOR_LIBERTY === '1';
+const out = path.join(root, localVectorLiberty ? 'artifacts/test-artifacts/takeoff-local-vector-liberty' : 'artifacts/test-artifacts/takeoff-ai-stubbed');
 const componentPath = path.join(root, 'components/construction-estimation/ai-plan-takeoff/AIPlanTakeoffStandalone.jsx');
 const workbookHookPath = path.join(root, 'hooks/estimate-builder/useEstimateBuilderWorkbook.js');
 const takeoffDir = path.dirname(componentPath);
-const jobId = 'stubbed-ai-takeoff-job';
+const jobName = localVectorLiberty ? 'LOCAL-VECTOR-LIBERTY-DISPOSABLE-20261016' : 'Stubbed AI takeoff';
+const jobId = localVectorLiberty ? 'local-vector-liberty-disposable-20261016' : 'stubbed-ai-takeoff-job';
 const supabaseUrl = 'https://stubbedtakeoff.supabase.invalid';
 fs.mkdirSync(out, { recursive: true });
 
@@ -146,8 +148,11 @@ const {createEstimateBuilderWorkbookDefaults}=require(${JSON.stringify(path.join
 const {masterJobId,linkTakeoffToMasterJob}=require(${JSON.stringify(path.join(root, 'lib/construction-estimation/masterJob.js'))});
 const {prepareAiPlanTakeoffJobForSave}=require(${JSON.stringify(path.join(takeoffDir, 'jobPersistence.js'))});
 const {materializeTakeoffPlanPages}=require(${JSON.stringify(path.join(takeoffDir, 'planBlobStorage.js'))});
+const {createTakeoffSchedule,createJobSetupPayload}=require(${JSON.stringify(path.join(takeoffDir, 'takeoffSchedule.js'))});
+const {readPlanRaster}=require(${JSON.stringify(path.join(takeoffDir, 'geometry/planRaster.js'))});
 const indexes=${JSON.stringify(indexes)};
 const jobId=${JSON.stringify(jobId)};
+const jobName=${JSON.stringify(jobName)};
 const reactRoot=createRoot(document.getElementById('root'));
 let currentSheet=null,control=null;
 const saveResults=[],saveInputs=[];
@@ -156,9 +161,18 @@ function hooks(){const values=[];let hook=findFiber(reactRoot._internalRoot.curr
 function value(name){return hooks()[indexes[name]]?.memoizedState;}
 function dispatch(name,next){const hook=hooks()[indexes[name]];if(!hook?.queue?.dispatch)throw Error('Missing state hook '+name);hook.queue.dispatch(next);}
 function snapshot(){
- const result={};for(const name of ['currentPage','totalPages','pixelsPerMm','completedWallRuns','placedOpenings','completedAreas','completedFloorplans','savedRevision','hasUnsavedChanges','platformSaveMessage','planLoadError','planFilename','openedTakeoffJob'])result[name]=value(name);
+ const result={};for(const name of ['currentPage','totalPages','pixelsPerMm','activeTool','selectedWallId','selectedOpeningId','hoveredWallId','completedWallRuns','placedOpenings','completedAreas','completedFloorplans','savedRevision','hasUnsavedChanges','platformSaveMessage','planLoadError','planFilename','openedTakeoffJob'])result[name]=value(name);
+ result.planPages=(value('planPages')||[]).map(page=>({pageNumber:page.pageNumber,logicalWidth:page.logicalWidth,logicalHeight:page.logicalHeight,vectorCount:page.vectorSegments?.length||0,styledVectors:page.vectorSegments?.filter(segment=>segment.paint==='stroke'&&Number.isFinite(segment.widthPx)&&typeof segment.color==='string').length||0}));
+ result.roomNames=[...document.querySelectorAll('[data-room-name]')].map(element=>element.getAttribute('data-room-name'));
+ result.roomIds=[...document.querySelectorAll('[data-room-id]')].map(element=>element.getAttribute('data-room-id'));
+ result.roomBoundaries=document.querySelectorAll('[data-testid^="room-source:"]').length;
+ result.schedule=createTakeoffSchedule(result);
+ result.jobSetupImport=createJobSetupPayload(result.schedule,{sheetLevels:result.schedule.sheetLevels,jobId});
+ result.wallReviewCandidates=Number(document.querySelector('[data-testid="takeoff-wall-review-candidates"]')?.getAttribute('data-count')||0);
+ result.bridgeReviewCandidates=Number(document.querySelector('[data-testid="takeoff-wall-review-candidates"]')?.getAttribute('data-bridge-count')||0);
+ result.openingReviewCandidates=Number(document.querySelector('[data-testid="takeoff-wall-review-candidates"]')?.getAttribute('data-opening-count')||0);
  result.imageReady=Boolean(value('image'));
- const layer=value('layerRef')?.current;result.konvaLines=layer?layer.find('Line').length:0;result.konvaGroups=layer?layer.find('Group').length:0;
+ const layer=value('layerRef')?.current;result.konvaLines=layer?layer.find('Line').length:0;result.reviewCandidateLines=layer?layer.find('.wall-review-candidate').length:0;result.reviewBridgeLines=layer?layer.find('.bridge-review-candidate').length:0;result.reviewOpeningMarkers=layer?layer.find('.opening-review-candidate').length:0;result.konvaGroups=layer?layer.find('Group').length:0;
  return JSON.parse(JSON.stringify(result));
 }
 const frame=()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
@@ -173,17 +187,20 @@ function Shell(){
  control={async reopen(){setVisible(false);await frame();const result=await currentSheet.openSavedJob('job:'+jobId);if(!result.ok)throw Error(result.message);setRequest({requestId:'reopen-'+Date.now(),jobData:result.workbook.aiPlanTakeoffJob});setMount(n=>n+1);setVisible(true);return result.key;}};
  if(!sheet.hydrated)return React.createElement('div',null,'Loading workbook');
  const wb=sheet.workbook,jid=masterJobId(wb);
- return visible?React.createElement(Takeoff,{key:(jid||'no-job')+':'+sheet.jobLoadVersion+':'+mount,embedded:true,jobId:jid,initialJob:selectJob(wb),openTakeoffJobRequest:request,
+ return visible?React.createElement(Takeoff,{key:(jid||'no-job')+':'+sheet.jobLoadVersion+':'+mount,embedded:true,enableAiTakeoffDevelopment:true,jobId:jid,initialJob:selectJob(wb),openTakeoffJobRequest:request,
   onMasterTakeoffChange:(jobData)=>{try{return currentSheet.updateAiPlanTakeoffDraft(jobData);}catch(error){return {ok:false,message:error.message};}},
-  platformContext:{jobId:jid,projectId:jid,projectName:'Stubbed AI takeoff',noJobOpen:!jid,isHydratingProject:!sheet.hydrated},
+  platformContext:{jobId:jid,projectId:jid,projectName:jobName,noJobOpen:!jid,isHydratingProject:!sheet.hydrated},
   onSaveToPlatform:async incoming=>{saveInputs.push(JSON.parse(JSON.stringify({walls:incoming.completedWallRuns||[],openings:incoming.placedOpenings||[],floorplans:incoming.completedFloorplans||[],scheduleState:incoming.scheduleState||null})));const workbook=currentSheet.getCurrentWorkbook();const owned=linkTakeoffToMasterJob(workbook,incoming);const prepared=prepareAiPlanTakeoffJobForSave(selectJob(workbook),owned,jid);const result=prepared.ok?await currentSheet.saveAiPlanTakeoffJob(prepared.job):prepared;saveResults.push(result);return result;}}):React.createElement('div',null,'Takeoff closed');
 }
 window.harness={snapshot,saveResults:()=>saveResults,saveInputs:()=>saveInputs,ready:()=>Boolean(currentSheet?.hydrated),
- async newJob(){const workbook={...createEstimateBuilderWorkbookDefaults(),jobId,projectId:jobId,commercialProjectId:jobId,projectName:'Stubbed AI takeoff',registeredJob:{jobId,jobName:'Stubbed AI takeoff'},jobFileMeta:{projectId:jobId,jobName:'Stubbed AI takeoff'}};delete workbook.aiPlanTakeoffJob;if(workbook.takeoffEngine)delete workbook.takeoffEngine.aiPlanTakeoffJob;const result=await currentSheet.loadJobFileData({workbook,jobName:'Stubbed AI takeoff'},'stubbed-ai-takeoff.gr8job');if(!result.ok)throw Error(result.message);return result;},
+ async vectorInput(){const plan=(value('planPages')||[]).find(page=>page.pageNumber===value('currentPage'));const pixelsPerMm=value('pixelsPerMm');const raster=await readPlanRaster(plan.dataUrl,undefined,{logicalWidth:plan.logicalWidth,pixelsPerMm});const canvas=document.createElement('canvas');canvas.width=raster.width;canvas.height=raster.height;canvas.getContext('2d').putImageData(raster,0,0);return {pageNumber:plan.pageNumber,logicalWidth:plan.logicalWidth,logicalHeight:plan.logicalHeight,pixelsPerMm,vectorSegments:plan.vectorSegments,textItems:plan.textItems||[],rasterPng:canvas.toDataURL('image/png'),storedPixelsPerMm:raster.storedPixelsPerMm};},
+ async newJob(){const workbook={...createEstimateBuilderWorkbookDefaults(),jobId,projectId:jobId,commercialProjectId:jobId,projectName:jobName,registeredJob:{jobId,jobName},jobFileMeta:{projectId:jobId,jobName}};delete workbook.aiPlanTakeoffJob;if(workbook.takeoffEngine)delete workbook.takeoffEngine.aiPlanTakeoffJob;const result=await currentSheet.loadJobFileData({workbook,jobName},jobName+'.gr8job');if(!result.ok)throw Error(result.message);return result;},
  reopen:()=>control.reopen(),
  setView({zoom,pan}){value('sheetViewStateRef').current[value('currentPage')]={scale:zoom,pos:pan};dispatch('stageScale',zoom);dispatch('stagePos',pan);},
  viewSize(){return {width:value('stageRef').current.width(),height:value('stageRef').current.height()};},
  point(point){const stage=value('stageRef').current,layer=value('layerRef').current,rect=stage.content.getBoundingClientRect(),visible=layer.getAbsoluteTransform().point(point);return {x:rect.left+visible.x*rect.width/stage.width(),y:rect.top+visible.y*rect.height/stage.height()};},
+ calibrationPair(){const plan=(value('planPages')||[]).find(page=>page.pageNumber===value('currentPage'));if(!plan)throw Error('No current plan page');const segments=(plan.vectorSegments||[]).filter(segment=>segment.paint==='stroke');const distance=(point,segment)=>{const dx=segment.x2-segment.x1,dy=segment.y2-segment.y1,length=dx*dx+dy*dy,t=length?Math.max(0,Math.min(1,((point.x-segment.x1)*dx+(point.y-segment.y1)*dy)/length)):0;return Math.hypot(point.x-segment.x1-t*dx,point.y-segment.y1-t*dy);};for(let y=36;y<plan.logicalHeight-36;y+=24)for(let x=36;x+72<plan.logicalWidth-36;x+=24){const a={x,y},b={x:x+72,y};if(segments.every(segment=>distance(a,segment)>32&&distance(b,segment)>32))return [a,b];}throw Error('No clear 72-point calibration span beyond snap tolerance was found on the page.');},
+ calibrationPair(){const plan=(value('planPages')||[]).find(page=>page.pageNumber===value('currentPage'));if(!plan)throw Error('No current plan page');const segments=(plan.vectorSegments||[]).filter(segment=>segment.paint==='stroke');const distance=(point,segment)=>{const dx=segment.x2-segment.x1,dy=segment.y2-segment.y1,length=dx*dx+dy*dy,t=length?Math.max(0,Math.min(1,((point.x-segment.x1)*dx+(point.y-segment.y1)*dy)/length)):0;return Math.hypot(point.x-segment.x1-t*dx,point.y-segment.y1-t*dy);};for(let y=24;y<plan.logicalHeight-24;y+=24)for(let x=24;x+72<plan.logicalWidth-24;x+=24){const a={x,y},b={x:x+72,y};if(segments.every(segment=>distance(a,segment)>12&&distance(b,segment)>12))return [a,b];}throw Error('No clear 72-point calibration span was found on the page.');},
  async stored(){const openDb=(name)=>new Promise((resolve,reject)=>{const request=indexedDB.open(name);request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});let record;for(const {name} of await indexedDB.databases()){if(!String(name).startsWith('estimate-builder-template-db'))continue;const db=await openDb(name);if(db.objectStoreNames.contains('jobs'))record=await new Promise((resolve,reject)=>{const request=db.transaction('jobs','readonly').objectStore('jobs').get('job:'+jobId);request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});db.close();if(record)break;}const materialized=await materializeTakeoffPlanPages(record.workbook);return JSON.parse(JSON.stringify({job:materialized.aiPlanTakeoffJob}));}
 };
 reactRoot.render(React.createElement(Shell));
@@ -232,23 +249,28 @@ try {
   const origin = `http://127.0.0.1:${server.address().port}`;
   browser = await puppeteer.launch({ executablePath: process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true, userDataDir: path.join(out, 'profile-' + Date.now()), args: ['--no-first-run', '--disable-extensions', '--disable-background-networking'], defaultViewport: { width: 1800, height: 1400 } });
 
-  // A simple single-storey plan image matching the fake provider's geometry.
-  const planPath = path.join(out, 'simple-house-plan.png');
-  const drawer = await browser.newPage();
-  await drawer.setViewport({ width: 1200, height: 900 });
-  await drawer.setContent(`<body style="margin:0"><svg width="1200" height="900" xmlns="http://www.w3.org/2000/svg"><rect width="1200" height="900" fill="#fff"/>
-    <rect x="240" y="225" width="720" height="450" fill="none" stroke="#000" stroke-width="10"/><line x1="600" y1="225" x2="600" y2="675" stroke="#000" stroke-width="6"/>
-    <line x1="384" y1="225" x2="456" y2="225" stroke="#fff" stroke-width="6"/><path d="M760 675 A40 40 0 0 1 800 635" fill="none" stroke="#000"/>
-    <text x="380" y="450" font-size="22">BED 1</text><text x="740" y="450" font-size="22">LIVING</text><text x="60" y="860" font-size="18">SCALE 1:100</text></svg></body>`);
-  await drawer.screenshot({ path: planPath });
-  await drawer.close();
+  const planPath = localVectorLiberty
+    ? path.resolve(process.env.GR8_TAKEOFF_LIBERTY_PDF || 'C:/Users/grant/Downloads/25 LIBERTY TERRACE MOOLOOLABA.pdf')
+    : path.join(out, 'simple-house-plan.png');
+  if (localVectorLiberty) assert.ok(fs.existsSync(planPath), 'The local Liberty PDF is available');
+  else {
+    // A simple single-storey plan image matching the fake provider's geometry.
+    const drawer = await browser.newPage();
+    await drawer.setViewport({ width: 1200, height: 900 });
+    await drawer.setContent(`<body style="margin:0"><svg width="1200" height="900" xmlns="http://www.w3.org/2000/svg"><rect width="1200" height="900" fill="#fff"/>
+      <rect x="240" y="225" width="720" height="450" fill="none" stroke="#000" stroke-width="10"/><line x1="600" y1="225" x2="600" y2="675" stroke="#000" stroke-width="6"/>
+      <line x1="384" y1="225" x2="456" y2="225" stroke="#fff" stroke-width="6"/><path d="M760 675 A40 40 0 0 1 800 635" fill="none" stroke="#000"/>
+      <text x="380" y="450" font-size="22">BED 1</text><text x="740" y="450" font-size="22">LIVING</text><text x="60" y="860" font-size="18">SCALE 1:100</text></svg></body>`);
+    await drawer.screenshot({ path: planPath });
+    await drawer.close();
+  }
 
   page = await browser.newPage();
   page.setDefaultTimeout(60000);
   page.on('pageerror', (error) => report.errors.push(error.message));
   page.on('dialog', async (dialog) => {
     report.dialogs.push(dialog.message());
-    if (dialog.type() === 'prompt' && /known dimension/i.test(dialog.message())) await dialog.accept('12000');
+    if (dialog.type() === 'prompt' && /known dimension/i.test(dialog.message())) await dialog.accept(localVectorLiberty ? '2540' : '12000');
     else await dialog.accept();
   });
   await page.setRequestInterception(true);
@@ -269,6 +291,194 @@ try {
   await (await page.$('input[type="file"][accept="image/*,.pdf"]')).uploadFile(planPath);
   await ready();
   let state = await snapshot();
+  if (localVectorLiberty) {
+    assert.equal(state.totalPages, 4, 'Liberty PDF loads all four sheets through the existing upload control');
+    assert.equal(state.pixelsPerMm, null, 'The disposable job starts uncalibrated');
+    assert.ok(state.planPages[0].vectorCount > 0, 'PDF upload extracts vector linework');
+    assert.ok(state.planPages[0].styledVectors > 0, 'Persisted vector segments retain wall detector styles');
+    await page.screenshot({ path: path.join(out, '1-liberty-uploaded.png') });
+    const [calibrationStart, calibrationEnd] = await page.evaluate(() => harness.calibrationPair());
+    await centre(calibrationStart);
+    await button('Calibrate');
+    await clickPlan(calibrationStart);
+    await clickPlan(calibrationEnd);
+    await page.waitForFunction(() => harness.snapshot().pixelsPerMm > 0);
+    state = await snapshot();
+    const printedScalePixelsPerMm = 72 / 25.4 / 100;
+    const calibrationErrorShare = Math.abs(state.pixelsPerMm - printedScalePixelsPerMm) / printedScalePixelsPerMm;
+    assert.ok(calibrationErrorShare <= 0.02, `Existing UI calibration is within 2% of printed 1:100 scale (actual ${state.pixelsPerMm})`);
+    report.cases.calibration = { pixelsPerMm: state.pixelsPerMm, printedScalePixelsPerMm, errorShare: calibrationErrorShare, acceptedTolerance: 0.02, method: 'existing two-click Calibrate control' };
+    if (process.env.GR8_TAKEOFF_CAPTURE_VECTOR_INPUT) {
+      const captureDirectory = path.resolve(process.env.GR8_TAKEOFF_CAPTURE_VECTOR_INPUT);
+      assert.ok(!fs.existsSync(path.join(captureDirectory, 'application-input.json')), 'Do not overwrite a frozen application input');
+      const { rasterPng, ...input } = await page.evaluate(() => harness.vectorInput());
+      fs.mkdirSync(captureDirectory, { recursive: true });
+      fs.writeFileSync(path.join(captureDirectory, 'application-raster.png'), Buffer.from(rasterPng.split(',')[1], 'base64'));
+      fs.writeFileSync(path.join(captureDirectory, 'application-input.json'), JSON.stringify(input));
+    }
+    await button('Select');
+    await page.waitForSelector('#ai-takeoff-run-local-vector:not([disabled])', { timeout: 30000 });
+    const requestsBefore = apiRequests.length;
+    await page.click('#ai-takeoff-run-local-vector');
+    await page.waitForFunction(() => /Local vector takeoff complete|measured.*review required|could not|failed|error|style evidence|vector linework/i.test(document.querySelector('#ai-takeoff-status')?.textContent || '')
+      && !document.querySelector('#ai-takeoff-run-local-vector')?.disabled, { timeout: 120000 });
+    const localStatus = await page.$eval('#ai-takeoff-status', element => element.textContent);
+    assert.match(localStatus, /measured.*review required/i, localStatus);
+    assert.equal(apiRequests.length, requestsBefore, 'Local vector takeoff made no analysis endpoint request');
+    state = report.cases.localVectorResult = await snapshot();
+    const localWalls = state.completedWallRuns.filter(item => item.source === 'ai');
+    const localOpenings = state.placedOpenings.filter(item => item.source === 'ai');
+    assert.ok(localWalls.length > 0, 'Liberty vector walls appear as Takeoff canvas objects');
+    assert.ok(localOpenings.length > 0, 'Liberty vector openings appear as Takeoff canvas objects');
+    assert.ok(localWalls.every(item => item.alignment === 'center'), 'Vector wall centrelines survive admission into the canvas');
+    assert.ok(localOpenings.every(item => localWalls.some(wall => wall.id === item.hostWallId)), 'Every admitted vector opening retains a measured host wall');
+    assert.ok(state.wallReviewCandidates > 0, 'Unclassified measured wall geometry is preserved as review-only candidates');
+    assert.equal(state.reviewCandidateLines, state.wallReviewCandidates, 'Each unclassified candidate has a visible dashed review overlay');
+    assert.equal(state.reviewBridgeLines, state.bridgeReviewCandidates, 'Each unclassified confirmed-opening bridge has a distinct overlay');
+    assert.equal(state.reviewOpeningMarkers, state.openingReviewCandidates, 'Each opening on an unclassified wall has a review marker');
+    assert.equal(state.schedule.measurementRecords.filter(item => item.kind === 'wall').length, localWalls.length, 'Review-only candidates do not create wall quantity records');
+    assert.equal(state.schedule.measurementRecords.filter(item => item.kind === 'opening').length, localOpenings.length, 'Review-only host openings do not create opening quantity records');
+    const expectedVector = process.env.GR8_TAKEOFF_EXPECT_VECTOR_READING ? JSON.parse(fs.readFileSync(process.env.GR8_TAKEOFF_EXPECT_VECTOR_READING, 'utf8')).reading : null;
+    const vectorSignature = points => JSON.stringify(points.map(point => [Number(point.x.toFixed(4)), Number(point.y.toFixed(4))]).sort((first, second) => first[0] - second[0] || first[1] - second[1]));
+    const measuredPoints = points => points.map(point => ({ x: point.x / state.pixelsPerMm, y: point.y / state.pixelsPerMm }));
+    if (expectedVector) {
+      assert.deepEqual(localWalls.map(wall => `${wall.category}:${vectorSignature(measuredPoints(wall.nodes))}`).sort(), expectedVector.walls.map(wall => `${wall.category}:${vectorSignature(wall.points)}`).sort(), 'Actual browser walls equal the scored admitted geometry');
+      assert.deepEqual(localOpenings.map(opening => `${opening.type}:${vectorSignature(measuredPoints([opening]))}`).sort(), expectedVector.openings.map(opening => `${opening.kind}:${vectorSignature([opening])}`).sort(), 'Actual browser openings equal the scored admitted geometry');
+    }
+    assert.ok(localWalls.some(item => item.category === 'exterior') && localWalls.some(item => item.category === 'interior'), 'Both wall classes appear');
+    assert.ok(state.konvaLines > 0 && state.konvaGroups > 0, 'Walls and openings render on the plan canvas');
+    assert.ok(state.schedule.measurementRecords.some(item => item.kind === 'wall' && item.quantity > 0), 'Detected walls create downstream schedule quantities');
+    const mappedJobSetupQuantities = state.jobSetupImport.mappingPreview.filter(item => typeof item.value === 'number' && item.value > 0);
+    assert.ok(mappedJobSetupQuantities.length > 0, 'Measured quantities map into the downstream Job Setup import payload');
+    assert.equal(state.jobSetupImport.schedule.measurementRecords.length, state.schedule.measurementRecords.length, 'Job Setup import retains the source Takeoff measurement records');
+    report.apiRequests = apiRequests;
+    report.cases.detected = { walls: localWalls.length, openings: localOpenings.length, rooms: state.roomIds.length, roomBoundaries: state.roomBoundaries,
+      wallReviewCandidates: state.wallReviewCandidates, reviewCandidateLines: state.reviewCandidateLines,
+      bridgeReviewCandidates: state.bridgeReviewCandidates, reviewBridgeLines: state.reviewBridgeLines,
+      openingReviewCandidates: state.openingReviewCandidates, reviewOpeningMarkers: state.reviewOpeningMarkers,
+      wallRecords: state.schedule.measurementRecords.filter(item => item.kind === 'wall').length,
+      openingRecords: state.schedule.measurementRecords.filter(item => item.kind === 'opening').length };
+    report.cases.jobSetupImport = { mappedQuantityFields: mappedJobSetupQuantities.length, sourceMeasurementRecords: state.jobSetupImport.schedule.measurementRecords.length };
+    await page.screenshot({ path: path.join(out, '2-liberty-local-vector-detected.png') });
+    const correctionSegments = localWalls.flatMap(wall => wall.nodes.slice(1).map((end, index) => {
+      const start = wall.nodes[index], midpoint = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
+      const clearance = Math.min(Infinity, ...localOpenings.map(opening => Math.hypot(opening.x - midpoint.x, opening.y - midpoint.y)));
+      return { wall, start, end, index, midpoint, length: Math.hypot(end.x - start.x, end.y - start.y), clearance };
+    })).filter(segment => segment.length > 100 && segment.clearance > 40).sort((a, b) => b.clearance - a.clearance);
+    assert.ok(correctionSegments.length, 'A detected wall segment is clear of opening hit targets for selection');
+    const correctionSegment = correctionSegments[0];
+    const correctionTarget = correctionSegment.wall;
+    const wallMidpoint = correctionSegment.midpoint;
+    await page.click('[data-testid="takeoff-select-tool"]');
+    await page.waitForFunction(() => harness.snapshot().activeTool === 'select');
+    await centre(wallMidpoint);
+    const wallScreenPoint = await page.evaluate(point => harness.point(point), wallMidpoint);
+    await page.mouse.move(wallScreenPoint.x, wallScreenPoint.y);
+    await page.waitForFunction(id => harness.snapshot().hoveredWallId === id, {}, correctionTarget.id);
+    await clickPlan(wallMidpoint);
+    await page.waitForFunction(id => harness.snapshot().selectedWallId === id, {}, correctionTarget.id);
+    const recolorTo = correctionTarget.category === 'exterior' ? 'interior' : 'exterior';
+    await selectByTestId('selected-wall-category', recolorTo);
+    let corrected = (await snapshot()).completedWallRuns.find(item => item.id === correctionTarget.id);
+    assert.equal(corrected.category, recolorTo, 'The selected vector wall can be recolored through the existing editor');
+    const correctedStart = corrected.nodes[correctionSegment.index];
+    const correctionOpening = localOpenings[0];
+    await centre({ x: correctionOpening.x, y: correctionOpening.y });
+    await clickPlan({ x: correctionOpening.x, y: correctionOpening.y });
+    await page.waitForFunction(id => harness.snapshot().selectedOpeningId === id, {}, correctionOpening.id);
+    await editLabelInput('Width (mm)', String(Number(correctionOpening.widthMm || 800) + 20));
+    const editedOpening = (await snapshot()).placedOpenings.find(item => item.id === correctionOpening.id);
+    assert.equal(editedOpening.widthMm, Number(correctionOpening.widthMm || 800) + 20, 'A detected opening accepts a manual width correction');
+    report.cases.manualCorrections = { wallId: corrected.id, recoloredTo: corrected.category,
+      wallGeometryChanged: false, wallGeometryNote: 'Liberty correction target is a shared junction; vertex-drag persistence is covered by the synthetic canvas browser acceptance.',
+      openingId: editedOpening.id, correctedWidthMm: editedOpening.widthMm };
+    await page.screenshot({ path: path.join(out, '4-liberty-corrections.png') });
+
+    const saveBefore = await page.evaluate(() => ({ count: harness.saveResults().length, dirty: harness.snapshot().hasUnsavedChanges,
+      button: (() => { const element = document.querySelector('#ai-plan-takeoff-save-button'); return element && { disabled: element.disabled, visible: Boolean(element.getClientRects().length) }; })() }));
+    assert.equal(saveBefore.dirty, true, 'Manual corrections mark the takeoff dirty before explicit save');
+    assert.ok(saveBefore.button && !saveBefore.button.disabled && saveBefore.button.visible, 'The explicit Save control is enabled and visible');
+    await page.evaluate(() => document.querySelector('#ai-plan-takeoff-save-button').click());
+    await page.waitForFunction(count => harness.saveResults().length > count, { timeout: 120000 }, saveBefore.count);
+    const correctionSave = await page.evaluate(() => harness.saveResults().at(-1));
+    assert.equal(correctionSave.ok, true, correctionSave.message);
+    const stored = await page.evaluate(() => harness.stored());
+    assert.equal(stored.job.scheduleState.aiAnalysis.status, 'review', 'Unconfirmed geometry remains in review after save');
+    assert.equal(stored.job.scheduleState.aiAnalysis.completedAt, null, 'Admitted quantities do not certify a completed takeoff');
+    assert.ok(stored.job.scheduleState.aiAnalysis.review.length > 0, 'Review issues persist with the saved takeoff');
+    const savedWallReviewCandidates = stored.job.scheduleState.aiAnalysis.wallReviewCandidates || [];
+    assert.equal(savedWallReviewCandidates.length, state.wallReviewCandidates, 'All uncertain wall geometry is saved in review metadata');
+    assert.ok(savedWallReviewCandidates.every(candidate => candidate.category === null && candidate.status === 'review-required'), 'Persisted candidates keep unknown classification and review-only status');
+    assert.ok(savedWallReviewCandidates.every(candidate => !stored.job.completedWallRuns.some(wall => wall.ai?.detectionId === candidate.id)), 'Review candidates are not saved as canonical quantity walls');
+    const savedOpeningReviewCandidates = stored.job.scheduleState.aiAnalysis.openingReviewCandidates || [];
+    assert.equal(savedOpeningReviewCandidates.length, state.openingReviewCandidates, 'Openings on unclassified hosts are saved in review metadata');
+    assert.ok(savedOpeningReviewCandidates.every(candidate => candidate.status === 'review-required' && candidate.hostDetectionKey), 'Review-only openings retain their measured host identity');
+    assert.ok(savedOpeningReviewCandidates.every(candidate => !stored.job.placedOpenings.some(opening => opening.ai?.detectionId === candidate.id)), 'Review-only host openings are not saved as quantity openings');
+    const savedBridgeReviewCandidates = stored.job.scheduleState.aiAnalysis.bridgeReviewCandidates || [];
+    assert.equal(savedBridgeReviewCandidates.length, state.bridgeReviewCandidates, 'Unclassified confirmed-opening spans are saved in review metadata');
+    assert.ok(savedBridgeReviewCandidates.every(candidate => candidate.category === null && candidate.status === 'review-required'), 'Confirmed bridge candidates remain review-only without a guessed category');
+    assert.ok(savedBridgeReviewCandidates.every(candidate => !stored.job.completedWallRuns.some(wall => wall.ai?.detectionId === candidate.id)), 'Unclassified bridge candidates are excluded from canonical quantity walls');
+    report.cases.readiness = { status: stored.job.scheduleState.aiAnalysis.status, completedAt: stored.job.scheduleState.aiAnalysis.completedAt, reviewItems: stored.job.scheduleState.aiAnalysis.review.length };
+    report.cases.reviewWallCandidates = { count: savedWallReviewCandidates.length, candidateIds: savedWallReviewCandidates.map(candidate => candidate.id), canonicalWalls: stored.job.completedWallRuns.length,
+      candidates: savedWallReviewCandidates.map(({ id, modelWallId, detectionKey, absorbedKeys, nodes, thicknessMm }) => ({ id, modelWallId, detectionKey, absorbedKeys, nodes, thicknessMm })) };
+    report.cases.wallLineage = stored.job.scheduleState.aiAnalysis.wallLineage || [];
+    report.cases.unclassifiedBridges = Number(stored.job.scheduleState.aiAnalysis.linework?.[1]?.unclassifiedBridges || 0);
+    report.cases.reviewOpeningCandidates = { count: savedOpeningReviewCandidates.length, candidateIds: savedOpeningReviewCandidates.map(candidate => candidate.id), canonicalOpenings: stored.job.placedOpenings.length,
+      candidates: savedOpeningReviewCandidates.map(({ id, page, nodes, widthMm, openingKind, hostModelWallId, hostDetectionKey }) => ({ id, page, nodes, widthMm, openingKind, hostModelWallId, hostDetectionKey })) };
+    report.cases.reviewBridgeCandidates = { count: savedBridgeReviewCandidates.length, candidateIds: savedBridgeReviewCandidates.map(candidate => candidate.id), canonicalWalls: stored.job.completedWallRuns.length,
+      candidates: savedBridgeReviewCandidates.map(({ id, modelWallId, detectionKey, page, nodes, thicknessMm }) => ({ id, modelWallId, detectionKey, page, nodes, thicknessMm })) };
+    report.cases.savedRoomBoundaries = stored.job.scheduleState.aiAnalysis.rooms.map(({ id, lineworkRoomId, name, level, reviewRequired, polygon }) => ({ id, lineworkRoomId, name, level, reviewRequired, polygon }));
+    assert.equal(report.cases.savedRoomBoundaries.length, state.roomBoundaries, 'Every detected room boundary is represented in persisted analysis');
+    if (expectedVector) assert.deepEqual(stored.job.scheduleState.aiAnalysis.rooms.map(room => vectorSignature(measuredPoints(room.polygon))).sort(), expectedVector.reviewRooms.map(room => vectorSignature(room.polygon)).sort(), 'Saved browser room candidates equal the application review-boundary geometry');
+    await page.evaluate(() => harness.reopen());
+    await ready();
+    state = await snapshot();
+    corrected = state.completedWallRuns.find(item => item.id === correctionTarget.id);
+    assert.equal(corrected.category, recolorTo, 'Wall recolor survives save/reopen');
+    assert.deepEqual(corrected.nodes, stored.job.completedWallRuns.find(item => item.id === correctionTarget.id).nodes, 'Wall vertex edit survives save/reopen');
+    const reopenedOpening = state.placedOpenings.find(item => item.id === correctionOpening.id);
+    assert.equal(reopenedOpening.widthMm, editedOpening.widthMm, 'Opening width edit survives save/reopen');
+    assert.equal(state.wallReviewCandidates, savedWallReviewCandidates.length, 'Review-only wall overlays return after save/reopen');
+    assert.equal(state.reviewCandidateLines, savedWallReviewCandidates.length, 'Every saved review candidate renders after reopen');
+    assert.equal(state.openingReviewCandidates, savedOpeningReviewCandidates.length, 'Review-only opening-host markers return after save/reopen');
+    assert.equal(state.reviewOpeningMarkers, savedOpeningReviewCandidates.length, 'Every saved review-only opening marker renders after reopen');
+    assert.equal(state.bridgeReviewCandidates, savedBridgeReviewCandidates.length, 'Unclassified bridge spans return after save/reopen');
+    assert.equal(state.reviewBridgeLines, savedBridgeReviewCandidates.length, 'Each saved unclassified bridge span renders after reopen');
+    report.cases.manualSaveReopen = { wallId: corrected.id, category: corrected.category, openingId: reopenedOpening.id, widthMm: reopenedOpening.widthMm };
+    await page.screenshot({ path: path.join(out, '5-liberty-corrections-reopened.png') });
+
+    await button('Select');
+    const wallCountBeforeRerun = state.completedWallRuns.length, openingCountBeforeRerun = state.placedOpenings.length;
+    const requestsBeforeRerun = apiRequests.length, providersBeforeRerun = providerCalls.length;
+    await page.click('#ai-takeoff-run-local-vector');
+    await page.waitForFunction(() => /Local vector takeoff complete|measured.*review required|could not|failed|error/i.test(document.querySelector('#ai-takeoff-status')?.textContent || '')
+      && !document.querySelector('#ai-takeoff-run-local-vector')?.disabled, { timeout: 180000 });
+    assert.match(await page.$eval('#ai-takeoff-status', element => element.textContent), /measured.*review required/i);
+    state = await snapshot();
+    assert.equal(state.completedWallRuns.length, wallCountBeforeRerun, 'Re-analysis does not duplicate or erase wall objects');
+    assert.equal(state.placedOpenings.length, openingCountBeforeRerun, 'Re-analysis does not duplicate or erase openings');
+    assert.equal(state.wallReviewCandidates, savedWallReviewCandidates.length, 'Local rerun restores the same number of review-only wall candidates');
+    assert.equal(state.reviewCandidateLines, savedWallReviewCandidates.length, 'Every review-only wall candidate remains visibly overlaid after rerun');
+    assert.equal(state.openingReviewCandidates, savedOpeningReviewCandidates.length, 'Local rerun restores the same review-only opening candidates');
+    assert.equal(state.reviewOpeningMarkers, savedOpeningReviewCandidates.length, 'Review-only opening markers remain visible after rerun');
+    assert.equal(state.bridgeReviewCandidates, savedBridgeReviewCandidates.length, 'Local rerun restores the same unclassified bridge review candidates');
+    assert.equal(state.reviewBridgeLines, savedBridgeReviewCandidates.length, 'Review-only bridge spans remain visible after rerun');
+    corrected = state.completedWallRuns.find(item => item.id === correctionTarget.id);
+    assert.equal(corrected.category, recolorTo, 'Re-analysis preserves the manual wall category');
+    assert.deepEqual(corrected.nodes, stored.job.completedWallRuns.find(item => item.id === correctionTarget.id).nodes, 'Re-analysis preserves the manual wall geometry');
+    assert.equal(state.placedOpenings.find(item => item.id === correctionOpening.id).widthMm, editedOpening.widthMm, 'Re-analysis preserves the manual opening width');
+    assert.equal(apiRequests.length, requestsBeforeRerun, 'Local re-analysis makes no analysis API requests');
+    assert.equal(providerCalls.length, providersBeforeRerun, 'Local re-analysis makes no provider requests');
+    report.cases.rerun = { walls: state.completedWallRuns.length, openings: state.placedOpenings.length,
+      manualWallCorrectionPreserved: true, manualOpeningCorrectionPreserved: true,
+      wallQuantityRecords: state.schedule.measurementRecords.filter(item => item.kind === 'wall').length,
+      openingQuantityRecords: state.schedule.measurementRecords.filter(item => item.kind === 'opening').length };
+    report.apiRequests = apiRequests;
+    report.providerCalls = providerCalls;
+    report.ok = true;
+    await page.screenshot({ path: path.join(out, '6-liberty-after-rerun.png') });
+    console.log('LOCAL LIBERTY PASS: upload, calibration, local vectors, hover, selection, recolor, wall/opening correction, save/reopen and rerun; no provider calls.');
+  } else {
   assert.equal(state.totalPages, 1);
   assert.equal(state.pixelsPerMm, null);
   // 3. Calibrate with the existing Calibrate tool: 720 px north wall = 12000 mm.
@@ -380,15 +590,45 @@ try {
   assert.deepEqual(report.errors, [], 'No browser runtime errors');
   report.ok = true;
   console.log('Stubbed live AI Takeoff passed: new job, upload, calibrate, manual wall, visible unconfigured error, busy state, inspect/measure/refine via real handler, AI walls/openings/areas in live state and rendered, auto-save via handleSaveJob, no overwrite, reopen restored. No paid provider called.');
+  }
 } catch (error) {
   report.error = error.stack || String(error);
-  if (page) { report.failureState = await snapshot().catch(() => null); report.status = await page.$eval('#ai-takeoff-status', (element) => element.textContent).catch(() => null); await page.screenshot({ path: path.join(out, 'failure.png') }).catch(() => {}); }
+  if (page) {
+    report.failureState = await snapshot().catch(() => null);
+    report.status = await page.$eval('#ai-takeoff-status', (element) => element.textContent).catch(() => null);
+    report.saveDiagnostics = await page.evaluate(() => {
+      const button = document.querySelector('#ai-plan-takeoff-save-button');
+      return { callbackCount: harness.saveResults().length, inputCount: harness.saveInputs().length,
+        dirty: harness.snapshot().hasUnsavedChanges, button: button && { disabled: button.disabled, visible: Boolean(button.getClientRects().length), text: button.textContent.trim() } };
+    }).catch(() => null);
+    await page.screenshot({ path: path.join(out, 'failure.png') }).catch(() => {});
+  }
   throw error;
 } finally {
   report.apiRequests = apiRequests; report.providerCalls = providerCalls;
   fs.writeFileSync(path.join(out, 'report.json'), JSON.stringify(report, null, 2));
   await browser?.close();
   await new Promise((resolve) => server.listening ? server.close(resolve) : resolve());
+}
+async function selectByTestId(testId, value) {
+  const found = await page.evaluate(({ testId, value }) => {
+    const field = document.querySelector(`[data-testid="${testId}"]`);
+    if (!field) return false;
+    Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(field, value);
+    field.dispatchEvent(new Event('change', { bubbles: true }));
+    return true;
+  }, { testId, value });
+  assert.ok(found, `Find select ${testId}`);
+  await settle();
+}
+async function editLabelInput(label, text) {
+  const input = await page.evaluateHandle(label => [...document.querySelectorAll('label')].find(element => element.textContent.trim().startsWith(label))?.querySelector('input'), label);
+  assert.ok(input.asElement(), `Find input ${label}`);
+  await input.asElement().click({ clickCount: 3 });
+  await page.keyboard.type(text);
+  await page.keyboard.press('Tab');
+  await settle();
+  await input.dispose();
 }
 
 async function snapshot() { return page.evaluate(() => harness.snapshot()); }
@@ -397,3 +637,4 @@ async function ready() { await page.waitForFunction(() => window.harness?.snapsh
 async function centre(point) { await page.evaluate((point) => { const size = harness.viewSize(); harness.setView({ zoom: 1, pan: { x: size.width / 2 - point.x, y: size.height / 2 - point.y } }); }, point); await settle(); }
 async function button(label, prefix = false) { const found = await page.evaluate(({ label, prefix }) => { const element = [...document.querySelectorAll('button')].find((item) => prefix ? item.textContent.trim().startsWith(label) : item.textContent.trim() === label); if (!element) return false; element.click(); return true; }, { label, prefix }); assert.ok(found, `Find button ${label}`); await settle(); }
 async function clickPlan(point) { const client = await page.evaluate((point) => harness.point(point), point); await page.mouse.move(client.x, client.y); await page.mouse.click(client.x, client.y); await settle(); await new Promise((resolve) => setTimeout(resolve, 650)); }
+async function dragPlan(from, to) { const points = await page.evaluate(({ from, to }) => [harness.point(from), harness.point(to)], { from, to }); await page.mouse.move(points[0].x, points[0].y); await page.mouse.down(); await page.mouse.move(points[1].x, points[1].y, { steps: 12 }); await page.mouse.up(); await settle(); }
