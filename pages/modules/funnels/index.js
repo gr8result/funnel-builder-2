@@ -3,9 +3,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/router";
 import ICONS from "../../../components/iconMap";
 import AuthGate from "../../../components/AuthGate";
+import CampaignManager from "../../../components/funnels/CampaignManager";
 import { supabase } from "../../../lib/supabaseClient";
+import { useBusinessBranding } from "../../../hooks/useBusinessBranding";
+import { useWorkspace } from "../../../hooks/useWorkspace";
 
 export default function FunnelsHome() {
   return (
@@ -16,11 +20,16 @@ export default function FunnelsHome() {
 }
 
 function FunnelsInner() {
+  const router = useRouter();
+  const { workspaceId } = useWorkspace();
+  const { branding, error: brandingError } = useBusinessBranding();
   const [session, setSession] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [rows, setRows] = useState([]);
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState("");
+  const [navError, setNavError] = useState("");
+  const [navigatingTo, setNavigatingTo] = useState("");
+  const newNameRef = useRef(null);
   const [funnelUsage, setFunnelUsage] = useState(null);
   const [assetFiles, setAssetFiles] = useState([]);
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -46,11 +55,33 @@ function FunnelsInner() {
 
   useEffect(() => {
     if (!session?.user?.id) return;
-    refresh();
     refreshAssets(session.user.id);
     fetchFunnelUsage(session.access_token);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user?.id]);
+
+  useEffect(() => {
+    const onError = (err, url) => {
+      if (err?.cancelled) return;
+      setNavigatingTo("");
+      setNavError(`We couldn't open ${String(url || "that page").split("?")[0]}: ${err?.message || "the page failed to load"}. Check your connection and try again; if it keeps happening, reload this dashboard.`);
+    };
+    router.events.on("routeChangeError", onError);
+    return () => router.events.off("routeChangeError", onError);
+  }, [router.events]);
+
+  async function openCreator(href) {
+    setNavError("");
+    setNavigatingTo(href);
+    try {
+      const ok = await router.push(href);
+      if (ok === false) throw new Error("navigation was blocked");
+    } catch (err) {
+      if (err?.cancelled) return;
+      setNavigatingTo("");
+      setNavError(`We couldn't open the creator: ${err?.message || "the page failed to load"}. Please try again.`);
+    }
+  }
 
   function safeName(name = "") {
     return name.replace(/[^a-zA-Z0-9._-]/g, "-");
@@ -181,28 +212,6 @@ function FunnelsInner() {
     }
   }
 
-  async function refresh() {
-    setLoading(true);
-
-    let data = null, error = null;
-    let q1 = supabase.from("funnels").select("id, name, slug, status, updated_at");
-    ({ data, error } = await q1.order("updated_at", { ascending: false }));
-
-    if (error && /updated_at/.test(error.message)) {
-      let q2 = supabase.from("funnels").select("id, name, slug, status, created_at");
-      const r2 = await q2.order("created_at", { ascending: false });
-      data = r2.data; error = r2.error;
-    }
-
-    if (error) {
-      const r3 = await supabase.from("funnels").select("id, name, slug, status");
-      data = r3.data; error = r3.error;
-    }
-
-    setRows(data || []);
-    setLoading(false);
-  }
-
   async function fetchFunnelUsage(token) {
     if (!token) return;
     try {
@@ -215,22 +224,28 @@ function FunnelsInner() {
   }
 
   async function createFunnel() {
-    if (!newName.trim()) return alert("Please enter a funnel name.");
-    if (!session?.user?.id) return alert("No session.");
-
-    // Frontend quota guard
+    setCreateError("");
+    if (!newName.trim()) {
+      setCreateError("Enter a name for the new funnel, then press + Create Funnel.");
+      newNameRef.current?.focus();
+      return;
+    }
+    if (!session?.user?.id) {
+      setCreateError("Your session has expired. Please sign in again to create a funnel.");
+      return;
+    }
     if (funnelUsage?.atLimit) {
-      alert(`You've reached your funnel limit (${funnelUsage.limit} on the ${funnelUsage.planName} plan). Please upgrade to create more funnels.`);
+      setCreateError(`You've reached your funnel limit (${funnelUsage.limit} on the ${funnelUsage.planName} plan). Delete a funnel or upgrade to create more.`);
       return;
     }
 
     setCreating(true);
-
     const funnelName = newName.trim();
     const { data, error } = await supabase
       .from("funnels")
       .insert({
         owner_user_id: session.user.id,
+        ...(workspaceId ? { workspace_id: workspaceId } : {}),
         name: funnelName,
         description: "",
         slug: null,
@@ -239,9 +254,10 @@ function FunnelsInner() {
       .select("id")
       .single();
 
-    if (error) {
+    if (error || !data?.id) {
       setCreating(false);
-      return alert(error.message);
+      setCreateError(`We couldn't create the funnel: ${error?.message || "no funnel was returned"}. Please try again.`);
+      return;
     }
 
     const { error: stepError } = await supabase.from("funnel_steps").insert({
@@ -251,28 +267,15 @@ function FunnelsInner() {
       content: buildStarterPageHtml(funnelName),
     });
 
-    setCreating(false);
     if (stepError) {
-      console.error("Could not create starter page:", stepError);
-      alert("The funnel was created, but the first page could not be added automatically.");
+      await supabase.from("funnels").delete().eq("id", data.id);
+      setCreating(false);
+      setCreateError(`We couldn't add the first page, so the funnel wasn't created: ${stepError.message}. Please try again.`);
+      return;
     }
 
-    window.location.href = `/modules/funnels/edit/${data.id}`;
-  }
-
-  async function saveName(id, name) {
-    const clean = (name || "").trim();
-    if (!clean) return alert("Name can’t be empty.");
-    const { error } = await supabase.from("funnels").update({ name: clean }).eq("id", id);
-    if (error) return alert(error.message);
-    await refresh();
-  }
-
-  async function deleteFunnel(id) {
-    if (!confirm("Delete this funnel? This cannot be undone.")) return;
-    const { error } = await supabase.from("funnels").delete().eq("id", id);
-    if (error) return alert(error.message);
-    await refresh();
+    await openCreator(`/modules/funnels/edit/${data.id}`);
+    setCreating(false);
   }
 
   return (
@@ -295,9 +298,9 @@ function FunnelsInner() {
               {ICONS.funnels({ size: 40, color: "#fff" })}
             </div>
             <div>
-              <h1 style={{ margin: 0, fontSize: 48, fontWeight: 600, color: "#fff", lineHeight: 1.1 }}>Funnels</h1>
+              <h1 style={{ margin: 0, fontSize: 48, fontWeight: 600, color: "#fff", lineHeight: 1.1 }}>Funnel Builder</h1>
               <p style={{ margin: "4px 0 0", fontSize: 18, color: "rgba(255,255,255,0.88)", fontWeight: 600 }}>
-                Build multi-step funnels that capture leads &amp; drive conversions.
+                Landing pages and multi-step sales funnels.
               </p>
             </div>
           </div>
@@ -322,21 +325,22 @@ function FunnelsInner() {
           marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16,
         }}>
           <div>
-            <p style={{ color: "#93c5fd", fontSize: 16, fontWeight: 600, margin: "0 0 4px", textTransform: "uppercase", letterSpacing: 1 }}>✨ Recommended</p>
-            <p style={{ color: "#e6eef5", fontSize: 20, fontWeight: 600, margin: "0 0 4px" }}>Build with the Funnel Wizard</p>
-            <p style={{ color: "#64748b", fontSize: 16, margin: 0 }}>Choose a funnel type, enter your offer, and AI writes all the sections — ready to edit in seconds.</p>
+            <p style={{ color: "#e6eef5", fontSize: 20, fontWeight: 600, margin: "0 0 4px" }}>Create a new campaign</p>
           </div>
-          <Link href="/modules/funnels/new">
-            <button style={{
-              padding: "16px 36px", borderRadius: 12, border: "none", whiteSpace: "nowrap",
-              background: "linear-gradient(135deg,#3b82f6,#ef465d)",
-              color: "#fff", fontSize: 18, fontWeight: 600, cursor: "pointer",
-              boxShadow: "0 4px 20px rgba(239,70,93,0.25)",
-              transition: "background 0.2s, box-shadow 0.2s"
-            }}>
-              🧭 Open Wizard →
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 12, minWidth: 0 }}>
+            <button type="button" onClick={() => openCreator("/modules/landing-pages?from=sales-funnels")} disabled={!!navigatingTo} data-testid="create-ai-landing-page" style={{ padding: "14px 20px", borderRadius: 8, border: "none", background: "#b5224a", color: "#fff", fontSize: 16, fontWeight: 600, cursor: "pointer", textAlign: "center" }}>
+              {navigatingTo.startsWith("/modules/landing-pages") ? "Opening…" : "Create standalone landing page"}
             </button>
-          </Link>
+            <button type="button" onClick={() => openCreator("/modules/funnels/new")} disabled={!!navigatingTo} data-testid="create-multi-step-funnel" style={{ padding: "14px 20px", borderRadius: 8, border: "1px solid #93c5fd", background: "transparent", color: "#e6eef5", fontSize: 16, fontWeight: 600, cursor: "pointer", textAlign: "center" }}>
+              {navigatingTo === "/modules/funnels/new" ? "Opening…" : "Create multi-step sales funnel"}
+            </button>
+          </div>
+          {navError ? (
+            <div role="alert" data-testid="creator-nav-error" style={{ flexBasis: "100%", background: "#3b1219", border: "1px solid #7f1d1d", color: "#fecaca", borderRadius: 10, padding: "10px 12px", display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+              {navError}
+              <button type="button" onClick={() => window.location.reload()} style={{ ...mediaLink, cursor: "pointer" }}>Reload dashboard</button>
+            </div>
+          ) : null}
         </div>
 
         {/* Media upload panel (visible on this page) */}
@@ -348,7 +352,7 @@ function FunnelsInner() {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 12 }}>
             <div>
               <p style={{ color: "#93c5fd", fontSize: 16, margin: "0 0 4px", fontWeight: 600, letterSpacing: 1 }}>START HERE</p>
-              <p style={{ color: "#e6eef5", fontSize: 22, margin: 0, fontWeight: 600 }}>Upload Logos & Website Images</p>
+              <p style={{ color: "#e6eef5", fontSize: 22, margin: 0, fontWeight: 600 }}>Company Branding & Images</p>
               <p style={{ color: "#64748b", fontSize: 16, margin: "4px 0 0" }}>Shared library used by Funnels + Website Builder.</p>
             </div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -361,6 +365,13 @@ function FunnelsInner() {
               <Link href="/assets" style={mediaLink}>Open Media Library</Link>
             </div>
           </div>
+
+          {branding?.logo ? <div role="status" style={{ display: "flex", alignItems: "center", gap: 16, padding: "16px 0", flexWrap: "wrap" }}>
+            <img src={branding.logo} alt="Saved company logo" style={{ maxWidth: 200, maxHeight: 96, objectFit: "contain", background: "#fff", padding: 8, borderRadius: 6 }} />
+            <span style={{ color: "#cbd5e1" }}>Company logo saved</span>
+            <Link href="/account" style={mediaLink}>Manage company branding</Link>
+          </div> : null}
+          {brandingError ? <p role="alert" style={{ color: "#fca5a5" }}>{brandingError}</p> : null}
 
           <div style={{
             border: "1px solid #2b3650",
@@ -478,9 +489,10 @@ function FunnelsInner() {
               New funnel name
             </label>
             <input
+              ref={newNameRef}
               placeholder="e.g. Summer Lead Magnet"
               value={newName}
-              onChange={(e) => setNewName(e.target.value)}
+              onChange={(e) => { setNewName(e.target.value); setCreateError(""); }}
               onKeyDown={(e) => e.key === "Enter" && !funnelUsage?.atLimit && createFunnel()}
               disabled={!!funnelUsage?.atLimit}
               style={{
@@ -491,25 +503,28 @@ function FunnelsInner() {
               }}
             />
           </div>
-          <Link href="/modules/funnels/new">
+          <button
+            type="button"
+            onClick={() => openCreator("/modules/funnels/new")}
+            disabled={!!navigatingTo}
+            style={{
+              padding: "14px 24px",
+              borderRadius: 10,
+              border: "1px solid #34517c",
+              background: "#112036",
+              color: "#93c5fd",
+              cursor: "pointer",
+              fontWeight: 600,
+              fontSize: 18,
+              whiteSpace: "nowrap",
+              marginTop: 28,
+            }}
+          >
+            Start with Template
+          </button>
             <button
-              style={{
-                padding: "14px 24px",
-                borderRadius: 10,
-                border: "1px solid #34517c",
-                background: "#112036",
-                color: "#93c5fd",
-                cursor: "pointer",
-                fontWeight: 600,
-                fontSize: 18,
-                whiteSpace: "nowrap",
-                marginTop: 28,
-              }}
-            >
-              Start with Template
-            </button>
-          </Link>
-            <button
+              type="button"
+              data-testid="create-blank-funnel"
               onClick={createFunnel}
               disabled={creating || !!funnelUsage?.atLimit}
               style={{
@@ -525,27 +540,10 @@ function FunnelsInner() {
             {creating ? "Creating…" : funnelUsage?.atLimit ? "Limit Reached" : "+ Create Funnel"}
           </button>
           </div>
+          {createError ? <p role="alert" data-testid="create-funnel-error" style={{ margin: "12px 0 0", color: "#fca5a5", fontSize: 16 }}>{createError}</p> : null}
         </div>
 
-        {/* Funnel list */}
-        {loading ? (
-          <p style={{ fontSize: 16, color: "#94a3b8" }}>Loading…</p>
-        ) : rows.length === 0 ? (
-          <div style={{
-            padding: "48px 24px", border: "2px dashed #2b3650", borderRadius: 14,
-            textAlign: "center", color: "#64748b",
-          }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>🚀</div>
-            <p style={{ margin: 0, fontSize: 18, fontWeight: 600, color: "#94a3b8" }}>No funnels yet</p>
-            <p style={{ margin: "6px 0 0", fontSize: 16, color: "#64748b" }}>Create your first funnel above to get started.</p>
-          </div>
-        ) : (
-          <div style={{ display: "grid", gap: 12 }}>
-            {rows.map((r, i) => (
-              <Row key={r.id} row={r} onSave={saveName} onDelete={deleteFunnel} idx={i} />
-            ))}
-          </div>
-        )}
+        <CampaignManager onFunnelsChanged={() => fetchFunnelUsage(session?.access_token)} />
       </div>
     </div>
   );
@@ -581,105 +579,5 @@ const aiSelect = {
   color: "#e6eef5",
   fontSize: 16,
 };
-
-/* ---- Row component — card style ---- */
-
-// Color palette for cards and icons
-const CARD_COLORS = [
-  { bg: "#111827", icon: "#60a5fa" }, // blue
-  { bg: "#1e293b", icon: "#f59e42" }, // orange
-  { bg: "#0e172a", icon: "#22c55e" }, // green
-  { bg: "#23272f", icon: "#ef465d" }, // red
-  { bg: "#1a2236", icon: "#a78bfa" }, // purple
-  { bg: "#18233b", icon: "#fbbf24" }, // yellow
-  { bg: "#22223b", icon: "#38bdf8" }, // sky
-  { bg: "#2b3650", icon: "#f472b6" }, // pink
-];
-
-function Row({ row, onSave, onDelete, idx = 0 }) {
-  const [name, setName] = useState(row.name);
-  const isPublished = row.status === "published";
-  const palette = CARD_COLORS[idx % CARD_COLORS.length];
-  // Pick an icon for each card (cycle through a few for demo)
-  const icons = [ICONS.funnels, ICONS.email, ICONS.automation, ICONS.billing, ICONS.products, ICONS.leads, ICONS.settings, ICONS.analytics];
-  const iconFn = icons[idx % icons.length];
-
-  return (
-    <div style={{
-      background: palette.bg,
-      border: "1px solid #1e2d45",
-      borderRadius: 16,
-      padding: "28px 20px 18px 20px",
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      gap: 14,
-      boxShadow: "0 2px 12px 0 rgba(0,0,0,0.10)",
-      transition: "background 0.3s"
-    }}>
-      {/* Large icon on its own line, centered */}
-      <div style={{ width: 64, height: 64, borderRadius: 16, background: "rgba(0,0,0,0.10)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 10 }}>
-        {iconFn({ size: 44, color: palette.icon })}
-      </div>
-      <div style={{ width: "100%", display: "flex", alignItems: "center", gap: 14 }}>
-        {/* Status dot */}
-        <div style={{
-          width: 10, height: 10, borderRadius: "50%", flexShrink: 0,
-          background: isPublished ? "#22c55e" : "#f59e0b",
-          boxShadow: isPublished ? "0 0 8px rgba(34,197,94,0.6)" : "0 0 8px rgba(245,158,11,0.5)",
-        }} />
-        {/* Name input */}
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          style={{
-            flex: 1, padding: "9px 12px", borderRadius: 8, border: "1px solid #2b3650",
-            background: "#0c121a", color: "#e6eef5", fontSize: 16, fontWeight: 600,
-          }}
-        />
-        {/* Status + URL */}
-        <div style={{ minWidth: 160, fontSize: 16 }}>
-          {isPublished && row.slug ? (
-            <a href={`/p/${row.slug}`} target="_blank" rel="noreferrer"
-              style={{ color: "#60a5fa", fontWeight: 600, textDecoration: "none", fontSize: 16 }}>
-              /p/{row.slug} ↗
-            </a>
-          ) : (
-            <span style={{ color: "#f59e0b", fontWeight: 600 }}>Draft</span>
-          )}
-        </div>
-        {/* Actions */}
-        <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-            <a href={`/modules/funnels/edit/${row.id}`}
-              style={{
-                padding: "10px 20px", borderRadius: 8, border: "none",
-                background: "linear-gradient(135deg, #2d6cdf, #ef465d)",
-                color: "#fff", fontSize: 18, fontWeight: 600, textDecoration: "none",
-                boxShadow: "0 2px 8px rgba(45,108,223,0.4)",
-                transition: "background 0.2s, box-shadow 0.2s"
-              }}>
-            Edit
-          </a>
-          <button onClick={() => onSave(row.id, name)}
-            style={{
-              padding: "10px 18px", borderRadius: 8, border: "1px solid #22c55e",
-              background: "linear-gradient(135deg,#22c55e,#3b82f6)", color: "#fff", fontSize: 18, fontWeight: 600, cursor: "pointer",
-              transition: "background 0.2s"
-            }}>
-            Save
-          </button>
-          <button onClick={() => onDelete(row.id)}
-            style={{
-              padding: "10px 18px", borderRadius: 8, border: "1px solid #ef465d",
-              background: "linear-gradient(135deg,#ef465d,#b91c1c)", color: "#fff", fontSize: 18, fontWeight: 600, cursor: "pointer",
-              transition: "background 0.2s"
-            }}>
-            Delete
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 /* ---- styles removed — inline styles used above ---- */

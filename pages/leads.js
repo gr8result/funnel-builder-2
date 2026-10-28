@@ -246,6 +246,20 @@ export default function LeadsPage() {
     loadTeams();
   }, [userId, workspaceId]);
 
+  // Deep link: /leads?lead=<id> opens that lead's CRM details (Landing Pages links each enquiry here).
+  const deepLinkedLeadRef = useRef(null);
+  useEffect(() => {
+    const leadId = typeof router.query.lead === "string" ? router.query.lead : "";
+    if (!leadId || loading || deepLinkedLeadRef.current === leadId) return;
+    const match = (leads || []).find((l) => String(l.id) === leadId);
+    if (match) {
+      deepLinkedLeadRef.current = leadId;
+      openLeadDetails(match);
+    } else if (!allMode && workspaceId) {
+      showAllLeads();
+    }
+  }, [router.query.lead, leads, loading, allMode, workspaceId]); // eslint-disable-line react-hooks/exhaustive-deps
+
   function loadTeams() {
     const storedTeams = readStoredJson(
       `${TEAM_STORAGE_KEY_PREFIX}${userId}`,

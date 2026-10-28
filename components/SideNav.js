@@ -75,7 +75,7 @@ const MODULE_ITEMS = [
   { href: "/modules/social_media/dashboard",   label: "Social Media",          icon: ICONS.social,         color: "u25", roles: MKT_UP,   emoji: "📱" },
   { href: "/modules/calendar/dashboard",       label: "Booking Calendar",      icon: ICONS.calendar,       color: "u15", roles: SALES_UP, emoji: "📅" },
   { href: "/modules/website-builder",          label: "Website Builder",       icon: ICONS.websiteBuilder, color: "u07", roles: MKT_UP,   emoji: "🌐" },
-  { href: "/funnels",                          label: "Sales Funnels",         icon: ICONS.funnels,        color: "u08", roles: MKT_UP },
+  { href: "/modules/funnels",                  label: "Funnel Builder",        icon: ICONS.funnels,        color: "u08", roles: MKT_UP },
 
   { href: "/modules/business-automation",      label: "Business Automation",   icon: ICONS.automation,     color: "u09", roles: MGMT,    emoji: "⚙️" },
   { href: "/modules/webinars",                 label: "Evergreen Webinars",    icon: ICONS.webinars,       color: "u14", roles: MKT_UP,  comingSoon: true, emoji: "🎥" },
@@ -95,6 +95,7 @@ export default function SideNav({ collapsed = false, onToggleCollapsed }) {
 
   const isActive = (href) => {
     if (!router.isReady) return false;
+    if (href === "/modules/funnels" && ["/modules/funnels", "/modules/landing-pages"].some((base) => activePath === base || activePath.startsWith(base + "/"))) return true;
     return activePath === href || activePath.startsWith(href + "/");
   };
 
