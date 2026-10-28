@@ -152,7 +152,7 @@ function overlaps(a, b) {
   return a.length === b.length && a.every((point) => b.some((other) => point.x === other.x && point.y === other.y));
 }
 
-function projectOpeningToHost(point, host, page, scale, reachMm = 0) {
+function projectOpeningToHost(point, host, page, scale) {
   if (!normalizedPoint(point)) throw new Error('Opening location must lie on the submitted drawing.');
   const x = point.x * page.logicalWidth, y = point.y * page.logicalHeight;
   let closest = null;
@@ -167,7 +167,7 @@ function projectOpeningToHost(point, host, page, scale, reachMm = 0) {
     const distance = Math.hypot(px - x, py - y);
     if (!closest || distance < closest.distance) closest = { x: px / page.logicalWidth, y: py / page.logicalHeight, distance };
   }
-  const tolerance = Math.max(300, host.thicknessMm * 2, reachMm) * scale;
+  const tolerance = Math.max(150, (Number(host.thicknessMm) || 0) / 2) * scale;
   if (!closest || closest.distance > tolerance) throw new Error('Opening location is too far from its claimed host wall; association requires review.');
   return { x: closest.x, y: closest.y, distanceMm: closest.distance / scale };
 }
@@ -215,7 +215,7 @@ const polygonSegments = (polygon) => polygon.map((point, index) => [point, polyg
  * Share of a traced wall that runs along a wall already in the takeoff. Walls the estimator has
  * already drawn are authoritative; an AI trace of the same wall must not be counted a second time.
  */
-function coveredByExistingWalls(nodes, existingWalls, scale, toleranceMm = READ_TOLERANCE_MM) {
+function coveredByExistingWalls(nodes, existingWalls, scale, toleranceMm = READ_TOLERANCE_MM, strict = false) {
   const step = 250 * scale;
   let samples = 0, covered = 0;
   for (let index = 1; index < nodes.length; index += 1) {
@@ -228,7 +228,7 @@ function coveredByExistingWalls(nodes, existingWalls, scale, toleranceMm = READ_
       const point = { x: a.x + (b.x - a.x) * part / parts, y: a.y + (b.y - a.y) * part / parts };
       samples += 1;
       const near = existingWalls.some((wall) => {
-        const tolerance = Math.max(toleranceMm, (Number(wall.thicknessMm) || 0) * 2) * scale;
+        const tolerance = (strict ? toleranceMm : Math.max(toleranceMm, (Number(wall.thicknessMm) || 0) * 2)) * scale;
         const segments = wall.segments || wall.nodes.slice(1).map((end, i) => [wall.nodes[i], end]);
         return segments.some(([start, end]) => {
           const difference = Math.abs(Math.atan2(end.y - start.y, end.x - start.x) - angle) % Math.PI;
@@ -243,8 +243,9 @@ function coveredByExistingWalls(nodes, existingWalls, scale, toleranceMm = READ_
 }
 
 /** Convert unreliable provider output into evidence-bearing Phase 1 detections. */
-export function normalizePlanAnalysis({ context, responses = [], runId, modelVersion, planEvidence = null, projectDefaults = null }) {
+export function normalizePlanAnalysis({ context, responses = [], runId, modelVersion, planEvidence = null, projectDefaults = null, reviewedDetectionIds = [] }) {
   if (!context || !Array.isArray(responses)) throw new Error('Analysis requires the current Takeoff context and page responses.');
+  const reviewedIds = new Set(reviewedDetectionIds);
   const batch = { jobId: context.jobId, takeoffId: context.takeoffId, documentHash: context.documentHash, runId, modelVersion, pixelsPerMm: context.pixelsPerMm, detections: [] };
   const analysis = { schemaVersion: 'ai-takeoff-analysis.v1', runId, modelVersion, rooms: [], fixtures: [], documentedQuantities: [], unresolved: [], review: [], benchmarks: [], pages: [], alreadyMeasured: [], notAdded: [], openEdges: [], documentedAreas: [] };
   const report = (page, item, message, code = 'review') => analysis.review.push({ page, detectionId: item?.detectionId || '', message, code, audience: reviewAudience({ code }) });
@@ -332,20 +333,21 @@ export function normalizePlanAnalysis({ context, responses = [], runId, modelVer
       if (raw.basis === 'ASSUMED' || raw.confidence < 0.5) throw new Error('Assumed or low-confidence geometry is withheld for review.');
       const fields = {};
       const detectionId = `page-${page}:${raw.detectionId}`;
+      const estimatorConfirmed = reviewedIds.has(detectionId);
       const detection = { detectionId, kind, page, confidence: raw.confidence, coordinates: { space: 'normalized' }, ...(level === 'Unassigned' ? {} : { level }) };
       const targetPage = pageFor(page);
       if (kind === 'wall') {
         if (!['exterior', 'interior'].includes(raw.category)) throw new Error('Wall category must be observed as exterior or interior.');
         const pageWalls = existingWalls.filter((wall) => wall.page === page);
         if (pageWalls.length && Array.isArray(raw.nodes) && raw.nodes.every(normalizedPoint)
-          && coveredByExistingWalls(raw.nodes.map((point) => toPixels(point, targetPage)), pageWalls, scale) >= 0.6) {
+          && coveredByExistingWalls(raw.nodes.map((point) => toPixels(point, targetPage)), pageWalls, scale, estimatorConfirmed ? 30 : READ_TOLERANCE_MM, estimatorConfirmed) >= (estimatorConfirmed ? 0.95 : 0.6)) {
           skip(raw, page, kind, 'This wall is already traced in the takeoff; the existing wall is kept and the AI trace is not added.');
           continue;
         }
         // The open side of an alfresco, patio, porch or balcony is posts, columns or a balustrade,
         // not a wall. A line that runs along such an area's outline where that outline is also
         // the outside of the building is not added as wall; it is put to the builder once.
-        if (raw.category === 'exterior' && Array.isArray(raw.nodes) && raw.nodes.every(normalizedPoint)) {
+        if (!estimatorConfirmed && raw.category === 'exterior' && Array.isArray(raw.nodes) && raw.nodes.every(normalizedPoint)) {
           const line = raw.nodes.map((point) => toPixels(point, targetPage));
           const footprint = outlines.filter((item) => item.page === page && item.type === 'Footprint').flatMap((item) => item.segments);
           const open = outlines.find((item) => item.page === page && OPEN_AREA_TYPES.includes(item.type)
@@ -353,11 +355,11 @@ export function normalizePlanAnalysis({ context, responses = [], runId, modelVer
           if (open) {
             const lengthM = line.slice(1).reduce((sum, point, index) => sum + Math.hypot(point.x - line[index].x, point.y - line[index].y), 0) / scale / 1000;
             analysis.openEdges.push({ ...metadataOnly(raw), page, level, area: open.type, lengthM });
-            report(page, raw, `${lengthM.toFixed(1)} m along the open side of the ${open.type.toLowerCase()} was not added as a wall (posts, columns and balustrades are not walls). If it is a solid wall, draw it on the plan.`, 'open-edge');
+            report(page, raw, `${lengthM.toFixed(1)} m along the open side of the ${open.type.toLowerCase()} was not added as a wall (posts, columns and balustrades are not walls). If it is a solid wall, draw it on the plan.`, lengthM >= 1.5 ? 'open-edge' : 'open-edge-minor');
             continue;
           }
         }
-        if (estimatorMeasured(`wall:${page}:${raw.category}`)) {
+        if (!estimatorConfirmed && estimatorMeasured(`wall:${page}:${raw.category}`)) {
           hold(raw, page, kind, `A possible ${raw.category} wall was not added: the ${raw.category} walls on this sheet are already traced and none matches it.`, { category: raw.category });
           continue;
         }
@@ -460,14 +462,14 @@ export function normalizePlanAnalysis({ context, responses = [], runId, modelVer
         else if (resolved.wallHeightM) fields.wallHeightM = fromSource(resolved.wallHeightM);
         else report(page, raw, 'Wall height is not documented; existing downstream height defaults require review.', 'missing-height');
         Object.assign(detection, {
-          nodes: raw.nodes, category: raw.category, thicknessMm: thickness, alignment: 'outer',
+          nodes: raw.nodes, category: raw.category, thicknessMm: thickness, alignment: raw.alignment === 'center' ? 'center' : 'outer',
           exteriorType, wallHeightM, linedFaces: 2, openingDeductionsEnabled: true,
           constructionSystem, frameThicknessMm,
           ...(frameAssumed ? { frameAssumed: true } : {}),
           ...(exteriorFinish ? { exteriorFinish } : {}),
           ...(constructionSystem === 'custom' && typeof raw.customSystemLabel === 'string' ? { customSystemLabel: raw.customSystemLabel } : {}),
         });
-        fields.alignment = { basis: 'DERIVED', confidence: raw.confidence, evidence: 'Trace is the outer wall face; the adapter uses the existing outer alignment convention.' };
+        fields.alignment = { basis: 'DERIVED', confidence: raw.confidence, evidence: raw.alignment === 'center' ? 'Trace is the measured centreline between the paired wall faces.' : 'Trace is the outer wall face; the adapter uses the existing outer alignment convention.' };
         const forward = JSON.stringify(raw.nodes), reversed = JSON.stringify([...(raw.nodes || [])].reverse());
         const shape = `${page}:${raw.category}:${forward < reversed ? forward : reversed}`;
         if (wallShapes.has(shape)) throw new Error('Duplicate wall geometry is withheld to avoid double-counting.');
@@ -485,14 +487,14 @@ export function normalizePlanAnalysis({ context, responses = [], runId, modelVer
         const twin = existingOpenings.filter((item) => item.page === page && family(item) === family(raw) && !matchedExistingOpenings.has(item.id))
           .map((item) => ({ item, distanceMm: Math.hypot(item.x - pixel.x, item.y - pixel.y) / scale }))
           // The same size close by is the same opening; anything of the same kind right on top of it is too.
-          .filter(({ item, distanceMm }) => distanceMm <= (rawWidth && Number(item.widthMm) === rawWidth ? 2500 : Math.max(900, (Number(item.widthMm) || 0) * 0.6)))
+          .filter(({ item, distanceMm }) => distanceMm <= (estimatorConfirmed ? 100 : rawWidth && Number(item.widthMm) === rawWidth ? 2500 : Math.max(900, (Number(item.widthMm) || 0) * 0.6)))
           .sort((a, b) => a.distanceMm - b.distanceMm)[0];
         if (twin) {
           matchedExistingOpenings.add(twin.item.id);
           skip(raw, page, kind, 'This opening is already placed in the takeoff; the existing opening is kept and the AI detection is not added.');
           continue;
         }
-        if (estimatorMeasured(`opening:${page}:${family(raw)}`)) {
+        if (!estimatorConfirmed && estimatorMeasured(`opening:${page}:${family(raw)}`)) {
           const room = roomLabels.filter((label) => label.page === page).map((label) => ({ label, distance: Math.hypot((label.x - raw.x) * targetPage.logicalWidth, (label.y - raw.y) * targetPage.logicalHeight) })).sort((a, b) => a.distance - b.distance)[0];
           const what = `${raw.openingClass === 'Window' ? 'window' : raw.openingClass.toLowerCase()}${rawWidth ? ` ${rawWidth} wide` : ''}${room ? ` near ${room.label.name}` : ''}`;
           hold(raw, page, kind, `A possible ${what} was not added: this sheet's openings are already placed and none matches it.`, { what });
@@ -505,27 +507,26 @@ export function normalizePlanAnalysis({ context, responses = [], runId, modelVer
           ...batch.detections.filter((item) => item.kind === 'wall' && item.page === page).map((host) => ({ host, batch: true })),
           ...existingWalls.filter((wall) => wall.page === page).map((wall) => ({ batch: false, host: { ...wall, nodes: wall.nodes.map((point) => ({ x: point.x / targetPage.logicalWidth, y: point.y / targetPage.logicalHeight })) } })),
         ];
-        const reach = (list, reachMm = 0) => list.flatMap((candidate) => {
-          try { return [{ ...candidate, ...projectOpeningToHost(raw, candidate.host, targetPage, scale, reachMm) }]; }
+        const reach = (list) => list.flatMap((candidate) => {
+          try { return [{ ...candidate, ...projectOpeningToHost(raw, candidate.host, targetPage, scale) }]; }
           catch { return []; }
         }).sort((a, b) => a.distanceMm - b.distanceMm);
         let chosen = null;
         if (raw.hostDetectionId) {
           const claimed = hosts.find((candidate) => candidate.batch && candidate.host.detectionId === `page-${page}:${raw.hostDetectionId}` && acceptedWalls.has(candidate.host.detectionId));
           chosen = claimed ? reach([claimed])[0] || null : null;
-          if (!chosen) report(page, raw, claimed ? 'Opening location is too far from its claimed host wall; another wall was looked for.' : 'Opening host wall was not reliably established in this analysis; another wall was looked for.', 'host-reassigned');
+          if (!chosen) throw new Error('The explicit opening host is missing or does not contain this opening. Correct its wall association before accepting it.');
         }
         if (!chosen) {
           const sameKind = hosts.filter((candidate) => !category || candidate.host.category === category);
-          // A point read off a drawing is approximate: look on the wall first, then a little further out.
+          // Only nearby walls of the expected category are eligible; never search across rooms.
           const matching = reach(sameKind);
-          const candidates = matching.length ? matching : [reach(hosts), reach(sameKind, 1200), reach(hosts, 1200)].find((list) => list.length) || [];
+          const candidates = matching;
           chosen = candidates[0] || null;
           if (chosen) {
             const ambiguous = candidates[1] && candidates[1].distanceMm - chosen.distanceMm < 50;
-            fields.hostWall = { basis: 'DERIVED', confidence: ambiguous || !matching.length ? Math.min(raw.confidence, 0.6) : raw.confidence,
-              evidence: ambiguous ? 'Two walls meet at this opening; the nearest was used.' : `Nearest ${matching.length ? 'matching ' : ''}wall on the same calibrated page.` };
-            if (ambiguous) report(page, raw, 'Two walls are equally close to this opening; it was attached to the nearest.', 'host-ambiguous');
+            if (ambiguous) throw new Error('Two walls are equally close to this opening. Confirm its host wall before accepting it.');
+            fields.hostWall = { basis: 'DERIVED', confidence: raw.confidence, evidence: 'Unique nearby matching wall on the same calibrated page.' };
           }
         }
         if (chosen) {
@@ -534,11 +535,7 @@ export function normalizePlanAnalysis({ context, responses = [], runId, modelVer
             ? { basis: 'DERIVED', confidence: raw.confidence, evidence: `Observed opening point projected ${chosen.distanceMm.toFixed(1)} mm to its nearby observed host-wall trace.` }
             : provenance;
         } else {
-          // Counted regardless: an observed opening is never dropped because its wall is unclear.
-          detection.unhosted = true;
-          fields.hostWall = { basis: 'ASSUMED', confidence: 0, evidence: 'No wall close enough to this opening was traced; it is counted without a wall link.' };
-          fields.location = provenance;
-          report(page, raw, 'Opening is counted, but no nearby wall was traced to attach it to.', 'unhosted');
+          throw new Error('No matching wall contains this opening. Resolve its position and host before accepting its quantity.');
         }
         const tag = typeof raw.tag === 'string' ? raw.tag : '';
         const sizeCode = typeof raw.sizeCode === 'string' ? raw.sizeCode : (/^\d{4}$/.test(tag.trim()) ? tag.trim() : '');
@@ -549,7 +546,10 @@ export function normalizePlanAnalysis({ context, responses = [], runId, modelVer
         const scheduled = findScheduleEntry({ ...raw, tag, sizeCode }, planEvidence);
         const discrepancies = [];
         const dimension = (name) => {
-          const explicit = raw[`explicit${name[0].toUpperCase()}${name.slice(1)}`];
+          const stated = raw[`explicit${name[0].toUpperCase()}${name.slice(1)}`];
+          // "2130 STACKER DOOR" is a size code (2100 high x 3000 wide), not a 2130 mm dimension:
+          // the code's own four digits repeated as an explicit size are a misreading of the code.
+          const explicit = interpreted && stated === Number(String(sizeCode).trim().slice(0, 4)) ? null : stated;
           if (positive(explicit)) {
             if (interpreted && explicit !== interpreted[name]) discrepancies.push(`${name}: explicit ${explicit} mm takes precedence over ${sizeCode} shorthand ${interpreted[name]} mm.`);
             fields[name] = { basis: 'OBSERVED', confidence: raw.confidence, evidence: raw.dimensionEvidence || raw.evidence };
@@ -600,6 +600,7 @@ export function normalizePlanAnalysis({ context, responses = [], runId, modelVer
         const location = nearestRoom && nearestRoom.distanceMm <= 4500 ? nearestRoom.room.name : '';
         Object.assign(detection, {
           x: chosen ? chosen.x : raw.x, y: chosen ? chosen.y : raw.y, type: raw.type, openingClass: raw.openingClass, widthMm, heightMm,
+          ...(raw.needsClassification === true ? { needsClassification: true } : {}),
           itemTag: tag || sizeCode || raw.detectionId, subType: resolveOpeningSubType({ ...raw, tag, sizeCode }), glassType,
           ...(location ? { location } : {}),
         });

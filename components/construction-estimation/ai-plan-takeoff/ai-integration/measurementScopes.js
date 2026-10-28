@@ -4,10 +4,10 @@
 // unscoped compatibility path uses the same merge so both produce identical analyses.
 export const MEASUREMENT_SCOPES = ['geometry', 'items'];
 
-// A separate, single-purpose request: read only the room names labelled on a floor plan. It is
-// never part of a full takeoff run and returns no walls, openings or areas, so it can be used on a
-// takeoff that was traced by hand without adding anything to the canvas.
+// A focused room-boundary request. It returns semantic room polygons and labels
+// without duplicating existing walls, openings or aggregate building-area objects.
 export const ROOMS_SCOPE = 'rooms';
+export const OPENINGS_REGION_SCOPE = 'items';
 
 export function mergeMeasurementScopes(geometry, items) {
   const prefix = (id) => id.startsWith('geometry:') ? id : `geometry:${id}`;

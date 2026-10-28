@@ -122,9 +122,9 @@ assert.deepEqual([byTag('W3').widthMm, byTag('W3').heightMm], [1810, 1030], 'a t
 const hinged = canonical.placedOpenings.find((item) => item.widthMm === 820);
 assert.deepEqual([hinged.heightMm, hinged.subType, hinged.location], [2040, 'Internal', 'BED 2'], 'a door with only its width printed takes the plan-set door height and its room');
 assert.equal(canonical.placedOpenings.find((item) => item.widthMm === 720).subType, 'Cavity');
-const far = byTag('0612');
-assert.equal(far.hostWallId, '', 'an opening with no wall nearby is still counted');
-assert.equal(canonical.placedOpenings.length, 5, 'every observed opening is counted');
+assert.equal(byTag('0612'), undefined, 'an opening with no measured host is withheld from quantities');
+assert.ok(output.analysis.unresolved.some((item) => item.detectionId === 'far'), 'the unmatched opening remains visible for review');
+assert.equal(canonical.placedOpenings.length, 4, 'only hosted observed openings enter canonical quantities');
 assert.equal(canonical.completedEaves[0].widthMm, 600, 'the Job Setup eave width fills an undocumented eave');
 assert.deepEqual(output.analysis.review.filter((item) => item.audience === 'decision').map((item) => item.code), ['evidence-conflict'], 'the only decision is the ceiling height the two sheets disagree about');
 
@@ -148,7 +148,8 @@ const traced = { completedWallRuns: [...existing.completedWallRuns, { id: 'manua
 output = normalize({ ...context, ...traced });
 canonical = convertAiTakeoffDetections(output.batch, { ...context, ...traced });
 assert.equal(canonical.completedWallRuns.length, 0, 'an unmatched AI wall is not added beside the estimator trace');
-assert.deepEqual(canonical.placedOpenings.map((item) => item.type), ['door', 'door'], 'unmatched AI windows are not added to a sheet whose windows are already placed; its doors, which the estimator has not placed, are');
+assert.deepEqual(canonical.placedOpenings, [], 'placed windows are not duplicated and floating doors are withheld without a measured host');
+assert.equal(output.analysis.unresolved.filter((item) => item.kind === 'opening').length, 2, 'unhosted doors remain visible for correction');
 assert.deepEqual(output.analysis.notAdded.map((item) => item.kind).sort(), ['opening', 'opening', 'wall']);
 assert.equal(output.analysis.review.filter((item) => item.code === 'possible-missing-openings' && item.audience === 'decision').length, 2, 'each possible missed opening is put to the builder, by room');
 assert.ok(!output.analysis.review.some((item) => item.code === 'possible-missing-walls'), 'a shorter AI measurement than the trace raises nothing');
@@ -164,11 +165,11 @@ assert.equal(canonical.placedOpenings.find((item) => item.widthMm === 820).heigh
 const takeoff = { ...canonical, completedMeasurements: [], pixelsPerMm: 0.1, totalPages: 1, sheetLevels: { 1: 'Ground Floor' }, scheduleState: { aiAnalysis: output.analysis } };
 let payload = createJobSetupPayload(createTakeoffSchedule(takeoff), { sheetLevels: takeoff.sheetLevels });
 const ids = payload.review.decisions.map((item) => item.id);
-assert.deepEqual(ids, ['external-wall-type:Ground Floor', 'ceiling-height:Ground Floor', 'internal-wall-type', 'door-height', 'opening-size', 'opening-wall', 'eave-width'], 'each open question appears once, whatever the number of walls or openings behind it');
+assert.deepEqual(ids, ['external-wall-type:Ground Floor', 'ceiling-height:Ground Floor', 'internal-wall-type', 'door-height', 'opening-size', 'eave-width'], 'each actionable open question appears once; hostless geometry remains withheld');
 assert.ok(payload.review.decisions.every((item) => item.title && item.detail && item.action?.type), 'every review item says what to confirm and how');
 assert.ok(payload.review.diagnostics.some((text) => /Wall thicknesses are not legible/.test(text)), 'the AI notes are kept, as diagnostics');
 assert.ok(!payload.warnings.some((text) => /not legible|manual default|not documented/.test(text)), 'AI diagnostics are never Job Setup warnings');
-assert.ok(payload.review.checklist.some((item) => /3 windows identified/.test(item.label)));
+assert.ok(payload.review.checklist.some((item) => /2 windows identified/.test(item.label)));
 assert.ok(payload.review.checklist.some((item) => /2 internal doors identified \(1 cavity\/sliding\)/.test(item.label)));
 
 // Answering a review item changes the objects it names; the item then clears on its own.
@@ -181,7 +182,7 @@ answer('eave-width', 600);
 assert.deepEqual([takeoff.completedWallRuns[0].exteriorType, takeoff.completedWallRuns[0].frameThicknessMm, takeoff.completedWallRuns[0].wallHeightM], ['Rendered Brick Veneer', 70, 2.7]);
 assert.deepEqual([takeoff.completedWallRuns[1].thicknessMm, takeoff.completedWallRuns[1].constructionSystem], [90, 'internal_timber_frame'], 'a 90 mm internal wall stays a 90 mm wall');
 payload = createJobSetupPayload(createTakeoffSchedule(takeoff), { sheetLevels: takeoff.sheetLevels });
-assert.deepEqual(payload.review.decisions.map((item) => item.id), ['opening-size', 'opening-wall'], 'only what genuinely cannot be established remains');
+assert.deepEqual(payload.review.decisions.map((item) => item.id), ['opening-size'], 'only canonical, hosted openings can receive further decisions');
 assert.equal(payload.dataInputFields.lowerInternal90mmWallsLm > 0, true, '90 mm internal framing reaches its own Job Setup quantity');
 assert.deepEqual(applyReviewDecision({ action: { field: 'heightMm', targets: ['x'] } }, 99999, takeoff), {}, 'an implausible answer changes nothing');
 
@@ -213,5 +214,20 @@ output = normalizePlanAnalysis({ context: { ...context, completedFloorplans: flo
 assert.equal(output.analysis.benchmarks.length, 4, 'an area table printed on several sheets is compared once');
 assert.ok(output.analysis.benchmarks.every((item) => Math.abs(item.difference) < 1e-9), 'printed sqm areas are checked against the takeoff geometry, the estimator own outlines included');
 assert.ok(!output.analysis.review.some((item) => item.code === 'benchmark-discrepancy'));
+
+// A size code repeated as an "explicit" width is a misread code, not a second, conflicting size.
+output = normalizePlanAnalysis({ context, runId: 'run', modelVersion: 'model', responses: [{ ...response, openings: [opening('stacker', { type: 'door', openingClass: 'Large Glazed/Stacker/Sliding Door', sizeCode: '2130 STACKER DOOR', explicitWidthMm: 2130 })] }] });
+const stacker = output.batch.detections.find((item) => item.kind === 'opening');
+assert.deepEqual([stacker.widthMm, stacker.heightMm], [3000, 2100]);
+assert.ok(!output.analysis.review.some((item) => item.code === 'dimension-conflict'));
+// A short stub along an outdoor area's open side is not added as wall and is not a review item.
+const outdoor = (id, type, nodes) => ({ detectionId: id, type, label: type, nodes, ...observed });
+const edges = (length) => normalizePlanAnalysis({ context, runId: 'run', modelVersion: 'model', responses: [{ ...response, openings: [], eaves: [], rooms: [],
+  walls: [wall('edge', 'exterior', [{ x: 0.1, y: 0.1 }, { x: 0.1 + length, y: 0.1 }])],
+  buildingAreas: [outdoor('fp', 'Footprint', square(0.1, 0.1, 0.8, 0.8)), outdoor('alf', 'Alfresco', square(0.1, 0.1, 0.5, 0.3))] }] });
+output = edges(0.1);
+assert.deepEqual([output.batch.detections.filter((item) => item.kind === 'wall').length, output.analysis.review.find((item) => /open side/.test(item.message)).audience], [0, 'diagnostic']);
+output = edges(0.35);
+assert.equal(output.analysis.review.find((item) => /open side/.test(item.message)).audience, 'decision', 'a real length of open edge is still put to the builder once');
 
 console.log('AI Takeoff review and evidence: cross-sheet evidence, Job Setup defaults, authoritative calibration, automatic resolution, de-duplication, builder review and floor areas passed.');

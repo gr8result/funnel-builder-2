@@ -40,20 +40,27 @@ function fixOut(job) {
   const result = calculateEstimateBuilderWorkbook(workbook);
   const rows = result.quotation[name].rows;
   const row = (id) => rows.find((entry) => entry.id === id);
-  return { name, q: result.quantities, internal: row("quote-1357"), window: row("quote-1361"), robe: row("quote-1362"), untouched: row("quote-1358"), order: rows.map((entry) => entry.id) };
+  return { name, q: result.quantities, aggregate: row("quote-1356"), internal: row("quote-1357"), window: row("quote-1361"), robe: row("quote-1362"), untouched: row("quote-1358"), order: rows.map((entry) => entry.id) };
 }
 
 function check(label, job, expected) {
   const r = fixOut(job);
   assert.deepEqual([r.q.takeoffInternalDoorCount, r.q.takeoffWindowCount, r.q.takeoffRobeDoorCount], expected);
-  for (const [row, qty] of [[r.internal, expected[0]], [r.window, expected[1]], [r.robe, expected[2]]]) {
-    assert.equal(row.qty, qty, `${row.item} qty`);
-    assert.equal(row.unit, "EACH");
-    assert.equal(row.cost, Math.round(qty * 1.5 * 100) / 100, `${row.item}: Qty x $1.50`);
+  for (const row of [r.internal, r.window]) {
+    assert.equal(row.qty, 0, `${row.item} is included in aggregate stock`);
+    assert.equal(row.active, false);
+  }
+  assert.equal(r.aggregate.qty, r.q.nonRobeArchitraveLengthsEach);
+  assert.equal(r.aggregate.unit, "LENGTH");
+  assert.equal(r.robe.qty, r.q.robeArchitravePurchaseLm);
+  assert.equal(r.robe.unit, "LM");
+  assert.equal(r.robe.cost, Math.round(r.q.robeArchitravePurchaseLm * 1.5 * 100) / 100);
+  if (r.q.architraveLengthsEach) {
+    assert.equal(r.q.nonRobeArchitraveLengthsEach + r.q.robeArchitraveLengthsEach, r.q.architraveLengthsEach, "robe and non-robe stock reconcile to whole-job cutting schedule");
   }
   assert.equal(r.untouched.qty, 0, "other FIX OUT rows unchanged");
   console.log(`${label} [${r.name}]`);
-  for (const row of [r.internal, r.window, r.robe]) console.log(`  ${row.item}: Qty ${row.qty} ${row.unit} x ${row.finalRateUsed} = $${row.cost.toFixed(2)} (${row.quantityKey})`);
+  for (const row of [r.aggregate, r.internal, r.window, r.robe]) console.log(`  ${row.item}: Qty ${row.qty} ${row.unit} x ${row.finalRateUsed} = $${row.cost.toFixed(2)} (${row.quantityKey})`);
   return r.order;
 }
 

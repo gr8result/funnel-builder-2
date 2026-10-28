@@ -235,7 +235,7 @@ export function resolveConstructionSystem(wall = {}) {
       displayLabel: CONSTRUCTION_SYSTEM_LABELS[system],
     };
   }
-const explicit = EXTERIOR_CONSTRUCTION_SYSTEMS.includes(wall.constructionSystem) ? wall.constructionSystem : null;
+  let explicit = EXTERIOR_CONSTRUCTION_SYSTEMS.includes(wall.constructionSystem) ? wall.constructionSystem : null;
    const legacyClass = resolveExteriorClass(wall);
    // If explicit is 'unclassified' but we have a recognized legacy class, ignore the explicit and use the legacy class.
    if (explicit === 'unclassified' && legacyClass !== 'Other') {

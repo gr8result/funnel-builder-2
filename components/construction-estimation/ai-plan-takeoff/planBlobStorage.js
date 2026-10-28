@@ -67,6 +67,31 @@ async function transformJob(job, encode, assets = new Map()) {
 async function transformWorkbook(workbook, encode) {
   const result = { ...workbook };
   const assets = new Map();
+  // Imported quotation artwork used to be repeated in page.baseArtwork,
+  // design.backgroundImageUrl and importedDocument.baseArtwork, in every
+  // revision. Keep one durable asset, restoring the original string fields on
+  // explicit open/export. The per-operation map is released after completion.
+  async function artwork(value) {
+    if (encode && typeof value === 'string' && value.startsWith('data:')) {
+      if (!assets.has(value)) assets.set(value, putAsset(value));
+      return { __gr8StoredDataUrl: await assets.get(value) };
+    }
+    if (!value || typeof value !== 'object') return value;
+    if (!encode && typeof value.__gr8StoredDataUrl === 'string' && Object.keys(value).length === 1) {
+      const id = value.__gr8StoredDataUrl;
+      if (!assets.has(id)) assets.set(id, readPlanAsset(id));
+      return assets.get(id);
+    }
+    if (Array.isArray(value)) {
+      const output = [];
+      for (const item of value) output.push(await artwork(item));
+      return output;
+    }
+    const output = {};
+    for (const key of Object.keys(value)) Object.defineProperty(output, key, { value: await artwork(value[key]), enumerable: true, writable: true, configurable: true });
+    return output;
+  }
+  if (workbook.projectEstimateBuilder) result.projectEstimateBuilder = await artwork(workbook.projectEstimateBuilder);
   if (workbook.aiPlanTakeoffJob) result.aiPlanTakeoffJob = await transformJob(workbook.aiPlanTakeoffJob, encode, assets);
   if (workbook.takeoffEngine?.aiPlanTakeoffJob) result.takeoffEngine = {
     ...workbook.takeoffEngine,

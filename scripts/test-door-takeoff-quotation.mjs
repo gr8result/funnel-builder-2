@@ -5,6 +5,7 @@ process.env.NEXT_PUBLIC_SUPABASE_URL ||= "http://localhost:54321";
 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||= "anon";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { createEstimateBuilderWorkbookDefaults } from "../lib/construction-estimation/estimateBuilderWorkbookDefaults.js";
 
 const quiet = console.log; console.log = () => {}; console.info = () => {}; console.warn = () => {};
 const log = (...a) => quiet(...a);
@@ -50,18 +51,23 @@ const byFunction = (fn) => furniture.find((p) => (p.attributes?.function || "") 
 assert.ok(hume820 && byFunction("Passage") && byFunction("Privacy") && byFunction("Dummy"), "catalogue has a priced Hume door and passage/privacy/dummy furniture");
 
 function workbookFor(job, selections = []) {
-  const base = hook.__doorTakeoffTestUtils.normalizeWorkbook({});
+  const base = hook.__doorTakeoffTestUtils.normalizeWorkbook(createEstimateBuilderWorkbookDefaults());
   const wb = base || {};
   return { ...wb, jobId: "door-acceptance", aiPlanTakeoffJob: job, clientSelectionsBook: { rooms: [{ rows: selections.map((guidedSelection) => ({ guidedSelection })) }] } };
 }
-const rowsIn = (preview, name) => preview.quotation[Object.keys(preview.quotation).find((key) => key.toLowerCase().startsWith(name))].rows;
+const quoteRows = (preview) => Object.values(preview.quotation || {}).flatMap((section) => section.rows || []);
+const rowsIn = (preview, name) => {
+  const sectionKey = Object.keys(preview.quotation || {}).find((key) => key.toLowerCase().startsWith(name));
+  assert.ok(sectionKey, `Quotation section '${name}' must exist; found: ${Object.keys(preview.quotation || {}).join(", ")}`);
+  return preview.quotation[sectionKey].rows;
+};
 const generated = (rows) => rows.filter((row) => row.generatedTakeoffProductRow && row.lineType !== "Appliance heading");
 const byItem = (rows, text) => rows.find((row) => row.item.includes(text));
-const labour = (preview, section, source) => rowsIn(preview, section).find((row) => row.id === `quote-${source}`);
+const labour = (preview, section, source) => quoteRows(preview).find((row) => row.id === `quote-${source}`);
 
 // ---- default product (no client selection yet)
 const noSelection = calculateEstimateBuilderWorkbook(workbookFor(fixture()));
-const fixOut = rowsIn(noSelection, "fix out (88)");
+const fixOut = rowsIn(noSelection, "fix out");
 // 1. Internal Doors first in Section 93
 assert.equal(fixOut[0].item, "INTERNAL DOORS", "Section 93 starts with the Internal Doors subsection");
 const doorRows = generated(fixOut).filter((row) => row.quantityKey.startsWith("takeoffInternalDoor:"));
@@ -88,7 +94,7 @@ const selected = calculateEstimateBuilderWorkbook(workbookFor(fixture(), [
   { requirementKey: "door-hardware", productId: privacy.productId, function: "Privacy", quantity: 2 },
   { requirementKey: "door-hardware", productId: dummy.productId, function: "Dummy" },
 ]));
-const fixOutSel = rowsIn(selected, "fix out (88)");
+const fixOutSel = rowsIn(selected, "fix out");
 const r820 = byItem(generated(fixOutSel), "820 X 2040");
 // 4. Client Selection flows into the quotation (ID, image, manufacturer, SKU/model, price)
 assert.equal(r820.canonicalProductId, hume820.productId);
@@ -109,10 +115,9 @@ const jamb90 = byItem(generated(fixOutSel), "90 x 19"); const jamb110 = byItem(g
 assert.equal(jamb90.qty, 2 + 1 + 1 + 2, "70mm walls -> 90x19: 720 x2, 920, 650 + robe (existing robe rule: 2 lengths)");
 assert.equal(jamb110.qty, 3 + 1, "90mm walls -> 110x19: 820 x3 + double set");
 // 8/9. cavity cages: size + wall variant, total = INSTALL CAVITY DOOR CAGE labour
-const framing = rowsIn(selected, "framing timber");
-const cages = generated(framing);
+const cages = generated(fixOutSel).filter((row) => /CAVITY CAGE/.test(row.item));
 const cage = (text) => byItem(cages, text);
-assert.equal(cage("820 CAVITY CAGE - 90MM WALL").qty, 2);
+assert.equal(cage("820 CAVITY CAGE - 90MM WALL")?.qty, 2, `Expected the 820 cavity cage; generated products: ${cages.map((row) => row.item).join(" | ")}`);
 assert.equal(cage("820 CAVITY CAGE - 90MM WALL").canonicalProductId, "master-CAVITY-CAGE-820-90MM");
 assert.equal(cage("720 CAVITY CAGE - 90MM WALL").canonicalProductId, "master-CAVITY-CAGE-720-90MM");
 assert.equal(cage("920 CAVITY CAGE - 90MM WALL").quoteRequired, true, "unsourced cage variant is PRICE REQUIRED, never $0 silently");
@@ -126,7 +131,7 @@ assert.equal(labour(selected, "fix-out stage labour", 150).qty, 2 + 1 + 1, "HANG
 assert.equal(labour(selected, "fix-out stage labour", 152).qty, 2 + 3 + 1 + 1 + 1 + 1, "HANG SINGLE DOOR = all internal openings minus cavity doors; purchasing subtypes do not narrow the labour total");
 assert.equal(labour(selected, "fix-out stage labour", 153).qty, 1, "HANG DOUBLE DOORS = double sets");
 // superseded legacy cage material rows are not costed twice
-assert.equal(labour(selected, "frame stage labour", 30043)?.cost ?? rowsIn(selected, "frame stage labour").find((r) => r.id === "quote-30043").cost, 0);
+assert.equal(labour(selected, "frame stage labour", 30043)?.cost, 0);
 // 14. BOQ + procurement keep product, size, wall thickness and quantities
 const boq = quotationSectionsForFinalBoq(selected.quotation).flatMap((entry) => entry.rows);
 assert.ok(boq.some((row) => row.id === r820.id && row.qty === 5));
@@ -139,7 +144,7 @@ const doorItem = procurement.find((item) => item.quoteRowId === r820.id);
 assert.equal(doorItem.qty, 5); assert.equal(doorItem.purchasingDetails.doorWidthMm, 820); assert.equal(doorItem.productId, hume820.productId);
 // 15. nothing hard-coded: a scaled Takeoff scales every quantity
 const scaled = calculateEstimateBuilderWorkbook(workbookFor(fixture(3)));
-assert.equal(byItem(generated(rowsIn(scaled, "fix out (88)")), "820 X 2040").qty, 9 + 6);
+assert.equal(byItem(generated(rowsIn(scaled, "fix out")), "820 X 2040").qty, 9 + 6);
 assert.equal(labour(scaled, "frame stage labour", 104).qty, 6 + 1 + 1);
 assert.equal(labour(scaled, "frame stage labour", 73).qty, 9 + 1 + 6 + 1);
 // 16. one canonical catalogue: rows reference catalogue products; cages are not client-selectable
@@ -150,7 +155,7 @@ assert.equal(PRODUCT_CATEGORY_REGISTRY["cavity-sliding-door-cages"].modules.clie
 assert.ok(toCanonicalProductContract(getCategoryProducts("cavity-sliding-door-cages")[0]).stableProductId);
 // no Takeoff -> no generated rows, labour unchanged
 const noTakeoff = calculateEstimateBuilderWorkbook(workbookFor(null));
-assert.equal(generated(rowsIn(noTakeoff, "fix out (88)")).length, 0);
+assert.equal(generated(rowsIn(noTakeoff, "fix out")).length, 0);
 
 log("Door takeoff quotation acceptance checks passed (16/16).");
 process.exit(0);

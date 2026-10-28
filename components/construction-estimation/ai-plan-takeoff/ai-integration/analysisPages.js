@@ -114,6 +114,8 @@ export function restoreAnalysisCoordinates(analysis, rotation = 0) {
       : rotation === 270 ? { x: 1 - y, y: x } : { x, y }) });
   const item = (value) => ({
     ...value,
+    ...(Array.isArray(value.polygon) ? { polygon: value.polygon.map(point) } : {}),
+    ...(Array.isArray(value.dimensionReferences) ? { dimensionReferences: value.dimensionReferences.map(reference => ({ ...reference, p1: point(reference.p1), p2: point(reference.p2) })) } : {}),
     ...(Array.isArray(value.nodes) ? { nodes: value.nodes.map(point) } : {}),
     ...(Number.isFinite(value.x) && Number.isFinite(value.y) ? point(value) : {}),
   });
