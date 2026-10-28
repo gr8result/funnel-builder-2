@@ -55,6 +55,9 @@ await step('2. complete the AI interview (essentials answered, optional ones ski
   assert.equal(r.body.interview.next.key, 'business');
   const tooEarly = await call(campaignRoute, asA({ method: 'POST', query: { id: campaignId }, body: { action: 'generate' } }));
   assert.equal(tooEarly.statusCode, 400, 'cannot generate before the essentials');
+  const failedAudit = (await db.pg.query(`select action, detail from landing_audit_log where entity_id = $1 and action = 'generation_failed'`, [campaignId])).rows;
+  assert.equal(failedAudit.length, 1, 'a failed generation leaves an audit trace on the pageless campaign');
+  assert.equal(failedAudit[0].detail.status, 400);
   await answer('business', 'Harbourline Homes, 02 9000 1234, hello@harbourline.test');
   await answer('objective', 'enquiries');
   await answer('offering', 'single and double storey custom homes');

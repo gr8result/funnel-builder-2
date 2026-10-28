@@ -27,6 +27,8 @@ if (REAL_AI) {
 const APP_PORT = Number(process.env.LP_E2E_PORT || (REAL_AI ? 3117 : 3107));
 const MOCK_PORT = Number(process.env.LP_E2E_DB_PORT || (REAL_AI ? 54409 : 54399));
 const APP = `http://localhost:${APP_PORT}`;
+// First-visit compiles on a loaded machine can exceed four minutes per page.
+const SLOW_MS = Number(process.env.LP_E2E_SLOW_MS || 240_000);
 const OUT = process.env.LP_E2E_OUT || `artifacts/landing-pages-e2e/${REAL_AI ? 'real-ai' : FIXTURES ? 'fixtures' : 'regression'}-${new Date().toISOString().replace(/[:.]/g, '-')}`;
 fs.mkdirSync(OUT, { recursive: true });
 const BUSINESS = REAL_AI ? 'Example Residential Builders' : 'Harbourline Homes';
@@ -124,11 +126,11 @@ try {
   const serverLog = fs.createWriteStream(path.join(OUT, 'next-dev.log'));
   serverLog.on('error', () => { /* the log file is diagnostics only */ });
   next.stdout.pipe(serverLog); next.stderr.pipe(serverLog);
-  await waitForHttp(`${APP}/api/ping`, 240_000);
+  await waitForHttp(`${APP}/api/ping`, Number(process.env.LP_E2E_SERVER_WAIT_MS || SLOW_MS));
 
-  browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-gpu', '--disable-gpu-compositing', '--window-size=1440,960'] });
+  browser = await puppeteer.launch({ headless: true, protocolTimeout: Math.max(180_000, SLOW_MS * 2), args: ['--no-sandbox', '--disable-gpu', '--disable-gpu-compositing', '--window-size=1440,960'] });
   const builder = await browser.newPage();
-  builder.setDefaultNavigationTimeout(120_000);
+  builder.setDefaultNavigationTimeout(SLOW_MS);
   await builder.setViewport({ width: 1440, height: 960 });
   const consoleErrors = [];
   builder.on('pageerror', (e) => consoleErrors.push(`pageerror: ${e.message}`));
@@ -161,31 +163,31 @@ try {
   };
 
   await step('1. create the campaign', async () => {
-    await builder.goto(`${APP}/modules/funnels`, { waitUntil: 'domcontentloaded', timeout: 240_000 });
-    await builder.waitForFunction(() => document.querySelector('[data-testid="create-ai-landing-page"]') || /Retry connection|Please sign in/.test(document.body.innerText), { timeout: 240_000 });
+    await builder.goto(`${APP}/modules/funnels`, { waitUntil: 'domcontentloaded', timeout: SLOW_MS });
+    await builder.waitForFunction(() => document.querySelector('[data-testid="create-ai-landing-page"]') || /Retry connection|Please sign in/.test(document.body.innerText), { timeout: SLOW_MS });
     if (!(await builder.$('[data-testid="create-ai-landing-page"]'))) {
       if (await builder.$('button')) await clickText('button', 'Retry connection');
-      await builder.waitForSelector('[data-testid="create-ai-landing-page"]', { timeout: 120_000 });
+      await builder.waitForSelector('[data-testid="create-ai-landing-page"]', { timeout: SLOW_MS });
     }
     assert.equal((await builder.$$('.sidenav a[href="/modules/landing-pages"]')).length, 0, 'no standalone Landing Pages sidebar item');
     assert.equal((await builder.$$('.sidenav a[href="/modules/funnels"]')).length, 1, 'one canonical Funnel Builder sidebar item');
     await builder.waitForSelector('.sidenav a[href="/modules/funnels"] .nav-item.active');
     // Creators are buttons that navigate via router.push; assert where each click lands.
     await builder.click('[data-testid="create-multi-step-funnel"]');
-    await builder.waitForFunction(() => location.pathname === '/modules/funnels/new' && document.body.innerText.includes('Create New Funnel'), { timeout: 120_000 });
+    await builder.waitForFunction(() => location.pathname === '/modules/funnels/new' && document.body.innerText.includes('Create New Funnel'), { timeout: SLOW_MS });
     await builder.waitForSelector('.sidenav a[href="/modules/funnels"] .nav-item.active');
     assert(await builder.$('a[href="/modules/landing-pages?from=sales-funnels"]'), 'existing wizard retains the landing-page entry');
-    await builder.goto(`${APP}/modules/funnels`, { waitUntil: 'domcontentloaded', timeout: 120_000 });
+    await builder.goto(`${APP}/modules/funnels`, { waitUntil: 'domcontentloaded', timeout: SLOW_MS });
     await builder.waitForSelector('[data-testid="create-ai-landing-page"]');
     await builder.click('[data-testid="create-ai-landing-page"]');
-    await builder.waitForFunction(() => location.pathname === '/modules/landing-pages' && new URLSearchParams(location.search).get('from') === 'sales-funnels', { timeout: 240_000 });
-    await builder.waitForSelector('input[aria-label="Campaign name"]', { timeout: 240_000 });
+    await builder.waitForFunction(() => location.pathname === '/modules/landing-pages' && new URLSearchParams(location.search).get('from') === 'sales-funnels', { timeout: SLOW_MS });
+    await builder.waitForSelector('input[aria-label="Campaign name"]', { timeout: SLOW_MS });
     await builder.waitForSelector('.sidenav a[href="/modules/funnels"] .nav-item.active');
     await builder.type('input[aria-label="Campaign name"]', 'Build Your Dream Home in 2027');
     await clickText('button', 'Create campaign');
-    await builder.waitForFunction(() => /\/modules\/landing-pages\/[0-9a-f-]{36}$/.test(location.pathname), { timeout: 240_000 });
+    await builder.waitForFunction(() => /\/modules\/landing-pages\/[0-9a-f-]{36}$/.test(location.pathname), { timeout: SLOW_MS });
     campaignId = builder.url().split('/').pop();
-    await builder.waitForSelector('[data-testid="interview-composer"]', { timeout: 240_000 });
+    await builder.waitForSelector('[data-testid="interview-composer"]', { timeout: SLOW_MS });
   });
 
   const question = () => text('[data-testid="interview-composer"] > div');
@@ -254,7 +256,7 @@ try {
   });
 
   await step('3. generate a professional landing page', async () => {
-    const providerResponse = builder.waitForResponse((response) => response.url().includes('/api/landing-pages/campaigns/') && response.request().method() === 'POST' && JSON.parse(response.request().postData() || '{}').action === 'generate', { timeout: 120_000 });
+    const providerResponse = builder.waitForResponse((response) => response.url().includes('/api/landing-pages/campaigns/') && response.request().method() === 'POST' && JSON.parse(response.request().postData() || '{}').action === 'generate', { timeout: SLOW_MS });
     await builder.click('[data-testid="generate-page"]');
     const generated = await (await providerResponse).json();
     if (REAL_AI) {
@@ -272,9 +274,9 @@ try {
       assert.equal(generated.aiStatus.architecture, 'fallback');
       assert.equal(generated.aiStatus.copy, 'fallback');
     }
-    await builder.waitForFunction(() => location.pathname.includes('/modules/landing-pages/editor/'), { timeout: 240_000 });
+    await builder.waitForFunction(() => location.pathname.includes('/modules/landing-pages/editor/'), { timeout: SLOW_MS });
     pageId = builder.url().split('/editor/')[1].split('?')[0];
-    await builder.waitForSelector('[data-testid="canvas"] .lp-s-hero h1', { timeout: 240_000 });
+    await builder.waitForSelector('[data-testid="canvas"] .lp-s-hero h1', { timeout: SLOW_MS });
     primaryDocument = (await mock.pg.query('select document from landing_pages where id=$1', [pageId])).rows[0].document;
     if (REAL_AI) {
       const publicCopy = JSON.stringify(primaryDocument.sections.map((section) => section.props));
@@ -317,7 +319,7 @@ try {
     await builder.click('[data-testid="tab-ai"]');
     const instruction = REAL_AI ? 'Improve only the hero headline and subheadline for residential homebuilding customers in South East Queensland planning to build in 2027. Make the free initial building consultation compelling and the copy specific. Do not change the theme, images, form, other hero properties or any other section. Do not invent claims.' : 'Change this campaign to target first-home buyers';
     const requestEdit = async () => {
-      const providerResponse = builder.waitForResponse((response) => response.url().includes('/api/landing-pages/pages/') && response.request().method() === 'POST' && JSON.parse(response.request().postData() || '{}').action === 'assistant', { timeout: 120_000 });
+      const providerResponse = builder.waitForResponse((response) => response.url().includes('/api/landing-pages/pages/') && response.request().method() === 'POST' && JSON.parse(response.request().postData() || '{}').action === 'assistant', { timeout: SLOW_MS });
       const input = await builder.$('[data-testid="ai-input"]');
       await input.click({ clickCount: 3 }); await builder.keyboard.press('Backspace'); await input.type(instruction);
       await builder.keyboard.press('Enter');
@@ -379,7 +381,7 @@ try {
         assert.equal(stored.type, 'image/jpeg');
         assert.equal(stored.bytes[0], 0xff); assert.equal(stored.bytes[1], 0xd8, 'stored asset is a JPEG returned by the image API');
         imageEvidence.push({ provider: result.source, url: result.url, objectKey, bytes: stored.bytes.length, contentType: stored.type });
-        await builder.waitForFunction(() => !document.querySelector('[data-testid="image-upload"]'), { timeout: 120_000 });
+        await builder.waitForFunction(() => !document.querySelector('[data-testid="image-upload"]'), { timeout: SLOW_MS });
         return result;
       };
       const generated = await generateFromProvider();
@@ -429,7 +431,7 @@ try {
     await builder.click('[data-testid="save"]');
     await waitSaved();
     await builder.reload({ waitUntil: 'domcontentloaded' });
-    await builder.waitForSelector('[data-testid="canvas"] .lp-s-hero h1', { timeout: 120_000 });
+    await builder.waitForSelector('[data-testid="canvas"] .lp-s-hero h1', { timeout: SLOW_MS });
     assert.equal(await text('[data-testid="canvas"] .lp-s-hero h1'), acceptedHeadline);
     if (!REAL_AI) assert.match(await text('[data-testid="canvas"] .lp-s-benefits h2'), /first-home buyers/i);
     assert.equal(await builder.$eval('[data-testid="canvas"] .lp-s-hero img', (i) => i.src), newImage);
@@ -489,7 +491,7 @@ try {
 
   const visitorContext = await browser.createBrowserContext();
   const visitor = await visitorContext.newPage();
-  visitor.setDefaultNavigationTimeout(120_000);
+  visitor.setDefaultNavigationTimeout(SLOW_MS);
   const visitorErrors = [];
   const failedRequests = [];
   visitor.on('pageerror', (e) => visitorErrors.push(e.message));
@@ -507,7 +509,7 @@ try {
 
   await step('10-11. public URL renders on desktop and mobile with working links and images', async () => {
     await visitor.setViewport({ width: 1440, height: 900 });
-    const res = await visitor.goto(`${publicUrl}?utm_source=facebook&utm_medium=social&utm_campaign=build-your-dream-home-in-2027`, { waitUntil: 'networkidle0', timeout: 240_000 });
+    const res = await visitor.goto(`${publicUrl}?utm_source=facebook&utm_medium=social&utm_campaign=build-your-dream-home-in-2027`, { waitUntil: 'networkidle0', timeout: SLOW_MS });
     assert.equal(res.status(), 200);
     assert.equal(await visitor.$eval('.lp-s-hero h1', (e) => e.innerText), acceptedHeadline);
     if (REAL_AI) {
@@ -586,7 +588,7 @@ try {
     for (const re of [/Build Your Dream Home in 2027/, /Kellyville|Four bedrooms/, /utm_source/, new RegExp(campaignId)]) assert.match(note, re);
     // Builder sees it in the campaign and opens it in CRM
     await builder.goto(`${APP}/modules/landing-pages/${campaignId}`, { waitUntil: 'domcontentloaded' });
-    await builder.waitForSelector('[role=tab]', { timeout: 120_000 });
+    await builder.waitForSelector('[role=tab]', { timeout: SLOW_MS });
     await clickText('[role=tab]', 'Enquiries (1)');
     await builder.waitForFunction(() => document.body.innerText.includes('Jordan Rivers') && document.body.innerText.includes('In CRM'), { timeout: 30_000 });
     await capture(builder, { path: path.join(OUT, '08-campaign-enquiries.png') });
@@ -598,7 +600,7 @@ try {
 
   await step('16-17. republish an edited version and the live page updates', async () => {
     await builder.goto(`${APP}/modules/landing-pages/editor/${pageId}`, { waitUntil: 'domcontentloaded' });
-    await builder.waitForSelector('[data-testid="canvas"] .lp-s-hero h1', { timeout: 120_000 });
+    await builder.waitForSelector('[data-testid="canvas"] .lp-s-hero h1', { timeout: SLOW_MS });
     await builder.click('[data-testid="canvas"] .lp-s-hero h1');
     await builder.keyboard.down('Control'); await builder.keyboard.press('KeyA'); await builder.keyboard.up('Control');
     await builder.keyboard.type('Your 2027 home, designed around your family');
@@ -608,13 +610,13 @@ try {
     await builder.waitForSelector('[data-testid="publish-confirm"]:not([disabled])');
     await builder.click('[data-testid="publish-confirm"]');
     await builder.waitForSelector('[data-testid="public-url"]', { timeout: 60_000 });
-    await visitor.goto(publicUrl, { waitUntil: 'domcontentloaded', timeout: 120_000 });
-    await visitor.waitForFunction(() => document.querySelector('.lp-s-hero h1')?.innerText === 'Your 2027 home, designed around your family', { timeout: 120_000 });
+    await visitor.goto(publicUrl, { waitUntil: 'domcontentloaded', timeout: SLOW_MS });
+    await visitor.waitForFunction(() => document.querySelector('.lp-s-hero h1')?.innerText === 'Your 2027 home, designed around your family', { timeout: SLOW_MS });
     assert.equal(await visitor.$eval('.lp-s-hero h1', (e) => e.innerText), 'Your 2027 home, designed around your family');
     const versions = (await mock.pg.query(`select kind from landing_page_versions where page_id=$1 order by version_no`, [pageId])).rows.map((r) => r.kind);
     assert.equal(versions.filter((k) => k === 'publish').length, 2, `two published versions kept (${versions.join(',')})`);
-    await builder.goto(`${APP}/modules/landing-pages/editor/${pageId}`, { waitUntil: 'domcontentloaded', timeout: 120_000 });
-    await builder.waitForSelector('[data-testid="canvas"] .lp-s-hero h1', { timeout: 120_000 });
+    await builder.goto(`${APP}/modules/landing-pages/editor/${pageId}`, { waitUntil: 'domcontentloaded', timeout: SLOW_MS });
+    await builder.waitForSelector('[data-testid="canvas"] .lp-s-hero h1', { timeout: SLOW_MS });
     assert.equal(await text('[data-testid="canvas"] .lp-s-hero h1'), 'Your 2027 home, designed around your family', 'republished content survives editor reopen');
   });
 
@@ -677,8 +679,8 @@ try {
       assert.equal(sequence[0], 'hero');
       assert.equal(sequence.at(-2), 'enquiry');
       assert.equal(sequence.at(-1), 'footer');
-      await builder.goto(`${APP}/modules/landing-pages/editor/${generated.pageId}`, { waitUntil: 'domcontentloaded', timeout: 120_000 });
-      await builder.waitForSelector('[data-testid="canvas"] .lp-s-hero h1', { timeout: 120_000 });
+      await builder.goto(`${APP}/modules/landing-pages/editor/${generated.pageId}`, { waitUntil: 'domcontentloaded', timeout: SLOW_MS });
+      await builder.waitForSelector('[data-testid="canvas"] .lp-s-hero h1', { timeout: SLOW_MS });
       const rendered = await builder.$$eval('[data-testid="canvas"] [data-section-type]', (els) => els.map((e) => e.dataset.sectionType));
       assert.deepEqual(rendered, sequence, `${item.name} browser sections match its plan`);
       const pageDocument = (await mock.pg.query('select document from landing_pages where id=$1', [generated.pageId])).rows[0].document;
@@ -738,7 +740,7 @@ try {
           await clickText('header button', 'History');
           await builder.waitForFunction(() => document.body.innerText.toLowerCase().includes('version history'));
           await builder.waitForFunction(() => /first generation/i.test(document.querySelector('aside[aria-label="Edit panel"]')?.innerText || ''));
-          await builder.goto(`${APP}/modules/landing-pages/editor/${generated.pageId}`, { waitUntil: 'domcontentloaded', timeout: 120_000 });
+          await builder.goto(`${APP}/modules/landing-pages/editor/${generated.pageId}`, { waitUntil: 'domcontentloaded', timeout: SLOW_MS });
           await builder.waitForSelector('[data-testid="canvas"] .lp-s-hero h1', { timeout: 60_000 });
           assert.equal(await text('[data-testid="canvas"] .lp-s-hero h1'), 'Dental care for every stage', 'saved content is present after reopening');
           assert.equal(await text('[data-testid="canvas"] .lp-s-hero .lp-btn-primary'), 'Book a dental visit');
@@ -747,15 +749,15 @@ try {
       }
       if (REAL_AI) {
         await builder.setViewport({ width: 1440, height: 960 });
-        await builder.waitForFunction(() => document.querySelector('[data-testid="canvas"] .lp-s-hero h1') && !document.body.innerText.includes('Loading editor'), { timeout: 120_000 });
+        await builder.waitForFunction(() => document.querySelector('[data-testid="canvas"] .lp-s-hero h1') && !document.body.innerText.includes('Loading editor'), { timeout: SLOW_MS });
         await capture(builder, { path: path.join(OUT, `business-${slugify(item.name)}-desktop.png`) });
         await builder.setViewport({ width: 390, height: 844, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
-        await builder.waitForFunction(() => document.querySelector('[data-testid="canvas"] .lp-s-hero h1') && !document.body.innerText.includes('Loading editor'), { timeout: 120_000 });
+        await builder.waitForFunction(() => document.querySelector('[data-testid="canvas"] .lp-s-hero h1') && !document.body.innerText.includes('Loading editor'), { timeout: SLOW_MS });
         await capture(builder, { path: path.join(OUT, `business-${slugify(item.name)}-mobile.png`) });
       } else {
         for (const viewport of [{ name: 'desktop', width: 1440, height: 960 }, { name: 'tablet', width: 834, height: 1112 }, { name: 'mobile', width: 390, height: 844, isMobile: true, hasTouch: true, deviceScaleFactor: 2 }]) {
           await builder.setViewport(viewport);
-          await builder.goto(`${APP}/modules/landing-pages/preview/${generated.pageId}`, { waitUntil: 'networkidle0', timeout: 120_000 });
+          await builder.goto(`${APP}/modules/landing-pages/preview/${generated.pageId}`, { waitUntil: 'networkidle0', timeout: SLOW_MS });
           await builder.waitForSelector('.lp-root .lp-s-hero h1', { timeout: 60_000 });
           await builder.evaluate(async () => { for (let y = 0; y < document.body.scrollHeight; y += 600) { window.scrollTo(0, y); await new Promise((resolve) => setTimeout(resolve, 80)); } window.scrollTo(0, 0); });
           const readyImages = await builder.waitForFunction(() => Array.from(document.querySelectorAll('.lp-root img')).every((image) => image.complete && image.naturalWidth > 1 && image.naturalHeight > 1), { timeout: 60_000 });
