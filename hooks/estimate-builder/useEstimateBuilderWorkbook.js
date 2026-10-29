@@ -2,27 +2,104 @@ import { browserTenantKey, builderLocalStorage, builderSessionStorage, scopeBrow
 import { CURRENT_BUILDER_WORKSPACE_ID } from '../../lib/builders/currentBuilderSeed.js';
 import { addCabinetryCatalogueItem } from '../../lib/construction-estimation/finalCabinetryQuotation.js';
 import { reconcileCabinetryQuotation } from '../../lib/construction-estimation/finalCabinetryQuotation.js';
-import { applyCabinetryRequirementsToQuotation, setCabinetryRequirements, migrateWorkbookCabinetSchedules } from '../../lib/construction-estimation/cabinetryRequirements.js';
+import { applyCabinetryRequirementsToQuotation, setCabinetryRequirements, migrateWorkbookCabinetSchedules, classifyLegacyCabinetLine, returnCabinetryRowToAutomatic, updateCabinetrySelectionRequirement } from '../../lib/construction-estimation/cabinetryRequirements.js';
 import { connectTenantSelectionMetadata } from '../../lib/builders/tenantSelectionQuotation.js';
+import { connectAllocatedSelectionsToQuotation } from '../../lib/builders/allocatedSelectionQuotation.js';
+import { connectEntryDoorFurnitureSchedules } from '../../lib/builders/entryDoorFurnitureSelection.js';
 import { linkInternalPaintColoursToQuotation } from '../../lib/builders/internalPaintColours.js';
 import { connectElectricalScheduleToQuotation } from '../../lib/builders/electricalSchedule.js';
+import { connectFlooringSelectionsToQuotation } from '../../lib/builders/flooringSelection.js';
+import { connectApplianceSelectionsToQuotation } from '../../lib/builders/applianceClientSelectionFlow.js';
+import { connectTilingSelectionsToQuotation } from '../../lib/builders/tilingRooms.js';
 import { applySelectionProduct, applyInclusionScheduleToQuote } from '../../lib/builders/selectionQuoteEngine.js';
+import { applyConstructionBaselineSpecifications } from '../../lib/standard-inclusions/jobBaseline.mjs';
 import { withStableQuoteTargets, preserveQuoteQuantityOwnership } from '../../lib/builders/selectionRegistry.js';
+import { deferUnapprovedQuotationChanges, planSelectionReconciliation } from '../../lib/builders/selectionReconciliation.js';
+import { normalizeSelectionPackRoomAliases } from '../../lib/builders/plumbingSelectionPatch.js';
+import { connectExternalLightingToQuotation } from '../../lib/builders/externalLightingQuotation.js';
+import { linkExteriorPaintToQuotation } from '../../lib/builders/exteriorPaintQuotation.js';
 import { takeoffProcurementDetails, assignPlasterboardSupplier, procurementSupplierKey } from '../../lib/construction-estimation/takeoffProcurement.js';
 import { masterJobId, linkTakeoffToMasterJob, mergeMasterJobSummaries, findMasterJobForProject } from '../../lib/construction-estimation/masterJob.js';
 import { normalizeTakeoffInputSection } from '../../lib/construction-estimation/takeoffInputRows.js';
-import { applyPersistedQuotationOrder, persistedSectionOrder, stampQuotationOrder } from "../../lib/construction-estimation/quotationOrder.js";
+import { applyPersistedQuotationOrder, ensureQuotationSectionIds, persistedSectionOrder, quotationNamesForSectionIds, quotationSectionOrderIds, stampQuotationOrder } from "../../lib/construction-estimation/quotationOrder.js";
+import { compareQuotationRevisions } from "../../lib/construction-estimation/quotationRevisionComparison.js";
+import { reconcileProductSelections } from "../../lib/builders/productSelectionIntegrity.js";
+import { selectionReconciliationFinancialImpact } from "../../lib/builders/quotationFinancialImpact.js";
+import { withCommercialSnapshotAssociation } from "../../lib/builders/commercialJobAssociation.js";
+import { commercialSnapshotHasCompleteWorkbook } from "../../lib/builders/commercialSnapshotPayload.js";
+import { refreshSelectionProcurementRequirements } from "../../lib/builders/selectionProcurementRequirements.js";
+import { commercialPriceProposalById, proposalRateExGst } from "../../lib/builders/commercialPriceProposals.js";
+import { createCommercialIssueRfq, excludeCommercialIssue, selectCommercialIssueProduct, updateCommercialQuoteRow } from "../../lib/builders/commercialIssueResolution.js";
+import { reconcileSelectionTargets } from "../../lib/builders/quotationTargetResolver.js";
+import { normalizeQuotationStructure, quotationSectionOrderAfterNormalize } from "../../lib/construction-estimation/quotationStructure.js";
+import { SYSTEM_TRADE_TEMPLATES, addApprovedVariation, approveClaim, assignSupplier, attachSubcontractPurchaseOrders, linkContractToJobBoard, recordPayment, rejectClaim, sectionCoveredBySubcontract, setAgreedAmount, setMilestoneCompletion, setMilestoneField, setMilestoneLink, submitClaim } from "../../lib/construction-estimation/tradePaymentSchedule.js";
+import { applyJobBoardToContracts, describeTradeContractSync, ganttTaskOptions, linkContractsToGantt, syncTradeContracts } from "../../lib/construction-estimation/tradeContractWorkbook.js";
+import { loadBuilderTemplates, loadBuilderTemplatesShared, saveBuilderTemplateShared, templateFromContract } from "../../lib/construction-estimation/tradePaymentTemplateStore.js";
+import { loadJobBoardJobs, loadJobBoardTaskRecords } from "../../lib/construction-estimation/tradePaymentJobBoardClient.js";
+import { loadGanttByJobId } from "../../components/estimate-builder/gantt/ganttUtils.js";
 import { withWallLiningMappings } from '../../lib/construction-estimation/quotationWallLinings.js';
 import { acknowledgeQuotationNotification } from '../../lib/construction-estimation/quotationNotifications.js';
-import { persistCompleteJob, jobContentSignature, restoreCompleteWorkbook, normalizeJobForCurrentSchema, isProtectedRecoveryRecord, PROTECTED_RECOVERY_JOB_KEY } from "../../lib/construction-estimation/jobPersistence.js";
+import { persistCompleteJob, jobDirtySignature, restoreCompleteWorkbook, normalizeJobForCurrentSchema, isProtectedRecoveryRecord, PROTECTED_RECOVERY_JOB_KEY } from "../../lib/construction-estimation/jobPersistence.js";
 import { externalizeTakeoffPlanPages, materializeTakeoffPlanPages } from "../../components/construction-estimation/ai-plan-takeoff/planBlobStorage.js";
-import { getMasterProducts } from "../../lib/product-library/catalogueService.js";
+import { jobJsonByteLength } from "../../lib/construction-estimation/jobSerialization.js";
+import { getEffectiveProductCatalogue } from "../../lib/product-library/catalogueService.js";
+import { currentTabId, jobKeyFromLocation, knownJobRevision, rememberJobRevision, writeJobToLocation } from "../../lib/construction-estimation/jobContext.js";
+import { commitJobToSharedStorage } from "../../lib/job-storage/sharedSync.js";
 
-// Product Library lookup for the tiling connector (tile sizes, box coverage, prices).
-let masterProductIndex = null;
-function masterProductById(id) {
-  if (!masterProductIndex) masterProductIndex = new Map(getMasterProducts().map((product) => [product.productId, product]));
-  return masterProductIndex.get(id) || null;
+// Product Library lookup for schedule connectors. Private products are visible only through
+// the active workbook's already-hydrated, workspace-scoped effective catalogue.
+function productByIdForWorkbook(workbook = {}) {
+  const workspaceId = String(workbook.workspaceId || workbook.workspace_id || "").trim();
+  if (!workspaceId || (typeof window !== "undefined" && browserWorkspaceId() !== workspaceId)) return () => null;
+  const catalogue = getEffectiveProductCatalogue({ organisationId: workspaceId, includeDisabled: true });
+  if (catalogue.organisationId !== workspaceId) return () => null;
+  const products = new Map(catalogue.products.map((product) => [String(product.productId), product]));
+  const productsByCode = new Map();
+  const indexCode = (code, supplier, product) => {
+    const normalizedCode = String(code || "").trim().toLowerCase();
+    if (!normalizedCode) return;
+    const supplierKey = String(supplier || "").trim().toLowerCase();
+    const key = `${supplierKey}\u0000${normalizedCode}`;
+    const existing = productsByCode.get(key);
+    productsByCode.set(key, existing && existing.productId !== product.productId ? null : product);
+  };
+  for (const product of catalogue.products) {
+    for (const code of [product.productCode, product.supplierCode, product.sku]) {
+      indexCode(code, product.supplier, product);
+      indexCode(code, "", product);
+    }
+    const codeSuffix = String(product.productCode || "").split("-").pop();
+    if (/^\d+$/.test(codeSuffix)) {
+      indexCode(codeSuffix, product.supplier, product);
+      indexCode(codeSuffix, "", product);
+    }
+  }
+  const lookup = (productId) => products.get(String(productId || "")) || null;
+  lookup.byCode = (code, supplier = "") => productsByCode.get(`${String(supplier).trim().toLowerCase()}\u0000${String(code || "").trim().toLowerCase()}`) || null;
+  return lookup;
+}
+
+function selectedProductIds(book = {}) {
+  const ids = new Set();
+  const visit = (value) => {
+    if (Array.isArray(value)) { value.forEach(visit); return; }
+    if (!value || typeof value !== "object") return;
+    if (typeof value.productId === "string" && value.productId) ids.add(value.productId);
+    if (typeof value.canonicalProductId === "string" && value.canonicalProductId) ids.add(value.canonicalProductId);
+    Object.values(value).forEach(visit);
+  };
+  visit(book);
+  return [...ids];
+}
+
+function assertSelectedWorkspaceProductsAvailable(book, workbook, catalogueState = {}) {
+  const productById = productByIdForWorkbook(workbook);
+  const uuid = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
+  const missing = selectedProductIds(book).filter((id) => uuid.test(id) && !productById(id));
+  if (!missing.length) return;
+  if (catalogueState.loading) throw new Error("Builder product catalogue is still loading. Retry saving Client Selections when synchronization finishes.");
+  if (catalogueState.error) throw new Error(`Builder product catalogue is unavailable: ${catalogueState.error}`);
+  throw new Error("A selected workspace product is unavailable to this builder. Reload the catalogue before saving.");
 }
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { V4_DATA_SECTIONS, V4_WINDOW_TYPES } from "../../lib/construction-estimation/estimateWorksheetV4Schema.js";
@@ -102,7 +179,7 @@ const OLD_LINEN_AND_ROBE_DOOR_SECTIONS = new Set([
 const BLANK_INPUT_QUOTE_SECTION_NAMES = new Set(["roof framing"]);
 const BLANK_QTY_QUOTE_SECTION_NAMES = new Set(["demolition works", "base brickwork", "face brickwork", "bricklayers labour", "entry doors", "double entry doors", "windows", "couplings", "misc", "materials", "roofing materials", "roofing labour", "renderers labour", "misc rendering"]);
 const BLANK_VALUE_QUOTE_SECTION_NAMES = new Set(["hourly rate"]);
-const TILING_MANUAL_QUOTE_SECTION_NAMES = new Set(["tiling", "toilet", "other room/s", "kitchen", "tile layer", "plumbing fittings & tapwear", "kitchen sinks", "kitchen taps", "vanity basins"]);
+const TILING_MANUAL_QUOTE_SECTION_NAMES = new Set(["tiling", "toilet", "other room/s", "kitchen", "tile layer", "plumbing fittings & tapwear", "kitchen sinks", "kitchen taps", "vanity basins", "plumbing fixtures & hot water"]);
 const EDITABLE_LINKED_QUOTE_KEYS = new Set([
   "cavityDoorQty",
   "quoteFaceBricksBaseRange",
@@ -182,9 +259,56 @@ const RENAMED_QUOTE_SECTION_NAMES = new Map([
   ["engeineered timber", "ENGINEERED TIMBER"],
 ]);
 
+function bindSelectionFoundationToQuotation(workbook, foundation) {
+  const sectionId = (reference) => workbook.quotation?.[reference]?.id || reference;
+  return {
+    ...foundation,
+    mappings: (foundation.mappings || []).map((mapping) => ({
+      ...mapping,
+      quote_section_id: sectionId(mapping.quote_section_id),
+      ...(mapping.metadata?.locationTargets ? { metadata: { ...mapping.metadata, locationTargets: mapping.metadata.locationTargets.map((target) => ({ ...target, sectionId: sectionId(target.sectionId) })) } } : {}),
+    })),
+  };
+}
+
+// Compare the same shape prepareWorkbookForJobSave persists. Normalising quotation
+// order on write must not make an otherwise identical live workbook dirty again.
+function jobContentSignature(workbook) {
+  if (!workbookHasExplicitJobIdentity(workbook)) return jobDirtySignature(workbook);
+  return jobDirtySignature({
+    ...withPersistedQuotationOrder(workbook),
+    templateKey: workbook.templateKey || MASTER_TEMPLATE_KEY,
+    templateName: workbook.templateName || MASTER_TEMPLATE_NAME,
+    templateType: "job",
+  });
+}
+
 function estimateBuilderLog(event, details = {}) {
   if (typeof window === "undefined") return;
   console.info(`[Estimate Builder] ${event}`, details);
+}
+
+const calculatedWorkbookPreviews = new WeakMap();
+
+function recordEstimateHydrationTiming(stage, details = {}) {
+  if (typeof window === "undefined") return;
+  try {
+    if (builderLocalStorage.getItem("estimate-builder-hydration-timing") !== "true") return;
+    window.__estimateBuilderHydrationTrace ||= [];
+    window.__estimateBuilderHydrationTrace.push({ stage, atMs: Math.round(performance.now()), ...details });
+  } catch {}
+}
+
+function calculateWorkbookPreview(workbook) {
+  const cached = calculatedWorkbookPreviews.get(workbook);
+  if (cached) return cached;
+  const startedAt = typeof performance === "undefined" ? 0 : performance.now();
+  const calculated = calculateEstimateBuilderWorkbook(workbook);
+  calculatedWorkbookPreviews.set(workbook, calculated);
+  recordEstimateHydrationTiming("workbook-calculated", {
+    durationMs: Math.round((typeof performance === "undefined" ? startedAt : performance.now()) - startedAt),
+  });
+  return calculated;
 }
 
 function takeoffPersistenceCounts(workbook = {}) {
@@ -210,6 +334,7 @@ function takeoffPersistenceCounts(workbook = {}) {
 
 export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
   const previewMode = Boolean(options.previewMode);
+  const catalogueState = options.catalogueState || { loading: false, error: "" };
   // Build the startup workbook once per mount; both initial states derive from the same object.
   const [startupState] = useState(() => {
     const startupWorkbook = initialWorkbook(initialValues, { previewMode });
@@ -253,27 +378,16 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
   const completedJobLoadVersionRef = useRef(0);
   const autosavePausedRef = useRef(false);
   const autosaveInFlightRef = useRef(false);
+  const [autosaveCompletion, setAutosaveCompletion] = useState(0);
   const lastAutosaveSignatureRef = useRef("");
   const lastLinkedTemplateRef = useRef(loadLastLinkedTemplateReference());
   const allowUnlinkedJobSaveRef = useRef(loadAllowUnlinkedJobSave());
   const workbookRef = useRef(workbook);
+  const builderRequirementMappingsRef = useRef([]);
   workbookRef.current = workbook;
   const clientSelectionsSavePendingRef = useRef(null);
   const clientSelectionsSaveRunningRef = useRef(false);
   const saveClientSelectionsBookRef = useRef(null);
-  // Also migrate a job already open when this code is loaded, without resetting it.
-  useEffect(() => {
-    const owner = workbook.workspaceId || browserWorkspaceId();
-    if (reconcileCabinetryQuotation(workbook, owner) !== workbook) {
-      setWorkbook(current => reconcileCabinetryQuotation(current, owner));
-      return;
-    }
-    // Takeoff / Job Setup own cabinetry Qty and the selected finish owns the row: any change to
-    // either (import, edit, selection save, baseline, open, reload) lands here.
-    if (applyCabinetryRequirementsToQuotation(workbook, owner) !== workbook) {
-      setWorkbook(current => applyCabinetryRequirementsToQuotation(current, owner));
-    }
-  }, [workbook]);
   function updateWorkbookState(updater) {
     setWorkbook((current) => {
       const next = typeof updater === "function" ? updater(current) : updater;
@@ -295,7 +409,7 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     ? workbook
     : deferredWorkbook;
   const rawPreview = useMemo(
-    () => (hydrated ? calculateEstimateBuilderWorkbook(calculationWorkbook) : null),
+    () => (hydrated ? calculateWorkbookPreview(calculationWorkbook) : null),
     [calculationWorkbook, hydrated],
   );
   const preview = useMemo(() => normaliseEstimatePreview(rawPreview), [rawPreview]);
@@ -343,12 +457,20 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     let cancelled = false;
     const startupLoadOperationId = workbookLoadOperationRef.current;
     (async () => {
+      recordEstimateHydrationTiming("hydration-start");
       clearActiveRegisteredEstimateJob();
+      // The job this tab's address names, read before anything can rewrite the address.
+      const urlJobKey = jobKeyFromLocation();
       const explicitJobKey = loadExplicitActiveJobSessionKey();
+      recordEstimateHydrationTiming("job-identity-resolved", { explicitJobKey, urlJobKey });
       let explicitLoadFailed = false;
       if (explicitJobKey) {
         let explicitRecord;
-        try { explicitRecord = await loadStoredJob(explicitJobKey); }
+        try {
+          const loadStartedAt = performance.now();
+          explicitRecord = await loadStoredJob(explicitJobKey);
+          recordEstimateHydrationTiming("indexeddb-job-loaded", { durationMs: Math.round(performance.now() - loadStartedAt) });
+        }
         catch (error) {
           // A read failure can be transient, so keep the pointer for a reload retry.
           explicitLoadFailed = true;
@@ -374,17 +496,34 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
         ) {
           const recovered = explicitRecord; // Automatic recovery is disabled.
           if (cancelled || workbookLoadOperationRef.current !== startupLoadOperationId) return;
-          const nextWorkbook = normalizeWorkbook(recovered.workbook);
+          const normalizeStartedAt = performance.now();
+          let nextWorkbook = normalizeWorkbook(recovered.workbook);
+          recordEstimateHydrationTiming("workbook-normalized", { durationMs: Math.round(performance.now() - normalizeStartedAt) });
+          const withWindowRates = syncWindowDoorApproximateRates(nextWorkbook);
+          const calculated = calculateWorkbookPreview(withWindowRates);
+          const syncedWorkbook = syncEditableLinkedQuoteQuantities(withWindowRates, normaliseEstimatePreview(calculated));
+          if (syncedWorkbook !== withWindowRates) {
+            nextWorkbook = syncedWorkbook;
+            // Linked quantity synchronization persists the quantities already used by the
+            // calculation. Reuse that exact result instead of recalculating all 3,531 rows.
+            calculatedWorkbookPreviews.set(nextWorkbook, calculated);
+          } else {
+            nextWorkbook = withWindowRates;
+          }
+          recordEstimateHydrationTiming("startup-derived-state-ready");
           workbookRef.current = nextWorkbook;
           setWorkbook(nextWorkbook);
           setActiveWorkbookPage(resolveLastActiveWorkbookPage(nextWorkbook));
           setLastSavedAt(recovered.savedAt || recovered.workbook?.savedAt || "");
+          const signatureStartedAt = performance.now();
           const signature = jobContentSignature(nextWorkbook);
+          recordEstimateHydrationTiming("content-signature-ready", { durationMs: Math.round(performance.now() - signatureStartedAt) });
           setSavedContentSignature(signature);
           if (!recovered.recoveredFromBackupKey) lastAutosaveSignatureRef.current = signature;
           setRecentJobs(loadRecentEstimateJobs());
           setRecentEstimateFiles(loadRecentEstimateFiles());
           setHydrated(true);
+          recordEstimateHydrationTiming("react-state-initialized");
           estimateBuilderLog("loading workbook", {
             source: "explicit-session-active-job",
             destination: "builder-workspace",
@@ -398,36 +537,16 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
       }
       if (cancelled || workbookLoadOperationRef.current !== startupLoadOperationId) return;
 
-      // The session-key pointer above is only a fast hint. It can go missing (a
-      // fresh tab restore after an OOM crash, a browser evicting localStorage
-      // under memory pressure) or point at a stale record, even while the job
-      // itself is still safely persisted in IndexedDB. Before declaring "no job
-      // open" - which also wipes the durable active-job pointer - fall back to
-      // the durable record so a still-existing job is never abandoned.
-      const fallbackRecovered = await loadLastActiveOrRecentStoredJob().catch(() => null);
-      if (cancelled || workbookLoadOperationRef.current !== startupLoadOperationId) return;
-      if (fallbackRecovered?.workbook && workbookHasExplicitJobIdentity(fallbackRecovered.workbook)) {
-        const nextWorkbook = normalizeWorkbook(fallbackRecovered.workbook);
-        workbookRef.current = nextWorkbook;
-        setWorkbook(nextWorkbook);
-        setActiveWorkbookPage(resolveLastActiveWorkbookPage(nextWorkbook));
-        setLastSavedAt(fallbackRecovered.savedAt || nextWorkbook.savedAt || "");
-        const signature = jobContentSignature(nextWorkbook);
-        setSavedContentSignature(signature);
-        if (!fallbackRecovered.recoveredFromBackupKey) lastAutosaveSignatureRef.current = signature;
-        saveExplicitActiveJobSessionKey(workbookJobKey(nextWorkbook));
+      // A tab whose address or tab-session pointer names a job opens THAT job or none. Never
+      // fall back to another browser-wide active/recent job: a fresh tab must not inherit a job
+      // that the user did not explicitly open in this tab.
+      if (urlJobKey) {
+        if (!explicitLoadFailed) setPersistenceStatus({ state: "error", label: "The job in this link is not saved in this browser. Open it from its job file or the job list.", detail: "No other job was opened in its place." });
         setRecentJobs(loadRecentEstimateJobs());
         setRecentEstimateFiles(loadRecentEstimateFiles());
         setHydrated(true);
-        estimateBuilderLog("loading workbook", {
-          source: "durable-active-job-pointer",
-          destination: "builder-workspace",
-          key: workbookJobKey(nextWorkbook),
-          mode: "job",
-        });
         return;
       }
-
       await clearActiveStoredJob().catch(() => {});
       if (cancelled || workbookLoadOperationRef.current !== startupLoadOperationId) return;
       estimateBuilderLog("loading workbook", {
@@ -443,6 +562,21 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!hydrated || !rawPreview || typeof window === "undefined") return undefined;
+    let secondFrame = 0;
+    const firstFrame = window.requestAnimationFrame(() => {
+      secondFrame = window.requestAnimationFrame(() => recordEstimateHydrationTiming("react-ready", {
+        jobId: workbook.jobId || "",
+        quotationRows: Object.values(workbook.quotation || {}).reduce((total, section) => total + (section?.rows?.length || 0), 0),
+      }));
+    });
+    return () => {
+      window.cancelAnimationFrame(firstFrame);
+      if (secondFrame) window.cancelAnimationFrame(secondFrame);
+    };
+  }, [hydrated, rawPreview, workbook.jobId, workbook.quotation]);
 
   useEffect(() => {
     if (previewMode) return;
@@ -463,14 +597,17 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     }
     autosaveTimerRef.current = window.setTimeout(() => {
       if (!workbookHasExplicitJobIdentity(workbook)) return;
-      if (autosaveInFlightRef.current) return;
+      if (autosaveInFlightRef.current || clientSelectionsSaveRunningRef.current) return;
       const signature = contentSignature;
       if (!signature || signature === lastAutosaveSignatureRef.current) return;
       const saveDraftWhenIdle = () => {
         if (isProtectedRecoveryRecord({ key: workbookJobKey(workbookRef.current) })) return;
-        autosaveInFlightRef.current = true;
         const snapshot = workbookRef.current;
-        const savingSignature = snapshot === workbook ? signature : jobContentSignature(snapshot);
+        const savingSignature = jobContentSignature(snapshot);
+        // An explicit save may have completed while the idle callback waited.
+        if (autosaveInFlightRef.current || clientSelectionsSaveRunningRef.current || savingSignature === lastAutosaveSignatureRef.current) return;
+        autosaveInFlightRef.current = true;
+        window.__memoryProbe?.trace?.("autosave", Object.fromEntries(Object.entries(snapshot).map(([key, value]) => [key, jobDirtySignature({ value })])));
         // Use the same stored shape as Save Job. A manual/recovery save adds
         // template metadata to disk without replacing live edits; saving the
         // raw live workbook afterwards fails complete-record validation.
@@ -493,6 +630,7 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
           .catch((error) => setPersistenceStatus({ state: "error", label: `Save failed: ${error.message}`, detail: "Previous successful revision retained." }))
           .finally(() => {
             autosaveInFlightRef.current = false;
+            if (workbookRef.current !== snapshot) setAutosaveCompletion(value => value + 1);
           });
       };
       if (typeof window.requestIdleCallback === "function") {
@@ -508,7 +646,7 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
         autosaveIdleRef.current = null;
       }
     };
-  }, [workbook, contentSignature, previewMode, hydrated]);
+  }, [workbook, contentSignature, previewMode, hydrated, autosaveCompletion]);
 
   function setPage(page) {
     if (!ESTIMATE_BUILDER_PAGE_KEYS.has(page)) return;
@@ -859,6 +997,74 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     }));
   }
 
+  function workbookWithFormulaOverride(current, key, value, note, action = "override") {
+    const changedAt = new Date().toISOString();
+    return {
+      ...current,
+      formulas: {
+        ...(current.formulas || {}),
+        [key]: value,
+      },
+      formulaOverrides: action === "reset"
+        ? Object.fromEntries(Object.entries(current.formulaOverrides || {}).filter(([overrideKey]) => overrideKey !== key))
+        : {
+          ...(current.formulaOverrides || {}),
+          [key]: {
+            expression: value,
+            note: note || current.formulaNotes?.[key] || "",
+            changedAt,
+          },
+        },
+      formulaNotes: {
+        ...(current.formulaNotes || {}),
+        [key]: note || current.formulaNotes?.[key] || "",
+      },
+      formulaHistory: [
+        ...(current.formulaHistory || []),
+        {
+          key,
+          value,
+          previousValue: current.formulas?.[key] || "",
+          action,
+          note: note || current.formulaNotes?.[key] || (action === "reset" ? "Reset to default formula" : "Edited for this estimate"),
+          changedAt,
+        },
+      ],
+    };
+  }
+
+  async function saveFormulaOverride(key, value, note = "") {
+    const next = workbookWithFormulaOverride(workbookRef.current, key, value, note);
+    workbookRef.current = next;
+    setWorkbook(next);
+    return saveDraft(next);
+  }
+
+  async function resetFormulaOverride(key, defaultFormula, note = "") {
+    const next = workbookWithFormulaOverride(workbookRef.current, key, defaultFormula, note, "reset");
+    workbookRef.current = next;
+    setWorkbook(next);
+    return saveDraft(next);
+  }
+
+  function recalculateFormulas() {
+    const next = { ...workbookRef.current };
+    workbookRef.current = next;
+    setWorkbook(next);
+    return calculateEstimateBuilderWorkbook(next);
+  }
+
+  async function setFormulaEditingEnabled(enabled) {
+    const next = {
+      ...workbookRef.current,
+      formulaEditingEnabled: Boolean(enabled),
+      formulaEditingChangedAt: new Date().toISOString(),
+    };
+    workbookRef.current = next;
+    setWorkbook(next);
+    return saveDraft(next);
+  }
+
   function updateFormulaNote(key, note) {
     setWorkbook((current) => ({
       ...current,
@@ -1088,14 +1294,15 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
   async function applySelectionBaseline(snapshot, foundation) {
     const owner = browserWorkspaceId();
     if (!owner || foundation.workspace_id !== owner) throw new Error('Builder workspace changed.');
-    const next = applyCabinetryRequirementsToQuotation(applyInclusionScheduleToQuote(workbookRef.current, snapshot, foundation), owner);
+    const next = applyCabinetryRequirementsToQuotation(applyConstructionBaselineSpecifications(applyInclusionScheduleToQuote(workbookRef.current, snapshot, bindSelectionFoundationToQuotation(workbookRef.current, foundation)), snapshot), owner);
+    if (next.standardInclusionsDefault?.status === 'pending') next.standardInclusionsDefault = { ...next.standardInclusionsDefault, status: 'applied', scheduleId: snapshot.schedule.id, scheduleVersionId: snapshot.schedule.scheduleVersionId };
     const savedAt = new Date().toISOString();
     const draft = prepareWorkbookForJobSave(next, savedAt);
     await saveStoredJob(draft, savedAt);
     if (browserWorkspaceId() !== owner) throw new Error('Builder workspace changed during save.');
     setWorkbook(normalizeWorkbook(draft));
     setLastSavedAt(savedAt);
-    return next.selectionMappingReport || [];
+    return [...(next.selectionMappingReport || []), ...(next.constructionInclusionMappingReport || [])];
   }
 
   function updateQuote(section, id, key, value) {
@@ -1128,6 +1335,215 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
         ? appendQuoteHistory(current.quoteHistory, { section, id, field: key, value: nextValue, changedAt: new Date().toISOString() })
         : current.quoteHistory || [],
     }));
+  }
+
+  function workbookWithCommercialPriceProposal(current, { proposalId, section, rowId, gstIncluded }) {
+    const proposal = commercialPriceProposalById(proposalId);
+    if (!proposal) throw new Error("The verified pricing proposal is no longer available.");
+    const rate = proposalRateExGst(proposal, gstIncluded);
+    const evidenceRow = (preview?.quotation?.[section]?.rows || []).find((row) => row.id === rowId);
+    const savedRows = current.quotation?.[section]?.rows || [];
+    if (!savedRows.some((row) => row.id === rowId) && !evidenceRow) throw new Error("The quotation target for this proposal no longer exists.");
+    const rows = [
+      ...savedRows,
+      ...(!savedRows.some((row) => row.id === rowId) && evidenceRow ? [{ ...evidenceRow, quantity: "", importedQuantity: "" }] : []),
+    ].map((row) => row.id !== rowId ? row : {
+      ...row,
+      manualRate: rate,
+      manualRateApproved: true,
+      manualRateSource: "verified-retail-reference",
+      quoteRequired: false,
+      priceStatus: "Manual rate",
+      supplierQuote: proposal.sourceUrl,
+      commercialPriceApproval: {
+        proposalId: proposal.id,
+        supplier: proposal.supplier,
+        productCode: proposal.productCode,
+        dimensions: proposal.dimensions,
+        finish: proposal.finish,
+        retailReferencePrice: proposal.price,
+        gstIncluded,
+        sourceUrl: proposal.sourceUrl,
+        verifiedAt: proposal.verifiedAt,
+        approvedAt: new Date().toISOString(),
+        basis: proposal.priceBasis,
+      },
+    });
+    return {
+      ...current,
+      quotation: {
+        ...current.quotation,
+        [section]: { ...current.quotation[section], rows },
+      },
+    };
+  }
+
+  function previewCommercialPriceProposal(options) {
+    const current = workbookRef.current;
+    const next = workbookWithCommercialPriceProposal(current, options);
+    return selectionReconciliationFinancialImpact(current, next);
+  }
+
+  function applyCommercialPriceProposal({ approvedFinancialImpact = null, ...options }) {
+    const current = workbookRef.current;
+    const next = workbookWithCommercialPriceProposal(current, options);
+    const impact = selectionReconciliationFinancialImpact(current, next);
+    const approved = approvedFinancialImpact
+      && approvedFinancialImpact.before === impact.before
+      && approvedFinancialImpact.after === impact.after
+      && approvedFinancialImpact.delta === impact.delta
+      && approvedFinancialImpact.signature === impact.signature;
+    if (!approved) throw new Error(`Approve the exact quotation change of ${impact.delta >= 0 ? "+" : ""}$${impact.delta.toFixed(2)} before applying this retail reference.`);
+    updateWorkbookState(next);
+    return impact;
+  }
+
+  function previewCommercialIssueQuoteChange(options) {
+    const current = workbookRef.current;
+    const next = updateCommercialQuoteRow(current, options);
+    return selectionReconciliationFinancialImpact(current, next);
+  }
+
+  async function persistCommercialResolution(next) {
+    workbookRef.current = next;
+    setWorkbook(next);
+    const result = await saveDraft(next);
+    if (!result?.ok) throw new Error(result?.message || "The commercial resolution could not be saved.");
+    return result;
+  }
+
+  async function applyCommercialIssueQuoteChange({ approvedFinancialImpact = null, ...options }) {
+    const current = workbookRef.current;
+    const next = updateCommercialQuoteRow(current, options);
+    const impact = selectionReconciliationFinancialImpact(current, next);
+    const approved = approvedFinancialImpact
+      && approvedFinancialImpact.before === impact.before
+      && approvedFinancialImpact.after === impact.after
+      && approvedFinancialImpact.delta === impact.delta
+      && approvedFinancialImpact.signature === impact.signature;
+    if (impact.requiresApproval && !approved) {
+      throw new Error(`Approve the exact quotation change of ${impact.delta >= 0 ? "+" : ""}$${impact.delta.toFixed(2)} before saving this resolution.`);
+    }
+    await persistCommercialResolution(next);
+    return impact;
+  }
+
+  async function linkCommercialIssueToQuotationRow({ issueId, identityKey, rowId }) {
+    const current = workbookRef.current;
+    const initial = reconcileSelectionTargets({
+      workbook: current,
+      book: current.clientSelectionsBook || current.selectionsBook,
+      mappings: builderRequirementMappingsRef.current,
+    });
+    const selected = initial.results.find(({ identity }) => identity.key === identityKey);
+    if (!selected) throw new Error("The selected product identity is no longer available.");
+    const rowTarget = Object.entries(current.quotation || {}).flatMap(([section, group]) =>
+      (group.rows || []).filter((row) => row.id === rowId).map((row) => ({ section, row }))).at(0);
+    if (!rowTarget) throw new Error("The selected quotation row no longer exists.");
+    const mapping = {
+      status: "MAPPED",
+      mode: "PRODUCT_ROW",
+      template_id: current.templateKey || "",
+      workspace_id: current.workspaceId,
+      requirement_key: selected.identity.requirementKey,
+      product_id: selected.identity.productId || "",
+      location_id: selected.identity.location || "",
+      quote_section_id: rowTarget.section,
+      quote_row_id: rowId,
+      metadata: {
+        requirementKey: selected.identity.requirementKey,
+        productId: selected.identity.productId || "",
+        locationId: selected.identity.location || "",
+        confirmedBy: "builder-commercial-issue-review",
+        itemLabel: rowTarget.row.item || rowTarget.row.description || rowId,
+      },
+    };
+    const mappingKey = (entry) => `${entry.requirement_key || entry.metadata?.requirementKey}|${entry.product_id || entry.metadata?.productId || ""}|${entry.location_id || entry.metadata?.locationId || ""}`;
+    const quoteTargetMappings = [...(current.quoteTargetMappings || []).filter((entry) => mappingKey(entry) !== mappingKey(mapping)), mapping];
+    const mappedWorkbook = { ...current, quoteTargetMappings };
+    const impact = selectionReconciliationFinancialImpact(current, mappedWorkbook);
+    if (impact.requiresApproval) throw new Error("This link would change quotation values. Use the financial approval control instead.");
+    await persistCommercialResolution({
+      ...mappedWorkbook,
+      commercialIssueResolutions: [
+        ...(current.commercialIssueResolutions || []),
+        { id: `commercial-resolution:${issueId}:${Date.now()}`, issueId, type: "QUOTATION_ROW_LINKED", status: "APPLIED", identityKey, rowId, recordedAt: new Date().toISOString() },
+      ],
+    });
+    return mapping;
+  }
+
+  function commercialIssueMutationWorkbook(current, identityKey, { approveBaseline = false } = {}) {
+    const productById = productByIdForWorkbook(current);
+    const buildPlan = (approvedBaselines = {}) => planSelectionReconciliation({
+      workbook: current,
+      productById,
+      productByCode: productById.byCode,
+      mappings: builderRequirementMappingsRef.current,
+      quotationEvidence: calculateEstimateBuilderWorkbook(structuredClone(current)).quotation,
+      approvedBaselines,
+    });
+    let plan = buildPlan();
+    let mutations = plan.mutationAccounting.filter((change) => change.selectionIdentityKeys.includes(identityKey)
+      && ["ADDED", "REPLACED"].includes(change.kind));
+    if (approveBaseline && mutations.some((change) => change.kind === "REPLACED")) {
+      plan = buildPlan(Object.fromEntries(mutations.map((change) => [change.rowId, true])));
+      mutations = plan.mutationAccounting.filter((change) => change.selectionIdentityKeys.includes(identityKey)
+        && ["ADDED", "REPLACED"].includes(change.kind));
+    }
+    if (!mutations.length) throw new Error("No isolated quotation addition or replacement is available for this issue.");
+    const quotation = structuredClone(current.quotation || {});
+    for (const mutation of mutations) {
+      const planned = Object.entries(plan.workbook.quotation || {}).flatMap(([section, group]) =>
+        (group.rows || []).filter((row) => row.id === mutation.rowId).map((row) => ({ section, row }))).at(0);
+      if (!planned) throw new Error(`The planned quotation row ${mutation.rowId} is no longer available.`);
+      const existing = Object.entries(quotation).flatMap(([section, group]) =>
+        (group.rows || []).map((row, index) => ({ section, row, index }))).find(({ row }) => row.id === mutation.rowId);
+      if (existing) {
+        const rows = [...quotation[existing.section].rows];
+        rows[existing.index] = structuredClone(planned.row);
+        quotation[existing.section] = { ...quotation[existing.section], rows };
+      } else {
+        const section = quotation[planned.section] || { collapsed: false, columns: [], rows: [] };
+        quotation[planned.section] = { ...section, rows: [...(section.rows || []), structuredClone(planned.row)] };
+      }
+    }
+    return { workbook: { ...current, quotation }, mutations };
+  }
+
+  function previewCommercialIssueMutation({ identityKey, approveBaseline = false }) {
+    const current = workbookRef.current;
+    const isolated = commercialIssueMutationWorkbook(current, identityKey, { approveBaseline });
+    return { ...selectionReconciliationFinancialImpact(current, isolated.workbook), mutations: isolated.mutations };
+  }
+
+  async function applyCommercialIssueMutation({ issueId, identityKey, approveBaseline = false, approvedFinancialImpact = null }) {
+    const current = workbookRef.current;
+    const isolated = commercialIssueMutationWorkbook(current, identityKey, { approveBaseline });
+    const impact = selectionReconciliationFinancialImpact(current, isolated.workbook);
+    const approved = approvedFinancialImpact
+      && approvedFinancialImpact.before === impact.before
+      && approvedFinancialImpact.after === impact.after
+      && approvedFinancialImpact.delta === impact.delta
+      && approvedFinancialImpact.signature === impact.signature;
+    if (!approved) throw new Error("Approve the exact isolated quotation change before applying it.");
+    await persistCommercialResolution({
+      ...isolated.workbook,
+      commercialIssueResolutions: [
+        ...(current.commercialIssueResolutions || []),
+        {
+          id: `commercial-resolution:${issueId}:${Date.now()}`,
+          issueId,
+          type: approveBaseline ? "REPLACEMENT_APPROVED" : "QUOTATION_ADDITION_APPROVED",
+          status: "APPLIED",
+          identityKey,
+          rowIds: isolated.mutations.map((mutation) => mutation.rowId),
+          financialImpact: { before: impact.before, after: impact.after, delta: impact.delta, signature: impact.signature },
+          recordedAt: new Date().toISOString(),
+        },
+      ],
+    });
+    return impact;
   }
 
   function updateQuoteSectionMeta(section, key, value) {
@@ -1334,17 +1750,14 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
   }
 
   function refreshProcurementListFromQuote() {
-    const existingItems = workbookRef.current?.procurement?.items || [];
-    const nextItems = buildProcurementItemsFromQuote(workbookRef.current, calculateEstimateBuilderWorkbook(workbookRef.current), existingItems);
-    setWorkbook((current) => ({
-      ...current,
-      procurement: {
-        ...(current.procurement || {}),
-        items: nextItems,
-        refreshedAt: new Date().toISOString(),
-      },
-    }));
-    return { ok: true, message: `Refreshed ${nextItems.length} procurement items.` };
+    setWorkbook((current) => {
+      const calculated = calculateEstimateBuilderWorkbook(current);
+      const items = buildProcurementItemsFromQuote(current, calculated, current.procurement?.items || []);
+      const productById = productByIdForWorkbook(current);
+      const refreshed = refreshSelectionProcurementRequirements(current, calculated, items, { productById, productByCode: productById.byCode });
+      return { ...refreshed, procurement: { ...refreshed.procurement, refreshedAt: new Date().toISOString() } };
+    });
+    return { ok: true, message: "Refreshed procurement and unapproved supplier requirements without changing quotation prices." };
   }
 
   function updateProcurementItem(id, key, value) {
@@ -1396,8 +1809,136 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     return { ok: true, message: `Pushed ${tasks.length} procurement items to the job board.` };
   }
 
+  // Trade payment schedules: contracts persist in the job; the quotation sets each amount; one subcontract PO carries the milestones.
+  const tradeBuilderId = () => workbookRef.current.workspaceId || browserWorkspaceId();
+
+  // Every trade with a payment template: the system defaults plus this builder's own master templates.
+  function tradeContractSyncResult() {
+    const current = workbookRef.current;
+    const builderId = tradeBuilderId();
+    const templates = loadBuilderTemplates(builderId);
+    const trades = [...new Set([...Object.keys(SYSTEM_TRADE_TEMPLATES), ...Object.keys(templates[builderId] || {})])];
+    return syncTradeContracts(current, calculateEstimateBuilderWorkbook(current), { builderId, templates, trades });
+  }
+
+  // Step 1 of Create / Refresh: what would change, without changing it.
+  function previewTradeContractSync() {
+    const result = tradeContractSyncResult();
+    if (!result.ok) return result;
+    return { ok: true, changed: result.changed, lines: describeTradeContractSync(result) };
+  }
+
+  // Step 2: apply. Recalculated from the job as it is now, so a second run finds nothing left to do.
+  function syncTradeContractsNow() {
+    const result = tradeContractSyncResult();
+    if (!result.ok) return result;
+    if (result.changed) setWorkbook((latest) => ({ ...latest, tradeContracts: result.tradeContracts, purchaseOrders: result.purchaseOrders }));
+    return { ok: true, message: result.changed ? `Applied: ${describeTradeContractSync(result).join(" ") || "purchase order details refreshed."}` : "Trade contracts are up to date. Nothing was changed." };
+  }
+
+  function tradeContractGanttProject() {
+    const current = workbookRef.current;
+    try { return [current.jobId, current.openedFileName, current.id].filter(Boolean).map((id) => loadGanttByJobId(id)).find(Boolean) || null; } catch { return null; }
+  }
+
+  const tradeContractGanttTasks = () => ganttTaskOptions(tradeContractGanttProject());
+
+  // Called from the panel, and by the Gantt page each time its schedule is saved (quiet), so a moved task moves the forecast date.
+  function linkTradeContractsToSchedule({ project = null, quiet = false } = {}) {
+    const current = workbookRef.current;
+    if (!(current.tradeContracts || []).length) return { ok: true, message: "No trade contracts to link." };
+    const schedule = project || tradeContractGanttProject();
+    if (!schedule) return { ok: false, message: "No Gantt schedule is saved for this job." };
+    const ctx = { builderId: tradeBuilderId(), jobId: current.jobId };
+    const result = linkContractsToGantt(current.tradeContracts || [], schedule, ctx);
+    // Applied to the latest job state, so an edit made a moment ago is linked, not overwritten.
+    if (result.changed) setWorkbook((latest) => { const relinked = linkContractsToGantt(latest.tradeContracts || [], schedule, ctx); return relinked.changed ? { ...latest, tradeContracts: relinked.tradeContracts } : latest; });
+    if (quiet) return result;
+    const overridden = result.moved.filter((entry) => entry.overridden).length;
+    return { ok: true, message: `Linked ${result.linked} milestone(s) to the Gantt; ${result.moved.length} forecast date(s) updated${overridden ? ` (${overridden} keep a manual date)` : ""}; ${result.completed.length} newly eligible for claim.` };
+  }
+
+  // Job Board: one Job Board job for this estimate job, held by id on every contract.
+  function linkTradeContractsToJobBoard({ jobId = "", jobName = "" } = {}, actor = "") {
+    const current = workbookRef.current;
+    const ctx = { builderId: tradeBuilderId(), jobId: current.jobId, actor };
+    const next = [];
+    for (const contract of current.tradeContracts || []) {
+      const result = linkContractToJobBoard(contract, { jobId, jobName }, ctx);
+      if (!result.ok) return result;
+      next.push(result.contract);
+    }
+    setWorkbook((latest) => ({ ...latest, tradeContracts: next }));
+    return { ok: true, message: jobId ? `Linked to Job Board job "${jobName || jobId}".` : "Job Board link removed." };
+  }
+
+  // Finished Job Board work makes its milestone eligible for review. It never claims, approves or pays.
+  function applyJobBoardTaskRecords(records = [], completeJobIds = []) {
+    const current = workbookRef.current;
+    if (!(current.tradeContracts || []).some((contract) => contract.jobBoard?.jobId)) return { ok: true, changed: false, message: "No trade contract is linked to a Job Board job." };
+    const ctx = { builderId: tradeBuilderId(), jobId: current.jobId, completeJobIds };
+    const result = applyJobBoardToContracts(current.tradeContracts, records, ctx);
+    if (!result.ok) return result;
+    if (result.changed) setWorkbook((latest) => { const applied = applyJobBoardToContracts(latest.tradeContracts || [], records, ctx); return applied.ok && applied.changed ? { ...latest, tradeContracts: applied.tradeContracts } : latest; });
+    return { ok: true, changed: result.changed, message: `Job Board: ${result.completed.length} milestone(s) now eligible for review${result.reopened.length ? `, ${result.reopened.length} re-opened` : ""}. Claims still need manual approval.` };
+  }
+
+  async function syncTradeContractsFromJobBoard() {
+    const jobIds = (workbookRef.current.tradeContracts || []).map((contract) => contract.jobBoard?.jobId).filter(Boolean);
+    if (!jobIds.length) return { ok: false, message: "Choose the Job Board job for this job first." };
+    const loaded = await loadJobBoardTaskRecords(supabase, jobIds);
+    if (!loaded.ok) return loaded;
+    if (!loaded.jobIds.length) return { ok: false, message: "The linked Job Board job was not found for this sign-in." };
+    return applyJobBoardTaskRecords(loaded.records, loaded.jobIds);
+  }
+
+  const loadTradeContractJobBoardJobs = () => loadJobBoardJobs(supabase);
+
+  // Builder master templates: shared per builder; a job's contract is a copy, so neither ever rewrites the other.
+  async function refreshBuilderTradeTemplates() {
+    const builderId = tradeBuilderId();
+    const loaded = await loadBuilderTemplatesShared(supabase, builderId);
+    return { ok: true, source: loaded.source, message: loaded.message || "", templates: Object.values(loaded.store[builderId] || {}) };
+  }
+
+  async function saveBuilderTradeTemplate({ contractId = "", template = null } = {}, actor = "") {
+    const builderId = tradeBuilderId();
+    if (!builderId) return { ok: false, code: "BUILDER_REQUIRED", message: "No builder workspace is active." };
+    const contract = contractId ? (workbookRef.current.tradeContracts || []).find((entry) => entry.contractId === contractId) : null;
+    if (contractId && (!contract || contract.builderId !== builderId)) return { ok: false, code: "TENANT_MISMATCH", message: "This contract belongs to another builder." };
+    return saveBuilderTemplateShared(supabase, builderId, contract ? templateFromContract(contract) : template, { actor });
+  }
+
+  const TRADE_CONTRACT_ACTIONS = {
+    setAmount: (contract, payload, ctx) => setAgreedAmount(contract, payload.amount, ctx),
+    assignSupplier: (contract, payload, ctx) => assignSupplier(contract, payload, ctx),
+    setField: (contract, payload, ctx) => setMilestoneField(contract, payload.key, payload.field, payload.value, ctx),
+    setCompletion: (contract, payload, ctx) => setMilestoneCompletion(contract, payload.key, payload.status, ctx),
+    setLink: (contract, payload, ctx) => setMilestoneLink(contract, payload.key, payload, ctx),
+    claim: (contract, payload, ctx) => submitClaim(contract, payload.key, payload, ctx),
+    approve: (contract, payload, ctx) => approveClaim(contract, payload.key, payload, ctx),
+    reject: (contract, payload, ctx) => rejectClaim(contract, payload.key, payload, ctx),
+    pay: (contract, payload, ctx) => recordPayment(contract, payload.key, payload, ctx),
+    addVariation: (contract, payload, ctx) => addApprovedVariation(contract, payload, ctx),
+  };
+
+  function updateTradeContract(contractId, action, payload = {}, actor = "") {
+    const current = workbookRef.current;
+    const contract = (current.tradeContracts || []).find((entry) => entry.contractId === contractId);
+    const run = TRADE_CONTRACT_ACTIONS[action];
+    if (!contract || !run) return { ok: false, code: "NOT_FOUND", message: "Unknown contract or action." };
+    const result = run(contract, payload, { builderId: current.workspaceId || browserWorkspaceId(), jobId: current.jobId, actor });
+    if (!result.ok) return result;
+    setWorkbook((latest) => {
+      const contracts = (latest.tradeContracts || []).map((entry) => (entry.contractId === contractId ? result.contract : entry));
+      const attached = attachSubcontractPurchaseOrders(latest.purchaseOrders || [], contracts);
+      return { ...latest, tradeContracts: attached.contracts, purchaseOrders: attached.purchaseOrders };
+    });
+    return { ok: true, message: "Saved." };
+  }
+
   function createPurchaseOrdersFromProcurement() {
-    const items = assignPlasterboardSupplier((workbookRef.current?.procurement?.items || []).filter((item) => !item.removedFromQuote));
+    const items = assignPlasterboardSupplier((workbookRef.current?.procurement?.items || []).filter((item) => !item.removedFromQuote && !sectionCoveredBySubcontract(workbookRef.current?.tradeContracts, item.sectionName)));
     const createdAt = new Date().toISOString();
     const ordersBySupplier = new Map();
     items.forEach((item) => {
@@ -1644,10 +2185,12 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
   function deleteQuoteSection(section) {
     updateWorkbookState((current) => {
       const { [section]: removed, ...quotation } = current.quotation || {};
+      const quotationSectionOrder = normalizeQuoteSectionOrder(current.quotationSectionOrder || [], quotation);
       return {
         ...current,
         quotation,
-        quotationSectionOrder: normalizeQuoteSectionOrder(current.quotationSectionOrder || [], quotation),
+        quotationSectionOrder,
+        quotationSectionOrderIds: quotationSectionOrderIds(quotation, quotationSectionOrder),
       };
     });
   }
@@ -1657,16 +2200,14 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     if (!section) return;
     updateWorkbookState((current) => {
       if (current.quotation[section]) return current;
+      const newSection = { sectionId: `quote-section:${crypto.randomUUID()}`, collapsed: true, rows: [] };
+      const quotation = ensureQuotationSectionIds({ ...current.quotation, [section]: newSection });
+      const quotationSectionOrder = normalizeQuoteSectionOrder([...(current.quotationSectionOrder || []), section], quotation);
       return {
         ...current,
-        quotation: {
-          ...current.quotation,
-          [section]: { id: crypto.randomUUID(), collapsed: true, rows: [] },
-        },
-        quotationSectionOrder: normalizeQuoteSectionOrder([...(current.quotationSectionOrder || []), section], {
-          ...current.quotation,
-          [section]: { collapsed: true, rows: [] },
-        }),
+        quotation,
+        quotationSectionOrder,
+        quotationSectionOrderIds: quotationSectionOrderIds(quotation, quotationSectionOrder),
       };
     });
   }
@@ -1677,6 +2218,7 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
       return {
         ...current,
         quotationSectionOrder,
+        quotationSectionOrderIds: quotationSectionOrderIds(current.quotation || {}, quotationSectionOrder),
         quotation: stampQuotationOrder(current.quotation || {}, quotationSectionOrder),
       };
     });
@@ -1726,7 +2268,7 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     });
   }
 
-  async function saveDraft(sourceWorkbook = null) {
+  async function saveDraft(sourceWorkbook = null, saveOptions = {}) {
     if (typeof window === "undefined") return { ok: false, message: "Jobs are not available here." };
     const savedAt = new Date().toISOString();
     const workbookToSave = sourceWorkbook || workbookRef.current;
@@ -1747,12 +2289,19 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     setPersistenceStatus({ state: "saving", label: "Saving\u2026", detail: "" });
     let verification;
     try {
-      verification = await saveVerifiedStoredJob(draft, { savedAt, source: "manual" });
+      verification = await saveVerifiedStoredJob(draft, { savedAt, source: "manual", allowOlderTakeoff: saveOptions?.allowOlderTakeoff === true });
     } catch (error) {
       setPersistenceStatus({ state: "error", label: `Save failed: ${error.message}`, detail: "Previous successful revision retained." });
       return { ok: false, message: error.message };
     }
     if (!verification?.ok) return verification;
+    // Save preparation stamps the canonical persisted quotation order. Keep the live
+    // workbook on that exact saved revision so a hard refresh cannot visibly reorder rows.
+    // Do not replace edits made while the async write was in flight.
+    if (workbookRef.current === workbookToSave) {
+      workbookRef.current = draft;
+      setWorkbook(draft);
+    }
     setSavedContentSignature(savingSignature);
     setPersistenceStatus({ state: "saved", label: `Saved at ${new Date(savedAt).toLocaleTimeString()}`, detail: `Application storage ? ${verification.jobId} ? revision ${verification.revision}` });
     saveLocalDraftMetadata(draft, savedAt);
@@ -1766,23 +2315,53 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     return { ...verification, ok: true, message: `Saved at ${new Date(savedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`, key: workbookJobKey(draft), payloadBytes: verification.payloadBytes, quotationRows: verification.quotationRows };
   }
 
+  async function persistCommercialAssociation({ workspaceId, jobId, projectId, snapshotId } = {}) {
+    let nextWorkbook;
+    try {
+      nextWorkbook = withCommercialSnapshotAssociation(workbookRef.current, { workspaceId, jobId, projectId, snapshotId });
+    } catch (error) {
+      return { ok: false, message: error.message };
+    }
+    workbookRef.current = nextWorkbook;
+    setWorkbook(nextWorkbook);
+    const saved = await saveDraft(nextWorkbook);
+    return saved.ok ? { ...saved, projectId, snapshotId } : saved;
+  }
+
   async function restorePreviousJobRevision() {
-    const key = workbookJobKey(workbookRef.current);
+    const startingWorkbook = workbookRef.current;
+    const key = workbookJobKey(startingWorkbook);
     const db = await openTemplateDb();
-    const records = await new Promise((resolve, reject) => {
-      const request = db.transaction(JOB_STORE_NAME, "readonly").objectStore(JOB_STORE_NAME).getAll();
+    const read = (request) => new Promise((resolve, reject) => {
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
-    }).finally(() => db.close());
-    const current = records.find((record) => record.key === key);
-    const previous = records.filter((record) => record.key.startsWith(`${key}:snapshot:`)
-      && Number(record.revision || 0) < Number(current?.revision || 0))
-      .sort((a, b) => Number(b.revision || 0) - Number(a.revision || 0))[0];
+    });
+    let previous;
+    try {
+      const current = await read(db.transaction(JOB_STORE_NAME, "readonly").objectStore(JOB_STORE_NAME).get(key));
+      const keys = await read(db.transaction(JOB_STORE_NAME, "readonly").objectStore(JOB_STORE_NAME).getAllKeys());
+      const prefix = `${key}:snapshot:revision-`;
+      const candidates = keys.filter((entry) => String(entry).startsWith(prefix))
+        .map((entry) => ({ key: entry, revision: Number(String(entry).slice(prefix.length).split("-")[0]) }))
+        .filter((entry) => Number.isFinite(entry.revision) && entry.revision < Number(current?.revision || 0))
+        .sort((left, right) => right.revision - left.revision);
+      if (candidates.length) previous = await read(db.transaction(JOB_STORE_NAME, "readonly").objectStore(JOB_STORE_NAME).get(candidates[0].key));
+    } finally {
+      db.close();
+    }
     if (!previous?.workbook && !previous?.originalRecord?.workbook) return { ok: false, message: "No earlier successful revision is available." };
     const restored = normalizeWorkbook(await materializeTakeoffPlanPages(previous.originalRecord?.workbook || previous.workbook));
+    const comparison = compareQuotationRevisions(startingWorkbook, restored);
+    const details = comparison.changes.slice(0, 8).map((change) => `${change.action}: ${change.section} / ${change.item || change.rowId}${Object.keys(change.fields).length ? ` (${Object.keys(change.fields).join(", ")})` : ""}`).join("\n");
+    if (!window.confirm(`Restore revision ${previous.revision}?\nQuotation rows: ${comparison.currentRows} -> ${comparison.previousRows}.\nAdded ${comparison.counts.ADDED}; removed ${comparison.counts.REMOVED}; changed ${comparison.counts.UPDATED}; reordered ${comparison.counts.REORDERED}.\n${details}\nThis restores the whole saved job, including other module data. Your current successful save is retained as a revision.`)) return { ok: false, message: "Revision restoration cancelled. Nothing changed." };
+    if (workbookRef.current !== startingWorkbook) return { ok: false, message: "Current edits or another job open superseded this revision preview. Nothing changed." };
+    // Putting an earlier revision back is the one save that carries an older takeoff on purpose.
+    const saved = await saveDraft(restored, { allowOlderTakeoff: true });
+    if (!saved.ok) return saved;
+    if (workbookRef.current !== startingWorkbook) return { ...saved, message: "Revision saved to its own job; a newer editor state was not replaced." };
     completedJobLoadVersionRef.current += 1;
     updateWorkbookState(restored);
-    return saveDraft(restored);
+    return { ...saved, comparison };
   }
 
   async function closeCurrentJob() {
@@ -1826,11 +2405,15 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
   }
 
   function prepareWorkbookForJobSave(sourceWorkbook = workbookRef.current, savedAt = new Date().toISOString()) {
+    const auditCalculation = calculateEstimateBuilderWorkbook(structuredClone(sourceWorkbook));
+    const auditWorkbook = { ...sourceWorkbook, quotation: auditCalculation.quotation };
+    const productSelectionAudit = reconcileProductSelections({ workbook: auditWorkbook, mappings: builderRequirementMappingsRef.current, productById: productByIdForWorkbook(sourceWorkbook) });
     return compactWorkbookForStorage({
       ...withPersistedQuotationOrder(sourceWorkbook),
-      templateKey: MASTER_TEMPLATE_KEY,
-      templateName: MASTER_TEMPLATE_NAME,
+      templateKey: sourceWorkbook.templateKey || MASTER_TEMPLATE_KEY,
+      templateName: sourceWorkbook.templateName || MASTER_TEMPLATE_NAME,
       templateType: "job",
+      productSelectionIntegrity: { ...productSelectionAudit, version: 1, checkedAt: savedAt },
       savedAt,
     });
   }
@@ -2027,6 +2610,7 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     jobWorkbook.jobId = crypto.randomUUID();
     jobWorkbook.jobFileMeta = { ...jobWorkbook.jobFileMeta, localFileOnly: true };
     jobWorkbook.createdFromMasterTemplateAt = savedAt;
+    jobWorkbook.standardInclusionsDefault = { tier: "Premier", status: "pending", requestedAt: savedAt };
     const draft = prepareWorkbookForJobSave(jobWorkbook, savedAt);
     saveLocalDraftMetadata(draft, savedAt);
     await saveVerifiedStoredJob(draft, { savedAt });
@@ -2272,13 +2856,16 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
         throw error;
       }) : null;
       const snapshotRecord = localRecord?.workbook ? null : await loadLatestWorkspaceProjectWorkbookSnapshot(project.id, project.workspace_id || workspaceId);
-      const sourceWorkbook = localRecord?.workbook || workbookFromEstimateSnapshot(snapshotRecord) || project.source_metadata?.workbook || null;
+      const incompleteCommercialSnapshot = !localRecord?.workbook && snapshotRecord && !commercialSnapshotHasCompleteWorkbook(snapshotRecord);
+      const sourceWorkbook = localRecord?.workbook || (incompleteCommercialSnapshot ? null : workbookFromEstimateSnapshot(snapshotRecord) || project.source_metadata?.workbook || null);
       if (!sourceWorkbook) {
         return openProjectJobFailure({
           operation: "load saved estimate workbook",
           projectId: project.id,
           status: "not_found",
-          message: "This project says an Estimate Builder workbook exists, but no saved workbook payload could be loaded.",
+          message: incompleteCommercialSnapshot
+            ? "The linked commercial snapshot contains quotation data only; the complete saved Estimate Builder job file is required to restore Job Setup and takeoff data."
+            : "This project says an Estimate Builder workbook exists, but no saved workbook payload could be loaded.",
         });
       }
       if (isCorruptEstimateJobWorkbook(sourceWorkbook)) {
@@ -2430,7 +3017,15 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     const draft = prepareWorkbookForJobSave(nextWorkbook, savedAt);
     await saveJobBackup(workbookFromFile, savedAt).catch(() => {});
     saveLocalDraftMetadata(draft, savedAt);
-    await saveVerifiedStoredJob(draft, { savedAt });
+    try {
+      await saveVerifiedStoredJob(draft, { savedAt });
+    } catch (error) {
+      // An older job file must not put its older plan takeoff over the one already saved.
+      if (error?.code === "TAKEOFF_STALE") {
+        throw Object.assign(new Error(`This job file holds an older plan takeoff (${error.incoming?.describe || "older copy"}) than the one already saved for this job (${error.stored?.describe || "newer copy"}). Nothing was changed. Open the saved job instead, or use Restore revision if the older takeoff is wanted.`), { code: error.code, stored: error.stored, incoming: error.incoming, wouldLose: error.wouldLose });
+      }
+      throw error;
+    }
     saveExplicitActiveJobSessionKey(workbookJobKey(draft));
     const normalisedWorkbook = normalizeWorkbook(nextWorkbook);
     if (workbookLoadOperationRef.current !== loadOperationId) {
@@ -2475,11 +3070,18 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
   // older book could be the one left in the job. A save still waiting when a newer one arrives
   // is superseded by it: every book is the complete selection state, so only the newest matters.
   function updateClientSelectionsBook(bookForSave = {}, options = {}) {
-    return new Promise((resolve, reject) => {
-      const waiters = [...(clientSelectionsSavePendingRef.current?.waiters || []), { resolve, reject }];
-      clientSelectionsSavePendingRef.current = { bookForSave, options, waiters };
-      drainClientSelectionsSaves();
-    });
+    const pending = clientSelectionsSavePendingRef.current;
+    if (pending) {
+      pending.bookForSave = bookForSave;
+      pending.options = options;
+      return pending.promise;
+    }
+    let resolve, reject;
+    const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
+    clientSelectionsSavePendingRef.current = { bookForSave, options, promise, resolve, reject };
+    if (typeof window !== 'undefined') window.__memoryProbe?.selectionQueue?.(Number(clientSelectionsSaveRunningRef.current), 1);
+    drainClientSelectionsSaves();
+    return promise;
   }
 
   async function drainClientSelectionsSaves() {
@@ -2487,17 +3089,20 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     clientSelectionsSaveRunningRef.current = true;
     try {
       while (clientSelectionsSavePendingRef.current) {
-        const { bookForSave, options, waiters } = clientSelectionsSavePendingRef.current;
+        const { bookForSave, options, resolve, reject } = clientSelectionsSavePendingRef.current;
         clientSelectionsSavePendingRef.current = null;
+        if (typeof window !== 'undefined') window.__memoryProbe?.selectionQueue?.(1, 0);
         try {
           const result = await saveClientSelectionsBookRef.current(bookForSave, options);
-          waiters.forEach((waiter) => waiter.resolve(result));
+          resolve(result);
         } catch (error) {
-          waiters.forEach((waiter) => waiter.reject(error));
+          reject(error);
         }
       }
     } finally {
       clientSelectionsSaveRunningRef.current = false;
+      if (typeof window !== 'undefined') window.__memoryProbe?.selectionQueue?.(0, 0);
+      setAutosaveCompletion(value => value + 1);
     }
   }
 
@@ -2550,6 +3155,7 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     };
     // The selections and the quotation lines linked to them, written onto a job. Pure, so the
     // same change can be put onto the live job if that moved on while this save was being stored.
+    let financialReconciliationDeferral = null;
     const withSelections = (source) => {
       const nextWorkbook = {
         ...source,
@@ -2570,18 +3176,37 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
           lastModified: savedAt,
         },
       };
-      const connected = foundation ? connectTenantSelectionMetadata(nextWorkbook, nextBook, foundation, { productById: masterProductById }) : nextWorkbook;
-      // Paint colours are a specification on the estimate's own painting lines: no rows, quantities or rates change.
-      const withColours = linkInternalPaintColoursToQuotation(applyCabinetryRequirementsToQuotation(preserveQuoteQuantityOwnership(nextWorkbook, connected), owner), nextBook);
-      // Electrical point quantities: one quotation row per room and point (stable ids), priced from the estimate's own electrical rates.
-      return prepareWorkbookForJobSave(connectElectricalScheduleToQuotation(withColours, nextBook), savedAt);
+      assertSelectedWorkspaceProductsAvailable(nextBook, nextWorkbook, catalogueState);
+      const productById = productByIdForWorkbook(nextWorkbook);
+      const connected = foundation ? connectTenantSelectionMetadata(nextWorkbook, nextBook, bindSelectionFoundationToQuotation(nextWorkbook, foundation), { productById }) : nextWorkbook;
+      // One shared reconciliation contract runs all category connectors, applies only verified targets,
+      // preserves estimator-owned quantities and leaves proposals/ambiguous products blocked.
+      const selectionOwned = preserveQuoteQuantityOwnership(nextWorkbook, connected);
+      const reconciled = planSelectionReconciliation({ workbook: selectionOwned, book: nextBook, productById, productByCode: productById.byCode, mappings: builderRequirementMappingsRef.current });
+      if (reconciled.duplicates.length) {
+        const error = new Error("Client Selections maps multiple products to the same quotation row. Resolve the duplicate before saving.");
+        error.code = "DUPLICATE_SELECTION_QUOTATION_TARGET";
+        throw error;
+      }
+      const reconciliationProducts = productByIdForWorkbook(reconciled.workbook);
+      const refreshedDrafts = refreshSelectionProcurementRequirements(
+        reconciled.workbook,
+        calculateEstimateBuilderWorkbook(structuredClone(reconciled.workbook)),
+        reconciled.workbook.procurement?.items || [],
+        { productById: reconciliationProducts, productByCode: reconciliationProducts.byCode },
+      );
+      const quotation = normalizeQuotationStructure(refreshedDrafts.quotation);
+      const reconciledWorkbook = { ...refreshedDrafts, quotation, quotationSectionOrder: quotationSectionOrderAfterNormalize(refreshedDrafts.quotationSectionOrder, quotation) };
+      const financialImpact = selectionReconciliationFinancialImpact(source, reconciledWorkbook);
+      if (financialImpact.requiresApproval) financialReconciliationDeferral = financialImpact;
+      const safeWorkbook = deferUnapprovedQuotationChanges(source, reconciledWorkbook, financialImpact);
+      return prepareWorkbookForJobSave(safeWorkbook, savedAt);
     };
     // Taken after the network wait, immediately before the write: the job as it is now.
     const savedFrom = workbookRef.current;
     const draft = withSelections(savedFrom);
     const jobKey = workbookJobKey(draft);
-    await saveStoredJob(draft, savedAt);
-    const verification = await loadStoredJob(jobKey).catch(() => null);
+    const verification = await saveStoredJob(draft, savedAt);
     const verifiedBook = verification?.workbook?.clientSelectionsBook;
     const verifiedRevision = verifiedBook?.metadata?.selectionRevision;
     const verifiedProjectId = workbookAttachedProjectId(verification?.workbook || {});
@@ -2595,6 +3220,13 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     if (workbookJobKey(live) === jobKey) {
       const applied = normalizeWorkbook(live === savedFrom ? draft : withSelections(live));
       workbookRef.current = applied;
+      // The written draft is the clean baseline. Load-time normalization may
+      // temporarily rebuild quotation rows before reconciliation settles them.
+      // Marking that intermediate display shape clean schedules a second save.
+      const appliedSignature = jobContentSignature(draft);
+      window.__memoryProbe?.trace?.("explicit-save", Object.fromEntries(Object.entries(applied).map(([key, value]) => [key, jobDirtySignature({ value })])));
+      lastAutosaveSignatureRef.current = appliedSignature;
+      setSavedContentSignature(appliedSignature);
       setWorkbook((current) => {
         if (current === live) return applied;
         if (workbookJobKey(current) !== jobKey) return current;
@@ -2610,14 +3242,15 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     setRecentJobs(loadRecentEstimateJobs());
     return {
       ok: true,
-      message: options.successMessage || `Client Selections saved to ${identity.jobNumber || identity.projectName}.`,
+      message: options.successMessage || (financialReconciliationDeferral
+        ? `Client Selections saved. ${financialReconciliationDeferral.changedLineCount} quotation line changes with a ${financialReconciliationDeferral.delta > 0 ? "+" : ""}$${financialReconciliationDeferral.delta.toFixed(2)} total change were deferred for Reconcile Selections approval.`
+        : `Client Selections saved to ${identity.jobNumber || identity.projectName}.`),
       book: nextBook,
       selectionRevision: revision,
       projectId: identity.projectId,
     };
   }
   saveClientSelectionsBookRef.current = saveClientSelectionsBook;
-
   const formulaRows = Array.isArray(workbook.formulaRows)
     ? workbook.formulaRows
     : createEstimateBuilderWorkbookDefaults().formulaRows || [];
@@ -2644,6 +3277,7 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     storagePersisted,
     dirty: workbookHasExplicitJobIdentity(workbook) && contentSignature !== savedContentSignature,
     getCurrentWorkbook: () => workbookRef.current,
+    persistCommercialAssociation,
     ensureAiPlanTakeoffWorkspace,
     jobLoadVersion: completedJobLoadVersionRef.current,
     updateAiPlanTakeoffDraft,
@@ -2666,6 +3300,10 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     addDataRow,
     deleteDataRow,
     updateFormula,
+    saveFormulaOverride,
+    resetFormulaOverride,
+    recalculateFormulas,
+    setFormulaEditingEnabled,
     updateFormulaNote,
     updateFormulaRowMeta,
     addFormulaRow,
@@ -2700,12 +3338,149 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     updateProcurementItem,
     pushProcurementToJobBoard,
     createPurchaseOrdersFromProcurement,
+    syncTradeContracts: syncTradeContractsNow,
+    previewTradeContractSync,
+    linkTradeContractsToSchedule,
+    tradeContractGanttTasks,
+    linkTradeContractsToJobBoard,
+    applyJobBoardTaskRecords,
+    syncTradeContractsFromJobBoard,
+    loadTradeContractJobBoardJobs,
+    refreshBuilderTradeTemplates,
+    saveBuilderTradeTemplate,
+    updateTradeContract,
     previewSectionCsvImport,
     applySectionCsvImport,
     restoreSectionBackup,
     addQuoteLine,
-    addCabinetryCatalogueItem: importKey => updateWorkbookState(current => addCabinetryCatalogueItem(current, importKey, browserWorkspaceId())),
+    // Review-panel actions. Each ends in the one cabinetry engine, so the quote follows at once.
+    restoreCabinetryRow: importKey => updateWorkbookState(current => applyCabinetryRequirementsToQuotation(addCabinetryCatalogueItem(current, importKey, browserWorkspaceId()), current.workspaceId || browserWorkspaceId())),
+    classifyCabinetryLine: (componentId, cabinetTypeId) => updateWorkbookState(current => applyCabinetryRequirementsToQuotation(classifyLegacyCabinetLine(current, componentId, cabinetTypeId), current.workspaceId || browserWorkspaceId())),
+    updateCabinetrySelectionRequirement: (requirementId, value) => updateWorkbookState(current => applyCabinetryRequirementsToQuotation(updateCabinetrySelectionRequirement(current, requirementId, value), current.workspaceId || browserWorkspaceId())),
+    returnCabinetryRowToAutomatic: importKey => updateWorkbookState(current => returnCabinetryRowToAutomatic(current, importKey, current.workspaceId || browserWorkspaceId())),
     setCabinetryRequirements: items => updateWorkbookState(current => applyCabinetryRequirementsToQuotation(setCabinetryRequirements(current, items), current.workspaceId || browserWorkspaceId())),
+    // Reconcile Selections: the preview is pure; apply is the only write and runs on the job that is open now.
+    previewSelectionReconciliation: (options = {}) => {
+      const current = workbookRef.current;
+      const productById = productByIdForWorkbook(current);
+      const plan = planSelectionReconciliation({ workbook: current, productById, productByCode: productById.byCode, mappings: builderRequirementMappingsRef.current, quotationEvidence: preview.quotation, ...options });
+      return { ...plan, financialImpact: selectionReconciliationFinancialImpact(current, plan.workbook) };
+    },
+    selectionRequirementMappings: builderRequirementMappingsRef.current,
+    productSelectionIntegrity: () => {
+      const current = workbookRef.current;
+      const auditCalculation = calculateEstimateBuilderWorkbook(structuredClone(current));
+      const productById = productByIdForWorkbook(current);
+      const plan = planSelectionReconciliation({
+        workbook: current,
+        productById,
+        productByCode: productById.byCode,
+        mappings: builderRequirementMappingsRef.current,
+        quotationEvidence: auditCalculation.quotation,
+      });
+      return plan.canonicalAudit;
+    },
+    previewCommercialPriceProposal,
+    applyCommercialPriceProposal,
+    previewCommercialIssueQuoteChange,
+    applyCommercialIssueQuoteChange,
+    linkCommercialIssueToQuotationRow,
+    previewCommercialIssueMutation,
+    applyCommercialIssueMutation,
+    createCommercialIssueRfq: async options => persistCommercialResolution(createCommercialIssueRfq(workbookRef.current, options)),
+    markCommercialIssueNotRequired: async options => persistCommercialResolution(excludeCommercialIssue(workbookRef.current, options)),
+    selectCommercialIssueProduct: async options => persistCommercialResolution(selectCommercialIssueProduct(workbookRef.current, options)),
+    // The builder's reusable requirement -> row mappings (workspace-scoped on the server); an unreachable service only means no reuse.
+    loadBuilderRequirementMappings: async () => {
+      try {
+        const owner = browserWorkspaceId();
+        const { data: auth } = await supabase.auth.getSession();
+        const response = await fetch('/api/builders/selection-foundation?resource=requirementMappings', { headers: { Authorization: `Bearer ${auth?.session?.access_token || ''}`, 'x-workspace-id': owner } });
+        if (!response.ok) throw new Error(`status ${response.status}`);
+        const { records = [] } = await response.json();
+        builderRequirementMappingsRef.current = records.filter(record => record.workspace_id === owner && record.status === 'MAPPED');
+      } catch (error) {
+        builderRequirementMappingsRef.current = [];
+        console.warn('[Reconcile Selections] builder mappings unavailable; this job can still confirm its own mappings.', error?.message || error);
+      }
+      return builderRequirementMappingsRef.current;
+    },
+    applySelectionReconciliation: async (options = {}) => {
+      const { saveForBuilder = false, approvedFinancialImpact = null, acknowledgedPending = [], ...planOptions } = options;
+      const mappings = builderRequirementMappingsRef.current;
+      const current = workbookRef.current;
+      const productById = productByIdForWorkbook(current);
+      const plan = planSelectionReconciliation({ workbook: current, productById, productByCode: productById.byCode, mappings, quotationEvidence: preview.quotation, ...planOptions });
+      if (plan.blocking.length) throw new Error('Reconcile Selections is blocked: verify the quantity changes first.');
+      const financialImpact = selectionReconciliationFinancialImpact(current, plan.workbook);
+      const approvedImpactMatches = approvedFinancialImpact
+        && approvedFinancialImpact.before === financialImpact.before
+        && approvedFinancialImpact.after === financialImpact.after
+        && approvedFinancialImpact.delta === financialImpact.delta
+        && approvedFinancialImpact.signature === financialImpact.signature;
+      if (financialImpact.requiresApproval && !approvedImpactMatches) {
+        throw new Error(`Reconcile Selections is blocked: explicitly approve the ${financialImpact.rowChanges.length} quotation line change(s) and total change of ${financialImpact.delta > 0 ? "+" : ""}$${financialImpact.delta.toFixed(2)} (${financialImpact.before.toFixed(2)} to ${financialImpact.after.toFixed(2)}).`);
+      }
+      const recordedAt = new Date().toISOString();
+      const approvalRecord = {
+        id: `selection-reconciliation:${recordedAt}`,
+        recordedAt,
+        jobId: current.jobId || workbookAttachedProjectId(current) || "",
+        workspaceId: current.workspaceId || browserWorkspaceId(),
+        financialImpact: {
+          before: financialImpact.before,
+          after: financialImpact.after,
+          delta: financialImpact.delta,
+          signature: financialImpact.signature,
+          approved: financialImpact.requiresApproval ? Boolean(approvedImpactMatches) : false,
+        },
+        approvedBaselines: Object.keys(planOptions.approvedBaselines || {}).filter((key) => planOptions.approvedBaselines[key] === true),
+        approvedQuantities: Object.keys(planOptions.approvedQuantities || {}).filter((key) => planOptions.approvedQuantities[key] === true),
+        confirmedTargets: Object.entries(planOptions.confirmed || {}).map(([identityKey, rowId]) => ({ identityKey, rowId: rowId || "", status: rowId ? "MAPPED" : "PENDING" })),
+        confirmedFixtureTargets: Object.entries(planOptions.confirmedFixtureTargets || {}).map(([identityKey, target]) => ({ identityKey, rowId: target?.rowId || "", section: target?.section || "", status: target?.rowId ? "MAPPED" : "PENDING" })),
+        acknowledgedPending: [...acknowledgedPending],
+        remainingBlockers: plan.selectionDecisions.filter((result) => !["ALREADY_REPRESENTED", "INCLUSION_COVERED"].includes(result.reconciliationDecision)).map((result) => ({
+          identityKey: result.identityKey,
+          requirementKey: result.requirementKey,
+          productId: result.productId,
+          productName: result.productName,
+          location: result.location,
+          status: result.status,
+          blockers: result.blockers,
+          reason: result.reason,
+          reconciliationDecision: result.reconciliationDecision,
+          procurementStatus: result.procurementStatus,
+        })),
+      };
+      const refreshed = refreshSelectionProcurementRequirements(
+        plan.workbook,
+        calculateEstimateBuilderWorkbook(structuredClone(plan.workbook)),
+        plan.workbook.procurement?.items || [],
+        { productById, productByCode: productById.byCode },
+      );
+      updateWorkbookState({
+        ...refreshed,
+        selectionReconciliationPending: null,
+        selectionReconciliationDecisionLog: [...(current.selectionReconciliationDecisionLog || []), approvalRecord],
+      });
+      const confirmedMappings = plan.applied.filter(entry => entry.action === 'CONFIRMED_MAPPING');
+      const fixtureMappings = plan.fixtureMappings || [];
+      const saveErrors = [];
+      if (saveForBuilder) {
+        const owner = browserWorkspaceId();
+        const { data: auth } = await supabase.auth.getSession();
+        const reusableMappings = [...confirmedMappings.map(({ mapping }) => mapping), ...fixtureMappings];
+        for (const mapping of reusableMappings) {
+          try {
+            const response = await fetch('/api/builders/selection-foundation', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${auth?.session?.access_token || ''}`, 'x-workspace-id': owner },
+              body: JSON.stringify({ resource: 'requirementMappings', record: { template_id: mapping.template_id, requirement_key: mapping.requirement_key, product_id: mapping.product_id || '', location_id: mapping.metadata?.locationId || '', mode: mapping.mode || 'PRODUCT_ROW', quote_section_id: mapping.quote_section_id, quote_row_id: mapping.quote_row_id, status: 'MAPPED', metadata: mapping.metadata } }) });
+            if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || `status ${response.status}`);
+          } catch (error) { saveErrors.push(`${mapping.requirement_key}: ${error?.message || error}`); }
+        }
+      }
+      const mappingsConfirmed = confirmedMappings.length + fixtureMappings.length;
+      return { added: plan.changes.filter(change => change.kind === 'ADDED').length, replaced: plan.replacements.length, confirmedMappings: mappingsConfirmed, savedForBuilder: saveForBuilder ? mappingsConfirmed - saveErrors.length : 0, saveErrors, held: plan.held.length };
+    },
     duplicateQuoteLine,
     moveQuoteLine,
     deleteQuoteLine,
@@ -2946,32 +3721,98 @@ function createBlankPreviewWorkbook(initialValues = {}) {
   };
 }
 
-function normalizeWorkbook(workbook = {}) {
+function normalizeWorkbook(workbook = {}, { onQuotationStage, allowQuotationHydration = false } = {}) {
+  const observe = (stage, value) => {
+    onQuotationStage?.(stage, value);
+    return value;
+  };
+  observe("saved-input", workbook);
+  const authoritativeQuotation = workbook.quotation && typeof workbook.quotation === "object" && !Array.isArray(workbook.quotation) ? workbook.quotation : null;
   if (typeof window !== "undefined") workbook = scopeBrowserWorkbook(workbook);
   const owner = workbook.workspaceId || browserWorkspaceId();
   const defaults = createEstimateBuilderWorkbookDefaults({}, { workspaceId: owner });
   // Every load path (browser storage, .gr8job, recovery) brings the job to the current schema here:
   // retired sections go, and sections the job never had come from the current defaults below.
   // Old Cabinet Schedule lines are moved onto the canonical cabinet items in the same pass.
-  workbook = migrateWorkbookCabinetSchedules(normalizeJobForCurrentSchema(workbook));
+  workbook = observe("schema-migration", normalizeJobForCurrentSchema(workbook));
+  workbook = observe("cabinet-schedule-migration", migrateWorkbookCabinetSchedules(workbook));
+  const sourceQuotation = ensureQuotationSectionIds(withStableQuoteTargets(!allowQuotationHydration && authoritativeQuotation ? authoritativeQuotation : workbook.quotation || {}));
+  const savedOrderIds = Array.isArray(workbook.quotationSectionOrderIds) ? workbook.quotationSectionOrderIds : [];
+  const savedOrderNames = savedOrderIds.length
+    ? quotationNamesForSectionIds(sourceQuotation, savedOrderIds)
+    : Array.isArray(workbook.quotationSectionOrder) && workbook.quotationSectionOrder.length
+      ? workbook.quotationSectionOrder
+      : persistedSectionOrder(sourceQuotation);
   const restored = restoreCompleteWorkbook(defaults, workbook);
+  restored.quotation = sourceQuotation;
+  restored.quotationSectionOrder = savedOrderNames;
+  restored.quotationSectionOrderIds = quotationSectionOrderIds(sourceQuotation, savedOrderNames);
+  if (authoritativeQuotation && !allowQuotationHydration) {
+    if (workbookHasExplicitJobIdentity(workbook) || workbook.templateType === "job") restored.jobId = workbook.jobId || workbookAttachedProjectId(workbook) || crypto.randomUUID();
+    return observe("saved-quotation-preserved", withPersistedQuotationOrder(applyCabinetryRequirementsToQuotation(restored, owner)));
+  }
+  const savedQuotation = restored.quotation;
+  restored.quotation = normalizeQuotationStructure(savedQuotation);
+  observe("quotation-structure", restored);
+  if (restored.quotation !== savedQuotation) {
+    restored.quotationSectionOrder = quotationSectionOrderAfterNormalize(restored.quotationSectionOrder, restored.quotation);
+    restored.quotationSectionOrderIds = quotationSectionOrderIds(restored.quotation, restored.quotationSectionOrder);
+  }
+  restored.quotation = normalizePainterPatioCeilingFormula(restored.quotation);
+  observe("painter-formula", restored);
+  let savedSelections = restored.clientSelectionsBook || restored.selectionsBook || restored.selectionSchedule || restored.selectionSchedules;
+  if (savedSelections) {
+    const productById = productByIdForWorkbook(restored);
+    const normalizedSelections = normalizeSelectionPackRoomAliases(savedSelections);
+    if (normalizedSelections !== savedSelections) {
+      if (restored.clientSelectionsBook === savedSelections) restored.clientSelectionsBook = normalizedSelections;
+      else if (restored.selectionsBook === savedSelections) restored.selectionsBook = normalizedSelections;
+      else if (restored.selectionSchedule === savedSelections) restored.selectionSchedule = normalizedSelections;
+      else if (restored.selectionSchedules === savedSelections) restored.selectionSchedules = normalizedSelections;
+      savedSelections = normalizedSelections;
+    }
+    const withElectrical = observe("electrical-selections", connectElectricalScheduleToQuotation(restored, savedSelections));
+    const withTiling = observe("tiling-selections", connectTilingSelectionsToQuotation(withElectrical, savedSelections, { productById }));
+    const restructuredQuotation = normalizeQuotationStructure(withTiling.quotation);
+    const synchronized = {
+      ...withTiling,
+      quotation: restructuredQuotation,
+      ...(restructuredQuotation !== withTiling.quotation ? {
+        quotationSectionOrder: quotationSectionOrderAfterNormalize(withTiling.quotationSectionOrder, restructuredQuotation),
+        quotationSectionOrderIds: quotationSectionOrderIds(restructuredQuotation, quotationSectionOrderAfterNormalize(withTiling.quotationSectionOrder, restructuredQuotation)),
+      } : {}),
+    };
+    const withFlooring = observe("flooring-selections", connectFlooringSelectionsToQuotation(synchronized, savedSelections, { productById }));
+    const withAppliances = observe("appliance-selections", connectApplianceSelectionsToQuotation(withFlooring, savedSelections, { productById }));
+    const withEntryDoorFurniture = observe("door-furniture-selections", connectEntryDoorFurnitureSchedules(withAppliances, savedSelections));
+    const allocated = observe("allocated-selections", connectAllocatedSelectionsToQuotation(withEntryDoorFurniture, savedSelections));
+    const lighting = observe("external-lighting-selections", connectExternalLightingToQuotation(allocated, savedSelections));
+    const withAllocated = observe("exterior-paint-selections", linkExteriorPaintToQuotation(lighting, savedSelections));
+    const canonicalQuotation = normalizeQuotationStructure(withAllocated.quotation);
+    const quotationSectionOrder = quotationSectionOrderAfterNormalize(withAllocated.quotationSectionOrder, canonicalQuotation);
+    Object.assign(restored, { ...withAllocated, quotation: canonicalQuotation, quotationSectionOrder, quotationSectionOrderIds: quotationSectionOrderIds(canonicalQuotation, quotationSectionOrder) });
+    observe("selection-trade-structure", restored);
+  }
   // A targeted selection save owns its existing quote structure, including on file reopen.
   if (workbook.selectionQuoteEngineVersion === 1 && workbook.quotation) {
-    return applyCabinetryRequirementsToQuotation(reconcileCabinetryQuotation({ ...restored, quotation: workbook.quotation }, owner), owner);
+    return observe("final-cabinetry", applyCabinetryRequirementsToQuotation(reconcileCabinetryQuotation(restored, owner), owner));
   }
   if (!owner || owner === CURRENT_BUILDER_WORKSPACE_ID) {
     restored.quotation = withEntryDoorLibraryQuotation(restored.quotation);
+    observe("entry-door-library", restored);
     restored.quotation = withLinea180PlankQuoteRow(restored.quotation, defaults.quotation);
+    observe("linea-library", restored);
     restored.quotation = withWallLiningMappings(withWindowsPriceListQuotation(restored.quotation));
+    observe("windows-wall-library", restored);
   }
   if (restored.data?.inputDataSheet) restored.data = { ...restored.data, inputDataSheet: normalizeTakeoffInputSection(restored.data.inputDataSheet, V4_DATA_SECTIONS.find((section) => section.key === "inputDataSheet").rows) };
   // Section 53 WINDOWS carries the full windows / glass sliding doors / flyscreens price list,
   // quantities linked to the takeoff Window Schedule (see windowsQuotePriceList.js).
   if (workbookHasExplicitJobIdentity(workbook) || workbook.templateType === "job") {
     restored.jobId = workbook.jobId || workbookAttachedProjectId(workbook) || crypto.randomUUID();
-    return withPersistedQuotationOrder(applyCabinetryRequirementsToQuotation(reconcileCabinetryQuotation(restored, owner), owner));
+    return observe("final-cabinetry-order", withPersistedQuotationOrder(applyCabinetryRequirementsToQuotation(reconcileCabinetryQuotation(restored, owner), owner)));
   }
-  return withPersistedQuotationOrder(applyCabinetryRequirementsToQuotation(reconcileCabinetryQuotation(restored, owner), owner));
+  return observe("final-cabinetry-order", withPersistedQuotationOrder(applyCabinetryRequirementsToQuotation(reconcileCabinetryQuotation(restored, owner), owner)));
 }
 
 // Quotation order is saved data (quotationOrder.js): every section and line carries its position.
@@ -2982,15 +3823,19 @@ function withPersistedQuotationOrder(workbook = {}) {
   if (!workbook?.quotation || typeof workbook.quotation !== "object") return workbook;
   const restoredQuotation = applyPersistedQuotationOrder(withStableQuoteTargets(workbook.quotation));
   const listedOrder = Array.isArray(workbook.quotationSectionOrder) ? workbook.quotationSectionOrder : [];
-  // section.sortOrder is the saved position; the name list only places sections that have none yet.
-  const savedSectionOrder = Object.values(restoredQuotation).some((section) => Number.isFinite(Number(section?.sortOrder)))
-    ? persistedSectionOrder(restoredQuotation, listedOrder)
-    : listedOrder;
+  const listedIds = Array.isArray(workbook.quotationSectionOrderIds) ? workbook.quotationSectionOrderIds : [];
+  const idOrder = quotationNamesForSectionIds(restoredQuotation, listedIds);
+  const migratedNameOrder = normalizeQuoteSectionOrder(listedOrder, restoredQuotation);
+  const hasCompleteIdOrder = idOrder.length === Object.keys(restoredQuotation).length;
+  // Stable ids are authoritative. Legacy saved names are migrated once; absent metadata is
+  // recovered from section stamps and source key order before defaults can be merged in.
+  const savedSectionOrder = normalizeQuoteSectionOrder(hasCompleteIdOrder ? idOrder : migratedNameOrder.length ? migratedNameOrder : persistedSectionOrder(restoredQuotation), restoredQuotation);
   const sectionOrder = orderedQuoteSections(restoredQuotation, savedSectionOrder);
   const quotation = stampQuotationOrder(restoredQuotation, sectionOrder);
-  const quotationSectionOrder = savedSectionOrder.length ? normalizeQuoteSectionOrder(savedSectionOrder, quotation) : workbook.quotationSectionOrder;
-  if (quotation === workbook.quotation && quotationSectionOrder === workbook.quotationSectionOrder) return workbook;
-  return { ...workbook, quotation, ...(quotationSectionOrder ? { quotationSectionOrder } : {}) };
+  const quotationSectionOrder = normalizeQuoteSectionOrder(savedSectionOrder, quotation);
+  const sectionOrderIds = quotationSectionOrderIds(quotation, quotationSectionOrder);
+  if (quotation === workbook.quotation && quotationSectionOrder === workbook.quotationSectionOrder && sectionOrderIds === workbook.quotationSectionOrderIds) return workbook;
+  return { ...workbook, quotation, quotationSectionOrder, quotationSectionOrderIds: sectionOrderIds };
 }
 
 // Saved quotations are authoritative in restoreCompleteWorkbook, so a job saved before the
@@ -3221,7 +4066,11 @@ function isStalePlatformFormula(key, formula) {
   if (key === "lowerSkirtingLm" && (formula === "lowerInternalWallsLm + lowerExternalWallsLm" || formula === "(lowerInternalWallsLm * 2) + lowerExternalWallsLm")) return true;
   if (key === "upperSkirtingLm" && (formula === "upperInternalWallsLm + upperExternalWallsLm" || formula === "(upperInternalWallsLm * 2) + upperExternalWallsLm")) return true;
   if (key === "thirdSkirtingLm" && (formula === "thirdInternalWallsLm + thirdExternalWallsLm" || formula === "(thirdInternalWallsLm * 2) + thirdExternalWallsLm")) return true;
-  if (key === "skirtingLengthsEach" && formula === "(lowerSkirtingLm + upperSkirtingLm + thirdSkirtingLm) * 1.15 / 5.4") return true;
+  if (key === "skirtingLengthsEach" && (
+    formula === "(lowerSkirtingLm + upperSkirtingLm + thirdSkirtingLm) * 0.85 / 5.4" ||
+    formula === "(lowerSkirtingLm + upperSkirtingLm + thirdSkirtingLm) * 1.15 / 5.4" ||
+    formula === "ceil((skirtingLm / 5.4) * 1.1)"
+  )) return true;
   return false;
 }
 
@@ -4252,7 +5101,7 @@ function normalizeWindowDoorArchitraveQuoteRow(row) {
   const item = row.item || row.values?.[0] || "INSTALL EXTERIOR DOOR AND WINDOW ARCHITRAVES";
   const unit = row.unit || row.values?.[3] || "LM";
   return {
-    ...normalizeFormulaQuoteRow(row, item, "architraveLengthsEach*5.4", "B1356*F1356"),
+    ...normalizeFormulaQuoteRow(row, item, "architraveLengthsEach", "B1356*F1356"),
     unit,
     notes: "IMPORTED DATA",
     values: Array.isArray(row.values)
@@ -4301,6 +5150,26 @@ function normalizePainterQuoteRow(row) {
   };
 }
 
+function normalizePainterPatioCeilingFormula(quotation = {}) {
+  let changed = false;
+  const nextQuotation = Object.fromEntries(Object.entries(quotation).map(([sectionName, section]) => {
+    const rows = Array.isArray(section?.rows) ? section.rows : [];
+    let sectionChanged = false;
+    const nextRows = rows.map((row) => {
+      if (quoteRowSourceNumber(row) !== 1968 || quoteSectionBaseName(row?.section || sectionName) !== "painter"
+        || row.quantityManualOverride === true || row.quantityFormulaOverride === true) return row;
+      const formula = painterQuoteFormula({ ...row, section: row.section || sectionName });
+      if (!formula || row.formulas?.B === formula) return row;
+      sectionChanged = true;
+      return { ...row, formulas: { ...(row.formulas || {}), B: formula } };
+    });
+    if (!sectionChanged) return [sectionName, section];
+    changed = true;
+    return [sectionName, { ...section, rows: nextRows }];
+  }));
+  return changed ? nextQuotation : quotation;
+}
+
 function painterQuoteFormula(row) {
   if (quoteSectionBaseName(row?.section) !== "painter") return "";
   if (row?.id === "quote-1963.1") return "thirdLevelFloorAreaM2";
@@ -4311,7 +5180,7 @@ function painterQuoteFormula(row) {
   if (rowNumber === 1964) return "lowerExternalWallAreaM2";
   if (rowNumber === 1965) return "upperExternalWallAreaM2";
   if (rowNumber === 1967) return "eavesAreaM2";
-  if (rowNumber === 1968) return "lowerAlfrescoAreaM2 + lowerPorchAreaM2";
+  if (rowNumber === 1968) return "painterPatioCeilingAreaM2";
   return "";
 }
 
@@ -4790,8 +5659,10 @@ function buildProcurementItemsFromQuote(workbook = {}, preview = {}, existingIte
       const estimatedRate = procurementEstimatedRate(row) / (material.rateDivisor || 1);
       const estimatedTotal = procurementEstimatedTotal(row);
       items.push({
+        ...existing,
         id: existing.id || `procurement:${quoteRowId}`,
         quoteRowId,
+        productId: row.productId || row.activeProductId || row.selectedProductId || existing.productId || "",
         stageNumber,
         stageName,
         sectionNumber,
@@ -4831,7 +5702,11 @@ function buildProcurementItemsFromQuote(workbook = {}, preview = {}, existingIte
     });
   });
   (existingItems || []).forEach((item) => {
-    if (!item.quoteRowId || activeQuoteRowIds.has(item.quoteRowId)) return;
+    if (!item.quoteRowId) {
+      items.push(item);
+      return;
+    }
+    if (activeQuoteRowIds.has(item.quoteRowId)) return;
     items.push({
       ...item,
       removedFromQuote: true,
@@ -5710,6 +6585,7 @@ function normalizeQuoteSectionOrder(savedOrder = [], quotation = {}) {
   sections.forEach((section) => {
     if (!seen.has(section)) ordered.push(section);
   });
+  if (Array.isArray(savedOrder) && savedOrder.length && ordered.length === sections.length) return ordered;
   return moveFixOutMaterialsGroupAfterStairs(moveQuoteSectionNamesAfter(
     moveQuoteSectionNamesAfter(
       moveQuoteSectionNamesAfter(
@@ -6073,6 +6949,8 @@ function shouldTrackQuoteChange(key) {
     "selectionAllowanceAmount",
     "selectionSelectedCost",
     "selectionAdjustment",
+    "progressPercent",
+    "progressManualAmount",
   ].includes(key);
 }
 
@@ -6516,6 +7394,7 @@ const SAVED_JOB_PACKAGE_SECTION_KEYS = [
   "productLibrary",
   "procurement",
   "purchaseOrders",
+  "tradeContracts",
 ];
 
 function hasOwnJobPackageValue(source = {}, key = "") {
@@ -6611,15 +7490,15 @@ async function resolveMasterTemplate() {
 function migrateWorkbookToMasterTemplate(workbook = {}) {
   return {
     ...workbook,
-    templateKey: MASTER_TEMPLATE_KEY,
-    templateName: MASTER_TEMPLATE_NAME,
+    templateKey: workbook.templateKey || MASTER_TEMPLATE_KEY,
+    templateName: workbook.templateName || MASTER_TEMPLATE_NAME,
     templateType: "job",
   };
 }
 
 function needsMasterTemplateMigration(workbook = {}) {
-  return String(workbook?.templateKey || "").trim() !== MASTER_TEMPLATE_KEY
-    || String(workbook?.templateName || "").trim() !== MASTER_TEMPLATE_NAME;
+  return !String(workbook?.templateKey || "").trim()
+    || !String(workbook?.templateName || "").trim();
 }
 
 function createCleanJobFromMasterTemplate(template = {}, savedAt = new Date().toISOString()) {
@@ -6639,6 +7518,7 @@ function createCleanJobFromMasterTemplate(template = {}, savedAt = new Date().to
     procurement: { settings: { ...(template.procurement?.settings || {}) }, items: [] },
     jobBoardTasks: [],
     purchaseOrders: [],
+    tradeContracts: [],
     formulaHistory: [],
     quoteHistory: [],
     formulaPromotions: {},
@@ -7048,6 +7928,8 @@ function parseTags(value) {
 }
 
 export const __quotationPersistenceTestUtils = {
+  bindSelectionFoundationToQuotation,
+  productByIdForWorkbook,
   withPersistedQuotationOrder,
   orderedQuoteSections,
   sanitizeWorkbookForTemplate,
@@ -7346,8 +8228,11 @@ function resolveLastActiveWorkbookPage(workbook = {}) {
 function loadExplicitActiveJobSessionKey() {
   if (typeof window === "undefined") return "";
   try {
+    // The tab's URL names its job. The stored pointers are only a hint for a tab with no jobId;
+    // another tab opening another job must never change which job this tab is on.
     return String(
-      builderSessionStorage.getItem(EXPLICIT_ACTIVE_JOB_SESSION_KEY)
+      jobKeyFromLocation()
+        || builderSessionStorage.getItem(EXPLICIT_ACTIVE_JOB_SESSION_KEY)
         || builderLocalStorage.getItem(EXPLICIT_ACTIVE_JOB_SESSION_KEY)
         || ""
     ).trim();
@@ -7360,6 +8245,7 @@ function saveExplicitActiveJobSessionKey(key = "") {
   if (typeof window === "undefined") return;
   try {
     const safeKey = String(key || "").trim();
+    writeJobToLocation(safeKey);
     if (safeKey) {
       builderSessionStorage.setItem(EXPLICIT_ACTIVE_JOB_SESSION_KEY, safeKey);
       builderLocalStorage.setItem(EXPLICIT_ACTIVE_JOB_SESSION_KEY, safeKey);
@@ -7428,16 +8314,35 @@ async function saveStoredJob(workbook, savedAt = new Date().toISOString(), optio
   // navigator.locks.request(`estimate-builder-save:${key}`, ...) - wrapping this
   // call in another lock of the *same name* self-deadlocks every save: the outer
   // lock is held while the inner request waits forever for that same name to free.
-  return persistCompleteJob({ openDatabase: openWorkspaceDatabase, storeName: JOB_STORE_NAME, key, workbook: savedWorkbook,
+  // The save names its own job (key) and the revision this tab loaded: a job another tab or user
+  // has saved since is not overwritten (JobConflictError), and this tab's base moves on only
+  // after its own save lands.
+  const record = await persistCompleteJob({ openDatabase: openWorkspaceDatabase, storeName: JOB_STORE_NAME, key, workbook: savedWorkbook,
     name: workbookJobName(savedWorkbook), savedAt, externalize: externalizeTakeoffPlanPages,
-    activePointer: createActiveJobPointer, initializeRecovery: options.initializeRecovery === true, normalizeRecovery: normalizeWorkbook });
+    activePointer: createActiveJobPointer, initializeRecovery: options.initializeRecovery === true, normalizeRecovery: normalizeWorkbook,
+    baseRevision: knownJobRevision(key), writer: { tabId: currentTabId(), workspaceId: storageWorkspaceId || "" }, force: options.overwriteNewer === true,
+    allowOlderTakeoff: options.allowOlderTakeoff === true });
+  rememberJobRevision(key, record?.revision);
+  // SHARED STORAGE (Storage Settings): the same save is committed to the builder's own job server
+  // under this job's id. Local Only mode does nothing here. The local save above has already
+  // succeeded, so the work is never lost; a commit the server refuses because another user saved
+  // first surfaces as a JobConflictError and overwrites nothing of theirs.
+  if (options.skipSharedStorage !== true) await commitJobToSharedStorage(key, savedWorkbook, { name: workbookJobName(savedWorkbook) });
+  return record;
+}
+
+// A job fetched from shared storage (Storage Settings > Open), stored on this computer so the
+// application can open it by its id. It is the shared revision itself, so it is not sent back.
+export async function storeSharedJobLocally(workbook) {
+  const record = await saveStoredJob(workbook, new Date().toISOString(), { overwriteNewer: true, skipSharedStorage: true });
+  return { key: record.key, jobId: record.jobId };
 }
 
 async function saveVerifiedStoredJob(workbook, options = {}) {
   const savedAt = options.savedAt || new Date().toISOString();
   const record = await saveStoredJob(workbook, savedAt, options);
   return { ok: true, key: record.key, jobId: record.jobId, revision: record.revision,
-    checksum: record.checksum, savedAt, payloadBytes: jsonByteLength(record.workbook),
+    checksum: record.checksum, savedAt: record.savedAt || savedAt, payloadBytes: jobJsonByteLength(record.workbook),
     quotationRows: countQuotationRows(record.workbook.quotation), source: options.source || "manual" };
 }
 
@@ -7623,6 +8528,8 @@ async function loadStoredJobUnlocked(key = "", { hydrateTakeoff = true } = {}) {
       try {
         // Reading a saved record must never initialize or overwrite a working job.
         let record = request.result || await loadLatestStoredJobBackup(key);
+        // What this tab has now seen of the job: the base its next save is checked against.
+        if (request.result?.type === "job") rememberJobRevision(key, request.result.revision);
         // Adopt an existing legacy record's explicit storage identity once;
         // renaming that job must never mint a new identity on a later open.
         if (record?.workbook && !record.workbook.jobId && String(record.key || key).startsWith("job:")) {

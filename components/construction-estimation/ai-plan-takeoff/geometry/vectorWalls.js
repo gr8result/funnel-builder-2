@@ -151,7 +151,8 @@ function thicknessModes(candidates, options) {
 
 function repeatedDetailGroups(lines, angle, mmPx, options, textItems = []) {
   const groups = [];
-  const stairLabels = textItems.filter(item => /\b(stairs?|stair\s+void|steps?\s+down)\b/i.test(String(item.text || ''))
+  // A stair is labelled by name or by its run direction (UP / DN / DOWN beside the run arrow).
+  const stairLabels = textItems.filter(item => /\b(stairs?|stair\s+void|steps?\s+down|up|dn|down)\b/i.test(String(item.text || ''))
     && Number.isFinite(item.x) && Number.isFinite(item.y));
   const u = { x: Math.cos(angle), y: Math.sin(angle) };
   const n = { x: -u.y, y: u.x };

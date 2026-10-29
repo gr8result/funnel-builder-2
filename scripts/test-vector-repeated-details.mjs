@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { detectVectorWalls } from '../components/construction-estimation/ai-plan-takeoff/geometry/vectorWalls.js';
 
-function fixture(angle, pixelsPerMm, withPartitions = false) {
+function fixture(angle, pixelsPerMm, withPartitions = false, label = 'STAIRS') {
   const segments = [];
   const cosine = Math.cos(angle), sine = Math.sin(angle);
   const point = ([x, y]) => ({ x: (x * cosine - y * sine + 10000) * pixelsPerMm, y: (x * sine + y * cosine + 10000) * pixelsPerMm });
@@ -24,7 +24,7 @@ function fixture(angle, pixelsPerMm, withPartitions = false) {
   const stairLabel = point([900, 1250]);
   return { segments, point, context: {
     pixelsPerMm, logicalWidth: 25000 * pixelsPerMm, logicalHeight: 25000 * pixelsPerMm,
-    textItems: withPartitions ? [] : [{ text: 'STAIRS', x: stairLabel.x, y: stairLabel.y }],
+    textItems: withPartitions ? [] : [{ text: label, x: stairLabel.x, y: stairLabel.y }],
   } };
 }
 
@@ -39,6 +39,16 @@ for (const angle of [0, Math.PI / 2, Math.PI / 4]) for (const scale of [.03, .1]
     const first = inverse(wall.nodes[0]), last = inverse(wall.nodes.at(-1));
     return Math.abs(first.y - last.y) < 10 && first.y > 400 && first.y < 2100 && Math.max(first.x, last.x) < 1900;
   }), 'repeated stair treads must not form architectural walls');
+  // A stair labelled only by its run direction (UP beside the arrow) is the same evidence.
+  const up = fixture(angle, scale, false, 'UP');
+  const upFound = detectVectorWalls(up.segments, up.context);
+  assert.ok(!upFound.walls.some(wall => {
+    const first = inverse(wall.nodes[0]), last = inverse(wall.nodes.at(-1));
+    return Math.abs(first.y - last.y) < 10 && first.y > 400 && first.y < 2100 && Math.max(first.x, last.x) < 1900;
+  }), 'treads beside an UP run label must not form walls');
+  // An unrelated word near repeated lines is not stair evidence.
+  const other = fixture(angle, scale, false, 'LAUNDRY');
+  assert.ok(detectVectorWalls(other.segments, other.context).walls.length >= detectVectorWalls(up.segments, up.context).walls.length, 'only stair labels withhold repeated lines');
   const partitions = fixture(angle, scale, true);
   const real = detectVectorWalls(partitions.segments, partitions.context);
   assert.ok(real.walls.length >= 6, 'regularly spaced real walls retain their independently paired faces');
