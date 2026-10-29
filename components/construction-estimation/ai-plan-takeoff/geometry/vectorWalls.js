@@ -43,6 +43,9 @@ export const VECTOR_WALL_DEFAULTS = {
   openingMinMm: 400, openingMaxMm: 6200,
   swingReachMm: 200,          // a door swing's hinge lies this close to the end of the gap it closes
   frameMinMm: 400, frameMaxMm: 4000, frameThicknessMm: [25, 80],
+  windowLabelReachMm: 1500,
+  cornerReturnMaxMm: 300,     // a window may stop this short of the corner wall (the wall's short return)  // a window's size code is printed within this of it
+  projectedBoxMinMm: 60, projectedBoxMaxMm: 450, projectedBoxEndMm: 40, // a window box out from the wall: how far past the face, cap tolerance
   projectedFrameMaxThicknessMm: 180, projectedFrameReachMm: 100, frameCapToleranceMm: 20,
   frameJoinMm: 150,           // frame pieces along one wall this close are one window (split at a mullion)
   garageMinMm: 2700,
@@ -455,6 +458,65 @@ export function detectVectorWalls(segments, context, overrides = {}) {
     -(arc.closedEnd.x - arc.centre.x) * Math.sin(angle)
     + (arc.closedEnd.y - arc.centre.y) * Math.cos(angle)) <= arc.radius * Math.sin(2 * deg);
   const allLines = linesByDirection;
+  // A window drawn as a box projecting from the wall: its end caps run right across the wall and out
+  // past one face, and an outer line joins them. Garage, barn and sliding doors do not cap the wall.
+  // Caps between the ends are mullions between separate windows. Returns the box or null.
+  const projectedWindowBox = (gap, half, lines) => {
+    const u = { x: Math.cos(gap.angle), y: Math.sin(gap.angle) }, n = { x: -u.y, y: u.x };
+    const near = options.projectedBoxEndMm * mmPx;
+    const caps = straight.filter((segment) => Math.abs(segment.x1 * u.x + segment.y1 * u.y - (segment.x2 * u.x + segment.y2 * u.y)) <= 2 * mmPx)
+      .map((segment) => { const c1 = segment.x1 * n.x + segment.y1 * n.y, c2 = segment.x2 * n.x + segment.y2 * n.y;
+        return { s: ((segment.x1 + segment.x2) / 2) * u.x + ((segment.y1 + segment.y2) / 2) * u.y, lo: Math.min(c1, c2), hi: Math.max(c1, c2) }; })
+      .filter((cap) => cap.s >= gap.lo - near && cap.s <= gap.hi + near);
+    for (const side of [-1, 1]) {
+      const wallFace = gap.c - side * half, outerFace = gap.c + side * half;
+      const crossing = caps.filter((cap) => {
+        const reachIn = side > 0 ? cap.lo <= wallFace + 5 * mmPx : cap.hi >= wallFace - 5 * mmPx;
+        const beyond = side > 0 ? cap.hi - outerFace : outerFace - cap.lo;
+        return reachIn && beyond >= options.projectedBoxMinMm * mmPx && beyond <= options.projectedBoxMaxMm * mmPx;
+      });
+      // At a corner the box may stop short of the perpendicular wall by the short return of the wall.
+      const slackLo = gap.cornerAt === 'lo' ? options.cornerReturnMaxMm * mmPx : 0, slackHi = gap.cornerAt === 'hi' ? options.cornerReturnMaxMm * mmPx : 0;
+      const atLo = crossing.filter((cap) => cap.s >= gap.lo - near && cap.s <= gap.lo + near + slackLo).sort((a, b) => a.s - b.s)[0];
+      const atHi = crossing.filter((cap) => cap.s <= gap.hi + near && cap.s >= gap.hi - near - slackHi).sort((a, b) => b.s - a.s)[0];
+      if (!atLo || !atHi) continue;
+      const depth = Math.min(side > 0 ? atLo.hi : -atLo.lo, side > 0 ? atHi.hi : -atHi.lo) * side;
+      const outer = lines.some((line) => side * (line.c - outerFace) >= options.projectedBoxMinMm * mmPx && Math.abs(line.c - depth) <= 20 * mmPx
+        && line.lo <= atLo.s + near && line.hi >= atHi.s - near && (line.hi - line.lo) <= (atHi.s - atLo.s) + 2 * near);
+      if (!outer) continue;
+      const mullions = [...new Set(crossing.filter((cap) => cap.s > atLo.s + near && cap.s < atHi.s - near).map((cap) => Math.round(cap.s / mmPx)))].map((value) => value * mmPx).sort((a, b) => a - b);
+      return { side, c0: Math.min(outerFace, depth), c1: Math.max(outerFace, depth), lo: Math.min(gap.lo, atLo.s), hi: Math.max(gap.hi, atHi.s), windowLo: atLo.s, windowHi: atHi.s, mullions };
+    }
+    return null;
+  };
+  const windowBoxes = [];
+  // A wall that stops short of a perpendicular wall it runs into: the space between can be a window or
+  // door at the end of the wall, beside a corner whose short return is too short to read as a wall of its
+  // own. It is offered as a gap with its one measured host and kept only with strong drawn evidence (a
+  // door swing or a capped window box), never for a single line carried across.
+  for (const wall of accepted) {
+    const u = { x: Math.cos(wall.angle), y: Math.sin(wall.angle) }, n = { x: -u.y, y: u.x };
+    for (const direction of [-1, 1]) {
+      const at = direction > 0 ? wall.hi : wall.lo;
+      let best = null;
+      for (const other of accepted) {
+        if (Math.abs(Math.cos(other.angle - wall.angle)) > 0.05) continue;
+        const e = endpoints(other);
+        const sAt = ((e.a.x + e.b.x) / 2) * u.x + ((e.a.y + e.b.y) / 2) * u.y;
+        const c0 = e.a.x * n.x + e.a.y * n.y, c1 = e.b.x * n.x + e.b.y * n.y, reach = other.thicknessMm / 2 * mmPx;
+        // At an L or T the other wall stops at one of this wall's faces.
+        const span = (wall.thicknessMm / 2 + 30) * mmPx;
+        if (wall.c < Math.min(c0, c1) - span || wall.c > Math.max(c0, c1) + span) continue;
+        const face = sAt - direction * reach, gapPx = direction * (face - at);
+        if (gapPx < options.openingMinMm * mmPx || gapPx > options.openingMaxMm * mmPx) continue;
+        if (!best || gapPx < best.gapPx) best = { face, gapPx };
+      }
+      // The wall carries on along the same line before the corner wall: an ordinary gap, not a corner.
+      if (best && accepted.some((other) => other !== wall && sameLine(other, wall)
+        && (direction > 0 ? other.lo >= at - 1e-6 && other.lo <= best.face : other.hi <= at + 1e-6 && other.hi >= best.face))) best = null;
+      if (best) openingsFromGaps.push({ host: [wall], lo: Math.min(at, best.face), hi: Math.max(at, best.face), c: wall.c, angle: wall.angle, thicknessMm: wall.thicknessMm, atCorner: true, cornerAt: direction > 0 ? 'hi' : 'lo' });
+    }
+  }
   for (const gap of openingsFromGaps) {
     if (!gap.host.every((wall) => accepted.some((item) => item.angle === wall.angle && Math.abs(item.c - wall.c) < 1e-6 && item.lo <= wall.lo + 1e-6 && item.hi >= wall.hi - 1e-6))) continue;
     const widthMm = (gap.hi - gap.lo) / mmPx, half = gap.thicknessMm / 2 * mmPx;
@@ -489,6 +551,31 @@ export function detectVectorWalls(segments, context, overrides = {}) {
       kind = openingWidthMm >= 2000 ? 'sliding-door' : 'window';
       evidence.push(`${partial.length} frame or glass lines across ${Math.round(openingWidthMm)} mm`);
     }
+    const box = kind === 'opening' ? projectedWindowBox(gap, half, lines) : null;
+    if (gap.atCorner && !box) continue;
+    if (box) {
+      // One window per panel between the end caps and mullions.
+      windowBoxes.push({ angle: gap.angle, ...box });
+      // Caps between the ends split separate windows only when each one carries its own size label
+      // (one code per window); otherwise they are the mullions of one window.
+      const labelAt = (lo, hi) => (context.textItems || []).some((item) => {
+        if (!/^s*d{3,4}s*[A-Z]{0,3}s*$/i.test(String(item.text || '')) || !Number.isFinite(item.x) || !Number.isFinite(item.y)) return false;
+        const along = item.x * Math.cos(gap.angle) + item.y * Math.sin(gap.angle), off = -item.x * Math.sin(gap.angle) + item.y * Math.cos(gap.angle);
+        return along >= lo - 5 * mmPx && along <= hi + 5 * mmPx && Math.abs(off - gap.c) <= options.windowLabelReachMm * mmPx;
+      });
+      const panels = [box.windowLo, ...box.mullions, box.windowHi];
+      const ownLabels = box.mullions.length && panels.slice(1).every((stop, k) => labelAt(panels[k], stop));
+      const stops = ownLabels ? panels : [box.windowLo, box.windowHi];
+      for (let k = 1; k < stops.length; k += 1) {
+        const panelMm = (stops[k] - stops[k - 1]) / mmPx;
+        if (panelMm < options.frameMinMm) continue;
+        openings.push({ id: `vo-${openings.length + 1}`, ...toXY(gap.angle, (stops[k - 1] + stops[k]) / 2, gap.c), axis: Math.abs(Math.cos(gap.angle)) > 0.999 ? 'h' : Math.abs(Math.sin(gap.angle)) > 0.999 ? 'v' : 'd',
+          direction: { x: Math.cos(gap.angle), y: Math.sin(gap.angle) }, widthMm: Math.round(panelMm), hostThicknessMm: Math.round(gap.thicknessMm),
+          ...(stops.length > 2 || gap.atCorner ? { bridgeX: centre.x, bridgeY: centre.y, bridgeWidthMm: Math.round(widthMm) } : {}),
+          kind: 'window', confirmed: true, evidence: `window box drawn out from the wall, capped at both ends${stops.length > 2 ? ` (${stops.length - 1} panels)` : ''}` });
+      }
+      continue;
+    }
     if (kind === 'opening' && across.length >= 2) { kind = widthMm >= 2000 ? 'sliding-door' : 'window'; evidence.push(`${across.length} frame or glass lines across the gap`); }
     if (kind === 'opening' && across.length === 1 && widthMm >= options.garageMinMm) { kind = 'garage-door'; evidence.push('a single door line across a wide gap'); }
     if (kind === 'opening' && across.length === 1) { kind = 'window'; evidence.push('a glass line across the gap'); }
@@ -497,6 +584,14 @@ export function detectVectorWalls(segments, context, overrides = {}) {
       direction: { x: Math.cos(gap.angle), y: Math.sin(gap.angle) }, widthMm: Math.round(openingWidthMm), ...(leafMm ? { leafMm } : {}), hostThicknessMm: Math.round(gap.thicknessMm),
       ...(bridgeCentre ? { bridgeX: bridgeCentre.x, bridgeY: bridgeCentre.y, bridgeWidthMm: Math.round(bridgeWidthMm) } : {}),
       kind, confirmed: kind !== 'opening', evidence: evidence.join('; ') || 'a gap in the wall line with nothing drawn to say what it is' });
+  }
+  // The box of a projected window is not a wall: drop measured pairs lying inside it.
+  if (windowBoxes.length) {
+    const inBox = (wall) => windowBoxes.some((box) => box.angle === wall.angle && wall.lo >= box.lo - 40 * mmPx && wall.hi <= box.hi + 40 * mmPx
+      && wall.c >= Math.min(box.c0, wall.c) - 1e-9 && Math.min(wall.c0, wall.c1) >= Math.min(box.c0, box.c1) - (wall.thicknessMm + 10) * mmPx && Math.max(wall.c0, wall.c1) <= Math.max(box.c0, box.c1) + 5 * mmPx
+      && Math.max(wall.c0, wall.c1) > Math.min(box.c0, box.c1) + 5 * mmPx);
+    for (const wall of accepted) if (inBox(wall)) reject(wall, 'inside a projected window box (frame and glass, not a wall)');
+    accepted = accepted.filter((wall) => !inBox(wall));
   }
   // Windows drawn as a frame along a continuous wall (the frame was set aside as lying beside the wall).
   // A frame split at a mullion is one window: pieces along one wall a short way apart are joined.
