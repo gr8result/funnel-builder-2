@@ -29,6 +29,11 @@ const STAMP = new Date().toISOString().replace(/[:.]/g, '-');
 const OUT = path.resolve('artifacts', `landing-pages-live-acceptance-${STAMP}`);
 fs.mkdirSync(OUT, { recursive: true });
 const ONLY = new Set(String(process.env.LP_LIVE_PHASES || 'A,B,C').split(','));
+// LP_LIVE_NO_AI=1: no AI provider calls at all. The page is built by the product's template generator (useAi:false,
+// no images), the edit is made by hand in the Inspector, and the funnel wizard request is sent with useAI:false.
+// AI generation and AI editing are then recorded as BLOCKED, never PASS.
+const NO_AI = process.env.LP_LIVE_NO_AI === '1';
+const AI_BLOCKED_REASON = process.env.LP_LIVE_AI_BLOCKED_REASON || 'OpenAI API returned 429: You have no credits remaining.';
 
 const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY, { auth: { persistSession: false } });
 const must = (r) => { if (r.error) throw new Error(r.error.message); return r.data; };
@@ -39,7 +44,10 @@ const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
 const step = async (name, fn) => {
   const started = Date.now();
   try { const detail = await fn(); results.push({ name, ok: true, ms: Date.now() - started, detail }); log('PASS', name); }
-  catch (error) { results.push({ name, ok: false, ms: Date.now() - started, error: String(error?.stack || error).slice(0, 2000) }); log('FAIL', name, error?.message); }
+  catch (error) {
+    results.push({ name, ok: false, ms: Date.now() - started, error: String(error?.stack || error).slice(0, 2000) }); log('FAIL', name, error?.message);
+    await page.screenshot({ path: path.join(OUT, `FAIL-${name.split(' ')[0]}.png`) }).catch(() => {});
+  }
   fs.writeFileSync(path.join(OUT, 'results.json'), JSON.stringify({ app: APP, results, created }, null, 2));
 };
 const shot = (page, name, opts = {}) => page.screenshot({ path: path.join(OUT, `${name}.png`), ...opts }).catch(() => {});
@@ -56,6 +64,9 @@ page.setDefaultTimeout(240_000);
 page.setDefaultNavigationTimeout(300_000);
 const pageErrors = [];
 page.on('pageerror', (e) => pageErrors.push(`${page.url()} :: ${e.message}`));
+// Never let a confirm/beforeunload dialog stall the run; record each one.
+const dialogs = [];
+page.on('dialog', (d) => { dialogs.push(`${d.type()}: ${d.message()} @ ${page.url()}`); log('DIALOG', d.type(), d.message()); d.accept().catch(() => {}); });
 
 // ---- sign-in ----------------------------------------------------------------------------------------------------
 const sessionUser = async () => page.evaluate(() => {
@@ -111,6 +122,8 @@ if (ONLY.has('A')) {
         await page.waitForSelector('.lp-root section, .lp-root [class*="lp-s-"]', { timeout: 240_000 });
         await page.evaluate(async () => { for (let y = 0; y < document.body.scrollHeight; y += 700) { window.scrollTo(0, y); await new Promise((r) => setTimeout(r, 60)); } window.scrollTo(0, 0); });
         await sleep(1200);
+        // Large library images can take several seconds; wait for loading to settle before judging an image broken.
+        await page.waitForFunction(() => [...document.querySelectorAll('.lp-root img')].every((im) => im.complete), { timeout: 30_000 }).catch(() => {});
         const metrics = await page.evaluate(() => ({
           sections: document.querySelectorAll('.lp-root [class*="lp-s-"]').length,
           overflow: document.documentElement.scrollWidth - window.innerWidth,
@@ -159,7 +172,42 @@ if (ONLY.has('B')) {
   let publicUrl = null; let acceptedHeadline = null;
   const waitSaved = () => page.waitForFunction(() => /^Saved/.test(document.querySelector('[data-testid="save-state"]')?.innerText || ''), { timeout: 120_000 });
 
-  await step('B1 quick-generate a disposable campaign in the TEST workspace (no paid imagery)', async () => {
+  const lpApi = (method, url, body, ws = TEST_WORKSPACE) => page.evaluate(async ({ method, url, body, ws }) => {
+    const key = Object.keys(localStorage).find((k) => /^sb-.*-auth-token$/.test(k));
+    const token = JSON.parse(localStorage.getItem(key)).access_token;
+    const r = await fetch(url, { method, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, 'x-workspace-id': ws }, body: body ? JSON.stringify(body) : undefined });
+    return { status: r.status, body: await r.json().catch(() => ({})) };
+  }, { method, url, body, ws });
+
+  if (NO_AI) {
+    results.push({ name: 'B0 AI generation (quick-generate with AI copy)', ok: false, blocked: true, error: `BLOCKED: ${AI_BLOCKED_REASON}` });
+    await step('B1 template-built disposable campaign in the TEST workspace (no AI, no images)', async () => {
+      await page.goto(`${APP}/modules/landing-pages`, { waitUntil: 'domcontentloaded' });
+      await page.waitForSelector('textarea[aria-label="Quick Generate or Advanced Brief"]');
+      const c = await lpApi('POST', '/api/landing-pages/campaigns', { name: `TEST ${STAMP.slice(0, 16)} Ridgeline Decks` });
+      assert.equal(c.status, 201, JSON.stringify(c.body).slice(0, 300));
+      created.campaignId = c.body.campaign.id;
+      const brief = {
+        businessName: 'Ridgeline Decks (TEST)', phone: '07 3000 0000', email: TEST_EMAIL, objective: 'booking',
+        offering: 'Deck and pergola design and construction, with a free on-site design consultation',
+        audience: 'Brisbane homeowners planning an outdoor living area', serviceArea: 'Brisbane and surrounds',
+        ctaLabel: 'Book a free consultation', style: 'premium',
+      };
+      const b = await lpApi('PATCH', `/api/landing-pages/campaigns/${created.campaignId}`, { brief });
+      assert.equal(b.status, 200, JSON.stringify(b.body).slice(0, 300));
+      const gen = await lpApi('POST', `/api/landing-pages/campaigns/${created.campaignId}`, { action: 'generate', useAi: false, generateImage: false, maxGeneratedImages: 0 });
+      assert.equal(gen.status, 200, `generation: ${JSON.stringify(gen.body).slice(0, 500)}`);
+      assert.equal(gen.body.usedAi, false, 'no AI copy was used');
+      assert.equal(gen.body.aiStatus?.correction, 'skipped', 'no AI proofreading call was made');
+      created.pageId = gen.body.pageId;
+      await page.goto(`${APP}/modules/landing-pages/editor/${created.pageId}`, { waitUntil: 'domcontentloaded' });
+      await page.waitForSelector('[data-testid="canvas"] .lp-root .lp-s-hero h1', { timeout: 240_000 });
+      const camp = must(await db.from('landing_campaigns').select('workspace_id').eq('id', created.campaignId).single());
+      assert.equal(camp.workspace_id, TEST_WORKSPACE, 'campaign was created in the TEST workspace');
+      await shot(page, 'B1-template-editor');
+      return { campaignId: created.campaignId, pageId: created.pageId, usedAi: gen.body.usedAi, aiStatus: gen.body.aiStatus, structure: gen.body.structure };
+    });
+  } else await step('B1 quick-generate a disposable campaign in the TEST workspace (no paid imagery)', async () => {
     await page.goto(`${APP}/modules/landing-pages`, { waitUntil: 'domcontentloaded' });
     await page.waitForSelector('textarea[aria-label="Quick Generate or Advanced Brief"]');
     const imageBox = await page.$('label input[type=checkbox]');
@@ -185,7 +233,22 @@ if (ONLY.has('B')) {
     return { campaignId: created.campaignId, pageId: created.pageId, usedAi: body.usedAi, aiStatus: body.aiStatus, imagery: body.imagery ? { generated: body.imagery.generatedRequestCount } : null };
   });
 
-  await step('B2 AI assistant edit is proposed, previewed and accepted', async () => {
+  if (NO_AI) {
+    results.push({ name: 'B2 AI assistant / batch edit', ok: false, blocked: true, error: `BLOCKED: ${AI_BLOCKED_REASON}` });
+    await step('B2m manual Inspector edit of the hero headline autosaves', async () => {
+      await page.evaluate(() => [...document.querySelectorAll('li')].find((li) => /Hero/.test(li.querySelector('small')?.innerText || ''))?.click());
+      await page.waitForFunction(() => [...document.querySelectorAll('label')].some((l) => l.firstChild?.textContent?.trim() === 'Headline' && l.querySelector('textarea')), { timeout: 60_000 });
+      const field = await page.evaluateHandle(() => [...document.querySelectorAll('label')].find((l) => l.firstChild?.textContent?.trim() === 'Headline').querySelector('textarea'));
+      acceptedHeadline = `Decks built for Brisbane summers (TEST ${STAMP.slice(11, 16)})`;
+      await field.click({ clickCount: 3 });
+      await page.keyboard.down('Control'); await page.keyboard.press('a'); await page.keyboard.up('Control');
+      await page.keyboard.press('Backspace');
+      await field.type(acceptedHeadline);
+      await page.waitForFunction((h) => document.querySelector('[data-testid="canvas"] .lp-s-hero h1')?.innerText.trim() === h, { timeout: 30_000 }, acceptedHeadline);
+      await shot(page, 'B2m-manual-edit'); // B3 saves explicitly and verifies persistence
+      return { headline: acceptedHeadline };
+    });
+  } else await step('B2 AI assistant edit is proposed, previewed and accepted', async () => {
     await page.click('[data-testid="tab-ai"]');
     await page.waitForSelector('[data-testid="ai-input"]');
     const resp = page.waitForResponse((r) => r.url().includes(`/api/landing-pages/pages/${created.pageId}`) && r.request().method() === 'POST' && /"assistant"/.test(r.request().postData() || ''), { timeout: 240_000 });
@@ -267,14 +330,15 @@ if (ONLY.has('B')) {
     await visitor.goto(`${localPublic()}?utm_source=acceptance&utm_medium=test&utm_campaign=lp-live-acceptance`, { waitUntil: 'networkidle2' });
     await visitor.waitForSelector('.lp-form');
     await visitor.$eval('.lp-form', (e) => e.scrollIntoView());
-    const fill = async (sel, value) => { if (await visitor.$(sel)) await visitor.type(sel, value); };
-    await fill('#lpf-name', 'Acceptance Tester');
-    await fill('#lpf-email', TEST_EMAIL);
-    await fill('#lpf-phone', '0400 000 000');
-    await fill('#lpf-business', 'Acceptance Test Pty Ltd');
-    await fill('#lpf-business_name', 'Acceptance Test Pty Ltd');
-    await fill('#lpf-suburb', 'Paddington');
-    await fill('#lpf-message', 'Automated acceptance test enquiry. Please ignore; it is deleted after verification.');
+    // Field ids are lpf-<formId>-<key>; select by the stable field name instead.
+    const fill = async (key, value) => { const sel = `.lp-form input[name="${key}"], .lp-form textarea[name="${key}"]`; if (await visitor.$(sel)) await visitor.type(sel, value); };
+    await fill('name', 'Acceptance Tester');
+    await fill('email', TEST_EMAIL);
+    await fill('phone', '0400 000 000');
+    await fill('business', 'Acceptance Test Pty Ltd');
+    await fill('business_name', 'Acceptance Test Pty Ltd');
+    await fill('suburb', 'Paddington');
+    await fill('message', 'Automated acceptance test enquiry. Please ignore; it is deleted after verification.');
     for (const sel of await visitor.$$('.lp-form select')) {
       const value = await sel.evaluate((s) => [...s.options].find((o) => o.value)?.value || '');
       if (value) await sel.select(value);
@@ -318,6 +382,30 @@ if (ONLY.has('B')) {
     return { submissionId: sub.id, leadId: lead.id, leadSource: lead.lead_source, tags: lead.tags, campaign: campaign.name, notes: notes.length };
   });
 
+  await step('B8t tenant isolation: other workspaces and anonymous clients cannot see TEST data', async () => {
+    // Same signed-in user, but asking through the LIVE workspace: the TEST campaign must not be reachable.
+    const cross = await lpApi('GET', `/api/landing-pages/campaigns/${created.campaignId}`, null, LIVE_WORKSPACE);
+    assert([403, 404].includes(cross.status), `cross-workspace campaign read returned ${cross.status}`);
+    const list = await lpApi('GET', '/api/landing-pages/campaigns', null, LIVE_WORKSPACE);
+    assert.equal(list.status, 200);
+    assert(!(list.body.campaigns || []).some((c) => c.id === created.campaignId), 'TEST campaign absent from the LIVE workspace list');
+    const crossPage = await lpApi('GET', `/api/landing-pages/pages/${created.pageId}`, null, LIVE_WORKSPACE);
+    assert([403, 404].includes(crossPage.status), `cross-workspace page read returned ${crossPage.status}`);
+    // A workspace the user does not belong to is refused outright.
+    const foreign = await lpApi('GET', '/api/landing-pages/campaigns', null, '00000000-0000-4000-8000-000000000000');
+    assert([401, 403, 404].includes(foreign.status), `non-member workspace returned ${foreign.status}`);
+    // The public (anon) key sees no private rows.
+    const anon = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY, { auth: { persistSession: false } });
+    const seen = {};
+    const leadId = created.leadIds[0];
+    for (const [table, col, val] of [['landing_page_submissions', 'page_id', created.pageId], ['landing_campaigns', 'id', created.campaignId], ...(leadId ? [['leads', 'id', leadId], ['lead_notes', 'lead_id', leadId]] : [])]) {
+      const r = await anon.from(table).select('id').eq(col, val);
+      seen[table] = r.error ? `refused (${r.error.code || r.error.message})` : r.data.length;
+      assert(r.error || r.data.length === 0, `anonymous client can read ${table}`);
+    }
+    return { crossCampaign: cross.status, crossPage: crossPage.status, foreignWorkspace: foreign.status, anon: seen };
+  });
+
   await step('B9 take the page offline; the public URL stops serving it', async () => {
     await page.goto(`${APP}/modules/landing-pages/editor/${created.pageId}`, { waitUntil: 'domcontentloaded' });
     await page.waitForSelector('[data-testid="publish-open"]');
@@ -331,7 +419,7 @@ if (ONLY.has('B')) {
     assert.equal(res.status(), 404, 'offline page is not served');
     return { status: p.status };
   });
-  await visitorContext.close();
+  await visitorContext.close().catch(() => {});
 }
 
 // ---- Phase C: multi-step funnel ---------------------------------------------------------------------------------
@@ -363,17 +451,36 @@ if (ONLY.has('C')) {
     await page.type('input[placeholder^="e.g. women over 40"]', 'Brisbane homeowners planning a new deck');
     await page.type('input[placeholder^="e.g. lose stubborn"]', 'a finished deck designed for their backyard');
     const createResp = page.waitForResponse((r) => r.url().includes('/api/funnels/create-with-pages'), { timeout: 300_000 });
+    let rewritten = false;
+    const noAi = (req) => {
+      if (req.isInterceptResolutionHandled()) return;
+      if (req.url().includes('/api/funnels/create-with-pages') && req.method() === 'POST') {
+        const body = JSON.parse(req.postData() || '{}');
+        body.useAI = false; rewritten = true;
+        return req.continue({ postData: JSON.stringify(body) });
+      }
+      return req.continue();
+    };
+    if (NO_AI) { await page.setRequestInterception(true); page.on('request', noAi); }
     await page.evaluate(() => [...document.querySelectorAll('button')].find((b) => /Build My Funnel/.test(b.innerText)).click());
     const cr = await createResp;
+    if (NO_AI) { page.off('request', noAi); await page.setRequestInterception(false); assert(rewritten, 'wizard request was sent with useAI:false'); }
     const cb = await cr.json().catch(() => ({}));
-    assert(cb.ok && cb.funnelId, `create-with-pages: ${cr.status()} ${JSON.stringify(cb).slice(0, 300)}`);
-    created.funnelId = cb.funnelId;
-    await page.waitForFunction((id) => location.pathname === `/modules/funnels/edit/${id}`, { timeout: 240_000 }, cb.funnelId);
+    assert.equal(cr.status(), 200, `create-with-pages: ${cr.status()} ${JSON.stringify(cb).slice(0, 300)}`);
+    // The response body can be unavailable once the wizard navigates away; the editor URL carries the new id.
+    await page.waitForFunction(() => /^\/modules\/funnels\/edit\/[0-9a-f-]{36}$/.test(location.pathname), { timeout: 240_000 });
+    const urlId = await page.evaluate(() => location.pathname.split('/').pop());
+    if (cb.funnelId) assert.equal(cb.funnelId, urlId);
+    created.funnelId = urlId;
+    // Funnels are owner-scoped: the wizard stores workspace_id null (or the active workspace) under the signed-in owner.
+    const owned = must(await db.from('funnels').select('id, workspace_id, owner_user_id').eq('id', urlId).single());
+    assert.equal(owned.owner_user_id, user.id, 'funnel owned by the signed-in user');
+    assert.ok(owned.workspace_id === null || owned.workspace_id === TEST_WORKSPACE, `funnel workspace is null or TEST (got ${owned.workspace_id})`);
     await sleep(8000);
     await shot(page, 'C1-funnel-editor');
-    const steps = must(await db.from('funnel_steps').select('id, title, order_index').eq('funnel_id', cb.funnelId).order('order_index'));
+    const steps = must(await db.from('funnel_steps').select('id, title, order_index').eq('funnel_id', created.funnelId).order('order_index'));
     assert(steps.length >= 2, `multi-step funnel has ${steps.length} steps`);
-    return { funnelId: cb.funnelId, steps: steps.map((s) => s.title) };
+    return { funnelId: created.funnelId, useAI: NO_AI ? false : 'wizard default', steps: steps.map((s) => s.title) };
   });
 
   await step('C2 funnel publishes and every public step renders; then unpublishes', async () => {
@@ -438,7 +545,7 @@ await step('Z cleanup of this run\'s own test records', async () => {
   return done;
 });
 
-fs.writeFileSync(path.join(OUT, 'results.json'), JSON.stringify({ app: APP, results, created, pageErrors }, null, 2));
+fs.writeFileSync(path.join(OUT, 'results.json'), JSON.stringify({ app: APP, results, created, pageErrors, dialogs }, null, 2));
 const failed = results.filter((r) => !r.ok);
 log(`${results.length - failed.length}/${results.length} passed. Evidence: ${OUT}`);
 await browser.close();
