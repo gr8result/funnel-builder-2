@@ -56,10 +56,16 @@ const browser = await puppeteer.launch({
   headless: false,
   userDataDir: PROFILE,
   defaultViewport: null,
-  args: ['--window-size=1440,1000', '--no-first-run', '--no-default-browser-check'],
+  args: ['--window-size=1440,1000', '--no-first-run', '--no-default-browser-check', '--hide-crash-restore-bubble',
+    '--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding', '--disable-background-timer-throttling'],
   protocolTimeout: 600_000,
 });
-const page = (await browser.pages())[0] || await browser.newPage();
+// The profile can restore old tabs after an unclean exit; driving a hidden background tab stops rendering
+// (no animation frames, selectors never appear). Use a fresh foreground tab and close the restored ones.
+const restoredTabs = await browser.pages();
+const page = await browser.newPage();
+await page.bringToFront();
+for (const t of restoredTabs) await t.close().catch(() => {});
 page.setDefaultTimeout(240_000);
 page.setDefaultNavigationTimeout(300_000);
 const pageErrors = [];
@@ -311,6 +317,7 @@ if (ONLY.has('B')) {
   visitor.setDefaultTimeout(240_000); visitor.setDefaultNavigationTimeout(300_000);
   const localPublic = () => `${APP}/lp/${new URL(publicUrl).pathname.split('/').pop()}`;
 
+  await visitor.bringToFront();
   await step('B6 public page renders for an anonymous visitor on desktop and mobile', async () => {
     for (const [vp, size] of [['desktop', { width: 1440, height: 1000 }], ['mobile', { width: 390, height: 844, isMobile: true, hasTouch: true, deviceScaleFactor: 2 }]]) {
       await visitor.setViewport(size);
@@ -382,6 +389,7 @@ if (ONLY.has('B')) {
     return { submissionId: sub.id, leadId: lead.id, leadSource: lead.lead_source, tags: lead.tags, campaign: campaign.name, notes: notes.length };
   });
 
+  await page.bringToFront();
   await step('B8t tenant isolation: other workspaces and anonymous clients cannot see TEST data', async () => {
     // Same signed-in user, but asking through the LIVE workspace: the TEST campaign must not be reachable.
     const cross = await lpApi('GET', `/api/landing-pages/campaigns/${created.campaignId}`, null, LIVE_WORKSPACE);
@@ -406,6 +414,7 @@ if (ONLY.has('B')) {
     return { crossCampaign: cross.status, crossPage: crossPage.status, foreignWorkspace: foreign.status, anon: seen };
   });
 
+  await page.bringToFront();
   await step('B9 take the page offline; the public URL stops serving it', async () => {
     await page.goto(`${APP}/modules/landing-pages/editor/${created.pageId}`, { waitUntil: 'domcontentloaded' });
     await page.waitForSelector('[data-testid="publish-open"]');
@@ -435,6 +444,7 @@ if (ONLY.has('C')) {
     return { status: r.status, body: await r.json().catch(() => ({})) };
   }, { body, ws: TEST_WORKSPACE });
 
+  await page.bringToFront();
   await step('C1 Funnel Builder creates a multi-step funnel through the wizard', async () => {
     await page.goto(`${APP}/modules/funnels`, { waitUntil: 'domcontentloaded' });
     await page.waitForSelector('[data-testid="create-multi-step-funnel"]');
