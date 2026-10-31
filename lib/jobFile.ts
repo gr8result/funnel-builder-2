@@ -668,7 +668,15 @@ export async function readJob(source: File | FileSystemFileHandle | string): Pro
   if (typeof source === "string") {
     text = source;
   } else if (source && "getFile" in source) {
-    const file = await source.getFile();
+    let file: File;
+    try {
+      file = await source.getFile();
+    } catch (error: unknown) {
+      if (!isFileSystemAccessContextError(error)) throw error;
+      const accessError = new Error(`The browser blocked access to ${source.name || "the selected job file"}. Choose the file again using Open Job File From Computer. Your current job has not been replaced.`);
+      accessError.name = "NotAllowedError";
+      throw accessError;
+    }
     buffer = await file.arrayBuffer();
   } else if (source instanceof File) {
     buffer = await source.arrayBuffer();
@@ -865,6 +873,16 @@ export async function openJob(): Promise<JobFileResult> {
       if (isAbortLikeFileSystemError(error)) {
         return { ok: true, cancelled: true };
       }
+      if (isFileSystemAccessContextError(error)) {
+        const file = await openFileInput();
+        if (!file) return { ok: true, cancelled: true };
+        try {
+          const data = await readJob(file);
+          return { ok: true, handle: null, fileName: file.name, data };
+        } catch (fallbackError: unknown) {
+          return { ok: false, message: `${file.name}: ${(fallbackError as Error)?.message || "This job file could not be opened."}` };
+        }
+      }
       return { ok: false, message: (error as Error)?.message || "This job file could not be opened." };
     }
   }
@@ -966,6 +984,14 @@ export function isAbortLikeFileSystemError(error: unknown): boolean {
     || combined.includes("aborterror")
     || combined.includes("lock broken by another request")
     || (combined.includes("lock") && combined.includes("steal"));
+}
+
+function isFileSystemAccessContextError(error: unknown): boolean {
+  const name = String((error as { name?: string })?.name || "");
+  const message = String((error as { message?: string })?.message || error || "").toLowerCase();
+  return name === "NotAllowedError" || name === "SecurityError"
+    || message.includes("not allowed by the user agent or the platform")
+    || (message.includes("not allowed") && message.includes("current context"));
 }
 
 export function autoSave(params: {

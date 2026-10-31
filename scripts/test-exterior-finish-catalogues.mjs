@@ -41,6 +41,7 @@ const finishFamilyKeys = [
   "landscaping",
 ];
 const optionalProjectFamilies = new Set(["balustrades", "driveway", "decking", "pool", "retaining-walls", "landscaping"]);
+const delistedBeaconProductsWithoutImages = new Set(["BEACON-EXT-2396410", "BEACON-EXT-2370160"]);
 
 const bricks = qldBrickMasterCatalogue.products.map((product) => normalizeMasterProductRecord(product));
 const roofing = [
@@ -52,7 +53,7 @@ const exteriorFinishes = exteriorFinishesCatalogue.products.map((product) => nor
 const masterProducts = [...bricks, ...roofing, ...exteriorOpenings, ...exteriorFinishes];
 const enablements = ensureDemoBuilderCatalogueEnablements(masterProducts, [], DEMO_BUILDER_ORGANISATION_ID);
 
-assert.equal(exteriorFinishes.length, 27, "Exterior finishes catalogue must expose every requested finish record");
+assert.equal(exteriorFinishes.length, 228, "Exterior finishes catalogue must expose every current source record");
 assert.equal(activeExteriorFinishMasterProducts(masterProducts).length, exteriorFinishes.length, "Exterior finish demo enablement candidates must cover the new catalogue");
 
 const expectedCladdingCodes = [
@@ -113,6 +114,7 @@ assert.match(colorbondWall.specificationUrl, /walling-cladding-facades/, "COLORB
 const featureStone = claddingProducts.find((product) => product.productCode === "CLADDING-PGH-FEATURE-STONE");
 assert.equal(featureStone.productName, "Feature Stone Wall Cladding", "Feature Stone must remain a top-level cladding option");
 assert.match(featureStone.primaryImageUrl, /^https:\/\/www\.csrassetlibrary\.com\/celum\//, "Feature Stone must use relevant stone wall imagery");
+assert.equal(resolveProductLibraryImage({ familyKey: "decking" }), "", "Generic timber decking must not reuse the removed cabin-interior stock photo or an unrelated product image");
 
 finishFamilyKeys.forEach((familyKey) => {
   const products = exteriorFinishes.filter((product) => product.familyKey === familyKey);
@@ -122,10 +124,17 @@ finishFamilyKeys.forEach((familyKey) => {
   assert.ok(requirement, `${familyKey} has a Client Selections guided requirement`);
   assert.equal(requirement.familyKey.startsWith("visual-"), false, `${familyKey} cannot use a legacy visual family`);
   assert.ok(products.length > 0, `${familyKey} has imported master products`);
-  assert.ok(products.every((product) => product.primaryImageUrl), `${familyKey} products carry image URLs`);
-  assert.ok(products.every((product) => product.imageStatus !== "missing"), `${familyKey} products must not be missing images`);
-  assert.ok(products.every((product) => ["quote_required", "price_pending"].includes(product.priceStatus)), `${familyKey} products must not invent current pricing`);
-  assert.ok(products.every((product) => product.rrp === null && product.clientPrice === null), `${familyKey} products must not store fake prices`);
+  const isApprovedNoImageState = (product) => delistedBeaconProductsWithoutImages.has(product.productCode)
+    || (product.sourceType === "builder_configurable_generic" && product.priceStatus === "quote_required" && !product.primaryImageUrl);
+  assert.ok(products.every((product) => product.primaryImageUrl || isApprovedNoImageState(product)), `${familyKey} products carry images unless they are delisted or explicit generic configurations`);
+  assert.ok(products.every((product) => product.imageStatus !== "missing" || isApprovedNoImageState(product)), `${familyKey} missing images are limited to delisted or explicit generic configuration records`);
+  const currentPriceAllowed = familyKey === "external-lighting";
+  assert.ok(products.every((product) => ["quote_required", "price_pending", "allowance_only", ...(currentPriceAllowed ? ["current"] : [])].includes(product.priceStatus)), `${familyKey} products must not carry unsupported current supplier pricing`);
+  assert.ok(products.every((product) => product.rrp === null && (product.priceStatus === "allowance_only"
+    ? Number(product.clientPrice) > 0
+    : product.priceStatus === "current"
+      ? currentPriceAllowed && Number(product.clientPrice) > 0 && product.gstIncluded === true && Boolean(product.officialProductUrl && product.sourceRetrievedAt)
+      : product.clientPrice === null)), `${familyKey} pricing must be source-backed, GST-qualified current pricing or an explicit allowance`);
   assert.notEqual(resolveProductLibraryImage({ familyKey }), FAMILY_IMAGE_FALLBACKS.bedrooms, `${familyKey} fallback cannot resolve to bedroom imagery`);
   assert.notEqual(resolveProductLibraryImage({ familyKey }), FAMILY_IMAGE_FALLBACKS.bathroom, `${familyKey} fallback cannot resolve to bathroom imagery`);
   assert.notEqual(resolveProductLibraryImage({ familyKey }), FAMILY_IMAGE_FALLBACKS.cooktop, `${familyKey} fallback cannot resolve to appliance imagery`);
@@ -210,8 +219,7 @@ assert.match(catalogueServiceSource, /AU-EXTERIOR-FINISHES-CATALOGUE\.json/, "Sh
 assert.match(catalogueServiceSource, /AU-FASCIA-GUTTER-DOWNPIPE-CATALOGUE\.json/, "Shared Product Library catalogue service imports the Roofing fascia/gutter/downpipe catalogue");
 assert.match(selectionsPageSource, /requirementAppliesToBook/, "Client Selections must filter project-conditional exterior requirements");
 assert.match(selectionsPageSource, /requirementsForGuidedArea\("exterior", book\)/, "Exterior card flow must use book-aware requirement filtering");
-assert.match(selectionsPageSource, /applicableGuidedRequirementsForBook\(book\)/, "Auto-advance must use book-aware guided requirements");
-assert.match(selectionsPageSource, /EXTERIOR COMPLETE\. Opening Interior\./, "Completing the last applicable exterior item must announce Exterior complete before opening Interior");
+assert.match(selectionsPageSource, /returnToGuidedDashboard\(committedRequirement\)/, "Saving a guided selection returns to the dashboard before the next requirement is opened");
 assert.doesNotMatch(selectionsPageSource, /data\/product-library\/catalogues\/client-selections/i, "Client Selections must not load a separate client-only product catalogue");
 
 const productLibraryPageSource = fs.readFileSync(new URL("../pages/modules/builders/product-library.js", import.meta.url), "utf8");

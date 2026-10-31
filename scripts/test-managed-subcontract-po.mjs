@@ -1,0 +1,26 @@
+import assert from "node:assert/strict";
+import { managedSubcontractDraftPayload } from "../lib/builders/managedSubcontractPurchaseOrder.js";
+
+const workspaceId = "846885cd-25b9-4eca-b9f9-3fd02f5882d8";
+const projectId = "11111111-1111-4111-8111-111111111111";
+const snapshotId = "22222222-2222-4222-8222-222222222222";
+const contract = { contractId: "tc:isolated-job:PLUMBING", builderId: workspaceId, jobId: "isolated-job", trade: "PLUMBING", contractAmount: 58270, sourceSection: "PLUMBING" };
+const internalOrder = { id: "po:subcontract:tc:isolated-job:PLUMBING", kind: "SUBCONTRACT", status: "Draft", tradeContractId: contract.contractId, commitment: 58270, milestones: [{ key: "UNDERSLAB" }, { key: "ROUGH_IN" }, { key: "FIT_OFF" }] };
+const input = { workspaceId, jobId: contract.jobId, commercialProjectId: projectId, snapshotId, snapshotProjectId: projectId, contract, internalOrder, supplier: { id: "supplier-1", name: "Acme Plumbing" }, actorId: "35ab846e-0764-498b-b1f8-7d2cf27d85a5" };
+const result = managedSubcontractDraftPayload(input);
+assert.equal(result.ok, true);
+assert.equal(result.purchaseOrder.status, "draft");
+assert.equal(result.purchaseOrder.issued_at, null);
+assert.equal(result.purchaseOrder.metadata.tradeContractId, contract.contractId);
+assert.equal(result.item.source_procurement_item_id, `trade-contract:${contract.contractId}`);
+assert.equal(result.item.quantity_ordered, 1);
+assert.equal(result.item.line_total, 58270);
+assert.equal(result.purchaseOrder.total, 64097);
+assert.equal(managedSubcontractDraftPayload(input).poNumber, result.poNumber, "conversion has a deterministic idempotency key");
+assert.equal(managedSubcontractDraftPayload({ ...input, snapshotProjectId: "33333333-3333-4333-8333-333333333333" }).code, "SNAPSHOT_PROJECT_MISMATCH");
+assert.equal(managedSubcontractDraftPayload({ ...input, jobId: "another-job" }).code, "JOB_OR_WORKSPACE_MISMATCH");
+assert.equal(managedSubcontractDraftPayload({ ...input, supplier: null }).code, "SUBCONTRACTOR_REQUIRED");
+assert.equal(managedSubcontractDraftPayload({ ...input, internalOrder: { ...internalOrder, status: "Issued" } }).code, "INTERNAL_ORDER_NOT_DRAFT");
+assert.equal(managedSubcontractDraftPayload({ ...input, workspaceId: "builder-b" }).code, "WORKSPACE_REQUIRED");
+assert.equal(managedSubcontractDraftPayload({ ...input, actorId: "" }).code, "SIGN_IN_REQUIRED");
+console.log("Managed subcontract PO draft: 11 checks passed; authenticated, draft-only, project-scoped, idempotent identity.");

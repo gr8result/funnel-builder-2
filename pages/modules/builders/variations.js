@@ -1,9 +1,12 @@
 import Head from "next/head";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { useWorkspace } from "../../../hooks/useWorkspace";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useApiFetch, useWorkspace } from "../../../hooks/useWorkspace";
 import { supabase } from "../../../utils/supabase-client";
 import FlooringProjectSchedule from "../../../components/client-selections/FlooringProjectSchedule";
+import { getEffectiveApplianceCatalogue, getEffectiveProductCatalogue } from "../../../lib/product-library/catalogueService.js";
+import { calculateEstimateBuilderWorkbook } from "../../../lib/construction-estimation/estimateBuilderWorkbookCalculations";
+import { standardInclusionUpgradeProposals, priceStandardInclusionUpgrade, standardInclusionUpgradeDraftId } from "../../../lib/standard-inclusions/upgradeVariation.mjs";
 
 const GST_RATE = 10;
 
@@ -36,8 +39,36 @@ const emptyLineItem = {
   sourceQuoteRowId: "",
 };
 
-export default function BuilderVariationsPage({ workbook = null } = {}) {
+function upgradeCatalogueProducts(workspaceId) {
+  const products = getEffectiveProductCatalogue({ organisationId: workspaceId }).products;
+  const appliances = getEffectiveApplianceCatalogue({ organisationId: workspaceId }).records.map(record => ({
+    productId: record.productId || record.stableProductId,
+    productName: record.name || record.productName,
+    brand: record.brand || record.brandName,
+    supplier: record.supplier || record.brand || record.brandName,
+    model: record.model || record.manufacturerModel,
+    description: record.description,
+    specification: record.specificationSummary || record.specifications,
+    image: record.image,
+    finish: record.finish,
+    colour: record.colour,
+    clientPrice: record.price,
+    priceIncludesGst: record.priceIncludesGst ?? record.gstIncluded,
+    priceStatus: record.priceStatus,
+    eligibility: record.eligibility,
+    active: record.active !== false,
+    selectable: record.selectable !== false,
+    priceReviewRequired: record.priceReviewRequired === true,
+  })).filter(product => product.productId);
+  const byId = new Map(products.map(product => [product.productId || product.id, product]));
+  for (const product of appliances) byId.set(product.productId, product);
+  return [...byId.values()];
+}
+
+export default function BuilderVariationsPage({ workbook = null, embedded = false, commercialProjectId = "", snapshotId: linkedSnapshotId = "" } = {}) {
   const { workspaceId, activeWorkspace, loading: workspaceLoading } = useWorkspace();
+  const apiFetch = useApiFetch();
+  const embeddedProjectId = String(commercialProjectId || workbook?.commercialProjectId || "");
   const [projects, setProjects] = useState([]);
   const [snapshots, setSnapshots] = useState([]);
   const [boqItems, setBoqItems] = useState([]);
@@ -51,6 +82,106 @@ export default function BuilderVariationsPage({ workbook = null } = {}) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [sourceUpgrade, setSourceUpgrade] = useState(null);
+  const automaticUpgradeDrafts = useRef(new Set());
+  const inclusionUpgrades = useMemo(() => workspaceId && workbook
+    ? standardInclusionUpgradeProposals(workbook, upgradeCatalogueProducts(workspaceId))
+    : [], [workspaceId, workbook]);
+
+  useEffect(() => { setSourceUpgrade(null); }, [workspaceId, selectedProjectId, selectedSnapshotId]);
+
+  function reviewInclusionUpgrade(upgrade) {
+    setError("");
+    try {
+      if (!selectedProjectId || !selectedSnapshotId) throw Error("Select this job's saved commercial snapshot before preparing an upgrade.");
+      if (variations.some(variation => variation.metadata?.inclusionUpgrade?.key === upgrade.key && !["void", "rejected"].includes(variation.status))) throw Error("This inclusion already has an active variation. Review that record before preparing another.");
+      const preview = calculateEstimateBuilderWorkbook(workbook);
+      const products = getEffectiveProductCatalogue({ organisationId: workspaceId }).products;
+      const current = standardInclusionUpgradeProposals(workbook, products, { quotation: preview.quotation }).find(item => item.key === upgrade.key);
+      if (!current) throw Error("This inclusion upgrade is no longer selected.");
+      const priced = priceStandardInclusionUpgrade(workbook, current, calculateEstimateBuilderWorkbook);
+      setSourceUpgrade(priced);
+      setForm(currentForm => ({ ...currentForm, status: "draft", title: `${priced.includedProductName} to ${priced.productName}`, reason: "Client product upgrade", approvedDate: "" }));
+      setLineItems([{ ...emptyLineItem, description: `${priced.includedProductName} replaced by ${priced.productName}${priced.locationId ? ` (${priced.locationId})` : ""}`, quantity: priced.quantity, unit: priced.unit, unitCost: priced.unitDifferenceExGst, sellPrice: priced.subtotal / priced.quantity, marginPercentage: priced.pricingRules.marginPercent, sourceQuoteRowId: priced.sourceQuoteRowId, gstTotal: priced.gst }]);
+      setSuccess("Upgrade priced using the job's quotation rules. Save it as a draft for builder review; the quotation is unchanged.");
+    } catch (reviewError) { setError(reviewError.message); }
+  }
+
+  async function transitionUpgrade(variation, action) {
+    setSaving(true); setError(''); setSuccess('');
+    try {
+      if (action === 'approve' && variation.metadata?.inclusionUpgrade) {
+        const source = variation.metadata.inclusionUpgrade;
+        const latest = standardInclusionUpgradeProposals(workbook, upgradeCatalogueProducts(workspaceId), { quotation: calculateEstimateBuilderWorkbook(workbook).quotation }).find(item => item.key === source.key);
+        if (!latest || latest.status !== 'READY' || latest.productId !== source.productId || latest.creditExGst !== source.creditExGst || latest.unitPriceExGst !== source.unitPriceExGst || latest.quantity !== source.quantity) {
+          throw Error('The included credit, replacement price or job quantity changed. Create a refreshed draft before approving.');
+        }
+        const refreshed = priceStandardInclusionUpgrade(workbook, latest, calculateEstimateBuilderWorkbook);
+        if (refreshed.total !== source.total) throw Error('The quotation margin or tax settings changed. Create a refreshed draft before approving.');
+      }
+      const response = await apiFetch('/api/standard-inclusions/upgrade-variation', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ projectId: selectedProjectId, variationId: variation.id, action }) });
+      const body = await response.json();
+      if (!response.ok) throw Error(body.error || 'The upgrade action could not be completed.');
+      setVariations(current => current.map(item => item.id === variation.id ? body.variation : item));
+      setSuccess(action === 'approve' ? 'Builder review approved. The upgrade has not been accepted by the client or paid.' : 'Issued to the existing Client Portal for acceptance. Payment remains outstanding.');
+    } catch (actionError) { setError(actionError.message); }
+    finally { setSaving(false); }
+  }
+
+  async function createInclusionUpgradeDraft(upgrade) {
+    if (!workspaceId || !selectedProjectId || !selectedSnapshotId || !workbook) return;
+    if (variations.some(variation => variation.metadata?.inclusionUpgrade?.key === upgrade.key && !["void", "rejected"].includes(variation.status))) return;
+    const latest = standardInclusionUpgradeProposals(workbook, upgradeCatalogueProducts(workspaceId), { quotation: calculateEstimateBuilderWorkbook(workbook).quotation }).find(item => item.key === upgrade.key);
+    if (!latest || latest.status !== "READY") return;
+    const priced = priceStandardInclusionUpgrade(workbook, latest, calculateEstimateBuilderWorkbook);
+    const variationId = await standardInclusionUpgradeDraftId({ workspaceId, projectId: selectedProjectId, snapshotId: selectedSnapshotId, upgrade: priced });
+    const { data: authData } = await supabase.auth.getUser();
+    const userId = authData?.user?.id || null;
+    const sellUnit = priced.subtotal / priced.quantity;
+    const costTotal = priced.unitDifferenceExGst * priced.quantity;
+    const variationPayload = {
+      id: variationId, workspace_id: workspaceId, project_id: selectedProjectId, snapshot_id: selectedSnapshotId,
+      variation_number: nextVariationNumber(variations),
+      title: `${priced.includedProductName} to ${priced.productName}`,
+      reason: "Client product upgrade", status: "draft", subtotal: priced.subtotal, gst_total: priced.gst,
+      total: priced.total, margin_total: roundMoney(priced.subtotal - costTotal), submitted_at: null, approved_at: null,
+      client_visible: false, requires_client_approval: false, client_status: "not_issued",
+      metadata: { uiStatus: "draft", source: "standard_inclusion_upgrade", inclusionUpgrade: priced, builderReviewStatus: "pending", paymentStatus: "not_requested", quoteTreatment: "separate_variation", totalCost: costTotal, totalSellExGst: priced.subtotal },
+      created_by: userId, updated_by: userId,
+    };
+    const { error: variationError } = await supabase.from("builder_variations").upsert(variationPayload, { onConflict: "id", ignoreDuplicates: true });
+    if (variationError) throw variationError;
+    const { data: variation, error: loadError } = await supabase.from("builder_variations").select("*")
+      .eq("workspace_id", workspaceId).eq("project_id", selectedProjectId).eq("id", variationId).single();
+    if (loadError) throw loadError;
+    const lineId = await standardInclusionUpgradeDraftId({ workspaceId, projectId: selectedProjectId, snapshotId: selectedSnapshotId, upgrade: { ...priced, key: `${priced.key}:line` } });
+    const itemPayload = {
+      id: lineId, workspace_id: workspaceId, project_id: selectedProjectId, variation_id: variationId, snapshot_id: selectedSnapshotId,
+      source_quote_row_id: priced.sourceQuoteRowId, source_section_name: priced.sourceSection,
+      description: `${priced.includedProductName} replaced by ${priced.productName}`,
+      quantity: priced.quantity, unit: priced.unit || null, unit_cost: priced.unitDifferenceExGst,
+      unit_price: sellUnit, gst_rate: priced.gstRate, cost_total: costTotal, line_total: priced.subtotal, status: "active",
+      metadata: { source: "standard_inclusion_upgrade", inclusionUpgradeKey: priced.key, baselineCreditExGst: priced.creditExGst, replacementUnitPriceExGst: priced.unitPriceExGst },
+      created_by: userId,
+    };
+    const { error: itemError } = await supabase.from("builder_variation_items").upsert(itemPayload, { onConflict: "id", ignoreDuplicates: true });
+    if (itemError) throw itemError;
+    setVariations(current => current.some(item => item.id === variation.id) ? current : [variation, ...current]);
+    setVariationItems(current => current.some(item => item.id === lineId) ? current : [...current, { ...itemPayload, variation_id: variationId }]);
+  }
+
+  useEffect(() => {
+    if (loading || !selectedProjectId || !selectedSnapshotId || !inclusionUpgrades.length) return;
+    const next = inclusionUpgrades.find(upgrade => upgrade.status === "READY"
+      && !variations.some(variation => variation.metadata?.source === "standard_inclusion_upgrade"
+        && variation.metadata?.inclusionUpgrade?.key === upgrade.key
+        && !["void", "rejected"].includes(variation.status))
+      && !automaticUpgradeDrafts.current.has(upgrade.key));
+    if (!next) return;
+    automaticUpgradeDrafts.current.add(next.key);
+    createInclusionUpgradeDraft(next).catch(draftError => setError(draftError.message || "Could not create the inclusion upgrade draft."))
+      .finally(() => automaticUpgradeDrafts.current.delete(next.key));
+  }, [loading, selectedProjectId, selectedSnapshotId, inclusionUpgrades, variations]);
 
   useEffect(() => {
     if (!workspaceId) {
@@ -75,9 +206,9 @@ export default function BuilderVariationsPage({ workbook = null } = {}) {
         setProjects([]);
         setSelectedProjectId("");
       } else {
-        const rows = data || [];
+        const rows = embedded ? (data || []).filter((project) => project.id === embeddedProjectId) : data || [];
         setProjects(rows);
-        setSelectedProjectId((current) => rows.find((project) => project.id === current)?.id || rows[0]?.id || "");
+        setSelectedProjectId((current) => embedded ? rows.find((project) => project.id === embeddedProjectId)?.id || "" : rows.find((project) => project.id === current)?.id || rows[0]?.id || "");
       }
       setLoading(false);
     }
@@ -86,10 +217,10 @@ export default function BuilderVariationsPage({ workbook = null } = {}) {
     return () => {
       cancelled = true;
     };
-  }, [workspaceId]);
+  }, [workspaceId, embedded, embeddedProjectId]);
 
   useEffect(() => {
-    if (!workspaceId || !selectedProjectId) {
+    if (!workspaceId || !selectedProjectId || (embedded && selectedProjectId !== embeddedProjectId)) {
       setSnapshots([]);
       setSelectedSnapshotId("");
       setVariations([]);
@@ -110,7 +241,7 @@ export default function BuilderVariationsPage({ workbook = null } = {}) {
           .order("snapshot_number", { ascending: false }),
         supabase
           .from("builder_variations")
-          .select("id, project_id, snapshot_id, variation_number, title, reason, status, subtotal, gst_total, total, margin_total, submitted_at, approved_at, approved_by_name, approved_by_email, metadata, notes, created_at, updated_at")
+          .select("id, project_id, snapshot_id, variation_number, title, reason, status, subtotal, gst_total, total, margin_total, submitted_at, approved_at, approved_by_name, approved_by_email, client_status, client_visible, requires_client_approval, metadata, notes, created_at, updated_at")
           .eq("workspace_id", workspaceId)
           .eq("project_id", selectedProjectId)
           .order("created_at", { ascending: false }),
@@ -132,7 +263,7 @@ export default function BuilderVariationsPage({ workbook = null } = {}) {
       } else {
         const snapshotRows = snapshotResult.data || [];
         setSnapshots(snapshotRows);
-        setSelectedSnapshotId((current) => snapshotRows.find((snapshot) => snapshot.id === current)?.id || snapshotRows[0]?.id || "");
+        setSelectedSnapshotId((current) => embedded && linkedSnapshotId ? snapshotRows.find((snapshot) => snapshot.id === linkedSnapshotId)?.id || "" : snapshotRows.find((snapshot) => snapshot.id === current)?.id || snapshotRows[0]?.id || "");
         setVariations(variationResult.data || []);
         setVariationItems(itemResult.data || []);
       }
@@ -143,7 +274,7 @@ export default function BuilderVariationsPage({ workbook = null } = {}) {
     return () => {
       cancelled = true;
     };
-  }, [workspaceId, selectedProjectId]);
+  }, [workspaceId, selectedProjectId, embedded, embeddedProjectId, linkedSnapshotId]);
 
   useEffect(() => {
     if (!workspaceId || !selectedProjectId || !selectedSnapshotId) {
@@ -228,6 +359,7 @@ export default function BuilderVariationsPage({ workbook = null } = {}) {
   }
 
   function updateLineItem(index, field, value) {
+    if (sourceUpgrade) return;
     setLineItems((current) => current.map((item, itemIndex) => {
       if (itemIndex !== index) return item;
       const next = { ...item, [field]: value };
@@ -251,10 +383,12 @@ export default function BuilderVariationsPage({ workbook = null } = {}) {
   }
 
   function addLineItem() {
+    if (sourceUpgrade) return;
     setLineItems((current) => [...current, { ...emptyLineItem }]);
   }
 
   function removeLineItem(index) {
+    if (sourceUpgrade) return;
     setLineItems((current) => current.length === 1 ? current : current.filter((_, itemIndex) => itemIndex !== index));
   }
 
@@ -271,6 +405,17 @@ export default function BuilderVariationsPage({ workbook = null } = {}) {
       setError("Variation number and title are required.");
       return;
     }
+    if (sourceUpgrade) {
+      const latest = standardInclusionUpgradeProposals(workbook, upgradeCatalogueProducts(workspaceId), { quotation: calculateEstimateBuilderWorkbook(workbook).quotation }).find(item => item.key === sourceUpgrade.key);
+      if (!latest || latest.status !== 'READY' || latest.productId !== sourceUpgrade.productId || latest.creditExGst !== sourceUpgrade.creditExGst || latest.unitPriceExGst !== sourceUpgrade.unitPriceExGst || latest.quantity !== sourceUpgrade.quantity || priceStandardInclusionUpgrade(workbook, latest, calculateEstimateBuilderWorkbook).total !== sourceUpgrade.total) {
+        setError("The selected product, price or job quantity changed. Review the upgrade again before saving.");
+        return;
+      }
+      if (variations.some(variation => variation.metadata?.inclusionUpgrade?.key === sourceUpgrade.key && !["void", "rejected"].includes(variation.status))) {
+        setError("This inclusion already has an active variation. No duplicate was created.");
+        return;
+      }
+    }
 
     const calculatedItems = calculateLineItems(lineItems).items.filter((item) => item.description.trim());
     if (!calculatedItems.length) {
@@ -284,9 +429,10 @@ export default function BuilderVariationsPage({ workbook = null } = {}) {
 
     const { data: authData } = await supabase.auth.getUser();
     const userId = authData?.user?.id || null;
-    const statusMapping = statusOption(form.status);
+    const statusMapping = statusOption(sourceUpgrade ? "draft" : form.status);
     const totals = calculateTotals(calculatedItems);
     const variationPayload = {
+      ...(sourceUpgrade ? { id: await standardInclusionUpgradeDraftId({ workspaceId, projectId: selectedProjectId, snapshotId: selectedSnapshotId, upgrade: sourceUpgrade }) } : {}),
       workspace_id: workspaceId,
       project_id: selectedProjectId,
       snapshot_id: selectedSnapshotId,
@@ -302,7 +448,7 @@ export default function BuilderVariationsPage({ workbook = null } = {}) {
       approved_at: form.status === "approved" && form.approvedDate ? new Date(`${form.approvedDate}T00:00:00`).toISOString() : null,
       approved_by_name: form.status === "approved" ? form.clientName.trim() : null,
       metadata: {
-        uiStatus: form.status,
+        uiStatus: sourceUpgrade ? "draft" : form.status,
         requestedDate: form.requestedDate || null,
         approvedDate: form.approvedDate || null,
         clientName: form.clientName.trim(),
@@ -311,6 +457,7 @@ export default function BuilderVariationsPage({ workbook = null } = {}) {
         originalSnapshotNumber: selectedSnapshot?.snapshot_number || null,
         totalCost: totals.costSubtotal,
         totalSellExGst: totals.sellSubtotal,
+        ...(sourceUpgrade ? { source: "standard_inclusion_upgrade", inclusionUpgrade: sourceUpgrade, builderReviewStatus: "pending", paymentStatus: "not_requested", quoteTreatment: "separate_variation" } : {}),
       },
       notes: form.notes.trim(),
       created_by: userId,
@@ -346,13 +493,14 @@ export default function BuilderVariationsPage({ workbook = null } = {}) {
         unit: item.unit || null,
         unit_cost: item.unitCost,
         unit_price: item.sellPrice,
-        gst_rate: GST_RATE,
+        gst_rate: sourceUpgrade ? sourceUpgrade.gstRate : GST_RATE,
         cost_total: item.totalCost,
         line_total: item.totalSell,
         status: "active",
         metadata: {
           marginPercentage: item.marginPercentage,
           source: "builders_variations_page",
+          ...(sourceUpgrade ? { inclusionUpgradeKey: sourceUpgrade.key, baselineCreditExGst: sourceUpgrade.creditExGst, replacementUnitPriceExGst: sourceUpgrade.unitPriceExGst, gstTotal: item.gstTotal } : {}),
         },
         created_by: userId,
       };
@@ -385,6 +533,7 @@ export default function BuilderVariationsPage({ workbook = null } = {}) {
       requestedDate: todayDate(),
     });
     setLineItems([{ ...emptyLineItem }]);
+    setSourceUpgrade(null);
     setSuccess(`Variation ${insertedVariation.variation_number} created. Approved variations are tracked separately from the original snapshot.`);
     setSaving(false);
   }
@@ -411,7 +560,7 @@ export default function BuilderVariationsPage({ workbook = null } = {}) {
         <section style={styles.controls}>
           <label style={styles.field}>
             <span style={styles.label}>Commercial project</span>
-            <select value={selectedProjectId} onChange={(event) => setSelectedProjectId(event.target.value)} style={styles.select} disabled={workspaceLoading || loading || !projects.length}>
+            <select value={selectedProjectId} onChange={(event) => setSelectedProjectId(event.target.value)} style={styles.select} disabled={embedded || workspaceLoading || loading || !projects.length}>
               {!projects.length ? <option value="">No synced projects found</option> : null}
               {projects.map((project) => (
                 <option key={project.id} value={project.id}>
@@ -423,7 +572,7 @@ export default function BuilderVariationsPage({ workbook = null } = {}) {
 
           <label style={styles.field}>
             <span style={styles.label}>Estimate snapshot</span>
-            <select value={selectedSnapshotId} onChange={(event) => setSelectedSnapshotId(event.target.value)} style={styles.select} disabled={workspaceLoading || loading || !snapshots.length}>
+            <select value={selectedSnapshotId} onChange={(event) => setSelectedSnapshotId(event.target.value)} style={styles.select} disabled={embedded || workspaceLoading || loading || !snapshots.length}>
               {!snapshots.length ? <option value="">No snapshots found</option> : null}
               {snapshots.map((snapshot) => (
                 <option key={snapshot.id} value={snapshot.id}>
@@ -438,6 +587,7 @@ export default function BuilderVariationsPage({ workbook = null } = {}) {
         {success ? <div style={styles.success}>{success}</div> : null}
         {workspaceLoading ? <div style={styles.notice}>Loading workspace...</div> : null}
         {!workspaceLoading && !workspaceId ? <div style={styles.notice}>Choose an active workspace to manage variations.</div> : null}
+        {embedded && !selectedProjectId ? <div role="status" style={styles.notice}>This job has no linked commercial project. No other project's variations are shown.</div> : null}
 
         <section style={styles.snapshotNote}>
           <strong>Commercial rule:</strong>
@@ -450,6 +600,15 @@ export default function BuilderVariationsPage({ workbook = null } = {}) {
           <SummaryCard label="Draft / Sent" value={money(variationBuckets.pending, selectedProject?.currency)} helper="Not yet approved" />
           <SummaryCard label="Current Contract View" value={money(numberValue(selectedSnapshot?.final_quote_total) + variationBuckets.approved, selectedProject?.currency)} helper="Snapshot plus approved variations" emphasis />
         </section>
+
+        {inclusionUpgrades.length ? <section style={styles.controls} aria-label="Included product upgrades">
+          <h2 style={styles.panelTitle}>Included product upgrades</h2>
+          {inclusionUpgrades.map(upgrade => <div key={upgrade.key}>
+            <strong>{upgrade.includedProductName} → {upgrade.productName}</strong>
+            <p>{upgrade.locationId || "Job inclusion"} · {upgrade.status.replace(/_/g, " ")}</p>
+            <button type="button" style={styles.smallButtonPrimary} disabled={saving || !["READY", "QUANTITY_REQUIRED"].includes(upgrade.status)} onClick={() => reviewInclusionUpgrade(upgrade)}>Review upgrade pricing</button>
+          </div>)}
+        </section> : null}
 
         <section style={styles.workspaceGrid}>
           <div style={styles.panel}>
@@ -468,7 +627,7 @@ export default function BuilderVariationsPage({ workbook = null } = {}) {
 
               <label style={styles.field}>
                 <span style={styles.label}>Status</span>
-                <select value={form.status} onChange={(event) => updateForm("status", event.target.value)} style={styles.select}>
+                <select value={form.status} disabled={Boolean(sourceUpgrade)} onChange={(event) => updateForm("status", event.target.value)} style={styles.select}>
                   {VARIATION_STATUS_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                 </select>
               </label>
@@ -509,20 +668,21 @@ export default function BuilderVariationsPage({ workbook = null } = {}) {
                 <h3 style={styles.sectionTitle}>Variation line items</h3>
                 <p style={styles.panelText}>Use negative quantities or prices for credits.</p>
               </div>
-              <button type="button" onClick={addLineItem} style={styles.smallButtonPrimary}>Add item</button>
+              <button type="button" disabled={Boolean(sourceUpgrade)} onClick={addLineItem} style={styles.smallButtonPrimary}>Add item</button>
             </div>
 
             <div style={styles.lineItems}>
+              {sourceUpgrade ? <p role="status">Included credit {money(sourceUpgrade.creditExGst)} per unit. Replacement {money(sourceUpgrade.unitPriceExGst)} per unit. Calculated additional total {money(sourceUpgrade.total)}. Payment not requested.</p> : null}
               {lineItemTotals.items.map((item, index) => (
                 <div key={index} style={styles.lineItem}>
                   <label style={styles.fieldWide}>
                     <span style={styles.label}>Description</span>
-                    <input value={lineItems[index].description} onChange={(event) => updateLineItem(index, "description", event.target.value)} style={styles.input} />
+                    <input value={lineItems[index].description} readOnly={Boolean(sourceUpgrade)} onChange={(event) => updateLineItem(index, "description", event.target.value)} style={styles.input} />
                   </label>
 
                   <label style={styles.field}>
                     <span style={styles.label}>Source row</span>
-                    <select value={lineItems[index].sourceQuoteRowId} onChange={(event) => updateLineItem(index, "sourceQuoteRowId", event.target.value)} style={styles.select}>
+                    <select value={lineItems[index].sourceQuoteRowId} disabled={Boolean(sourceUpgrade)} onChange={(event) => updateLineItem(index, "sourceQuoteRowId", event.target.value)} style={styles.select}>
                       <option value="">No source row</option>
                       {boqItems.map((boq) => (
                         <option key={boq.id} value={boq.source_quote_row_id || boq.id}>
@@ -534,27 +694,27 @@ export default function BuilderVariationsPage({ workbook = null } = {}) {
 
                   <label style={styles.field}>
                     <span style={styles.label}>Qty</span>
-                    <input type="number" step="0.0001" value={lineItems[index].quantity} onChange={(event) => updateLineItem(index, "quantity", event.target.value)} style={styles.input} />
+                    <input type="number" step="0.0001" value={lineItems[index].quantity} readOnly={Boolean(sourceUpgrade)} onChange={(event) => updateLineItem(index, "quantity", event.target.value)} style={styles.input} />
                   </label>
 
                   <label style={styles.field}>
                     <span style={styles.label}>Unit</span>
-                    <input value={lineItems[index].unit} onChange={(event) => updateLineItem(index, "unit", event.target.value)} style={styles.input} />
+                    <input value={lineItems[index].unit} readOnly={Boolean(sourceUpgrade)} onChange={(event) => updateLineItem(index, "unit", event.target.value)} style={styles.input} />
                   </label>
 
                   <label style={styles.field}>
                     <span style={styles.label}>Unit cost</span>
-                    <input type="number" step="0.01" value={lineItems[index].unitCost} onChange={(event) => updateLineItem(index, "unitCost", event.target.value)} style={styles.input} />
+                    <input type="number" step="0.01" value={lineItems[index].unitCost} readOnly={Boolean(sourceUpgrade)} onChange={(event) => updateLineItem(index, "unitCost", event.target.value)} style={styles.input} />
                   </label>
 
                   <label style={styles.field}>
                     <span style={styles.label}>Margin %</span>
-                    <input type="number" step="0.01" value={lineItems[index].marginPercentage} onChange={(event) => updateLineItem(index, "marginPercentage", event.target.value)} style={styles.input} />
+                    <input type="number" step="0.01" value={lineItems[index].marginPercentage} readOnly={Boolean(sourceUpgrade)} onChange={(event) => updateLineItem(index, "marginPercentage", event.target.value)} style={styles.input} />
                   </label>
 
                   <label style={styles.field}>
                     <span style={styles.label}>Sell price</span>
-                    <input type="number" step="0.01" value={lineItems[index].sellPrice} onChange={(event) => updateLineItem(index, "sellPrice", event.target.value)} style={styles.input} />
+                    <input type="number" step="0.01" value={lineItems[index].sellPrice} readOnly={Boolean(sourceUpgrade)} onChange={(event) => updateLineItem(index, "sellPrice", event.target.value)} style={styles.input} />
                   </label>
 
                   <div style={styles.lineTotals}>
@@ -562,7 +722,7 @@ export default function BuilderVariationsPage({ workbook = null } = {}) {
                     <MiniTotal label="Total sell" value={money(item.totalSell, selectedProject?.currency)} />
                   </div>
 
-                  <button type="button" onClick={() => removeLineItem(index)} style={styles.removeButton} disabled={lineItems.length === 1}>Remove</button>
+                  <button type="button" onClick={() => removeLineItem(index)} style={styles.removeButton} disabled={Boolean(sourceUpgrade) || lineItems.length === 1}>Remove</button>
                 </div>
               ))}
             </div>
@@ -604,6 +764,11 @@ export default function BuilderVariationsPage({ workbook = null } = {}) {
                       <span style={{ ...styles.statusPill, ...statusStyle(uiStatus) }}>{titleCase(uiStatus)}</span>
                     </div>
                     <p style={styles.reasonText}>{variation.reason || variation.notes || "No reason recorded."}</p>
+                    {variation.metadata?.source === 'standard_inclusion_upgrade' ? <div>
+                      <p>Builder review: {variation.metadata.builderReviewStatus || 'pending'}. Client: {variation.client_status || 'not issued'}. Payment: {variation.metadata.paymentStatus || 'not requested'}.</p>
+                      {variation.status === 'draft' && variation.metadata.builderReviewStatus !== 'approved' ? <button type="button" style={styles.smallButtonPrimary} disabled={saving} onClick={() => transitionUpgrade(variation, 'approve')}>Approve builder review</button> : null}
+                      {['draft', 'submitted'].includes(variation.status) && variation.metadata.builderReviewStatus === 'approved' ? <button type="button" style={styles.smallButtonPrimary} disabled={saving} onClick={() => transitionUpgrade(variation, 'issue')}>{variation.status === 'submitted' ? 'Retry client issue' : 'Issue to client'}</button> : null}
+                    </div> : null}
                     <div style={styles.cardTotals}>
                       <MiniTotal label="Cost" value={money(items.reduce((sum, item) => sum + numberValue(item.cost_total), 0), selectedProject?.currency)} />
                       <MiniTotal label="Sell ex GST" value={money(variation.subtotal, selectedProject?.currency)} />
@@ -653,7 +818,7 @@ function calculateTotals(items) {
   const costSubtotal = roundMoney(items.reduce((sum, item) => sum + numberValue(item.totalCost), 0));
   const sellSubtotal = roundMoney(items.reduce((sum, item) => sum + numberValue(item.totalSell), 0));
   const marginTotal = roundMoney(sellSubtotal - costSubtotal);
-  const gst = roundMoney(sellSubtotal * (GST_RATE / 100));
+  const gst = roundMoney(items.reduce((sum, item) => sum + (item.gstTotal == null ? numberValue(item.totalSell) * (GST_RATE / 100) : numberValue(item.gstTotal)), 0));
   return { costSubtotal, sellSubtotal, marginTotal, gst, totalSellWithGst: roundMoney(sellSubtotal + gst) };
 }
 

@@ -17,6 +17,8 @@ import {
   ComposedChart,
 } from "recharts";
 import { supabase } from "../../../../utils/supabase-client";
+import CrmTabs from "../../../../components/crm/CrmTabs";
+import { getUserSafe, isLockContention, retryOnLockContention } from "../../../../lib/lockRetry";
 
 const TEAM_STORAGE_KEY_PREFIX = "crm:pipeline:teams:";
 const LEAD_META_KEY_PREFIX = "crm:pipeline:leadMeta:";
@@ -107,6 +109,7 @@ export default function CRMReportsPage() {
   const [leadMetaMap, setLeadMetaMap] = useState({});
   const [loading, setLoading] = useState(true);
   const [generatedAt, setGeneratedAt] = useState("");
+  const [loadError, setLoadError] = useState("");
   const [filters, setFilters] = useState({
     team: "all",
     member: "all",
@@ -117,20 +120,27 @@ export default function CRMReportsPage() {
 
   async function loadReportData() {
     setLoading(true);
+    setLoadError("");
     try {
-      const { data } = await supabase.auth.getUser();
-      const uid = data?.user?.id || "guest";
+      const { user, error: authError } = await getUserSafe(supabase);
+      if (!user && authError && isLockContention(authError)) {
+        setLoadError("Another GR8 Result tab is busy saving or signing in. Your data is safe. Please retry.");
+        return;
+      }
+      const uid = user?.id || "guest";
       setUserId(uid);
 
-      const { data: leadRows, error } = await supabase
-        .from("leads")
-        .select("*")
-        .eq("user_id", uid)
-        .order("created_at", { ascending: false });
+      const { data: leadRows, error } = await retryOnLockContention(() =>
+        supabase
+          .from("leads")
+          .select("*")
+          .eq("user_id", uid)
+          .order("created_at", { ascending: false })
+      );
 
       if (error) {
         console.error("load report leads error:", error);
-        setLeads([]);
+        setLoadError("Could not load leads. Please retry.");
       } else {
         setLeads(leadRows || []);
       }
@@ -140,7 +150,11 @@ export default function CRMReportsPage() {
       setGeneratedAt(new Date().toLocaleString("en-AU"));
     } catch (err) {
       console.error("load report data exception:", err);
-      setLeads([]);
+      setLoadError(
+        isLockContention(err)
+          ? "Another GR8 Result tab is busy saving or signing in. Your data is safe. Please retry."
+          : "Could not generate the report. Please retry."
+      );
     } finally {
       setLoading(false);
     }
@@ -347,6 +361,7 @@ export default function CRMReportsPage() {
 
   return (
     <main style={styles.main}>
+      <CrmTabs active="reports" />
       <div style={styles.bannerWrap}>
         <div style={styles.banner}>
           <div>
@@ -423,6 +438,13 @@ export default function CRMReportsPage() {
 
         {loading ? (
           <div style={styles.emptyState}>Generating report…</div>
+        ) : loadError ? (
+          <div style={styles.emptyState} role="alert">
+            {loadError}{" "}
+            <button type="button" onClick={loadReportData} style={styles.primaryBtn}>
+              Retry
+            </button>
+          </div>
         ) : filteredLeads.length === 0 ? (
           <div style={styles.emptyState}>No leads match the current report filters.</div>
         ) : (

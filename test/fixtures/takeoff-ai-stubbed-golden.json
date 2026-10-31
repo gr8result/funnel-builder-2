@@ -1,13 +1,13 @@
 {
   "walls": [
     {
-      "id": "ai:stubbed-ai-takeoff-job:takeoff%3Astubbed-ai-takeoff-job:canvas-sha256%3A<document>:ai-takeoff-v1:wall:page-1%3Ageometry%3AW01",
+      "id": "ai:stubbed-ai-takeoff-job:takeoff%3Astubbed-ai-takeoff-job:canvas-sha256%3A<document>:ai-takeoff-v3-linework:wall:page-1%3Ageometry%3AW01",
       "page": 1,
       "level": "Ground Floor",
       "source": "ai",
       "confidence": 0.92,
       "ai": {
-        "runId": "ai-takeoff-v1",
+        "runId": "ai-takeoff-v3-linework",
         "detectionId": "page-1:geometry:W01",
         "documentHash": "canvas-sha256:<document>",
         "sourcePage": 1,
@@ -17,11 +17,6 @@
           "confidence": 0.92,
           "evidence": "North and east outer wall.",
           "fields": {
-            "thicknessMm": {
-              "basis": "ASSUMED",
-              "confidence": 0,
-              "evidence": "230 mm is the existing manual tool display default; wall thickness was not documented."
-            },
             "lengthMm": {
               "basis": "DERIVED",
               "confidence": 0.92,
@@ -41,6 +36,11 @@
               "basis": "ASSUMED",
               "confidence": 0,
               "evidence": "Construction system is not established from the drawing."
+            },
+            "thicknessMm": {
+              "basis": "ASSUMED",
+              "confidence": 0,
+              "evidence": "230 mm is the existing manual tool display default; wall thickness was not documented."
             },
             "exteriorType": {
               "basis": "ASSUMED",
@@ -81,13 +81,13 @@
       "wallHeightM": null
     },
     {
-      "id": "ai:stubbed-ai-takeoff-job:takeoff%3Astubbed-ai-takeoff-job:canvas-sha256%3A<document>:ai-takeoff-v1:wall:page-1%3Ageometry%3AW02",
+      "id": "ai:stubbed-ai-takeoff-job:takeoff%3Astubbed-ai-takeoff-job:canvas-sha256%3A<document>:ai-takeoff-v3-linework:wall:page-1%3Ageometry%3AW02",
       "page": 1,
       "level": "Ground Floor",
       "source": "ai",
       "confidence": 0.92,
       "ai": {
-        "runId": "ai-takeoff-v1",
+        "runId": "ai-takeoff-v3-linework",
         "detectionId": "page-1:geometry:W02",
         "documentHash": "canvas-sha256:<document>",
         "sourcePage": 1,
@@ -97,11 +97,6 @@
           "confidence": 0.92,
           "evidence": "South and west outer wall.",
           "fields": {
-            "thicknessMm": {
-              "basis": "ASSUMED",
-              "confidence": 0,
-              "evidence": "230 mm is the existing manual tool display default; wall thickness was not documented."
-            },
             "lengthMm": {
               "basis": "DERIVED",
               "confidence": 0.92,
@@ -121,6 +116,11 @@
               "basis": "ASSUMED",
               "confidence": 0,
               "evidence": "Construction system is not established from the drawing."
+            },
+            "thicknessMm": {
+              "basis": "ASSUMED",
+              "confidence": 0,
+              "evidence": "230 mm is the existing manual tool display default; wall thickness was not documented."
             },
             "exteriorType": {
               "basis": "ASSUMED",
@@ -161,13 +161,13 @@
       "wallHeightM": null
     },
     {
-      "id": "ai:stubbed-ai-takeoff-job:takeoff%3Astubbed-ai-takeoff-job:canvas-sha256%3A<document>:ai-takeoff-v1:wall:page-1%3Ageometry%3AW03",
+      "id": "ai:stubbed-ai-takeoff-job:takeoff%3Astubbed-ai-takeoff-job:canvas-sha256%3A<document>:ai-takeoff-v3-linework:wall:page-1%3Ageometry%3AW03",
       "page": 1,
       "level": "Ground Floor",
       "source": "ai",
       "confidence": 0.92,
       "ai": {
-        "runId": "ai-takeoff-v1",
+        "runId": "ai-takeoff-v3-linework",
         "detectionId": "page-1:geometry:W03",
         "documentHash": "canvas-sha256:<document>",
         "sourcePage": 1,
@@ -177,11 +177,6 @@
           "confidence": 0.92,
           "evidence": "Internal wall between Bed 1 and Living.",
           "fields": {
-            "thicknessMm": {
-              "basis": "ASSUMED",
-              "confidence": 0,
-              "evidence": "70 mm is the existing manual tool display default; wall thickness was not documented."
-            },
             "lengthMm": {
               "basis": "DERIVED",
               "confidence": 0.92,
@@ -201,6 +196,11 @@
               "basis": "ASSUMED",
               "confidence": 0,
               "evidence": "Construction system is not established from the drawing."
+            },
+            "thicknessMm": {
+              "basis": "ASSUMED",
+              "confidence": 0,
+              "evidence": "70 mm is the existing manual tool display default; wall thickness was not documented."
             },
             "alignment": {
               "basis": "DERIVED",
@@ -234,13 +234,13 @@
   ],
   "openings": [
     {
-      "id": "ai:stubbed-ai-takeoff-job:takeoff%3Astubbed-ai-takeoff-job:canvas-sha256%3A<document>:ai-takeoff-v1:opening:page-1%3Aitems%3AO01",
+      "id": "ai:stubbed-ai-takeoff-job:takeoff%3Astubbed-ai-takeoff-job:canvas-sha256%3A<document>:ai-takeoff-v3-linework:opening:page-1%3Aitems%3AO01",
       "page": 1,
       "level": "Ground Floor",
       "source": "ai",
       "confidence": 0.92,
       "ai": {
-        "runId": "ai-takeoff-v1",
+        "runId": "ai-takeoff-v3-linework",
         "detectionId": "page-1:items:O01",
         "documentHash": "canvas-sha256:<document>",
         "sourcePage": 1,
@@ -253,7 +253,7 @@
             "hostWall": {
               "basis": "DERIVED",
               "confidence": 0.92,
-              "evidence": "Unique nearby wall on the same calibrated page, with matching internal/external classification."
+              "evidence": "Unique nearby matching wall on the same calibrated page."
             },
             "location": {
               "basis": "OBSERVED",
@@ -285,27 +285,28 @@
       "openingClass": "Window",
       "x": 420,
       "y": 225,
-      "hostWallId": "ai:stubbed-ai-takeoff-job:takeoff%3Astubbed-ai-takeoff-job:canvas-sha256%3A<document>:ai-takeoff-v1:wall:page-1%3Ageometry%3AW01",
+      "hostWallId": "ai:stubbed-ai-takeoff-job:takeoff%3Astubbed-ai-takeoff-job:canvas-sha256%3A<document>:ai-takeoff-v3-linework:wall:page-1%3Ageometry%3AW01",
+      "needsClassification": false,
       "widthMm": 1800,
       "heightMm": 1200,
       "itemTag": "1218",
-      "subType": "Window",
+      "subType": "standard",
       "glassType": "",
       "frameMaterial": "",
       "frameColour": "",
       "sillType": "",
       "brickSillRequired": false,
-      "location": "",
+      "location": "BED 1",
       "frameJambDetails": ""
     },
     {
-      "id": "ai:stubbed-ai-takeoff-job:takeoff%3Astubbed-ai-takeoff-job:canvas-sha256%3A<document>:ai-takeoff-v1:opening:page-1%3Aitems%3AO02",
+      "id": "ai:stubbed-ai-takeoff-job:takeoff%3Astubbed-ai-takeoff-job:canvas-sha256%3A<document>:ai-takeoff-v3-linework:opening:page-1%3Aitems%3AO02",
       "page": 1,
       "level": "Ground Floor",
       "source": "ai",
       "confidence": 0.92,
       "ai": {
-        "runId": "ai-takeoff-v1",
+        "runId": "ai-takeoff-v3-linework",
         "detectionId": "page-1:items:O02",
         "documentHash": "canvas-sha256:<document>",
         "sourcePage": 1,
@@ -318,7 +319,7 @@
             "hostWall": {
               "basis": "DERIVED",
               "confidence": 0.92,
-              "evidence": "Unique nearby wall on the same calibrated page, with matching internal/external classification."
+              "evidence": "Unique nearby matching wall on the same calibrated page."
             },
             "location": {
               "basis": "OBSERVED",
@@ -350,29 +351,30 @@
       "openingClass": "External Door",
       "x": 780,
       "y": 675,
-      "hostWallId": "ai:stubbed-ai-takeoff-job:takeoff%3Astubbed-ai-takeoff-job:canvas-sha256%3A<document>:ai-takeoff-v1:wall:page-1%3Ageometry%3AW02",
+      "hostWallId": "ai:stubbed-ai-takeoff-job:takeoff%3Astubbed-ai-takeoff-job:canvas-sha256%3A<document>:ai-takeoff-v3-linework:wall:page-1%3Ageometry%3AW02",
+      "needsClassification": false,
       "widthMm": null,
       "heightMm": null,
       "itemTag": "D1",
-      "subType": "External Door",
+      "subType": "Entry",
       "glassType": "",
       "frameMaterial": "",
       "frameColour": "",
       "sillType": "",
       "brickSillRequired": false,
-      "location": "",
+      "location": "LIVING",
       "frameJambDetails": ""
     }
   ],
   "floorplans": [
     {
-      "id": "ai:stubbed-ai-takeoff-job:takeoff%3Astubbed-ai-takeoff-job:canvas-sha256%3A<document>:ai-takeoff-v1:floorplan:page-1%3Ageometry%3AA01",
+      "id": "ai:stubbed-ai-takeoff-job:takeoff%3Astubbed-ai-takeoff-job:canvas-sha256%3A<document>:ai-takeoff-v3-linework:floorplan:page-1%3Ageometry%3AA01",
       "page": 1,
       "level": "Ground Floor",
       "source": "ai",
       "confidence": 0.92,
       "ai": {
-        "runId": "ai-takeoff-v1",
+        "runId": "ai-takeoff-v3-linework",
         "detectionId": "page-1:geometry:A01",
         "documentHash": "canvas-sha256:<document>",
         "sourcePage": 1,

@@ -1,3 +1,12 @@
+import { useAuth } from '../../../context/AuthContext.js';
+import { requestApprovedCatalogue } from '../../../lib/builders/approvedCatalogueRequest.js';
+import { chooseSelectionBookSource, selectionBookFromWorkbook, roomForSavedRequirement } from '../../../lib/builders/selectionBookSource.js';
+import LazySchedulePage from '../../../components/client-selections/LazySchedulePage.jsx';
+import { createSelectionsCover, renderSelectionsCover, selectionsCoverCss } from "../../../lib/builders/selectionsCover.js";
+import { buildSelectionsSchedule } from "../../../lib/builders/selectionsScheduleDocument.js";
+import { MULTI_PRODUCT_REQUIREMENTS, selectionAttention } from "../../../lib/builders/selectionAttention.js";
+import { roomConflicts, saveLineWithDecision } from "../../../lib/builders/selectionAssignments.js";
+import SelectionAttentionPanel from "../../../components/client-selections/SelectionAttentionPanel.jsx";
 import { browserTenantKey } from '../../../lib/builders/browserTenantStorage.js';
 import GarageDoorChoiceGrid from "../../../components/product-library/GarageDoorChoiceGrid";
 import GarageDoorReviewPreview from "../../../components/product-library/GarageDoorReviewPreview";
@@ -11,7 +20,8 @@ import DoorProductImage from '../../../components/product-library/DoorProductIma
 import { isDoorProduct } from '../../../lib/product-library/productPresentation.js';
 import StairSelectionWizard from '../../../components/product-library/StairSelectionWizard';
 import { stairFlightsFromJobSetup } from "../../../lib/construction-estimation/estimateBuilderWorkbookCalculations.js";
-import { cabinetryScheduleCatalogue, cabinetryRoomKey } from "../../../lib/construction-estimation/cabinetryRequirements.js";
+import { bulkheadRuns, cabinetryScheduleCatalogue, cabinetryRoomKey, cabinetryWetAreaTag, sharkfinUpgrade } from "../../../lib/construction-estimation/cabinetryRequirements.js";
+import { BulkheadRunsEditor, OpenShelvingUnitsEditor, SharkfinUpgradeDetail } from "../../../components/client-selections/CabinetScheduleExtras.jsx";
 import {INTERNAL_SELECTION_KEYS,internalRequirementMatchesRow} from '../../../lib/product-library/internalSelection.js';
 import { rowOwnedByOtherRequirement } from "../../../lib/builders/selectionRowOwnership.js";
 import { INDICATIVE_RATE_BASIS } from "../../../lib/builders/allocatedSelectionQuotation.js";
@@ -23,10 +33,13 @@ import ProjectRoomManager from "../../../components/client-selections/ProjectRoo
 import { getBuilderBenchtopRangeMapping, saveBuilderBenchtopRangeMapping, supplierPriceGroups } from "../../../lib/builders/benchtopRangeMapping.js";
 import { ROOM_LOCATION_OPTIONS } from "../../../components/construction-estimation/ai-plan-takeoff/takeoffRunData.js";
 import { benchtopLocationPatch } from "../../../lib/builders/benchtopSelection.js";
-import { addProjectRoom, mergeProjectRooms, projectRoomModel, projectRoomUsage, removeProjectRoom, removeRoomRecords, removedProjectRooms, renameProjectRoom, renameRoomRecords, restoreProjectRoom, updateProjectRoom } from "../../../lib/builders/projectRoomModel.js";
+import { addProjectRoom, assignSelectionAllocationToRoom, confirmProjectRooms, keepRoomsSeparate, keepSelectionAllocationUnallocated, mergeProjectRooms, possibleDuplicateRooms, projectRoomModel, projectRoomUsage, projectRoomsConfirmed, removeDuplicateSelectionAllocation, removeProjectRoom, removeRoomRecords, removedProjectRooms, renameProjectRoom, renameRoomRecords, restoreProjectRoom, roomMergeConflicts, unlistedSelectionLocations, updateProjectRoom } from "../../../lib/builders/projectRoomModel.js";
 import { ELECTRICAL_SCHEDULE_REQUIREMENT_KEY, electricalEstimateCounts, electricalInclusionBaseline, electricalScheduleLines, electricalScheduleProgress, electricalSelectionPatch, normaliseElectricalSchedule } from "../../../lib/builders/electricalSchedule.js";
 import { choiceSwatch, colourLabel, internalPaintScheduleLines, internalPaintSchemeStatus, internalPaintSummary, normaliseInternalPaintScheme } from "../../../lib/builders/internalPaintColours.js";
 import { serviceProjectRequirement, serviceQuoteRequirements, RESIDENTIAL_SERVICE_KEYS } from '../../../lib/builders/residentialServices.js';
+import { STANDARD_RANGE_KEYS, standardRangeDefaults } from '../../../lib/builders/builderStandardRange.js';
+import { standardInclusionClientSelectionPatches } from '../../../lib/standard-inclusions/clientSelectionBaseline.mjs';
+import BuilderStandardRangeWorkflow from '../../../components/client-selections/BuilderStandardRangeWorkflow.jsx';
 import { plumbingSelectionPatch } from "../../../lib/builders/plumbingSelectionPatch.js";
 import TilingRoomsWorkflow from "../../../components/client-selections/TilingRoomsWorkflow";
 import FlooringSelectionWorkflow from "../../../components/client-selections/FlooringSelectionWorkflow";
@@ -55,7 +68,7 @@ import { createWindowAndDoorSchedules } from "../../../components/construction-e
 import { canonicalWindowScheduleFromTakeoffJob, windowScheduleLevelSortIndex } from "../../../lib/builders/windowScheduleProjection.js";
 import { canonicalProjectUuid } from "../../../lib/builders/canonicalProjectIdentity.js";
 import Head from "next/head";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowUp, CheckCircle2, Upload } from "lucide-react";
 import { useWorkspace } from "../../../hooks/useWorkspace";
 import {
@@ -101,6 +114,7 @@ import {
   INTERIOR_REQUIREMENTS,
   KITCHEN_REQUIREMENTS,
   PLUMBING_FIXTURE_REQUIREMENTS,
+  TILES_REQUIREMENTS,
   PRICE_STATES,
   isPricedState,
   areaTotals as guidedAreaTotals,
@@ -142,6 +156,7 @@ import {
   statusForRequirement,
   statusTone,
   variationFor,
+  productPriceIncludesGst,
 } from "../../../lib/builders/clientSelectionWorkflow";
 import {
   CABINETRY_AREA_LABELS,
@@ -155,7 +170,7 @@ import {
   HANDLE_HOUSE_BASE_CATALOGUE,
   LAMINEX_CABINETRY_CATALOGUE,
   POLYTEC_CABINETRY_CATALOGUE,
-  WET_AREA_CABINETRY_ROOM_NAMES,
+  isWetAreaCabinetryLocationName,
   WET_AREA_CABINETRY_SCHEDULE_TYPES,
   adjacentCabinetryRoom,
   applicableColourTargetRooms,
@@ -174,12 +189,14 @@ import {
   normaliseCabinetrySelection,
   overrideCabinetryArea,
 } from "../../../lib/builders/cabinetryWorkflow";
+import { applyConfirmedClientSelectionCorrections } from "../../../lib/builders/clientSelectionCorrections";
 import { roundMoney } from "../../../lib/builders/selectionBudget";
 import {
   STONE_BENCHTOP_CATALOGUE,
   activeStoneBenchtopProducts,
 } from "../../../lib/builders/stoneBenchtopWorkflow";
 import { DEFAULT_BUILDER_TEMPLATE_BRAND } from "../../../lib/builders/defaultTemplateBrand";
+import { builderLogoFor } from "../../../lib/builders/selectionsCover";
 import { supabase } from "../../../utils/supabase-client";
 import {
   APPROVED_SELECTIONS_CSV_PATH,
@@ -230,7 +247,8 @@ import {
   selectionGroupsForRequirement,
   variantForOptions,
 } from "../../../lib/product-library/showerScreenMirrorCatalogue.js";
-import { SELECTIONS_BOOK_TEMPLATE_ROOMS, houseRoomNames, houseRooms, isSelectionCategoryName, projectLocations, takeoffRoomCounts } from "../../../lib/builders/projectLocations.js";
+import { SELECTIONS_BOOK_TEMPLATE_ROOMS, houseRoomNames, houseRooms, isSelectionCategoryName, projectLocations, takeoffRoomEvidence } from "../../../lib/builders/projectLocations.js";
+import { isGenericBuildingLevelLocation } from "../../../lib/builders/buildingLevels.js";
 import ProjectLocationMultiSelect from "../../../components/product-library/ProjectLocationMultiSelect";
 import {
   UNALLOCATED_LOCATION_KEY,
@@ -993,6 +1011,7 @@ const CATEGORY_CARD_REQUIREMENT_KEYS = { "external-doors": "entry-door", "garage
 // Requirement cards inside a category hub, before anything is selected: a genuine photo of that
 // requirement's own product type (never another category's product).
 const REQUIREMENT_CARD_IMAGES = {
+  "air-conditioning": "/images/client-selections/air-conditioning.webp",
   // Complete heat-pump installation, framed for the existing landscape feature card.
   "hot-water-system": CATEGORY_CARD_IMAGES["hot-water"],
   bricks: "/images/catalogues/product-library/categories/bricks-card-austral-everyday-life-escape.webp",
@@ -1008,7 +1027,7 @@ const REQUIREMENT_CARD_IMAGES = {
   "internal-doors": "/images/client-selections/internal-doors.webp",
 };
 // Cards that always show their category photo, even after a product is selected.
-const FIXED_CATEGORY_CARD_IMAGE_KEYS = new Set(["shower-fixtures"]);
+const FIXED_CATEGORY_CARD_IMAGE_KEYS = new Set(["shower-fixtures", "air-conditioning"]);
 
 // A category hub with only a couple of categories (Stairs & Balustrades) shows them as large feature
 // cards instead of the many-category product grid. Wording for those feature cards: the card is the
@@ -1070,7 +1089,7 @@ const BATHROOM_HANDLE_TARGETS = WET_AREA_CABINETRY_CONFIG.handleTargets;
 const BATHROOM_HANDLE_OPTIONS = WET_AREA_CABINETRY_CONFIG.handleOptions;
 const CABINETRY_WORKFLOW_TYPE = "guided_cabinetry";
 const CABINETRY_SELECTION_TYPE = "cabinetry_specification";
-const CABINETRY_SCHEMA_VERSION = 2;
+const CABINETRY_SCHEMA_VERSION = 3;
 const CABINETRY_DRAFT_STORAGE_KEY = "gr8:client-selections:guided-cabinetry-draft";
 
 function today() {
@@ -1145,8 +1164,6 @@ function normaliseKey(value) {
   return String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, "");
 }
 
-// "recovered-03-09-123-mttbljky" and "recovered-03-09-123" are the same job opened twice.
-// The trailing base-36 timestamp is the only difference, so strip it to compare identities.
 // True when the book carries work a user would be upset to lose. Used to refuse replacing
 // a populated book with an empty template after a failed read.
 function bookHasRecordedSelections(candidate = {}) {
@@ -1181,11 +1198,6 @@ function projectPersistenceTarget(projectId, workbook = null) {
   };
 }
 
-function recoveredProjectRoot(value) {
-  const next = String(value || "").trim();
-  if (!next.startsWith("recovered-")) return "";
-  return next.replace(/-[0-9a-z]{6,}$/i, "") || next;
-}
 
 function uuidOrNull(value) {
   const next = String(value || "").trim();
@@ -1205,10 +1217,21 @@ function getPathValue(source, path) {
   return String(path).split(".").reduce((value, key) => (value && typeof value === "object" ? value[key] : undefined), source);
 }
 
-function collectWorkbookFields(source, fields = []) {
+// Cover metadata must not index the contents of drawings, quotation lines and
+// entire catalogues on every selection render. Job Setup and project metadata
+// remain the source of these fields; shared workbook aliases are visited once.
+const COVER_NON_METADATA_BRANCHES = new Set([
+  'quotation', 'productLibrary', 'projectEstimateBuilder', 'aiPlanTakeoffJob',
+  'takeoffEngine', 'takeoffSchedule', 'importedWorkbook', 'importedSheets',
+  'clientSelectionsBook', 'selectionsBook', 'selectionSchedule', 'selectionSchedules',
+  'quoteHistory', 'formulaHistory', 'procurement', 'purchaseOrders', 'windowsDoors',
+]);
+function collectWorkbookFields(source, fields = [], seen = new WeakSet()) {
   if (!source || typeof source !== "object") return fields;
+  if (seen.has(source)) return fields;
+  seen.add(source);
   if (Array.isArray(source)) {
-    source.forEach((item) => collectWorkbookFields(item, fields));
+    source.forEach((item) => collectWorkbookFields(item, fields, seen));
     return fields;
   }
 
@@ -1220,8 +1243,9 @@ function collectWorkbookFields(source, fields = []) {
   }
 
   Object.entries(source).forEach(([entryKey, entryValue]) => {
+    if (COVER_NON_METADATA_BRANCHES.has(entryKey)) return;
     if (entryValue && typeof entryValue === "object") {
-      collectWorkbookFields(entryValue, fields);
+      collectWorkbookFields(entryValue, fields, seen);
     } else if (entryValue !== undefined && entryValue !== null && typeof entryValue !== "object") {
       fields.push({ key: normaliseKey(entryKey), label: normaliseKey(entryKey), rawLabel: entryKey, value: entryValue });
     }
@@ -1520,15 +1544,24 @@ function embeddedSelectionsSnapshot({ snapshotId = "", workbook = null, projectC
 }
 
 function selectionBookFromEmbeddedWorkbook(workbook = null) {
-  const candidates = [
-    workbook?.selectionsBook,
-    workbook?.clientSelectionsBook,
-    workbook?.builderSelectionsBook,
-    workbook?.selections?.book,
-    workbook?.data?.selectionsBook,
-    workbook?.data?.clientSelectionsBook,
-  ];
-  return candidates.find((candidate) => candidate?.documentType === "luxury_selections_book" || Array.isArray(candidate?.rooms)) || null;
+  return selectionBookFromWorkbook(workbook);
+}
+
+// builder_products columns mean different things for legacy seeded rows (base_allowance is the
+// included product's cost) and Product Library rows (upgrade_cost is the client price and
+// base_allowance the builder cost). A Product Library row carries its price and GST basis in
+// metadata.productEntity; use them so the builder's cost is never charged as the client price.
+function libraryRowPricing(product = {}) {
+  const entity = product.metadata?.productEntity || {};
+  const clientPrice = entity.clientPrice ?? entity.client_price;
+  if (clientPrice !== undefined && clientPrice !== null && clientPrice !== "" && Number.isFinite(Number(clientPrice))) {
+    return {
+      selectedCost: numberValue(clientPrice),
+      allowance: numberValue(entity.allowance ?? product.base_allowance),
+      priceIncludesGst: typeof entity.gstIncluded === "boolean" ? entity.gstIncluded : null,
+    };
+  }
+  return { selectedCost: numberValue(product.base_allowance || product.upgrade_cost), allowance: numberValue(product.base_allowance), priceIncludesGst: null };
 }
 
 function productOption(brand, productName, model, finish, supplier, description, allowance, selectedCost, priceBand, colour) {
@@ -1616,6 +1649,8 @@ function rowFromOption(option, itemName, sortOrder, options = []) {
   };
 }
 
+import { useBuilderCatalogue } from "../../../components/product-library/useBuilderCatalogue";
+
 export default function BuilderSelectionsBookPage(props) {
   const { workspaceId, loading } = useWorkspace();
   if (loading) return <div role="status">Loading builder workspace...</div>;
@@ -1639,15 +1674,21 @@ function BuilderSelectionsBookPageContent({
   const selectionRouter = useRouter();
   const selectionRouterRef = useRef(selectionRouter);
   const bookLoadRequestRef = useRef(0);
+  const approvedCatalogueRequestRef = useRef(0);
+  const approvedCatalogueSessionRef = useRef(null);
+  const [hydratedStandardBookKey, setHydratedStandardBookKey] = useState('');
   const loadedBookKeyRef = useRef("");
   const bookEditVersionRef = useRef(0);
   const autosaveTimerRef = useRef(null);
   const autosavePendingBookRef = useRef(null);
+  const projectSaveQueueRef = useRef(Promise.resolve());
   selectionRouterRef.current = selectionRouter;
   const selectionRoutePath = String(selectionRouter.asPath || '');
   const selectionRouterReady = Boolean(selectionRouter.isReady);
   const { workspaceId: activeWorkspaceId, loading: workspaceLoading } = useWorkspace();
+  const { session: catalogueSession } = useAuth();
   const workspaceId = providedWorkspaceId || providedOrganisationId || projectContext?.workspaceId || projectContext?.organisationId || activeWorkspaceId;
+  const databaseCatalogue = useBuilderCatalogue(workspaceId);
   const [projects, setProjects] = useState([]);
   const [snapshots, setSnapshots] = useState([]);
   const [templates, setTemplates] = useState([]);
@@ -1676,6 +1717,7 @@ function BuilderSelectionsBookPageContent({
   const [activePage, setActivePage] = useState("cover");
   const [activeRoomId, setActiveRoomId] = useState("");
   const [guidedScreen, setGuidedScreen] = useState("areas");
+  const [reviewingProjectRooms, setReviewingProjectRooms] = useState(false);
   const [guidedArea, setGuidedArea] = useState("");
   // The main page (Interior / Exterior) the client is working through, so a category returns to it.
   const [guidedSide, setGuidedSide] = useState("interior");
@@ -1741,6 +1783,7 @@ function BuilderSelectionsBookPageContent({
   const [newRoomTemplate, setNewRoomTemplate] = useState("Powder Room");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [publishing, setPublishing] = useState(false);
   // Confirmed persistence outcome, never inferred from local React state:
   // "saved" (database row written), "saved-local" (job file only, no cloud project),
   // "failed" (database rejected the write).
@@ -1750,6 +1793,11 @@ function BuilderSelectionsBookPageContent({
   const [scheduleDocument, setScheduleDocument] = useState(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  useEffect(() => {
+    if (databaseCatalogue.error) setError(databaseCatalogue.error);
+    setMasterCatalogueProducts(getMasterProducts(workspaceId || ""));
+    setBuilderEnablements(getBuilderEnablementRefs(workspaceId || ""));
+  }, [workspaceId, databaseCatalogue.revision, databaseCatalogue.error]);
   const viewerRef = useRef(null);
   const pageRefs = useRef(new Map());
   const embeddedProject = useMemo(() => embeddedSelectionsProject({
@@ -1781,11 +1829,31 @@ function BuilderSelectionsBookPageContent({
     () => reviewablePersistedProjectSelections.length ? reviewPersistedProjectSelections(reviewablePersistedProjectSelections) : reviewScheduleBook(book),
     [book, reviewablePersistedProjectSelections]
   );
-  const effectiveScheduleSections = useMemo(() => scheduleSectionsForEffectiveSelections({
-    persistedSelections: reviewablePersistedProjectSelections,
-    book,
-  }), [book, reviewablePersistedProjectSelections]);
-  const effectiveScheduleItems = useMemo(() => effectiveScheduleSections.flatMap((section) => section.items), [effectiveScheduleSections]);
+  // Product Library details for a selection that only recorded its product id (tiles, roof profile).
+  const scheduleProductLookup = useMemo(() => {
+    const byKey = new Map();
+    getEffectiveProductCatalogue({ organisationId: workspaceId || "" }).products.forEach((product) => {
+      [product.productId, product.productCode, product.productCode ? `master-${product.productCode}` : ""].filter(Boolean).forEach((key) => { if (!byKey.has(key)) byKey.set(key, product); });
+    });
+    return (productId, productCode) => {
+      const product = byKey.get(productId) || byKey.get(productCode);
+      if (!product) return null;
+      const firstImage = Array.isArray(product.images) ? product.images[0] : "";
+      return { productName: product.productName, brand: product.brand, supplier: product.supplier, colour: product.colour, finish: product.finish,
+        imageUrl: product.primaryImageUrl || product.thumbnailUrl || product.imageUrl || product.exactImageUrl || product.imageReference || (Array.isArray(product.galleryImageUrls) ? product.galleryImageUrls[0] : "") || (typeof firstImage === "string" ? firstImage : firstImage?.url) || "" };
+    };
+  }, [workspaceId, databaseCatalogue.revision]);
+  // The contract schedule body: Exterior Selections, Interior Selections, Painting Schedule - one
+  // continuous document paginated by page capacity (lib/builders/selectionsScheduleDocument.js).
+  const selectionsSchedule = useMemo(() => buildSelectionsSchedule(scheduleSourceBook({ persistedSelections: reviewablePersistedProjectSelections, book }), {
+    productLookup: scheduleProductLookup,
+    firstPageNumber: 3,
+    exteriorWalls: embeddedWorkbook?.takeoffEngine?.lastJobSetupSync?.payload?.schedule?.projectTotals?.exteriorWalls || [],
+    isHidden: (row, guided) => exteriorWallConstruction?.brickApplicable === false
+      && /\bbrick/i.test([row.guidedRequirementKey, guided.requirementKey, guided.familyKey, guided.productName].filter(Boolean).join(" ")) && !/\bexposed\b/i.test(String(guided.productName || "")),
+  }), [book, reviewablePersistedProjectSelections, scheduleProductLookup, exteriorWallConstruction, embeddedWorkbook]);
+  const effectiveScheduleItems = useMemo(() => selectionsSchedule.rows.map((row) => ({ id: row.id, sourceRowId: row.sourceRowId, selectionId: row.id, category: row.item, area: row.qtyLocation, title: row.product,
+    imageUrl: row.imageUrl, statusLabel: row.status, priceLabel: "", fields: [] })), [selectionsSchedule]);
   const currentSelectionsRevisionLabel = useMemo(() => {
     const latest = reviewablePersistedProjectSelections.map((selection) => selection.updated_at || selection.selected_at || "").filter(Boolean).sort().at(-1);
     return latest ? formatScheduleRevisionDate(latest) : formatScheduleRevisionDate(book.updatedAt);
@@ -1803,7 +1871,7 @@ function BuilderSelectionsBookPageContent({
     [book, exteriorWallConstruction.brickApplicable]
   );
   const guidedKitchenTotals = useMemo(() => guidedAreaTotals(KITCHEN_REQUIREMENTS, guidedSelectionMap), [guidedSelectionMap]);
-  const catalogueRefreshKey = `${builderEnablements.length}:${masterCatalogueProducts.length}`;
+  const catalogueRefreshKey = `${builderEnablements.length}:${masterCatalogueProducts.length}:${databaseCatalogue.revision}`;
   const effectiveApplianceCatalogue = useMemo(() => {
     void catalogueRefreshKey;
     return getEffectiveApplianceCatalogue({
@@ -1839,11 +1907,16 @@ function BuilderSelectionsBookPageContent({
   // the builder added, e.g. "Ensuite 2") plus the project's Cabinetry locations.
   // Physical locations only (projectLocations.js): the category containers the book keeps its
   // guided rows in ("Bathroom Accessories", "Plumbing Fixtures", ...) are never project locations.
+  const roomSourceWorkbook = useMemo(() => ({
+    aiPlanTakeoffJob: embeddedWorkbook?.aiPlanTakeoffJob || null,
+    takeoffEngine: { aiPlanTakeoffJob: embeddedWorkbook?.takeoffEngine?.aiPlanTakeoffJob || null },
+    projectRoomModel: embeddedWorkbook?.projectRoomModel || null,
+  }), [embeddedWorkbook?.aiPlanTakeoffJob, embeddedWorkbook?.takeoffEngine?.aiPlanTakeoffJob, embeddedWorkbook?.projectRoomModel]);
   const projectLocationList = useMemo(() => projectLocations({
     book,
     cabinetryLocations: guidedSelectionMap.get("cabinetry")?.selected_details?.cabinetrySelection?.locations || [],
-    workbook: embeddedWorkbook,
-  }), [book.rooms, book.projectRoomModel, guidedSelectionMap, embeddedWorkbook]); // eslint-disable-line react-hooks/exhaustive-deps
+    workbook: roomSourceWorkbook,
+  }), [book.rooms, book.projectRoomModel, guidedSelectionMap, roomSourceWorkbook]); // eslint-disable-line react-hooks/exhaustive-deps
   const plumbingProjectLocationNames = useMemo(() => projectLocationList.map((location) => location.name), [projectLocationList]);
   // Tiles & Stone room-by-room workflow: saved rooms, or (first time) the project's tiled rooms plus
   // any saved Floor Wastes & Drains migrated into their rooms; earlier per-m² tile picks are kept.
@@ -1881,8 +1954,8 @@ function BuilderSelectionsBookPageContent({
     let committedBook = null;
     setBook((current) => {
       const cabinetry = (current.rooms || []).flatMap((room) => room.rows || []).find((row) => row?.guidedSelection?.cabinetrySelection)?.guidedSelection.cabinetrySelection.locations || [];
-      const rooms = projectLocations({ book: current, cabinetryLocations: cabinetry, workbook: embeddedWorkbook });
-      const model = projectRoomModel(current, embeddedWorkbook);
+      const rooms = projectLocations({ book: current, cabinetryLocations: cabinetry, workbook: roomSourceWorkbook });
+      const model = projectRoomModel(current, roomSourceWorkbook);
       let result = { error: "Unknown room change." };
       let records = current;
       if (kind === "add") result = addProjectRoom(model, rooms, payload || {});
@@ -1893,9 +1966,25 @@ function BuilderSelectionsBookPageContent({
         if (!result.error) records = renameRoomRecords(current, location, { id: location.id, name: String(payload || "").trim().replace(/\s+/g, " ") }, { rooms });
       }
       if (kind === "merge") {
-        result = mergeProjectRooms(model, location, payload);
-        if (!result.error) records = renameRoomRecords(current, location, payload, { rooms, merge: true });
+        // payload: { into, resolutions } - what to do where both rooms hold the same selection.
+        const into = payload?.into || payload;
+        result = mergeProjectRooms(model, location, into);
+        if (!result.error) records = renameRoomRecords(current, location, into, { rooms, merge: true, resolutions: payload?.resolutions || {} });
       }
+      if (kind === "assign-selection") {
+        records = assignSelectionAllocationToRoom(current, location, payload?.into, payload?.detail, payload?.quantity);
+        result = { model };
+      }
+      if (kind === "resolve-selection-duplicate") {
+        records = removeDuplicateSelectionAllocation(current, location, payload?.detail);
+        result = { model };
+      }
+      if (kind === "keep-selection-unallocated") {
+        records = keepSelectionAllocationUnallocated(current, location, payload?.detail);
+        result = { model };
+      }
+      if (kind === "separate") result = keepRoomsSeparate(model, location, payload);
+      if (kind === "confirm") result = confirmProjectRooms(model, rooms);
       if (kind === "remove") {
         result = removeProjectRoom(model, location);
         records = removeRoomRecords(current, location);
@@ -1913,21 +2002,33 @@ function BuilderSelectionsBookPageContent({
     }, 0));
   }
   const projectRoomManager = useMemo(() => {
-    const model = projectRoomModel(book, embeddedWorkbook);
-    const takeoff = takeoffRoomCounts(embeddedWorkbook || {});
+    const model = projectRoomModel(book, roomSourceWorkbook);
+    const takeoff = takeoffRoomEvidence(roomSourceWorkbook);
     return {
       removed: removedProjectRooms(model),
-      levels: [...new Set(Object.values(embeddedWorkbook?.aiPlanTakeoffJob?.sheetLevels || embeddedWorkbook?.takeoffEngine?.aiPlanTakeoffJob?.sheetLevels || {}).map((level) => String(level || "").trim()).filter(Boolean))],
+      levels: [...new Set(Object.values(roomSourceWorkbook.aiPlanTakeoffJob?.sheetLevels || roomSourceWorkbook.takeoffEngine?.aiPlanTakeoffJob?.sheetLevels || {}).map((level) => String(level || "").trim()).filter(Boolean))],
       usageFor: (location) => projectRoomUsage(book, location, { rooms: projectLocationList, takeoff, sourceKeys: model.rooms.find((entry) => entry.id === location.id)?.sourceKeys || [] }),
       onAdd: (room) => changeProjectRooms("add", null, room),
       onRename: (location, name) => changeProjectRooms("rename", location, name),
       onUpdate: (location, patch) => changeProjectRooms("update", location, patch),
       onRemove: (location) => changeProjectRooms("remove", location),
-      onMerge: (from, into) => changeProjectRooms("merge", from, into),
+      onMerge: (from, into, resolutions = {}) => changeProjectRooms("merge", from, { into, resolutions }),
+      onAssignSelection: (from, into, detail, quantity) => changeProjectRooms("assign-selection", from, { into, detail, quantity }),
+      onRemoveFloorDuplicate: (from, detail) => changeProjectRooms("resolve-selection-duplicate", from, { detail }),
+      onKeepFloorUnallocated: (from, detail) => changeProjectRooms("keep-selection-unallocated", from, { detail }),
       onRestore: (entry) => changeProjectRooms("restore", null, entry),
+      // Room setup review: names that may be one room, and locations selections use that are not rooms.
+      possibleDuplicates: possibleDuplicateRooms(projectLocationList, model),
+      unlistedLocations: unlistedSelectionLocations(book, projectLocationList, model),
+      conflictsFor: (from, into) => roomMergeConflicts(book, from, into, { rooms: projectLocationList }),
+      onKeepSeparate: (left, right) => changeProjectRooms("separate", left, right),
+      onConfirm: () => changeProjectRooms("confirm"),
+      confirmed: projectRoomsConfirmed(model),
+      confirmedAt: model.confirmedAt || "",
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [book, embeddedWorkbook, projectLocationList]);
+  }, [book, roomSourceWorkbook, projectLocationList]);
+  const requireProjectRoomConfirmation = !projectRoomManager.confirmed && !["areas", "review"].includes(guidedScreen);
   // Electrical: a room-by-room quantity schedule over the project's own rooms. No products; the
   // Quotation Builder prices each point (electricalSchedule.js).
   const electricalProps = useMemo(() => {
@@ -2006,8 +2107,8 @@ function BuilderSelectionsBookPageContent({
   // rebuilt from the component allocation lines it expanded into.
   const accessoryPackState = useMemo(() => {
     const required = selectionPackRooms(BATHROOM_ACCESSORY_PACK_GROUP, [
-      ...(tilingProps.savedRooms || []).map((room) => room.name),
       ...plumbingProjectLocationNames,
+      ...(tilingProps.savedRooms || []).map((room) => room.name),
       ...(tilingProps.takeoff?.openings || []).map((opening) => opening.roomLabel),
     ], accessoryPacksOffered.settings, { notRooms: effectiveGuidedRequirements.map((item) => item.areaLabel) });
     const linesByRequirement = Object.fromEntries(bathroomAccessoryRequirements.map((item) => [
@@ -2016,7 +2117,14 @@ function BuilderSelectionsBookPageContent({
     ]));
     return { ...accessoryPacksOffered, required, linesByRequirement, selected: selectedSelectionPack(linesByRequirement, BATHROOM_ACCESSORY_PACK_GROUP) };
   }, [accessoryPacksOffered, tilingProps, plumbingProjectLocationNames, bathroomAccessoryRequirements, effectiveGuidedRequirements, guidedSelectionMap]);
-  const guidedRequirement = useMemo(() => guidedRequirementsByKey.get(guidedRequirementKey) || guidedRequirementByKey(guidedRequirementKey) || kitchenRequirementByKey("oven") || KITCHEN_REQUIREMENTS[0], [guidedRequirementKey, guidedRequirementsByKey]);
+  const guidedRequirement = useMemo(() => {
+    const requirement = guidedRequirementsByKey.get(guidedRequirementKey) || guidedRequirementByKey(guidedRequirementKey) || kitchenRequirementByKey("oven") || KITCHEN_REQUIREMENTS[0];
+    const slot = requirement.selectionSlotId || requirement.requirementKey;
+    const baseline = embeddedWorkbook?.jobInclusionSnapshot?.jobInclusionSnapshot || embeddedWorkbook?.jobInclusionSnapshot;
+    const included = baseline?.items?.find(item => (item.selection_slot_id || item.selectionSlotId) === slot);
+    if (!included || included.baselineUnitPrice == null) return requirement;
+    return { ...requirement, defaultAllowance: Number(included.baselineUnitPrice), allowanceStatus: "set", standardInclusionBaseline: included };
+  }, [guidedRequirementKey, guidedRequirementsByKey, embeddedWorkbook?.jobInclusionSnapshot]);
   const activeGuidedRequirements = useMemo(() => {
     if (guidedScreen === "appliances" || guidedScreen === "appliance-products") return visibleApplianceRequirements;
     if (guidedScreen === "plumbing-fixtures") return requirementsForGuidedArea("plumbing-fixtures", book);
@@ -2137,15 +2245,18 @@ function BuilderSelectionsBookPageContent({
       const key = product.productCode || product.sku || product.id || `${product.product_name || product.productName}-${byIdentity.size}`;
       byIdentity.set(key, product);
     });
+    getEffectiveProductCatalogue({ organisationId: workspaceId || "" }).products
+      .filter(product => product.isCustom && product.familyKey === guidedRequirement.familyKey)
+      .forEach(product => byIdentity.set(product.productId, masterProductToClientSelectionProduct(product, { organisationId: workspaceId || "", requirement: guidedRequirement })));
     return Array.from(byIdentity.values());
-  }, [approvedCatalogueProducts, brickMasterSelectionProducts, entryDoorMasterSelectionProducts, masterSelectionProducts, roofingMasterSelectionProducts, windowMasterSelectionProducts]);
+  }, [approvedCatalogueProducts, brickMasterSelectionProducts, entryDoorMasterSelectionProducts, masterSelectionProducts, roofingMasterSelectionProducts, windowMasterSelectionProducts, workspaceId, guidedRequirement, databaseCatalogue.revision]);
   const masterProductsForGuidedFamily = useMemo(() => masterCatalogueProducts.filter((product) => product.familyKey === guidedRequirement.familyKey && product.active !== false && !product.archived && !product.discontinued), [guidedRequirement.familyKey, masterCatalogueProducts]);
   const builderEnabledForGuidedFamily = useMemo(() => builderEnablements.filter((item) => item.organisationId === workspaceId && item.enabled !== false && item.active !== false && masterCatalogueProducts.some((product) => product.productCode === item.masterProductCode && product.familyKey === guidedRequirement.familyKey)), [builderEnablements, guidedRequirement.familyKey, masterCatalogueProducts, workspaceId]);
   const guidedProducts = useMemo(() => guidedProductsForRequirement(guidedRequirement, clientSelectionCatalogueProducts, {
     brickSupplier: guidedBrickSupplier,
     brickRange: guidedBrickRange,
   }), [guidedRequirement, clientSelectionCatalogueProducts, guidedBrickSupplier, guidedBrickRange]);
-  const entryDoorFurnitureProducts = useMemo(() => entryDoorFurnitureCatalogueProducts([...windowsDoorsGarageCatalogue.products, ...getEffectiveProductCatalogue({ organisationId: workspaceId || '', familyKey: ENTRY_DOOR_FURNITURE_FAMILY_KEY }).products]), [workspaceId]);
+  const entryDoorFurnitureProducts = useMemo(() => entryDoorFurnitureCatalogueProducts([...windowsDoorsGarageCatalogue.products, ...getEffectiveProductCatalogue({ organisationId: workspaceId || '', familyKey: ENTRY_DOOR_FURNITURE_FAMILY_KEY }).products]), [workspaceId, databaseCatalogue.revision]);
   const brickGuidedProducts = useMemo(() => {
     if (guidedRequirement.requirementKey !== "bricks") return guidedProducts;
     const directMasterProducts = guidedProductsForRequirement(guidedRequirement, brickMasterSelectionProducts, {
@@ -2180,13 +2291,62 @@ function BuilderSelectionsBookPageContent({
     PLUMBING_FIXTURE_REQUIREMENTS.map((requirement) => requirement.requirementKey),
     { organisationId: workspaceId || "" },
   ), [workspaceId, builderEnablements, masterCatalogueProducts]);
+  // Materialise missing inclusions while preserving existing client decisions and baselines.
+  useEffect(() => {
+    const loadKey = [workspaceId, selectedProjectId, selectedSnapshotId, selectedTemplateId, templateItems.length].join('|');
+    if (!embeddedWorkbook || !selectedProjectId || !workspaceId || loading || hydratedStandardBookKey !== loadKey) return;
+    const catalogue = getEffectiveProductCatalogue({ organisationId: workspaceId }).products;
+    const changes = STANDARD_RANGE_KEYS.flatMap(key => {
+      if (guidedSelectionMap.has(key)) return [];
+      const requirement = guidedRequirementsByKey.get(key);
+      if (!requirement) return [];
+      const lines = standardRangeDefaults(embeddedWorkbook, catalogue, key);
+      const built = lines.length ? plumbingSelectionPatch(requirement, lines, null, { projectId: selectedProjectId, organisationId: workspaceId }) : null;
+      return built ? [{requirement, patch: built.patch}] : [];
+    });
+    if (!changes.length) return;
+    setBook(current => {
+      const existing = guidedSelectedByRequirement(guidedSelectionsFromBook(current));
+      const next = changes.filter(c => !existing.has(c.requirement.requirementKey)).reduce((b,c) => guidedBookWithRequirementPatch(b,c.requirement,c.patch),current);
+      if (next !== current) saveEmbeddedBookDraft(next);
+      return next;
+    });
+  }, [embeddedWorkbook, selectedProjectId, workspaceId, loading, hydratedStandardBookKey, selectedSnapshotId, selectedTemplateId, templateItems.length, guidedSelectionMap, guidedRequirementsByKey, builderEnablements]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const inclusionSnapshot = embeddedWorkbook?.jobInclusionSnapshot?.jobInclusionSnapshot || embeddedWorkbook?.jobInclusionSnapshot;
+    const owner = inclusionSnapshot?.schedule?.workspace_id || inclusionSnapshot?.sourceWorkspaceId;
+    const loadKey = [workspaceId, selectedProjectId, selectedSnapshotId, selectedTemplateId, templateItems.length].join("|");
+    if (!embeddedWorkbook || !selectedProjectId || !workspaceId || loading || hydratedStandardBookKey !== loadKey || owner !== workspaceId) return;
+    const patches = standardInclusionClientSelectionPatches(inclusionSnapshot, {
+      resolveRequirement: slot => guidedRequirementsByKey.get(INCLUSION_SLOT_REQUIREMENT_KEYS[slot] || slot) || guidedRequirementByKey(INCLUSION_SLOT_REQUIREMENT_KEYS[slot] || slot),
+      quotation: embeddedWorkbook.quotation,
+    });
+    if (!patches.length) return;
+    setBook(current => {
+      let next = current;
+      const inserted = [];
+      for (const entry of patches) {
+        const room = ensureGuidedRoom(next, entry.requirement);
+        const row = rowForRequirement(room, entry.requirement);
+        const confirmed = row?.guidedSelection?.productId || row?.guidedSelection?.selectedProductId || row?.selectedOptionId;
+        if (confirmed) continue;
+        next = guidedBookWithRequirementPatch(next, entry.requirement, entry.patch);
+        inserted.push(entry.requirement.requirementKey);
+      }
+      if (next === current) return current;
+      saveEmbeddedBookDraft(next);
+      queueSelectionAutosave(next);
+      if (inserted.length) setSuccess(`Loaded ${inserted.length} included product${inserted.length === 1 ? "" : "s"} from ${inclusionSnapshot.schedule.display_name || inclusionSnapshot.schedule.name}. Client choices already on this job were preserved.`);
+      return next;
+    });
+  }, [embeddedWorkbook, selectedProjectId, workspaceId, loading, hydratedStandardBookKey, selectedSnapshotId, selectedTemplateId, templateItems.length, guidedRequirementsByKey]);
   // Per requirement: how many verified Product Library products each category offers, plus a real
   // product photo for its card. Tiles have no m² selection workflow or verified range yet.
   const guidedCategorySummaries = useMemo(() => {
     const organisationId = workspaceId || "";
     const allocatedRequirements = effectiveGuidedRequirements.filter((item) => isAllocatedCatalogueRequirement(item));
-    const summaries = clientSelectionCategorySummaries(allocatedRequirements, { organisationId });
-    CATALOGUE_CATEGORY_REQUIREMENTS.filter((item) => !isAllocatedCatalogueRequirement(item)).forEach((item) => { summaries[item.requirementKey] = { count: 0, noRange: true }; });
+    const summaries = clientSelectionCategorySummaries([...allocatedRequirements, ...TILES_REQUIREMENTS], { organisationId });
+    CATALOGUE_CATEGORY_REQUIREMENTS.filter((item) => !isAllocatedCatalogueRequirement(item) && item.areaKey !== "tiles-stone").forEach((item) => { summaries[item.requirementKey] = { count: 0, noRange: true }; });
     return summaries;
   }, [workspaceId, builderEnablements, masterCatalogueProducts, effectiveGuidedRequirements]);
   // Shower Screens & Mirrors: first-level groups from the Product Library range, and the quantity
@@ -2242,6 +2402,13 @@ function BuilderSelectionsBookPageContent({
       footerText: coverValue(coverDraft.footerText) || coverDebugFields.footerText || "",
     };
   }, [coverDraft, coverDebugFields]);
+  const brochureCover = useMemo(() => createSelectionsCover({
+    cover: coverDraft,
+    workbook: embeddedWorkbook || selectedSnapshot?.workbook_snapshot || {},
+    project: selectedProject || {},
+    builder: selectedProject?.builder_profile || selectedSnapshot?.workbook_metadata?.builderProfile || {},
+    template: selectedTemplate || {},
+  }), [coverDraft, embeddedWorkbook, selectedSnapshot, selectedProject, selectedTemplate]);
   const projectInfoDisplay = useMemo(() => ({
     ...(book.projectInfo || {}),
     clientName: coverValue(book.projectInfo?.clientName) || coverDebugFields.clientName || "",
@@ -2262,6 +2429,9 @@ function BuilderSelectionsBookPageContent({
     items: effectiveScheduleItems,
     review: scheduleReview,
   }), [displayCover, effectiveScheduleItems, projectInfoDisplay, scheduleReview, selectedProject]);
+  // Everything that needs the builder, grouped, each with its own action (selectionAttention.js).
+  const scheduleAttention = useMemo(() => selectionAttention({ book, rooms: projectLocationList, model: projectRoomModel(book, embeddedWorkbook), schedule: selectionsSchedule, preflight: projectPreflight }),
+    [book, projectLocationList, embeddedWorkbook, selectionsSchedule, projectPreflight]);
 
   useEffect(() => {
     onEmbeddedMount?.();
@@ -2270,9 +2440,18 @@ function BuilderSelectionsBookPageContent({
   useEffect(() => {
     if (!workspaceId) return;
     loadInitialData();
-    loadApprovedClientSelectionCatalogue();
     loadMasterCatalogueState();
   }, [workspaceId]);
+
+  useEffect(() => {
+    approvedCatalogueSessionRef.current = catalogueSession;
+    if (!workspaceId || !catalogueSession?.access_token) return;
+    let disposed = false;
+    const reload = () => { if (!disposed) void loadApprovedClientSelectionCatalogue(); };
+    reload();
+    window.addEventListener('online', reload);
+    return () => { disposed = true; approvedCatalogueRequestRef.current += 1; window.removeEventListener('online', reload); };
+  }, [workspaceId, catalogueSession?.access_token]);
 
   useEffect(() => {
     if (!workspaceId || !selectedProjectId) {
@@ -2288,9 +2467,9 @@ function BuilderSelectionsBookPageContent({
     // The book is initialised once for a job. Fast Refresh re-runs this effect with nothing
     // changed, and reloading then would rebuild the book under the client's hands.
     const loadKey = [workspaceId, selectedProjectId, selectedSnapshotId, selectedTemplateId, templateItems.length].join("|");
-    if (loadedBookKeyRef.current === loadKey) return;
+    if (loadedBookKeyRef.current === loadKey) { setHydratedStandardBookKey(loadKey); return; }
     let cancelled = false;
-    loadBook().then(() => { if (!cancelled) loadedBookKeyRef.current = loadKey; });
+    loadBook().then(() => { if (!cancelled) { loadedBookKeyRef.current = loadKey; setHydratedStandardBookKey(loadKey); } });
     return () => { cancelled = true; bookLoadRequestRef.current += 1; };
   }, [workspaceId, selectedProjectId, selectedSnapshotId, selectedTemplateId, templateItems.length]);
 
@@ -2442,30 +2621,17 @@ function BuilderSelectionsBookPageContent({
   }, [embedded, guidedApplianceBrand, guidedApplianceFamilyKey, guidedApplianceMode, guidedAppliancePackageId, guidedApplianceProductId, guidedRequirement.familyKey, guidedScreen]);
 
   async function loadApprovedClientSelectionCatalogue() {
-    if (!workspaceId) { setApprovedCatalogueProducts([]); return; }
+    if (!workspaceId) return;
+    const request = ++approvedCatalogueRequestRef.current;
     try {
-      const requestUrl = `/api/product-library/approved-client-selection-catalogue?workspace_id=${encodeURIComponent(workspaceId)}`;
-      const { data: auth } = await supabase.auth.getSession();
-      const response = await fetch(requestUrl, { headers: { Authorization: `Bearer ${auth?.session?.access_token || ''}` } });
-      if (!response.ok) {
-        let body = "";
-        try {
-          body = await response.text();
-        } catch {}
-        const message = `Approved catalogue API returned ${response.status}${body ? `: ${body.slice(0, 220)}` : ""}`;
-        console.warn("[Client Selections] approved catalogue load failed", { requestUrl, status: response.status, body });
-        setApprovedCatalogueError(message);
-        return;
-      }
-      const payload = await response.json();
-      setApprovedCatalogueProducts(Array.isArray(payload.products) ? payload.products : []);
+      const payload = await requestApprovedCatalogue({ auth: supabase.auth, workspaceId, session: approvedCatalogueSessionRef.current });
+      if (request !== approvedCatalogueRequestRef.current) return;
+      setApprovedCatalogueProducts(payload.products);
       setApprovedCatalogueAudit(payload.audit || null);
-      setApprovedCatalogueError("");
+      setApprovedCatalogueError('');
     } catch (loadError) {
-      console.warn("[Client Selections] approved catalogue load error", {
-        message: loadError?.message || String(loadError || "Unknown approved catalogue load error"),
-      });
-      setApprovedCatalogueError(loadError?.message || "Approved catalogue could not be loaded.");
+      if (request !== approvedCatalogueRequestRef.current) return;
+      setApprovedCatalogueError(loadError?.message || 'Approved quotation catalogue could not be loaded.');
     }
   }
 
@@ -2501,7 +2667,12 @@ function BuilderSelectionsBookPageContent({
       const projectPayload = selectedProjectId ? JSON.parse(window.localStorage.getItem(embeddedBookStorageKey()) || "null") : null;
       if (projectPayload?.book && (!selectedProjectId || projectPayload.projectId === selectedProjectId)) return { book: projectPayload.book, savedAt: projectPayload.savedAt || "" };
       const latestPayload = JSON.parse(window.localStorage.getItem(latestEmbeddedBookStorageKey()) || "null");
-      if (latestPayload?.book && (!selectedProjectId || latestPayload.projectId === selectedProjectId)) return { book: latestPayload.book, savedAt: latestPayload.savedAt || "" };
+      // The "latest" slot holds whichever job saved last. It is only ever used for the SAME job.
+      if (latestPayload?.book && selectedProjectId && latestPayload.projectId === selectedProjectId) return { book: latestPayload.book, savedAt: latestPayload.savedAt || "" };
+      if (latestPayload?.storageKey && selectedProjectId && latestPayload.projectId === selectedProjectId) {
+        const pointedPayload = JSON.parse(window.localStorage.getItem(latestPayload.storageKey) || "null");
+        if (pointedPayload?.book && pointedPayload.projectId === selectedProjectId) return { book: pointedPayload.book, savedAt: pointedPayload.savedAt || latestPayload.savedAt || "" };
+      }
       const prefix = `${EMBEDDED_SELECTIONS_BOOK_STORAGE_KEY}:${workspaceId}:`;
       const payloads = Object.keys(window.localStorage)
         .filter((key) => key.startsWith(prefix) && !key.endsWith(":latest"))
@@ -2509,13 +2680,8 @@ function BuilderSelectionsBookPageContent({
         .filter((payload) => payload?.book);
       const exact = payloads.find((payload) => payload.projectId === selectedProjectId);
       if (exact) return { book: exact.book, savedAt: exact.savedAt || "" };
-      // A protected job used to be handed a new "recovered-<source>-<timestamp>" project id on
-      // every open, so a draft saved yesterday is keyed to an id that no longer matches. Those
-      // drafts are the same job and must be adopted, not discarded as somebody else's work.
-      const sibling = payloads
-        .filter((payload) => recoveredProjectRoot(payload.projectId) && recoveredProjectRoot(payload.projectId) === recoveredProjectRoot(selectedProjectId))
-        .sort((left, right) => String(right.savedAt || "").localeCompare(String(left.savedAt || "")))[0];
-      return sibling ? { book: sibling.book, savedAt: sibling.savedAt || "" } : null;
+      // Similar recovered ID prefixes are not proof of job identity.
+      return null;
     } catch {
       return null;
     }
@@ -2532,7 +2698,12 @@ function BuilderSelectionsBookPageContent({
         book: nextBook,
       });
       window.localStorage.setItem(embeddedBookStorageKey(), payload);
-      window.localStorage.setItem(latestEmbeddedBookStorageKey(), payload);
+      window.localStorage.setItem(latestEmbeddedBookStorageKey(), JSON.stringify({
+        workspaceId,
+        projectId: selectedProjectId,
+        savedAt: new Date().toISOString(),
+        storageKey: embeddedBookStorageKey(),
+      }));
     } catch (storageError) {
       console.warn("Client Selections draft cache could not be written. Saved project data was not changed.", storageError);
     }
@@ -2555,7 +2726,7 @@ function BuilderSelectionsBookPageContent({
           .order("price_band", { ascending: true }),
         supabase
           .from("builder_products")
-          .select("id, product_name, category_id, manufacturer_id, supplier_id, sku, model, description, price_band, standard_included, base_allowance, upgrade_cost, primary_image_url, datasheet_pdf_url, warranty_document_url, product_url, notes, active")
+          .select("id, product_name, category_id, manufacturer_id, supplier_id, sku, model, description, price_band, standard_included, base_allowance, upgrade_cost, primary_image_url, datasheet_pdf_url, warranty_document_url, product_url, notes, active, metadata")
           .eq("workspace_id", workspaceId)
           .eq("active", true)
           .order("product_name", { ascending: true }),
@@ -2707,15 +2878,11 @@ function BuilderSelectionsBookPageContent({
       }catch(error){console.warn('Saved entry-door history could not be read; the loaded selections were retained.',error.message);}
       return view;
     };
-    const embeddedDraft = loadEmbeddedBookDraft();
-    // A locally-cached draft used to be trusted unconditionally, ahead of the database, whenever
-    // one existed. For a real cloud project that meant a browser tab that still had an older cache
-    // (a different tab, a previous session, a race with the autosave timer) could make a refresh
-    // show selections reverting even though the newer values were already saved successfully to
-    // builder_selection_books - exactly the "completed it six times and it didn't persist" failure
-    // mode. For a real cloud project the two are now compared by timestamp and the newer one wins;
-    // the cache is still trusted immediately for embedded/local-file jobs, which have no database
-    // row to compare against.
+    const cachedDraft = loadEmbeddedBookDraft();
+    const embeddedDraft = chooseSelectionBookSource({ workbook: embeddedWorkbook, projectId: selectedProjectId, workspaceId,
+      draft: cachedDraft ? { ...cachedDraft, projectId: selectedProjectId, workspaceId } : null });
+    // Compare the exact job's browser draft with its persisted workbook before using
+    // either. Cloud-backed jobs compare that result with the database below.
     if (embeddedDraft && !isRealCloudProject) {
       const next = normaliseDocumentBook(embeddedDraft.book, { project: selectedProject, snapshot: selectedSnapshot, template: selectedTemplate, templateItems: items, products, manufacturerById, supplierById, categoryById });
       setBookId(embeddedDraft.book.id || "");
@@ -2968,8 +3135,7 @@ function BuilderSelectionsBookPageContent({
     if (!selectorRow || !product) return;
     const manufacturer = manufacturerById.get(product.manufacturer_id) || "";
     const supplier = supplierById.get(product.supplier_id) || "";
-    const selectedCost = numberValue(product.base_allowance || product.upgrade_cost);
-    const allowance = numberValue(product.base_allowance);
+    const { selectedCost, allowance, priceIncludesGst } = libraryRowPricing(product);
     const selectedOption = productOption(
       manufacturer || "Product Library",
       product.product_name || "",
@@ -3003,6 +3169,7 @@ function BuilderSelectionsBookPageContent({
       allowanceAmount: allowance,
       selectedCost,
       upgradeCost: selectedCost - allowance,
+      priceIncludesGst,
       datasheetUrl: product.datasheet_pdf_url || "",
       warrantyUrl: product.warranty_document_url || "",
       productUrl: product.product_url || "",
@@ -3272,6 +3439,12 @@ function BuilderSelectionsBookPageContent({
       setError("This appliance package cannot be selected because its component products are not safely resolved.");
       return;
     }
+    const replacesExistingSelection = patches.some(({ requirement }) => (book.rooms || []).some((room) => (room.rows || []).some((row) => {
+      const matchesRequirement = row.guidedRequirementKey === requirement.requirementKey || rowMatchesRequirement(row, requirement);
+      const hasSelection = row.selectedProduct || row.selectedOptionId || row.guidedSelection?.productId || row.guidedSelection?.selectedProductId;
+      return matchesRequirement && hasSelection;
+    })));
+    if (replacesExistingSelection && typeof window !== "undefined" && !window.confirm("Switching appliance selection mode may replace existing appliance selections. Continue with this package?")) return;
     let committedBook = null;
     setBook((current) => {
       committedBook = patches.reduce((nextBook, item) => guidedBookWithRequirementPatch(nextBook, item.requirement, item.patch), current);
@@ -3692,6 +3865,49 @@ function BuilderSelectionsBookPageContent({
   // commitOptions.stayOnScreen: save to the job without leaving the screen the user is working on.
   function selectGuidedProduct(requirement, option, commitOptions = {}) {
     if (!option) return;
+    if (requirement?.requirementKey === "robes" && option.robeDoorSystem) {
+      const previous = guidedSelectionMap.get("robes")?.selected_details || {};
+      const incoming = option.robeDoorSystem;
+      const systems = [...(previous.robeSlidingDoorSystems || []).filter(item => item.id !== incoming.id), incoming];
+      const first = systems[0];
+      const complete = systems.length > 0 && systems.every(item => item.configurationComplete === true);
+      const summary = systems.map(item => `${item.productName} — ${item.location}`).join("; ");
+      commitGuidedRequirementPatch(requirement, {
+        selectedOptionId: "robe-linen-sliding-doors",
+        selectedProduct: summary,
+        productModel: systems.map(item => item.sku || item.productCode).filter(Boolean).join(", "),
+        brand: [...new Set(systems.map(item => item.brand).filter(Boolean))].join(", "),
+        description: summary,
+        supplier: [...new Set(systems.map(item => item.supplier).filter(Boolean))].join(", "),
+        allowanceAmount: 0,
+        selectedCost: null,
+        upgradeCost: null,
+        included: false,
+        status: "selected",
+        guidedSelection: {
+          ...previous,
+          source: "guided_client_selections",
+          requirementKey: "robes",
+          requirementLabel: requirement.label,
+          familyKey: requirement.familyKey,
+          productId: first.productId,
+          productCode: first.productCode || first.sku,
+          productName: "Robe & Linen Sliding Doors",
+          selectedProduct: summary,
+          robeSlidingDoorSystems: systems,
+          quantity: systems.reduce((total, item) => total + item.quantity, 0),
+          unit: "EACH",
+          selectedPrice: null,
+          allowance: 0,
+          priceState: PRICE_STATES.quoteRequired,
+          priceStatus: PRICE_STATES.quoteRequired,
+          variationPending: true,
+          configurationComplete: complete,
+          updatedAt: new Date().toISOString(),
+        },
+      }, { autoAdvance: false, persist: true, successMessage: "Robe/linen door selection saved. Supplier confirmation is required before pricing." });
+      return;
+    }
     if (option.paintScheme) {
       // Internal Paint Colours. A colour is a specification: the row carries no allowance, price
       // or variation, and it is complete once the three house colours are confirmed.
@@ -3725,10 +3941,13 @@ function BuilderSelectionsBookPageContent({
       commitPlumbingAllocation(requirement, option.balustradeAllocationLines);
       return;
     }
+    if (requirement.requirementKey === 'external-lighting' && Array.isArray(option.plumbingAllocationLines)) {
+      return commitPlumbingAllocation(requirement, option.plumbingAllocationLines);
+    }
     if (isAllocatedCatalogueRequirement(requirement)) {
       // Selecting a plumbing product never completes the category by itself: it opens the
       // Add / Allocate Product modal, and only the allocation it saves is committed.
-      if (Array.isArray(option.plumbingAllocationLines)) commitPlumbingAllocation(requirement, option.plumbingAllocationLines);
+      if (Array.isArray(option.plumbingAllocationLines)) return commitPlumbingAllocation(requirement, option.plumbingAllocationLines);
       // A shower screen / mirror is configured for ONE room at a time, so each room can differ.
       else if (isConfiguredSelectionRequirement(requirement)) setConfiguredSelectionDraft({ requirement, product: option, line: option.configuredLine || null });
       else setPlumbingAllocationDraft({ requirement, product: option });
@@ -3811,7 +4030,7 @@ function BuilderSelectionsBookPageContent({
     const selectedCost = option.stairConfiguration ? option.selectedCost : priceState === PRICE_STATES.current ? numberValue(option.selectedCost) : null;
     const quantity = numberValue(option.quantity ?? requirement.defaultQuantity) || 1;
     const upgradeCost = priceState === PRICE_STATES.current
-      ? variationFor({ selectedPrice: selectedCost, allowance, quantity })
+      ? variationFor({ selectedPrice: selectedCost, allowance, quantity, priceIncludesGst: productPriceIncludesGst(option) })
       : null;
     const now = new Date().toISOString();
     const patch = {
@@ -3948,7 +4167,7 @@ function BuilderSelectionsBookPageContent({
 
   function commitPlumbingAllocation(requirement, lines = []) {
     const { patch, quantity } = plumbingAllocationPatch(requirement, lines);
-    commitGuidedRequirementPatch(requirement, patch, { autoAdvance: false, persist: true, successMessage: quantity ? `${requirement.label}: ${quantity} allocated.` : `${requirement.label} selection removed.` });
+    return commitGuidedRequirementPatch(requirement, patch, { autoAdvance: false, persist: true, successMessage: quantity ? `${requirement.label}: ${quantity} allocated.` : `${requirement.label} selection removed.` });
   }
 
   // A Selection Pack changes several requirements at once (Towel Rails, Robe Hooks, ...): every
@@ -4396,7 +4615,7 @@ function BuilderSelectionsBookPageContent({
       const selectedCost = priceStateForGuidedOption(tile) === PRICE_STATES.current ? numberValue(tile.selectedCost) : null;
       const priceState = priceStateForGuidedOption(tile) === PRICE_STATES.current ? PRICE_STATES.current : PRICE_STATES.quoteRequired;
       const quantity = numberValue(requirement.defaultQuantity) || 1;
-      const variation = priceState === PRICE_STATES.current ? variationFor({ selectedPrice: selectedCost, allowance, quantity }) : null;
+      const variation = priceState === PRICE_STATES.current ? variationFor({ selectedPrice: selectedCost, allowance, quantity, priceIncludesGst: productPriceIncludesGst(tile) }) : null;
       const selectedProduct = `${tile.productName || `${tile.manufacturer} ${tile.range} ${tile.colour}`.trim()} / ${fascia.productName} / ${gutter.productName} / ${downpipe.productName}`;
       const now = new Date().toISOString();
       const guidedSelection = {
@@ -4492,7 +4711,7 @@ function BuilderSelectionsBookPageContent({
     const selectedCost = priceStateForGuidedOption(profile) === PRICE_STATES.current ? numberValue(profile.selectedCost) : null;
     const priceState = priceStateForGuidedOption(profile) === PRICE_STATES.current ? PRICE_STATES.current : PRICE_STATES.quoteRequired;
     const quantity = numberValue(requirement.defaultQuantity) || 1;
-    const variation = priceState === PRICE_STATES.current ? variationFor({ selectedPrice: selectedCost, allowance, quantity }) : null;
+    const variation = priceState === PRICE_STATES.current ? variationFor({ selectedPrice: selectedCost, allowance, quantity, priceIncludesGst: productPriceIncludesGst(profile) }) : null;
     const selectedProduct = `${profile.profile || profile.productName} / ${colour.name} / ${finish.name} / ${fascia.productName} / ${gutter.productName} / ${downpipe.productName}`;
     const now = new Date().toISOString();
     const guidedSelection = {
@@ -4645,14 +4864,20 @@ function BuilderSelectionsBookPageContent({
   async function saveBook(status = "in_progress") {
     const bookForSave = {
       ...book,
-      cover: { ...book.cover, ...displayCover },
+      cover: { ...book.cover, ...displayCover, ...brochureCover, suburbPostcode: brochureCover.locality },
       projectInfo: { ...(book.projectInfo || {}), ...projectInfoDisplay },
       updatedAt: new Date().toISOString(),
     };
     return persistBookData(bookForSave, status, { savedFrom: book });
   }
 
-  async function persistBookData(bookForSave, status = "in_progress", options = {}) {
+  function persistBookData(bookForSave, status = "in_progress", options = {}) {
+    const queuedSave = projectSaveQueueRef.current.catch(() => null).then(() => performPersistBookData(bookForSave, status, options));
+    projectSaveQueueRef.current = queuedSave.then(() => undefined, () => undefined);
+    return queuedSave;
+  }
+
+  async function performPersistBookData(bookForSave, status = "in_progress", options = {}) {
     saveEmbeddedBookDraft(bookForSave);
     // A save takes seconds and the client keeps working through it. When it finishes it may only
     // write back the book it was started from; anything edited since is newer and stays as it is.
@@ -4663,10 +4888,18 @@ function BuilderSelectionsBookPageContent({
     };
     let embeddedSaveResult = null;
     if (embedded && typeof onClientSelectionsSave === "function") {
-      embeddedSaveResult = await onClientSelectionsSave(bookForSave, {
-        status,
-        successMessage: options.successMessage,
-      });
+      // A save that is refused (another tab or user has saved this job since; storage failed) is an
+      // answer, not a crash: the work stays on screen and the reason is shown. Left unhandled it
+      // used to leave the screen waiting forever on a save that would never report back.
+      try {
+        embeddedSaveResult = await onClientSelectionsSave(bookForSave, {
+          status,
+          successMessage: options.successMessage,
+        });
+      } catch (saveError) {
+        console.warn("[Client Selections] job save was not completed.", saveError?.message || saveError);
+        embeddedSaveResult = { ok: false, message: saveError?.message || "Client Selections could not be saved to the job." };
+      }
       if (embeddedSaveResult?.ok === false) {
         applySavedBook(bookForSave);
         setError(embeddedSaveResult.message || "Open or create a job before saving client selections.");
@@ -4702,6 +4935,12 @@ function BuilderSelectionsBookPageContent({
 
     const { data: authData } = await supabase.auth.getUser();
     const userId = authData?.user?.id || null;
+    if (!userId) {
+      setLastSaveState({ state: "failed", at: new Date().toISOString(), message: "Sign in before saving selections to the project database." });
+      setError("Sign in before saving selections to the project database. Your browser draft is still preserved.");
+      setSaving(false);
+      return null;
+    }
     const payload = {
       workspace_id: workspaceId,
       project_id: target.uuid,
@@ -4709,21 +4948,15 @@ function BuilderSelectionsBookPageContent({
       inclusion_template_id: null,
       book_name: `${bookForSave.cover.projectName || selectedProject?.project_name || "Project"} Selections Book`,
       status,
-      book_data: bookForSave,
+      book_data: embeddedSaveResult?.book || bookForSave,
       updated_by: userId,
       updated_at: new Date().toISOString(),
     };
     const query = bookId
-      ? supabase.from("builder_selection_books").update(payload).eq("workspace_id", workspaceId).eq("id", bookId)
+      ? supabase.from("builder_selection_books").update(payload).eq("workspace_id", workspaceId).eq("project_id", target.uuid).eq("id", bookId)
       : supabase.from("builder_selection_books").insert({ ...payload, created_by: userId });
-    const { data, error: saveError } = await query.select("id, book_data").single();
+    const { data, error: saveError } = await query.select("id, workspace_id, project_id, book_data").single();
     if (saveError) {
-      if (embeddedSaveResult?.ok || String(selectedProjectId).startsWith("embedded:")) {
-        applySavedBook(bookForSave);
-        setSuccess(embeddedSaveResult?.message || "Selections Book saved to the active job.");
-        setSaving(false);
-        return embeddedSaveResult?.selectionRevision || "embedded-local";
-      }
       if (options.autosave) {
         // A recovered or file-backed job has no database project row to write to. The draft
         // and the open job file already hold the selections, so this is not a data loss and
@@ -4740,6 +4973,12 @@ function BuilderSelectionsBookPageContent({
       setSaving(false);
       return null;
     }
+    if (data.workspace_id !== workspaceId || data.project_id !== target.uuid) {
+      setLastSaveState({ state: "failed", at: new Date().toISOString(), message: "Saved selection identity did not match the active workspace and project." });
+      setError("The saved Selections Book did not match the active job and workspace. Publication is blocked.");
+      setSaving(false);
+      return null;
+    }
     setLastSaveState({ state: "saved", at: new Date().toISOString(), reason: "", message: "" });
     setBookId(data.id);
     applySavedBook(data.book_data || bookForSave);
@@ -4750,10 +4989,13 @@ function BuilderSelectionsBookPageContent({
     // pre-migration record) can fail that batch without the actual save having failed at all. That
     // must not be reported as "save failed" - doing so previously blocked Next Room from ever
     // advancing whenever unrelated data elsewhere in the project had this kind of issue.
-    const syncResult = await syncBookToProjectSelections({ bookForSync: data.book_data || bookForSave, savedBookId: data.id, userId });
+    const syncResult = await syncBookToProjectSelections({ bookForSync: data.book_data || embeddedSaveResult?.book || bookForSave, savedBookId: data.id, userId });
     if (syncResult.error) {
       console.error("[Client Selections] builder_client_selections sync failed after a successful book save", syncResult.error);
       setError(`Saved, but some selections could not sync to BOQ/procurement yet: ${syncResult.error}`);
+      setLastSaveState({ state: "failed", at: new Date().toISOString(), message: syncResult.error });
+      setSaving(false);
+      return null;
     }
     const refreshedSelections = await loadPersistedProjectSelections();
     setPersistedProjectSelections(refreshedSelections);
@@ -4772,11 +5014,12 @@ function BuilderSelectionsBookPageContent({
     if (syncTarget.local) return { error: "", message: "", skipped: true };
     const rows = (bookForSync.rooms || []).flatMap((room) => (room.rows || []).map((row) => ({ room, row })));
     const syncRows = rows.filter(({ row }) => isProjectSelectionSyncCandidate(row));
-    const { data: existingRows } = await supabase
+    const { data: existingRows, error: existingRowsError } = await supabase
       .from("builder_client_selections")
       .select("id, metadata")
       .eq("workspace_id", workspaceId)
       .eq("project_id", syncTarget.uuid);
+    if (existingRowsError) return { inserted: 0, updated: 0, message: "", error: existingRowsError.message || "Could not verify existing project selections." };
     const existingByRow = new Map((existingRows || [])
       .filter((item) => item.metadata?.selection_book_id === savedBookId && item.metadata?.selection_book_row_id)
       .map((item) => [item.metadata.selection_book_row_id, item.id]));
@@ -4805,8 +5048,9 @@ function BuilderSelectionsBookPageContent({
     if (staleIds.length) {
       const { error: staleError } = await supabase
         .from("builder_client_selections")
-        .update({ is_active: false, selection_status: "removed", status: "removed", updated_by: userId, updated_at: new Date().toISOString() })
+        .update({ is_active: false, client_visible: false, client_status: "withdrawn", selection_status: "removed", status: "removed", updated_by: userId, updated_at: new Date().toISOString() })
         .eq("workspace_id", workspaceId)
+        .eq("project_id", syncTarget.uuid)
         .in("id", staleIds);
       if (staleError) return { inserted: 0, updated: 0, message: "", error: staleError.message || "Could not deactivate stale selection records." };
     }
@@ -4816,6 +5060,7 @@ function BuilderSelectionsBookPageContent({
         .from("builder_client_selections")
         .update({ ...update.payload, updated_by: userId, updated_at: new Date().toISOString() })
         .eq("workspace_id", workspaceId)
+        .eq("project_id", syncTarget.uuid)
         .eq("id", update.id);
       if (updateError) return { inserted: 0, updated: 0, message: "", error: updateError.message || "Could not update imported selection records." };
     }
@@ -4846,6 +5091,37 @@ function BuilderSelectionsBookPageContent({
     await saveBook("imported");
     setSuccess(`Imported ${syncResult.inserted} new and updated ${syncResult.updated} selection records.${syncResult.message ? ` ${syncResult.message}` : ""}`);
     setImporting(false);
+  }
+
+  async function publishSelectionsToPortal() {
+    if (publishing) return;
+    setPublishing(true);
+    setError("");
+    setSuccess("");
+    try {
+      const queued = Boolean(autosavePendingBookRef.current);
+      const flushedBookId = queued ? await flushSelectionAutosave() : null;
+      if (queued && !flushedBookId) throw new Error("The latest selections could not be confirmed in the project database. Your browser draft remains available.");
+      const savedBookId = flushedBookId || await saveBook("in_progress");
+      if (!savedBookId || !uuidOrNull(savedBookId)) throw new Error("Selections must be saved to the project database before they can be published. Your browser draft remains available.");
+      const target = projectPersistenceTarget(selectedProjectId, embeddedWorkbook);
+      if (!target.uuid || !workspaceId) throw new Error("Portal publication requires a cloud-linked project in the active workspace.");
+      const { data: authData, error: authError } = await supabase.auth.getSession();
+      const token = authData?.session?.access_token;
+      if (authError || !token) throw new Error("Sign in again before publishing selections to the Client Portal.");
+      const response = await fetch("/api/builders/publish-client-selections", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, "x-workspace-id": workspaceId },
+        body: JSON.stringify({ workspaceId, projectId: target.uuid, selectionBookId: savedBookId }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || result.ok !== true) throw new Error(result.error || "The server did not confirm Portal publication.");
+      setSuccess(`Published ${result.publishedCount} saved selection${result.publishedCount === 1 ? "" : "s"} to the Client Portal.`);
+    } catch (publishError) {
+      setError(publishError?.message || "Could not publish selections to the Client Portal.");
+    } finally {
+      setPublishing(false);
+    }
   }
 
   async function syncImportedWindowSelectionToProcurement({ projectId, snapshotId, userId }) {
@@ -4992,7 +5268,7 @@ function BuilderSelectionsBookPageContent({
       return;
     }
     if (!projectPreflight.canGenerateDraft) {
-      setError("The active project details could not be loaded. Reconnect the Johnson job before generating this schedule.");
+      setError(`${projectPreflight.projectName ? `${projectPreflight.projectName}: ` : ""}the schedule cannot be generated until these project details are added: ${projectPreflight.missing.join(", ")}.`);
       return;
     }
     if (documentStatus === "contract" && !scheduleReview.canIssueFinal) {
@@ -5005,7 +5281,7 @@ function BuilderSelectionsBookPageContent({
     try {
       const bookForGeneration = {
         ...book,
-        cover: { ...book.cover, ...displayCover },
+        cover: { ...book.cover, ...displayCover, ...brochureCover, suburbPostcode: brochureCover.locality },
         projectInfo: { ...(book.projectInfo || {}), ...projectInfoDisplay },
         updatedAt: new Date().toISOString(),
       };
@@ -5047,7 +5323,8 @@ function BuilderSelectionsBookPageContent({
           previewSchedule: {
             documentType: "inclusions_and_selections_schedule",
             title: "INCLUSIONS AND SELECTIONS SCHEDULE",
-            cover: displayCover,
+            cover: brochureCover,
+            pages: selectionsSchedule.pages,
             pageCount: totalPageCount,
             itemCount: effectiveScheduleItems.length,
             imageCount: effectiveScheduleItems.filter((item) => item.imageUrl && !isPlaceholderSelectionImage(item.imageUrl)).length,
@@ -5094,21 +5371,24 @@ function BuilderSelectionsBookPageContent({
   }
 
   const documentPages = useMemo(() => {
-    const sectionPages = paginateScheduleSections(effectiveScheduleSections).map((section, index) => ({
-      value: `section:${section.key}:page-${section.pageIndex}`,
-      label: section.pageCount > 1 ? `${section.title} (${section.pageIndex} of ${section.pageCount})` : section.title,
-      type: "schedule-section",
-      section,
-      pageNumber: index + 3,
-    }));
+    // One entry per printed page. A page is named by the section it is in and what starts on it.
+    const sectionPages = selectionsSchedule.pages.map((schedulePage) => {
+      const starts = schedulePage.blocks.filter((block) => block.type === "group" && !block.continued).map((block) => block.title);
+      return {
+        value: `schedule:page-${schedulePage.number}`,
+        label: `${schedulePage.section.number}. ${schedulePage.section.title}${starts.length ? ` - ${starts.slice(0, 2).join(", ")}${starts.length > 2 ? "..." : ""}` : " (continued)"}`,
+        type: "schedule-section",
+        schedulePage,
+        pageNumber: schedulePage.number,
+      };
+    });
     return [
       { value: "cover", label: "Cover", type: "cover", pageNumber: 1 },
       { value: "project", label: "Project Summary", type: "project", pageNumber: 2 },
       ...sectionPages,
-      { value: "outstanding", label: "Outstanding Client Decisions", type: "outstanding", pageNumber: sectionPages.length + 3 },
-      { value: "acknowledgement", label: "Review", type: "acknowledgement", pageNumber: sectionPages.length + 4 },
+      { value: "acknowledgement", label: "Sign-Off", type: "acknowledgement", pageNumber: sectionPages.length + 3 },
     ];
-  }, [effectiveScheduleSections]);
+  }, [selectionsSchedule]);
   const sectionOptions = documentPages.map((page) => ({ value: page.value, label: page.label }));
   const activeSectionValue = activePage === "room" ? `room:${activeRoomId}` : activePage;
   const activePageIndex = Math.max(0, documentPages.findIndex((page) => page.value === activeSectionValue));
@@ -5136,7 +5416,7 @@ function BuilderSelectionsBookPageContent({
       observer.disconnect();
       window.removeEventListener("resize", updateWidth);
     };
-  }, []);
+  }, [guidedScreen]);
 
   useEffect(() => {
     if (viewMode !== "continuous" || typeof IntersectionObserver === "undefined") return undefined;
@@ -5160,7 +5440,7 @@ function BuilderSelectionsBookPageContent({
       if (element) observer.observe(element);
     });
     return () => observer.disconnect();
-  }, [documentPages, viewMode]);
+  }, [documentPages, viewMode, guidedScreen]);
 
   function setPageFrameRef(value, element) {
     if (element) pageRefs.current.set(value, element);
@@ -5202,10 +5482,10 @@ function BuilderSelectionsBookPageContent({
     if (page.type === "cover") {
       return (
         <>
-          <CoverPage cover={displayCover} onLogoChange={changeBuilderLogo} />
+          <CoverPage cover={brochureCover} onLogoChange={changeBuilderLogo} />
           {coverSettingsOpen && viewMode === "single" && (
             <CoverSettingsPanel
-              cover={coverDraft}
+              cover={{ ...coverDraft, ...brochureCover, suburbPostcode: brochureCover.locality }}
               dirty={hasCoverDraftChanges}
               onChange={updateCoverDraft}
               onReset={() => setCoverDraft(book.cover)}
@@ -5216,9 +5496,7 @@ function BuilderSelectionsBookPageContent({
       );
     }
     if (page.type === "project") return <ProjectInfoPage book={{ ...book, cover: displayCover }} details={projectInfoDisplay} scheduleItems={effectiveScheduleItems} review={scheduleReview} />;
-    if (page.type === "divider") return <ScheduleSectionDividerPage book={{ ...book, cover: displayCover }} title="Exterior" subtitle="External envelope, street-facing finishes, colours, openings, lighting and driveway selections." pageNumber={page.pageNumber} />;
-    if (page.type === "schedule-section" && page.section) return <ScheduleSectionPage book={{ ...book, cover: displayCover }} section={page.section} pageNumber={page.pageNumber} onPreviewImage={setImagePreview} onSelectProduct={openScheduleItemSource} />;
-    if (page.type === "outstanding") return <ScheduleOutstandingPage book={{ ...book, cover: displayCover }} review={scheduleReview} pageNumber={page.pageNumber} />;
+    if (page.type === "schedule-section" && page.schedulePage) return <SelectionsSchedulePage book={{ ...book, cover: displayCover }} page={page.schedulePage} onPreviewImage={setImagePreview} onSelectProduct={openScheduleItemSource} />;
     if (page.type === "acknowledgement") return <ScheduleAcknowledgementPage book={{ ...book, cover: displayCover }} review={scheduleReview} pageNumber={page.pageNumber} />;
     if (page.type === "room" && page.room) {
       return (
@@ -5295,6 +5573,7 @@ function BuilderSelectionsBookPageContent({
             </button>
             <div className="bannerActions">
               <button onClick={() => saveBook()} disabled={saving}>{saving ? "Saving..." : "Save Progress"}</button>
+              <button type="button" onClick={publishSelectionsToPortal} disabled={saving || publishing || !workspaceId || !projectPersistenceTarget(selectedProjectId, embeddedWorkbook).uuid}>{publishing ? "Publishing..." : "Publish to Client Portal"}</button>
               <button onClick={importToProject} disabled={importing}>{importing ? "Importing..." : "Import to Project"}</button>
               <button type="button" onClick={() => setGuidedScreen(guidedScreen === "review" ? "areas" : "review")}>
                 {guidedScreen === "review" ? "Guided Selections" : "Review Schedule"}
@@ -5308,10 +5587,12 @@ function BuilderSelectionsBookPageContent({
           </div>
           {approvedCatalogueError ? (
             <div className="alert warning" role="status">
-              Approved catalogue feed is temporarily unavailable. Existing master catalogue products remain available.
+              {approvedCatalogueError} Existing master products and saved selections remain available.{' '}
+              <button type="button" onClick={loadApprovedClientSelectionCatalogue}>Retry catalogue</button>
             </div>
           ) : null}
 
+          {(reviewingProjectRooms || requireProjectRoomConfirmation) ? <ProjectRoomManager rooms={houseRooms(projectLocationList)} roomTypes={ROOM_LOCATION_OPTIONS.filter((type) => type.key !== "exterior")} {...projectRoomManager} requireConfirmation={requireProjectRoomConfirmation} onClose={() => setReviewingProjectRooms(false)} /> : null}
           {guidedScreen === "review" ? (
             <>
           <EntryDoorFurnitureSchedule workbook={embeddedWorkbook} review title="Exterior Door Furniture - Review Schedule" />
@@ -5323,11 +5604,20 @@ function BuilderSelectionsBookPageContent({
               <div className="currentSavedSelectionsIndicator" role="status">Showing current saved selections - revised {currentSelectionsRevisionLabel}</div>
             </div>
             <div className="scheduleReviewStats">
-              <span><strong>{effectiveScheduleItems.length}</strong> Items</span>
+              <span><strong>{effectiveScheduleItems.length}</strong> Rows</span>
               <span><strong>{scheduleReview.complete}</strong> Complete</span>
               <span><strong>{scheduleReview.unconfirmed}</strong> Unconfirmed</span>
               <span><strong>{scheduleReview.pricing}</strong> Pricing</span>
               <span><strong>{scheduleReview.images}</strong> Images</span>
+            </div>
+            <div className="scheduleReconciliation" role="status" data-testid="schedule-reconciliation" data-schedule-ok={selectionsSchedule.reconciliation.ok ? "true" : "false"}>
+              <strong data-schedule-saved-records={selectionsSchedule.reconciliation.records.saved} data-schedule-eligible-records={selectionsSchedule.reconciliation.records.eligible} data-schedule-represented-records={selectionsSchedule.reconciliation.records.represented} data-schedule-source-entries={selectionsSchedule.reconciliation.scheduleSourceEntries}>
+                {selectionsSchedule.reconciliation.records.represented} of {selectionsSchedule.reconciliation.records.eligible} saved selection records represented · {selectionsSchedule.reconciliation.scheduleSourceEntries} schedule entries · {selectionsSchedule.reconciliation.templatePlaceholders} template rows excluded
+              </strong>
+              {[["Exterior", selectionsSchedule.reconciliation.exterior], ["Interior", selectionsSchedule.reconciliation.interior], ["Painting", selectionsSchedule.reconciliation.painting]].map(([label, count]) => (
+                <span key={label}>{label}: {count.sources} entries, {count.rendered} direct, {count.consolidated} consolidated</span>
+              ))}
+              <span data-schedule-missing-records={selectionsSchedule.reconciliation.records.missing.length}>Missing records {selectionsSchedule.reconciliation.records.missing.length} · Missing entries {selectionsSchedule.reconciliation.missing.length} · Duplicated {selectionsSchedule.reconciliation.duplicated.length} · Unrendered {selectionsSchedule.reconciliation.unrendered.length}</span>
             </div>
             <div className="scheduleIssueActions">
               <button type="button" onClick={() => generateFinalSchedule("draft")} disabled={Boolean(scheduleGenerating)}>
@@ -5340,14 +5630,17 @@ function BuilderSelectionsBookPageContent({
                 {scheduleGenerating === "contract" ? "Issuing..." : "Issue Final Contract Schedule"}
               </button>
             </div>
-            {scheduleReview.items.length ? (
-              <div className="scheduleReviewList">
-                {scheduleReview.items.slice(0, 6).map((item) => (
-                  <span key={`${item.id}-${item.reason}`}>{item.label}: {item.reason}</span>
-                ))}
-                {scheduleReview.items.length > 6 ? <span>{scheduleReview.items.length - 6} more review items</span> : null}
-              </div>
-            ) : null}
+            <SelectionAttentionPanel attention={scheduleAttention} onAction={(action) => {
+              if (action.kind === "rooms") setReviewingProjectRooms(true);
+              else if (action.kind === "project") setCoverSettingsOpen(true);
+              else if (action.rowId) {
+                // A guided selection opens in its own selection screen, where it can be edited.
+                const source = (book.rooms || []).flatMap((room) => room.rows || []).find((row) => row.id === action.rowId);
+                const requirementKey = source?.guidedRequirementKey || source?.guidedSelection?.requirementKey || "";
+                if (requirementKey && guidedRequirementByKey(resolveCabinetryRequirementKey(requirementKey))) openGuidedRequirement(requirementKey);
+                else openScheduleItemSource(action.rowId);
+              }
+            }} />
             {scheduleDocument ? (
               <a className="scheduleDocumentLink" href={scheduleDocument.publicUrl || scheduleDocument.public_url || "#"} target="_blank" rel="noreferrer">
                 Open latest generated PDF
@@ -5427,8 +5720,8 @@ function BuilderSelectionsBookPageContent({
 
           <div
             ref={viewerRef}
-            className={`documentViewer ${viewMode} ${zoomMode}`}
             data-view-mode={viewMode}
+            className={`documentViewer ${viewMode} ${zoomMode}`}
             data-zoom-mode={zoomMode}
             data-page-count={totalPageCount}
             data-fit-width={viewerPageWidth}
@@ -5446,7 +5739,7 @@ function BuilderSelectionsBookPageContent({
                     data-page-number={page.pageNumber}
                     data-page-title={page.label}
                   >
-                    {renderDocumentPage(page)}
+                    <LazySchedulePage renderPage={() => renderDocumentPage(page)} />
                   </div>
                 ))
                 : (
@@ -5466,10 +5759,7 @@ function BuilderSelectionsBookPageContent({
             </>
           ) : (
             <GuidedSelectionsWorkflow
-              tiling={tilingProps}
-              flooring={flooringProps}
               electrical={electricalProps}
-              stairFlights={stairFlights}
               projectRoomNames={plumbingProjectLocationNames}
               saving={saving}
               organisationId={workspaceId || ""}
@@ -5619,7 +5909,7 @@ function BuilderSelectionsBookPageContent({
             requirement={plumbingAllocationDraft.requirement}
             product={plumbingAllocationDraft.product}
             lines={plumbingLinesFromSelection(guidedSelectionMap.get(plumbingAllocationDraft.requirement.requirementKey)?.selected_details)}
-            projectLocationNames={RESIDENTIAL_SERVICE_KEYS.includes(plumbingAllocationDraft.requirement.requirementKey) ? houseRoomNames(plumbingProjectLocationNames) : plumbingProjectLocationNames}
+            projectLocationNames={RESIDENTIAL_SERVICE_KEYS.includes(plumbingAllocationDraft.requirement.requirementKey) ? houseRooms(projectLocationList) : projectLocationList}
             workbook={embeddedWorkbook || {}}
             onCancel={() => setPlumbingAllocationDraft(null)}
             onSave={(nextLines) => {
@@ -5685,6 +5975,7 @@ function GuidedSelectionsWorkflow({
   flooring = null,
   electrical = null,
   projectRoomNames = [],
+  projectRooms = [],
   stairFlights = [],
   saving = false,
   organisationId = "",
@@ -5793,8 +6084,9 @@ function GuidedSelectionsWorkflow({
   const [managingProjectRooms, setManagingProjectRooms] = useState(false);
   const projectRoomsBar = electrical?.roomManager ? (
     <div className="guidedProjectRooms" data-testid="project-rooms-bar">
-      <div><strong>Project rooms</strong><span>{electrical.rooms.length ? `${electrical.rooms.length} rooms: ${electrical.rooms.slice(0, 8).map((room) => room.name).join(", ")}${electrical.rooms.length > 8 ? ", ..." : ""}` : "No rooms recorded yet"}</span></div>
-      <button type="button" onClick={() => setManagingProjectRooms(true)} data-testid="manage-project-rooms">Manage rooms</button>
+      <div><strong>{electrical.roomManager.confirmed ? "Project rooms" : "Step 1 — Confirm project rooms & locations"}</strong><span>{electrical.rooms.length ? `${electrical.rooms.length} rooms: ${electrical.rooms.slice(0, 8).map((room) => room.name).join(", ")}${electrical.rooms.length > 8 ? ", ..." : ""}` : "No rooms recorded yet"}</span>
+        {electrical.roomManager.possibleDuplicates.length + electrical.roomManager.unlistedLocations.length ? <span data-testid="project-rooms-review-count" style={{ color: "#92400e", fontWeight: 800 }}>{electrical.roomManager.possibleDuplicates.length + electrical.roomManager.unlistedLocations.length} room name{electrical.roomManager.possibleDuplicates.length + electrical.roomManager.unlistedLocations.length === 1 ? "" : "s"} to review (possible duplicates)</span> : null}</div>
+      <button type="button" onClick={() => setManagingProjectRooms(true)} data-testid="manage-project-rooms">{electrical.roomManager.confirmed ? "Manage rooms" : "Confirm rooms"}</button>
       {managingProjectRooms ? <ProjectRoomManager rooms={electrical.rooms} roomTypes={ROOM_LOCATION_OPTIONS.filter((type) => type.key !== "exterior")} {...electrical.roomManager} onClose={() => setManagingProjectRooms(false)} /> : null}
     </div>
   ) : null;
@@ -6036,6 +6328,15 @@ function GuidedSelectionsWorkflow({
   }
 
   if (screen === "product") {
+    if (STANDARD_RANGE_KEYS.includes(requirement.requirementKey) && (requirement.requirementKey !== 'external-lighting'
+      || (!selections.get('external-lighting')?.selected_details?.externalLightingSelection &&
+        (selections.get('external-lighting')?.selected_details?.plumbingAllocation?.lines?.length || standardRangeDefaults(workbook || {}, products, 'external-lighting').length)))) {
+      const productCategory = clientSelectionCategoryForRequirement(requirement.requirementKey, side);
+      return <BuilderStandardRangeWorkflow key={`${projectId}:${requirement.requirementKey}`} requirement={requirement}
+        products={products} selection={selections.get(requirement.requirementKey)} workbook={workbook || {}}
+        projectRoomNames={projectRoomNames} projectRooms={projectRooms} onSelectProduct={onSelectProduct} onViewDetails={onViewDetails}
+        onBack={() => onOpenCategory(productCategory?.key || '')} />;
+    }
     if (requirement.requirementKey === 'interior-paint') {
       return <InternalPaintColourSpecification key={projectId || 'paint'}
         selection={selections.get('interior-paint')} projectRoomNames={projectRoomNames} inclusions={workbook?.standardInclusions}
@@ -6275,7 +6576,7 @@ function GuidedSelectionsWorkflow({
               <span>{requirement.areaLabel} / {requirement.label}</span>
               <strong>{products.length ? `${products.length} ${requirement.label} product option${products.length === 1 ? "" : "s"}` : `No products have been added for ${requirement.label}.`}</strong>
             </div>
-            {requirement.requirementKey === 'stairs' ? <StairSelectionWizard key={`stairs:${projectId}`} stairFlights={stairFlights} storageKey={`product-library:stairs:${projectId||book?.id||'local-job'}`} products={products} requirement={requirement} selection={selections.get(requirement.requirementKey)} onSelect={onSelectProduct} backLabel="← Stairs & Balustrades" onBack={()=>onOpenCategory('stairs-balustrades','interior')} onSave={onSaveProgress}/> : INTERNAL_SELECTION_KEYS.includes(requirement.requirementKey) ? <InternalCataloguePicker key={requirement.requirementKey} products={products} requirement={requirement} selection={selections.get(requirement.requirementKey)} onSelect={onSelectProduct} onBack={()=>onOpenArea('interior')} onSave={onSaveProgress} relatedRequirement={INTERNAL_RELATED_REQUIREMENTS[requirement.requirementKey]} onOpenRelated={INTERNAL_RELATED_REQUIREMENTS[requirement.requirementKey] ? () => onOpenRequirementKey(INTERNAL_RELATED_REQUIREMENTS[requirement.requirementKey].key) : undefined}/> : products.length ? (
+            {requirement.requirementKey === 'stairs' ? <StairSelectionWizard key={`stairs:${projectId}`} stairFlights={stairFlights} storageKey={`product-library:stairs:${projectId||book?.id||'local-job'}`} products={products} requirement={requirement} selection={selections.get(requirement.requirementKey)} onSelect={onSelectProduct} backLabel="← Stairs & Balustrades" onBack={()=>onOpenCategory('stairs-balustrades','interior')} onSave={onSaveProgress}/> : INTERNAL_SELECTION_KEYS.includes(requirement.requirementKey) ? <InternalCataloguePicker key={requirement.requirementKey} products={products} requirement={requirement} selection={selections.get(requirement.requirementKey)} rooms={requirement.requirementKey === 'robes' ? houseRooms(projectLocationList) : []} onSelect={onSelectProduct} onBack={()=>onOpenArea('interior')} onSave={onSaveProgress} relatedRequirement={INTERNAL_RELATED_REQUIREMENTS[requirement.requirementKey]} onOpenRelated={INTERNAL_RELATED_REQUIREMENTS[requirement.requirementKey] ? () => onOpenRequirementKey(INTERNAL_RELATED_REQUIREMENTS[requirement.requirementKey].key) : undefined}/> : products.length ? (
               <div className="guidedProductGrid">
                 {products.map((product) => (
                   <GuidedProductCard key={product.id} requirement={requirement} product={product} onSelect={() => onSelectProduct(requirement, product)} onViewDetails={() => onViewDetails(product)} onSaveProgress={onSaveProgress} />
@@ -6626,7 +6927,7 @@ function ApplianceSelectionSummary({ brand, requirements = [], selections, selec
 function GuidedApplianceModelCard({ requirement, product, selected, onDetails, onSelect }) {
   const selectedPrice = product.selectedCost == null ? null : numberValue(product.selectedCost);
   const allowance = numberValue(product.allowance ?? requirement.defaultAllowance);
-  const variation = selectedPrice == null ? null : variationFor({ selectedPrice, allowance, quantity: requirement.defaultQuantity || 1 });
+  const variation = selectedPrice == null ? null : variationFor({ selectedPrice, allowance, quantity: requirement.defaultQuantity || 1, priceIncludesGst: productPriceIncludesGst(product) });
   return (
     <article className={`guidedProductCard applianceModelCard ${selected ? "selected" : ""}`} data-testid={`appliance-model-${slug(product.model || product.productName)}`} data-product-id={product.canonicalProductId} data-family-key={requirement.familyKey} data-brand={product.brand} data-price={selectedPrice ?? ""} data-image-url={product.imageUrl || ""}>
       <div className="applianceModelLogo">{product.brandLogo || product.logo ? <img src={product.brandLogo || product.logo} alt={`${product.brand} logo`} /> : <span>{product.brand}</span>}</div>
@@ -6653,7 +6954,7 @@ function GuidedApplianceModelCard({ requirement, product, selected, onDetails, o
 function GuidedApplianceDetails({ requirement, product, onBackToAppliances, onBackToBrands, onBackToModels, onCancel, onSelect }) {
   const selectedPrice = product.selectedCost == null ? null : numberValue(product.selectedCost);
   const allowance = numberValue(product.allowance ?? requirement.defaultAllowance);
-  const variation = selectedPrice == null ? null : variationFor({ selectedPrice, allowance, quantity: requirement.defaultQuantity || 1 });
+  const variation = selectedPrice == null ? null : variationFor({ selectedPrice, allowance, quantity: requirement.defaultQuantity || 1, priceIncludesGst: productPriceIncludesGst(product) });
   return (
     <div className="applianceDetailsPanel" data-testid="appliance-product-details">
       <div className="applianceNavActions">
@@ -7339,21 +7640,26 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
     clearTimeout(scheduleSyncTimerRef.current);
     scheduleSyncTimerRef.current = setTimeout(() => flushScheduleSyncRef.current(), 900);
   }
-  function updateSchedule(schedule) {
-    updateDraft({ schedule });
+  function updateSchedule(change) {
+    const current = latestDraftRef.current || normalisedDraft;
+    const currentSchedule = normaliseCabinetrySelection(current).schedule;
+    const schedule = typeof change === "function" ? change(currentSchedule) : change;
+    const next = normaliseCabinetrySelection({ ...current, schedule, confirmed: false });
+    latestDraftRef.current = next;
+    setDraft(next);
     queueCabinetryQuoteSync();
   }
 
   function updateScheduleLine(componentId, patch) {
-    updateSchedule(normalisedDraft.schedule.map((line) => line.componentId === componentId ? { ...line, ...patch, location: activeLocation.location } : line));
+    updateSchedule((schedule) => schedule.map((line) => line.componentId === componentId ? { ...line, ...patch, location: activeLocation.location } : line));
   }
 
   function addScheduleLine(unitType, patch = {}) {
-    updateSchedule([...normalisedDraft.schedule, { ...newScheduleLine(unitType), ...patch }]);
+    updateSchedule((schedule) => [...schedule, { ...newScheduleLine(unitType), ...patch }]);
   }
 
   function removeScheduleLine(componentId) {
-    updateSchedule(normalisedDraft.schedule.filter((line) => line.componentId !== componentId));
+    updateSchedule((schedule) => schedule.filter((line) => line.componentId !== componentId));
   }
 
   function roomTakeoffCabinetQuantities() {
@@ -7370,13 +7676,18 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
   function cabinetCatalogueScheduleRow(type, takeoffQuantity) {
     const item = activeSchedule.find((line) => line.cabinetTypeId === type.id);
     const overhead = /^(overhead_|rangehood_cabinet)/.test(type.id);
-    const base = { cabinetTypeId: type.id, clientSelectableSurfaces: [overhead ? "overheadDoors" : "lowerDoorsDrawers"] };
+    // A vanity keeps the wet-area tag its colour areas, handles and benchtop are keyed by; the
+    // item itself is always its canonical cabinet id.
+    const wetTag = activeIsBathroomCabinetry ? cabinetryWetAreaTag(type.id) : "";
+    const base = wetTag
+      ? { cabinetTypeId: type.id, type: wetTag, clientSelectableSurfaces: BATHROOM_AREA_RULES.filter((rule) => (rule.schedules || []).includes(wetTag)).map((rule) => rule.key) }
+      : { cabinetTypeId: type.id, clientSelectableSurfaces: [overhead ? "overheadDoors" : "lowerDoorsDrawers"] };
     const setQuantity = (value) => {
       const quantity = Math.max(0, Number(value) || 0);
       if (item) updateScheduleLine(item.componentId, { quantity, handleQuantity: quantity });
       else addScheduleLine(type.label, { ...base, quantity, handleQuantity: quantity });
     };
-    return {
+    const row = {
       id: type.id,
       name: type.label,
       description: item
@@ -7391,6 +7702,38 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
       onNotesChange: (event) => item ? updateScheduleLine(item.componentId, { notes: event.target.value }) : addScheduleLine(type.label, { ...base, quantity: takeoffQuantity || 1, handleQuantity: takeoffQuantity || 1, notes: event.target.value }),
       actions: item ? <button type="button" className="cabinetrySelectionReset" onClick={(event) => { event.preventDefault(); removeScheduleLine(item.componentId); }}>Reset</button> : null,
     };
+    // Three items are not a plain count (cabinetryRequirements.js): each keeps the row and adds its own editor.
+    if (/^bulkhead_/.test(type.id)) {
+      // A bulkhead is a length: runs entered in mm, quoted as their total in LM.
+      const measured = bulkheadRuns(item || {});
+      const included = Boolean(item) && (item.quantity > 0 || measured.recorded);
+      const setRuns = (runs) => { const lm = bulkheadRuns({ runs }).lm; if (item) updateScheduleLine(item.componentId, { runs, quantity: lm, handleQuantity: 0 }); else addScheduleLine(type.label, { ...base, runs, quantity: lm, handleQuantity: 0 }); };
+      const runs = measured.recorded ? (item.runs || []) : included ? [{ id: "run-1", location: "", lengthMm: "" }] : [];
+      return { ...row, selected: included, quantity: null, notesValue: item ? row.notesValue : null,
+        description: measured.lm > 0 ? `${measured.lm.toFixed(2)} LM across ${measured.measured.length} run${measured.measured.length === 1 ? "" : "s"}` : included ? "Measurement required - enter the length of each run" : "Not included",
+        onToggle: () => (included ? removeScheduleLine(item.componentId) : setRuns([{ id: `run-${Date.now()}`, location: "", lengthMm: "" }])),
+        detail: included ? <BulkheadRunsEditor runs={runs} lm={measured.lm} savedCount={measured.recorded ? 0 : item.quantity} onChange={setRuns} /> : null };
+    }
+    if (type.id === "handle_upgrade_sharkfin") {
+      // Charged once per eligible short door / external drawer front of this room's own cabinets.
+      const upgrade = sharkfinUpgrade(activeLocation, activeSchedule);
+      const write = (patch) => (item ? updateScheduleLine(item.componentId, patch) : addScheduleLine(type.label, { ...base, quantity: 1, handleQuantity: 0, ...patch }));
+      return { ...row, selected: upgrade.applies, quantity: null, notesValue: item ? row.notesValue : null,
+        description: upgrade.applies ? `${upgrade.quantity} front${upgrade.quantity === 1 ? "" : "s"} - ${upgrade.manual ? "manual quantity" : "calculated from this room's doors and drawers"}` : "Not included. Choose Sharkfin in Handles, or tick to apply it to the base cabinets.",
+        onToggle: () => (upgrade.applies ? write({ sharkfinExcluded: true, quantity: 0, quantityOverride: "" }) : write({ sharkfinExcluded: false, quantity: 1 })),
+        detail: upgrade.applies ? <SharkfinUpgradeDetail upgrade={upgrade} override={item?.quantityOverride ?? ""} includeTall={item?.includeTall === true} onOverride={(value) => write({ quantityOverride: value })} onIncludeTall={(value) => write({ includeTall: value })} /> : null };
+    }
+    if (type.id === "open_shelf") {
+      // Each line is one unit configuration (a standard size or custom), so a room can hold several.
+      const units = activeSchedule.filter((line) => line.cabinetTypeId === type.id);
+      const count = units.reduce((total, line) => total + (Number(line.quantity) || 0), 0);
+      const addUnit = (shelfUnit) => addScheduleLine(type.label, { ...base, shelfUnit, quantity: 1, handleQuantity: 0 });
+      return { ...row, selected: count > 0, quantity: null, notesValue: null, actions: null,
+        description: count > 0 ? `${count} unit${count === 1 ? "" : "s"} in this room` : "Not included",
+        onToggle: () => (units.length ? updateSchedule(normalisedDraft.schedule.filter((line) => !units.includes(line))) : addUnit({ sizeKey: "tall_wide", heightMm: 2100, widthMm: 1200, shelves: 5 })),
+        detail: units.length ? <OpenShelvingUnitsEditor units={units} onAdd={addUnit} onChange={updateScheduleLine} onRemove={removeScheduleLine} /> : null };
+    }
+    return row;
   }
 
   // The Cabinet Schedule lists only the current cabinet items priced in the quotation.
@@ -7403,38 +7746,6 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
         <CabinetrySelectionList items={group.items.map((type) => cabinetCatalogueScheduleRow(type, takeoff[type.id] || 0))} />
       </section>
     ));
-  }
-
-  function newBathroomScheduleLine(type, unitType) {
-    return {
-      componentId: `CAB-${slug(activeLocation?.location || "bathroom")}-${slug(type)}-${Date.now()}`,
-      location: activeLocation?.location || "Bathroom",
-      type,
-      unitType,
-      quantity: 1,
-      width: "",
-      notes: "",
-      clientSelectableSurfaces: BATHROOM_AREA_RULES.filter((rule) => (rule.schedules || []).includes(type)).map((rule) => rule.key),
-      handleQuantity: 1,
-    };
-  }
-
-  function toggleBathroomScheduleLine(type, unitType) {
-    const item = activeSchedule.find((line) => (line.type || line.unitType) === type);
-    if (item) {
-      removeScheduleLine(item.componentId);
-      return;
-    }
-    updateDraft({ schedule: [...normalisedDraft.schedule, newBathroomScheduleLine(type, unitType)] });
-  }
-
-  function updateBathroomScheduleLine(type, patch) {
-    const item = activeSchedule.find((line) => (line.type || line.unitType) === type);
-    if (item) {
-      updateScheduleLine(item.componentId, patch);
-      return;
-    }
-    updateDraft({ schedule: [...normalisedDraft.schedule, { ...newBathroomScheduleLine(type, BATHROOM_SCHEDULE_GROUPS.flatMap((group) => group.items).find(([id]) => id === type)?.[1] || type), ...patch }] });
   }
 
   function toggleBathroomColourShortcut(areaKey, mode) {
@@ -7537,7 +7848,7 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
     if (stageIndex > 0) { navigateCabinetryStage(stageIndex - 1); return; }
     const previousRoom = activeLocation ? adjacentCabinetryRoom(normalisedDraft.locations, activeLocation.location, -1) : null;
     // Edits made in this room stay in the draft (and its stored copy); nothing is confirmed here.
-    persistCabinetry(normalisedDraft, { commitRequirement: false });
+    persistCabinetry(latestDraftRef.current || normalisedDraft, { commitRequirement: false });
     if (previousRoom) {
       setCabinetrySelectionMessage("");
       goToCabinetryRoom(previousRoom.location, CABINETRY_WORKFLOW_STAGES.length - 1);
@@ -7567,8 +7878,9 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
   }
 
   async function saveCabinetryDraft(confirmRoom = false, { skipColourPrompt = false, workingDraft: workingDraftOverride } = {}) {
-    if (!activeLocation) return persistCabinetry(normalisedDraft);
-    const startingDraft = workingDraftOverride || normalisedDraft;
+    const latestDraft = latestDraftRef.current || normalisedDraft;
+    if (!activeLocation) return persistCabinetry(latestDraft);
+    const startingDraft = workingDraftOverride || latestDraft;
     if (confirmRoom) {
       const preConfirmLocations = startingDraft.locations.map((location) => location.location === activeLocation.location
         ? { ...location, status: location.status || "in_progress", confirmedAt: "" }
@@ -8026,31 +8338,7 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
           {stageIndex === 0 ? (
             <div className="cabinetryStage" data-testid="cabinetry-builder-schedule">
               <div className="clientNotice">This schedule defines {activeLocation.location} cabinetry only. Appliance cabinets are openings or panels, not appliance product selections.</div>
-              {activeIsBathroomCabinetry ? (
-                BATHROOM_SCHEDULE_GROUPS.map((group) => (
-                  <section key={group.title} className="cabinetryScheduleGroup">
-                    <h3>{group.title}</h3>
-                    <CabinetrySelectionList items={group.items.map(([type, label, scopeKey]) => {
-                      // The bulkhead sits over a tall linen cupboard, so it is offered once one is scheduled.
-                      if (scopeKey === "linenBulkhead" && !activeSchedule.some((line) => (line.type || line.unitType) === "bath-tall-linen")) return null;
-                      const item = activeSchedule.find((line) => (line.type || line.unitType) === type);
-                      return {
-                        id: type,
-                        name: label,
-                        description: item ? `Included in this ${activeLocation.location} schedule` : "Not included",
-                        selected: Boolean(item),
-                        onToggle: () => toggleBathroomScheduleLine(type, label),
-                        quantity: item?.quantity ?? 0,
-                        onQuantityChange: (event) => updateBathroomScheduleLine(type, { quantity: Number(event.target.value), handleQuantity: Number(event.target.value) }),
-                        widthValue: item?.width || "",
-                        onWidthChange: (event) => updateBathroomScheduleLine(type, { width: event.target.value }),
-                        notesValue: item?.notes || "",
-                        onNotesChange: (event) => updateBathroomScheduleLine(type, { notes: event.target.value }),
-                      };
-                    }).filter(Boolean)} />
-                  </section>
-                ))
-              ) : renderRoomCabinetSchedule()}
+              {renderRoomCabinetSchedule()}
               <div className="cabinetryInlineEditor"><button type="button" onClick={() => removeLocation(activeLocation.location)}>Remove this room from Cabinetry</button></div>
             </div>
           ) : null}
@@ -8422,7 +8710,8 @@ function CabinetrySelectionList({ items = [] }) {
   return (
     <div className="cabinetrySelectionList">
       {items.map((item) => (
-        <label key={item.id || item.name} className={`cabinetrySelectionRow ${item.selected ? "selected" : ""} ${item.disabled ? "disabled" : ""}`}>
+        <Fragment key={item.id || item.name}>
+        <label className={`cabinetrySelectionRow ${item.selected ? "selected" : ""} ${item.disabled ? "disabled" : ""}`} data-cabinet-item={item.id || ""}>
           <input type="checkbox" checked={Boolean(item.selected)} disabled={Boolean(item.disabled)} onChange={item.onToggle} />
           <span className="cabinetrySelectionMain">
             <strong>{item.name}</strong>
@@ -8433,6 +8722,8 @@ function CabinetrySelectionList({ items = [] }) {
           {item.notesValue != null ? <span className="cabinetrySelectionNotes"><span>Notes</span><input value={item.notesValue} onChange={item.onNotesChange} /></span> : null}
           {item.actions || null}
         </label>
+        {item.detail || null}
+        </Fragment>
       ))}
     </div>
   );
@@ -8526,7 +8817,7 @@ function cabinetryPlainObject(value) {
 }
 
 function isBathroomCabinetryLocation(locationName = "") {
-  return WET_AREA_CABINETRY_ROOM_NAMES.includes(String(locationName || "").trim().toLowerCase());
+  return isWetAreaCabinetryLocationName(locationName);
 }
 
 function bathroomScopeKeysForLocation(location = {}) {
@@ -12123,7 +12414,7 @@ function GuidedRoofingWorkflow({
   const selectedPriceState = priceStateForGuidedOption(selectedProfile);
   const selectedPrice = selectedPriceState === PRICE_STATES.current ? numberValue(selectedProfile?.selectedCost) : 0;
   const selectedAllowance = numberValue(selectedProfile?.allowance ?? requirement.defaultAllowance);
-  const selectedVariation = selectedPriceState === PRICE_STATES.current ? variationFor({ selectedPrice, allowance: selectedAllowance, quantity: requirement.defaultQuantity || 1 }) : 0;
+  const selectedVariation = selectedPriceState === PRICE_STATES.current ? variationFor({ selectedPrice, allowance: selectedAllowance, quantity: requirement.defaultQuantity || 1, priceIncludesGst: productPriceIncludesGst(selectedProfile || {}) }) : 0;
   const setConfig = (patch) => onRoofingConfigurationChange((current) => ({ ...(current || {}), ...patch }));
   const accessoriesComplete = Boolean(config.fasciaProductCode && config.fasciaColour && config.gutterProductCode && config.gutterColour && config.downpipeProductCode && (!downpipeRequiresColour || config.downpipeColour));
   const colorbondComplete = Boolean(config.roofType === "metal_roofing" && config.profileProductCode && config.colour && config.finish);
@@ -12394,7 +12685,7 @@ function GuidedRoofingWorkflow({
                   const priceState = priceStateForGuidedOption(tile);
                   const allowance = numberValue(tile.allowance ?? requirement.defaultAllowance);
                   const selectedPrice = priceState === PRICE_STATES.current ? numberValue(tile.selectedCost) : 0;
-                  const variation = priceState === PRICE_STATES.current ? variationFor({ selectedPrice, allowance, quantity: requirement.defaultQuantity || 1 }) : 0;
+                  const variation = priceState === PRICE_STATES.current ? variationFor({ selectedPrice, allowance, quantity: requirement.defaultQuantity || 1, priceIncludesGst: productPriceIncludesGst(tile) }) : null;
                   return (
                     <button key={tile.id} type="button" className={config.tileProductCode === tile.productCode ? "selected" : ""} onClick={() => {
                       setConfig({ tileProductCode: tile.productCode, colour: tile.colour || "", finish: tile.finish || "Manufacturer finish" });
@@ -12908,6 +13199,7 @@ function plumbingProductFromLine(line = {}) {
     finish: line.finish,
     imageUrl: line.imageUrl,
     selectedCost: line.unitPrice,
+    priceIncludesGst: line.priceIncludesGst,
     allowance: line.unitAllowance,
     priceStatus: line.unitPrice === null ? PRICE_STATES.pending : PRICE_STATES.current,
     plumbingSavedLine: line,
@@ -12919,10 +13211,14 @@ function plumbingProductRates(requirement = {}, product = {}) {
   const priceState = product.plumbingSavedLine
     ? (product.plumbingSavedLine.unitPrice === null ? PRICE_STATES.pending : PRICE_STATES.current)
     : priceStateForGuidedOption(product);
-  const hasPrice = priceState === PRICE_STATES.current;
+  const priceIncludesGst = product.plumbingSavedLine
+    ? product.plumbingSavedLine.priceIncludesGst
+    : productPriceIncludesGst(product);
+  const hasPrice = priceState === PRICE_STATES.current && typeof priceIncludesGst === 'boolean';
   return {
     priceState,
     hasPrice,
+    priceIncludesGst,
     unitPrice: hasPrice ? numberValue(product.selectedCost) : null,
     unitAllowance: numberValue(product.allowance ?? requirement.defaultAllowance),
   };
@@ -12931,12 +13227,12 @@ function plumbingProductRates(requirement = {}, product = {}) {
 function PlumbingFixtureProductCard({ requirement, product, line = null, configuredLines = null, onSelect, onViewDetails }) {
   const configured = Array.isArray(configuredLines);
   const priceFrom = Boolean(product.attributes?.priceFrom);
-  const { hasPrice, unitPrice, unitAllowance } = plumbingProductRates(requirement, product);
+  const { priceState, priceIncludesGst, hasPrice, unitPrice, unitAllowance } = plumbingProductRates(requirement, product);
   const selected = Boolean(line);
   const quantity = line?.quantity || 1;
   const priceValue = hasPrice ? unitPrice * quantity : 0;
   const allowanceValue = unitAllowance * quantity;
-  const variation = hasPrice ? roundMoney(priceValue - allowanceValue) : 0;
+  const variation = hasPrice ? roundMoney((unitPrice * (priceIncludesGst ? 1 / 1.1 : 1) - unitAllowance) * quantity) : null;
   const code = plumbingFixtureSupplierCode(product);
   const keySpec = displayCatalogueValue(product.attributes?.keySpec || product.metadata?.productEntity?.attributes?.keySpec)
     || [product.dimensions, product.colour].map(displayCatalogueValue).filter(Boolean).join(" · ");
@@ -12954,7 +13250,7 @@ function PlumbingFixtureProductCard({ requirement, product, line = null, configu
         {selected ? <small className="plumbingCardLocations" data-testid="plumbing-card-locations">{formatPlumbingAllocations(line.allocations)}</small> : null}
       </div>
       <div className="guidedProductMoney">
-        <GuidedMiniTotal label={selected ? `Price ×${quantity}` : priceFrom ? "Price from" : "Price each"} value={hasPrice ? money(priceValue) : configured ? QUOTE_REQUIRED_LABEL : "Price not published"} tone={hasPrice ? "" : "warn"} />
+        <GuidedMiniTotal label={selected ? `Price ×${quantity}` : priceFrom ? "Price from" : "Price each"} value={hasPrice ? money(priceValue) : priceState === PRICE_STATES.current ? "GST basis required" : configured ? QUOTE_REQUIRED_LABEL : "Price not published"} tone={hasPrice ? "" : "warn"} />
         <GuidedMiniTotal label={selected ? `Allowance ×${quantity}` : "Allowance each"} value={money(allowanceValue)} />
         <GuidedMiniTotal label={variation < 0 ? "Credit" : "Upgrade"} value={hasPrice ? signedMoney(variation) : "—"} tone={variation > 0 ? "bad" : variation < 0 ? "good" : ""} />
       </div>
@@ -12972,6 +13268,8 @@ function PlumbingAllocationModal({ requirement, product, lines = [], projectLoca
   const details = plumbingFixtureCategoryDetails(requirement);
   const existingLine = lines.find((line) => plumbingLineMatchesProduct(line, product)) || null;
   const [replaceLineId, setReplaceLineId] = useState('');
+  // Rooms this product is going into that already have a different one - waiting for the builder's answer.
+  const [occupiedRooms, setOccupiedRooms] = useState(null);
   const { priceState, hasPrice, unitPrice, unitAllowance } = plumbingProductRates(requirement, product);
   const serviceRows = serviceQuoteRequirements(workbook, requirement.requirementKey);
   const isService = RESIDENTIAL_SERVICE_KEYS.includes(requirement.requirementKey);
@@ -13002,7 +13300,14 @@ function PlumbingAllocationModal({ requirement, product, lines = [], projectLoca
     .join(", ");
   const setQuantity = (key, value) => setQuantities((current) => ({ ...current, [key]: Math.max(0, Math.min(99, Math.round(numberValue(value)))) }));
   const allocations = rows
-    .map((row) => ({ locationKey: row.key, location: row.key === UNALLOCATED_LOCATION_KEY ? "Unallocated" : row.label, quantity: numberValue(quantities[row.key]) }))
+    .map((row) => ({
+      ...((row.locationId || row.levelId || row.key !== plumbingLocationKey(row.label)) ? { locationKey: row.key } : {}),
+      location: row.key === UNALLOCATED_LOCATION_KEY ? "Unallocated" : row.label,
+      quantity: numberValue(quantities[row.key]),
+      ...(row.locationId && (row.levelId || row.identityRequired) ? { locationId: row.locationId } : {}),
+      ...(row.levelId ? { levelId: row.levelId } : {}),
+      ...(row.name && row.name !== row.label ? { roomName: row.name } : {}),
+    }))
     .filter((allocation) => allocation.quantity > 0);
   const draftLine = plumbingLineWithTotals({
     ...(existingLine || plumbingLineFromProduct(product)),
@@ -13019,19 +13324,23 @@ function PlumbingAllocationModal({ requirement, product, lines = [], projectLoca
   const addCustomLocation = () => {
     const label = customName.trim();
     const key = plumbingLocationKey(label);
-    if (!label || !key || isSelectionCategoryName(label)) return;
+    if (!label || !key || isSelectionCategoryName(label) || isGenericBuildingLevelLocation(label)) return;
     if (!rows.some((row) => row.key === key)) setCustomLocations((current) => [...current, { key, label, suggested: true, source: "custom" }]);
     setQuantity(key, Math.max(1, numberValue(quantities[key])));
     setCustomName("");
   };
-  const save = () => {
+  const save = (decision) => {
     if (!draftLine.quantity) {
       if (!existingLine) return;
       if (typeof window !== "undefined" && !window.confirm(`Every location for ${existingLine.productName} is now 0. Remove this product from ${details.title}?`)) return;
       onSave(removePlumbingLine(lines, existingLine.lineId));
       return;
     }
-    onSave(upsertPlumbingLine(lines, draftLine));
+    // A room that already has a different product is never added to silently.
+    const previousLine = existingLine || lines.find((line) => line.lineId === replaceLineId) || null;
+    const conflicts = MULTI_PRODUCT_REQUIREMENTS.has(requirement.requirementKey) ? [] : roomConflicts(lines, draftLine, previousLine);
+    if (conflicts.length && decision !== "replace" && decision !== "add") { setOccupiedRooms(conflicts); return; }
+    onSave(conflicts.length ? saveLineWithDecision(lines, draftLine, conflicts, decision) : upsertPlumbingLine(lines, draftLine));
   };
   const renderRow = (row) => {
     const quantity = numberValue(quantities[row.key]);
@@ -13078,6 +13387,7 @@ function PlumbingAllocationModal({ requirement, product, lines = [], projectLoca
         </div>}
         <h4>Use this product in:</h4>
         <div className="plumbingAllocationRows">
+          {!rows.length ? <p role="status" data-testid="selection-location-setup-required">No project locations are available. Confirm this job's rooms and locations in Job Setup before allocating products.</p> : null}
           {suggestedRows.map(renderRow)}
           {otherRows.length ? (
             <button type="button" className="plumbingShowAll" onClick={() => setShowAll((value) => !value)}>
@@ -13098,9 +13408,20 @@ function PlumbingAllocationModal({ requirement, product, lines = [], projectLoca
           <div><dt>Allowance total</dt><dd data-testid="plumbing-allocation-allowance-total">{money(draftLine.allowanceTotal)}</dd></div>
           <div className={draftLine.variation > 0 ? "bad" : draftLine.variation < 0 ? "good" : ""}><dt>{draftLine.variation < 0 ? "Credit" : "Variation"}</dt><dd data-testid="plumbing-allocation-variation">{draftLine.variation === null ? "—" : signedMoney(draftLine.variation)}</dd></div>
         </dl>
+        {occupiedRooms ? (
+          <div className="plumbingOccupiedRooms" role="alert" data-testid="room-occupied-prompt">
+            <strong>A product is already selected here</strong>
+            {occupiedRooms.map((conflict) => <p key={conflict.locationKey}>{conflict.location} already has {conflict.existing.map((entry) => `${entry.productName} ×${entry.quantity}`).join(" and ")}.</p>)}
+            <div>
+              <button type="button" className="primary" data-testid="room-occupied-replace" onClick={() => save("replace")}>Replace existing</button>
+              <button type="button" data-testid="room-occupied-add" onClick={() => save("add")}>Add another</button>
+              <button type="button" data-testid="room-occupied-cancel" onClick={() => setOccupiedRooms(null)}>Cancel</button>
+            </div>
+          </div>
+        ) : null}
         <footer>
           <button type="button" onClick={onCancel}>Cancel</button>
-          <button type="button" className="primary" data-testid="plumbing-allocation-save" disabled={!draftLine.quantity && !existingLine} onClick={save}>
+          <button type="button" className="primary" data-testid="plumbing-allocation-save" disabled={!draftLine.quantity && !existingLine} onClick={() => save()}>
             {existingLine ? (draftLine.quantity ? "Update Allocation" : "Remove Product") : "Add Selection"}
           </button>
         </footer>
@@ -13209,13 +13530,13 @@ function ConfiguredSelectionModal({ requirement, product, line = null, lines = [
   const setOption = (key) => (event) => setDraft((current) => ({ ...current, options: { ...current.options, [key]: event.target.value } }));
   const setLocations = (keys, chosen) => setDraft((current) => ({
     ...current,
-    locations: chosen.map((location) => current.locations.find((item) => item.key === location.key) || { id: location.id, key: location.key, label: location.label, widthMm: "", heightMm: "", depthMm: "" }),
+    locations: chosen.map((location) => current.locations.find((item) => item.key === location.key) || { ...location, widthMm: "", heightMm: "", depthMm: "" }),
   }));
   const setDimension = (key, field) => (event) => setDraft((current) => ({ ...current, locations: current.locations.map((item) => (item.key === key ? { ...item, [field]: event.target.value } : item)) }));
   const variant = variantForOptions(product, draft.options);
   const cataloguePrice = configurator.variants.length ? null : numberValue(product.selectedCost) || null;
   const draftLines = line
-    ? draft.locations.slice(0, 1).map((location) => configuredLineFromProduct(product, { ...draft, room: location.label, locationId: location.id, widthMm: location.widthMm, heightMm: location.heightMm, depthMm: location.depthMm }, { existingLine: line, lines: otherLines, cataloguePrice }))
+    ? draft.locations.slice(0, 1).map((location) => configuredLineFromProduct(product, { ...draft, room: location.label, locationId: location.id, locationKey: location.key, levelId: location.levelId || "", widthMm: location.widthMm, heightMm: location.heightMm, depthMm: location.depthMm }, { existingLine: line, lines: otherLines, cataloguePrice }))
     : configuredLinesFromProduct(product, draft, { lines: otherLines, cataloguePrice });
   const totals = plumbingAllocationSummary(draftLines);
   const problems = draft.locations.flatMap((location) => dimensionProblems(product, location).map((problem) => location.label + ": " + problem));
@@ -13261,7 +13582,7 @@ function ConfiguredSelectionModal({ requirement, product, line = null, lines = [
           multiple={!line}
           describe={describe}
           renderRow={dimensionRow}
-          isInvalidName={isSelectionCategoryName}
+          isInvalidName={(name) => isSelectionCategoryName(name) || isGenericBuildingLevelLocation(name)}
           testId="configured-locations"
         />
         {configurator.madeToMeasure ? <p className="configuredNote">{dimensions.rule ? "Made to measure — supplier size rule: " + dimensions.rule + "." : "Made to measure — the supplier publishes no standard sizes; size is confirmed by site measure and quote."} Dimensions are kept separately for each room.</p> : null}
@@ -13370,7 +13691,7 @@ function GuidedProductCard({ requirement, product, onSelect, onViewDetails, onSa
   const priceState = priceStateForGuidedOption(product);
   const selectedPrice = priceState === PRICE_STATES.current ? numberValue(product.selectedCost) : 0;
   const allowance = numberValue(product.allowance ?? requirement.defaultAllowance);
-  const variation = priceState === PRICE_STATES.current ? variationFor({ selectedPrice, allowance, quantity: requirement.defaultQuantity || 1 }) : 0;
+  const variation = priceState === PRICE_STATES.current ? variationFor({ selectedPrice, allowance, quantity: requirement.defaultQuantity || 1, priceIncludesGst: productPriceIncludesGst(product) }) : null;
   const isBrick = requirement.requirementKey === "bricks";
   const isGarageDoor = requirement.requirementKey === "garage-door";
   const finishLabel = displayCatalogueValue(product.finish) || "Finish to be confirmed";
@@ -13641,57 +13962,19 @@ function GuidedStatusDot({ status }) {
 }
 
 function CoverPage({ cover, onLogoChange }) {
-  const overlayOpacity = clamp(Number(cover.overlayOpacity), 0, 0.9, 0.72);
-  const backgroundImageUrl = text(cover.backgroundImageUrl);
-  const builderName = coverBuilderDisplayName(cover.builderName);
-  const tagline = cover.tagline || COVER_BRAND_FALLBACK.tagline;
-  const clientName = coverDisplayValue(cover.clientName, "clientName", [cover.projectName]);
-  const siteAddress = coverDisplayValue(cover.siteAddress, "address");
-  const suburbPostcode = coverValue(cover.suburbPostcode) || "";
-  const quoteNumber = coverDisplayValue(cover.quoteNumber, "jobNumber");
-  const issueDate = coverValue(cover.issueDate) || today();
-  const version = coverValue(cover.version) || "1.0";
-  const projectName = coverValue(cover.projectName, [clientName]) || "";
-  const selectionStandard = coverValue(cover.selectionStandard) || "";
-  const pageStyle = {
-    "--accent": cover.accentColor || DEFAULT_BUILDER_TEMPLATE_BRAND.accentColor,
-    "--cover-text": cover.textColor || "#ffffff",
-    "--overlay-opacity": overlayOpacity,
-    backgroundImage: backgroundImageUrl
-      ? `linear-gradient(180deg, rgba(2, 8, 23, ${Math.min(0.88, overlayOpacity + 0.08)}) 0%, rgba(2, 8, 23, ${overlayOpacity}) 48%, rgba(2,8,23,0.84) 100%), url(${backgroundImageUrl})`
-      : `linear-gradient(180deg, rgba(2, 8, 23, ${overlayOpacity}) 0%, rgba(2,8,23,0.88) 100%)`,
-  };
-  return (
-    <section className="page coverPage" style={pageStyle}>
-      <div className="coverBrand">
-        <LogoBox src={cover.logoUrl} builderName={builderName} onLogoChange={onLogoChange} />
-        <div>
-          <strong>{builderName}</strong>
-          <span>{tagline}</span>
-        </div>
-      </div>
-      <div className="coverTitle">
-        {projectName ? <span className="coverProject">{projectName}</span> : null}
-        <span className="kicker">{cover.subtitle || "Luxury Selections Schedule"}</span>
-        <h1>{coverTitleDisplay(cover.title)}</h1>
-        <strong className="coverClientName">{clientName}</strong>
-        <span className="coverAddress">{siteAddress}</span>
-        {suburbPostcode ? <span className="coverAddress coverSuburb">{suburbPostcode}</span> : null}
-      </div>
-      <div className="coverMeta">
-        <CoverMeta label="Job Number" value={quoteNumber} />
-        <CoverMeta label="Date" value={issueDate} />
-        <CoverMeta label="Selection Level" value={selectionStandard || "Builder standard"} />
-        <CoverMeta label="Version" value={version} />
-        <CoverMeta label="Status" value={cover.status || "Draft"} />
-        <CoverMeta label="Document ID" value={cover.documentIdentifier || `${quoteNumber || "JOB"}-ISS-v${version}`} />
-      </div>
-      <footer>
-        <span>{cover.footerText || builderName}</span>
-        <span>Page 1</span>
-      </footer>
-    </section>
-  );
+  const inputRef = useRef(null);
+  return <div className="page coverPage" onDoubleClick={(event) => {
+    if (event.target.closest(".brochureBrand") && onLogoChange) inputRef.current?.click();
+  }}>
+    <div dangerouslySetInnerHTML={{ __html: renderSelectionsCover(cover) }} onErrorCapture={(event) => {
+      if (event.target.tagName === "IMG") event.target.style.display = "none";
+    }} />
+    {onLogoChange ? <input ref={inputRef} type="file" accept="image/*" hidden onChange={(event) => {
+      const file = event.target.files?.[0];
+      event.target.value = "";
+      if (file) onLogoChange(file);
+    }} /> : null}
+  </div>;
 }
 
 function LogoBox({ src, builderName, onLogoChange }) {
@@ -13843,20 +14126,9 @@ function CoverSettingsPanel({ cover, dirty, onChange, onReset, onResetFromProjec
         Footer text
         <input value={cover.footerText || ""} onChange={(event) => onChange("footerText", event.target.value)} />
       </label>
-      <div className="coverSettingsGrid">
-        <label>
-          Overlay opacity
-          <input type="range" min="0" max="0.9" step="0.05" value={cover.overlayOpacity ?? "0.72"} onChange={(event) => onChange("overlayOpacity", event.target.value)} />
-          <small>{cover.overlayOpacity ?? "0.72"}</small>
-        </label>
-        <label>
-          Accent colour
-          <input type="color" value={cover.accentColor || DEFAULT_BUILDER_TEMPLATE_BRAND.accentColor} onChange={(event) => onChange("accentColor", event.target.value)} />
-        </label>
-      </div>
       <label>
-        Text colour
-        <input type="color" value={cover.textColor || "#ffffff"} onChange={(event) => onChange("textColor", event.target.value)} />
+        Accent colour
+        <input type="color" value={cover.accentColor || DEFAULT_BUILDER_TEMPLATE_BRAND.accentColor} onChange={(event) => onChange("accentColor", event.target.value)} />
       </label>
       <p>Cover changes are kept locally and saved only when Save Progress is clicked.</p>
     </aside>
@@ -13902,47 +14174,10 @@ function ProjectInfoPage({ book, details, scheduleItems = [], review = null }) {
   );
 }
 
-function ScheduleSectionDividerPage({ book, title, subtitle, pageNumber }) {
-  return (
-    <section className="page scheduleDividerPage">
-      <HeaderLogo book={book} title={title} page={pageNumber} />
-      <div className="scheduleDividerContent">
-        <span>Document section</span>
-        <h2>{title}</h2>
-        <p>{subtitle}</p>
-      </div>
-      <PageFooter book={book} page={pageNumber} />
-    </section>
-  );
-}
-
-function ScheduleOutstandingPage({ book, review, pageNumber }) {
-  return (
-    <section className="page scheduleOutstandingPage">
-      <HeaderLogo book={book} title="Outstanding Selection Items" page={pageNumber} />
-      <div className="scheduleReviewHero">
-        <span>Draft review</span>
-        <strong>{review.complete} of {review.total} selections have product data</strong>
-        <p>{review.items.length ? "Outstanding decisions and catalogue corrections are listed below. Draft PDFs remain available without inventing missing selections." : "No outstanding review items are currently recorded."}</p>
-      </div>
-      <div className="scheduleOutstandingList">
-        {review.items.length ? review.items.map((item) => (
-          <article key={`${item.id}-${item.reason}`}>
-            <strong>{item.label}</strong>
-            <span>{item.reason}</span>
-            <em>{titleCase(item.type)}</em>
-          </article>
-        )) : <article><strong>Ready for approval review</strong><span>No outstanding items detected in the working schedule.</span><em>Draft</em></article>}
-      </div>
-      <PageFooter book={book} page={pageNumber} />
-    </section>
-  );
-}
-
 function ScheduleAcknowledgementPage({ book, review, pageNumber }) {
   return (
     <section className="page scheduleAcknowledgementPage">
-      <HeaderLogo book={book} title="Review and Acknowledgement" page={pageNumber} />
+      <HeaderLogo book={book} title="Sign-Off" page={pageNumber} />
       <div className="acknowledgementCopy">
         <h2>Client Review</h2>
         <p>This schedule records the current project selections for review. Draft schedules may include selections awaiting confirmation, supplier quote items and catalogue image corrections.</p>
@@ -13951,13 +14186,6 @@ function ScheduleAcknowledgementPage({ book, review, pageNumber }) {
       <div className="acknowledgementGrid">
         <span>Owner / client signature</span><span>Date</span>
         <span>Builder representative</span><span>Date</span>
-      </div>
-      <div className="scheduleReviewStats printed">
-        <span><strong>{review.total}</strong> Selection items</span>
-        <span><strong>{review.complete}</strong> Complete</span>
-        <span><strong>{review.unconfirmed}</strong> Unconfirmed</span>
-        <span><strong>{review.pricing}</strong> Pricing review</span>
-        <span><strong>{review.images}</strong> Image review</span>
       </div>
       <PageFooter book={book} page={pageNumber} />
     </section>
@@ -13990,86 +14218,67 @@ function InfoField({ label, value, type = "text", multiline = false, onChange })
   );
 }
 
-function ScheduleSectionPage({ book, section, pageNumber, onPreviewImage, onSelectProduct }) {
-  const items = section.items || [];
+// One landscape A4 page of the schedule body. The page is a slice of the continuous document
+// (lib/builders/selectionsScheduleDocument.js): section headings and category subheadings are rows
+// in the flow, so a category never claims a page of its own.
+const SELECTIONS_SCHEDULE_COLUMNS = ["Image", "Item", "Selected product", "Brand / Supplier", "Model / Code", "Colour / Finish", "Qty / Location", "Status"];
+function SelectionsSchedulePage({ book, page, onPreviewImage, onSelectProduct }) {
+  const rowCount = page.blocks.filter((block) => block.type === "row").length;
   return (
-    <section className="page roomPage contractPage scheduleSectionPage">
-      <main className="roomSheet">
-        <header className="scheduleTableHeader">
-          <div>
-            <span>Exterior selections</span>
-            <h2>{section.title}</h2>
-            {section.pageCount > 1 ? <p>Continued page {section.pageIndex} of {section.pageCount}</p> : <p>{section.subtitle}</p>}
-          </div>
-          <div className="builderLogoBox">
-            <img src={book.cover.logoUrl} alt="Builder logo" />
-            <b>{book.cover.builderName}</b>
-          </div>
-        </header>
-
-        <ScheduleRowTable items={items} sectionKey={section.key} onPreviewImage={onPreviewImage} onSelectProduct={onSelectProduct} />
+    <section className="page selectionsSchedulePage" data-schedule-page={page.number} data-schedule-section={page.section.key} data-schedule-row-count={rowCount} data-schedule-fill={page.fill}>
+      <header className="ssHeader">
+        <div>
+          <span>Inclusions and Selections Schedule</span>
+          <h2>{page.section.number}. {page.section.title}{page.continued ? " — continued" : ""}</h2>
+        </div>
+        {book.cover.logoUrl ? <img src={book.cover.logoUrl} alt={book.cover.builderName || "Builder logo"} /> : <b>{book.cover.builderName}</b>}
+      </header>
+      <main className="ssBody">
+        <table className="ssTable">
+          <colgroup><col className="ssColImage" /><col className="ssColItem" /><col className="ssColProduct" /><col className="ssColBrand" /><col className="ssColModel" /><col className="ssColColour" /><col className="ssColQty" /><col className="ssColStatus" /></colgroup>
+          <thead><tr>{SELECTIONS_SCHEDULE_COLUMNS.map((label) => <th key={label}>{label}</th>)}</tr></thead>
+          <tbody>
+            {page.blocks.map((block, index) => {
+              if (block.type === "section") return <tr key={`section-${block.key}`} className="ssSection" data-schedule-section-start={block.key}><td colSpan={8}>{block.number}. {block.title}</td></tr>;
+              if (block.type === "group") return <tr key={`group-${block.key}-${index}`} className="ssGroup" data-schedule-group={block.key}><td colSpan={8}>{block.title}{block.continued ? " (continued)" : ""}</td></tr>;
+              return <SelectionsScheduleRow key={block.row.id} row={block.row} onPreviewImage={onPreviewImage} onSelectProduct={onSelectProduct} />;
+            })}
+          </tbody>
+        </table>
       </main>
-
-      <footer className="contractFooter">
-        <span>{book.cover.builderName} Pty Ltd</span>
+      <footer className="ssFooter">
+        <span>{book.cover.builderName}</span>
         <span>{book.cover.footerText}</span>
-        <strong>Page {pageNumber}</strong>
+        <strong>Page {page.number}</strong>
       </footer>
     </section>
   );
 }
 
-function ScheduleRowTable({ items = [], sectionKey = "", onPreviewImage, onSelectProduct }) {
+// A product row shows its image, a colour row its swatch, and a row with neither gives the space
+// to its item label instead of an empty box.
+function SelectionsScheduleRow({ row, onPreviewImage, onSelectProduct }) {
+  const visual = row.imageUrl
+    ? <button type="button" className="ssImage" onClick={() => onPreviewImage?.({ url: row.imageUrl, alt: row.product })} aria-label={`Preview ${row.product}`}><img loading="lazy" decoding="async" src={schedulePreviewThumbnail(row.imageUrl)} alt={row.product} /></button>
+    : row.swatch ? <span className="ssSwatch" style={{ background: row.swatch }} aria-hidden="true" /> : null;
   return (
-    <table className="scheduleRowTable" data-selection-section={sectionKey} data-selection-item-count={items.length}>
-      <thead>
-        <tr>
-          <th className="scheduleImageColumn">Image</th>
-          <th>Area / Category</th>
-          <th className="scheduleProductColumn">Selected Product</th>
-          <th>Brand / Supplier</th>
-          <th>Model / Code</th>
-          <th>Colour / Finish</th>
-          <th>Qty / Location</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody>
-        {items.map((item) => (
-          <ScheduleRow key={item.id} item={item} onPreviewImage={onPreviewImage} onSelectProduct={onSelectProduct} />
-        ))}
-      </tbody>
-    </table>
+    <tr className={`ssRow ${row.imageUrl ? "withImage" : ""}`} data-selection-id={row.id} data-schedule-status={row.status}>
+      {visual ? <td className="ssVisual">{visual}</td> : null}
+      <td colSpan={visual ? 1 : 2} className="ssItem"><button type="button" onClick={() => onSelectProduct?.(row.sourceRowId)}>{row.item}</button></td>
+      <td><strong>{row.product}</strong>{row.details ? <span>{row.details}</span> : null}</td>
+      <td>{row.brandSupplier}</td>
+      <td>{row.modelCode}</td>
+      <td>{row.imageUrl && row.swatch ? <i className="ssDot" style={{ background: row.swatch }} aria-hidden="true" /> : null}{row.colourFinish}</td>
+      <td>{row.qtyLocation}</td>
+      <td className={`ssStatus ${row.status.toLowerCase()}`}>{row.status}</td>
+    </tr>
   );
 }
 
-function ScheduleRow({ item, onPreviewImage, onSelectProduct }) {
-  const missingImage = !item.imageUrl || isPlaceholderSelectionImage(item.imageUrl);
-  const field = (label) => item.fields?.find((entry) => entry.label === label)?.value || "";
-  const brandSupplier = [field("Brand"), field("Supplier")].filter(Boolean).join(" / ");
-  const modelCode = field("Model / product code") || field("Product ID");
-  const qtyLocation = [field("Quantity"), field("Unit"), field("Area / location")].filter(Boolean).join(" ");
-  return (
-    <tr data-selection-id={item.selectionId || item.sourceRowId}>
-      <td>
-        <button
-          type="button"
-          className={`scheduleRowImage ${missingImage ? "empty" : ""}`}
-          onClick={() => missingImage ? onSelectProduct?.(item.sourceRowId) : onPreviewImage?.({ url: item.imageUrl, alt: item.title })}
-          aria-label={missingImage ? "Image pending" : `Preview ${item.title}`}
-        >
-          {missingImage ? <span aria-hidden="true" /> : <img src={item.imageUrl} alt={item.title} />}
-        </button>
-      </td>
-      <td><strong>{item.category}</strong><span>{item.area}</span></td>
-      <td className="scheduleProductCell"><strong>{item.title || "Selection outstanding"}</strong>{item.notes ? <span>{item.notes}</span> : null}</td>
-      <td>{brandSupplier}</td>
-      <td>{modelCode}</td>
-      <td>{item.colourSwatch ? <span className="scheduleColourDot" style={{ background: item.colourSwatch }} /> : null}{[item.colourName, item.finish].filter(Boolean).join(" / ")}</td>
-      <td>{qtyLocation}</td>
-      <td><strong>{item.statusLabel}</strong><span>{item.priceLabel}</span>{item.confirmationStatus ? <span>{item.confirmationStatus}</span> : null}</td>
-    </tr>
-  );
+function schedulePreviewThumbnail(url = '') {
+  // Product library images are local assets. Next's image cache returns a small
+  // raster without copying image bytes into React or the saved job.
+  return url.startsWith('/images/') && !/\.svg(?:\?|$)/i.test(url) ? `/_next/image?url=${encodeURIComponent(url)}&w=256&q=75` : url;
 }
 
 function RoomPage({ room, rooms, activeRoomId, book, pageNumber, totals, onOpenRoom, onRoomChange, onRowChange, onApplyOption, onSelectProduct, onPreviewImage, onDuplicate, onRemove }) {
@@ -14123,7 +14332,7 @@ function ScheduleSelectionCard({ item, onPreviewImage, onSelectProduct }) {
         className={`scheduleSelectionImage ${missingImage ? "empty" : ""}`}
         onClick={() => missingImage ? onSelectProduct?.() : onPreviewImage?.({ url: item.imageUrl, alt: item.title })}
       >
-        {missingImage ? <span aria-hidden="true" /> : <img src={item.imageUrl} alt={item.title} />}
+        {missingImage ? <span aria-hidden="true" /> : <img loading="lazy" decoding="async" src={schedulePreviewThumbnail(item.thumbnailUrl || item.imageUrl)} alt={item.title} />}
       </button>
       <div className="scheduleSelectionDetails">
         <div className="scheduleSelectionTitle">
@@ -14157,70 +14366,29 @@ function ScheduleFieldList({ fields = [] }) {
   );
 }
 
-const EXTERIOR_SCHEDULE_SECTIONS = [
-  { key: "roofing", title: "Roofing", subtitle: "Roof material, profile, roof colour and visible roof accessory colour decisions." },
-  { key: "bricks-render-cladding", title: "Bricks, Render and Cladding", subtitle: "Visible facade masonry, render, cladding and location decisions." },
-  { key: "windows-external-doors", title: "Windows and External Doors", subtitle: "Window systems, frame colour, glass exceptions, screens, entry doors and external door selections." },
-  { key: "garage-door", title: "Garage Door", subtitle: "Garage door supplier, profile, finish, colour and visible glazing decisions." },
-  { key: "external-lighting", title: "External Lighting", subtitle: "Distinct exterior light products, quantities, locations and selected functions." },
-  { key: "exterior-paint-colours", title: "Exterior Paint and Colours", subtitle: "Exterior colour decisions grouped by visible area, finish and source." },
-  { key: "driveway", title: "Driveway", subtitle: "Driveway finish, concrete or exposed aggregate range, colour mix, area and quote status." },
-];
-
-const SCHEDULE_ROWS_PER_PAGE = 5;
 const TECHNICAL_SCHEDULE_ROW_PATTERN = /\b(wall\s*wrap|sarking|timber\s*framing|framing|insulation|fixing|fixings|structural\s*steel|beam|post|flashing|concealed|waterproofing|adhesive|mortar|sealant|substrate|batten|anticon|labou?r|garage.?door\s*motor|motor\s*\/\s*operator|tracks?|springs?|remotes?|installation\s*component)\b/i;
 const GENERIC_SCHEDULE_ROW_PATTERN = /\b(builder\s*)?(included|standard)\s*selection\b|builder\s*standard|generic\s*selection/i;
 
-function scheduleSectionsForEffectiveSelections({ persistedSelections = [], book = {} } = {}) {
+// The Selections Book the schedule is built from: the project's persisted selections where the
+// project has them, otherwise the working book. Either way the schedule itself is one model
+// (lib/builders/selectionsScheduleDocument.js).
+function scheduleSourceBook({ persistedSelections = [], book = {} } = {}) {
   const exteriorConstruction = normaliseExteriorWallConstruction(book?.exteriorWallConstruction);
-  const persistedItems = (persistedSelections || [])
+  const rows = (persistedSelections || [])
     .filter((selection) => !selectionHiddenByExteriorWallConstruction(selection, exteriorConstruction))
     .filter(isSelectionsSchedulePersistedRow)
-    .flatMap(scheduleItemsForPersistedSelection);
-  const sourceSections = persistedItems.length ? sectionsFromScheduleItems(persistedItems) : scheduleSectionsForBook(book);
-  return sourceSections.filter((section) => section.items.length);
+    .map(scheduleRowForPersistedSelection);
+  return rows.length ? { ...book, rooms: [{ id: "project", name: "Project", rows }] } : book;
 }
 
-function sectionsFromScheduleItems(items = []) {
-  const buckets = new Map(EXTERIOR_SCHEDULE_SECTIONS.map((section) => [section.key, { ...section, items: [] }]));
-  const interiorBuckets = new Map();
-  items.forEach((item) => {
-    const sectionKey = scheduleSectionKeyForItem(item);
-    if (buckets.has(sectionKey)) {
-      buckets.get(sectionKey).items.push(item);
-      return;
-    }
-    const title = titleCase(sectionKey || item.category || item.area || "Interior");
-    if (!interiorBuckets.has(title)) interiorBuckets.set(title, { key: slug(title), title, subtitle: "Interior client selections and outstanding decisions.", items: [] });
-    interiorBuckets.get(title).items.push(item);
-  });
-  return [
-    ...EXTERIOR_SCHEDULE_SECTIONS.map((section) => buckets.get(section.key)),
-    ...Array.from(interiorBuckets.values()).sort((left, right) => left.title.localeCompare(right.title)),
-  ];
-}
-
-function scheduleItemsForPersistedSelection(selection = {}, index = 0) {
+function scheduleRowForPersistedSelection(selection = {}, index = 0) {
   const details = selection.selected_details || {};
   const guided = details.guidedSelection || details;
-  const row = {
+  return {
     id: selection.id || guided.selectionId || `persisted-${index}`,
+    guidedRequirementKey: selection.metadata?.requirementKey || details.requirementKey || guided.requirementKey || "",
     item: details.item || selection.subcategory || selection.title || selection.selected_product_name,
-    category: selection.subcategory || details.requirementLabel || selection.category,
-    room: selection.room || details.room || details.areaLabel,
-    description: selection.description || details.description,
     selectedProduct: selection.selected_product_name || selection.product_name || details.selectedProduct || details.productName,
-    selectedOptionId: details.selectedOptionId || details.productId || selection.selected_product_id,
-    brand: selection.brand || details.brand,
-    productModel: selection.model_number || details.model || details.productCode,
-    finishColour: selection.colour || selection.finish || details.colour || details.finish,
-    supplier: selection.selected_supplier_name || selection.supplier || details.supplierName || details.supplier,
-    imageUrl: selection.image_url || details.exactImageUrl || details.imageUrl || details.imageReference,
-    allowanceAmount: selection.included_allowance ?? selection.allowance_amount ?? details.allowance,
-    selectedCost: selection.client_selection_price ?? selection.calculated_client_selection_price ?? details.selectedPrice,
-    upgradeCost: selection.variation_amount ?? details.variationAmount ?? details.variation,
-    status: selection.status || selection.selection_status || details.status,
-    notes: selection.notes || details.notes,
     guidedSelection: {
       ...guided,
       selectionId: selection.id || guided.selectionId,
@@ -14235,50 +14403,9 @@ function scheduleItemsForPersistedSelection(selection = {}, index = 0) {
       colour: guided.colour || selection.colour,
       finish: guided.finish || selection.finish,
       imageReference: guided.exactImageUrl || guided.imageReference || selection.image_url,
-      allowance: guided.allowance ?? selection.included_allowance ?? selection.allowance_amount,
-      selectedPrice: guided.selectedPrice ?? selection.client_selection_price ?? selection.calculated_client_selection_price,
       variationAmount: guided.variationAmount ?? selection.variation_amount,
-      priceStatus: guided.priceStatus || guided.priceState || "",
     },
   };
-  return scheduleItemsForRow(row, { id: row.room || "project", name: row.room || "Project", rows: [row] }, index);
-}
-
-function paginateScheduleSections(sections = []) {
-  return sections.flatMap((section) => {
-    const items = section.items || [];
-    const pageCount = Math.max(1, Math.ceil(items.length / SCHEDULE_ROWS_PER_PAGE));
-    return Array.from({ length: pageCount }, (_, index) => ({
-      ...section,
-      key: `${section.key}-${index + 1}`,
-      baseKey: section.key,
-      items: items.slice(index * SCHEDULE_ROWS_PER_PAGE, (index + 1) * SCHEDULE_ROWS_PER_PAGE),
-      pageIndex: index + 1,
-      pageCount,
-    }));
-  });
-}
-
-function scheduleSectionsForBook(book = {}) {
-  const exteriorConstruction = normaliseExteriorWallConstruction(book?.exteriorWallConstruction);
-  const buckets = new Map(EXTERIOR_SCHEDULE_SECTIONS.map((section) => [section.key, { ...section, items: [] }]));
-  const interiorBuckets = new Map();
-  (book.rooms || []).forEach((room) => {
-    scheduleItemsForRoom(room).filter((item) => !scheduleItemHiddenByExteriorWallConstruction(item, exteriorConstruction)).forEach((item) => {
-      const sectionKey = scheduleSectionKeyForItem(item);
-      if (buckets.has(sectionKey)) {
-        buckets.get(sectionKey).items.push(item);
-        return;
-      }
-      const title = titleCase(sectionKey || item.category || room.name || "Interior");
-      if (!interiorBuckets.has(title)) interiorBuckets.set(title, { key: slug(title), title, subtitle: "Interior client selections and outstanding decisions.", items: [] });
-      interiorBuckets.get(title).items.push(item);
-    });
-  });
-  return [
-    ...EXTERIOR_SCHEDULE_SECTIONS.map((section) => buckets.get(section.key)),
-    ...Array.from(interiorBuckets.values()).sort((left, right) => left.title.localeCompare(right.title)),
-  ].filter((section) => section.items.length);
 }
 
 function scheduleItemsForRoom(room = {}) {
@@ -14298,13 +14425,6 @@ function selectionHiddenByExteriorWallConstruction(selection = {}, construction 
     selection.title,
     selection.selected_product_name,
   ].filter(Boolean).join(" ").toLowerCase();
-  return /\bbrick/.test(text) && !/\bexposed\b/.test(text);
-}
-
-function scheduleItemHiddenByExteriorWallConstruction(item = {}, construction = {}) {
-  if (construction?.brickApplicable !== false) return false;
-  const fieldText = (item.fields || []).map((field) => `${field.label || ""} ${field.value || ""}`).join(" ");
-  const text = [item.category, item.area, item.title, item.item, item.selectedProduct, fieldText].filter(Boolean).join(" ").toLowerCase();
   return /\bbrick/.test(text) && !/\bexposed\b/.test(text);
 }
 
@@ -14361,20 +14481,6 @@ function isSelectionsScheduleBookRow(row = {}) {
   if (TECHNICAL_SCHEDULE_ROW_PATTERN.test(text)) return false;
   if (GENERIC_SCHEDULE_ROW_PATTERN.test(text) && !guided.clientDecisionRequired) return false;
   return Boolean(row.selectedProduct || row.guidedSelection || guided.clientDecisionRequired);
-}
-
-function scheduleSectionKeyForItem(item = {}) {
-  if (item.scheduleSection) return item.scheduleSection;
-  const text = `${item.category || ""} ${item.area || ""} ${item.title || ""}`.toLowerCase();
-  if (/roof|fascia|gutter|downpipe|eaves|soffit/.test(text)) return "roofing";
-  if (/brick|render|cladding|mortar|facade/.test(text)) return "bricks-render-cladding";
-  if (/window|entry\s*door|front\s*door|external\s*door/.test(text)) return "windows-external-doors";
-  if (/garage\s*door/.test(text)) return "garage-door";
-  if (/external\s*lighting|outdoor\s*light|sensor\s*spotlight|wall\s*light/.test(text)) return "external-lighting";
-  if (/exterior colours|exterior paint|painted cladding|surround|colour/.test(text) && /exterior|external|facade|render|cladding|eaves|soffit|fascia|gutter|downpipe|surround/.test(text)) return "exterior-paint-colours";
-  if (/driveway|concrete|exposed\s*aggregate/.test(text)) return "driveway";
-  if (/\b(appliances?|oven|cooktop|rangehood|dishwasher|microwave)\b/.test(text)) return "appliances";
-  return slug(item.category || item.area || "interior");
 }
 
 function baseScheduleItem(row = {}, room = {}, guided = {}, index = 0, overrides = {}) {
@@ -14722,7 +14828,7 @@ function scheduleProjectPreflight({ cover = {}, projectInfo = {}, selectedProjec
   const siteAddress = coverValue(projectInfo.fullSiteAddress || projectInfo.siteAddress || cover.siteAddress || selectedProject?.site_address);
   const jobNumber = coverValue(projectInfo.jobNumber || cover.jobNumber || cover.quoteNumber || selectedProject?.job_number);
   const builderName = coverValue(projectInfo.builderName || cover.builderName || selectedProject?.builder_name);
-  const builderLogo = coverValue(cover.logoUrl || selectedProject?.builder_logo_url);
+  const builderLogo = coverValue(builderLogoFor({ builderName, logoUrl: cover.logoUrl || selectedProject?.builder_logo_url }));
   const missingImages = items.filter((item) => !item.imageUrl || isPlaceholderSelectionImage(item.imageUrl));
   const checks = [
     { label: "Client loaded", ok: Boolean(clientName) },
@@ -14743,6 +14849,8 @@ function scheduleProjectPreflight({ cover = {}, projectInfo = {}, selectedProjec
     outstandingCount: review?.items?.length || 0,
     missingImageCount: missingImages.length,
     canGenerateDraft: Boolean(projectName && clientName && siteAddress && jobNumber && builderName && builderLogo),
+    // What is missing, in words, for the job that is actually linked - never another job's name.
+    missing: [!projectName ? "project name" : "", ...checks.filter((check) => !check.ok).map((check) => check.label.replace(/ loaded$/i, "").toLowerCase())].filter(Boolean),
   };
 }
 
@@ -14754,7 +14862,7 @@ function BuilderSchedulePreflight({ preflight, onFixProjectData, onFixImages, on
           <span>Builder preflight</span>
           <strong>{preflight.canGenerateDraft ? "Ready to generate draft preview" : "Project data required before preview"}</strong>
         </div>
-        {!preflight.canGenerateDraft ? <p>The active project details could not be loaded. Reconnect the Johnson job before generating this schedule.</p> : null}
+        {!preflight.canGenerateDraft ? <p data-testid="preflight-missing">{preflight.projectName ? `Linked job: ${preflight.projectName}. ` : "No job name is linked to this schedule. "}Still needed before a schedule can be generated: {preflight.missing.join(", ")}. Add {preflight.missing.length === 1 ? "it" : "them"} under Fix Project Data; no selection is affected.</p> : <p data-testid="preflight-linked-job">Linked job: {preflight.projectName}{preflight.jobNumber ? ` (${preflight.jobNumber})` : ""}</p>}
       </header>
       <div className="builderPreflightGrid">
         <div>
@@ -14805,7 +14913,7 @@ function ProductSelector({ products, categories, manufacturers, suppliers, categ
               <strong>{product.product_name}</strong>
               <span>{manufacturers.get(product.manufacturer_id) || "No brand"} | {product.model || product.sku || "No model"}</span>
               <small>{suppliers.get(product.supplier_id) || "No supplier"}</small>
-              <em>{money(product.base_allowance || product.upgrade_cost)}</em>
+              <em>{money(libraryRowPricing(product).selectedCost)}</em>
             </button>
           ))}
           {!products.length && <p className="emptyProducts">No matching products. Add products in the Product Library.</p>}
@@ -14881,6 +14989,7 @@ function createDocumentBook({ project = null, snapshot = null, template = null, 
 }
 
 function normaliseDocumentBook(value, context) {
+  value = applyConfirmedClientSelectionCorrections(value);
   // Bath Mixers + Shower Mixers are one category now; merge any saved Shower Mixer selection into it.
   if (Array.isArray(value?.rooms)) {
     const rooms = migrateBathShowerMixerRooms(value.rooms);
@@ -15228,23 +15337,26 @@ function fallbackStandardItems(quality = "mid_range") {
 }
 
 function reviewScheduleBook(book) {
+  const decisions = new Map(guidedSelectionsFromBook(book).map(selection => [selection.id, selection]));
   const rows = book.rooms.flatMap((room) => (room.rows || []).filter(isSelectionsScheduleBookRow).map((row) => ({ room, row })));
   const items = [];
   rows.forEach(({ room, row }) => {
     const label = row.selectedProduct || row.item || room.name || "Selection";
-    const status = String(row.status || "").toLowerCase();
+    const selection = decisions.get(row.id) || { selection_status: row.status, selected_details: row.guidedSelection || {} };
+    const requirement = guidedRequirementByKey(selection.selected_details?.requirementKey);
+    const confirmed = statusForRequirement(requirement, selection) === 'complete';
     const hasProduct = Boolean(row.selectedProduct || row.productModel || row.brand);
     const hasSupplier = Boolean(row.supplier || row.guidedSelection?.supplier);
     const pricePending = row.guidedSelection?.variationPending || row.guidedSelection?.priceState === "quote_required" || row.guidedSelection?.priceStatus === "quote_required";
     if (!hasProduct) items.push({ id: row.id, label, reason: "Product selection missing", type: "missing" });
     if (!hasSupplier) items.push({ id: row.id, label, reason: "Supplier not recorded", type: "missing" });
-    if (!["approved", "confirmed", "selected"].includes(status)) items.push({ id: row.id, label, reason: "Selection is not confirmed", type: "unconfirmed" });
+    if (!confirmed) items.push({ id: row.id, label, reason: "Selection is not confirmed", type: "unconfirmed" });
     if (pricePending || row.selectedCost == null || row.upgradeCost == null) items.push({ id: row.id, label, reason: "Price or variation requires confirmation", type: "pricing" });
     if (isPlaceholderSelectionImage(row.imageUrl)) items.push({ id: row.id, label, reason: "Product image requires review", type: "image" });
   });
   return {
     total: rows.length,
-    complete: rows.length - items.filter((item) => item.reason === "Product selection missing").length,
+    complete: rows.length - items.filter((item) => item.type === "unconfirmed").length,
     missing: items.filter((item) => item.type === "missing").length,
     unconfirmed: items.filter((item) => item.type === "unconfirmed").length,
     pricing: items.filter((item) => item.type === "pricing").length,
@@ -15262,19 +15374,19 @@ function reviewPersistedProjectSelections(selections = []) {
   activeRows.forEach((row) => {
     const details = row.selected_details || {};
     const label = row.selected_product_name || row.product_name || row.title || row.category || "Selection";
-    const status = String(row.selection_status || row.status || "").toLowerCase();
+    const confirmed = statusForRequirement(guidedRequirementByKey(details.requirementKey || row.metadata?.requirementKey), row) === 'complete';
     const supplier = row.selected_supplier_name || row.supplier || details.supplier || "";
     const selectedPrice = row.client_selection_price ?? row.calculated_client_selection_price ?? details.selectedPrice ?? details.clientPrice;
     const variation = row.variation_amount ?? details.variation;
     if (!row.selected_product_name && !row.product_name && !details.productName) items.push({ id: row.id, label, reason: "Product selection missing", type: "missing" });
     if (!supplier) items.push({ id: row.id, label, reason: "Supplier not recorded", type: "missing" });
-    if (!["approved", "confirmed", "selected"].includes(status)) items.push({ id: row.id, label, reason: "Selection is not confirmed", type: "unconfirmed" });
+    if (!confirmed) items.push({ id: row.id, label, reason: "Selection is not confirmed", type: "unconfirmed" });
     if (selectedPrice === null || selectedPrice === undefined || selectedPrice === "" || variation === null || variation === undefined || variation === "") items.push({ id: row.id, label, reason: "Price or variation requires confirmation", type: "pricing" });
     if (isPlaceholderSelectionImage(selectionImageForReview(row, details))) items.push({ id: row.id, label, reason: "Product image requires review", type: "image" });
   });
   return {
     total: activeRows.length,
-    complete: activeRows.length - items.filter((item) => item.reason === "Product selection missing").length,
+    complete: activeRows.length - items.filter((item) => item.type === "unconfirmed").length,
     missing: items.filter((item) => item.type === "missing").length,
     unconfirmed: items.filter((item) => item.type === "unconfirmed").length,
     pricing: items.filter((item) => item.type === "pricing").length,
@@ -15385,6 +15497,8 @@ function selectionRecordPayload({ workspaceId, projectId, snapshotId, bookId, te
     selected_supplier_name: row.supplier || "",
     selected_supplier_id: null,
     selected_details: selectedDetails,
+    client_visible: false,
+    client_status: "draft",
     status: row.status === "approved" || row.status === "selected" ? "approved" : "pending",
     selected_at: guided.selectedAt || guided.selectionTimestamp || new Date().toISOString(),
     notes: row.notes || "",
@@ -15520,7 +15634,7 @@ function cabinetryGuidedSelectionFromBook(book, room, requirement) {
   if (!row?.selectedProduct && !row?.guidedSelection && !legacyRows.length && !savedCabinetry) return null;
   const allowance = numberValue(guided.allowance ?? row?.allowanceAmount ?? requirement.defaultAllowance);
   const cabinetrySelection = savedCabinetry
-    ? normaliseCabinetrySelection(savedCabinetry)
+    ? normaliseCabinetrySelection(savedCabinetry, book.projectRoomModel)
     : legacyRows.length
       ? migratedCabinetrySelectionFromRows(legacyRows, allowance)
       : null;
@@ -15617,7 +15731,10 @@ function cabinetryProgressLabel(cabinetrySelection, legacyRows = []) {
 function latestCabinetryDraftFromStorage(projectId = "") {
   if (typeof window === "undefined") return null;
   try {
-    const payload = JSON.parse(window.localStorage.getItem(browserTenantKey(CABINETRY_DRAFT_STORAGE_KEY)) || "null");
+    // Job-scoped slot first; the older single slot (one draft for the whole builder) is still read
+    // for a draft saved before slots were per job, and only ever for the same job (checked below).
+    const payload = (projectId ? JSON.parse(window.localStorage.getItem(`${browserTenantKey(CABINETRY_DRAFT_STORAGE_KEY)}:${projectId}`) || "null") : null)
+      || JSON.parse(window.localStorage.getItem(browserTenantKey(CABINETRY_DRAFT_STORAGE_KEY)) || "null");
     if (payload?.selectionType !== CABINETRY_SELECTION_TYPE || payload?.workflowType !== CABINETRY_WORKFLOW_TYPE) return null;
     if (!projectId || payload.projectId !== projectId) return null;
     return payload;
@@ -15629,7 +15746,8 @@ function latestCabinetryDraftFromStorage(projectId = "") {
 function saveLatestCabinetryDraftToStorage(selection, projectId = "") {
   if (typeof window === "undefined" || !selection || !projectId) return;
   try {
-    window.localStorage.setItem(browserTenantKey(CABINETRY_DRAFT_STORAGE_KEY), JSON.stringify({
+    // One slot per job: working on a second job no longer evicts the first job's draft.
+    window.localStorage.setItem(`${browserTenantKey(CABINETRY_DRAFT_STORAGE_KEY)}:${projectId}`, JSON.stringify({
       ...selection,
       projectId,
       selectionType: CABINETRY_SELECTION_TYPE,
@@ -17177,6 +17295,9 @@ function ensureKitchenRoom(book) {
 }
 
 function ensureGuidedRoom(book, requirement) {
+  // The saved requirement ID owns the row; a category/room label may have changed.
+  const savedRoom = roomForSavedRequirement(book, requirement?.requirementKey);
+  if (savedRoom) return savedRoom;
   if (requirement?.areaKey === "kitchen") return ensureKitchenRoom(book);
   const roomName = requirement?.areaLabel || titleCase(requirement?.areaKey || "Selections");
   return book?.rooms?.find((room) => slug(room.name) === slug(roomName)) || { id: `guided-${slug(roomName)}`, name: roomName, rows: [] };
@@ -18352,6 +18473,11 @@ const styles = `
   .plumbingAddLocation input::placeholder { color: #94a3b8; }
   .plumbingAddLocation button { border: 1px solid #cbd5e1; border-radius: 6px; background: #ffffff; color: #0f172a; padding: 0 12px; font-weight: 800; cursor: pointer; }
   .plumbingAllocationTotals { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 16px; margin: 0; border-radius: 8px; background: #f8fafc; padding: 12px; }
+  .plumbingOccupiedRooms { margin: 12px 16px 0; padding: 14px; border: 1px solid #f0c36d; border-radius: 8px; background: #fff7e6; color: #102b42; font-size: 16px; }
+  .plumbingOccupiedRooms p { margin: 6px 0; font-size: 16px; }
+  .plumbingOccupiedRooms div { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .plumbingOccupiedRooms button { padding: 9px 14px; border: 1px solid #0f766e; border-radius: 6px; background: #fff; color: #0f766e; font-size: 16px; font-weight: 700; cursor: pointer; }
+  .plumbingOccupiedRooms button.primary { background: #0f766e; color: #fff; }
   .plumbingAllocationTotals div { display: flex; justify-content: space-between; gap: 8px; }
   .plumbingAllocationTotals dt { color: #475569; font-size: 16px; font-weight: 800; text-transform: uppercase; }
   .plumbingAllocationTotals dd { margin: 0; font-weight: 950; }
@@ -18992,6 +19118,37 @@ const styles = `
   .scheduleTableHeader span { color: #f8d58a; font-size: 16px; font-weight: 950; text-transform: uppercase; letter-spacing: .08em; }
   .scheduleTableHeader h2 { margin: 2px 0 0; color: #ffffff; font-size: 25px; line-height: 1.02; text-transform: uppercase; }
   .scheduleTableHeader p { margin: 5px 0 0; color: #dbe5f0; font-size: 16px; line-height: 1.35; font-weight: 760; }
+  .scheduleReconciliation { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: baseline; font-size: 16px; color: #334155; }
+  .scheduleReconciliation strong { color: #071827; }
+  .selectionsSchedulePage { container-type: inline-size; display: grid; grid-template-rows: 5.2cqw minmax(0, 1fr) 2.6cqw; background: #fff; color: #102033; }
+  .ssHeader { display: flex; align-items: center; justify-content: space-between; gap: 2cqw; background: #071827; color: #fff; border-left: .7cqw solid #c99735; padding: 0 1.6cqw; }
+  .ssHeader span { display: block; color: #f8d58a; font-size: .95cqw; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; }
+  .ssHeader h2 { margin: .15cqw 0 0; color: #fff; font-size: 1.9cqw; line-height: 1.05; text-transform: uppercase; }
+  .ssHeader img { height: 3.8cqw; max-width: 12cqw; object-fit: contain; background: #fff; padding: .25cqw .5cqw; border-radius: .2cqw; }
+  .ssHeader b { font-size: 1.2cqw; }
+  .ssBody { min-height: 0; overflow: hidden; padding: 1cqw 1.5cqw; }
+  .ssTable { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 1.05cqw; line-height: 1.25; }
+  .ssTable td, .ssTable strong, .ssTable button, .ssHeader div, .ssFooter span, .ssFooter strong { font-size: inherit; line-height: inherit; }
+  .ssColImage { width: 6%; } .ssColItem { width: 11%; } .ssColProduct { width: 23%; } .ssColBrand { width: 12%; } .ssColModel { width: 9%; } .ssColColour { width: 13%; } .ssColQty { width: 20%; } .ssColStatus { width: 6%; }
+  .ssTable th { height: 2.3cqw; background: #e8edf2; color: #071827; border: .08cqw solid #cfd8e3; padding: 0 .5cqw; text-align: left; font-size: .86cqw; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; }
+  .ssTable td { border: .08cqw solid #d9e0e8; padding: .3cqw .5cqw; vertical-align: middle; overflow-wrap: anywhere; }
+  .ssTable tr { break-inside: avoid; page-break-inside: avoid; }
+  .ssSection td { height: 4.2cqw; border: 0; border-bottom: .22cqw solid #c99735; padding: 1cqw 0 .3cqw; color: #071827; font-size: 1.75cqw; font-weight: 950; text-transform: uppercase; letter-spacing: .03em; vertical-align: bottom; }
+  .ssGroup td { height: 2.5cqw; background: #071827; color: #fff; border-color: #071827; font-size: 1cqw; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; }
+  .ssRow { height: 2.7cqw; }
+  .ssRow.withImage { height: 3.6cqw; }
+  .ssRow td strong { display: block; color: #071827; font-weight: 900; }
+  .ssRow td span { display: block; color: #475569; font-size: .95cqw; margin-top: .1cqw; }
+  .ssItem button { all: unset; cursor: pointer; font-weight: 800; color: #071827; }
+  .ssVisual { padding: .2cqw !important; text-align: center; }
+  .ssImage { display: block; width: 100%; height: 3.05cqw; border: 0; background: #fff; padding: 0; cursor: zoom-in; }
+  .ssImage img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .ssSwatch { display: block; width: 100%; height: 1.9cqw; border: .08cqw solid rgba(15,23,42,.3); border-radius: .2cqw; }
+  .ssDot { display: inline-block; width: 1.5cqw; height: .9cqw; margin-right: .4cqw; border: .08cqw solid rgba(15,23,42,.3); border-radius: .15cqw; vertical-align: -.1cqw; }
+  .ssStatus { font-weight: 900; color: #0f766e; }
+  .ssStatus.upgrade { color: #92400e; } .ssStatus.tbc { color: #b91c1c; } .ssStatus.included { color: #334155; }
+  .ssFooter { display: grid; grid-template-columns: auto 1fr auto; gap: 1.6cqw; align-items: center; background: #071827; color: #fff; padding: 0 1.6cqw; font-size: .95cqw; line-height: 1.2; }
+  .ssFooter span:nth-child(2) { color: #cbd5e1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .scheduleRowTable { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 16px; }
   .scheduleRowTable th { background: #071827; color: #ffffff; border-right: 1px solid rgba(255,255,255,.18); padding: 7px 6px; text-align: left; text-transform: uppercase; letter-spacing: .04em; font-size: 16px; }
   .scheduleRowTable td { border: 1px solid #d9e0e8; padding: 6px; vertical-align: middle; color: #102033; line-height: 1.22; overflow-wrap: anywhere; }
@@ -19033,29 +19190,8 @@ const styles = `
   .roomPage { overflow: visible; }
   .page input, .page textarea, .page select { background: #fff !important; color: #071827 !important; border-color: #d8dee8 !important; box-shadow: none !important; }
   .page input:focus, .page textarea:focus, .page select:focus { outline: 2px solid rgba(201,151,53,.22); border-color: #d7a640 !important; }
-  .coverPage { width: 100%; aspect-ratio: 297 / 210; height: auto; min-height: 0; box-sizing: border-box; background-size: cover; background-position: center; color: var(--cover-text); padding: clamp(24px, 3.2vw, 42px); display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto; gap: clamp(8px, 1.4vw, 14px); }
-  .coverBrand { display: flex; align-items: center; gap: 18px; max-width: 100%; min-width: 0; }
-  .coverBrand strong { display: block; color: var(--cover-text); font-size: clamp(19px, 2.7vw, 28px); font-weight: 950; line-height: 1.04; margin: 0 0 5px; overflow-wrap: anywhere; }
-  .coverBrand span { display: block; margin-top: 3px; color: var(--accent); letter-spacing: 1px; text-transform: none; font-size: clamp(11px, 1.5vw, 15px); font-weight: 850; }
-  .coverLogoBox, .coverLogoFallback { width: clamp(104px, 15vw, 140px); height: clamp(62px, 9vw, 82px); box-sizing: border-box; display: grid; place-items: center; background: rgba(255,255,255,.96); border: 1px solid rgba(255,255,255,.78); border-radius: 8px; padding: 9px; color: #071827; overflow: hidden; flex: 0 0 auto; }
-  .coverLogoBox img { width: 100%; height: 100%; object-fit: contain; display: block; }
-  .coverLogoFallback { text-align: center; font-size: 16px; line-height: 1.2; font-weight: 950; text-transform: uppercase; letter-spacing: .05em; }
-  .logoUploadTarget { display: block; cursor: pointer; }
-  .logoUploadTarget input { display: none; }
-  .coverTitle { align-self: start; max-width: 820px; display: grid; gap: 7px; padding: clamp(18px, 4vw, 46px) 0 0; }
-  .coverProject { color: rgba(255,255,255,.82); font-size: clamp(13px, 2vw, 17px); line-height: 1.3; font-weight: 850; text-transform: uppercase; letter-spacing: .08em; overflow-wrap: anywhere; }
-  .coverClientName { display: block; color: var(--cover-text); font-size: clamp(21px, 3.2vw, 34px); line-height: 1.08; font-weight: 950; overflow-wrap: anywhere; margin-top: 4px; }
-  .coverAddress { display: block; color: rgba(255,255,255,.9); font-size: clamp(13px, 1.9vw, 17px); line-height: 1.28; font-weight: 750; max-width: 100%; overflow-wrap: anywhere; }
-  .coverSuburb { color: #f8d58a; font-weight: 850; }
-  .coverTitle .kicker { color: var(--accent); font-size: clamp(16px, 2.2vw, 23px); font-weight: 950; text-transform: none; letter-spacing: .04em; }
-  .coverTitle h1 { margin: 0; color: var(--cover-text); font-size: clamp(34px, 4.25vw, 52px); line-height: 1; font-weight: 950; text-transform: uppercase; white-space: normal; letter-spacing: 0; max-width: 820px; overflow-wrap: anywhere; }
-  .coverMeta { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 16px; align-items: start; border-top: 1px solid rgba(248,213,138,.62); border-bottom: 1px solid rgba(248,213,138,.62); padding: 10px 0; }
-  .coverMetaItem { min-width: 0; }
-  .coverMetaItem span { display: block; color: rgba(255,255,255,.68); font-size: 16px; font-weight: 950; text-transform: uppercase; letter-spacing: .12em; margin-bottom: 5px; }
-  .coverMetaItem strong { color: var(--cover-text); font-size: clamp(12px, 1.55vw, 15px); line-height: 1.2; font-weight: 900; overflow-wrap: anywhere; }
-  .coverPage footer { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 18px; justify-content: space-between; align-items: center; border-top: 2px solid var(--accent); padding-top: 8px; margin-top: 0; min-width: 0; }
-  .coverPage footer span:first-child { color: #f8d58a; font-style: normal; font-weight: 850; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-  .coverPage footer span:last-child { color: var(--cover-text); font-weight: 900; white-space: nowrap; }
+  ${selectionsCoverCss}
+  .coverPage { width: 100%; aspect-ratio: 297 / 210; height: auto; min-height: 0; padding: 0; overflow: visible; background: #f7f5ef; }
   .coverDebugPanel { width: min(1123px, 100%); box-sizing: border-box; background: #0f172a; color: #e2e8f0; border: 1px solid #334155; border-radius: 8px; padding: 10px 12px; display: grid; gap: 8px; font-size: 16px; }
   .coverDebugPanel button { justify-self: start; background: #f8d58a; color: #071827; border: 0; border-radius: 5px; padding: 5px 8px; font-size: 16px; font-weight: 900; cursor: pointer; }
   .coverDebugPanel div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px 14px; }
@@ -19258,13 +19394,17 @@ const styles = `
   }
   @media print {
     @page { size: A4 landscape; margin: 10mm; }
+    body:has(.coverPage), body:has(.coverPage) :is(main, section, div):has(.coverPage) { display: block !important; width: auto !important; max-width: none !important; min-height: 0 !important; margin: 0 !important; padding: 0 !important; border: 0 !important; background: white !important; overflow: visible !important; }
+    body:has(.coverPage) :is(main, div):has(.screen) > :not(:has(.screen)):not(.screen) { display: none !important; }
     .screen { display: block; background: white; }
     .sidebar, .standardActions, .scheduleControls, .alert, .coverSettingsPanel, .coverDebugPanel, .productModal, .modalBackdrop { display: none !important; }
     .workspace { padding: 0; overflow: visible; }
+    .workspace > :not(.documentViewer) { display: none !important; }
     .documentViewer, .documentPages, .documentPageFrame { display: block; width: auto; max-width: none; padding: 0; border: 0; background: white; }
     .page { box-shadow: none; page-break-after: always; break-after: page; overflow: visible; }
     .scheduleSelectionCard { break-inside: avoid; page-break-inside: avoid; }
-    .coverPage { width: 297mm; height: 210mm; aspect-ratio: auto; padding: 14mm; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+    .selectionsSchedulePage { width: 277mm; height: 188mm; aspect-ratio: auto; overflow: hidden; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+    .coverPage { page: selections-cover; width: 297mm; height: 210mm; aspect-ratio: auto; padding: 0; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
   }
   @media (max-width: 1380px) { .selectionTable { min-width: 1360px; } .scheduleControls { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
   @media (max-width: 980px) { .roomHero, .notesRow, .scheduleControls, .contractSchedulePanel, .selectionCardGrid, .scheduleOutstandingList { grid-template-columns: 1fr; } .scheduleSelectionCard, .scheduleSelectionCard.compact { grid-template-columns: 1fr; } .standardActions { align-items: flex-start; } .bannerActions, .sectionButtons, .scheduleIssueActions { justify-content: flex-start; } .coverPage, .coverSettingsPanel, .coverDebugPanel { width: 100%; } .coverMeta, .coverSettingsGrid, .coverDebugPanel { grid-template-columns: 1fr; } .contractPage { grid-template-columns: 1fr; } .contractFooter { grid-column: 1; grid-row: auto; } .documentViewer { padding: 12px; } .selectionTable { min-width: 1120px; } .scheduleReviewStats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .exteriorWallConstructionOptions { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

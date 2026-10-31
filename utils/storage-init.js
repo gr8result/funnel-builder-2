@@ -11,15 +11,16 @@
 import { supabase } from "./supabase-client";
 
 const BUCKET = "private-assets"; // MUST MATCH YOUR REAL BUCKET NAME
+const initializedUsers = new Set();
+const initializingUsers = new Map();
 
-export async function ensureUserFolders() {
-  try {
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) return;
+export async function ensureUserFolders(userId = "") {
+  const id = String(userId || "").trim();
+  if (!id || initializedUsers.has(id)) return;
+  const existing = initializingUsers.get(id);
+  if (existing) return existing;
+  const task = (async () => {
+    try {
 
     // 1️⃣ Check bucket exists
     const { data: buckets, error: bucketErr } =
@@ -30,7 +31,7 @@ export async function ensureUserFolders() {
     const bucketExists = buckets.some((b) => b.name === BUCKET);
     if (!bucketExists) return;
 
-    const basePath = `${user.id}/`;
+    const basePath = `${id}/`;
     const folders = ["templates", "uploads", "logos", "proof"];
 
     // 2️⃣ Create ONE marker file per folder (idempotent)
@@ -50,7 +51,11 @@ export async function ensureUserFolders() {
         console.warn("storage-init:", error.message);
       }
     }
+    initializedUsers.add(id);
   } catch {
     // ABSOLUTELY NEVER throw from here
-  }
+    }
+  })().finally(() => initializingUsers.delete(id));
+  initializingUsers.set(id, task);
+  return task;
 }

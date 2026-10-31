@@ -252,7 +252,7 @@ export function convertAiTakeoffDetections(batch, context) {
       result.completedWallRuns.push({
         ...base, category, nodes, lengthMm,
         thicknessMm: option(detection.thicknessMm, WALL_THICKNESSES, `${label} thicknessMm`),
-        alignment: option(detection.alignment, ['outer', 'inner'], `${label} alignment`),
+        alignment: option(detection.alignment, ['outer', 'inner', 'center'], `${label} alignment`),
         exteriorType: category === 'exterior' ? option(detection.exteriorType ?? 'Other', EXTERIOR_WALL_CLASSES, `${label} exteriorType`) : '',
         ...(constructionSystem === undefined ? {} : { constructionSystem }),
         ...(frameThicknessMm === undefined ? {} : { frameThicknessMm }),
@@ -296,6 +296,7 @@ export function convertAiTakeoffDetections(batch, context) {
       const point = convertPoint(Array.isArray(detection.nodes) ? detection.nodes[0] : detection);
       result.placedOpenings.push({
         ...base, type, openingClass, ...point, hostWallId,
+        needsClassification: optionalBoolean(detection.needsClassification, `${label} needsClassification`, false),
         // A located opening remains countable when its dimensions are not printed.
         // Null dimensions deliberately prevent area/architrave calculations.
         widthMm: optionalPositive(detection.widthMm, `${label} widthMm`),

@@ -8,7 +8,7 @@ export async function productImportHandler(req, res) {
   if (req.method !== 'POST') { res.setHeader('Allow', 'POST'); return res.status(405).json({ error: 'Method not allowed.' }); }
   if (!['owner', 'admin'].includes(req.memberRole)) return res.status(403).json({ error: 'Builder administrator required.' });
   try {
-    const { action, csv, mapping, slotMappings, batchId, rows, confirmed } = req.body || {};
+    const { action, csv, mapping, slotMappings, requirementMappings, batchId, rows, confirmed } = req.body || {};
     if (action === 'preview') {
       async function list(table) {
         const records = [];
@@ -20,7 +20,7 @@ export async function productImportHandler(req, res) {
         }
       }
       const [products, suppliers, aliases] = await Promise.all(['builder_products', 'builder_product_suppliers', 'builder_selection_aliases'].map(list));
-      const plan = previewBuilderCsv({ workspaceId: req.workspaceId, csv, mapping, slotMappings, products, suppliers, aliases });
+      const plan = previewBuilderCsv({ workspaceId: req.workspaceId, csv, mapping, slotMappings, requirementMappings, products, suppliers, aliases });
       const baseline = Object.fromEntries(Object.entries({ products, suppliers, aliases }).map(([key, records]) => [key, Object.fromEntries(records.map(record => [record.id, record]))]));
       const { data, error } = await supabaseAdmin.from('builder_product_imports').insert({ workspace_id: req.workspaceId, created_by: req.user.id, plan, baseline }).select('id').single();
       if (error) throw error;
@@ -34,6 +34,9 @@ export async function productImportHandler(req, res) {
     }
     return res.status(400).json({ error: 'Choose preview or commit.' });
   } catch (error) {
+    if (['42P01', 'PGRST205', 'PGRST202'].includes(error.code)) {
+      return res.status(503).json({ code: 'PRODUCT_IMPORT_SCHEMA_UNAVAILABLE', error: 'CSV import is unavailable because its database staging table or commit function is missing. The database owner must review 20261004000100_builder_product_csv_import.sql before enabling imports. No production migration was applied.' });
+    }
     return res.status(400).json({ error: error.message || 'Import failed.' });
   }
 }

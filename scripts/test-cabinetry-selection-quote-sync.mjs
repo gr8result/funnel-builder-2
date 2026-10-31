@@ -7,7 +7,7 @@ import { calculateEstimateBuilderWorkbook } from '../lib/construction-estimation
 import { preserveQuoteQuantityOwnership } from '../lib/builders/selectionRegistry.js';
 import { buildCabinetrySelectionPayload, defaultCabinetryDraft, normaliseCabinetrySelection, cabinetryScheduleScope, cabinetryLocationMissingRequirements, CABINETRY_WORKFLOW_STAGES, CABINETRY_SCHEDULE_TYPE_OPTIONS, LAUNDRY_CABINETRY_SCHEDULE_TYPE_OPTIONS } from '../lib/builders/cabinetryWorkflow.js';
 import fs from 'node:fs';
-import { applyCabinetryRequirementsToQuotation as apply, cabinetryScheduleCatalogue, cabinetryCatalogueRow, cabinetryRoomGroup, legacyCabinetryScheduleType, migrateWorkbookCabinetSchedules, migrateCabinetSchedule,
+import { applyCabinetryRequirementsToQuotation as apply, classifyLegacyCabinetLine, cabinetryScheduleCatalogue, cabinetryCatalogueRow, cabinetryRoomGroup, legacyCabinetryScheduleType, migrateWorkbookCabinetSchedules, migrateCabinetSchedule,
   CABINETRY_FINISHES, CABINETRY_LINK_FIELD, CABINETRY_MATCHED, CABINETRY_UNMATCHED } from '../lib/construction-estimation/cabinetryRequirements.js';
 
 const owner = source.workspaceId;
@@ -44,7 +44,9 @@ check('TAXONOMY', () => {
   assert.equal(item('Kitchen', 'Sink base cabinet').id, item('Laundry', 'Laundry sink cabinet').id);
   assert.deepEqual(cabinetryScheduleCatalogue("Butler's Pantry").find(group => group.key === 'tall').items.map(entry => entry.label), ['Tall pantry cabinet - 1 door - 600mm - 5 shelves', 'Tall pantry cabinet - 2 door - 1200mm - 5 shelves']);
   assert(cabinetryScheduleCatalogue('Kitchen').find(group => group.key === 'tall').items.some(entry => entry.label === 'Tall oven tower cabinet - 600mm'));
-  assert.deepEqual(cabinetryScheduleCatalogue('Bathroom'), [], 'wet areas keep the vanity schedule');
+  // Wet areas and wardrobe rooms schedule from the same taxonomy as every other room.
+  assert.deepEqual(cabinetryScheduleCatalogue('Ensuite').map(group => group.key), ['vanity_floor', 'vanity_wallhung', 'bathroom_additional']);
+  assert.deepEqual(cabinetryScheduleCatalogue('Bedroom 1').map(group => group.key), ['wardrobe_fitout', 'wardrobe_doors']);
 });
 
 // --- Job fixture: the book is built by the same functions the Client Selections page uses. ---
@@ -115,7 +117,8 @@ check('FINISH SEPARATE FROM QTY', () => {
   const before = structuredClone(selection.schedule);
   const shaker = normaliseCabinetrySelection({ ...selection, locations: selection.locations.map(entry => entry.location === 'Kitchen' ? { ...entry, doorMaterialGroup: 'Shaker/profile door', doorAndPanelSelections: { material: 'Shaker/profile door' } } : entry) });
   const moved = saveSelections(job, shaker);
-  assert.deepEqual(shaker.schedule, before);
+  assert.deepEqual(shaker.schedule.map(({ selectedFinishKey, ...entry }) => entry), before.map(({ selectedFinishKey, ...entry }) => entry));
+  assert(shaker.schedule.filter(entry => entry.location === 'Kitchen').every(entry => entry.selectedFinishKey === 'shaker_style'));
   assert.deepEqual(quoted(moved, K, 'SHAKER STYLE'), quoted(job, K, pack)); assert.deepEqual(quoted(moved, K, pack), {});
   assert.equal(populated(moved), populated(job));
 });
@@ -213,10 +216,33 @@ check('LEGACY MIGRATION', () => {
 
   // 5. One quotation row per cabinet; archived lines contribute nothing.
   const migrated = saveSelections(base, legacy);
-  assert.deepEqual(quoted(migrated, K, std), { 'Corner base cabinet': 1, 'Sink base cabinet': 1, 'Pull-out bin cabinet': 1, 'Underbench oven cabinet': 1, 'Dishwasher cabinet': 1, 'Microwave cabinet': 1, 'Rangehood cabinet': 1, '4 drawer base unit': 2, '5 drawer base unit': 1 });
+  // The kitchen's base handle is Sharkfin, so the upgrade is charged on its eligible fronts:
+  // corner 1 + sink 2 + bin 1 + 2 x 4 drawers + 5 drawers = 17.
+  assert.deepEqual(quoted(migrated, K, std), { 'Corner base cabinet': 1, 'Sink base cabinet': 1, 'Pull-out bin cabinet': 1, 'Underbench oven cabinet': 1, 'Dishwasher cabinet': 1, 'Microwave cabinet': 1, 'Rangehood cabinet': 1, '4 drawer base unit': 2, '5 drawer base unit': 1,
+    'Sharkfin handle upgrade - per unit': 17 });
   assert.deepEqual(quoted(migrated, BP, std), { 'Sink base cabinet': 1 }); assert.deepEqual(quoted(migrated, L, std), { 'Laundry sink cabinet': 1 });
-  assert.equal(populated(migrated), 11); assert.deepEqual(structure(migrated), structure(base));
-  assert.equal(migrated.cabinetryReconciliation.summary.unmatched, 0); assert.equal(migrated.cabinetryReconciliation.summary.legacyArchived, 7);
+  assert.equal(populated(migrated), 12); assert.deepEqual(structure(migrated), structure(base));
+  // Archived lines are never silently discarded: each is an UNMATCHED requirement with its reason,
+  // as is the Kitchen benchtop chosen without a measured length.
+  const lost = migrated.cabinetryReconciliation.entries.filter(entry => entry.status === CABINETRY_UNMATCHED);
+  assert.deepEqual(lost.filter(entry => entry.requirementId.startsWith('selection-retired:')).map(entry => [entry.room, entry.label, entry.quantity]), [['Kitchen', 'Standard base unit', 5], ['Kitchen', 'Tall pantry', 1],
+    ["Butler's Pantry", 'Standard base unit', 2], ["Butler's Pantry", 'Underbench oven cabinet', 1], ['Laundry', 'Overhead cabinets', 3], ['Laundry', 'Four-bank drawers', 1], ['Laundry', 'Underbench dryer provision', 1]]);
+  assert(lost.every(entry => entry.reason), 'every unmatched requirement says why');
+  assert.equal(migrated.cabinetryReconciliation.summary.unmatched, 8); assert.equal(migrated.cabinetryReconciliation.summary.legacyArchived, 7);
+  // Each waits for a one-time classification that offers only the items the old name can be.
+  const overheads = lost.find(entry => entry.room === 'Laundry' && entry.label === 'Overhead cabinets');
+  assert.equal(overheads.action.kind, 'classify');
+  assert.deepEqual(overheads.action.options.map(option => option.id), ['overhead_1door_standard', 'overhead_2door_standard', 'overhead_1door_extended', 'overhead_2door_extended']);
+  // Classified once: it is an ordinary canonical line from then on, in every copy of the book.
+  const replaced = apply(classifyLegacyCabinetLine(migrated, overheads.action.componentId, 'overhead_2door_standard'), owner);
+  assert(!replaced.cabinetryReconciliation.entries.some(entry => entry.room === 'Laundry' && entry.label === 'Overhead cabinets'));
+  assert.equal(find(replaced, L, std, 'Overhead cabinet - 2 door - standard height').quantity, 3);
+  assert.equal(scheduleOf(replaced.clientSelectionsBook).find(entry => entry.componentId === overheads.action.componentId).cabinetTypeId, 'overhead_2door_standard');
+  assert.equal(replaced.cabinetryReconciliation.summary.unmatched, 7);
+  // "Not required" removes the old line without adding anything.
+  const dryer = lost.find(entry => entry.label === 'Underbench dryer provision');
+  const dismissed = apply(classifyLegacyCabinetLine(replaced, dryer.action.componentId, ''), owner);
+  assert.equal(dismissed.cabinetryReconciliation.summary.unmatched, 6); assert.equal(populated(dismissed), populated(replaced));
   assert.deepEqual(migrated.cabinetryReconciliation.legacyArchive.map(entry => entry.label).sort(), ['Four-bank drawers', 'Overhead cabinets', 'Standard base unit', 'Standard base unit', 'Tall pantry', 'Underbench dryer provision', 'Underbench oven cabinet']);
   // No 1 door / 2 door split is invented for the generic base unit.
   assert.equal(find(migrated, K, std, '1 door base unit - 600mm').quantity, ''); assert.equal(find(migrated, K, std, '2 door base unit - 1200mm').quantity, '');
@@ -257,9 +283,18 @@ check('LEGACY MIGRATION', () => {
   const priced = { ...base, quotation: { ...base.quotation, CABINETRY: { ...base.quotation.CABINETRY, rows: rowsOf(base).map(row => row.room === K && row.range === std && row.item === '1 door base unit - 600mm' ? { ...row, quantity: 2 } : row.room === K && row.range === std && row.item === '2 door base unit - 1200mm' ? { ...row, quantity: 3 } : row) } } };
   const kept = saveSelections(priced, legacy);
   assert.equal(find(kept, K, std, '1 door base unit - 600mm').quantity, 2); assert.equal(find(kept, K, std, '2 door base unit - 1200mm').quantity, 3);
-  // 10. Bathroom vanity lines are a different schedule and are left alone.
-  const bath = [{ componentId: 'B1', location: 'Bathroom', type: 'bath-floor-two-door', unitType: 'Base unit with 2 doors', quantity: 1 }];
-  assert.equal(migrateCabinetSchedule(bath).schedule, bath);
+  // 10. Bathroom vanity lines are on the same taxonomy: one that names exactly one vanity becomes
+  //     it (keeping the tag its colour areas are keyed by); one that could be two sizes waits.
+  const bath = [{ componentId: 'B1', location: 'Bathroom', type: 'bath-floor-two-door', unitType: 'Base unit with 2 doors', quantity: 1 }, { componentId: 'B2', location: 'Ensuite', type: 'bath-wall-three-drawer', unitType: '3-drawer unit', quantity: 1 },
+    { componentId: 'B3', location: 'Powder Room', type: 'bath-wall-three-drawer', unitType: '3-drawer unit', quantity: 1, width: '900 mm' }];
+  const vanities = migrateCabinetSchedule(bath);
+  assert.deepEqual(vanities.schedule.map(entry => [entry.location, entry.cabinetTypeId, entry.type]), [['Bathroom', 'vanity_floor_2door_1200', 'bath-floor-two-door'], ['Powder Room', 'vanity_wallhung_3drawer_900', 'bath-wall-three-drawer']]);
+  assert.deepEqual(vanities.archived.map(entry => [entry.location, entry.candidates]), [['Ensuite', ['vanity_wallhung_3drawer_900', 'vanity_wallhung_3drawer_1200']]]);
+  // The saved width / door count picks the member of a family; with neither, nothing is guessed.
+  const sized = migrateCabinetSchedule([{ componentId: 'S1', location: 'Kitchen', unitType: 'Standard base unit', width: '1200', quantity: 2 }, { componentId: 'S2', location: 'Kitchen', unitType: 'Tall pantry', width: '600mm', quantity: 1 },
+    { componentId: 'S3', location: 'Laundry', unitType: 'Standard base unit', doorDrawerCount: 1, quantity: 1 }, { componentId: 'S4', location: "Butler's Pantry", unitType: 'Standard base unit', quantity: 1 }]);
+  assert.deepEqual(sized.schedule.map(entry => [entry.location, entry.cabinetTypeId, entry.quantity]), [['Kitchen', 'base_unit_1200_2door', 2], ['Kitchen', 'tall_pantry_600', 1], ['Laundry', 'base_unit_600_1door', 1]]);
+  assert.deepEqual(sized.archived.map(entry => entry.componentId), ['S4']);
 });
 
 check('CURRENT JOB', () => {

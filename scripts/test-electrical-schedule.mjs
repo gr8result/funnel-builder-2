@@ -117,6 +117,11 @@ workbook = connectElectricalScheduleToQuotation(workbook, bookWith(schedule));
 let kitchen = scheduleRows(workbook).find(row => row.id === 'electrical-schedule:kitchen:double-gpo');
 assert.deepEqual([kitchen.item, kitchen.location, kitchen.quantity, kitchen.qty, kitchen.excelRate, kitchen.rateSourceRowId, kitchen.source], ['Double Powerpoint - Kitchen', 'Kitchen', 6, 6, '$150.00', 'quote-1209', ELECTRICAL_SCHEDULE_SOURCE]);
 assert.equal(scheduleRows(workbook).find(row => row.electricalPointKey === 'rangehood').excelRate, '', 'an ambiguous rate is left for the estimator');
+const dataOnlySchedule = setRoom(normaliseElectricalSchedule(null, rooms), 'Bedroom 1', { points: { data: 1 }, status: ELECTRICAL_ROOM_STATUS.confirmed });
+const dataOnlyQuote = connectElectricalScheduleToQuotation({ quotation: quotation() }, bookWith(dataOnlySchedule));
+const dataPointRow = scheduleRows(dataOnlyQuote).find(row => row.electricalPointKey === 'data');
+assert.equal(dataPointRow.quoteRequired, true, 'a point with no tariff is visibly quote-required, not an unpriced zero');
+assert.equal(dataPointRow.lineType, 'Quote required');
 pass('Kitchen Double Powerpoints = 6 reaches the quotation at the estimate rate');
 
 schedule = setRoom(schedule, 'Bedroom 1', { points: { 'double-gpo': 4 }, status: ELECTRICAL_ROOM_STATUS.confirmed });
@@ -141,6 +146,19 @@ assert.deepEqual(workbook.quotation.PLUMBING, quotation().PLUMBING);
 assert.deepEqual(workbook.procurement.items, [{ id: 'keep' }], 'schedule items are not procurement products');
 const repriced = connectElectricalScheduleToQuotation({ ...workbook, quotation: { ...workbook.quotation, 'ELECTRICAL (84)': { rows: quotation()['ELECTRICAL (84)'].rows.map(row => (row.id === 'quote-1209' ? { ...row, manualRate: '$175.00' } : row)) } } }, bookWith(schedule));
 assert.equal(scheduleRows(repriced).find(row => row.id === 'electrical-schedule:kitchen:double-gpo').excelRate, '$175.00');
+const manualQuantityWorkbook = {
+  ...workbook,
+  quotation: {
+    ...workbook.quotation,
+    [ELECTRICAL_SCHEDULE_SECTION]: {
+      ...workbook.quotation[ELECTRICAL_SCHEDULE_SECTION],
+      rows: scheduleRows(workbook).map(row => row.id === 'electrical-schedule:kitchen:double-gpo' ? { ...row, quantity: 9, qty: 9, quantityManualOverride: true } : row),
+    },
+  },
+};
+const selectionChanged = connectElectricalScheduleToQuotation(manualQuantityWorkbook, bookWith(setRoom(schedule, 'Kitchen', { points: { 'double-gpo': 7 } })));
+const estimatorOwnedPoint = scheduleRows(selectionChanged).find(row => row.id === 'electrical-schedule:kitchen:double-gpo');
+assert.deepEqual([estimatorOwnedPoint.quantity, estimatorOwnedPoint.quantityManualOverride], [9, true], 'a manual quote quantity wins over subsequent schedule refreshes');
 // Save / reload: the stored selection round-trips through JSON and rebuilds the same schedule.
 const reloaded = JSON.parse(JSON.stringify(bookWith(schedule)));
 const restored = normaliseElectricalSchedule(reloaded.rooms[0].rows[0].guidedSelection.electricalSchedule, rooms);

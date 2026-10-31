@@ -10,6 +10,7 @@ import AuthGate from '../../../components/AuthGate';
 import { FUNNEL_TYPES, assemblePage, getFunnelTemplateLibraryAssets } from '../../../modules/funnels/index.js';
 import { supabase } from '../../../lib/supabaseClient';
 import { getWebsiteBuilderAssets, saveWebsiteBuilderAssets } from '../../../lib/website-builder/projectStore';
+import { useBusinessBranding } from '../../../hooks/useBusinessBranding';
 
 export default function NewFunnelWizard() {
   return (
@@ -20,6 +21,7 @@ export default function NewFunnelWizard() {
 }
 
 function Wizard() {
+  const { branding } = useBusinessBranding();
   const [step, setStep] = useState(1);
   const [selectedType, setSelectedType] = useState(null);
   const [customTradeName, setCustomTradeName] = useState('');
@@ -280,6 +282,8 @@ function Wizard() {
     ].filter(Boolean).join(' ');
 
     const fallbackBrand = {
+      businessName: branding?.businessName || '',
+      logoUrl: branding?.logo || '',
       name: normalizedName,
       headline: funnelSummary.headline,
       subheadline: funnelSummary.subheadline,
@@ -440,6 +444,10 @@ function Wizard() {
         </div>
 
         <div style={{ maxWidth: 1320, margin: '0 auto', padding: '0 16px 32px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, padding: '0 0 24px', marginBottom: 24, borderBottom: '1px solid #2b3a6a' }}>
+            <h2 style={{ color: '#e6eef5', fontSize: 20, fontWeight: 600, margin: 0 }}>Campaign Landing Page</h2>
+            <Link href="/modules/landing-pages?from=sales-funnels" style={{ color: '#fff', background: '#b5224a', padding: '12px 20px', borderRadius: 8, fontWeight: 600, textDecoration: 'none' }}>Create AI Landing Page</Link>
+          </div>
           <div style={{ display: 'flex', gap: 0, alignItems: 'center', marginBottom: 40 }}>
             {[1, 2].map((n) => (
               <div key={n} style={{ display: 'flex', alignItems: 'center', flex: n < 2 ? 1 : 'none' }}>

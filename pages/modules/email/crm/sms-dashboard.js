@@ -16,8 +16,10 @@ export default function SMSDashboard() {
   const [endDate, setEndDate] = useState(today.toISOString().slice(0,10));
 
   const [messages, setMessages] = useState([]);
+  const [campaignNames, setCampaignNames] = useState({});
   const [monthlyLimit, setMonthlyLimit] = useState(500);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
 
   const [sort, setSort] = useState({
     column: "created_at",
@@ -27,6 +29,16 @@ export default function SMSDashboard() {
   useEffect(() => {
     async function loadData() {
       setLoading(true);
+      setLoadError("");
+
+      const workspaceId = typeof window !== "undefined" ? localStorage.getItem("active_workspace_id") : null;
+      if (!workspaceId) {
+        setMessages([]);
+        setCampaignNames({});
+        setLoadError("Select a builder workspace to view SMS reports.");
+        setLoading(false);
+        return;
+      }
 
       // 🔥 FIX: proper UTC boundaries to avoid missing rows
       const startISO = new Date(startDate + "T00:00:00Z").toISOString();
@@ -35,13 +47,20 @@ export default function SMSDashboard() {
       const { data: smsData, error } = await supabase
         .from("sms_sent_history")
         .select("*")
+        .eq("workspace_id", workspaceId)
         .gte("created_at", startISO)
         .lte("created_at", endISO)
         .order("created_at", { ascending: false });
 
       if (error) {
         console.error(error);
+        setLoadError("SMS history could not be loaded for this workspace.");
       }
+
+      const { data: campaigns } = await supabase
+        .from("sms_marketing_campaigns")
+        .select("id,name")
+        .eq("workspace_id", workspaceId);
 
       const { data: billing } = await supabase
         .from("billing_subscriptions")
@@ -50,6 +69,7 @@ export default function SMSDashboard() {
         .single();
 
       setMessages(smsData || []);
+      setCampaignNames(Object.fromEntries((campaigns || []).map((campaign) => [campaign.id, campaign.name])));
       setMonthlyLimit(billing?.plan_sms_limit || 500);
       setLoading(false);
     }
@@ -87,8 +107,8 @@ export default function SMSDashboard() {
 
   const stats = useMemo(() => {
     const sent = messages.length;
-    const delivered = messages.filter(m => m.status !== "failed").length;
-    const failed = messages.filter(m => m.status === "failed").length;
+    const delivered = messages.filter(m => m.status === "delivered").length;
+    const failed = messages.filter(m => ["failed", "undelivered"].includes(String(m.status || "").toLowerCase())).length;
 
     return {
       sent,
@@ -339,11 +359,15 @@ export default function SMSDashboard() {
           </div>
         </div>
 
+        {loadError && <div role="status" style={{ marginBottom: 12, color: "#fca5a5" }}>{loadError}</div>}
+
         <table style={styles.table}>
           <thead>
             <tr>
               <th style={styles.th} onClick={() => toggleSort("created_at")}>Time</th>
+              <th style={styles.th}>Campaign</th>
               <th style={styles.th}>Phone</th>
+              <th style={styles.th}>Status</th>
               <th style={styles.th}>Message</th>
             </tr>
           </thead>
@@ -351,18 +375,22 @@ export default function SMSDashboard() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={3}>Loading...</td>
+                <td colSpan={5}>Loading...</td>
               </tr>
-            ) : (
+            ) : sortedMessages.length ? (
               sortedMessages.map(msg => (
                 <tr key={msg.id}>
                   <td style={styles.td}>
                     {new Date(msg.created_at).toLocaleString()}
                   </td>
+                  <td style={styles.td}>{campaignNames[msg.campaign_id] || "Single / legacy"}</td>
                   <td style={styles.td}>{msg.to_phone}</td>
+                  <td style={styles.td}>{msg.status || "sent"}</td>
                   <td style={styles.td}>{msg.body}</td>
                 </tr>
               ))
+            ) : (
+              <tr><td style={styles.td} colSpan={5}>No SMS activity for this workspace and date range.</td></tr>
             )}
           </tbody>
         </table>

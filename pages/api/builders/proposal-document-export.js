@@ -1,5 +1,6 @@
 import { PDFDocument } from "pdf-lib";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
+import { validateProductSelectionIntegrityForExport } from "../../../lib/builders/productSelectionIntegrity";
 
 export const config = {
   api: {
@@ -277,6 +278,10 @@ function validateExportPayload(body = {}) {
       field: "importedDocumentReferences",
     };
   }
+  const integrity = validateProductSelectionIntegrityForExport(body.productSelectionIntegrity, {
+    jobId: String(body.jobId || "").trim(), workspaceId: String(body.workspaceId || "").trim(),
+  });
+  if (!integrity.ok) return { ok: false, statusCode: 409, error: integrity.message, code: integrity.code, details: integrity.blocked || [] };
   return { ok: true };
 }
 

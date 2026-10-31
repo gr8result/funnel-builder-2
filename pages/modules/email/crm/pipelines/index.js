@@ -6,6 +6,7 @@ import { useEffect, useState, useRef } from "react";
 import Head from "next/head";
 import Link from "next/link";
 import { supabase } from "../../../../../utils/supabase-client";
+import { getUserSafe } from "../../../../../lib/lockRetry";
 
 import {
   DndContext,
@@ -16,6 +17,7 @@ import {
   DragOverlay,
 } from "@dnd-kit/core";
 
+import CrmTabs from "../../../../../components/crm/CrmTabs";
 import LeadDetailsModal from "../../../../../components/crm/LeadDetailsModal";
 import styles from "../../../../../components/crm/pipelines/pipelineStyles";
 import { parseList, formatMoney, buildDefaultTeams } from "../../../../../components/crm/pipelines/pipelineSharedHelpers";
@@ -50,6 +52,15 @@ const DEFAULT_STAGES = [
     title: "Follow up",
     color: "#eab308",
   },
+];
+
+// Builder customer journey; applied only when a brand-new pipeline is created.
+const BUILDER_STAGES = [
+  { id: "new_lead", title: "New Enquiry", color: "#22c55e" },
+  { id: "consultation", title: "Consultation", color: "#0ea5e9" },
+  { id: "quote_sent", title: "Quote Sent", color: "#eab308" },
+  { id: "accepted", title: "Accepted", color: "#a855f7" },
+  { id: "project_created", title: "Project Created", color: "#f97316" },
 ];
 
 // localStorage keys
@@ -102,6 +113,7 @@ function getLeadCrmMeta(lead, metaMap = {}) {
 
 export default function Pipelines() {
   const [userId, setUserId] = useState(null);
+  const [authError, setAuthError] = useState("");
 
   // Pipelines + current pipeline
   const [pipelines, setPipelines] = useState([]);
@@ -186,14 +198,17 @@ export default function Pipelines() {
   }
 
   async function loadUser() {
-    const { data, error } = await supabase.auth.getUser();
+    setAuthError("");
+    const { user, error } = await getUserSafe(supabase);
     if (error) {
       console.error("loadUser error:", error);
+      setAuthError("Another GR8 Result tab is busy saving or signing in. Your data is safe. Please retry.");
+      setLoading(false);
       return;
     }
-    if (!data?.user) return;
+    if (!user) return;
 
-    const uid = data.user.id;
+    const uid = user.id;
     setUserId(uid);
 
     await Promise.all([
@@ -693,7 +708,7 @@ export default function Pipelines() {
           user_id: userId,
           name: trimmedName,
           description: null,
-          stages: DEFAULT_STAGES,
+          stages: BUILDER_STAGES,
         })
         .select()
         .single();
@@ -715,7 +730,7 @@ export default function Pipelines() {
 
       setPipelines((prev) => [...prev, data]);
       setCurrentPipeline(data);
-      setStages(DEFAULT_STAGES);
+      setStages(BUILDER_STAGES);
       setListFilter(listSelection || "all");
       setIsPipelineModalOpen(false);
     } else {
@@ -910,6 +925,14 @@ export default function Pipelines() {
     );
   }
 
+  if (authError)
+    return (
+      <div role="alert" style={{ textAlign: "center", color: "#fff", padding: 24 }}>
+        <p>{authError}</p>
+        <button type="button" onClick={() => { setLoading(true); loadUser(); }}>Retry</button>
+      </div>
+    );
+
   if (loading)
     return <p style={{ textAlign: "center", color: "#fff" }}>Loading…</p>;
 
@@ -988,6 +1011,7 @@ export default function Pipelines() {
       </Head>
 
       <main style={styles.main}>
+        <CrmTabs active="pipeline" />
         {/* HEADER + CONTROL STRIP */}
         <div style={styles.bannerRow}>
           {/* main green banner – title + back only */}

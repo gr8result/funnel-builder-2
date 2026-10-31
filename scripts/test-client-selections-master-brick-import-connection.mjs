@@ -37,8 +37,8 @@ assert.ok(selectionsSource.includes('setGuidedBrickStep("ranges")'), "brick grid
 assert.ok(selectionsSource.includes('setGuidedBrickStep("suppliers")'), "range back must return to supplier");
 assert.ok(selectionsSource.includes('setGuidedScreen("exterior")'), "bricks back must return to Exterior");
 assert.ok(!/PGH Bricks|Austral Bricks|Townhouse Range|Elements Range/.test(selectionsSource), "supplier/range names must not be hard-coded in Client Selections");
-assert.ok(selectionsSource.includes("MASTER_CATALOGUE_STORAGE_KEY"), "Client Selections must read shared master catalogue storage");
-assert.ok(selectionsSource.includes("BUILDER_ENABLEMENT_STORAGE_KEY"), "Client Selections must read shared builder enablement storage");
+assert.ok(selectionsSource.includes("getMasterProducts") && selectionsSource.includes("queryClientSelectableProducts"), "Client Selections must resolve products through the shared master catalogue service and selectable-product query");
+assert.ok(selectionsSource.includes("getBuilderEnablementRefs"), "Client Selections must resolve builder-specific product enablement through the shared catalogue service");
 
 const csvRecords = parseMasterProductCatalogueCsv(csvFixture);
 const jsonRecords = parseMasterProductCatalogueJson(jsonFixture);

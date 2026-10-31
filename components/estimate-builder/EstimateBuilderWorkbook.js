@@ -4,8 +4,11 @@ import ClientSelectionsErrorBoundary from './ClientSelectionsErrorBoundary.jsx';
 import { safeSelectionNavigate } from "../../lib/navigation/selectionNavigation.js";
 import { masterJobId, linkTakeoffToMasterJob } from "../../lib/construction-estimation/masterJob.js";
 import EntryDoorFurnitureSchedule from './EntryDoorFurnitureSchedule.jsx';
-import CabinetryCataloguePicker from './CabinetryCataloguePicker.jsx';
 import CabinetryReconciliation from './CabinetryReconciliation.jsx';
+import SelectionReconcilePanel from './SelectionReconcilePanel.jsx';
+import ProductSelectionIntegrityPanel from './ProductSelectionIntegrityPanel.jsx';
+import { reconcileProductSelections } from '../../lib/builders/productSelectionIntegrity.js';
+import { isQuotationRateUnresolved, quotationRateReviewRows } from '../../lib/builders/quotationRateReview.js';
 import { useQuotationSubgroups } from './useQuotationSubgroups.js';
 import { buildQuotationSubgroups, visibleSubgroupRows } from '../../lib/construction-estimation/quotationSubgroups.js';
 import { cabinetryQuoteGroupStatus } from '../../lib/construction-estimation/cabinetryRequirements.js';
@@ -18,6 +21,7 @@ import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState } fro
 import { createPortal } from "react-dom";
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import StorageStatusLink from "./StorageStatusLink.jsx";
 import { useRouter } from "next/router";
 import { DndContext, useDraggable } from "@dnd-kit/core";
 import {
@@ -39,12 +43,19 @@ import {
   Truck,
 } from "lucide-react";
 import { useEstimateBuilderWorkbook } from "../../hooks/estimate-builder/useEstimateBuilderWorkbook";
+import { useBuilderCatalogue } from "../product-library/useBuilderCatalogue.js";
 import { useWorkspace } from "../../hooks/useWorkspace";
 import { useJobFile } from "../../hooks/useJobFile";
 import { readJob } from "../../lib/jobFile";
 import { supabase } from "../../utils/supabase-client";
 import { isDeveloperEmail } from "../../lib/adminUsers";
-import { calculateEstimateBuilderWorkbook, V4_DEFAULT_FORMULAS } from "../../lib/construction-estimation/estimateBuilderWorkbookCalculations";
+import {
+  calculateEstimateBuilderWorkbook,
+  estimateBuilderFormulaReferences,
+  validateEstimateBuilderFormula,
+  validateQuoteQuantityFormula,
+  V4_DEFAULT_FORMULAS,
+} from "../../lib/construction-estimation/estimateBuilderWorkbookCalculations";
 import { applyPersistedQuotationOrder, stampQuotationOrder } from "../../lib/construction-estimation/quotationOrder";
 import { windowDoorSizeCodeForRow } from "../../lib/construction-estimation/estimateBuilderWorkbookDefaults";
 import { SUBCONTRACTOR_QUOTE_DEDUCTIONS, V4_DATA_SECTIONS } from "../../lib/construction-estimation/estimateWorksheetV4Schema";
@@ -103,6 +114,8 @@ import ProjectEstimateVersionHistoryPanel from "./project-estimate/components/Ve
 // whole website builder (renderer, project store, icon libraries) that this page never uses.
 import { TextEditingToolbar as WebsiteBuilderTextEditingToolbar } from "../website-builder/page-builder/panels/EditorControls";
 import ClientPortalRouteBridge from "../../client-portal/RouteBridge";
+import TradePaymentSchedulePanel from "./TradePaymentSchedulePanel";
+import SubcontractCashflowSection from "./SubcontractCashflowSection";
 
 // Not exported: one non-component export stops this module being a Fast Refresh boundary, and an
 // edit to anything it imports then remounts the whole workbook and re-reads the job from storage.
@@ -507,9 +520,17 @@ export default function EstimateBuilderWorkbook(props) {
 
 function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recentId = "", organisationId = "", initialPage = "" } = {}) {
   const router = useRouter();
-  const sheet = useEstimateBuilderWorkbook({}, { previewMode });
-  const { workspaceId, loading: workspaceLoading } = useWorkspace();
+  const { workspaceId, role: workspaceRole, loading: workspaceLoading } = useWorkspace();
   const moduleWorkspaceId = organisationId || workspaceId;
+  const catalogueState = useBuilderCatalogue(moduleWorkspaceId);
+  const sheet = useEstimateBuilderWorkbook({}, { previewMode, catalogueState });
+  useEffect(() => {
+    if (typeof window === "undefined" || builderLocalStorage.getItem("estimate-builder-hydration-timing") !== "true") return undefined;
+    window.__estimateBuilderSheet = sheet;
+    return () => {
+      if (window.__estimateBuilderSheet === sheet) delete window.__estimateBuilderSheet;
+    };
+  }, [sheet]);
   const saveStatusTimerRef = useRef(null);
   const modeHandledRef = useRef("");
   const localJobFileInputRef = useRef(null);
@@ -527,6 +548,7 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
   const [localJobFilePrompt, setLocalJobFilePrompt] = useState(null);
   const [saveStatus, setSaveStatus] = useState({ state: "idle", label: "", detail: "" });
   const [commercialSyncStatus, setCommercialSyncStatus] = useState({ state: "idle", message: "", projectId: "", snapshotId: "", syncedAt: "" });
+  const commercialSnapshotSyncRef = useRef(() => {});
   const [explicitJobRestoreState, setExplicitJobRestoreState] = useState({ state: "idle", key: "", message: "" });
   const explicitJobRestoreAttemptRef = useRef("");
   const [showDeveloperControls, setShowDeveloperControls] = useState(false);
@@ -629,6 +651,7 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
     navigationSheetRef.current.setPage(requestedPage);
   }, [mode, previewMode, requestedPage, workbookPage]);
   const isAdminMode = typeof window !== "undefined" && builderLocalStorage.getItem("estimate-builder-permission-mode") === "admin";
+  const canEditEstimateFormulas = isAdminMode || ["owner", "admin"].includes(String(workspaceRole || "").toLowerCase());
   const isSaving = saveStatus.state === "saving";
   const isCommercialSyncing = commercialSyncStatus.state === "syncing";
   const activeVisual = workspaceVisual(activePageKey);
@@ -780,7 +803,7 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
       });
       return { ok: true };
     },
-  }), [sheet, openJobDetails, moduleWorkspaceId, activeCommercialProjectId, activeBuilderJobId, takeoffWorkflowSnapshot, navigateWorkspacePage, openTakeoffJobRequest, updateMasterTakeoffDraft]);
+  }), [sheet, openJobDetails, moduleWorkspaceId, activeBuilderJobId, takeoffWorkflowSnapshot, navigateWorkspacePage, openTakeoffJobRequest, updateMasterTakeoffDraft]);
   const commercialModuleContext = useMemo(() => ({
     embedded: true,
     organisationId: moduleWorkspaceId,
@@ -788,8 +811,9 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
     workbook: sheet.workbook,
     calculated: sheet.preview,
     projectId: activeBuilderJobId,
-    estimateSnapshotId: commercialSyncStatus.snapshotId || "",
-    snapshotId: commercialSyncStatus.snapshotId || "",
+    commercialProjectId: activeCommercialProjectId,
+    estimateSnapshotId: sheet.workbook?.commercialSnapshotId || commercialSyncStatus.snapshotId || "",
+    snapshotId: sheet.workbook?.commercialSnapshotId || commercialSyncStatus.snapshotId || "",
     projectContext: {
       organisationId: moduleWorkspaceId,
       workspaceId: moduleWorkspaceId,
@@ -809,9 +833,9 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
       lastSavedAt: sheet.lastSavedAt || "",
       saveStatus: saveStatus.state,
     },
-    onSyncSnapshot: handleCommercialSnapshotSync,
+    onSyncSnapshot: (...args) => commercialSnapshotSyncRef.current(...args),
     onClientSelectionsSave: sheet.updateClientSelectionsBook,
-  }), [moduleWorkspaceId, sheet.workbook, sheet.preview, activeBuilderJobId, commercialSyncStatus.snapshotId, openJobDetails, jobFilePayload, sheet.lastSavedAt, saveStatus.state, sheet.updateClientSelectionsBook]);
+  }), [moduleWorkspaceId, sheet.workbook, sheet.preview, activeBuilderJobId, activeCommercialProjectId, commercialSyncStatus.snapshotId, openJobDetails, jobFilePayload, sheet.lastSavedAt, saveStatus.state, sheet.updateClientSelectionsBook]);
 
   useEffect(() => () => {
     if (saveStatusTimerRef.current) window.clearTimeout(saveStatusTimerRef.current);
@@ -1019,19 +1043,69 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
 
     setCommercialSyncStatus({ state: "syncing", message: "Syncing commercial snapshot...", projectId: "", snapshotId: "", syncedAt: "" });
     try {
-      const calculated = calculateEstimateBuilderWorkbook(sheet.workbook);
+      const liveWorkbook = sheet.getCurrentWorkbook();
+      const sourceWorkbook = {
+        ...liveWorkbook,
+        quotation: stampQuotationOrder(
+          applyPersistedQuotationOrder(liveWorkbook.quotation || {}),
+          liveWorkbook.quotationSectionOrder || [],
+        ),
+      };
+      const sourceJobId = String(sourceWorkbook?.jobId || "");
+      const sourceWorkspaceId = String(sourceWorkbook?.workspaceId || sourceWorkbook?.workspace_id || "");
+      if (!sourceJobId || !sourceWorkspaceId || sourceWorkspaceId !== workspaceId) {
+        throw new Error("The active job needs a matching workspace and stable job ID before commercial sync.");
+      }
+      const sourceSignature = JSON.stringify([
+        sourceWorkbook.jobId,
+        sourceWorkbook.workspaceId || sourceWorkbook.workspace_id,
+        sourceWorkbook.quotation,
+        sourceWorkbook.quotationSectionOrder,
+        sourceWorkbook.clientSelectionsBook,
+        sourceWorkbook.procurement,
+        sourceWorkbook.jobInclusionSnapshot,
+        sourceWorkbook.summaryAdjustments,
+      ]);
+      const calculated = calculateEstimateBuilderWorkbook(sourceWorkbook);
       const result = await syncCommercialSnapshot({
         workspace_id: workspaceId,
-        project: commercialProjectMetadataFromWorkbook(sheet.workbook, jobFilePayload),
-        workbook: sheet.workbook,
+        commercial_project_id: sourceWorkbook.commercialProjectId || null,
+        project: commercialProjectMetadataFromWorkbook(sourceWorkbook, jobFilePayload),
+        workbook: sourceWorkbook,
         calculated,
       });
       const projectId = result?.project_id || result?.data?.project?.id || "";
       const snapshotId = result?.snapshot_id || result?.data?.snapshot?.id || "";
+      const currentLiveWorkbook = sheet.getCurrentWorkbook();
+      const currentWorkbook = {
+        ...currentLiveWorkbook,
+        quotation: stampQuotationOrder(
+          applyPersistedQuotationOrder(currentLiveWorkbook?.quotation || {}),
+          currentLiveWorkbook?.quotationSectionOrder || [],
+        ),
+      };
+      const currentSignature = JSON.stringify([
+        currentWorkbook?.jobId,
+        currentWorkbook?.workspaceId || currentWorkbook?.workspace_id,
+        currentWorkbook?.quotation,
+        currentWorkbook?.quotationSectionOrder,
+        currentWorkbook?.clientSelectionsBook,
+        currentWorkbook?.procurement,
+        currentWorkbook?.jobInclusionSnapshot,
+        currentWorkbook?.summaryAdjustments,
+      ]);
+      if (currentSignature !== sourceSignature) {
+        throw new Error("The job changed while its commercial snapshot was syncing. The snapshot was not linked to the newer job state; sync the current job again.");
+      }
+      const associationSave = await sheet.persistCommercialAssociation({ workspaceId, jobId: sourceJobId, projectId, snapshotId });
+      if (!associationSave?.ok) throw new Error(`The commercial snapshot synced, but its job association could not be saved: ${associationSave?.message || "Save failed."}`);
       const syncedAt = result?.data?.snapshot?.created_at || new Date().toISOString();
+      const snapshotMessage = result?.workbook_snapshot_complete === false
+        ? `Quotation snapshot synced and linked. Full plan/document data remains in the saved local job${result.workbook_snapshot_omitted_sections?.length ? ` (not copied: ${result.workbook_snapshot_omitted_sections.join(", ")})` : ""}.`
+        : `Commercial snapshot synced and linked to this saved job${snapshotId ? `: ${snapshotId}` : ""}`;
       setCommercialSyncStatus({
         state: "success",
-        message: `Commercial snapshot synced${snapshotId ? `: ${snapshotId}` : ""}`,
+        message: snapshotMessage,
         projectId,
         snapshotId,
         syncedAt,
@@ -1046,6 +1120,7 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
       });
     }
   }
+  commercialSnapshotSyncRef.current = handleCommercialSnapshotSync;
 
   useEffect(() => {
     if (previewMode || !mode) return;
@@ -1336,6 +1411,8 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
 
         {showDeveloperControls && commercialSyncStatus.state !== "idle" && (
           <div
+            data-testid="commercial-sync-status"
+            data-state={commercialSyncStatus.state}
             style={{
               ...styles.commercialSyncStatus,
               ...(commercialSyncStatus.state === "error" ? styles.commercialSyncStatusError : {}),
@@ -1413,6 +1490,7 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
                         ] : []),
                       ]}
                     />
+                    <StorageStatusLink jobKey={sheet.workbook?.jobId || sheet.workbook?.registeredJobId || sheet.workbook?.projectId ? `job:${sheet.workbook.jobId || sheet.workbook.registeredJobId || sheet.workbook.projectId}` : ""} />
                     <button type="button" style={styles.bannerBackButton} onClick={() => navigateWorkspacePage("projectDashboard")}>Back to Project Workspace</button>
                   </div>
                   {showDeveloperControls ? (
@@ -1470,6 +1548,9 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
         {ESTIMATE_WORKBOOK_SHEET_TABS.some((tab) => tab.key === activePageKey) ? (
           <WorkbookSheetTabs activePageKey={activePageKey} onNavigate={navigateWorkspacePage} />
         ) : null}
+        { ["quotation", "projectEstimate"].includes(activePageKey) && !previewMode && !mode ? (
+          <ProductSelectionIntegrityPanel sheet={sheet} />
+        ) : null}
 
         <fieldset disabled={previewMode} style={styles.previewFieldset}>
             {activePageKey === "projectDashboard" && (
@@ -1498,7 +1579,7 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
                 sections={dataInputWorkbookSections(sheet)}
                 formulaTarget={formulaTarget}
                 onPickFormulaReference={(key) => insertQuoteQuantityReference(sheet, formulaTarget, key)}
-                canEditFormulas={isAdminMode}
+                canEditFormulas={canEditEstimateFormulas}
               />
               </div>
             )}
@@ -1512,10 +1593,10 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
                 sheet={sheet}
                 formulaTarget={formulaTarget}
                 onPickFormulaReference={(key) => insertQuoteQuantityReference(sheet, formulaTarget, key)}
-                canEditFormulas={isAdminMode}
+                canEditFormulas={canEditEstimateFormulas}
               />
           )}
-          {activePageKey === "quotation" && <QuotationSheet sheet={sheet} onFormulaTarget={setFormulaTarget} />}
+          {activePageKey === "quotation" && <><SelectionBaselineControl key={sheet.workbook.workspaceId || sheet.workbook.workspace_id} workbook={sheet.workbook} onApply={sheet.applySelectionBaseline} autoApplyDefault /><QuotationSheet sheet={sheet} onFormulaTarget={setFormulaTarget} canEditFormulas={canEditEstimateFormulas} /></>}
           {activePageKey === "standardInclusions" && <StandardInclusionsSheet sheet={sheet} />}
           {activePageKey === "productLibrary" && <EmbeddedProductLibraryPage embeddedInEstimateBuilder {...commercialModuleContext} />}
           {activePageKey === "estimatingCatalogue" && <EstimatingCatalogueSheet sheet={sheet} />}
@@ -1526,11 +1607,12 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
           {activePageKey === "boq" && <CommercialBoqPage {...commercialModuleContext} />}
           {activePageKey === "variations" && <CommercialVariationsPage {...commercialModuleContext} />}
           {['purchaseOrders', 'supplierProcurement', 'procurement'].includes(activePageKey) && <EntryDoorFurnitureSchedule workbook={sheet.workbook} />}
+          {activePageKey === "purchaseOrders" && <TradePaymentSchedulePanel sheet={sheet} readonly={sheet.previewMode} />}
           {activePageKey === "purchaseOrders" && <CommercialPurchaseOrdersPage {...commercialModuleContext} />}
           {activePageKey === "clientSelections" && (
             <>
             {commercialModuleContext?.projectId && <SelectionBaselineControl key={sheet.workbook.workspaceId || sheet.workbook.workspace_id} workbook={sheet.workbook} onApply={sheet.applySelectionBaseline} />}
-            <ClientSelectionsModuleHost
+            {sheet.workbook.standardInclusionsDefault?.status === "pending" && !sheet.workbook.jobInclusionSnapshot ? <div role="status"><p>Establish the approved Premier quotation baseline before starting Client Selections.</p><button type="button" onClick={() => navigateWorkspacePage("quotation")}>Open quotation</button></div> : <ClientSelectionsModuleHost
               moduleContext={commercialModuleContext}
               restoringActiveJob={explicitJobRestoreState.state === "restoring"}
               onBackToDashboard={() => navigateWorkspacePage("projectDashboard")}
@@ -1538,7 +1620,7 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
               onOpenLocalJobFile={openLocalJobFilePicker}
               onNewJob={() => setNewJobModalOpen(true)}
               showDeveloperControls={showDeveloperControls}
-            />
+            />}
             </>
           )}
           {activePageKey === "budgetVsActual" && <CommercialBudgetVsActualPage {...commercialModuleContext} />}
@@ -1557,7 +1639,7 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
             <GanttBuilderPage sheet={sheet} />
           )}
           {activePageKey === "jobBoard" && (
-            <JobBoardPage />
+            <JobBoardPage onTaskRecordsChange={sheet.applyJobBoardTaskRecords} />
           )}
         </fieldset>
 
@@ -1656,10 +1738,21 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
                 <span style={styles.okPill}>Required inputs complete</span>
               )}
             </Panel>
-            <Panel title="Quote / Rate Review">
-              {quoteReviewRows(sheet).slice(0, 10).map((row) => (
-                <SummaryRow key={`${row.item}-${row.sourceOfRate}`} label={row.item} value={row.sourceOfRate} />
-              ))}
+            <Panel title={`Quote / Rate Review (${quoteReviewRows(sheet).length})`}>
+              {quoteReviewRows(sheet).length ? (
+                <>
+                  <p role="status">This quotation remains a draft while required commercial inputs are unresolved. Save and continue; issuing the proposal is blocked until each required price, mapping, and decision is resolved.</p>
+                  {quoteReviewRows(sheet).slice(0, 10).map((row) => (
+                    <SummaryRow
+                      key={`${row.item}-${row.sourceOfRate}`}
+                      label={row.item}
+                      value={isQuotationRateUnresolved(row) ? "QUOTE REQUIRED" : row.sourceOfRate}
+                    />
+                  ))}
+                </>
+              ) : (
+                <span style={styles.okPill}>No unresolved quotation rates</span>
+              )}
             </Panel>
           </>
         )}
@@ -1708,6 +1801,7 @@ function ClientSelectionsModuleHost({ moduleContext, restoringActiveJob = false,
   const [loadError, setLoadError] = useState(null);
   const [retryKey, setRetryKey] = useState(0);
   const mountedRef = useRef(false);
+  const mountTimeoutRef = useRef(null);
   const showDeveloperDetails = useMemo(() => {
     if (process.env.NODE_ENV !== "development" || !showDeveloperControls) return false;
     if (typeof window === "undefined") return false;
@@ -1720,14 +1814,24 @@ function ClientSelectionsModuleHost({ moduleContext, restoringActiveJob = false,
   // A different job gets a fresh page through the `key` below, not by unloading the module.
   useEffect(() => {
     let cancelled = false;
-    const slowMountTimer = window.setTimeout(() => {
-      if (cancelled || mountedRef.current) return;
-      console.warn("[Client Selections] module is still mounting", {
-        fileName: moduleContext?.fileState?.fileName,
-        projectId: moduleContext?.projectId,
-        workspaceId: moduleContext?.workspaceId,
-      });
-    }, 10000);
+    let timedOut = false;
+    mountedRef.current = false;
+    window.clearTimeout(mountTimeoutRef.current);
+    mountTimeoutRef.current = null;
+    if (moduleContext?.projectId && !restoringActiveJob) {
+      mountTimeoutRef.current = window.setTimeout(() => {
+        if (cancelled || mountedRef.current) return;
+        timedOut = true;
+        mountTimeoutRef.current = null;
+        const error = new Error("Client Selections module did not mount within 10 seconds.");
+        console.error("[Client Selections] module mount timeout", {
+          fileName: moduleContext?.fileState?.fileName,
+          projectId: moduleContext?.projectId,
+          workspaceId: moduleContext?.workspaceId,
+        });
+        setLoadError({ error, source: "module-mount-timeout" });
+      }, 10000);
+    }
 
     setLoadError(null);
 
@@ -1739,14 +1843,17 @@ function ClientSelectionsModuleHost({ moduleContext, restoringActiveJob = false,
         setLoadedClientSelectionsPage(() => Component);
       })
       .catch((error) => {
-        if (cancelled) return;
+        if (cancelled || timedOut) return;
+        window.clearTimeout(mountTimeoutRef.current);
+        mountTimeoutRef.current = null;
         console.error("[Client Selections] import error", error);
         setLoadError({ error, source: "dynamic-import" });
       });
 
     return () => {
       cancelled = true;
-      window.clearTimeout(slowMountTimer);
+      window.clearTimeout(mountTimeoutRef.current);
+      mountTimeoutRef.current = null;
     };
   }, [retryKey]);
 
@@ -1801,7 +1908,10 @@ function ClientSelectionsModuleHost({ moduleContext, restoringActiveJob = false,
           onBackToDashboard={onBackToDashboard}
         />
       )}
-      onError={(error, info) => setLoadError({ error, info, source: "react-boundary" })}
+      onError={(error, info) => {
+        console.error("[Client Selections] component mount error", error, info);
+        setLoadError({ error, info, source: "react-boundary" });
+      }}
     >
       <LoadedClientSelectionsPage
         key={`${retryKey}:${moduleContext?.workspaceId || ""}:${moduleContext?.projectId || ""}`}
@@ -1810,6 +1920,8 @@ function ClientSelectionsModuleHost({ moduleContext, restoringActiveJob = false,
         onEmbeddedBack={onBackToDashboard}
         onEmbeddedMount={() => {
           mountedRef.current = true;
+          window.clearTimeout(mountTimeoutRef.current);
+          mountTimeoutRef.current = null;
         }}
       />
     </ClientSelectionsErrorBoundary>
@@ -2988,72 +3100,232 @@ function WindowScheduleSheet({ sheet }) {
 function FormulaSheet({ sheet, formulaTarget, onPickFormulaReference, canEditFormulas = false }) {
   const rows = formulaRows(sheet);
   const readonly = sheet.previewMode;
-  const locked = readonly || !canEditFormulas;
+  const editingEnabled = !readonly && canEditFormulas;
+  const formulaHeaders = !editingEnabled
+    ? ["Formula Name", "Formula Expression", "Formula Result", "Unit", "Change Note"]
+    : ["Formula Name", "Formula Expression", "Formula Result", "Unit", "Change Note", "Actions"];
   return (
     <div style={styles.pageStack}>
-      {!locked && <button style={styles.addLineButton} onClick={() => sheet.addFormulaRow()}>Add new row</button>}
-      <Spreadsheet headers={locked ? ["Formula Name", "Formula Expression", "Formula Result", "Unit", "Change Note"] : ["Formula Name", "Formula Expression", "Formula Result", "Unit", "Change Note", "Actions"]}>
+      {!editingEnabled ? (
+        <div style={styles.formulaPermissionNotice}>
+          <strong>{readonly ? "Formula editing is unavailable in preview mode." : "Formula editing requires an authorised builder or estimator role."}</strong>
+          <span>{readonly ? "Open the job in the normal Estimate Builder workspace to create a job-level override." : "Ask a workspace owner or administrator to save job-level formula overrides."}</span>
+        </div>
+      ) : (
+        <div style={styles.formulaEditorToolbar}>
+          <button style={styles.addLineButton} onClick={() => sheet.addFormulaRow()}>Add new row</button>
+          <span>Formula changes apply to this job only. Master defaults and approved rates remain unchanged.</span>
+        </div>
+      )}
+      <Spreadsheet
+        headers={formulaHeaders}
+        columnPreferencesKey="calculations"
+        defaultColumnWidths={{
+          "Formula Name": 260,
+          "Formula Expression": 640,
+          "Formula Result": 180,
+          Unit: 110,
+          "Change Note": 360,
+          Actions: 300,
+        }}
+      >
         {rows.map((row) => (
-          <tr key={row.key}>
-            <Cell strong>
-              {row.custom ? (
-                <BufferedInput
-                  disabled={locked}
-                  style={styles.itemInput}
-                  value={row.label || ""}
-                  onCommit={(next) => sheet.updateFormulaRowMeta(row.key, "label", next)}
-                />
-              ) : row.label}
-            </Cell>
-            <Cell>
-              <BufferedInput
-                id={rowDomId("formula-edit", row.key)}
-                disabled={locked}
-                style={styles.formulaInput}
-                value={formulaForRow(sheet, row)}
-                onCommit={(next) => sheet.updateFormula(row.key, next)}
-              />
-            </Cell>
-            <Cell final>
-              <button
-                style={formulaPickButtonStyle(formulaTarget)}
-                title={formulaTarget ? `Insert ${row.key}` : row.key}
-                onClick={() => formulaTarget && onPickFormulaReference(row.key)}
-              >
-                {formulaResultDisplay(sheet, row.key)}
-              </button>
-            </Cell>
-            <Cell>
-              {row.custom ? (
-                <BufferedInput
-                  disabled={locked}
-                  style={styles.unitInput}
-                  value={row.unit || ""}
-                  onCommit={(next) => sheet.updateFormulaRowMeta(row.key, "unit", next)}
-                />
-              ) : row.unit}
-            </Cell>
-            <Cell>
-              <BufferedInput
-                style={styles.input}
-                placeholder="Why this formula changed for this job"
-                value={sheet.workbook.formulaNotes?.[row.key] || ""}
-                onCommit={(next) => sheet.updateFormulaNote(row.key, next)}
-              />
-            </Cell>
-            {!locked && <Cell>
-              <div style={styles.rowActions}>
-                <button style={styles.smallButton} onClick={() => focusRowEditor(rowDomId("formula-edit", row.key))}>Edit</button>
-                <button style={styles.smallButton} onClick={() => sheet.addFormulaRow(row.key, "after")}>Insert below</button>
-                {!row.custom && <button style={styles.smallButton} onClick={() => sheet.requestPromoteFormula(row.key)}>Promote Later</button>}
-                <button style={styles.dangerButton} onClick={() => sheet.deleteFormulaRow(row.key)}>Delete</button>
-              </div>
-            </Cell>}
-          </tr>
+          <FormulaEditorRow
+            key={row.key}
+            sheet={sheet}
+            row={row}
+            editingEnabled={editingEnabled}
+            formulaTarget={formulaTarget}
+            onPickFormulaReference={onPickFormulaReference}
+          />
         ))}
       </Spreadsheet>
       <HistoryPanel title="Formula Change History" rows={sheet.workbook.formulaHistory || []} />
     </div>
+  );
+}
+
+function FormulaEditorRow({ sheet, row, editingEnabled, formulaTarget, onPickFormulaReference }) {
+  const savedExpression = formulaForRow(sheet, row);
+  const defaultExpression = userFacingFormula(dynamicDefaultFormulaForRow(sheet, row)
+    || V4_DEFAULT_FORMULAS[row.key]
+    || row.defaultFormula
+    || row.formula
+    || "");
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(savedExpression);
+  const [note, setNote] = useState(sheet.workbook.formulaNotes?.[row.key] || "");
+  const [status, setStatus] = useState(null);
+
+  useEffect(() => {
+    if (!editing) setDraft(savedExpression);
+  }, [editing, savedExpression]);
+  useEffect(() => {
+    if (!editing) setNote(sheet.workbook.formulaNotes?.[row.key] || "");
+  }, [editing, row.key, sheet.workbook.formulaNotes]);
+
+  const references = estimateBuilderFormulaReferences(savedExpression);
+  const referenceText = references.length
+    ? references.map((name) => `${name} = ${value(sheet.preview.quantities[name])}`).join("; ")
+    : "No source variables; constant expression.";
+  const save = async () => {
+    setStatus({ tone: "working", message: "Validating formula..." });
+    const validation = validateEstimateBuilderFormula({
+      key: row.key,
+      expression: draft,
+      workbook: sheet.workbook,
+      quantities: sheet.preview.quantities,
+    });
+    if (!validation.ok) {
+      setStatus({ tone: "error", message: validation.message });
+      return;
+    }
+    setStatus({ tone: "working", message: "Saving formula override and recalculating..." });
+    const result = await sheet.saveFormulaOverride(row.key, validation.expression, note);
+    if (!result?.ok) {
+      setStatus({ tone: "error", message: `Formula save failed: ${result?.message || "The previous saved revision was retained."}` });
+      return;
+    }
+    setEditing(false);
+    setStatus({ tone: "success", message: `Saved. Current result: ${value(validation.result)}. Dependent quantities and quotation rows recalculated.` });
+  };
+  const reset = async () => {
+    if (!defaultExpression) {
+      setStatus({ tone: "error", message: "This custom formula has no master default to restore." });
+      return;
+    }
+    const validation = validateEstimateBuilderFormula({
+      key: row.key,
+      expression: defaultExpression,
+      workbook: sheet.workbook,
+      quantities: sheet.preview.quantities,
+    });
+    if (!validation.ok) {
+      setStatus({ tone: "error", message: `Default formula could not be restored: ${validation.message}` });
+      return;
+    }
+    setStatus({ tone: "working", message: "Restoring the master default and recalculating..." });
+    const result = await sheet.resetFormulaOverride(row.key, validation.expression, "Reset to master default");
+    if (!result?.ok) {
+      setStatus({ tone: "error", message: `Reset failed: ${result?.message || "The previous saved revision was retained."}` });
+      return;
+    }
+    setDraft(userFacingFormula(validation.expression));
+    setEditing(false);
+    setStatus({ tone: "success", message: `Default restored. Current result: ${value(validation.result)}.` });
+  };
+  const recalculate = () => {
+    const validation = validateEstimateBuilderFormula({
+      key: row.key,
+      expression: editing ? draft : savedExpression,
+      workbook: sheet.workbook,
+      quantities: sheet.preview.quantities,
+    });
+    if (!validation.ok) {
+      setStatus({ tone: "error", message: validation.message });
+      return;
+    }
+    const recalculated = sheet.recalculateFormulas();
+    const result = editing ? validation.result : recalculated.quantities[row.key];
+    setStatus({ tone: "success", message: `Recalculated. Current result: ${value(result)}.` });
+  };
+
+  return (
+    <tr>
+      <Cell strong>
+        {row.custom && editing ? (
+          <BufferedInput
+            style={styles.itemInput}
+            value={row.label || ""}
+            onCommit={(next) => sheet.updateFormulaRowMeta(row.key, "label", next)}
+          />
+        ) : row.label}
+      </Cell>
+      <Cell>
+        {editing ? (
+          <textarea
+            id={rowDomId("formula-edit", row.key)}
+            aria-label={`${row.label} formula expression`}
+            rows={4}
+            style={styles.formulaEditor}
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+          />
+        ) : (
+          <div style={styles.formulaReadView}>
+            <code style={styles.formulaText}>{savedExpression}</code>
+            <small><strong>Sources:</strong> {referenceText}</small>
+            {defaultExpression && <small><strong>Default:</strong> <code>{defaultExpression}</code></small>}
+          </div>
+        )}
+        {status && (
+          <div
+            role={status.tone === "error" ? "alert" : "status"}
+            style={status.tone === "error" ? styles.formulaError : status.tone === "success" ? styles.formulaSuccess : styles.formulaWorking}
+          >
+            {status.message}
+          </div>
+        )}
+      </Cell>
+      <Cell final>
+        <button
+          style={formulaPickButtonStyle(formulaTarget)}
+          title={formulaTarget ? `Insert ${row.key}` : row.key}
+          onClick={() => formulaTarget && onPickFormulaReference(row.key)}
+        >
+          {formulaResultDisplay(sheet, row.key)}
+        </button>
+      </Cell>
+      <Cell>
+        {row.custom && editing ? (
+          <BufferedInput
+            style={styles.unitInput}
+            value={row.unit || ""}
+            onCommit={(next) => sheet.updateFormulaRowMeta(row.key, "unit", next)}
+          />
+        ) : row.unit}
+      </Cell>
+      <Cell>
+        {editing ? (
+          <textarea
+            style={styles.formulaNoteEditor}
+            placeholder="Why this formula is changing for this job"
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+          />
+        ) : (sheet.workbook.formulaNotes?.[row.key] || "No job-specific change note.")}
+      </Cell>
+      {editingEnabled && (
+        <Cell>
+          <div style={styles.rowActions}>
+            {editing ? (
+              <>
+                <button type="button" style={styles.primaryButton} onClick={save}>Save</button>
+                <button
+                  type="button"
+                  style={styles.secondaryButton}
+                  onClick={() => {
+                    setDraft(savedExpression);
+                    setNote(sheet.workbook.formulaNotes?.[row.key] || "");
+                    setStatus(null);
+                    setEditing(false);
+                  }}
+                >
+                  Cancel
+                </button>
+              </>
+            ) : (
+              <button type="button" style={styles.smallButton} onClick={() => { setEditing(true); setStatus(null); }}>Edit</button>
+            )}
+            <button type="button" style={styles.smallButton} onClick={recalculate}>Recalculate</button>
+            <button type="button" style={styles.secondaryButton} disabled={!defaultExpression} onClick={reset}>Reset to Default</button>
+            <button type="button" style={styles.smallButton} onClick={() => sheet.addFormulaRow(row.key, "after")}>Insert below</button>
+            {!row.custom && <button type="button" style={styles.smallButton} onClick={() => sheet.requestPromoteFormula(row.key)}>Promote Later</button>}
+            {row.custom && <button type="button" style={styles.dangerButton} onClick={() => sheet.deleteFormulaRow(row.key)}>Delete</button>}
+          </div>
+        </Cell>
+      )}
+    </tr>
   );
 }
 
@@ -3084,7 +3356,7 @@ function CalculatedQuantitiesSheet({ sheet }) {
   );
 }
 
-function QuotationSheet({ sheet, onFormulaTarget }) {
+function QuotationSheet({ sheet, onFormulaTarget, canEditFormulas = false }) {
   const readonly = sheet.previewMode;
   const search = sheet.lineSearch.trim().toLowerCase();
   const [orderManagerOpen, setOrderManagerOpen] = useState(false);
@@ -3106,6 +3378,8 @@ function QuotationSheet({ sheet, onFormulaTarget }) {
   // never sheet.workbook, never a recalculation. Sections not yet touched this session simply fall
   // through to the saved value below.
   const [collapsedSectionOverrides, setCollapsedSectionOverrides] = useState({});
+  const [quoteRowRenderLimits, setQuoteRowRenderLimits] = useState({});
+  const initialQuoteRowRenderLimit = 120;
   function isQuoteSectionCollapsed(section) {
     return Object.hasOwn(collapsedSectionOverrides, section)
       ? collapsedSectionOverrides[section]
@@ -3117,6 +3391,21 @@ function QuotationSheet({ sheet, onFormulaTarget }) {
   function collapseAllQuoteSectionsLocal() {
     setCollapsedSectionOverrides(Object.fromEntries(sheet.quoteSections.map((name) => [name, true])));
   }
+  useEffect(() => {
+    const revealRow = (event) => {
+      const rowId = String(event?.detail?.rowId || "");
+      if (!rowId) return;
+      for (const [section, group] of Object.entries(sheet.preview?.quotation || {})) {
+        const index = (group?.rows || []).findIndex((row) => row.id === rowId);
+        if (index < 0) continue;
+        setCollapsedSectionOverrides((current) => ({ ...current, [section]: false }));
+        setQuoteRowRenderLimits((current) => ({ ...current, [section]: Math.max(current[section] || initialQuoteRowRenderLimit, index + 1) }));
+        break;
+      }
+    };
+    window.addEventListener("estimate-builder:reveal-quote-row", revealRow);
+    return () => window.removeEventListener("estimate-builder:reveal-quote-row", revealRow);
+  }, [sheet.preview?.quotation]);
 
   // Takeoff openings (from the AI Plan Takeoff Window Schedule) with no exact row in the Section 53
   // WINDOWS price list - each is a visible unpriced line in Section 53 requiring a rate, and is
@@ -3206,7 +3495,7 @@ function QuotationSheet({ sheet, onFormulaTarget }) {
       if (isHiddenQuoteRow(row)) return false;
       if (!isQuoteRowRelevantForFloorCount(row, sheet.workbook)) return false;
       if (!hasSelectedWallThickness(sheet.workbook, "90") && is90mmWallFrameQuoteRow(row) && !(Number(row.qty) > 0)) return false;
-      if (isApplianceHeadingQuoteRow(row) || isCabinetryDivider(row)) return true;
+      if (isApplianceHeadingQuoteRow(row) || isCabinetryDivider(row) || isQuotationSubheadingRow(row)) return true;
       const haystack = `${row.item || ""} ${row.rawText || ""}`.toLowerCase();
       if (search && !haystack.includes(search)) return false;
       if (sheet.hideUnused && !isUsedQuoteRow(row)) return false;
@@ -3214,18 +3503,22 @@ function QuotationSheet({ sheet, onFormulaTarget }) {
     });
     // Heading rows divide CABINETRY into rooms and finishes; each can be collapsed. Summaries come
     // from the calculated section, so they do not change with the search box or Hide unused.
-    const subgroupModel = section === 'CABINETRY' && cabinetryApplies(sheet.workbook.workspaceId)
-      ? buildQuotationSubgroups(previewSection?.rows || [], { headingLevel: (row) => row.cabinetryRowType === 'heading' ? row.cabinetryHeadingLevel : 0, isSpacer: (row) => row.cabinetryRowType === 'spacer' })
+    const subgroupRows = previewSection?.rows || [];
+    const subgroupModel = (section === 'CABINETRY' && cabinetryApplies(sheet.workbook.workspaceId) || subgroupRows.some(isQuotationSubheadingRow) || subgroupRows.some((row) => row.cabinetryRowType === 'heading'))
+      ? buildQuotationSubgroups(subgroupRows, { headingLevel: (row) => row.quotationSubgroupHeadingLevel || (row.cabinetryRowType === 'heading' ? row.cabinetryHeadingLevel : 0), isSpacer: (row) => row.cabinetryRowType === 'spacer' })
       : null;
     // A search shows its matches wherever they are.
     const subgroupOpen = (group) => Boolean(search) || quotationSubgroupState.isOpen(group, subgroupModel, cabinetryGroupStatus);
     const renderedRows = isAppliancePackageSection(section) ? visibleApplianceRows(rows, openApplianceBrands) : subgroupModel ? visibleSubgroupRows(rows, subgroupModel, subgroupOpen) : rows;
+    const renderLimit = search ? renderedRows.length : quoteRowRenderLimits[section] || initialQuoteRowRenderLimit;
+    const visibleRenderedRows = renderedRows.slice(0, renderLimit);
+    const remainingRows = renderedRows.length - visibleRenderedRows.length;
     const showQuoteRows = renderedRows.length > 0 || !isAppliancePackageSection(section);
     // A section with at least one physical product keeps the full product-detail table
     // (mixed rows fold their product-only columns away per row, see below); a section
     // made up entirely of services/labour/allowances uses the compact layout throughout.
     const finalCabinetrySection = section === 'CABINETRY' && cabinetryApplies(sheet.workbook.workspaceId);
-    const sectionHasPhysicalProduct = !finalCabinetrySection && renderedRows.some((row) => !isApplianceHeadingQuoteRow(row) && isPhysicalProductQuoteRow(row));
+    const sectionHasPhysicalProduct = !finalCabinetrySection && renderedRows.some((row) => !isApplianceHeadingQuoteRow(row) && !isQuotationSubheadingRow(row) && isPhysicalProductQuoteRow(row));
     return (
       <section key={section} data-quote-section={section} style={options.nested ? styles.nestedQuoteSection : styles.section}>
         <div
@@ -3283,8 +3576,37 @@ function QuotationSheet({ sheet, onFormulaTarget }) {
               ? ["Description", "Qty", "Unit", "Price", "Cost", "Selection"]
               : ["Move", "Description", "Qty", "Unit", "Price", "Cost", "Selection", "Actions"])}
           compactColumns={readonly ? [] : [0]}
+          columnPreferencesKey={sectionHasPhysicalProduct ? "quotation-products" : "quotation-standard"}
+          defaultColumnWidths={sectionHasPhysicalProduct
+            ? {
+              Move: 72,
+              Image: 96,
+              Product: 230,
+              "Brand / Manufacturer": 190,
+              Supplier: 170,
+              "SKU / Model": 150,
+              Description: 360,
+              Qty: 90,
+              Unit: 90,
+              Price: 120,
+              Cost: 130,
+              Source: 170,
+              Selection: 190,
+              Notes: 260,
+              Actions: 260,
+            }
+            : {
+              Move: 72,
+              Description: 440,
+              Qty: 90,
+              Unit: 90,
+              Price: 120,
+              Cost: 130,
+              Selection: 220,
+              Actions: 260,
+            }}
         >
-          {renderedRows.map((row, rowIndex) => {
+          {visibleRenderedRows.map((row, rowIndex) => {
             const subgroup = subgroupModel?.groups.get(row.id);
             if (subgroup) {
               // The whole coloured heading opens and closes its group.
@@ -3292,8 +3614,8 @@ function QuotationSheet({ sheet, onFormulaTarget }) {
               const toggle = () => quotationSubgroupState.toggle(subgroup, subgroupModel, cabinetryGroupStatus);
               return <tr key={row.id} role="button" tabIndex={0} aria-expanded={open} data-subgroup-label={row.item} data-subgroup-open={open ? 'true' : 'false'} style={{ cursor: 'pointer' }}
                 onClick={toggle} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggle(); } }}
-                data-cabinetry-row-type={row.cabinetryRowType} data-cabinetry-source-row={row.cabinetrySourceRow} data-cabinetry-heading-level={row.cabinetryHeadingLevel}>
-                <Cell colSpan={readonly ? 6 : 8} heading={subgroup.level === 1} subheading={subgroup.level === 2}>
+                data-cabinetry-row-type={row.cabinetryRowType} data-cabinetry-source-row={row.cabinetrySourceRow} data-cabinetry-heading-level={row.cabinetryHeadingLevel} data-quotation-subheading-level={row.quotationSubgroupHeadingLevel}>
+                  <Cell colSpan={sectionHasPhysicalProduct ? (readonly ? 13 : 15) : (readonly ? 6 : 8)} heading={subgroup.level === 1} subheading={subgroup.level === 2}>
                   <span style={{ display: 'flex', alignItems: 'baseline', gap: 16, flexWrap: 'wrap' }}>
                     <span><span aria-hidden="true" style={{ display: 'inline-block', width: '1.2em' }}>{open ? '▼' : '▶'}</span>{row.item}</span>
                     <span data-subgroup-summary style={{ marginLeft: 'auto', display: 'flex', gap: 16, fontSize: 13, fontWeight: 600 }}>
@@ -3346,7 +3668,8 @@ function QuotationSheet({ sheet, onFormulaTarget }) {
 
             const rowIsPhysical = isPhysicalProductQuoteRow(row);
             const moveCell = !readonly && <Cell compact><span style={styles.dragHandle} title="Drag row">::</span></Cell>;
-            const qtyCell = (
+            const progressRow = Boolean(row.progressAllocation);
+            const qtyCell = progressRow ? <Cell><span style={styles.readOnly}>-</span></Cell> : (
               <Cell>
                 {isBlankQuoteQtyRow(row) ? (
                   <BufferedInput disabled={row.quantityLocked} style={styles.numberInput} value={quoteInputQty(row, sheet)} onFocus={() => onFormulaTarget({ section, id: row.id })} onCommit={(next) => sheet.updateQuote(section, row.id, "quantity", next)} />
@@ -3358,15 +3681,22 @@ function QuotationSheet({ sheet, onFormulaTarget }) {
               </Cell>
             );
             const unitCell = <Cell><BufferedInput style={styles.unitInput} value={row.unit || ""} onCommit={(next) => sheet.updateQuote(section, row.id, "unit", next)} /></Cell>;
-            const priceCell = <Cell><BufferedInput style={styles.rateInput} value={value(row.selectionSource ? row.activeUnitPrice ?? '' : row.manualRate || row.excelRate)} onCommit={(next) => sheet.updateQuote(section, row.id, "manualRate", currencyInputValue(next))} /></Cell>;
-            const costCell = <Cell final>{quoteCost(row)}</Cell>;
+            const priceCell = progressRow ? <Cell><span style={styles.readOnly}>-</span></Cell> : <Cell><BufferedInput style={styles.rateInput} value={value(row.selectionSource ? row.activeUnitPrice ?? '' : row.manualRate || row.excelRate)} onCommit={(next) => sheet.updateQuote(section, row.id, "manualRate", currencyInputValue(next))} /></Cell>;
+            const costCell = <Cell final>{progressRow ? 'Not billed' : quoteCost(row)}</Cell>;
             const sourceCell = <Cell>{row.source === 'client-selections-internal-product' && row.priceStatus === 'Quote required' && !row.finalRateUsed ? 'Quote required' : row.sourceOfRate}</Cell>;
             const selectionCell = (colSpan) => (
               <Cell colSpan={colSpan}>
                 <QuoteSelectionReferenceCell
                   row={row}
                   readonly={readonly}
+                  canEditFormula={canEditFormulas}
                   onFormulaFocus={() => onFormulaTarget({ section, id: row.id, field: "quantityFormula", formula: row.derivedQuantityFormula })}
+                  onValidateFormula={(expression) => validateQuoteQuantityFormula({
+                    row,
+                    expression,
+                    quotation: sheet.preview.quotation,
+                    quantities: sheet.preview.quantities,
+                  })}
                   onChange={(key, next) => sheet.updateQuote(section, row.id, key, next)}
                 />
               </Cell>
@@ -3504,6 +3834,16 @@ function QuotationSheet({ sheet, onFormulaTarget }) {
             )
           )}
         </Spreadsheet>
+        {remainingRows > 0 && (
+          <div style={styles.sectionFooterActions}>
+            <span>{visibleRenderedRows.length} of {renderedRows.length} rows shown</span>
+            <button type="button" style={styles.secondaryButton} onClick={() => setQuoteRowRenderLimits((current) => ({
+              ...current,
+              [section]: Math.min(renderedRows.length, renderLimit + 250),
+            }))}>Show next {Math.min(250, remainingRows)}</button>
+            <button type="button" style={styles.secondaryButton} onClick={() => setQuoteRowRenderLimits((current) => ({ ...current, [section]: renderedRows.length }))}>Show all</button>
+          </div>
+        )}
         {!readonly && (
           <div style={styles.sectionFooterActions}>
             <button style={styles.addLineButton} onClick={() => sheet.addQuoteLine(section)}>Add line</button>
@@ -3533,8 +3873,8 @@ function QuotationSheet({ sheet, onFormulaTarget }) {
         </div>
       )}
       <QuotationNotifications sheet={sheet} styles={styles} />
-      {!readonly && <CabinetryCataloguePicker workspaceId={sheet.workbook.workspaceId} onAdd={sheet.addCabinetryCatalogueItem} />}
-      <CabinetryReconciliation workbook={sheet.workbook} readonly={readonly} onChange={sheet.setCabinetryRequirements} />
+      <SelectionReconcilePanel sheet={sheet} readonly={readonly} />
+      <CabinetryReconciliation workbook={sheet.workbook} readonly={readonly} onChange={sheet.setCabinetryRequirements} onClassify={sheet.classifyCabinetryLine} onResolve={sheet.updateCabinetrySelectionRequirement} onReturnToAutomatic={sheet.returnCabinetryRowToAutomatic} onRestoreRow={sheet.restoreCabinetryRow} />
       {orderManagerOpen && (
         <div style={styles.orderPanel}>
           <div style={styles.orderPanelHeader}>
@@ -3708,7 +4048,20 @@ function SummarySheet({ sheet }) {
         <button style={styles.secondaryButton} onClick={expandAllRows}>Expand All Rows</button>
         {!readonly && <button style={styles.addLineButton} onClick={sheet.addQuoteSection}>Add new row</button>}
       </div>
-      <Spreadsheet headers={headers}>
+      <Spreadsheet
+        headers={headers}
+        columnPreferencesKey="quotation-summary"
+        defaultColumnWidths={{
+          "Stage / Section": 180,
+          "Section Name": 240,
+          "Item Name": 360,
+          Qty: 90,
+          Unit: 90,
+          Rate: 120,
+          "Total / Cost": 140,
+          Notes: 280,
+        }}
+      >
         {stageGroups.flatMap((group) => {
           const mainOpen = Boolean(expandedStages[group.stageNumber]);
           const rows = [
@@ -5273,6 +5626,15 @@ export function ClientPageSheet({ sheet }) {
 
   const exportMergedProposalPdf = async () => {
     if (!guardedProjectEstimateAction()) return;
+    const integrity = sheet.productSelectionIntegrity();
+    const unresolved = integrity.entries.filter((entry) => entry.outcome.startsWith('BLOCKED_') || entry.procurementStatus !== 'REQUIRED_REPRESENTED');
+    const missingRates = quoteReviewRows(sheet);
+    if (unresolved.length || integrity.duplicates.length || missingRates.length) {
+      const examples = unresolved.slice(0, 8).map(entry => `${entry.productId || entry.requirementKey}: ${entry.outcome}; procurement ${entry.procurementStatus}`).join('\n');
+      const rateExamples = missingRates.slice(0, 5).map(row => `${row.section}: ${row.item || row.description}`).join('\n');
+      setStatusMessage(`Project Estimate PDF blocked: ${unresolved.length} selected product outcome(s), ${missingRates.length} active quotation rate(s), ${integrity.procurementDuplicates.length} duplicate procurement requirement(s) and ${integrity.duplicates.length} duplicate quote charge(s) need resolution.\n${[examples, rateExamples].filter(Boolean).join('\n')}`);
+      return;
+    }
     setStatusMessage("Preparing PDF...");
     try {
       const rawBuilder = draftRef.current || builder;
@@ -5312,6 +5674,7 @@ export function ClientPageSheet({ sheet }) {
         sheet,
         workspaceId,
         linkedFields,
+        productSelectionIntegrity: integrity,
       });
       const requestBody = JSON.stringify(exportPayload);
       assertProjectEstimateExportPayloadIsSmall(exportPayload);
@@ -6384,14 +6747,15 @@ function validateProjectEstimateExportBounds(root) {
   });
 }
 
-function buildProjectEstimateExportPayload({ builder = {}, sheet = {}, workspaceId = "", linkedFields = {} } = {}) {
+function buildProjectEstimateExportPayload({ builder = {}, sheet = {}, workspaceId = "", linkedFields = {}, productSelectionIntegrity = null } = {}) {
   const orderedPages = orderedProjectEstimatePages(builder).filter((page) => !page.hiddenFromPdf);
   return {
     documentType: "project-estimate",
     estimateId: proposalEstimateId(sheet),
-    jobId: sheet?.workbook?.id || sheet?.workbook?.jobId || "",
+    jobId: sheet?.workbook?.jobId || sheet?.workbook?.id || "",
     workspaceId: workspaceId || "",
     projectId: proposalProjectId(sheet),
+    productSelectionIntegrity,
     templateId: builder.templateId || QUOTE_PROPOSAL_TEMPLATE_KEY,
     templateVersion: builder.templateVersion || PROJECT_ESTIMATE_TEMPLATE_VERSION,
     template: builder.template || APPROVED_PROJECT_ESTIMATE_TEMPLATE_STATUS,
@@ -13444,6 +13808,8 @@ function CashflowSummarySheet({ sheet }) {
         </div>
       </section>
 
+      <SubcontractCashflowSection workbook={sheet.workbook} quotation={estimatePreviewQuotation(sheet)} />
+
       <section style={styles.section}>
         <div style={styles.staticSectionHeader}>Progress Payment Cashflow</div>
         <Spreadsheet headers={["Stage", "Progress Payment %", "Incoming Progress Payment", "Outgoing Costs", "Cash Surplus"]}>
@@ -15211,7 +15577,30 @@ function findPreviewQuoteRowBySource(quotation = {}, sourceRow) {
     .find((row) => quoteRowSourceNumber(row) === sourceRow) || null;
 }
 
-function QuoteSelectionReferenceCell({ row, readonly, onChange, onFormulaFocus }) {
+function ProgressAllocationCell({ row, readonly, onChange }) {
+  const result = row.progressAllocationResult;
+  const allocation = row.progressAllocation;
+  const problem = result?.flags?.length ? result.flags : [];
+  const labels = { OVER_ALLOCATED: `Over-allocated by ${money(result?.overAllocatedBy)}: stage allocations exceed the contract total`, INVALID_PERCENT: 'Percentage must be 0-100', INVALID_OVERRIDE: 'Override must be a dollar amount of 0 or more', SOURCE_SECTION_MISSING: `${allocation.sourceSection} section not found` };
+  return (
+    <div style={styles.selectionReferenceCell} data-progress-allocation={allocation.stage}>
+      <div><strong>Progress claim against the {allocation.sourceSection} contract (not added to the quotation total)</strong></div>
+      {result?.managedBy && <div>Managed by the {allocation.sourceSection} payment schedule (Purchase Orders page): {String(result.claimStatus || '').replace(/_/g, ' ').toLowerCase()}</div>}
+      <div>Contract total: {money(result?.contractTotal)}</div>
+      <label>Percentage <BufferedInput disabled={readonly || Boolean(result?.managedBy)} aria-label={`${allocation.stage} percentage`} style={styles.numberInput} value={String(result?.managedBy ? result.percent : allocation.percent ?? '')} onCommit={(next) => onChange('progressPercent', next)} />%</label>
+      <div>Calculated: {money(result?.calculatedAmount)}</div>
+      <label>Manual $ override <BufferedInput disabled={readonly || Boolean(result?.managedBy)} aria-label={`${allocation.stage} manual dollar override`} style={styles.rateInput} value={result?.managedBy ? (result.manualOverride ? money(result.manualOverride) : '') : allocation.manualAmount || ''} onCommit={(next) => onChange('progressManualAmount', next)} /></label>
+      <div><strong>Allocated: {money(result?.allocatedAmount)}</strong> ({result?.mode === 'MANUAL_OVERRIDE' ? 'manual override in use' : result?.mode === 'REMAINDER' ? 'contract balance' : 'percentage'})</div>
+      <div>Remaining contract balance: {money(result?.remaining)}</div>
+      {problem.map((flag) => <div key={flag} role="alert" style={styles.selectionAdjustmentBad}>{labels[flag] || flag}</div>)}
+      {(row.progressAllocationHistory || []).map((entry, index) => <div key={index} style={styles.selectionReferenceMeta}>History only: earlier charge {entry.value} (not applied)</div>)}
+    </div>
+  );
+}
+
+function QuoteSelectionReferenceCell({ row, readonly, canEditFormula, onChange, onFormulaFocus, onValidateFormula }) {
+  const [formulaError, setFormulaError] = useState("");
+  if (row.progressAllocation) return <ProgressAllocationCell row={row} readonly={readonly} onChange={onChange} />;
   const adjustment = quoteSelectionAdjustment(row);
   const formula = row.derivedQuantityFormula || "";
   const selection = quoteSelectionSpec(row);
@@ -15225,13 +15614,22 @@ function QuoteSelectionReferenceCell({ row, readonly, onChange, onFormulaFocus }
       </details>}
       {formula && <>
         <BufferedInput
-          disabled={readonly || row.generatedTakeoffProductRow || row.quantityLocked}
+          disabled={readonly || !canEditFormula || row.generatedTakeoffProductRow || row.quantityLocked}
           aria-label={`Quantity formula for ${row.item}`}
           style={styles.selectionSpecInput}
           value={`=${formula}`}
           onFocus={onFormulaFocus}
-          onCommit={(next) => onChange("quantityFormula", next)}
+          onCommit={(next) => {
+            const validation = onValidateFormula(next);
+            if (!validation.ok) {
+              setFormulaError(validation.message);
+              return;
+            }
+            setFormulaError("");
+            onChange("quantityFormula", validation.expression);
+          }}
         />
+        {formulaError && <div role="alert" style={styles.formulaError}>{formulaError}</div>}
         <div style={{ ...styles.selectionReferenceMeta, whiteSpace: "pre-line" }}>{row.derivedQuantityExplanation}</div>
       </>}
       {(!formula || selection) && <>
@@ -15251,12 +15649,112 @@ function QuoteSelectionReferenceCell({ row, readonly, onChange, onFormulaFocus }
   );
 }
 
-function Spreadsheet({ headers, children, compactColumns = [] }) {
+function Spreadsheet({
+  headers,
+  children,
+  compactColumns = [],
+  columnPreferencesKey = "",
+  defaultColumnWidths = {},
+}) {
   const compactSet = new Set(compactColumns);
+  const storageKey = columnPreferencesKey
+    ? `estimate-builder:column-widths:${columnPreferencesKey}`
+    : "";
+  const [columnWidths, setColumnWidths] = useState(() => {
+    if (!storageKey || typeof window === "undefined") return {};
+    try {
+      const saved = JSON.parse(builderLocalStorage.getItem(storageKey) || "{}");
+      return saved && typeof saved === "object" && !Array.isArray(saved) ? saved : {};
+    } catch (error) {
+      console.warn(`Could not load ${columnPreferencesKey} column widths.`, error);
+      return {};
+    }
+  });
+  const resizable = Boolean(columnPreferencesKey);
+  const widthFor = (header, index) => {
+    if (!resizable) return null;
+    const savedWidth = Number(columnWidths[header]);
+    const defaultWidth = Number(defaultColumnWidths[header]);
+    if (Number.isFinite(savedWidth) && savedWidth >= 72) return savedWidth;
+    if (Number.isFinite(defaultWidth) && defaultWidth >= 72) return defaultWidth;
+    return compactSet.has(index) ? 72 : 160;
+  };
+  const resolvedWidths = headers.map(widthFor);
+  const tableWidth = resizable
+    ? resolvedWidths.reduce((total, width) => total + width, 0)
+    : null;
+  const persistWidth = useCallback((header, width) => {
+    setColumnWidths((current) => {
+      const next = { ...current, [header]: Math.max(72, Math.round(width)) };
+      try {
+        builderLocalStorage.setItem(storageKey, JSON.stringify(next));
+      } catch (error) {
+        console.warn(`Could not save ${columnPreferencesKey} column widths.`, error);
+      }
+      return next;
+    });
+  }, [columnPreferencesKey, storageKey]);
+  const beginResize = (event, header, index) => {
+    if (!resizable) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const startX = event.clientX;
+    const startWidth = widthFor(header, index);
+    const previousCursor = document.body.style.cursor;
+    const previousUserSelect = document.body.style.userSelect;
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    const onMove = (moveEvent) => persistWidth(header, startWidth + moveEvent.clientX - startX);
+    const finishResize = () => {
+      document.body.style.cursor = previousCursor;
+      document.body.style.userSelect = previousUserSelect;
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", finishResize);
+      window.removeEventListener("pointercancel", finishResize);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", finishResize, { once: true });
+    window.addEventListener("pointercancel", finishResize, { once: true });
+  };
   return (
     <div style={styles.tableWrap}>
-      <table style={styles.table}>
-        <thead><tr>{headers.map((header, index) => <th key={`${header}-${index}`} style={{ ...styles.th, ...(compactSet.has(index) ? styles.compactColumn : {}) }}>{header}</th>)}</tr></thead>
+      <table style={{ ...styles.table, ...(resizable ? { width: tableWidth, minWidth: "100%", tableLayout: "fixed" } : {}) }}>
+        {resizable && (
+          <colgroup>
+            {headers.map((header, index) => <col key={`${header}-${index}`} style={{ width: resolvedWidths[index] }} />)}
+          </colgroup>
+        )}
+        <thead>
+          <tr>
+            {headers.map((header, index) => (
+              <th
+                key={`${header}-${index}`}
+                style={{
+                  ...styles.th,
+                  ...(compactSet.has(index) ? styles.compactColumn : {}),
+                  ...(resizable ? { width: resolvedWidths[index] } : {}),
+                }}
+              >
+                {header}
+                {resizable && (
+                  <span
+                    role="separator"
+                    aria-label={`Resize ${header} column`}
+                    aria-orientation="vertical"
+                    tabIndex={0}
+                    style={styles.columnResizeHandle}
+                    onPointerDown={(event) => beginResize(event, header, index)}
+                    onKeyDown={(event) => {
+                      if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+                      event.preventDefault();
+                      persistWidth(header, resolvedWidths[index] + (event.key === "ArrowRight" ? 16 : -16));
+                    }}
+                  />
+                )}
+              </th>
+            ))}
+          </tr>
+        </thead>
         <tbody>{children}</tbody>
       </table>
     </div>
@@ -16736,7 +17234,7 @@ function tabStyle(active) {
 }
 
 function quoteReviewRows(sheet) {
-  return Object.values(sheet.preview.quotation).flatMap((group) => group.rows).filter((row) => row.quoteRequired || row.sourceOfRate === "rate missing" || row.discontinuedWarning);
+  return quotationRateReviewRows(sheet.preview.quotation);
 }
 
 function exportCurrentPageCsv(sheet) {
@@ -17536,6 +18034,8 @@ function formulaForRow(sheet, row) {
 
 function internalFormulaForRow(sheet, row) {
   const key = String(row?.key || "");
+  const saved = sheet.workbook.formulas?.[row.key];
+  if (sheet.workbook.formulaOverrides?.[key] && saved !== undefined && saved !== null) return String(saved).trim();
   // CORRECTED_DEFAULT_FORMULA_KEYS (Items 64-89.1's own wall-area/deduction rows among them) exists
   // precisely to override a stale saved formula with the current, correct default - so it must be
   // checked before "any saved formula wins" below, not after: every real saved workbook has a saved
@@ -17544,7 +18044,6 @@ function internalFormulaForRow(sheet, row) {
   // own calculation, fixed in estimateBuilderWorkbookCalculations.js's currentFormula - this is the
   // Formula Sheet / Calculations page's own separate copy of that same ordering mistake).
   if (CORRECTED_DEFAULT_FORMULA_KEYS.has(key)) return V4_DEFAULT_FORMULAS[row.key] || row.formula || "";
-  const saved = sheet.workbook.formulas?.[row.key];
   if (saved !== undefined && saved !== null) return String(saved).trim();
   const dynamicFormula = dynamicDefaultFormulaForRow(sheet, row);
   const defaultFormula = dynamicFormula || V4_DEFAULT_FORMULAS[row.key] || row.defaultFormula || row.formula || "";
@@ -17620,7 +18119,11 @@ function isStaleFormula(key, formula) {
   if (key === "lowerSkirtingLm" && (formula === "lowerInternalWallsLm + lowerExternalWallsLm" || formula === "(lowerInternalWallsLm * 2) + lowerExternalWallsLm")) return true;
   if (key === "upperSkirtingLm" && (formula === "upperInternalWallsLm + upperExternalWallsLm" || formula === "(upperInternalWallsLm * 2) + upperExternalWallsLm")) return true;
   if (key === "thirdSkirtingLm" && (formula === "thirdInternalWallsLm + thirdExternalWallsLm" || formula === "(thirdInternalWallsLm * 2) + thirdExternalWallsLm")) return true;
-  if (key === "skirtingLengthsEach" && formula === "(lowerSkirtingLm + upperSkirtingLm + thirdSkirtingLm) * 1.15 / 5.4") return true;
+  if (key === "skirtingLengthsEach" && (
+    formula === "(lowerSkirtingLm + upperSkirtingLm + thirdSkirtingLm) * 0.85 / 5.4" ||
+    formula === "(lowerSkirtingLm + upperSkirtingLm + thirdSkirtingLm) * 1.15 / 5.4" ||
+    formula === "ceil((skirtingLm / 5.4) * 1.1)"
+  )) return true;
   if (key === "upperExternalWallAreaM2" && (formula.includes("+ 0.3") || formula === "upperExternalWallsLm * upperCeilingHeight")) return true;
   if (key === "thirdExternalWallAreaM2" && (formula.includes("+ 0.3") || formula === "thirdExternalWallsLm * thirdCeilingHeight")) return true;
   return false;
@@ -18615,6 +19118,8 @@ function displayQuoteRowNumber(row, rowIndex = 0) {
 }
 
 function quoteSectionNumber(section, sheet) {
+  const mainIndex = topLevelQuoteSections(sheet.quoteSections).indexOf(section);
+  if (mainIndex >= 0) return String(mainIndex + 1);
   const savedNumber = sheet.workbook?.quotation?.[section]?.groupNumber;
   if (savedNumber) return savedNumber;
   const override = QUOTE_SECTION_NUMBER_OVERRIDES[quoteSectionBaseName(section)];
@@ -18665,6 +19170,10 @@ function quoteItem(row) {
 
 function isApplianceHeadingQuoteRow(row) {
   return row?.applianceHeading === true || row?.lineType === "Appliance heading";
+}
+
+function isQuotationSubheadingRow(row) {
+  return Boolean(row?.quotationSubgroupHeadingLevel);
 }
 
 function isAppliancePackageSection(section) {
@@ -18755,6 +19264,9 @@ function quoteDisplayNumbering(sheet, openApplianceBrands = {}) {
       numbering.rows[row.id] = String(rowNumber);
       rowNumber += 1;
     });
+  });
+  topLevelQuoteSections(sheet.quoteSections).forEach((section, index) => {
+    numbering.sections[section] = String(index + 1);
   });
   return numbering;
 }
@@ -20197,6 +20709,7 @@ const styles = {
   tableWrap: { overflow: "auto", maxHeight: "calc(100vh - 235px)" },
   table: { width: "100%", borderCollapse: "collapse", fontSize: 16 },
   th: { position: "sticky", top: 0, zIndex: 2, background: "#dbeafe", color: "#0f172a", padding: "8px 9px", border: "1px solid #bfdbfe", textAlign: "left", fontWeight: 600, whiteSpace: "nowrap" },
+  columnResizeHandle: { position: "absolute", top: 0, right: -4, width: 9, height: "100%", cursor: "col-resize", touchAction: "none", zIndex: 3, borderRight: "2px solid transparent" },
   td: { padding: "5px 7px", border: "1px solid #e2e8f0", color: "#0f172a", verticalAlign: "middle", background: "#ffffff" },
   // Row numbers like the wall-thickness rows' 74.101-74.112 are 6 characters wide - too wide for
   // the previous 38px column at this table's 16px bold tabular-nums font, so the "#" text spilled
@@ -20222,6 +20735,14 @@ const styles = {
   selectInput: { width: "100%", minWidth: 150, boxSizing: "border-box", border: "1px solid #64748b", borderRadius: 5, padding: "6px 7px", color: "#0f172a", background: "#ffffff", fontSize: 14, fontWeight: 700 },
   removedProcurementRow: { opacity: 0.55, background: "#f8fafc" },
   formulaInput: { width: "100%", minWidth: 260, boxSizing: "border-box", border: "1px solid #0f766e", borderRadius: 5, padding: "6px 7px", color: "#0f172a", background: "#f0fdfa", fontFamily: "Consolas, monospace", fontSize: 16, fontWeight: 600 },
+  formulaEditor: { width: "100%", minHeight: 74, boxSizing: "border-box", border: "1px solid #0f766e", borderRadius: 5, padding: "6px 7px", color: "#0f172a", background: "#f0fdfa", fontFamily: "Consolas, monospace", fontSize: 16, fontWeight: 600, lineHeight: 1.35, resize: "vertical", overflowWrap: "anywhere", whiteSpace: "pre-wrap" },
+  formulaEditorToolbar: { display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", padding: "8px 10px", border: "1px solid #bfdbfe", borderRadius: 8, background: "#eff6ff" },
+  formulaPermissionNotice: { display: "grid", gap: 8, justifyItems: "start", padding: 14, border: "1px solid #f59e0b", borderRadius: 8, background: "#fffbeb", color: "#78350f" },
+  formulaReadView: { display: "grid", gap: 6, minWidth: 0, overflowWrap: "anywhere" },
+  formulaNoteEditor: { width: "100%", minHeight: 74, boxSizing: "border-box", border: "1px solid #64748b", borderRadius: 5, padding: "6px 7px", color: "#0f172a", background: "#ffffff", fontSize: 14, resize: "vertical" },
+  formulaError: { marginTop: 7, padding: "6px 8px", borderRadius: 5, background: "#fee2e2", color: "#991b1b", fontWeight: 700 },
+  formulaSuccess: { marginTop: 7, padding: "6px 8px", borderRadius: 5, background: "#dcfce7", color: "#166534", fontWeight: 700 },
+  formulaWorking: { marginTop: 7, padding: "6px 8px", borderRadius: 5, background: "#dbeafe", color: "#1e40af", fontWeight: 700 },
   formulaText: { fontFamily: "Consolas, monospace", color: "#0f172a", fontWeight: 600 },
   formulaPickButton: { width: "100%", background: "transparent", color: "inherit", border: 0, padding: 0, textAlign: "left", font: "inherit", fontWeight: 600 },
   formulaPickButtonActive: { width: "100%", background: "#bbf7d0", color: "#14532d", border: "1px solid #86efac", borderRadius: 5, padding: "4px 6px", textAlign: "left", font: "inherit", fontWeight: 600, cursor: "pointer" },

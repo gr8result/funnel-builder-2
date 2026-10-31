@@ -8,7 +8,7 @@
 // rejected with 409 so a stale save can never silently clobber newer work.
 
 import { supabaseAdmin } from "../../../../lib/supabaseAdmin";
-import { withWorkspace } from "../../../../lib/withWorkspace";
+import { withWorkspace, INTERNAL_COMMERCIAL_ROLES } from "../../../../lib/withWorkspace";
 import {
   fetchInstanceWithPages,
   fetchTemplateWithPages,
@@ -101,4 +101,4 @@ async function handler(req, res) {
   return res.status(405).json({ ok: false, error: "Method not allowed" });
 }
 
-export default withWorkspace(handler);
+export default withWorkspace(handler, { roles: INTERNAL_COMMERCIAL_ROLES });

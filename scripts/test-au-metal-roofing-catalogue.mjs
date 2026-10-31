@@ -261,7 +261,8 @@ assert.equal(statusForRequirement(roofingRequirement, roofingPayload), "complete
 });
 assert.ok(selectionsSource.includes("Choose fascia, gutters and downpipes before saving the roofing package."), "Roofing selection must validate the full roof package");
 assert.ok(selectionsSource.includes("roofingGuidedProducts"), "Roofing workflow must use master roofing products instead of approved quote rows");
-assert.ok(selectionsSource.includes('products={guidedRequirement.requirementKey === "bricks" ? brickGuidedProducts : guidedRequirement.requirementKey === "roofing" ? roofingGuidedProducts : guidedProducts}'), "Roofing workflow must be fed by filtered roofing master products");
+assert.ok(selectionsSource.includes('guidedRequirement.requirementKey === "roofing" ? roofingGuidedProducts'), "Roofing workflow must render its filtered product list");
+assert.ok(selectionsSource.includes("guidedProductsForRequirement(guidedRequirement, roofingMasterSelectionProducts)"), "Roofing products must be filtered from the master catalogue for the current requirement");
 ["Colorbond Corrugated", "Premium Colorbond Profile", "Monier Horizon Roof Tile"].forEach((fakeName) => {
   assert.ok(!selectionsSource.includes(fakeName), `${fakeName} fake roofing option must not be displayed`);
 });

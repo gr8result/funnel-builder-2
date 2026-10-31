@@ -1,0 +1,64 @@
+import {applySelectionProduct} from '../lib/builders/selectionQuoteEngine.js';
+import assert from 'node:assert/strict';
+import {chooseSelectionBookSource,roomForSavedRequirement} from '../lib/builders/selectionBookSource.js';
+import {requirementProgress, statusForRequirement} from '../lib/builders/clientSelectionWorkflow.js';
+import {canonicalProjectRoomName,renameRoomRecords} from '../lib/builders/projectRoomModel.js';
+import {normaliseCabinetrySelection} from '../lib/builders/cabinetryWorkflow.js';
+import {planCabinetryQuotation} from '../lib/construction-estimation/cabinetryRequirements.js';
+import {requestApprovedCatalogue} from '../lib/builders/approvedCatalogueRequest.js';
+const book={rooms:[{id:'room',name:'Kitchen',rows:[{id:'chosen',guidedRequirementKey:'oven',selectedProduct:'Saved choice',status:'confirmed',guidedSelection:{requirementKey:'oven',productId:'stable-product',colour:'Black',quantity:2}}]}]};
+const workbook={jobId:'recovered-job',savedAt:'2026-10-08T20:16:16Z',clientSelectionsBook:book};
+const draft={projectId:'recovered-job',workspaceId:'builder',savedAt:'2026-10-07T22:13:09Z',book:{rooms:[]}};
+const before=JSON.stringify({workbook,draft});
+const choose=d=>chooseSelectionBookSource({workbook,draft:d,projectId:'recovered-job',workspaceId:'builder'});
+assert.equal(choose(draft).book,book);
+assert.equal(choose({...draft,savedAt:'2026-10-09T00:00:00Z'}).source,'workbook', 'A newer empty initializer must not displace populated selections');
+assert.equal(choose({...draft,book:structuredClone(book),savedAt:'2026-10-09T00:00:00Z'}).source,'browser-draft');
+assert.equal(choose({...draft,projectId:'recovered-job-abcdef',savedAt:'2026-10-09T00:00:00Z'}).source,'workbook');
+assert.equal(choose({...draft,workspaceId:'other',savedAt:'2026-10-09T00:00:00Z'}).source,'workbook');
+assert.equal(JSON.stringify({workbook,draft}),before);
+assert.equal(chooseSelectionBookSource({workbook:null}),null);
+for(const priceState of ['Price Pending','Quote Required','Price Expired']){
+ const selected={selection_status:'confirmed',selected_details:{productId:'stable',colour:'Black',quantity:2,priceState}};
+ const snapshot=JSON.stringify(selected);
+ const progress=requirementProgress({requirementKey:'oven'},selected,{measurementOutstanding:true,quotationMappingOutstanding:true});
+ assert.equal(progress.clientSelectionConfirmed,true);assert.equal(progress.measurementOutstanding,true);assert.equal(progress.quotationMappingOutstanding,true);assert.equal(JSON.stringify(selected),snapshot);
+}
+assert.equal(statusForRequirement({},null),'not_started');
+assert.equal(statusForRequirement({}, {selection_status:'confirmed',selected_details:{paintScheme:{confirmed:false}}}),'incomplete');
+assert.equal(statusForRequirement({}, {selection_status:'confirmed',selected_details:{tilingRoomStatuses:[{status:'complete'},{status:'incomplete'}]}}),'incomplete');
+const model={rooms:[{id:'stable-bathroom',name:'Main Bathroom',sourceKeys:['bathroom','main-bathroom']}]};
+assert.equal(canonicalProjectRoomName('Bathroom',model),'Main Bathroom');
+assert.equal(canonicalProjectRoomName('Bathroom',{rooms:[...model.rooms,{id:'other',name:'Ensuite',sourceKeys:['bathroom']}]}),'Bathroom');
+const selection={schemaVersion:2,locations:[{id:'cabinetry-bathroom',location:'Main Bathroom',name:'Main Bathroom',included:true,status:'complete',confirmedAt:'2026-10-01',doorMaterialGroup:'Standard colourboard'}],schedule:[{componentId:'vanity',location:'Bathroom',cabinetTypeId:'vanity_wallhung_2door_1200',unitType:'Wall hung vanity - 2 door - 1200mm',quantity:1}]};
+const w={clientSelectionsBook:{projectRoomModel:model,rooms:[{name:'Kitchen',rows:[{guidedSelection:{cabinetrySelection:selection}}]}]}};
+const original=JSON.stringify(w);const plan=planCabinetryQuotation(w);
+assert.equal(plan.entries[0].status,'MATCHED TO QUOTE ROW');assert.equal(plan.entries[0].room,'Main Bathroom');assert.equal(JSON.stringify(w),original);
+const normalized=normaliseCabinetrySelection(selection,model);
+assert(normalized.schedule.some(l=>l.componentId==='vanity'&&l.location==='Main Bathroom'));
+const orphan=normaliseCabinetrySelection({...selection,schedule:[...selection.schedule,{componentId:'orphan',location:'Renamed unknown',unitType:'Standard base unit',quantity:3}]},model);
+assert(orphan.legacyCabinetSchedule.some(l=>l.componentId==='orphan'&&l.quantity===3));
+assert.equal(orphan.locations[0].confirmedAt,'2026-10-01');
+const renamed=renameRoomRecords({rooms:[{rows:[{guidedSelection:{cabinetrySelection:{...selection,locations:[{id:'cabinetry-bathroom',location:'Bathroom',name:'Bathroom'}]}}}]}]},{key:'bathroom',name:'Bathroom',id:'stable-bathroom'},{name:'Main Bathroom'});
+assert.equal(renamed.rooms[0].rows[0].guidedSelection.cabinetrySelection.schedule[0].location,'Main Bathroom');
+let calls=0,refreshes=0;
+const auth={getSession:async()=>({data:{session:{access_token:'expired'}}}),refreshSession:async()=>{refreshes++;return {data:{session:{access_token:'renewed'}}}}};
+const payload=await requestApprovedCatalogue({auth,workspaceId:'builder',fetcher:async(_url,options)=>{calls++;if(calls===1)return {status:401,ok:false};assert.equal(options.headers.Authorization,'Bearer renewed');return {status:200,ok:true,json:async()=>({products:[{productId:'stable-product'}]})}}});
+assert.equal(calls,2);assert.equal(refreshes,1);assert.equal(payload.products.length,1);
+await assert.rejects(requestApprovedCatalogue({auth,workspaceId:'builder',fetcher:async()=>({status:403,ok:false,json:async()=>({error:'Not a member'})})}),/403.*Not a member/);
+await assert.rejects(requestApprovedCatalogue({auth:{getSession:async()=>({data:{session:null}})},workspaceId:'builder',fetcher:()=>assert.fail('No unauthenticated request')}),/Sign in/);
+console.log('PASS stale-cache precedence, job isolation, independent progress, mandatory decisions, room aliases, schedule retention, read-only matching, auth refresh and error reporting');
+
+const quoted=applySelectionProduct({id:'quote-1',quantity:3,manualMargin:15,baselineUnitPrice:100},{source:'CLIENT_SELECTION',productId:'saved-unpriced',productName:'Saved product',unitPrice:null});
+assert.equal(quoted.selectionStatus,'SELECTED');assert.equal(quoted.selectionPricePending,true);assert.equal(quoted.quantity,3);assert.equal(quoted.manualMargin,15);assert.equal(quoted.baselineUnitPrice,100);
+console.log('PASS unpriced chosen product stays selected in Quotation Builder');
+
+const noLock=await requestApprovedCatalogue({auth:{getSession:()=>assert.fail('A restored auth session must not reacquire the auth lock')},session:{access_token:'restored'},workspaceId:'builder',fetcher:async(_url,options)=>{assert.equal(options.headers.Authorization,'Bearer restored');return {ok:true,status:200,json:async()=>({products:[]})}}});
+assert.deepEqual(noLock.products,[]);
+console.log('PASS feed uses restored auth session without contending for the auth lock');
+
+const renamedCategory={...book,rooms:book.rooms.map(room=>({...room,name:'Renamed appliances'}))};
+assert.equal(roomForSavedRequirement(renamedCategory,'oven').rows[0].guidedSelection.productId,'stable-product');
+assert.equal(roomForSavedRequirement({rooms:[...renamedCategory.rooms,...renamedCategory.rooms]},'oven'),null);
+assert.equal(requirementProgress({}, {selection_status:'confirmed',selected_details:{priceStatus:'quote_required'}}).supplierPriceOutstanding,true);
+console.log('PASS stable requirement references survive category renames; conflicting owners are not merged');

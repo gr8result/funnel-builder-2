@@ -16,6 +16,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { guardSmsSend } from "../../../lib/smsValidation";
 import { requestWorkspaceId } from "../../../lib/demoWorkspace";
+import { hasSmsMarketingConsent } from "../../../lib/marketingConsent";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
 const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
@@ -92,21 +93,20 @@ export default async function handler(req, res) {
     let toPhone = "";
     let resolvedLeadId = lead_id || null;
 
-    if (directTo) {
-      toPhone = directTo;
+    if (directTo && !lead_id) {
+      return res.status(400).json({ ok: false, error: "Marketing SMS requires a CRM contact with recorded SMS consent; direct-number sends are disabled." });
     } else if (lead_id) {
       let leadQuery = supabase
         .from("leads")
-        .select("id, user_id, phone, name")
+        .select("id, user_id, workspace_id, phone, sms_marketing_consent, sms_marketing_opt_out, sms_opt_out")
         .eq("id", lead_id);
       if (workspaceId) leadQuery = leadQuery.eq("workspace_id", workspaceId);
       const { data: lead, error: leadErr } = await leadQuery.maybeSingle();
 
       if (leadErr) return res.status(500).json({ ok: false, error: leadErr.message });
       if (!lead) return res.status(404).json({ ok: false, error: "Lead not found" });
-      if (String(lead.user_id) !== String(user_id)) {
-        return res.status(403).json({ ok: false, error: "Not allowed for this lead" });
-      }
+      if (String(lead.user_id) !== String(user_id) && (!workspaceId || String(lead.workspace_id) !== String(workspaceId))) return res.status(403).json({ ok: false, error: "Not allowed for this lead" });
+      if (!hasSmsMarketingConsent(lead)) return res.status(403).json({ ok: false, error: "This contact has no recorded SMS marketing consent or has opted out." });
 
       toPhone = lead.phone || "";
     } else {

@@ -11,7 +11,7 @@ const end = source.indexOf(endMarker);
 assert.ok(start > -1 && end > start, "Could not locate the startup hydration effect body");
 const body = source.slice(start, end + endMarker.length - "\n    })();".length);
 
-function runStartup({ explicitJobKey, loadStoredJob, fallbackRecovered = null }) {
+function runStartup({ explicitJobKey, urlJobKey = "", loadStoredJob, fallbackRecovered = null }) {
   const calls = { persistenceStatus: [], clearedExplicitKey: 0, hydrated: 0, log: [], clearedActiveStoredJob: 0, savedExplicitKeys: [], workbook: null };
   const deps = {
     cancelled: false,
@@ -20,7 +20,7 @@ function runStartup({ explicitJobKey, loadStoredJob, fallbackRecovered = null })
     workbookRef: { current: {} },
     lastAutosaveSignatureRef: { current: "" },
     clearActiveRegisteredEstimateJob: () => {},
-    loadExplicitActiveJobSessionKey: () => explicitJobKey,
+    loadExplicitActiveJobSessionKey: () => urlJobKey || explicitJobKey,
     loadStoredJob,
     loadLastActiveOrRecentStoredJob: async () => fallbackRecovered,
     saveExplicitActiveJobSessionKey: (key) => calls.savedExplicitKeys.push(key),
@@ -34,6 +34,7 @@ function runStartup({ explicitJobKey, loadStoredJob, fallbackRecovered = null })
     normalizeWorkbook: (value) => value,
     resolveLastActiveWorkbookPage: () => "projectDashboard",
     jobContentSignature: () => "signature",
+    jobKeyFromLocation: () => urlJobKey,
     loadRecentEstimateJobs: () => [],
     loadRecentEstimateFiles: () => [],
     setWorkbook: (workbook) => { calls.workbook = workbook; }, setActiveWorkbookPage: () => {}, setLastSavedAt: () => {},
@@ -49,7 +50,7 @@ let calls = await runStartup({ explicitJobKey: "job:gone", loadStoredJob: async 
 assert.equal(calls.hydrated, 1, "A missing saved job must still hydrate the dashboard");
 assert.equal(calls.clearedExplicitKey, 1, "A pointer with no record must be cleared, not left to block every reload");
 assert.equal(calls.persistenceStatus.at(-1).state, "error");
-assert.match(calls.persistenceStatus.at(-1).label, /could not be found/);
+assert.match(calls.persistenceStatus.at(-1).label, /saved in this browser is missing/);
 assert.equal(calls.log.at(-1).destination, "builder-dashboard");
 console.log("PASS a missing saved job hydrates the dashboard and clears the stale pointer.");
 
@@ -71,7 +72,7 @@ assert.equal(calls.clearedActiveStoredJob, 0, "A recoverable job must not fall t
 assert.equal(calls.log.at(-1).destination, "builder-workspace");
 console.log("PASS a recoverable saved job still opens the workspace.");
 
-// 4. A legacy job backup remains openable when both active pointers are missing.
+// 4. With no URL or explicit active key, a discoverable backup is not silently substituted.
 const backupWorkbook = { jobId: "retained-id", data: { savedValue: "keep" } };
 calls = await runStartup({
   explicitJobKey: "",
@@ -79,8 +80,66 @@ calls = await runStartup({
   fallbackRecovered: { type: "job", key: "job:retained-id", recoveredFromBackupKey: "job-backup:existing:timestamp", workbook: backupWorkbook },
 });
 assert.equal(calls.hydrated, 1);
-assert.equal(calls.clearedActiveStoredJob, 0);
-assert.deepEqual(calls.savedExplicitKeys, ["job:retained-id"]);
-assert.deepEqual(calls.workbook, backupWorkbook);
-assert.equal(calls.log.at(-1).destination, "builder-workspace");
-console.log("PASS a discoverable legacy backup hydrates with its existing identity and saved fields.");
+assert.equal(calls.clearedActiveStoredJob, 1);
+assert.deepEqual(calls.savedExplicitKeys, []);
+assert.equal(calls.workbook, null);
+assert.equal(calls.log.at(-1).destination, "builder-dashboard");
+console.log("PASS without a requested or explicit job ID, the loader does not substitute a discoverable backup.");
+
+// 5. URL identity wins over stale browser-wide storage, including after switching jobs.
+const jobs = new Map([
+  ["job:isolated-a", { type: "job", key: "job:isolated-a", workbook: { jobId: "isolated-a", quotation: { A: { rows: [{ id: "a-row", quantity: 2, excelRate: 50 }] } }, summary: { finalQuoteTotal: 110 } } }],
+  ["job:isolated-b", { type: "job", key: "job:isolated-b", workbook: { jobId: "isolated-b", quotation: { B: { rows: [{ id: "b-row", quantity: 3, excelRate: 25 }] } }, summary: { finalQuoteTotal: 82.5 } } }],
+]);
+const isolatedA = await runStartup({
+  explicitJobKey: "job:stale-protected-job",
+  urlJobKey: "job:isolated-a",
+  loadStoredJob: async (key) => jobs.get(key) || null,
+});
+assert.equal(isolatedA.workbook.jobId, "isolated-a");
+assert.deepEqual(Object.values(isolatedA.workbook.quotation).flatMap((section) => section.rows.map((row) => row.id)), ["a-row"]);
+assert.equal(isolatedA.workbook.summary.finalQuoteTotal, 110);
+assert.equal(isolatedA.clearedActiveStoredJob, 0, "A requested URL job never falls through to stale global storage.");
+console.log("PASS URL job ID overrides stale local/session pointers and preserves row identity and quote total.");
+
+const isolatedB = await runStartup({
+  explicitJobKey: "job:isolated-a",
+  urlJobKey: "job:isolated-b",
+  loadStoredJob: async (key) => jobs.get(key) || null,
+});
+assert.equal(isolatedB.workbook.jobId, "isolated-b", "Switching jobs follows the new URL ID, not the previous job pointer.");
+assert.deepEqual(Object.values(isolatedB.workbook.quotation).flatMap((section) => section.rows.map((row) => row.id)), ["b-row"]);
+assert.equal(isolatedB.workbook.summary.finalQuoteTotal, 82.5);
+console.log("PASS switching between two jobs loads the newly requested job only.");
+
+const refreshedJob = await runStartup({
+  explicitJobKey: "job:stale-job",
+  urlJobKey: "job:isolated-a",
+  loadStoredJob: async (key) => jobs.get(key) || null,
+});
+assert.deepEqual(refreshedJob.workbook, isolatedA.workbook, "A hard-refresh startup reads the same saved job, rows and total.");
+console.log("PASS hard-refresh startup restores the same job ID, quotation rows and total.");
+
+const missingUrlJob = await runStartup({
+  explicitJobKey: "job:isolated-a",
+  urlJobKey: "job:missing",
+  loadStoredJob: async (key) => jobs.get(key) || null,
+  fallbackRecovered: jobs.get("job:isolated-a"),
+});
+assert.equal(missingUrlJob.workbook, null, "A missing requested URL job never opens the available stale/recent job.");
+assert.equal(missingUrlJob.clearedActiveStoredJob, 0);
+assert.equal(missingUrlJob.hydrated, 1);
+assert.equal(missingUrlJob.clearedExplicitKey, 1);
+assert.match(missingUrlJob.persistenceStatus.at(-1).label, /saved in this browser is missing/);
+console.log("PASS a missing requested job ID fails closed without substituting another saved job.");
+
+const noJobId = await runStartup({
+  explicitJobKey: "",
+  urlJobKey: "",
+  loadStoredJob: async () => null,
+  fallbackRecovered: jobs.get("job:isolated-a"),
+});
+assert.equal(noJobId.workbook, null, "No requested job ID or explicit pointer leaves the dashboard empty.");
+assert.equal(noJobId.clearedActiveStoredJob, 1);
+assert.equal(noJobId.hydrated, 1);
+console.log("PASS a route with no job ID does not inherit browser-wide active/recent job data.");

@@ -3,10 +3,15 @@ import { readFile } from "node:fs/promises";
 import { withWorkspace } from "../../../lib/withWorkspace";
 import {
   archiveStandardInclusionsSchedule,
+  createStandardInclusionsScheduleDraft,
   createStandardInclusionsScheduleWithPdf,
+  downloadStandardInclusionsSchedulePdf,
+  duplicateStandardInclusionsSchedule,
   listStandardInclusionsSchedules,
+  loadStandardInclusionsSchedule,
   replaceStandardInclusionsSchedulePdf,
   restoreStandardInclusionsVersion,
+  updateStandardInclusionsSchedule,
 } from "../../../lib/standard-inclusions/pdfLibrary";
 
 export const config = {
@@ -50,9 +55,30 @@ async function parseJsonBody(req) {
 async function handler(req, res) {
   const workspaceId = req.workspaceId;
   const userId = req.user?.id;
+  const canManage = ["owner", "admin", "marketing"].includes(req.memberRole);
 
   try {
     if (req.method === "GET") {
+      const downloadId = String(req.query?.download || "").trim();
+      if (downloadId) {
+        const { buffer, fileName } = await downloadStandardInclusionsSchedulePdf({
+          workspaceId,
+          scheduleId: downloadId,
+          versionId: String(req.query?.version || "").trim(),
+        });
+        const safeName = String(fileName || "standard-inclusions.pdf").replace(/[\r\n"\\]/g, "_");
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader("Content-Length", buffer.length);
+        res.setHeader("Content-Disposition", `attachment; filename="${safeName}"`);
+        res.setHeader("Cache-Control", "private, no-store");
+        return res.status(200).send(buffer);
+      }
+      const scheduleId = String(req.query?.id || "").trim();
+      if (scheduleId) {
+        const schedule = await loadStandardInclusionsSchedule({ workspaceId, scheduleId });
+        if (!schedule) return res.status(404).json({ ok: false, error: "Schedule not found in this workspace." });
+        return res.status(200).json({ ok: true, schedules: [schedule] });
+      }
       const schedules = await listStandardInclusionsSchedules({
         workspaceId,
         includeArchived: String(req.query?.includeArchived || "") === "true",
@@ -62,6 +88,22 @@ async function handler(req, res) {
 
     if (req.method === "POST") {
       const contentType = String(req.headers["content-type"] || "");
+      if (contentType.includes("application/json")) {
+        if (!canManage) return res.status(403).json({ ok: false, error: "Schedule editing permission is required." });
+        const body = await parseJsonBody(req);
+        if (!body.name) return res.status(400).json({ ok: false, error: "Schedule name is required." });
+        const schedule = await createStandardInclusionsScheduleDraft({
+          workspaceId,
+          userId,
+          scheduleId: String(body.scheduleId || "").trim(),
+          name: String(body.name || ""),
+          description: String(body.description || ""),
+          tierKey: String(body.tierKey || ""),
+          metadata: body.metadata && typeof body.metadata === "object" ? body.metadata : {},
+        });
+        return res.status(200).json({ ok: true, schedule });
+      }
+      if (!canManage) return res.status(403).json({ ok: false, error: "Schedule editing permission is required." });
       if (!contentType.includes("multipart/form-data")) {
         return res.status(415).json({ ok: false, error: "Standard Inclusions PDF uploads must use multipart/form-data." });
       }
@@ -91,6 +133,7 @@ async function handler(req, res) {
     }
 
     if (req.method === "PATCH") {
+      if (!canManage) return res.status(403).json({ ok: false, error: "Schedule editing permission is required." });
       const body = await parseJsonBody(req);
       const action = String(body.action || "").trim();
       const scheduleId = String(body.scheduleId || "").trim();
@@ -102,6 +145,22 @@ async function handler(req, res) {
           versionId: String(body.versionId || "").trim(),
         });
         return res.status(200).json({ ok: true, schedule });
+      }
+      if (action === "update") {
+        const schedule = await updateStandardInclusionsSchedule({
+          workspaceId,
+          userId,
+          scheduleId,
+          name: String(body.name || ""),
+          description: String(body.description || ""),
+          tierKey: String(body.tierKey || ""),
+          metadata: body.metadata && typeof body.metadata === "object" ? body.metadata : undefined,
+        });
+        return res.status(200).json({ ok: true, schedule });
+      }
+      if (action === "duplicate") {
+        const schedule = await duplicateStandardInclusionsSchedule({ workspaceId, userId, scheduleId });
+        return res.status(201).json({ ok: true, schedule });
       }
       if (action === "archive") {
         await archiveStandardInclusionsSchedule({ workspaceId, userId, scheduleId });
@@ -118,4 +177,4 @@ async function handler(req, res) {
   }
 }
 
-export default withWorkspace(handler);
+export default withWorkspace(handler, { authTimeoutMs: 8000 });

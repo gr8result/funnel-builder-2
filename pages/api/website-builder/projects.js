@@ -9,6 +9,7 @@ import {
   loadFullSplitWebsiteProject,
   migrateWebsiteProjectToSplitStorage,
   saveSplitWebsiteProject,
+  normalizePages,
 } from "../../../lib/website-builder/supabaseSiteStorage";
 import {
   buildExpectedWebsitePersistenceProject,
@@ -250,6 +251,7 @@ function applyDeletedBlockTombstones(blocks, deletedBlockIds, pageName) {
 
 function normalizeProjectBlocksForSave(project) {
   if (!project || typeof project !== "object") return project;
+  project = { ...project, pages: normalizePages(project) };
   const footerContext = buildFooterNavigationContext({ pages: project.pages, logInvalid: true });
   const globalFooterBlock = resolveCanonicalGlobalFooterBlock(project, footerContext) || project.globalFooterBlock || globalFooterToFooterBlock(project.globalFooter, null) || null;
   let normalizedGlobalFooterBlock = normalizeFooterNavigationBlock(globalFooterBlock, footerContext);
@@ -426,7 +428,7 @@ function resolveProjectPageName(project, value = "") {
 function buildExpectedSplitReadbackProject(nextProject, currentProject, { requestedPage = "", siteOnly = false } = {}) {
   if (!currentProject || (!requestedPage && !siteOnly)) return nextProject;
 
-  const expected = { ...nextProject };
+  const expected = { ...currentProject, ...nextProject };
   const currentPageBlocks = objectMap(currentProject.pageBlocks);
   const currentPagesContent = objectMap(currentProject.pagesContent);
   const currentChaiData = objectMap(currentProject.chaiData);
@@ -1366,3 +1368,6 @@ async function handler(req, res) {
 }
 
 export default withAuth(handler);
+
+// Shared by persistence regression tests to verify the same API contract.
+export { normalizeProjectBlocksForSave, buildExpectedSplitReadbackProject, compareProjectPersistenceForSave };

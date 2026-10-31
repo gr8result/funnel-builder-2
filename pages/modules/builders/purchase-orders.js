@@ -3,6 +3,8 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useWorkspace } from "../../../hooks/useWorkspace";
 import { supabase } from "../../../utils/supabase-client";
+import { managedSubcontractDraftPayload } from "../../../lib/builders/managedSubcontractPurchaseOrder";
+import { blockedSelectionsForPurchaseOrderIssue, reconcileProductSelections } from "../../../lib/builders/productSelectionIntegrity";
 
 const PO_STATUS_OPTIONS = [
   { value: "draft", label: "Draft", db: "draft" },
@@ -26,8 +28,9 @@ const initialPoForm = {
   notes: "",
 };
 
-export default function BuilderPurchaseOrdersPage() {
+export default function BuilderPurchaseOrdersPage({ workbook = null, embedded = false, commercialProjectId = "", snapshotId: linkedSnapshotId = "" } = {}) {
   const { workspaceId, activeWorkspace, loading: workspaceLoading } = useWorkspace();
+  const embeddedProjectId = String(commercialProjectId || workbook?.commercialProjectId || "");
   const [projects, setProjects] = useState([]);
   const [snapshots, setSnapshots] = useState([]);
   const [boqItems, setBoqItems] = useState([]);
@@ -44,6 +47,8 @@ export default function BuilderPurchaseOrdersPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [draftingSubcontractId, setDraftingSubcontractId] = useState("");
+  const internalSubcontractOrders = (workbook?.purchaseOrders || []).filter((order) => order.kind === "SUBCONTRACT" && order.tradeContractId);
 
   useEffect(() => {
     if (!workspaceId) {
@@ -69,7 +74,10 @@ export default function BuilderPurchaseOrdersPage() {
       } else {
         const rows = data || [];
         setProjects(rows);
-        setSelectedProjectId((current) => rows.find((project) => project.id === current)?.id || rows[0]?.id || "");
+        setSelectedProjectId((current) => {
+          if (embedded) return rows.find((project) => project.id === embeddedProjectId)?.id || "";
+          return rows.find((project) => project.id === current)?.id || rows[0]?.id || "";
+        });
       }
       setLoading(false);
     }
@@ -77,10 +85,10 @@ export default function BuilderPurchaseOrdersPage() {
     return () => {
       cancelled = true;
     };
-  }, [workspaceId]);
+  }, [workspaceId, embedded, embeddedProjectId]);
 
   useEffect(() => {
-    if (!workspaceId || !selectedProjectId) {
+    if (!workspaceId || !selectedProjectId || (embedded && selectedProjectId !== embeddedProjectId)) {
       setSnapshots([]);
       setSelectedSnapshotId("");
       setPurchaseOrders([]);
@@ -94,7 +102,7 @@ export default function BuilderPurchaseOrdersPage() {
       const [snapshotResult, poResult, poItemResult, supplierResult] = await Promise.all([
         supabase
           .from("builder_estimate_snapshots")
-          .select("id, snapshot_number, snapshot_label, status, source_quote_number, source_quote_date, final_quote_total, created_at")
+            .select("id, project_id, snapshot_number, snapshot_label, status, source_quote_number, source_quote_date, final_quote_total, created_at")
           .eq("workspace_id", workspaceId)
           .eq("project_id", selectedProjectId)
           .order("snapshot_number", { ascending: false }),
@@ -128,7 +136,11 @@ export default function BuilderPurchaseOrdersPage() {
       } else {
         const snapshotRows = snapshotResult.data || [];
         setSnapshots(snapshotRows);
-        setSelectedSnapshotId((current) => snapshotRows.find((snapshot) => snapshot.id === current)?.id || snapshotRows[0]?.id || "");
+        setSelectedSnapshotId((current) => {
+          const linked = snapshotRows.find((snapshot) => snapshot.id === linkedSnapshotId && snapshot.project_id === selectedProjectId)?.id;
+          if (embedded && linkedSnapshotId) return linked || "";
+          return snapshotRows.find((snapshot) => snapshot.id === current)?.id || snapshotRows[0]?.id || "";
+        });
         setPurchaseOrders(poResult.data || []);
         setPurchaseOrderItems(poItemResult.data || []);
         setSuppliers(supplierResult.data || []);
@@ -139,7 +151,7 @@ export default function BuilderPurchaseOrdersPage() {
     return () => {
       cancelled = true;
     };
-  }, [workspaceId, selectedProjectId]);
+  }, [workspaceId, selectedProjectId, embedded, embeddedProjectId, linkedSnapshotId]);
 
   useEffect(() => {
     if (!workspaceId || !selectedProjectId || !selectedSnapshotId) {
@@ -263,6 +275,7 @@ export default function BuilderPurchaseOrdersPage() {
   }, [purchaseOrderItems]);
 
   const selectedSupplier = form.supplierId ? supplierById.get(form.supplierId) : null;
+  const visibleProjects = embedded ? projects.filter((project) => project.id === embeddedProjectId) : projects;
   const selectedTotals = useMemo(() => calculateTotals(selectedItems), [selectedItems]);
 
   function updateForm(field, value) {
@@ -321,6 +334,15 @@ export default function BuilderPurchaseOrdersPage() {
     const { data: authData } = await supabase.auth.getUser();
     const userId = authData?.user?.id || null;
     const statusMapping = statusOption(form.status);
+    if (statusMapping.db === "issued" && embedded && workbook) {
+      const integrity = reconcileProductSelections({ workbook });
+      const blockedForIssue = blockedSelectionsForPurchaseOrderIssue(integrity, selectedItems);
+      if (blockedForIssue.length) {
+        setSaving(false);
+        setError(`Purchase order issue blocked: ${blockedForIssue.length} selected product(s) have unresolved quote, baseline or procurement status. Resolve them before issuing the order.`);
+        return;
+      }
+    }
     const totals = calculateTotals(selectedItems);
     const poPayload = {
       workspace_id: workspaceId,
@@ -416,6 +438,86 @@ export default function BuilderPurchaseOrdersPage() {
     setSaving(false);
   }
 
+  async function createManagedSubcontractDraft(internalOrder) {
+    if (draftingSubcontractId) return;
+    setDraftingSubcontractId(internalOrder.id);
+    setError("");
+    setSuccess("");
+    let insertedHeaderId = "";
+    try {
+      if (!embedded || !workbook || selectedProjectId !== embeddedProjectId || !selectedSnapshotId) throw Error("Sync this job to its matching Project Commercials snapshot before creating a managed subcontract draft.");
+      const contract = (workbook.tradeContracts || []).find((entry) => entry.contractId === internalOrder.tradeContractId);
+      if (!contract) throw Error("The linked trade contract is not present in this job.");
+      const supplier = internalOrder.supplierId ? supplierById.get(internalOrder.supplierId) : null;
+      const supplierRecord = {
+        id: supplier?.id || internalOrder.supplierId || contract.supplierId || "",
+        name: supplier?.name || contract.supplierName || internalOrder.supplier || "",
+        email: supplier?.email || contract.supplierEmail || "",
+      };
+      const { data: authResult, error: authError } = await supabase.auth.getUser();
+      if (authError || !authResult?.user?.id) throw Error("Sign in before creating a managed subcontract draft.");
+      const payload = managedSubcontractDraftPayload({
+        workspaceId,
+        jobId: workbook.jobId,
+        commercialProjectId: embeddedProjectId,
+        snapshotId: selectedSnapshotId,
+        snapshotProjectId: selectedSnapshot?.project_id,
+        contract,
+        internalOrder,
+        supplier: supplierRecord,
+        actorId: authResult?.user?.id || "",
+      });
+      if (!payload.ok) throw Error(payload.code === "SUBCONTRACTOR_REQUIRED" ? "Assign the subcontractor in the trade schedule before creating its managed draft." : `Cannot create this managed draft: ${payload.code}.`);
+
+      const existingResult = await supabase.from("builder_purchase_orders")
+        .select("id, po_number, status, metadata, subtotal, gst_total, total, project_id, snapshot_id")
+        .eq("workspace_id", workspaceId).eq("project_id", selectedProjectId).eq("po_number", payload.poNumber).maybeSingle();
+      if (existingResult.error) throw Error(existingResult.error.message || "Could not check for an existing managed draft.");
+      let managedOrder = existingResult.data;
+      if (managedOrder && managedOrder.metadata?.tradeContractId !== contract.contractId) throw Error("A purchase order already uses this number but is linked to another trade contract.");
+      if (!managedOrder) {
+        const created = await supabase.from("builder_purchase_orders").insert(payload.purchaseOrder).select("*").single();
+        if (created.error) {
+          if (created.error.code !== "23505") throw Error(created.error.message || "Could not create the managed draft.");
+          const raced = await supabase.from("builder_purchase_orders").select("id, po_number, status, metadata, subtotal, gst_total, total, project_id, snapshot_id")
+            .eq("workspace_id", workspaceId).eq("project_id", selectedProjectId).eq("po_number", payload.poNumber).maybeSingle();
+          if (raced.error || raced.data?.metadata?.tradeContractId !== contract.contractId) throw Error("A matching managed draft could not be verified after a concurrent creation.");
+          managedOrder = raced.data;
+        } else {
+          managedOrder = created.data;
+          insertedHeaderId = managedOrder.id;
+        }
+      }
+
+      const existingItem = await supabase.from("builder_purchase_order_items")
+        .select("id, purchase_order_id, source_procurement_item_id, description, quantity_ordered, unit_cost, line_total, status, metadata")
+        .eq("workspace_id", workspaceId).eq("purchase_order_id", managedOrder.id)
+        .eq("source_procurement_item_id", payload.sourceProcurementItemId).maybeSingle();
+      if (existingItem.error) throw Error(existingItem.error.message || "Could not check the managed subcontract line.");
+      if (!existingItem.data) {
+        const createdItem = await supabase.from("builder_purchase_order_items")
+          .insert({ ...payload.item, purchase_order_id: managedOrder.id })
+          .select("id, purchase_order_id, snapshot_id, source_procurement_item_id, description, quantity_ordered, quantity_received, unit, unit_cost, gst_rate, line_total, status, metadata")
+          .single();
+        if (createdItem.error) {
+          if (createdItem.error.code !== "23505") throw Error(createdItem.error.message || "Could not create the subcontract draft line.");
+          const racedItem = await supabase.from("builder_purchase_order_items").select("id")
+            .eq("workspace_id", workspaceId).eq("purchase_order_id", managedOrder.id)
+            .eq("source_procurement_item_id", payload.sourceProcurementItemId).maybeSingle();
+          if (racedItem.error || !racedItem.data) throw Error("The subcontract draft line could not be verified after a concurrent creation.");
+        } else {
+          setPurchaseOrderItems((current) => current.some((item) => item.id === createdItem.data.id) ? current : [...current, createdItem.data]);
+        }
+      }
+      setPurchaseOrders((current) => current.some((po) => po.id === managedOrder.id) ? current : [managedOrder, ...current]);
+      setSuccess(`Managed subcontract draft ${managedOrder.po_number} is ready. It has not been issued or sent.`);
+    } catch (conversionError) {
+      setError(`${conversionError.message || "Could not create the managed subcontract draft."}${insertedHeaderId ? " The unissued draft header is retained for retry." : ""}`);
+    } finally {
+      setDraftingSubcontractId("");
+    }
+  }
+
   return (
     <>
       <Head>
@@ -437,9 +539,9 @@ export default function BuilderPurchaseOrdersPage() {
         <section style={styles.controls}>
           <label style={styles.field}>
             <span style={styles.label}>Commercial project</span>
-            <select value={selectedProjectId} onChange={(event) => setSelectedProjectId(event.target.value)} style={styles.select} disabled={workspaceLoading || loading || !projects.length}>
-              {!projects.length ? <option value="">No synced projects found</option> : null}
-              {projects.map((project) => (
+            <select value={selectedProjectId} onChange={(event) => setSelectedProjectId(event.target.value)} style={styles.select} disabled={embedded || workspaceLoading || loading || !visibleProjects.length}>
+              {!visibleProjects.length ? <option value="">No linked commercial project</option> : null}
+              {visibleProjects.map((project) => (
                 <option key={project.id} value={project.id}>
                   {project.project_name || "Untitled Project"}{project.client_name ? ` - ${project.client_name}` : ""}
                 </option>
@@ -449,7 +551,7 @@ export default function BuilderPurchaseOrdersPage() {
 
           <label style={styles.field}>
             <span style={styles.label}>Estimate snapshot</span>
-            <select value={selectedSnapshotId} onChange={(event) => setSelectedSnapshotId(event.target.value)} style={styles.select} disabled={workspaceLoading || loading || !snapshots.length}>
+            <select value={selectedSnapshotId} onChange={(event) => setSelectedSnapshotId(event.target.value)} style={styles.select} disabled={embedded || workspaceLoading || loading || !snapshots.length}>
               {!snapshots.length ? <option value="">No snapshots found</option> : null}
               {snapshots.map((snapshot) => (
                 <option key={snapshot.id} value={snapshot.id}>
@@ -469,6 +571,43 @@ export default function BuilderPurchaseOrdersPage() {
         {success ? <div style={styles.success}>{success}</div> : null}
         {workspaceLoading ? <div style={styles.notice}>Loading workspace...</div> : null}
         {!workspaceLoading && !workspaceId ? <div style={styles.notice}>Choose an active workspace to create purchase orders.</div> : null}
+
+        {embedded && internalSubcontractOrders.length > 0 && <section style={styles.panel} aria-label="Job subcontract commitments">
+          <div style={styles.panelHeader}>
+            <div>
+              <h2 style={styles.panelTitle}>Job subcontract commitments</h2>
+              <p style={styles.panelText}>Internal records saved with this job. They are not supplier purchase orders and have not been issued.</p>
+            </div>
+            <span style={styles.readOnlyPill}>{internalSubcontractOrders.length} internal</span>
+          </div>
+          <div style={styles.poGrid}>
+            {internalSubcontractOrders.map((order) => {
+              const contract = (workbook?.tradeContracts || []).find((entry) => entry.contractId === order.tradeContractId);
+              const subcontractor = order.supplier || contract?.supplierName || "";
+              const linkedProject = Boolean(embeddedProjectId && selectedProjectId === embeddedProjectId && selectedProject?.id === embeddedProjectId);
+              const ready = linkedProject && Boolean(selectedSnapshotId) && Boolean(subcontractor) && order.status === "Draft";
+              const blocker = !linkedProject ? "Sync this job to its matching commercial project first." : !selectedSnapshotId ? "Sync an estimate snapshot for this project first." : !subcontractor ? "Assign the subcontractor in the trade schedule first." : order.status !== "Draft" ? "This internal commitment is no longer a draft." : "";
+              return <article key={order.id} style={styles.poCard} data-internal-trade-po={order.id}>
+                <div style={styles.poCardHeader}>
+                  <div>
+                    <h3 style={styles.poTitle}>{order.trade?.replace(/_/g, " ") || "Subcontract"}</h3>
+                    <p style={styles.poMeta}>{subcontractor || "Subcontractor not assigned"} - {order.id}</p>
+                  </div>
+                  <span style={styles.statusPill}>{order.status || "Draft"} - Not issued</span>
+                </div>
+                <div style={styles.poFacts}>
+                  <MiniTotal label="Commitment" value={money(order.commitment, selectedProject?.currency)} />
+                  <MiniTotal label="Paid" value={money(order.paidTotal, selectedProject?.currency)} />
+                  <MiniTotal label="Milestones" value={String(order.milestones?.length || 0)} />
+                </div>
+                <button type="button" data-testid="create-managed-subcontract-draft" disabled={!ready || Boolean(draftingSubcontractId)} onClick={() => createManagedSubcontractDraft(order)} style={styles.createButton}>
+                  {draftingSubcontractId === order.id ? "Creating draft..." : "Create managed draft"}
+                </button>
+                {blocker ? <p style={styles.panelText}>{blocker}</p> : <p style={styles.panelText}>Creates one draft PO line. No issue or send action is performed.</p>}
+              </article>;
+            })}
+          </div>
+        </section>}
 
         <section style={styles.summaryGrid}>
           <SummaryCard label="Workspace" value={activeWorkspace?.name || "Active workspace"} helper={selectedProject?.status ? titleCase(selectedProject.status) : ""} />
@@ -680,6 +819,8 @@ function normaliseSourceItem({ boq = null, procurement = null, supplierById }) {
   const description = procurement?.description || procurement?.item_name || boq?.description || boq?.item_name || "Untitled item";
   return {
     key: `${boq?.id || "proc"}:${procurement?.id || boq?.source_quote_row_id || boq?.id}`,
+    productId: procurement?.product_id || procurement?.metadata?.productId || sourceRow.productId || sourceRow.product_id || boq?.metadata?.productId || boq?.metadata?.product_id || "",
+    productId: procurement?.product_id || procurement?.metadata?.productId || sourceRow.productId || sourceRow.product_id || boq?.metadata?.productId || boq?.metadata?.product_id || "",
     source: procurement && boq ? "boq_procurement" : procurement ? "procurement" : "boq",
     boqItemId: boq?.id || procurement?.boq_item_id || "",
     procurementItemId: procurement?.id || "",

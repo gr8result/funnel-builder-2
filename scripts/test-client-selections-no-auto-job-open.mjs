@@ -5,12 +5,11 @@ const hookSource = fs.readFileSync("hooks/estimate-builder/useEstimateBuilderWor
 const shellSource = fs.readFileSync("components/estimate-builder/EstimateBuilderWorkbook.js", "utf8");
 const standaloneSource = fs.readFileSync("pages/modules/builders/client-selections.js", "utf8");
 
-const startupEffect = hookSource.slice(
-  hookSource.indexOf("purgeCorruptEstimateJobLocalStorage();"),
-  hookSource.indexOf("}, []);", hookSource.indexOf("purgeCorruptEstimateJobLocalStorage();")),
-);
+const startupEffectStart = hookSource.lastIndexOf("useEffect(() => {", hookSource.indexOf("const startupLoadOperationId"));
+const startupEffectEnd = hookSource.indexOf("}, []);", startupEffectStart);
+const startupEffect = hookSource.slice(startupEffectStart, startupEffectEnd);
 
-assert.ok(startupEffect.includes('source: "no-active-job"'), "startup records no-active-job instead of restoring a stale job");
+assert.ok(startupEffect.includes('"no-active-job"'), "startup records no-active-job instead of restoring a stale job");
 assert.ok(startupEffect.includes("clearActiveRegisteredEstimateJob();"), "startup clears stale registered-job pointers");
 assert.ok(startupEffect.includes("clearActiveStoredJob().catch"), "startup clears the IndexedDB active-job pointer");
 assert.equal(startupEffect.includes("loadLastActiveOrRecentStoredJob()"), false, "startup does not load active/recent IndexedDB jobs");
@@ -24,7 +23,7 @@ assert.ok(hookSource.includes("delete(ACTIVE_JOB_KEY)"), "close/startup clears o
 
 assert.ok(shellSource.includes("<h2 style={styles.noJobGuardTitle}>No job open</h2>"), "Client Selections no-job screen is explicit");
 assert.ok(shellSource.includes("Create New Job"), "no-job screen exposes Create New Job");
-assert.ok(shellSource.includes("Open Job File From Computer"), "no-job screen exposes Open Job File From Computer");
+assert.ok(shellSource.includes("Open Job File from Computer"), "no-job screen exposes Open Job File from Computer");
 assert.ok(shellSource.includes("No previous job data is active."), "no-job screen says previous data is inactive");
 assert.ok(shellSource.includes("await sheet.closeCurrentJob?.();"), "invalid local file import clears the active job");
 assert.ok(shellSource.includes("openJobDetails.noJobOpen ? \"\""), "commercial modules receive no project id when no job is open");

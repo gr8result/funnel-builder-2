@@ -315,12 +315,14 @@ const unchangedPreview = previewProductImportRows([{
 assert.equal(unchangedPreview[0].action, "skip-unchanged", "unchanged import rows must be skipped");
 
 const pageSource = fs.readFileSync(new URL("../pages/modules/builders/product-library.js", import.meta.url), "utf8");
+const importSource = fs.readFileSync(new URL("../components/product-library/BuilderCsvImport.jsx", import.meta.url), "utf8");
+const importModelSource = fs.readFileSync(new URL("../lib/product-library/builderCsvImport.js", import.meta.url), "utf8");
 assert.match(pageSource, /data-testid="product-library-room-landing"/, "normal Product Library must render the room-first landing");
 assert.match(pageSource, /data-room-key=\{roomItem\.key\}/, "normal Product Library must render room cards");
 assert.match(pageSource, /data-room-category=\{categoryItem\.key\}/, "normal Product Library must render room category cards");
 assert.match(pageSource, /openRoomCategory\(categoryItem\.key\)/, "room category cards must route to the exact selected category");
 assert.match(pageSource, /openRoom\(selectedRoom\.key\)/, "Back navigation must step from room category back to room");
-assert.match(pageSource, /router\.push\("\/modules\/builders"\)/, "root Back must use a logical Builders route");
+assert.match(pageSource, /safeSelectionNavigate\(router, embeddedInEstimateBuilder \? "\/modules\/estimate-builder" : "\/modules\/estimate-builder\?page=projectDashboard"\)/, "root Back must use the existing Project Workspace route");
 assert.match(pageSource, /No products have been added for this category yet\./, "empty category state must be explicit");
 assert.match(pageSource, /> Add Product</, "empty state must expose Add Product");
 assert.match(pageSource, />\s*Import Products\s*</, "empty state must expose Import Products");
@@ -334,8 +336,9 @@ assert.doesNotMatch(pageSource, /sourceRow|headingRows|manualReviewRows/, "norma
 });
 assert.match(pageSource, /workspace_id", workspaceId/, "Product Library writes must include active organisation scope");
 assert.match(pageSource, /\.eq\("workspace_id", workspaceId\)/, "Product Library updates must be constrained to the active organisation");
-assert.match(pageSource, /skip-unchanged/, "Product import must skip unchanged rows");
-assert.match(pageSource, /imagePreview/, "Product import preview must include image previews");
+assert.match(importSource, /eligible\s*=\s*row\s*=>\s*\['NEW',\s*'UPDATE',\s*'UNCHANGED'\]/, "Product import must allow unchanged preview rows to be confirmed safely");
+assert.match(importModelSource, /\?\s*'UNCHANGED'\s*:/, "the import model must classify byte-equivalent rows as unchanged");
+assert.match(importSource, /imagePreview/, "Product import preview must include image previews");
 
 const requiredVisualCategories = [
   ["exterior", "Bricks", "brick"],
@@ -349,7 +352,7 @@ const requiredVisualCategories = [
   ["interior", "Flooring", "floor"],
 ];
 const requiredVisualUrls = new Map();
-const curatedVisualImagePattern = /^(https:\/\/images\.unsplash\.com\/|\/images\/product-library\/.+\.(?:jpg|jpeg|png|webp)$)/i;
+const curatedVisualImagePattern = /^(https:\/\/images\.unsplash\.com\/|\/images\/(?:product-library|catalogues\/(?:product-library|plumbing))\/.+\.(?:jpg|jpeg|png|webp)$)/i;
 requiredVisualCategories.forEach(([areaKey, categoryName, label]) => {
   const category = TAXONOMY_CATEGORY_DEFINITIONS.find((item) => item.topLevelArea === areaKey && item.category === categoryName);
   assert.ok(category?.image, `${categoryName} must have a visual ${label} image`);

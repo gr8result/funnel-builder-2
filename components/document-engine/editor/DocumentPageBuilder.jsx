@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { createDocument, getActivePage, hydrateDocument, serializeDocument, setActivePage, updatePage } from "../core/documentState.js";
 import { addObjectToPage, createA4Page, duplicateObjectOnPage, removeObjectFromPage, updateObjectOnPage } from "../core/pageEngine.js";
 import { bringForward, sendBackward } from "../core/layerEngine.js";
@@ -11,8 +12,12 @@ import { TextEditingToolbar as WebsiteBuilderTextEditingToolbar } from "../../we
 const DEFAULT_IMAGE = "/assets/builders/standard-inclusions-hero.jpg";
 const DEFAULT_LOGO = "/assets/builders/goodbuild-logo.png";
 
-export default function DocumentPageBuilder({ document, workbook = null, readonly = false, onChange, onStatus }) {
+export default function DocumentPageBuilder({ document, workbook = null, readonly = false, onChange, onSave, onStatus, onPdfGenerated, resolveProductImageForExport }) {
   const [draft, setDraft] = useState(() => hydrateDocument(document));
+  const [saving, setSaving] = useState(false);
+  const [imageLoading, setImageLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [exportPageIndex, setExportPageIndex] = useState(null);
   const [mode, setMode] = useState("preview");
   const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
   const [textEditingObjectId, setTextEditingObjectId] = useState("");
@@ -24,6 +29,7 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
   const imageUploadRef = useRef(null);
   const imageReplaceObjectIdRef = useRef("");
   const exportPagesRef = useRef(null);
+  const exportImageCacheRef = useRef(new Map());
   const activePage = getActivePage(draft);
   const activePageIndex = draft.pages.findIndex((page) => page.id === draft.activePageId);
   const selectedObjectId = draft.selection?.lastSelectedObjectId || "";
@@ -32,7 +38,7 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
   useEffect(() => {
     setDraft(hydrateDocument(document));
     setMode("preview");
-  }, [document?.id]);
+  }, [document?.id, document?.metadata?.designStyle, document?.metadata?.layoutRevision]);
 
   useEffect(() => {
     function move(event) {
@@ -290,9 +296,23 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
     }), "Object layer updated.");
   }
 
-  function saveDocument() {
-    onChange?.(serializeDocument(syncDocumentEditData(draft)));
-    onStatus?.("Document saved.");
+  async function saveDocument() {
+    if (imageLoading) return;
+    const snapshot = serializeDocument(syncDocumentEditData(draft));
+    onChange?.(snapshot);
+    if (!onSave) {
+      onStatus?.("Document changes updated. Save the containing schedule to persist them.");
+      return;
+    }
+    setSaving(true);
+    try {
+      await onSave(snapshot);
+      onStatus?.("Document saved.");
+    } catch (error) {
+      onStatus?.(error?.message || "Document could not be saved. Your edits remain open.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   function restoreSelectedOriginal() {
@@ -319,6 +339,9 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
   }
 
   async function exportPdf() {
+    if (exporting || imageLoading) return;
+    setExporting(true);
+    exportImageCacheRef.current.clear();
     try {
       const [{ PDFDocument }, html2canvasModule] = await Promise.all([
         import("pdf-lib"),
@@ -326,18 +349,67 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
       ]);
       const html2canvas = html2canvasModule.default || html2canvasModule;
       const pdf = await PDFDocument.create();
-      const pageNodes = Array.from(exportPagesRef.current?.querySelectorAll?.("[data-document-page-id]") || []);
-      if (!pageNodes.length) throw new Error("No document pages were available for PDF export.");
-      for (const [index, node] of pageNodes.entries()) {
+      if (!draft.pages.length) throw new Error("No document pages were available for PDF export.");
+      for (let index = 0; index < draft.pages.length; index += 1) {
+        onStatus?.(`Generating PDF: page ${index + 1} of ${draft.pages.length}.`);
+        flushSync(() => setExportPageIndex(index));
+        let node = exportPagesRef.current?.querySelector("[data-document-page-id]");
+        for (let attempt = 0; !node && attempt < 4; attempt += 1) {
+          await new Promise((resolve) => window.requestAnimationFrame(resolve));
+          node = exportPagesRef.current?.querySelector("[data-document-page-id]");
+        }
+        if (!node) throw new Error(`PDF page ${index + 1} could not be rendered.`);
         const sourcePage = draft.pages[index] || {};
+        const replacedImages = [];
+        if (resolveProductImageForExport) {
+          const externalProductImages = (sourcePage.objects || []).filter((object) =>
+            object.data?.productId && /^https?:\/\//i.test(String(object.data?.imageRef || "")),
+          );
+          for (const object of externalProductImages) {
+            const wrapper = [...node.querySelectorAll("[data-document-object-id]")].find((element) =>
+              element.getAttribute("data-document-object-id") === object.id,
+            );
+            const imageElement = wrapper?.querySelector("img");
+            if (!imageElement) throw new Error(`Product image ${object.data.productId} was not rendered for PDF export.`);
+            let resolved = exportImageCacheRef.current.get(object.data.productId);
+            if (!resolved) {
+              resolved = Promise.resolve(resolveProductImageForExport(object.data.productId));
+              exportImageCacheRef.current.set(object.data.productId, resolved);
+            }
+            const originalSource = imageElement.src;
+            imageElement.src = await resolved;
+            await imageElement.decode?.();
+            replacedImages.push([imageElement, originalSource]);
+          }
+        }
         const pdfWidth = 595.28;
         const pdfHeight = pdfWidth * (Number(sourcePage.height || 1123) / Math.max(1, Number(sourcePage.width || 794)));
-        const canvas = await html2canvas(node, { backgroundColor: "#ffffff", scale: 2, useCORS: true, logging: false });
-        const image = await pdf.embedPng(canvas.toDataURL("image/png"));
-        const pdfPage = pdf.addPage([pdfWidth, pdfHeight]);
-        pdfPage.drawImage(image, { x: 0, y: 0, width: pdfWidth, height: pdfHeight });
+        let canvas;
+        try {
+          canvas = await html2canvas(node, {
+            backgroundColor: "#ffffff", scale: 1.5, useCORS: true, logging: false,
+            ignoreElements: (element) => element.hasAttribute("data-document-page-id") && element !== node,
+          });
+        } finally {
+          for (const [imageElement, originalSource] of replacedImages) imageElement.src = originalSource;
+        }
+        try {
+          const imageBlob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.9));
+          if (!imageBlob) throw new Error(`PDF page ${index + 1} could not be encoded.`);
+          const image = await pdf.embedJpg(await imageBlob.arrayBuffer());
+          const pdfPage = pdf.addPage([pdfWidth, pdfHeight]);
+          pdfPage.drawImage(image, { x: 0, y: 0, width: pdfWidth, height: pdfHeight });
+        } finally {
+          canvas.width = 0;
+          canvas.height = 0;
+        }
       }
       const bytes = await pdf.save();
+      if (onPdfGenerated) {
+        onPdfGenerated(bytes, `${draft.name || "Inclusions Schedule"}.pdf`);
+        onStatus?.("PDF generated and ready to save as a schedule version.");
+        return;
+      }
       const blob = new Blob([bytes], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
       const link = window.document.createElement("a");
@@ -349,6 +421,10 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
     } catch (error) {
       console.error("Native document PDF export failed", error);
       onStatus?.(error?.message || "PDF export failed.");
+    } finally {
+      exportImageCacheRef.current.clear();
+      setExportPageIndex(null);
+      setExporting(false);
     }
   }
 
@@ -360,7 +436,10 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
     imageReplaceObjectIdRef.current = "";
     const targetObject = page?.objects?.find((object) => object.id === targetId) || selectedObject;
     if (!file || !targetObject || !["image", "logo"].includes(targetObject.type)) return;
+    setImageLoading(true);
     const reader = new FileReader();
+    reader.onloadend = () => setImageLoading(false);
+    reader.onerror = () => onStatus?.("The image could not be read. Choose the image again before saving.");
     reader.onload = () => {
       updateActivePage((currentPage) => updateObjectOnPage(currentPage, targetObject.id, (object) => ({
         ...object,
@@ -594,7 +673,7 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
               </button>
             </>
           ) : null}
-          <button type="button" disabled={readonly} style={styles.primaryButton} onClick={saveDocument}>Save</button>
+          <button type="button" disabled={readonly || saving || imageLoading} style={styles.primaryButton} onClick={saveDocument}>{imageLoading ? "Reading image…" : saving ? "Saving…" : "Save"}</button>
           <button type="button" disabled={activePageIndex <= 0} style={styles.secondaryButton} onClick={() => selectRelativePage(-1)}>Previous</button>
           <button type="button" disabled={activePageIndex < 0 || activePageIndex >= draft.pages.length - 1} style={styles.secondaryButton} onClick={() => selectRelativePage(1)}>Next</button>
           <label style={styles.zoomControl}>
@@ -609,7 +688,7 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
             </select>
           </label>
           <button type="button" style={styles.secondaryButton} onClick={() => setPdfPreviewOpen(true)}>Preview</button>
-          <button type="button" style={styles.primaryButton} onClick={exportPdf}>Export PDF</button>
+          <button type="button" disabled={exporting || imageLoading} style={styles.primaryButton} onClick={exportPdf}>{exporting ? "Exporting…" : "Export PDF"}</button>
         </div>
         <div
           style={{ ...styles.canvasWrap, ...(manualRegionType ? styles.canvasWrapSelecting : {}) }}
@@ -689,7 +768,7 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
         </div>
       ) : null}
       <div ref={exportPagesRef} style={styles.exportPages} aria-hidden="true">
-        {draft.pages.map((page) => <PageRenderer key={`export-${page.id}`} page={page} workbook={workbook} exportMode />)}
+        {exportPageIndex !== null && draft.pages[exportPageIndex] ? <PageRenderer key={`export-${draft.pages[exportPageIndex].id}`} page={draft.pages[exportPageIndex]} workbook={workbook} exportMode /> : null}
       </div>
     </div>
   );

@@ -114,12 +114,15 @@ async function openCategory(key, ready) {
   if (ready) await page.waitForSelector(ready, {timeout:60000}); else await delay(2500);
 }
 const openElectrical = () => openCategory('electrical-technology', OVERVIEW);
+// Saves have settled when no job write and no new save has happened for 10 seconds.
 const savesSettled = async (label2, timeoutMs = 600000) => {
   const start = Date.now();
+  let last = '', quietSince = Date.now();
   for (;;) {
-    const state = await page.evaluate(() => ({...window.__profile})).catch(() => null);
-    if (state && state.savesStarted === state.savesFinished) { await delay(4000); const again = await page.evaluate(() => ({...window.__profile})); if (again.savesStarted === again.savesFinished && again.savesStarted === state.savesStarted) return Math.round((Date.now() - start) / 1000); }
-    if (Date.now() - start > timeoutMs) { report.runtimeErrors.push(`${label2}: saves still running after ${timeoutMs / 1000}s ${JSON.stringify(state)}`); return -1; }
+    const state = await page.evaluate(() => `${window.__profile.savesStarted}:${window.__profile.jobPuts}`).catch(() => last);
+    if (state !== last) { last = state; quietSince = Date.now(); }
+    if (Date.now() - quietSince >= 10000) return Math.round((Date.now() - start) / 1000);
+    if (Date.now() - start > timeoutMs) { report.runtimeErrors.push(`${label2}: job writes still happening after ${timeoutMs / 1000}s (${state})`); return -1; }
     await delay(1000);
   }
 };

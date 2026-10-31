@@ -12,9 +12,9 @@ const doors = master.filter(p => p.familyKey === 'entry-doors');
 const hardwareCategory = getProductLibraryRoomCategory('external-door-furniture');
 const doorCategory = getProductLibraryRoomCategory('entry-doors');
 const hardware = master.filter(p => productBelongsToRoomCategory(p, hardwareCategory));
-assert.equal(doors.length, 148);
+assert.equal(doors.length, 142);
 assert.equal(doors.filter(p => p.attributes.recordType === 'entry_door_design').length, 142);
-assert.equal(hardware.length, 306);
+assert.equal(hardware.length, 297);
 assert.equal(getProductLibraryRoomCategory('door-furniture', 'exterior'), hardwareCategory);
 assert.notEqual(getProductLibraryRoomCategory('door-furniture', 'internal-areas'), hardwareCategory);
 

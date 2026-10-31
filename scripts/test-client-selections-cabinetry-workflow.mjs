@@ -401,7 +401,7 @@ assert.match(selectionsSource, /<BenchtopSelectionWorkflow/, "Benchtops (joinery
 assert.doesNotMatch(selectionsSource, /renderBathroomBenchtops|stone-benchtop-configurator|Actual slab thickness|Finished edge thickness|Full slab viewed/, "the old vanity benchtop form and its fabricator fields are gone");
 assert.ok(!selectionsSource.includes('<label><span>Supplier</span><input value={current.supplier || ""}'), "Bathroom vanity benchtops no longer start with disconnected supplier text fields");
 assert.match(selectionsSource, /bathroom-cabinetry-review-summary/, "Bathroom review renders a room-specific grouped summary");
-assert.match(selectionsSource, /WET_AREA_CABINETRY_ROOM_NAMES/, "Ensuite resolves to wet-area cabinetry before any Kitchen fallback");
+assert.match(selectionsSource, /isWetAreaCabinetryLocationName\(locationName\)/, "any bathroom-type room (Ensuite, Main Bathroom, WC ...) resolves to wet-area cabinetry");
 assert.match(selectionsSource, /Apply Kitchen Colours to Butler's Pantry/, "Kitchen review exposes the Pantry colours-only action");
 assert.doesNotMatch(selectionsSource, /Copy Kitchen Selections to Butler's Pantry/, "Kitchen-to-Pantry UI does not expose a full specification-copy action");
 assert.doesNotMatch(selectionsSource, /Copy this section to Butler's Pantry/, "Kitchen-to-Pantry modal does not offer section-level copying");

@@ -43,6 +43,7 @@ const nextConfig = {
 
   experimental: {
     middlewareClientMaxBodySize: "80mb",
+    webpackMemoryOptimizations: true,
   },
 
   async headers() {
@@ -61,6 +62,18 @@ const nextConfig = {
           },
         ],
       },
+    ];
+  },
+
+  // Job-scoped addresses: /jobs/<jobId>/<module> names the job explicitly. Each resolves to the
+  // module with ?jobId=..., which the app treats as the source of truth for that browser tab
+  // (lib/construction-estimation/jobContext.js). Takes effect after the server restarts.
+  async redirects() {
+    const modules = { job: "projectDashboard", setup: "dataInput", takeoff: "aiPlanTakeoff", "project-estimate": "projectEstimate", selections: "clientSelections", estimate: "quotation",
+      schedule: "gantt", "job-board": "jobBoard", boq: "boq", procurement: "supplierProcurement", variations: "variations", documents: "documentVault", rfis: "rfis" };
+    return [
+      ...Object.entries(modules).map(([segment, page]) => ({ source: `/jobs/:jobId/${segment}`, destination: `/modules/estimate-builder?jobId=:jobId&page=${page}`, permanent: false })),
+      { source: "/jobs/:jobId", destination: "/modules/estimate-builder?jobId=:jobId&page=projectDashboard", permanent: false },
     ];
   },
 

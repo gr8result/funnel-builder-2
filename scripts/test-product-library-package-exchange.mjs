@@ -86,7 +86,7 @@ assert.deepEqual(tapwareProducts.map((product) => product.productCode), ["TAP-00
 const exported = await buildProductLibraryExportPackage({
   products: applianceProducts,
   scope: { scope: "section", sectionId: "appliances", brand: "Omega" },
-  tenantId: "tenant-a",
+  tenantId: "builder-a",
   builderId: "builder-a",
   includeImages: true,
 });
@@ -111,28 +111,32 @@ assert.match(csv, /NOIMAGE-1/);
 
 const importedFile = new File([exported.blob], exported.fileName, { type: "application/zip" });
 const parsed = await parseProductLibraryPackageFile(importedFile);
-const preview = previewProductLibraryPackageImport(parsed, [], { tenantId: "tenant-b", builderId: "builder-b" });
+const preview = previewProductLibraryPackageImport(parsed, [], { tenantId: "builder-a", builderId: "builder-a" });
 assert.equal(preview.totalProducts, 2);
 assert.equal(preview.validProducts, 2);
 assert.equal(preview.newProducts, 2);
-assert.equal(preview.rows[0].product.organisationId, "builder-b");
+assert.equal(preview.rows[0].product.organisationId, "builder-a");
 assert.match(preview.rows[0].product.primaryImageUrl, /^data:image\/png;base64,/);
 
-const platformBlocked = previewProductLibraryPackageImport(parsed, [{ productCode: "OBO660X", productId: "master-obo660x", familyKey: "ovens" }], { tenantId: "tenant-b", builderId: "builder-b" });
+const crossWorkspace = previewProductLibraryPackageImport(parsed, [], { tenantId: "builder-b", builderId: "builder-b" });
+assert.equal(crossWorkspace.validProducts, 0, "packages owned by another builder must not import across workspace boundaries");
+assert.ok(crossWorkspace.rows.every((row) => row.issues.includes("Product belongs to another builder workspace.")), "every foreign package row must carry an ownership issue");
+
+const platformBlocked = previewProductLibraryPackageImport(parsed, [{ productCode: "OBO660X", productId: "master-obo660x", familyKey: "ovens" }], { tenantId: "builder-a", builderId: "builder-a" });
 assert.equal(platformBlocked.rows[0].valid, true);
 assert.equal(platformBlocked.rows[0].action, "update-master-reference");
 assert.equal(platformBlocked.masterOverrideProducts, 1);
 
-const addAsNew = previewProductLibraryPackageImport(parsed, [{ productCode: "OBO660X", productId: "master-obo660x", familyKey: "ovens" }], { tenantId: "tenant-b", builderId: "builder-b", importMode: "add" });
+const addAsNew = previewProductLibraryPackageImport(parsed, [{ productCode: "OBO660X", productId: "master-obo660x", familyKey: "ovens" }], { tenantId: "builder-a", builderId: "builder-a", importMode: "add" });
 assert.equal(addAsNew.rows[0].valid, true);
 assert.equal(addAsNew.rows[0].action, "create-builder-private");
-assert.match(addAsNew.rows[0].product.productId, /^builder-builder-b-omega-obo660x$/);
-assert.match(addAsNew.rows[0].product.productCode, /^builder-builder-b-omega-obo660x$/);
+assert.match(addAsNew.rows[0].product.productId, /^builder-builder-a-omega-obo660x$/);
+assert.match(addAsNew.rows[0].product.productCode, /^builder-builder-a-omega-obo660x$/);
 
 const tapwareExported = await buildProductLibraryExportPackage({
   products: tapwareProducts,
   scope: { scope: "category", sectionId: "plumbing-fixtures-fittings", categoryId: "tapware", brand: "Caroma" },
-  tenantId: "tenant-a",
+  tenantId: "builder-a",
   builderId: "builder-a",
   includeImages: true,
 });

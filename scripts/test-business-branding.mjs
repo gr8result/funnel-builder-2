@@ -1,0 +1,23 @@
+import assert from 'node:assert/strict';
+import { brandingAssetReference, resolveBusinessBrandingAsset, addBusinessBrandingHeader } from '../lib/businessBranding.js';
+
+assert.deepEqual(brandingAssetReference('https://example.supabase.co/storage/v1/object/sign/Private-assets/company/logo.png?token=expired'), { bucket: 'Private-assets', path: 'company/logo.png', public: false });
+assert.deepEqual(brandingAssetReference('https://example.supabase.co/storage/v1/object/public/public-assets/company/logo.png'), { bucket: 'public-assets', path: 'company/logo.png', public: true });
+assert.deepEqual(brandingAssetReference('private-assets/company/logo.png'), { bucket: 'private-assets', path: 'company/logo.png', public: false });
+assert.equal(brandingAssetReference('javascript:alert(1)'), null);
+const calls = [];
+const storage = { from(bucket) { return { getPublicUrl(path) { calls.push({ bucket, path, signed: false }); return { data: { publicUrl: 'https://assets.example/logo.png' } }; }, async createSignedUrl(path) { calls.push({ bucket, path, signed: true }); return { data: { signedUrl: 'https://assets.example/fresh-logo.png' } }; } }; } };
+assert.equal(await resolveBusinessBrandingAsset(storage, 'https://example.supabase.co/storage/v1/object/sign/Private-assets/company/logo.png?token=expired'), 'https://assets.example/fresh-logo.png');
+assert.equal(await resolveBusinessBrandingAsset(storage, 'https://example.supabase.co/storage/v1/object/public/public-assets/company/logo.png'), 'https://assets.example/logo.png');
+assert.equal(await resolveBusinessBrandingAsset(storage, 'Private-assets/../other/logo.png'), '');
+assert.equal(calls.length, 2);
+assert.equal(calls[0].bucket, 'Private-assets');
+assert.equal(calls[1].bucket, 'public-assets');
+const content = '<section>Existing funnel content</section>';
+const branded = addBusinessBrandingHeader(content, { businessName: 'Example <Business>', logoUrl: 'https://example.supabase.co/storage/v1/object/public/public-assets/company/logo.png' });
+assert(branded.includes('data-gr8-company-branding="true"'));
+assert(branded.includes('Example &lt;Business&gt;'));
+assert(branded.endsWith(content));
+assert.equal(addBusinessBrandingHeader(content, { logoUrl: 'javascript:alert(1)' }), content);
+assert.equal(addBusinessBrandingHeader(content, { logoUrl: 'https://example.supabase.co/storage/v1/object/sign/Private-assets/company/logo.png?token=expired' }), content);
+console.log('PASS existing branding assets retain their buckets, expired URLs are renewed, unsafe paths are rejected, and new funnel pages retain stable company branding without changing existing content');

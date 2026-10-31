@@ -1,7 +1,7 @@
 // Run: node --import ./scripts/register-json-loader.mjs scripts/test-entry-door-library-quotation.mjs
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { getMasterProducts } from "../lib/product-library/catalogueService.js";
+import { getMasterProducts, toCanonicalProductContract } from "../lib/product-library/catalogueService.js";
 import { entryDoorLibraryQuoteRows, withEntryDoorLibraryQuotation } from "../lib/construction-estimation/entryDoorLibraryQuotation.js";
 import { createEstimateBuilderWorkbookDefaults } from "../lib/construction-estimation/estimateBuilderWorkbookDefaults.js";
 import { calculateEstimateBuilderWorkbook } from "../lib/construction-estimation/estimateBuilderWorkbookCalculations.js";
@@ -22,6 +22,7 @@ for (const product of products) {
   const row = rows.find((r) => r.canonicalProductId === product.productId);
   assert.ok(row, product.productCode);
   for (const key of ["productCode", "productName", "supplier", "brand", "manufacturer", "sku", "model", "size", "range", "priceStatus"]) {
+    if (key === "priceStatus") continue;
     assert.equal(row[key], product[key], `${product.productCode}: ${key}`);
   }
   assert.equal(row.section, sectionName);
@@ -29,9 +30,15 @@ for (const product of products) {
   assert.deepEqual(row.sizes, product.attributes.sizes);
   assert.deepEqual(row.variants, product.variants);
   assert.deepEqual(row.productLibrarySnapshot, product, "Preserve the complete individual catalogue record");
-  assert.equal(row.excelRate, product.builderPrice ?? product.clientPrice ?? product.normalizedUnitPrice ?? "");
-  assert.equal(row.quoteRequired, true);
-  assert.equal(row.excelRate, "", "Unpriced products must not become $0 or estimated rates");
+  const canonical = toCanonicalProductContract(product);
+  const verifiedPrice = canonical.price != null && ["supplier_price", "catalogue_rrp"].includes(canonical.priceSource)
+    && Boolean(canonical.priceUpdatedAt && canonical.sourceUrl) && typeof canonical.priceIncludesGst === "boolean";
+  assert.equal(row.priceStatus, verifiedPrice ? product.priceStatus : "quote_required", `${product.productCode}: price status follows verified evidence`);
+  const expectedRate = !verifiedPrice ? "" : canonical.priceIncludesGst
+    ? Math.round((canonical.price / 1.1) * 10000) / 10000
+    : canonical.price;
+  assert.equal(row.excelRate, expectedRate, "Only verified supplier/catalogue prices with known GST basis reach the quotation");
+  assert.equal(row.quoteRequired, !verifiedPrice, "Unverified market estimates remain quote-required");
   assert.equal(row.quantity, "", "Catalogue availability must not select every door for the quote");
 }
 assert.equal(withEntryDoorLibraryQuotation(book.quotation), book.quotation, "Repeated sync adds nothing");
@@ -66,7 +73,8 @@ function calculate(workbook) {
 const preview = calculate(book);
 assert.equal(preview.quotation[sectionName].rows.length, 142, "DOORS calculation must retain the catalogue rows");
 assert.equal(preview.quotation[sectionName].subtotal, 0);
-assert.ok(preview.quotation[sectionName].rows.every((r) => r.finalRateUsed === "" && r.sourceOfRate === "Quote required"));
+assert.ok(preview.quotation[sectionName].rows.filter((r) => r.quoteRequired).every((r) => r.finalRateUsed === "" && r.sourceOfRate === "Quote required"), "estimate-only records stay unpriced");
+assert.ok(preview.quotation[sectionName].rows.filter((r) => !r.quoteRequired).every((r) => Number(r.finalRateUsed) > 0 && r.sourceOfRate === "Product Library"), "verified catalogue RRPs flow through as rates");
 const selected = { ...book, quotation: { ...book.quotation, [sectionName]: { ...book.quotation[sectionName], rows: rows.map((r, i) => i === 0 ? { ...r, quantity: "2", supplierQuote: "456.78" } : r) } } };
 const selectedPreview = calculate(selected).quotation[sectionName];
 assert.equal(selectedPreview.rows[0].qty, 2);

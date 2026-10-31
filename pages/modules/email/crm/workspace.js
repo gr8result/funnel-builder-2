@@ -4,6 +4,7 @@ import Head from "next/head";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../../../../utils/supabase-client";
+import CrmTabs from "../../../../components/crm/CrmTabs";
 import {
   LineChart,
   Line,
@@ -400,6 +401,7 @@ export default function WorkspaceAnalytics() {
       </Head>
 
       <div style={styles.page}>
+        <CrmTabs active="messaging" />
         <div style={styles.container}>
           {/* Banner */}
           <div style={styles.banner}>

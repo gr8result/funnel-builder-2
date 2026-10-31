@@ -103,7 +103,7 @@ function normaliseRecipients(input) {
 async function getAccountProfile(userId) {
   const { data } = await supabaseAdmin
     .from("accounts")
-    .select("business_name, brand_name, company_name, sendgrid_from_name, from_name, sendgrid_from_email, from_email, email, business_phone, phone, website, business_logo_url, business_logo, logo_url")
+    .select("business_name, brand_name, company_name, sendgrid_from_name, from_name, sendgrid_from_email, sendgrid_reply_to, email, business_phone, phone, website, business_logo_url, business_logo, logo_url")
     .eq("user_id", userId)
     .order("updated_at", { ascending: false })
     .limit(1)
@@ -122,7 +122,6 @@ function defaultProfiles(user, account) {
     "Business Email";
   const fromEmail =
     account?.sendgrid_from_email ||
-    account?.from_email ||
     account?.email ||
     user?.email ||
     process.env.SENDGRID_FROM_EMAIL ||
@@ -138,7 +137,7 @@ function defaultProfiles(user, account) {
         label: "Default sender",
         fromName,
         fromEmail,
-        replyTo: fromEmail,
+        replyTo: account?.sendgrid_reply_to || account?.email || fromEmail,
       },
     ],
     signatures: [

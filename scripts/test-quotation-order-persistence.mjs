@@ -7,9 +7,10 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 const { __quotationPersistenceTestUtils: utils } = await import("../hooks/estimate-builder/useEstimateBuilderWorkbook.js");
 const { createEstimateBuilderWorkbookDefaults } = await import("../lib/construction-estimation/estimateBuilderWorkbookDefaults.js");
-const { applyPersistedQuotationOrder, applyPersistedRowOrder, persistedSectionOrder, quotationOrderSnapshot, stampQuotationOrder } = await import("../lib/construction-estimation/quotationOrder.js");
+const { applyPersistedQuotationOrder, applyPersistedRowOrder, persistedSectionOrder, quotationOrderSnapshot, quotationSectionOrderIds, stampQuotationOrder } = await import("../lib/construction-estimation/quotationOrder.js");
 const { supersededRevisionKeys, jobContentSignature } = await import("../lib/construction-estimation/jobPersistence.js");
 const { connectAllocatedSelectionsToQuotation } = await import("../lib/builders/allocatedSelectionQuotation.js");
+const { canonicalQuotationSectionName } = await import("../lib/construction-estimation/quotationStructure.js");
 
 const results = [];
 assert.deepEqual(applyPersistedRowOrder([
@@ -34,7 +35,7 @@ function moveLine(workbook, fromSection, id, toSection, targetId, position = "af
 function moveSection(workbook, name, afterName) {
   const order = utils.orderedQuoteSections(workbook.quotation, workbook.quotationSectionOrder || []).filter((item) => item !== name);
   order.splice(order.indexOf(afterName) + 1, 0, name);
-  return { ...workbook, quotationSectionOrder: order, quotation: stampQuotationOrder(workbook.quotation, order) };
+  return { ...workbook, quotationSectionOrder: order, quotationSectionOrderIds: quotationSectionOrderIds(workbook.quotation, order), quotation: stampQuotationOrder(workbook.quotation, order) };
 }
 const saveJob = (workbook) => roundTrip(utils.withPersistedQuotationOrder({ ...workbook, savedAt: new Date().toISOString() }));
 const openJob = (stored) => utils.normalizeWorkbook(stored);
@@ -66,6 +67,46 @@ const namesBefore = utils.orderedQuoteSections(job.quotation, job.quotationSecti
 job = moveSection(job, namesBefore[2], namesBefore[10]);
 job = moveSection(job, namesBefore[20], namesBefore[4]);
 const arranged = ids(job);
+
+check("stable section ids survive renames, repeated normalization and new sections", () => {
+  const customName = "BUILDER CUSTOM ORDER TEST";
+  const customId = "builder-test:custom-quotation-section";
+  const customSection = { sectionId: customId, rows: [{ id: "custom-row-b", item: "Second", sortOrder: 2 }, { id: "custom-row-a", item: "First", sortOrder: 1 }] };
+  const withCustom = utils.normalizeWorkbook({
+    ...job,
+    quotation: { ...job.quotation, [customName]: customSection },
+    quotationSectionOrder: [...job.quotationSectionOrder, customName],
+    quotationSectionOrderIds: [...job.quotationSectionOrderIds, customId],
+  });
+  const originalOrder = [...withCustom.quotationSectionOrder];
+  const originalIds = [...withCustom.quotationSectionOrderIds];
+  const renamedName = "BUILDER CUSTOM ORDER RETITLED";
+  const renamedQuotation = { ...withCustom.quotation, [renamedName]: { ...withCustom.quotation[customName], displayName: "Builder Quote Group" } };
+  delete renamedQuotation[customName];
+  const renamed = utils.normalizeWorkbook({
+    ...withCustom,
+    quotation: renamedQuotation,
+    quotationSectionOrder: originalOrder.map((name) => name === customName ? renamedName : name),
+    quotationSectionOrderIds: originalIds,
+  });
+  assert.equal(renamed.quotation[renamedName].sectionId, customId, "display name changes do not change section identity");
+  assert.deepEqual(renamed.quotation[renamedName].rows.map((row) => row.id), ["custom-row-b", "custom-row-a"], "row order survives a section rename");
+  assert.equal(renamed.quotationSectionOrder.at(-1), renamedName);
+  const repeated = utils.normalizeWorkbook(renamed);
+  assert.deepEqual(repeated.quotationSectionOrder, renamed.quotationSectionOrder, "normalization is idempotent");
+  assert.deepEqual(repeated.quotationSectionOrderIds, renamed.quotationSectionOrderIds, "stable IDs are idempotent");
+  assert.equal(repeated.quotation[renamedName].rows.length, 2, "normalization does not duplicate rows");
+
+  const newName = "NEW TEMPLATE TRADE";
+  const newId = "template-test:new-trade";
+  const added = utils.normalizeWorkbook({
+    ...renamed,
+    quotation: { ...renamed.quotation, [newName]: { sectionId: newId, rows: [] } },
+    quotationSectionOrder: [...renamed.quotationSectionOrder, newName],
+    quotationSectionOrderIds: [...renamed.quotationSectionOrderIds, newId],
+  });
+  assert.deepEqual(added.quotationSectionOrder.slice(0, renamed.quotationSectionOrder.length), renamed.quotationSectionOrder, "new template sections append without moving existing ones");
+});
 
 check("moves changed the order and were recorded on the lines", () => {
   assert.notDeepEqual(arranged.rows[sectionA], original.rows[sectionA]);
@@ -120,7 +161,7 @@ check("Client Selections sync does not push manually placed lines to the end", (
   workbook = { ...workbook, quotation: stampQuotationOrder({ ...workbook.quotation, [sectionName]: { ...workbook.quotation[sectionName], rows: moved } }) };
   const arrangedIds = workbook.quotation[sectionName].rows.map((row) => row.id);
   const synced = connectAllocatedSelectionsToQuotation(workbook, book([line("a", "Screen A"), line("b", "Screen B"), line("c", "Screen C")]));
-  assert.notDeepEqual(synced.quotation[sectionName].rows.map((row) => row.id).slice(0, 4), arrangedIds, "the raw sync does rebuild the array");
+  assert.deepEqual(synced.quotation[sectionName].rows.map((row) => row.id), [...arrangedIds, "allocated-selection:shower-screen:c"], "raw sync preserves saved positions and appends only the new selection");
   const restored = applyPersistedQuotationOrder(synced.quotation)[sectionName].rows.map((row) => row.id);
   assert.deepEqual(restored.filter((id) => !id.endsWith(":c")), arrangedIds, "saved lines keep their saved positions");
   assert.equal(restored.length, 5, "the new selection is added, not dropped");
@@ -166,16 +207,50 @@ const recovered = "recovery/quotation-order-2026-10-02/extracted/estimate.json";
 if (fs.existsSync(recovered)) {
   check("the recovered 06:54 job file reopens in exactly its saved (reordered) order", () => {
     const workbook = JSON.parse(fs.readFileSync(recovered, "utf8")).workbook;
-    const savedRows = Object.fromEntries(Object.entries(workbook.quotation).map(([name, section]) => [name, (section.rows || []).map((row) => row.id)]));
+    const savedRows = {};
+    for (const [name, section] of Object.entries(workbook.quotation)) savedRows[name] = (section.rows || []).map((row) => row.id);
     const reopened = openJob(workbook);
-    assert.deepEqual(Object.fromEntries(Object.entries(reopened.quotation).map(([name, section]) => [name, (section.rows || []).map((row) => row.id)])), savedRows);
-    // The displayed section order is exactly what the saved file displays.
+    const relative = (book, name) => (book.quotation[name]?.rows || []).map((row) => row.id);
+    for (const name of Object.keys(savedRows)) assert.deepEqual(relative(reopened, name), savedRows[name], `${name}: no saved row lost or regenerated`);
     assert.deepEqual(ids(reopened).sections, utils.orderedQuoteSections(workbook.quotation, workbook.quotationSectionOrder));
     const again = openJob(saveJob(reopened));
     assert.deepEqual(ids(again), ids(reopened), "save -> reopen of the recovered job");
     const movedIds = new Set(workbook.quoteHistory.filter((item) => item.field === "moved").map((item) => `${item.section}|${item.id}`));
     assert(movedIds.size >= 5);
-    for (const entry of movedIds) { const [name, id] = entry.split("|"); if (!workbook.quotation[name]) continue; const before = savedRows[name].indexOf(id); if (before < 0) continue; assert.equal(again.quotation[name].rows.findIndex((row) => row.id === id), before, entry); }
+    for (const entry of movedIds) { const [name, id] = entry.split("|"); if (!workbook.quotation[name]) continue; const before = relative(reopened, name).indexOf(id); if (before < 0) continue; assert.equal(relative(again, name).indexOf(id), before, entry); }
+    const migrated = utils.normalizeWorkbook(roundTrip(workbook), { allowQuotationHydration: true });
+    for (const name of Object.keys(workbook.quotation)) assert(migrated.quotation[canonicalQuotationSectionName(name)], `${name}: explicit migration retains its trade`);
   });
 }
+check("main display numbers are consecutive without renumbering nested headings or saved data", () => {
+  const source = fs.readFileSync("components/estimate-builder/EstimateBuilderWorkbook.js", "utf8");
+  const extract = (name, nextName, dependencies) => {
+    const start = source.indexOf(`function ${name}(`);
+    const end = source.indexOf(`function ${nextName}(`, start);
+    assert(start >= 0 && end > start, `${name} implementation exists`);
+    return new Function(...Object.keys(dependencies), `${source.slice(start, end)}\nreturn ${name};`)(...Object.values(dependencies));
+  };
+  const mainSections = extract("topLevelQuoteSections", "isGroupedQuoteSubsection", { isGroupedQuoteSubsection: section => section.startsWith("nested:") });
+  const sheet = {
+    quoteSections: ["First", "nested:one", "Second", "nested:two", "Last"],
+    workbook: { quotation: Object.fromEntries(["First", "nested:one", "Second", "nested:two", "Last"].map((section, index) => [section, { sectionId: `stable-${index}`, groupNumber: 90 + index, rows: [{ id: `row-${index}`, quantity: 3, manualRate: 17, formulas: { G: "B1*F1" } }] }])) },
+  };
+  sheet.preview = { quotation: sheet.workbook.quotation };
+  const saved = JSON.stringify(sheet);
+  const display = extract("quoteDisplayNumbering", "visibleQuoteRowsForDisplay", {
+    topLevelQuoteSections: mainSections,
+    quoteChildSectionsForParent: section => section === "First" ? ["nested:one"] : section === "Second" ? ["nested:two"] : [],
+    visibleQuoteRowsForDisplay: (value, section) => value.preview.quotation[section].rows,
+    isApplianceHeadingQuoteRow: () => false,
+  })(sheet);
+  assert.deepEqual(mainSections(sheet.quoteSections).map(section => display.sections[section]), ["1", "2", "3"]);
+  assert.equal(display.sections["nested:one"], "2", "nested display number is unchanged from the original flat sequence");
+  assert.equal(display.sections["nested:two"], "4", "nested display number is unchanged from the original flat sequence");
+  assert.deepEqual(Object.values(display.rows), ["1", "2", "3", "4", "5"], "line display numbering is unchanged");
+  const number = extract("quoteSectionNumber", "findSectionByNumber", { topLevelQuoteSections: mainSections, QUOTE_SECTION_NUMBER_OVERRIDES: {}, quoteSectionBaseName: section => section, quoteRowNumber: () => "" });
+  assert.deepEqual(mainSections(sheet.quoteSections).map(section => number(section, sheet)), ["1", "2", "3"]);
+  assert.equal(number("nested:one", sheet), 91, "saved nested group number remains untouched");
+  assert.equal(JSON.stringify(sheet), saved, "numbering is display-only and never mutates stable IDs, order or row data");
+});
+
 console.log(`\n${results.length} checks passed`);

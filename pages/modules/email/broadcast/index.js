@@ -156,7 +156,7 @@ export default function CreateEmail() {
       try {
         const { data } = await supabase
           .from("accounts")
-          .select("business_name, brand_name, company_name, sendgrid_from_name, from_name, sendgrid_from_email, from_email")
+          .select("business_name, brand_name, company_name, sendgrid_from_name, from_name, sendgrid_from_email")
           .eq("user_id", user.id)
           .maybeSingle();
         accountBrand = data || null;
@@ -173,8 +173,6 @@ export default function CreateEmail() {
 
       const defaultFromEmail =
         accountBrand?.sendgrid_from_email ||
-        accountBrand?.from_email ||
-        user.email ||
         "";
 
       // ✅ Always seed defaults so fromEmail is never blank
@@ -278,11 +276,16 @@ export default function CreateEmail() {
       // preload broadcast (editing)
       if (!cancelled && broadcastId) {
         try {
+          if (!workspaceId) {
+            setLoadError("Select a builder workspace before editing a broadcast.");
+            return;
+          }
           const { data: bcast, error: bErr } = await supabase
             .from("email_broadcasts")
             .select("*")
             .eq("id", broadcastId)
             .eq("user_id", user.id)
+            .eq("workspace_id", workspaceId)
             .maybeSingle();
 
           if (bErr) {
@@ -341,7 +344,7 @@ export default function CreateEmail() {
     return () => {
       cancelled = true;
     };
-  }, [broadcastId]);
+  }, [broadcastId, workspaceId]);
 
   // DKIM status
   useEffect(() => {
@@ -745,7 +748,6 @@ export default function CreateEmail() {
 
         sandbox: Boolean(sandbox),
         workspace_id: workspaceId || "",
-        workspace_id: workspaceId || "",
 
         form: {
           ...form,
@@ -755,6 +757,38 @@ export default function CreateEmail() {
           audience: audienceValue,
         },
       };
+
+      if (sendMode === "schedule") {
+        if (sandbox) throw new Error("Scheduled campaigns are unavailable in sandbox mode.");
+        if (form.audienceType !== "list") {
+          throw new Error("Scheduled broadcasts require a saved contact list so consent can be checked again at delivery.");
+        }
+        const scheduledResponse = await fetch("/api/email/schedule-broadcast", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+            ...(workspaceId ? { "x-workspace-id": workspaceId } : {}),
+          },
+          body: JSON.stringify({
+            workspace_id: workspaceId || "",
+            list_table: "lead_lists",
+            list_id: audienceValue,
+            name: form.name,
+            subject,
+            html_content: html,
+            reply_to: safeReplyTo,
+            scheduled_at: sendAt,
+          }),
+        });
+        const scheduledResult = await scheduledResponse.json().catch(() => null);
+        if (!scheduledResponse.ok || !scheduledResult?.ok) {
+          throw new Error(scheduledResult?.error || "Could not schedule the broadcast.");
+        }
+        alert(`Broadcast scheduled for ${new Date(scheduledResult.scheduled_at).toLocaleString()}.`);
+        router.push("/modules/email/broadcast/view");
+        return;
+      }
 
       const res = await fetch("/api/email/send-broadcast", {
         method: "POST",
@@ -839,34 +873,21 @@ export default function CreateEmail() {
       ).trim();
       const safeReplyTo = (form.replyTo || safeFromEmail).trim();
 
-      const payload = {
-        mode: "test",
-        testEmail: email,
-        subject,
-        preheader: (form.preheader || "").trim(),
-        html,
-        fromEmail: safeFromEmail,
-        fromName: safeFromName,
-        replyTo: safeReplyTo,
-
-        sandbox: Boolean(sandbox),
-
-        form: {
-          ...form,
-          fromEmail: safeFromEmail,
-          fromName: safeFromName,
-          replyTo: safeReplyTo,
-        },
-      };
-
-      const res = await fetch("/api/email/send-broadcast", {
+      const res = await fetch("/api/email/test-send", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`, // ✅ FIX (Unauthorized)
-          ...(workspaceId ? { "x-workspace-id": workspaceId } : {}),
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          recipients: [email],
+          fromEmail: safeFromEmail,
+          fromName: safeFromName,
+          reply_to: safeReplyTo,
+          subject: `[TEST] ${subject || "Email preview"}`,
+          html,
+          sandbox: Boolean(sandbox),
+        }),
       });
 
       const raw = await res.text();

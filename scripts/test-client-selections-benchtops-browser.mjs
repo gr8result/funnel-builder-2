@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {spawn} from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -23,8 +24,11 @@ import {readyCabinetryLocation} from './cabinetry-room-fixture.mjs';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 dotenv.config({path:path.join(root, '.env.local'), quiet:true});
 dotenv.config({path:path.join(root, '.env'), quiet:true});
-const origin = process.env.CLIENT_SELECTIONS_BASE_URL || 'http://localhost:3000';
-const out = path.join(root, 'artifacts/test-artifacts/benchtop-selection-browser');
+const runId = new Date().toISOString().replace(/[.:]/g, '-');
+const testPort = Number(process.env.CLIENT_SELECTIONS_TEST_PORT || 3107);
+const distDir = `.next-client-selections-benchtop-${runId}`;
+const origin = process.env.CLIENT_SELECTIONS_BASE_URL || `http://localhost:${testPort}`;
+const out = path.join(root, 'artifacts/test-artifacts/benchtop-selection-browser', runId);
 fs.mkdirSync(out, {recursive:true});
 const projectId = `local-benchtops-${Date.now()}`;
 const owner = source.workspaceId;
@@ -46,7 +50,9 @@ const cabinetrySelection = normaliseCabinetrySelection({locations:[kitchen, ensu
     // A vanity line as the bathroom Cabinet Schedule stores it: its own type, with the vanity width.
     {componentId:'CAB-ensuite-bath-wall-three-drawer', location:'Ensuite', type:'bath-wall-three-drawer', unitType:'3-drawer unit', quantity:1, width:1200}]});
 const book = {documentType:'luxury_selections_book', rooms:[{id:'room-kitchen', name:'Kitchen', rows:[{id:'row-cabinetry', item:'Cabinetry', guidedRequirementKey:'cabinetry', selectedProduct:'Cabinetry specification',
-  guidedSelection:{requirementKey:'cabinetry', requirementLabel:'Cabinetry', cabinetrySelection}}]}]};
+  guidedSelection:{requirementKey:'cabinetry', requirementLabel:'Cabinetry', cabinetrySelection}},
+  {id:'row-integrity-fixture', item:'Fixture Unmapped Mixer', guidedRequirementKey:'unmapped-fixture-test', selectedProduct:'Fixture Unmapped Mixer',
+    guidedSelection:{requirementKey:'unmapped-fixture-test', requirementLabel:'Unmapped fixture test', productId:'fixture-unmapped-mixer', productName:'Fixture Unmapped Mixer', quantity:1, unit:'EACH', selectedPrice:100, priceIncludesGst:false}}]}]};
 const workbook = {...defaults, selectionQuoteEngineVersion:1, workspaceId:owner, templateType:'job', page:'clientSelections', projectId, commercialProjectId:projectId, registeredJobId:projectId,
   registeredJob:{jobId:projectId, jobName, jobNumber:'LOCAL-BENCH', clientName:'Local test client', siteAddress:'Local test address'},
   jobFileMeta:{projectId, jobName, jobNumber:'LOCAL-BENCH', clientName:'Local test client', address:'Local test address'},
@@ -68,11 +74,10 @@ if (linkError) throw linkError;
 const authClient = createClient(url, anon, {auth:{persistSession:false}});
 const {data:auth, error:authError} = await authClient.auth.verifyOtp({type:'magiclink', token_hash:link.properties.hashed_token});
 if (authError) throw authError;
-const browser = await puppeteer.launch({
-  executablePath:process.env.PUPPETEER_EXECUTABLE_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe',
-  headless:true, protocolTimeout:180000, defaultViewport:{width:1920, height:1080},
-});
-const report = {passed:false, route:`${origin}/modules/estimate-builder?page=clientSelections`, projectId, steps:{}, screenshots:[], documentLoads:0, runtimeErrors:[], blockedCloudWrites:0};
+const report = {passed:false, route:`${origin}/modules/estimate-builder?page=clientSelections`, projectId, distDir, steps:{}, screenshots:[], documentLoads:0, consoleErrors:[], runtimeErrors:[], failedRequests:[], httpErrors:[], blockedCloudWrites:0};
+let next;
+let serverLog;
+let browser;
 let page;
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 const selector = testId => `[data-testid="${testId}"]`;
@@ -87,16 +92,27 @@ async function screenshot(name) { await page.screenshot({path:path.join(out, `${
 async function shoot(name, sel) { await (await page.$(sel)).screenshot({path:path.join(out, `${name}.png`)}); report.screenshots.push(`${name}.png`); }
 
 async function loadLocalJob(file) {
-  const input = await page.waitForSelector(selector('open-local-job-file-input'));
+  let input;
+  try {
+    input = await page.waitForSelector(selector('open-local-job-file-input'), {timeout:240000});
+  } catch (error) {
+    report.startupBody = await page.evaluate(() => document.body.innerText.slice(0, 1600)).catch(() => 'Unable to read page body');
+    throw error;
+  }
   await input.uploadFile(file);
   for (let attempt = 0; attempt < 8; attempt++) {
     await delay(500);
     const labels = await page.$$eval('button', buttons => buttons.filter(button => !button.disabled).map(button => button.innerText.trim()));
     const dialogLabels = ['Discard Changes', 'Open Job', 'Open Job File', 'Keep Local'].filter(label => labels.includes(label));
     for (const label of dialogLabels) await page.evaluate((text) => [...document.querySelectorAll('button')].find(button => !button.disabled && button.innerText.trim() === text)?.click(), label);
-    if (!dialogLabels.length && attempt >= 1 && await page.$(GUIDED_SCREENS)) return;
+    if (!dialogLabels.length && attempt >= 1 && await page.$(GUIDED_SCREENS)) break;
   }
   await page.waitForSelector(GUIDED_SCREENS);
+  if (await page.$(selector('project-room-manager'))) {
+    await page.waitForFunction(() => { const button = document.querySelector('[data-testid="room-setup-confirm-button"]'); return button && !button.disabled; });
+    await page.click(selector('room-setup-confirm-button'));
+    await page.waitForFunction(() => !document.querySelector('[data-testid="project-room-manager"]'));
+  }
 }
 async function openBenchtops(room) {
   const inRoom = () => page.evaluate((workflow) => document.querySelector(`${workflow} [data-testid="cabinetry-progress-menu"] h2`)?.innerText.trim() || '', WORKFLOW);
@@ -160,10 +176,43 @@ async function storedWhen(predicate) {
   return record;
 }
 
+async function waitForApp(url, timeoutMs = 240000) {
+  const deadline = Date.now() + timeoutMs;
+  let lastStatus = 'not reachable';
+  while (Date.now() < deadline) {
+    if (next?.exitCode !== null && next?.exitCode !== undefined) throw new Error(`Next dev server exited (${next.exitCode}); see next-dev.log.`);
+    try {
+      const response = await fetch(url);
+      lastStatus = `HTTP ${response.status}`;
+      if (response.status === 200) return;
+    } catch (error) {
+      lastStatus = error.message;
+    }
+    await delay(1000);
+  }
+  throw new Error(`Next dev server did not compile ${url} (${lastStatus}); see next-dev.log.`);
+}
+
 try {
+  if (!process.env.CLIENT_SELECTIONS_BASE_URL) {
+    const env = {...process.env, NEXT_DIST_DIR:distDir, PORT:String(testPort), NODE_ENV:'development', NEXT_TELEMETRY_DISABLED:'1'};
+    next = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'dev', '-p', String(testPort)], {cwd:root, env, stdio:['ignore', 'pipe', 'pipe']});
+    serverLog = fs.createWriteStream(path.join(out, 'next-dev.log'));
+    next.stdout.pipe(serverLog);
+    next.stderr.pipe(serverLog);
+    await waitForApp(`${origin}/modules/estimate-builder?page=clientSelections`);
+  }
+  browser = await puppeteer.launch({
+    executablePath:process.env.PUPPETEER_EXECUTABLE_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe',
+    headless:true, protocolTimeout:180000, defaultViewport:{width:1920, height:1080},
+  });
   page = await browser.newPage();
-  page.setDefaultTimeout(60000);
-  page.on('pageerror', error => report.runtimeErrors.push(error.message));
+  page.setDefaultTimeout(240000);
+  page.setDefaultNavigationTimeout(240000);
+  page.on('console', message => { if (message.type() === 'error') report.consoleErrors.push(message.text()); });
+  page.on('pageerror', error => report.runtimeErrors.push(error.stack || error.message));
+  page.on('requestfailed', request => report.failedRequests.push({url:request.url(), method:request.method(), error:request.failure()?.errorText || 'request failed'}));
+  page.on('response', response => { if (response.status() >= 400) report.httpErrors.push({url:response.url(), status:response.status(), method:response.request().method()}); });
   page.on('dialog', dialog => dialog.accept());
   page.on('load', () => { report.documentLoads += 1; });
   await page.setRequestInterception(true);
@@ -231,7 +280,7 @@ try {
   await page.$eval(`${selector('benchtop-product')}[data-product-name="Eclipse"] ${selector('benchtop-select')}`, button => button.click());
   await page.waitForSelector(`${selector('benchtop-summary')}[data-area="Main benchtop"]`);
   let cards = await summaries();
-  assert.deepEqual(cards.map(card => [card.area, card.product]), [['Main benchtop', 'Eclipse']], 'only the main bench has a surface so far');
+  assert.deepEqual(cards.map(card => [card.area, card.product]), [['Main benchtop', 'Eclipse'], ['Island benchtop', 'Eclipse']], 'the island follows the main surface while the explicit same-as-main link is on');
   assert(/Stone Ambassador Eclipse/.test(cards[0].text) && /Range Kaya Surfaces/.test(cards[0].text) && /Edge Square arris/.test(cards[0].text) && /Waterfall ends None/.test(cards[0].text) && /Upstand 100mm/.test(cards[0].text) && /4\.80 lm/.test(cards[0].text), cards[0].text);
   assert(/Final colour should be confirmed from a current physical sample/.test(cards[0].text));
   // The client is not asked for the quotation range, and nothing was pre-mapped.
@@ -243,8 +292,7 @@ try {
   await page.waitForFunction(() => document.querySelector('[data-testid="benchtop-summary"][data-area="Main benchtop"]')?.dataset.rangeKey === 'mid_range_stone');
   assert.equal((await summaries())[0].rangeSource, 'supplier-price-group');
   report.steps.priceGroups = {groups:priceGroupsBefore.total, mappedByDefault:priceGroupsBefore.set};
-  // The same surface everywhere: one click.
-  await click(`${selector('benchtop-summary')}[data-area="Main benchtop"] ${selector('benchtop-apply-all')}`);
+  // The linked island already follows the main surface; its length and depth stay independent.
   await page.waitForSelector(`${selector('benchtop-summary')}[data-area="Island benchtop"]`);
   stored = await storedWhen(record => record.areas.length === 2 && record.areas.every(area => area.product === 'Eclipse' && area.rangeKey === 'mid_range_stone'));
   assert.deepEqual(stored.areas.map(area => [area.label, area.supplier, area.product, area.collection, area.rangeKey, area.lengthMm, area.supplierConfirmationStatus, area.edge, area.upstand]),
@@ -260,6 +308,9 @@ try {
 
   // 5 - the island takes a Stone Ambassador Signature surface; the two stay independent
   await page.$eval(`${selector('benchtop-target')}[data-area="Island benchtop"]`, tab => tab.click());
+  assert.equal(await page.$eval(selector('benchtop-island-same-as-main'), checkbox => checkbox.checked), true, 'new island areas explicitly show the default link');
+  await click(selector('benchtop-island-same-as-main'));
+  await page.waitForFunction(() => document.querySelector('[data-testid="benchtop-island-same-as-main"]')?.checked === false);
   await setValue(selector('benchtop-search'), signature.colourName);
   await page.waitForSelector(`${selector('benchtop-product')}[data-product-name="${signature.colourName}"]`);
   await page.$eval(`${selector('benchtop-product')}[data-product-name="${signature.colourName}"] ${selector('benchtop-select')}`, button => button.click());
@@ -336,6 +387,31 @@ try {
   assert.equal(await page.$eval(selector('benchtop-edge'), select => select.value), 'Mitred drop front');
   report.steps.vanity = {cutouts:vanity.cutouts, areas:vanity.areas, selected:vanityCard.text, quote:{top:stored.quote.vanityMid, basin:stored.quote.vanityBasin, tap:stored.quote.vanityTap, upstand:stored.quote.vanityUpstand}, persisted:true};
 
+  assert.equal(await page.evaluate(sel => Boolean(document.querySelector(sel)), selector('product-selection-integrity')), false, 'Client Selections must not show internal quotation/procurement diagnostics');
+  report.steps.clientSelectionsDiagnosticsHidden = true;
+  await page.$$eval('button.project-workspace-nav-button', buttons => buttons.find(button => button.innerText.trim() === 'Quotation Builder')?.click());
+  await page.waitForFunction(() => new URLSearchParams(window.location.search).get('page') === 'quotation');
+  if (await page.$(selector('project-room-manager'))) {
+    const confirmRooms = await page.$(selector('room-setup-confirm-button'));
+    if (confirmRooms) await confirmRooms.click();
+    await page.waitForFunction(sel => !document.querySelector(sel), {}, selector('project-room-manager'));
+  }
+  await page.waitForSelector(`${selector('product-selection-integrity')} ${selector('selection-integrity-warning')}`);
+  const warning = await page.$eval(selector('selection-integrity-warning'), element => element.innerText);
+  assert.match(warning, /1 selection need(?:s)? attention before this quotation can be finalised/i);
+  assert.match(warning, /Review Issues/);
+  assert(!warning.includes('fixture-unmapped-mixer'));
+  await screenshot('06-quotation-integrity-warning');
+  await click(selector('selection-integrity-review'));
+  await page.waitForSelector(selector('selection-integrity-issues'));
+  const issues = await page.$eval(selector('selection-integrity-issues'), element => element.innerText);
+  assert.match(issues, /Fixture Unmapped Mixer/);
+  assert.match(issues, /Kitchen/);
+  assert.match(issues, /No approved quotation item is linked/);
+  assert(!/fixture-unmapped-mixer|Product ID|row ID|mapping key/i.test(issues));
+  await screenshot('07-quotation-integrity-review');
+  report.steps.integrityQuotation = {warning, issueReview:issues, compactWarning:true, internalIdsHidden:true};
+
   assert.equal(report.runtimeErrors.length, 0, report.runtimeErrors.join('\n'));
   report.passed = true;
 } catch (error) {
@@ -345,5 +421,20 @@ try {
 } finally {
   fs.writeFileSync(path.join(out, 'report.json'), JSON.stringify(report, null, 2));
   console.log(JSON.stringify(report, null, 2));
-  await browser.close();
+  await browser?.close();
+  if (next && next.exitCode === null && next.signalCode === null) {
+    if (process.platform === 'win32') {
+      await new Promise(resolve => {
+        next.once('exit', resolve);
+        const killer = spawn('taskkill', ['/pid', String(next.pid), '/T', '/F'], {stdio:'ignore'});
+        killer.on('error', () => next.kill('SIGTERM'));
+      });
+    } else {
+      await new Promise(resolve => {
+        next.once('exit', resolve);
+        next.kill('SIGTERM');
+      });
+    }
+  }
+  serverLog?.end();
 }

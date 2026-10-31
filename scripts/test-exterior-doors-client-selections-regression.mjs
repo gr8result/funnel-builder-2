@@ -70,7 +70,7 @@ const enabledGarageProducts = windowsDoorsGarageCatalogue.products
   .filter((product) => product.family_key === "garage-doors" && product.active === "true" && product.archived !== "true")
   .map((product) => normalizeMasterProductRecord(product));
 const enabledSuppliers = garageDoorEnabledSupplierOptions(enabledGarageProducts);
-assert.deepEqual(enabledSuppliers.map((supplier) => supplier.label), ["B&D Australia"], "Only verified/enabled B&D garage-door products should feed the selector");
+assert.deepEqual(enabledSuppliers.map((supplier) => supplier.label), ["B&D Australia", "Smart Doors & Gates"], "Verified/enabled manufacturer and listed dealer ranges feed the selector");
 assert.equal(GARAGE_DOOR_COLOUR_CATALOGUE.length, 42, "B&D colour catalogue should expose the verified structured records");
 const bndPanelift = enabledGarageProducts.find((product) => /Panelift/i.test(`${product.range} ${product.productName}`));
 assert.ok(bndPanelift, "B&D Panelift product must be available for colour compatibility testing");

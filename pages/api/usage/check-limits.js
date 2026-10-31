@@ -2,7 +2,6 @@
 // Check and return usage limits for email, SMS, and subscribers
 
 import { getUsageStats, canSendEmail, canSendSms, canAddToList } from "../../../lib/usageTracking";
-import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { withAuth } from "../../../lib/withWorkspace";
 
 async function handler(req, res) {
@@ -11,15 +10,8 @@ async function handler(req, res) {
   }
 
   try {
-    const { Authorization } = req.headers;
-    if (!Authorization) {
-      return res.status(401).json({ error: "Missing authorization" });
-    }
-
-    const token = Authorization.replace("Bearer ", "");
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
-
-    if (authError || !user) {
+    const user = req.user;
+    if (!user?.id) {
       return res.status(401).json({ error: "Unauthorized" });
     }
 

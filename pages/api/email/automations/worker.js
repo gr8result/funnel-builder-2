@@ -14,6 +14,9 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { guardEmailSend, recordEmailSent } from "../../../../lib/emailValidation";
+import { hasEmailMarketingConsent } from "../../../../lib/marketingConsent";
+import { resolveVerifiedSender } from "../../../../lib/email/verifiedSender";
+import { buildUnsubscribeUrls, injectUnsubscribeUrl, normalizeUnsubscribeEmail } from "../../../../lib/email/unsubscribe";
 
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -96,6 +99,8 @@ async function loadAccountBrandByAuthUser(authUserId) {
     return {
       fromEmail: DEFAULT_FROM_EMAIL,
       fromName: DEFAULT_FROM_NAME,
+      dkim_verified: false,
+      dkim_domain: "",
       brandDebug: { used: "defaults", reason: "job.user_id not uuid" },
     };
   }
@@ -110,6 +115,8 @@ async function loadAccountBrandByAuthUser(authUserId) {
     return {
       fromEmail: DEFAULT_FROM_EMAIL,
       fromName: DEFAULT_FROM_NAME,
+      dkim_verified: false,
+      dkim_domain: "",
       brandDebug: {
         used: "defaults",
         reason: error?.message || "No accounts row for user_id",
@@ -136,6 +143,9 @@ async function loadAccountBrandByAuthUser(authUserId) {
   return {
     fromEmail,
     fromName,
+    sendgrid_from_email: data.sendgrid_from_email || data.from_email || "",
+    dkim_verified: data.dkim_verified === true,
+    dkim_domain: data.dkim_domain || "",
     brandDebug: {
       used: "accounts",
       account_id: data.id,
@@ -270,9 +280,11 @@ async function enqueueNext({ job, next_node_id, run_at_iso }) {
   throw new Error(error.message);
 }
 
-async function sendEmailSendGrid({ lead, node, fromEmail, fromName }) {
+async function sendEmailSendGrid({ lead, node, fromEmail, fromName, req, userId }) {
   if (!SENDGRID_KEY) throw new Error("Missing SENDGRID_API_KEY / GR8_MAIL_SEND_ONLY");
   if (!lead?.email) throw new Error("Lead has no email");
+  const normalizedEmail = normalizeUnsubscribeEmail(lead.email);
+  const unsubscribeUrls = buildUnsubscribeUrls({ req, userId, email: normalizedEmail });
 
   const d = node?.data || {};
 
@@ -296,6 +308,7 @@ async function sendEmailSendGrid({ lead, node, fromEmail, fromName }) {
               lead_name: lead.name || "",
               lead_email: lead.email || "",
               lead_phone: lead.phone || "",
+              unsubscribe_url: unsubscribeUrls.pageUrl,
               ...(d.dynamic_template_data || {}),
             },
           },
@@ -309,8 +322,15 @@ async function sendEmailSendGrid({ lead, node, fromEmail, fromName }) {
         ],
         from: { email: fromEmail, name: fromName },
         subject,
-        content: [{ type: "text/html", value: html || `<p>${subject}</p>` }],
+        content: [{ type: "text/html", value: injectUnsubscribeUrl(html || `<p>${subject}</p>`, unsubscribeUrls.pageUrl) }],
       };
+
+  if (unsubscribeUrls.apiUrl) {
+    payload.headers = {
+      "List-Unsubscribe": `<${unsubscribeUrls.apiUrl}>`,
+      "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+    };
+  }
 
   const resp = await fetch("https://api.sendgrid.com/v3/mail/send", {
     method: "POST",
@@ -339,8 +359,9 @@ async function loadLead(job) {
 
   const { data: lead, error } = await supabaseAdmin
     .from("leads")
-    .select("id,email,name,phone")
+    .select("id,email,name,phone,user_id,workspace_id,email_marketing_consent,email_marketing_opt_out")
     .eq("id", job.lead_id)
+    .eq("user_id", job.user_id)
     .maybeSingle();
 
   if (error) throw new Error(error.message);
@@ -363,7 +384,7 @@ function deriveStartNodeId(flow) {
   return firstTarget(edges, trigger.id);
 }
 
-async function processOneJob(job) {
+async function processOneJob(job, req) {
   // lock it
   await markJob(job.id, { status: "running" });
 
@@ -437,7 +458,10 @@ async function processOneJob(job) {
   if (nodeType === "email") {
     try {
       const lead = await loadLead(job);
+      if (!hasEmailMarketingConsent(lead)) throw new Error("Contact is missing recorded email marketing consent or has opted out; automation email was not sent.");
       const brand = await loadAccountBrandByAuthUser(job.user_id);
+      const verifiedSender = resolveVerifiedSender(brand, brand.fromEmail);
+      if (!verifiedSender.ok) throw new Error(verifiedSender.error);
       const emailGuard = await guardEmailSend(job.user_id, 1);
       const subject =
         node?.data?.subject ||
@@ -462,8 +486,10 @@ async function processOneJob(job) {
       const sent = await sendEmailSendGrid({
         lead,
         node,
-        fromEmail: brand.fromEmail,
+        fromEmail: verifiedSender.email,
         fromName: brand.fromName,
+        req,
+        userId: job.user_id,
       });
       await recordEmailSent(job.user_id, 1);
 
@@ -551,7 +577,7 @@ async function handler(req, res) {
     for (const job of jobs || []) {
       locked += 1;
       try {
-        const out = await processOneJob(job);
+        const out = await processOneJob(job, req);
         results.push(out);
       } catch (e) {
         try {

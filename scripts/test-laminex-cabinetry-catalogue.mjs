@@ -8,6 +8,7 @@ import {
   buildCabinetrySelectionPayload,
   normaliseCabinetrySelection,
 } from "../lib/builders/cabinetryWorkflow.js";
+import { cabinetryScheduleCatalogue } from "../lib/construction-estimation/cabinetryRequirements.js";
 
 const ROOT = process.cwd();
 const cataloguePath = path.join(ROOT, "data/product-library/catalogues/cabinetry/AU-LAMINEX-CABINETRY-COLOURS.json");
@@ -76,6 +77,7 @@ assert.ok(active.some((record) => record.priceStatus === "supplier_quote_require
 
 const selected = active.find((record) => record.colourName === "Polar White" && record.finish === "AbsoluteMatte");
 const otherRoomColour = POLYTEC_CABINETRY_CATALOGUE[0];
+const kitchenBaseUnit = cabinetryScheduleCatalogue("Kitchen").flatMap((group) => group.items).find((entry) => entry.label === "1 door base unit - 600mm");
 const selection = normaliseCabinetrySelection({
   locations: [
     {
@@ -107,7 +109,7 @@ const selection = normaliseCabinetrySelection({
     },
   ],
   schedule: [
-    { componentId: "CAB-KIT-1", location: "Kitchen", unitType: "Standard base unit", quantity: 1, clientSelectableSurfaces: ["lowerDoorsDrawers"], handleQuantity: 1 },
+    { componentId: "CAB-KIT-1", location: "Kitchen", cabinetTypeId: kitchenBaseUnit.id, unitType: kitchenBaseUnit.label, quantity: 1, clientSelectableSurfaces: ["lowerDoorsDrawers"], handleQuantity: 1 },
   ],
 });
 const payload = buildCabinetrySelectionPayload({ projectId: "laminex-test", selection });

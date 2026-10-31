@@ -9,6 +9,7 @@ import { getMasterProducts, isProductVisible } from "../lib/product-library/cata
 import { resolveProductPrice } from "../lib/product-library/catalogueModel.js";
 
 const REPORT = "artifacts/product-library-price-audit.json";
+const EXCEPTIONS_REPORT = "artifacts/product-library-foundation-exceptions.json";
 
 function priceOf(product) {
   const raw = product.clientPrice ?? product.rrp ?? product.normalizedUnitPrice ?? null;
@@ -74,7 +75,25 @@ const report = {
 };
 
 fs.mkdirSync("artifacts", { recursive: true });
-fs.writeFileSync(REPORT, `${JSON.stringify(report, null, 2)}\n`);
+if (!process.argv.includes('--exceptions-only')) fs.writeFileSync(REPORT, `${JSON.stringify(report, null, 2)}\n`);
+const exceptions = rows.map(({ product, price }) => ({
+  productId: product.productId, productCode: product.productCode, productName: product.productName,
+  familyKey: product.familyKey, supplier: product.supplier, priceStatus: product.priceStatus,
+  issues: [
+    ...price.issues,
+    ...(!product.primaryImageUrl || /missing|review|required|fallback/.test(product.imageStatus || '') ? ['exact_image_incomplete'] : []),
+    ...(!String(product.description || '').trim() ? ['missing_description'] : []),
+  ],
+})).filter(product => product.issues.length);
+fs.writeFileSync(EXCEPTIONS_REPORT, `${JSON.stringify({
+  generatedAt: report.generatedAt,
+  scope: 'Active static master catalogue only; live builder-private data is not included. Category fallback images do not count as verified exact images.',
+  totalProducts: rows.length,
+  exceptionProducts: exceptions.length,
+  totals: Object.fromEntries(['missing', 'zero', 'invalid', 'missing_unit', 'unknown_source', 'exact_image_incomplete', 'missing_description'].map(issue => [issue, exceptions.filter(product => product.issues.includes(issue)).length])),
+  products: exceptions,
+}, null, 2)}\n`);
+console.log(`Foundation exceptions: ${EXCEPTIONS_REPORT}`);
 console.log(JSON.stringify({ totals: report.totals, byStatus: report.byStatus }, null, 2));
 console.log("Missing price by category (top 25):", report.missingByCategory.slice(0, 25));
 console.log("Missing price by brand (top 25):", report.missingByBrand.slice(0, 25));

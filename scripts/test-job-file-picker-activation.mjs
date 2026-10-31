@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { createNewJob, saveJob, saveJobAs } from "../lib/jobFile.ts";
+import { createNewJob, openJob, readJob, saveJob, saveJobAs } from "../lib/jobFile.ts";
 
 let pickerCalls = 0;
 globalThis.window = {
@@ -29,5 +29,24 @@ assert.equal(statuses.at(-1).state, "idle");
 const failed = await run("Saving job to computer", () => { throw new DOMException("User activation expired", "SecurityError"); });
 assert.equal(failed.ok, false);
 assert.equal(statuses.at(-1).state, "error", "Picker errors should display in the save status without an unhandled rejection");
+const deniedHandle = {
+  name: "Isolated permission test.gr8job",
+  async getFile() { throw new DOMException("The request is not allowed by the user agent or the platform in the current context.", "NotAllowedError"); },
+};
+await assert.rejects(readJob(deniedHandle), error => error.name === "NotAllowedError"
+  && /browser blocked access/.test(error.message) && /current job has not been replaced/.test(error.message));
+let fallbackOpened = false;
+globalThis.window.showOpenFilePicker = async () => [deniedHandle];
+const fallbackFile = new File([JSON.stringify({ jobId: "permission-test", jobName: "Permission test", workbook: { jobId: "permission-test", data: {}, quotation: {} } })], "Permission test.gr8job", { type: "application/json" });
+globalThis.document = {
+  body: { appendChild() {} },
+  createElement() { return { style: {}, remove() {}, click() { fallbackOpened = true; this.files = [fallbackFile]; this.onchange(); } }; },
+};
+const recoveredOpen = await openJob();
+assert.equal(fallbackOpened, true, "Denied file handle opens the ordinary file selection fallback");
+assert.equal(recoveredOpen.ok, true, recoveredOpen.message);
+assert.equal(recoveredOpen.handle, null, "Fallback must not retain the denied computer handle");
+assert.equal(recoveredOpen.fileName, fallbackFile.name);
+delete globalThis.document;
 delete globalThis.window;
 console.log("PASS picker runs before packaging or timers; cancellation and errors are handled.");

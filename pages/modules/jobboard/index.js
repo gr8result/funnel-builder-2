@@ -342,7 +342,7 @@ function NoteCell({ rec, onOpen }) {
 }
 
 // ── Main page ─────────────────────────────────────────────────────────────────
-export default function JobBoard() {
+export default function JobBoard({ onTaskRecordsChange } = {}) {
   const [user, setUser]         = useState(null);
   const [jobs, setJobs]         = useState([]);
   const [taskMap, setTaskMap]   = useState({}); // { jobId: { taskKey: record } }
@@ -479,6 +479,13 @@ export default function JobBoard() {
   }, []);
 
   useEffect(() => { if (user) { load(); loadBoards(); loadAutomations(); } }, [user]);
+
+  // When the board is shown inside a job (Estimate Builder), tell it which tasks are done so linked trade payment milestones become
+  // eligible for review. The board itself approves and pays nothing.
+  useEffect(() => {
+    if (typeof onTaskRecordsChange !== "function" || loading) return;
+    onTaskRecordsChange(Object.values(taskMap).flatMap((tasks) => Object.values(tasks || {}).filter(Boolean)), jobs.map((job) => job.id));
+  }, [taskMap, jobs, loading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const load = useCallback(async () => {
     if (!user) return;

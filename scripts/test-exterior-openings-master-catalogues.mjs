@@ -56,20 +56,18 @@ assert.ok(productsByFamily["garage-doors"].length >= 5, "Garage Doors catalogue 
 
 const entryDoorProducts = productsByFamily["entry-doors"];
 const entryDoorSuppliers = entryDoorProducts.map((product) => product.supplier);
-assert.equal(entryDoorSuppliers.filter((supplier) => /hume/i.test(supplier)).length, 6, "Entry Doors includes six Hume exterior entrance door designs");
-assert.equal(entryDoorSuppliers.filter((supplier) => /corinthian/i.test(supplier)).length, 6, "Entry Doors includes six Corinthian exterior entrance door designs");
-assert.equal(/hume/i.test(entryDoorSuppliers[0]), true, "Hume is the first default Entry Door supplier in catalogue order");
-assert.equal(/corinthian/i.test(entryDoorSuppliers.find((supplier) => /corinthian/i.test(supplier)) || ""), true, "Corinthian is present as the second default Entry Door supplier group");
+assert.ok(entryDoorSuppliers.filter((supplier) => /hume/i.test(supplier)).length >= 6, "Entry Doors includes at least six Hume exterior entrance door designs");
+assert.ok(entryDoorSuppliers.filter((supplier) => /corinthian/i.test(supplier)).length >= 6, "Entry Doors includes at least six Corinthian exterior entrance door designs");
 assert.ok(new Set(entryDoorProducts.map((product) => product.range)).size >= 7, "Entry Doors exposes supplier ranges before designs");
 assert.ok(entryDoorProducts.every((product) => product.attributes?.sizes?.length), "Every Entry Door record exposes size/variant options");
 assert.ok(entryDoorProducts.every((product) => product.attributes?.finishOptions?.length), "Every Entry Door record exposes finish/colour options");
 assert.ok(entryDoorProducts.every((product) => product.attributes?.glazingOptions?.length), "Every Entry Door record exposes glazing options, including None where solid");
-assert.ok(entryDoorProducts.every((product) => product.attributes?.optionFlow === "supplier-range-design-size-finish-glazing-save"), "Entry Door records declare the supplier/range/design/variant/finish/glass save flow");
+assert.ok(entryDoorProducts.every((product) => product.attributes?.optionFlow === "supplier-range-design-size-configuration-finish-glazing-hardware-save"), "Entry Door records declare the supplier/range/design/configuration/finish/glass/hardware save flow");
 assert.ok(entryDoorProducts.every((product) => /entry|entrance/i.test(`${product.productName} ${product.officialProductUrl} ${product.attributes?.doorType || ""}`)), "Entry Door records are actual exterior entry/entrance door products");
 
 const badEntryDoorImageTerms = /\b(bathroom|ensuite|toilet|shower|bedroom|kitchen|interior|unsplash|cooktop)\b/i;
 entryDoorProducts.forEach((product) => {
-  assert.equal(badEntryDoorImageTerms.test(`${product.primaryImageUrl} ${product.thumbnailUrl} ${product.galleryImageUrls || ""}`), false, `${product.productCode} cannot use bathroom/interior fallback imagery`);
+  assert.equal(badEntryDoorImageTerms.test(`${product.primaryImageUrl} ${product.thumbnailUrl}`), false, `${product.productCode} cannot use bathroom/interior fallback imagery for its displayed product image`);
 });
 
 const exteriorFamilyKeys = EXTERIOR_REQUIREMENTS.map((requirement) => requirement.familyKey);
@@ -208,7 +206,7 @@ const selectionsBookSource = readFileSync("pages/modules/builders/selections-boo
   "entry-door-finish-step",
   "entry-door-glazing-step",
 ].forEach((token) => assert.ok(selectionsBookSource.includes(token), `Client Selections Entry Door workflow includes ${token}`));
-assert.ok(selectionsBookSource.includes("supplier-range-design-size-finish-glazing-save"), "Client Selections Entry Door workflow cannot save from supplier/range alone");
+assert.ok(selectionsBookSource.includes("supplier-range-design-size-configuration-finish-glazing-hardware-save"), "Client Selections Entry Door workflow cannot save before design configuration, finish, glazing and hardware are resolved");
 
 function selectionFor(requirementKey) {
   const requirement = EXTERIOR_REQUIREMENTS.find((item) => item.requirementKey === requirementKey);

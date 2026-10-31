@@ -109,6 +109,16 @@ test("Section 83: clearing Qty on the linked sialation row → Qty blank and Cos
 test("6. Section total falls by exactly the cleared row's cost", () => {
   assert.equal(Math.round((linkedBefore.quotation[INSULATION].subtotal - cleared.quotation[INSULATION].subtotal) * 100) / 100, linkedRowBefore.cost);
 });
+test("saved imported subtotal never overrides current row costs", () => {
+  const wb = workbook();
+  wb.quotation[INSULATION].workbookSummaryValue = "999999.99";
+  const result = calc(wb);
+  const rowTotal = result.quotation[INSULATION].rows
+    .filter((item) => !(item.feeType || item.cabinetMakerTotalRow))
+    .reduce((sum, item) => sum + Number(item.cost || 0), 0);
+  assert.equal(result.quotation[INSULATION].subtotal, Math.round(rowTotal * 100) / 100);
+  assert.notEqual(result.quotation[INSULATION].subtotal, 999999.99);
+});
 test("7. Grand quotation total falls accordingly", () => {
   assert(cleared.summary.baseLineItemSubtotal < linkedBefore.summary.baseLineItemSubtotal, "line-item subtotal falls");
   assert.equal(Math.round((linkedBefore.summary.baseLineItemSubtotal - cleared.summary.baseLineItemSubtotal) * 100) / 100, linkedRowBefore.cost);

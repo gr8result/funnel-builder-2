@@ -55,7 +55,7 @@ assert.equal(line.quantity, 12.4);
 assert.equal(line.unitPrice, 650);
 assert.equal(line.selectedTotal, 8060);
 assert.equal(line.allowanceTotal, 4650);
-assert.equal(line.variation, 3410);
+assert.equal(line.variation, 2677.27, "inclusive indicative rate is compared against the ex-GST project allowance");
 assert.equal(line.rateBasis, "indicative_estimating_rate");
 
 // Unsupported combinations are rejected.

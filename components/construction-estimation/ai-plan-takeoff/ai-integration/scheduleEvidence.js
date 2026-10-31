@@ -1,3 +1,4 @@
+import { roomQuantityRows } from './roomGeometry.js';
 // AI evidence augments the existing Rooms and Custom Takeoffs sections. Geometry
 // remains the sole source of measured area/length/count inputs; printed totals
 // remain visible benchmarks and are never silently substituted for geometry.
@@ -9,7 +10,7 @@ export function createAiScheduleRows(analysis, pages) {
     notes: `${item.basis}; ${Math.round(item.confidence * 100)}% confidence. ${item.evidence}`,
   });
   return {
-    rooms: (analysis?.rooms || []).filter(eligible).map((item, i) => row(item, i, 'Rooms', 1, 'No', item.name)),
+    rooms: [...(analysis?.rooms || []).filter(eligible).map((item, i) => row(item, i, 'Rooms', 1, 'No', item.name)), ...roomQuantityRows((analysis?.rooms || []).filter(item => pages.includes(item.page)))],
     customTakeoffs: [
       ...(analysis?.fixtures || []).filter(eligible).map((item, i) => row(item, i, 'Custom Takeoffs', item.quantity, 'No', `${item.type}${item.room ? ` — ${item.room}` : ''}`)),
       ...(analysis?.documentedQuantities || []).filter(eligible).map((item, i) => row(item, i, 'Drawing evidence', item.value, item.unit, item.label)),

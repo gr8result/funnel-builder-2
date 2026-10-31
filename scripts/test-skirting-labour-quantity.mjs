@@ -40,7 +40,7 @@ check("INSTALL SKIRTING BOARDS qty = total skirting LM, unit LM, source shown", 
   assert.equal(item.quantity, String(total));
   assert.equal(item.unit, "LM");
   assert.equal(item.derivedQuantityFormula, "skirtingLm");
-  assert.equal(item.derivedQuantityExplanation, `Skirting Boards LM (${total}) = ${total}`);
+  assert.equal(item.derivedQuantityExplanation, `Installation labour: Ground ${before.quantities.lowerSkirtingLm} + Second ${before.quantities.upperSkirtingLm} + Third ${before.quantities.thirdSkirtingLm} = ${total} LM required; labour is charged on required LM, not stock-rounded purchase LM.`);
   assert.equal(item.cost, Math.round(total * 2 * 100) / 100);
 });
 check("other Fix-out Stage Labour rows are unaffected", () => {

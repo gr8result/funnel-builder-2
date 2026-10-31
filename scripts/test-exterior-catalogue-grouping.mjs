@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { getMasterProducts, toCanonicalProductContract } from '../lib/product-library/catalogueService.js';
+import { CURRENT_BUILDER_WORKSPACE_ID } from '../lib/builders/currentBuilderSeed.js';
 import { EXTERIOR_CATALOGUE_SECTIONS, exteriorSectionForProduct } from '../lib/product-library/exteriorCatalogueSections.js';
 import { getProductLibraryRoomCategories, getProductLibraryRoomCategory, productBelongsToRoomCategory, resolveQuotationBuilderMappingForProduct, resolveProductLibrarySectionForQuotationRow } from '../lib/product-library/productLibraryTaxonomy.js';
 
@@ -19,7 +20,7 @@ for (const [parent, sections] of Object.entries(EXTERIOR_CATALOGUE_SECTIONS)) {
     counts[`${parent}/${key}`] = records.length;
     for (const p of records) {
       assert.equal(resolveQuotationBuilderMappingForProduct(p).quotationSubsectionId, key);
-      assert.equal(toCanonicalProductContract(p).quotationSubsectionId, key);
+      assert.equal(toCanonicalProductContract(p, { organisationId: CURRENT_BUILDER_WORKSPACE_ID }).quotationSubsectionId, key);
     }
     return records;
   });

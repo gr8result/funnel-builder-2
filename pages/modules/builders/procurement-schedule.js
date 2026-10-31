@@ -1,6 +1,6 @@
 import Head from "next/head";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useWorkspace } from "../../../hooks/useWorkspace";
 import { supabase } from "../../../utils/supabase-client";
 import FlooringProjectSchedule from "../../../components/client-selections/FlooringProjectSchedule";
@@ -16,17 +16,47 @@ const STATUS_OPTIONS = [
   "cancelled",
 ];
 
-export default function BuilderProcurementSchedulePage({ workbook = null } = {}) {
+export default function BuilderProcurementSchedulePage({ workbook = null, embedded = false, workspaceId: linkedWorkspaceId = "", organisationId = "", projectId: linkedJobId = "", commercialProjectId = "", snapshotId = "", estimateSnapshotId = "" } = {}) {
   const { workspaceId, activeWorkspace, loading: workspaceLoading } = useWorkspace();
+  const jobId = String(workbook?.jobId || "");
+  const expectedProjectId = String(commercialProjectId || workbook?.commercialProjectId || "");
+  const expectedSnapshotId = String(snapshotId || estimateSnapshotId || workbook?.commercialSnapshotId || "");
+  const tenantIds = [linkedWorkspaceId, organisationId, workbook?.workspaceId, workbook?.workspace_id].filter(Boolean);
+  const associationError = !embedded ? "" : !workspaceId || !jobId || !tenantIds.length
+    ? "This job needs a verified workspace and job identity. Reopen the correct job before managing procurement."
+    : tenantIds.some((id) => id !== workspaceId) || (linkedJobId && linkedJobId !== jobId)
+      ? "The job identity or builder workspace does not match the active job. Reopen the correct job and workspace."
+      : commercialProjectId && workbook?.commercialProjectId && commercialProjectId !== workbook.commercialProjectId
+        ? "The job has conflicting commercial project links. Review its commercial association before continuing."
+        : !expectedProjectId ? "This job has no linked commercial project. Sync this job to Project Commercials first."
+          : snapshotId && estimateSnapshotId && snapshotId !== estimateSnapshotId
+            ? "The job has conflicting commercial snapshot links. Review its commercial association before continuing." : "";
+  const associationKey = JSON.stringify([workspaceId, embedded, jobId, expectedProjectId, expectedSnapshotId, associationError]);
   const [projects, setProjects] = useState([]);
   const [snapshots, setSnapshots] = useState([]);
-  const [procurementItems, setProcurementItems] = useState([]);
-  const [boqItems, setBoqItems] = useState([]);
-  const [purchaseOrders, setPurchaseOrders] = useState([]);
-  const [purchaseOrderItems, setPurchaseOrderItems] = useState([]);
-  const [suppliers, setSuppliers] = useState([]);
-  const [selectedProjectId, setSelectedProjectId] = useState("");
-  const [selectedSnapshotId, setSelectedSnapshotId] = useState("");
+  const [storedProcurementItems, setProcurementItems] = useState([]);
+  const [storedBoqItems, setBoqItems] = useState([]);
+  const [storedPurchaseOrders, setPurchaseOrders] = useState([]);
+  const [storedPurchaseOrderItems, setPurchaseOrderItems] = useState([]);
+  const [storedSuppliers, setSuppliers] = useState([]);
+  const [projectChoice, setSelectedProjectId] = useState("");
+  const [snapshotChoice, setSelectedSnapshotId] = useState("");
+  const [verifiedProjectKey, setVerifiedProjectKey] = useState("");
+  const [verifiedSnapshotKey, setVerifiedSnapshotKey] = useState("");
+  const [loadedScope, setLoadedScope] = useState("");
+  const selectedProjectId = !associationError && verifiedProjectKey === associationKey ? projectChoice : "";
+  const snapshotKey = JSON.stringify([associationKey, selectedProjectId]);
+  const selectedSnapshotId = selectedProjectId && verifiedSnapshotKey === snapshotKey ? snapshotChoice : "";
+  const scopeKey = JSON.stringify([snapshotKey, selectedSnapshotId]);
+  const currentScope = useRef(scopeKey);
+  currentScope.current = scopeKey;
+  const emptyRows = useRef([]).current;
+  const scopeReady = Boolean(selectedProjectId && selectedSnapshotId && loadedScope === scopeKey);
+  const procurementItems = scopeReady ? storedProcurementItems : emptyRows;
+  const boqItems = scopeReady ? storedBoqItems : emptyRows;
+  const purchaseOrders = scopeReady ? storedPurchaseOrders : emptyRows;
+  const purchaseOrderItems = scopeReady ? storedPurchaseOrderItems : emptyRows;
+  const suppliers = scopeReady ? storedSuppliers : emptyRows;
   const [supplierFilter, setSupplierFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
@@ -34,13 +64,22 @@ export default function BuilderProcurementSchedulePage({ workbook = null } = {})
   const [drafts, setDrafts] = useState({});
   const [savingId, setSavingId] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [requestError, setError] = useState("");
+  const error = associationError || requestError;
   const [success, setSuccess] = useState("");
 
   useEffect(() => {
-    if (!workspaceId) {
+    setLoadedScope("");
+    setSelectedProjectId("");
+    setSelectedSnapshotId("");
+    setVerifiedProjectKey("");
+    setVerifiedSnapshotKey("");
+    setSuccess("");
+    setDrafts({});
+    if (!workspaceId || associationError) {
       setProjects([]);
-      setSelectedProjectId("");
+      setSnapshots([]);
+      setLoading(false);
       return;
     }
 
@@ -50,7 +89,7 @@ export default function BuilderProcurementSchedulePage({ workbook = null } = {})
       setError("");
       const { data, error: loadError } = await supabase
         .from("builder_commercial_projects")
-        .select("id, project_name, client_name, site_address, status, currency, updated_at, created_at")
+        .select("id, workspace_id, source_workbook_job_id, project_name, client_name, site_address, status, currency, updated_at, created_at")
         .eq("workspace_id", workspaceId)
         .order("updated_at", { ascending: false });
 
@@ -60,9 +99,11 @@ export default function BuilderProcurementSchedulePage({ workbook = null } = {})
         setProjects([]);
         setSelectedProjectId("");
       } else {
-        const rows = data || [];
+        const rows = (data || []).filter((project) => project.workspace_id === workspaceId && (!embedded || (project.id === expectedProjectId && project.source_workbook_job_id === jobId)));
         setProjects(rows);
-        setSelectedProjectId((current) => rows.find((project) => project.id === current)?.id || rows[0]?.id || "");
+        setVerifiedProjectKey(associationKey);
+        setSelectedProjectId(embedded && rows.some((project) => project.id === expectedProjectId) ? expectedProjectId : "");
+        if (embedded && rows.length !== 1) setError("The linked commercial project was not found in this builder workspace. Review the job's commercial project link.");
       }
       setLoading(false);
     }
@@ -71,9 +112,12 @@ export default function BuilderProcurementSchedulePage({ workbook = null } = {})
     return () => {
       cancelled = true;
     };
-  }, [workspaceId]);
+  }, [workspaceId, associationKey, associationError, embedded, expectedProjectId, jobId]);
 
   useEffect(() => {
+    setSelectedSnapshotId("");
+    setVerifiedSnapshotKey("");
+    setLoadedScope("");
     if (!workspaceId || !selectedProjectId) {
       setSnapshots([]);
       setSelectedSnapshotId("");
@@ -86,7 +130,7 @@ export default function BuilderProcurementSchedulePage({ workbook = null } = {})
       setError("");
       const { data, error: loadError } = await supabase
         .from("builder_estimate_snapshots")
-        .select("id, snapshot_number, snapshot_label, status, source_quote_number, source_quote_date, final_quote_total, created_at")
+        .select("id, workspace_id, project_id, source_workbook_job_id, snapshot_number, snapshot_label, status, source_quote_number, source_quote_date, final_quote_total, created_at")
         .eq("workspace_id", workspaceId)
         .eq("project_id", selectedProjectId)
         .order("snapshot_number", { ascending: false });
@@ -97,9 +141,11 @@ export default function BuilderProcurementSchedulePage({ workbook = null } = {})
         setSnapshots([]);
         setSelectedSnapshotId("");
       } else {
-        const rows = data || [];
+        const rows = (data || []).filter((snapshot) => snapshot.workspace_id === workspaceId && snapshot.project_id === selectedProjectId && (!embedded || (snapshot.source_workbook_job_id === jobId && (expectedSnapshotId ? snapshot.id === expectedSnapshotId : snapshot.status === "current"))));
         setSnapshots(rows);
-        setSelectedSnapshotId((current) => rows.find((snapshot) => snapshot.id === current)?.id || rows[0]?.id || "");
+        setVerifiedSnapshotKey(snapshotKey);
+        setSelectedSnapshotId(embedded && rows.length === 1 ? rows.find((snapshot) => snapshot.source_workbook_job_id === jobId)?.id || "" : "");
+        if (embedded && rows.length !== 1) setError("No unique linked snapshot was found for this job, commercial project and builder workspace. Review or resync the exact snapshot.");
       }
       setLoading(false);
     }
@@ -108,9 +154,10 @@ export default function BuilderProcurementSchedulePage({ workbook = null } = {})
     return () => {
       cancelled = true;
     };
-  }, [workspaceId, selectedProjectId]);
+  }, [workspaceId, selectedProjectId, snapshotKey, embedded, expectedSnapshotId, jobId]);
 
   useEffect(() => {
+    setLoadedScope("");
     if (!workspaceId || !selectedProjectId || !selectedSnapshotId) {
       setProcurementItems([]);
       setBoqItems([]);
@@ -175,6 +222,7 @@ export default function BuilderProcurementSchedulePage({ workbook = null } = {})
         setPurchaseOrderItems(poItemResult.data || []);
         setSuppliers(supplierResult.data || []);
         setDrafts(Object.fromEntries(procurementRows.map((item) => [item.id, draftFromItem(item)])));
+        setLoadedScope(scopeKey);
       }
       setLoading(false);
     }
@@ -183,7 +231,7 @@ export default function BuilderProcurementSchedulePage({ workbook = null } = {})
     return () => {
       cancelled = true;
     };
-  }, [workspaceId, selectedProjectId, selectedSnapshotId]);
+  }, [workspaceId, selectedProjectId, selectedSnapshotId, scopeKey]);
 
   const selectedProject = useMemo(
     () => projects.find((project) => project.id === selectedProjectId) || null,
@@ -283,7 +331,10 @@ export default function BuilderProcurementSchedulePage({ workbook = null } = {})
   }
 
   async function saveItem(item) {
-    if (!workspaceId) return;
+    if (!workspaceId || !scopeReady || associationError || !procurementItems.some((row) => row.id === item.id)) {
+      setError("Procurement updates require the verified job, builder, project and snapshot. Reload the linked schedule before saving.");
+      return;
+    }
     const draft = drafts[item.id] || draftFromItem(item);
     const statusMapping = dbStatusForSchedule(draft.scheduleStatus);
     setSavingId(item.id);
@@ -291,6 +342,10 @@ export default function BuilderProcurementSchedulePage({ workbook = null } = {})
     setSuccess("");
 
     const { data: authData } = await supabase.auth.getUser();
+    if (currentScope.current !== scopeKey) {
+      setSavingId("");
+      return;
+    }
     const userId = authData?.user?.id || null;
     const payload = {
       required_by: draft.requiredBy || null,
@@ -313,10 +368,13 @@ export default function BuilderProcurementSchedulePage({ workbook = null } = {})
       .from("builder_procurement_items")
       .update(payload)
       .eq("workspace_id", workspaceId)
+      .eq("project_id", selectedProjectId)
+      .eq("snapshot_id", selectedSnapshotId)
       .eq("id", item.id)
       .select("id, boq_item_id, supplier_id, source_quote_row_id, source_procurement_item_id, item_name, description, section_name, procurement_category, quantity, unit, estimated_rate, estimated_total, required_by, order_by, order_status, delivery_status, status, source_item, metadata, updated_at")
       .single();
 
+    if (currentScope.current !== scopeKey) return;
     if (updateError) {
       setError(updateError.message || "Could not update procurement schedule item.");
     } else {
@@ -349,8 +407,8 @@ export default function BuilderProcurementSchedulePage({ workbook = null } = {})
         <section style={styles.controls}>
           <label style={styles.field}>
             <span style={styles.label}>Commercial project</span>
-            <select value={selectedProjectId} onChange={(event) => setSelectedProjectId(event.target.value)} style={styles.select} disabled={workspaceLoading || loading || !projects.length}>
-              {!projects.length ? <option value="">No synced projects found</option> : null}
+            <select value={selectedProjectId} onChange={(event) => setSelectedProjectId(event.target.value)} style={styles.select} disabled={embedded || workspaceLoading || loading || !projects.length}>
+              <option value="">{projects.length ? "Choose a commercial project" : "No linked project found"}</option>
               {projects.map((project) => (
                 <option key={project.id} value={project.id}>
                   {project.project_name || "Untitled Project"}{project.client_name ? ` - ${project.client_name}` : ""}
@@ -361,8 +419,8 @@ export default function BuilderProcurementSchedulePage({ workbook = null } = {})
 
           <label style={styles.field}>
             <span style={styles.label}>Estimate snapshot</span>
-            <select value={selectedSnapshotId} onChange={(event) => setSelectedSnapshotId(event.target.value)} style={styles.select} disabled={workspaceLoading || loading || !snapshots.length}>
-              {!snapshots.length ? <option value="">No snapshots found</option> : null}
+            <select value={selectedSnapshotId} onChange={(event) => setSelectedSnapshotId(event.target.value)} style={styles.select} disabled={embedded || workspaceLoading || loading || !snapshots.length}>
+              <option value="">{snapshots.length ? "Choose an estimate snapshot" : "No linked snapshot found"}</option>
               {snapshots.map((snapshot) => (
                 <option key={snapshot.id} value={snapshot.id}>
                   Snapshot {snapshot.snapshot_number}{snapshot.status ? ` - ${titleCase(snapshot.status)}` : ""}{snapshot.source_quote_number ? ` - ${snapshot.source_quote_number}` : ""}
@@ -399,7 +457,7 @@ export default function BuilderProcurementSchedulePage({ workbook = null } = {})
           </label>
         </section>
 
-        {error ? <div style={styles.error}>{error}</div> : null}
+        {error ? <div role="alert" style={styles.error}>{error}</div> : null}
         {success ? <div style={styles.success}>{success}</div> : null}
         {workspaceLoading ? <div style={styles.notice}>Loading workspace...</div> : null}
         {!workspaceLoading && !workspaceId ? <div style={styles.notice}>Choose an active workspace to manage the procurement schedule.</div> : null}

@@ -6,7 +6,9 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Head from "next/head";
+import Link from "next/link";
 import { supabase } from "../../../../utils/supabase-client";
+import { getUserSafe } from "../../../../lib/lockRetry";
 import SubscriberAvatar from "/components/crm/SubscriberAvatar";
 import LeadDetailsModal from "/components/crm/LeadDetailsModal";
 import { getAvatarForLead } from "../../../../utils/avatar";
@@ -111,6 +113,7 @@ export default function EmailListsDashboard() {
   const [loading, setLoading] = useState(true);
   const [editingSubscriber, setEditingSubscriber] = useState(false);
   const [userId, setUserId] = useState(null);
+  const [authError, setAuthError] = useState("");
   const [selectedIds, setSelectedIds] = useState([]);
 
   const [showAllMode, setShowAllMode] = useState(false);
@@ -164,10 +167,14 @@ export default function EmailListsDashboard() {
   }, [userId, workspaceId]);
 
   async function loadUser() {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
+    setAuthError("");
+    const { user, error } = await getUserSafe(supabase);
+    if (error) {
+      console.error("loadUser error:", error);
+      setAuthError("Another GR8 Result tab is busy saving or signing in. Your data is safe. Please retry.");
+      setLoading(false);
+      return;
+    }
     if (user) setUserId(user.id);
   }
 
@@ -957,6 +964,25 @@ export default function EmailListsDashboard() {
                 📤 Import CSV
               </button>
 
+              <Link
+                href="/import-contacts"
+                style={{
+                  display: "block",
+                  background: "#2563eb",
+                  color: "#fff",
+                  width: "100%",
+                  boxSizing: "border-box",
+                  marginTop: "10px",
+                  borderRadius: "8px",
+                  padding: "10px 14px",
+                  fontWeight: "600",
+                  textAlign: "center",
+                  textDecoration: "none",
+                }}
+              >
+                Import from Klaviyo / Mailchimp
+              </Link>
+
               <button
                 style={{
                   background: "#14b8a6",
@@ -1048,7 +1074,12 @@ export default function EmailListsDashboard() {
                 </div>
               )}
 
-              {loading ? (
+              {authError ? (
+                <div role="alert">
+                  <p>{authError}</p>
+                  <button type="button" onClick={loadUser}>Retry</button>
+                </div>
+              ) : loading ? (
                 <p>Loading subscribers...</p>
               ) : subscribers.length === 0 ? (
                 <p>No subscribers found.</p>

@@ -69,7 +69,7 @@ const patch = flooringSelectionPatch({}, areas, { productById: byId, carpetRates
 const book = { rooms: [{ rows: [patch] }] };
 const connected = connectFlooringSelectionsToQuotation(wb, book, { productById: byId });
 const connectedAgain = connectFlooringSelectionsToQuotation(connected, book, { productById: byId });
-const selectedRows = connectedAgain.quotation.CARPETS.rows.filter((r) => r.source === "client-selections-flooring");
+const selectedRows = Object.values(connectedAgain.quotation).flatMap((section) => section.rows || []).filter((r) => r.source === "client-selections-flooring" && r.lineType !== "Heading");
 assert.equal(selectedRows.length, 2); assert.equal(connectedAgain.procurement.items.length, connected.procurement.items.length);
 assert.equal(connectedAgain.quotation.CARPETS.rows[0].quantity, 0, "replaced allowance is not charged a second time");
 const calculated = calculateEstimateBuilderWorkbook(connectedAgain);

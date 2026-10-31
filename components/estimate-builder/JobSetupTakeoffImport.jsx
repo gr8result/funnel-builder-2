@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { createJobSetupPayload, createTakeoffSchedule } from "../construction-estimation/ai-plan-takeoff/takeoffSchedule.js";
+import { takeoffCalibrationCheck } from "../../lib/construction-estimation/takeoffCalibrationGate.js";
 import { loadRecentTakeoffJobs, resolveRecentTakeoffIndexedDbRecord, findMostRecentTakeoffSnapshotWithData } from "../construction-estimation/ai-plan-takeoff/jobPersistence.js";
 import { createJobSetupImportPreview } from "../../lib/construction-estimation/jobSetupTakeoffImport.js";
 import { masterJobId, masterJobAliases } from "../../lib/construction-estimation/masterJob.js";
@@ -21,11 +22,14 @@ const GENERAL_WARNING_TOPICS = [
 ];
 
 function scheduleForJob(job, workbook) {
-  return createTakeoffSchedule({
+  const schedule = createTakeoffSchedule({
     ...job,
     totalPages: job.totalPages || job.plan?.totalPages || 1,
     jobSetupRows: workbook.data?.inputDataSheet?.rows || {},
   });
+  // Mis-calibrated sheets must not become quotation quantities (see takeoffCalibrationGate.js).
+  const calibration = takeoffCalibrationCheck(job);
+  return calibration.ok ? schedule : { ...schedule, calibrationBlocked: calibration };
 }
 
 const RAW_TAKEOFF_ARRAYS = ["completedWallRuns", "placedOpenings", "completedFloorplans", "completedAreas", "completedEaves", "completedMeasurements"];
@@ -100,7 +104,8 @@ export default function JobSetupTakeoffImport({ sheet, takeoffJob, projectId, jo
     setError("");
     setMessage("");
     setAllowMismatch(false);
-    setSource({ name: request.planFilename || "Current takeoff", schedule: request.schedule, payload: request, options: request.provenance || {} });
+    const requestCalibration = takeoffCalibrationCheck(takeoffJob || {});
+    setSource({ name: request.planFilename || "Current takeoff", schedule: request.schedule, payload: request, options: request.provenance || {}, calibrationBlocked: requestCalibration.ok ? null : requestCalibration });
     const previous = workbook.takeoffEngine?.lastJobSetupSync?.payload;
     const requestSheetLevels = request.sheetLevels || {};
     setSheetLevels(Object.keys(requestSheetLevels).length
@@ -151,6 +156,7 @@ export default function JobSetupTakeoffImport({ sheet, takeoffJob, projectId, jo
     };
   }, [payload, otherWarnings]);
   const reviewCount = reviewSummary.decisions.length + reviewSummary.extra.length;
+  const calibrationBlocked = source?.calibrationBlocked || source?.schedule?.calibrationBlocked || null;
   const selectedKeys = preview.rows.filter((row) => selected[row.destinationKey] && !["unavailable", "unchanged"].includes(row.status)).map((row) => row.destinationKey);
 
   async function startImport() {
@@ -220,6 +226,7 @@ export default function JobSetupTakeoffImport({ sheet, takeoffJob, projectId, jo
 
   async function importSelected() {
     setError("");
+    if (calibrationBlocked) { setError(calibrationBlocked.message); return; }
     setBusy(true);
     try {
       const result = await sheet.importJobSetupTakeoff(payload, selectedKeys, { allowProjectMismatch: allowMismatch });
@@ -313,7 +320,8 @@ export default function JobSetupTakeoffImport({ sheet, takeoffJob, projectId, jo
           </div>}
         </>}
         <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-          <button type="button" style={{ ...buttonStyle, background: "#0f766e", color: "#fff", opacity: !selectedKeys.length || busy ? 0.5 : 1 }} disabled={!selectedKeys.length || busy} onClick={importSelected}>Import selected quantities</button>
+          {calibrationBlocked && <p role="alert" data-testid="takeoff-calibration-blocked" style={{ color: "#b91c1c", fontWeight: 600 }}>{calibrationBlocked.message}</p>}
+          <button type="button" style={{ ...buttonStyle, background: "#0f766e", color: "#fff", opacity: !selectedKeys.length || busy || calibrationBlocked ? 0.5 : 1 }} disabled={!selectedKeys.length || busy || Boolean(calibrationBlocked)} onClick={importSelected}>Import selected quantities</button>
           <button type="button" style={buttonStyle} onClick={() => setOpen(false)}>Cancel</button>
           {!source && <button type="button" style={buttonStyle} onClick={onOpenTakeoff}>Open AI Plan Takeoff</button>}
         </div>

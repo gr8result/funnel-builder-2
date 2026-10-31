@@ -22,7 +22,7 @@ selections=upsertEntryDoorSelection(selections,{...selections[0],furnitureFinish
 const schedules=entryDoorSelectionSchedules(selections);for(const lines of Object.values(schedules)){assert.equal(lines.length,2);assert.equal(lines.find(l=>l.doorId==='D02').quantity,2);assert.equal(lines[0].rate,null);assert.equal(lines[0].amount,null);}
 const book={rooms:[{rows:[{guidedSelection:{entryDoors:selections}}]}]};const original={quotation:{Existing:{rows:[{id:'keep',item:'Existing product'}]}},procurement:{items:[{id:'keep'}]}};
 const next=connectEntryDoorFurnitureSchedules(original,book);assert.deepEqual(next.quotation.Existing,original.quotation.Existing);assert.equal(next.procurement.items.length,3);assert.equal(original.procurement.items.length,1);assert.equal(connectEntryDoorFurnitureSchedules(next,book).procurement.items.length,3);
-const quoteRows=next.quotation['ENTRY DOOR FURNITURE - CLIENT SELECTIONS'].rows;assert.equal(quoteRows.length,2);assert.equal(quoteRows[0].excelRate,'');
+const quoteRows=next.quotation['ENTRY DOORS'].rows.filter(row=>row.source==='client-selections-entry-door-furniture');assert.equal(quoteRows.length,2);assert.equal(quoteRows[0].excelRate,'');assert.equal(quoteRows.every(row=>row.quoteRequired&&row.lineType==='Quote required'),true);
 const finalSnapshot=createProjectInclusionsSnapshot({project:{id:'fixture',project_name:'Fixture'},selections:[{id:'entry-selection',category:'Exterior',subcategory:'Entry Doors',title:'Entry door',selected_product_name:'Selected entry doors',is_active:true,selection_status:'selected',status:'selected',selected_details:{requirementKey:'entry-door',entryDoors:selections,displayInSelectionsSchedule:true,clientDecisionRequired:true}}]});
 const html=renderFinalInclusionsScheduleHtml(finalSnapshot);
 assert(html.includes('ED1')&&html.includes('ED2'),'Both scheduled door references must reach Final Inclusions');assert(html.includes('Rate required'));assert(html.includes(furniture.model));
@@ -42,6 +42,6 @@ const removed=updateDoorFurnitureBook(changed,doors,furniture,{}, {remove:true})
 const cleared=connectEntryDoorFurnitureSchedules(connected,removed);
 assert.equal(cleared.entryDoorFurnitureSchedule.length,0);
 assert.equal(cleared.procurement.items.length,1);
-assert.equal(cleared.quotation['ENTRY DOOR FURNITURE - CLIENT SELECTIONS'].rows.length,0);
+assert.equal((cleared.quotation['ENTRY DOORS']?.rows||[]).filter(row=>row.source==='client-selections-entry-door-furniture').length,0);
 assert.throws(()=>updateDoorFurnitureBook(first,[doors[0]],furniture,{finish:furniture.finishOptions[0],quantity:0}));
 console.log('PASS explicit selection context, apply all, independent change, removal, and schedule cleanup');

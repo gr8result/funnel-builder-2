@@ -20,7 +20,7 @@ if (!globalThis.crypto) globalThis.crypto = webcrypto;
 globalThis.Image = class { naturalWidth = 1000; naturalHeight = 800; async decode() {} };
 const originalCreateElement = document.createElement.bind(document);
 document.createElement = (tag, ...args) => tag === 'canvas' ? {
-  width: 1, height: 1, getContext: () => ({ fillRect() {}, translate() {}, rotate() {}, drawImage() {}, measureText: () => ({ width: 12 }), fillText() {}, beginPath() {}, lineTo() {}, moveTo() {}, closePath() {}, stroke() {}, arc() {} }),
+  width: 1, height: 1, getContext: () => ({ getImageData: () => ({width:1000,height:800,data:new Uint8ClampedArray(1000*800*4).fill(255)}), fillRect() {}, translate() {}, rotate() {}, drawImage() {}, measureText: () => ({ width: 12 }), fillText() {}, beginPath() {}, lineTo() {}, moveTo() {}, closePath() {}, stroke() {}, arc() {} }),
   toDataURL: () => 'data:image/jpeg;base64,unit-test-image',
 } : originalCreateElement(tag, ...args);
 const { supabase } = await import('../utils/supabase-client.js');
@@ -309,6 +309,25 @@ try {
   const rotated ={ walls: [{ nodes: [{ x: .2, y: .3 }, { x: .4, y: .5 }] }], openings: [{ x: .6, y: .7 }], buildingAreas: [], rooms: [], fixtures: [] };
   assert.deepEqual(restoreAnalysisCoordinates(rotated, 270).walls[0].nodes, [{ x: .7, y: .2 }, { x: .5, y: .4 }]);
   assert.ok(Math.abs(restoreAnalysisCoordinates(rotated, 90).openings[0].y - .4) < 1e-10);
+  // Dedicated room detection: real hook, provider transport fixture, raster verification,
+  // correction, actions, calibration and a reread that preserves the confirmed boundary.
+  configuration = {...configuration, planPages:[page], sheetLevels:{1:'Ground Floor'}};
+  await render(); await resetRun();
+  getResponse = async () => ({...measurement,walls:[],rooms:[{page:1,name:'Main Bathroom',x:.3,y:.3,polygon:[{x:.1,y:.1},{x:.5,y:.1},{x:.5,y:.5},{x:.1,y:.5}],boundaryClosed:true,printedAreaM2:null,dimensionReferences:[],...observedEvidence}]});
+  await act(()=>current.analysis.rooms.read());
+  assert.equal(current.analysis.rooms.error,false,current.analysis.rooms.message);
+  const detectedRoom=current.analysis.report.rooms[0];
+  assert.equal(detectedRoom.polygon.length,4);
+  assert.equal(detectedRoom.reviewRequired,true,'A blank raster cannot establish supported wall edges');
+  await act(()=>current.analysis.rooms.update([detectedRoom.id],{confirmed:true,boundaryClosed:true,actions:['Floor Tiling']}));
+  assert.equal(current.analysis.report.rooms[0].reviewRequired,false);
+  const originalArea=current.analysis.report.rooms[0].areaM2;
+  await act(()=>current.setPixelsPerMm(current.pixelsPerMm*2));
+  assert.equal(current.analysis.report.rooms[0].areaM2,originalArea/4,'Sheet calibration recalculates room area');
+  await act(()=>current.analysis.rooms.read());
+  assert.equal(current.analysis.report.rooms.length,1,'Confirmed boundary is not duplicated on reread');
+  assert.deepEqual(current.analysis.report.rooms[0].actions,['Floor Tiling']);
+
   console.log('AI orchestration: confirmed scale, real canonical bridge, replay suppression, cancellation/job guards, review-only outcomes, rotation and saved evidence passed.');
 } finally {
   await act(() => root.unmount());

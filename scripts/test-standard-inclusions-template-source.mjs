@@ -35,7 +35,8 @@ assert(masterHelper.includes("createPremierInclusionsWorkingCopy"), "Master help
 assert(defaults.includes("createPremierInclusionsWorkingCopy"), "Default Standard Inclusions state uses the approved master clone");
 assert(defaults.includes("documentBuilder: createPremierInclusionsWorkingCopy"), "Fresh estimates receive a cloned documentBuilder");
 assert(defaults.includes("hasDeletedMarker ? value.documentBuilder || null"), "Explicit deleted schedules are not silently resurrected");
-assert(estimateDefaults.includes('selected_standard_inclusions_package_id: "std-premier-range-inclusions"'), "Blank master estimate selects the Premier package ID");
+// Tenant builders get their Premier default from the published schedule (quotationDefault); the legacy builder keeps the fixed ID.
+assert(/selected_standard_inclusions_package_id: (?:legacyBuilder \? )?['"]std-premier-range-inclusions['"]/.test(estimateDefaults), "Blank master estimate selects the Premier package ID");
 assert(workbook.includes("createPremierInclusionsWorkingCopy"), "Workbook editor fallback uses the approved master clone");
 assert(!workbook.includes("createPremierInclusionsDocument"), "Workbook no longer imports the three-page fallback creator");
 assert(compatibilityHelper.includes("../../../lib/standard-inclusions/masterTemplate.js"), "Legacy master helper path re-exports the lib helper");

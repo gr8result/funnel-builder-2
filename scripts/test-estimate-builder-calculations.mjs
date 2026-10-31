@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { calculateEstimateBuilderWorkbook } from "../lib/construction-estimation/estimateBuilderWorkbookCalculations.js";
+import { calculateEstimateBuilderWorkbook, validateQuoteQuantityFormula } from "../lib/construction-estimation/estimateBuilderWorkbookCalculations.js";
+import { createEstimateBuilderWorkbookDefaults } from "../lib/construction-estimation/estimateBuilderWorkbookDefaults.js";
 import { V4_DATA_SECTIONS } from "../lib/construction-estimation/estimateWorksheetV4Schema.js";
 
 function minimalWorkbook({ rows, formulas = {}, quotation = {}, windowsDoors = [] }) {
@@ -498,5 +499,103 @@ const dataRows = V4_DATA_SECTIONS[0].rows;
 const thirdEavesIndex = dataRows.findIndex((row) => row.key === "thirdEavesLm");
 assert.equal(dataRows[thirdEavesIndex + 1]?.key, "totalEavesLm");
 assert.equal(dataRows[thirdEavesIndex + 1]?.label, "TOTAL LM EAVES");
+
+const painterDefaults = createEstimateBuilderWorkbookDefaults();
+const painterSection = Object.keys(painterDefaults.quotation).find((name) => name.toLowerCase().startsWith("painter"));
+const patioCeiling = painterDefaults.quotation[painterSection].rows.find((row) => row.id === "quote-1968");
+assert.equal(patioCeiling.formulas.B, "painterPatioCeilingAreaM2");
+const outdoorAreas = Object.fromEntries(Object.entries({
+  lowerAlfrescoAreaM2: 19.003,
+  lowerPatioAreaM2: 18.125,
+  lowerPorchAreaM2: 0,
+  upperAlfrescoAreaM2: 5,
+  upperPatioAreaM2: 4,
+  upperPorchAreaM2: 1,
+  thirdAlfrescoAreaM2: 3.5,
+  thirdPatioAreaM2: 2.5,
+  thirdPorchAreaM2: 1.5,
+}).map(([key, value]) => [key, { value }]));
+painterDefaults.data.inputDataSheet.rows = {
+  ...painterDefaults.data.inputDataSheet.rows,
+  ...outdoorAreas,
+};
+const painterPreview = calculateEstimateBuilderWorkbook(painterDefaults);
+const calculatedPatioCeiling = painterPreview.quotation[painterSection].rows.find((row) => row.id === "quote-1968");
+assert.equal(Number(calculatedPatioCeiling.qty), 54.63);
+
+const savedOutdoorAreas = minimalWorkbook({
+  rows: { lowerAlfrescoAreaM2: 19.003, lowerPatioAreaM2: 18.125 },
+  quotation: { PAINTER: { rows: [{ ...patioCeiling, section: "PAINTER", quantity: "" }] } },
+});
+const savedPatioCeiling = calculateEstimateBuilderWorkbook(savedOutdoorAreas).quotation.PAINTER.rows[0];
+assert.equal(Number(savedPatioCeiling.qty), 37.13);
+
+const timberMaterialRows = minimalWorkbook({
+  rows: {
+    floorCount: 'Two storey',
+    lowerExternal70mmWallsLm: 63.0207,
+    lowerExternal90mmWallsLm: 0,
+    lowerInternal70mmWallsLm: 53.4265,
+    lowerInternal90mmWallsLm: 16.0113,
+  },
+  quotation: {
+    'FRAMING TIMBER': { rows: [
+      { id: 'quote-492.2', sourceRow: 492.2, item: '90 x 35 MPG 12 STUD MATERIAL 5.4 LENGTHS', unit: 'LENGTHS', formulas: { B: 'ceil(TotalStudMaterial90mmLm / 5.4)' }, excelRate: '$45.90' },
+      { id: 'quote-492.3', sourceRow: 492.3, item: '70 x 35 MPG 12 PLATE MATERIAL 5.4 LENGTHS', unit: 'LENGTHS', formulas: { B: 'ceil(TotalPlatesNogginsMaterial70mmLm / 5.4)' }, excelRate: '$35.65' },
+      { id: 'quote-492.4', sourceRow: 492.4, item: '90 x 35 MPG 12 PLATE MATERIAL 5.4 LENGTHS', unit: 'LENGTHS', formulas: { B: 'ceil(TotalPlatesNogginsMaterial90mmLm / 5.4)' }, excelRate: '$45.90' },
+    ] },
+  },
+});
+const timberPreview = calculateEstimateBuilderWorkbook(timberMaterialRows);
+assert.deepEqual(timberPreview.quotation['FRAMING TIMBER'].rows.map(row => Number(row.qty)), [22, 77, 9]);
+
+const formulaQuotation = {
+  TEST: {
+    rows: [
+      { id: "quote-1", sourceRow: 1, formulas: { B: "internalDoors" } },
+      { id: "quote-2", sourceRow: 2, formulas: { B: "B1 + 2" } },
+    ],
+  },
+};
+assert.deepEqual(
+  validateQuoteQuantityFormula({
+    row: formulaQuotation.TEST.rows[1],
+    expression: "=B1 + thirdLevelWindowCount",
+    quotation: formulaQuotation,
+    quantities: { internalDoors: 7, thirdLevelWindowCount: 3 },
+  }),
+  { ok: true, expression: "B1 + thirdLevelWindowCount", result: 10 },
+  "quotation formulas resolve current quantity variables and dependent quotation rows",
+);
+assert.match(
+  validateQuoteQuantityFormula({
+    row: formulaQuotation.TEST.rows[1],
+    expression: "missingDoorCount + 1",
+    quotation: formulaQuotation,
+    quantities: { internalDoors: 7 },
+  }).message,
+  /Unknown variable: missingDoorCount/,
+  "unknown quotation formula variables are rejected",
+);
+assert.match(
+  validateQuoteQuantityFormula({
+    row: formulaQuotation.TEST.rows[0],
+    expression: "B2",
+    quotation: formulaQuotation,
+    quantities: { internalDoors: 7 },
+  }).message,
+  /Circular dependency: B1 -> B2 -> B1/,
+  "circular quotation formula dependencies are rejected",
+);
+assert.match(
+  validateQuoteQuantityFormula({
+    row: formulaQuotation.TEST.rows[1],
+    expression: "1 / 0",
+    quotation: formulaQuotation,
+    quantities: { internalDoors: 7 },
+  }).message,
+  /finite numeric result/,
+  "non-finite quotation formula results are rejected",
+);
 
 console.log("Estimate Builder calculation regression checks passed.");

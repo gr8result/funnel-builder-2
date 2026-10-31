@@ -95,6 +95,14 @@ const items = synced.procurement.items.filter((item) => item.source === FLOORING
 assert.deepEqual(items.map((item) => [item.sku, item.qty, item.unit]), [["NT25-3418HB", 47, "PACK"], ["NT26-8090LM", study.packs, "PACK"]], "procurement orders whole packs");
 assert.equal(items[0].supplier, "National Tiles");
 
+const canonicalFlooring = connectFlooringSelectionsToQuotation({ quotation: { FLOORCOVERINGS: { collapsed: true, rows: [] } } }, book, { productById });
+assert.deepEqual(Object.keys(canonicalFlooring.quotation), ["FLOORCOVERINGS"]);
+assert.equal(canonicalFlooring.quotation.FLOORCOVERINGS.rows.filter((item) => item.source === FLOORING_SELECTION_SOURCE && item.quotationSubgroupHeadingLevel !== 1).length, 2);
+assert.deepEqual(canonicalFlooring.quotation.FLOORCOVERINGS.rows.filter((item) => item.quotationSubgroupHeadingLevel).map((item) => item.item), ["HYBRID FLOORING", "LAMINATED FLOORING"]);
+const canonicalRefresh = connectFlooringSelectionsToQuotation(canonicalFlooring, book, { productById });
+assert.equal(canonicalRefresh.quotation.FLOORCOVERINGS.rows.filter((item) => item.source === FLOORING_SELECTION_SOURCE && item.quotationSubgroupHeadingLevel !== 1).length, 2);
+assert.equal(canonicalRefresh.quotation.FLOORCOVERINGS.rows.filter((item) => item.source === FLOORING_SELECTION_SOURCE && item.quotationSubgroupHeadingLevel === 1).length, 2);
+
 // BOQ is built from the quotation rows: the flooring rows are included with their order detail
 const { quotationSectionsForFinalBoq } = await import("../lib/construction-estimation/finalQuotationBoq.js");
 const boqRows = quotationSectionsForFinalBoq(synced.quotation).flatMap((entry) => entry.rows).filter((item) => item.source === FLOORING_SELECTION_SOURCE);
@@ -104,11 +112,12 @@ assert.match(boqRows[0].description, /National Tiles - Camino Atlas Hybrid \(NT2
 // change the Study to the same colour as the rest: one row, recalculated - never a duplicate
 const changed = applyFlooringChoice(areas, [areas[5].id], { productId: "p-hybrid", variantId: "national-tiles:NT25-3418HB", wastagePct: 10 });
 const patch2 = flooringSelectionPatch({ requirementKey: "interior-flooring" }, changed, { productById, allowanceFor });
-const resynced = connectFlooringSelectionsToQuotation({ ...synced, quotation: { ...synced.quotation, "HYBRID FLOORING (151)": { rows: synced.quotation["HYBRID FLOORING (151)"].rows.map((item) => (item.source === FLOORING_SELECTION_SOURCE ? { ...item, manualRate: "33" } : item)) } } }, { rooms: [{ rows: [{ guidedSelection: patch2.guidedSelection }] }] }, { productById });
+const resynced = connectFlooringSelectionsToQuotation({ ...synced, quotation: { ...synced.quotation, "HYBRID FLOORING (151)": { rows: synced.quotation["HYBRID FLOORING (151)"].rows.map((item) => (item.source === FLOORING_SELECTION_SOURCE ? { ...item, quantity: 99, qty: 99, quantityManualOverride: true, manualRate: "33" } : item)) } } }, { rooms: [{ rows: [{ guidedSelection: patch2.guidedSelection }] }] }, { productById });
 const rows2 = resynced.quotation["HYBRID FLOORING (151)"].rows.filter((item) => item.source === FLOORING_SELECTION_SOURCE);
 assert.equal(rows2.length, 1);
 assert.equal(rows2[0].flooringOrder.netAreaM2, 90.6);
 assert.equal(rows2[0].manualRate, "33", "builder rate on the same product is kept");
+assert.deepEqual([rows2[0].quantity, rows2[0].quantityManualOverride], [99, true], "estimator quantity override survives a same-product selection refresh");
 assert.equal(resynced.quotation["LAMINATED FLOORING (152)"].rows.filter((item) => item.source === FLOORING_SELECTION_SOURCE).length, 0, "deselected colour removed");
 assert.equal(resynced.procurement.items.filter((item) => item.source === FLOORING_SELECTION_SOURCE).length, 1);
 // a type with no estimate section gets its own section (only then)

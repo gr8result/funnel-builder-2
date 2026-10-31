@@ -2,6 +2,7 @@
 import { ensureUserFolders } from "../utils/storage-init";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
+import Link from "next/link";
 import { isDeveloperEmail } from "../lib/adminUsers";
 import SideNav from "./SideNav";
 import ICONS from "./iconMap";
@@ -9,6 +10,8 @@ import { supabase } from "../utils/supabase-client";
 import UsageWarning from "./UsageWarning";
 import { useWorkspace } from "../hooks/useWorkspace";
 import { useAuth } from "../context/AuthContext";
+import { useBusinessBranding } from "../hooks/useBusinessBranding";
+import { loadAccountProfile } from "../lib/accountProfileLookup.mjs";
 
 const DEFAULT_BRAND_NAME = "Gr8 Result Digital Solutions";
 const DEFAULT_BRAND_LOGO = "/logo/gr8result-logo.png";
@@ -26,28 +29,6 @@ const PROTECTED_ROUTE_PREFIXES = [
 // Routes that approved vendors / affiliates (without a full platform subscription) are allowed to access
 const VENDOR_ONLY_ROUTE_PREFIXES = ["/modules/vendor", "/modules/affiliates"];
 const QA_ROUTE_PREFIXES = ["/modules/social_media"];
-const ACCOUNT_PROFILE_LEGACY_SELECT =
-  "business_name, business_logo, business_logo_url, business_avatar, business_avatar_url, approved, is_approved, status, subscription_status";
-
-function normalizeAccountProfile(account) {
-  if (!account || typeof account !== "object") return account || null;
-  return {
-    onboarding_completed: true,
-    phone_verified: true,
-    email_verified: true,
-    ...account,
-  };
-}
-
-async function loadAccountProfile(userId) {
-  const result = await supabase
-    .from("accounts")
-    .select(ACCOUNT_PROFILE_LEGACY_SELECT)
-    .eq("user_id", userId)
-    .single();
-  return { data: normalizeAccountProfile(result.data), error: result.error || null };
-}
-
 function isQaAccessibleRoute(pathname = "") {
   return QA_ROUTE_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
@@ -181,6 +162,7 @@ export default function Layout({ children }) {
   const router = useRouter();
   const { session, loading: authLoading, error: authError, retryAuth } = useAuth();
   const { activeWorkspace, isDemoWorkspace } = useWorkspace();
+  const { branding: workspaceBranding } = useBusinessBranding();
   const path = router.pathname;
 
   const isAdminRoute = path.startsWith("/admin") || path.startsWith("/dev");
@@ -205,9 +187,15 @@ export default function Layout({ children }) {
   const [avatar, setAvatar] = useState("");
   const [marketplaceVendorAllowed, setMarketplaceVendorAllowed] = useState(false);
   const [developerAccess, setDeveloperAccess] = useState(false);
+  const [profileError, setProfileError] = useState("");
+  const [profileRetry, setProfileRetry] = useState(0);
   const [loading, setLoading] = useState(true);
   const [navCollapsed, setNavCollapsed] = useState(false);
 
+  // TEMP-NAVDIAG: records when Layout replaces the page with the full-screen Loading view.
+  useEffect(() => {
+    if (loading || authLoading) window.__navDiag?.add("layout.loadingScreen", { at: path, loading, authLoading });
+  }, [loading, authLoading, path]);
   // Read persisted nav state only after mount to avoid SSR/CSR hydration mismatch.
   useEffect(() => {
     setNavCollapsed(window.localStorage.getItem("gr8:sidenav-collapsed") === "true");
@@ -218,10 +206,16 @@ export default function Layout({ children }) {
   }, [navCollapsed]);
 
   useEffect(() => {
+    if (session?.user?.id) void ensureUserFolders(session.user.id);
+  }, [session?.user?.id]);
+
+  useEffect(() => {
     if (authLoading || (authError && !session)) return;
+    window.__navDiag?.add("layout.profileEffect", { at: path, hasSession: Boolean(session) }); // TEMP-NAVDIAG
     let cancelled = false;
     (async () => {
       try {
+        setProfileError("");
         let localMarketplaceAllowed = false;
 
         const user = session?.user;
@@ -263,6 +257,7 @@ export default function Layout({ children }) {
           }
 
           if (isProtectedPlatformRoute && !isAdminRoute) {
+            window.__navDiag?.add("guard.login", { at: path }); // TEMP-NAVDIAG
             const currentPath = typeof window !== "undefined" ? window.location.pathname + window.location.search : "";
             router.replace(`/login${currentPath && currentPath !== "/" ? `?redirect=${encodeURIComponent(currentPath)}` : ""}`);
           }
@@ -277,16 +272,20 @@ export default function Layout({ children }) {
           return;
         }
 
-        await ensureUserFolders();
-
         const hasDeveloperAccess = isAdminRoute || isDeveloperEmail(user.email) || isBetaTesterEmail(user.email);
         setDeveloperAccess(hasDeveloperAccess);
 
         // 🧾 Load user data from Supabase
-        const { data, error } = await loadAccountProfile(user.id);
+        const { data, error } = await loadAccountProfile(supabase, user.id);
         if (cancelled) return;
 
-        if (error) console.error(error);
+        if (error) {
+          if (isProtectedPlatformRoute && !isAdminRoute) {
+            setProfileError("We couldn't verify your account access right now.");
+            return;
+          }
+          throw new Error("Your account details could not be verified.");
+        }
         setAccount(data);
 
         if (hasDeveloperAccess) {
@@ -364,19 +363,22 @@ export default function Layout({ children }) {
           const subscriptionOk = !!subscriptionStatus && !["none", "inactive", "cancelled", "canceled", "past_due"].includes(subscriptionStatus);
           const onboardingReady = (data?.onboarding_completed !== false && data?.phone_verified !== false) || (approved && subscriptionOk);
           if (!approved || statusBlocked || !onboardingReady) {
+            window.__navDiag?.add("guard.account", { at: path }); // TEMP-NAVDIAG
             router.replace("/account");
           } else {
+            window.__navDiag?.add("guard.billing", { at: path }); // TEMP-NAVDIAG
             router.replace("/billing");
           }
         }
       } catch (err) {
         console.error("❌ Layout load error:", err);
+        if (isProtectedPlatformRoute && !isAdminRoute) setProfileError("We couldn't verify your account access right now.");
       } finally {
         if (!cancelled) setLoading(false);
       }
     })();
     return () => { cancelled = true; };
-}, [session, authLoading, authError, isAdminRoute, isProtectedPlatformRoute, isVendorOnlyRoute, isQaRoute, marketplaceAccessEndpoint, path, router]);
+}, [session, authLoading, authError, isAdminRoute, isProtectedPlatformRoute, isVendorOnlyRoute, isQaRoute, marketplaceAccessEndpoint, path, router, profileRetry]);
 
   if (authError && !session) {
     return <main role="status" style={{ padding: 32 }}>
@@ -400,6 +402,12 @@ export default function Layout({ children }) {
         <div>Loading...</div>
       </main>
     );
+  }
+  if (profileError) {
+    return <main role="alert" style={{ minHeight: "100vh", padding: 32, display: "grid", placeContent: "center", gap: 16, background: "#0b1220", color: "#e5e7eb" }}>
+      <p>{profileError}</p>
+      <button type="button" onClick={() => setProfileRetry((value) => value + 1)}>Retry</button>
+    </main>;
   }
   const isVerifiedPlatformUser = isMainPlatformVerified(account);
   const hasPlatformAccess = developerAccess || isVerifiedPlatformUser;
@@ -449,9 +457,9 @@ export default function Layout({ children }) {
           <header style={topbar}>
             <div style={brandBox}>
               <div style={logoWrap}>
-                {header.logo ? (
+                {workspaceBranding?.logo || header.logo ? (
                   <img
-                    src={header.logo}
+                    src={workspaceBranding?.logo || header.logo}
                     alt="Business Logo"
                     style={brandLogo}
                   />
@@ -460,7 +468,7 @@ export default function Layout({ children }) {
                 )}
               </div>
               <span style={brandName}>
-                {header.nameLine1}
+                {workspaceBranding?.businessName || header.nameLine1}
                 {header.nameLine2 && (
                   <>
                     <br />
@@ -794,12 +802,12 @@ function ProfileMenu({ avatar }) {
 
       {open && (
         <div style={pmMenu}>
-          <a href="/account" style={pmItem}>
+          <Link href="/account" style={pmItem} onClick={() => setOpen(false)}>
             <span style={pmIcon}>{ICONS.account}</span> Account
-          </a>
-          <a href="/billing" style={pmItem}>
+          </Link>
+          <Link href="/billing" style={pmItem} onClick={() => setOpen(false)}>
             <span style={pmIcon}>{ICONS.billing}</span> Billing
-          </a>
+          </Link>
           <button
             onClick={handleLogout}
             style={{ ...pmItem, color: "#ffb3b3" }}

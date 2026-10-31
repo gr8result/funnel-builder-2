@@ -47,7 +47,7 @@ check("quotation appliance product-library brands", generatedBrandSections.map((
 check("quotation package heading rows", packageRows.length, catalogue.counts.packs);
 check("quotation package component rows", componentRows.length, catalogue.counts.relationships);
 check("unpackaged Product Library products are available as individual rows", individualRows.map((row) => row.canonicalProductId).sort(), individualProducts.map((record) => record.productId).sort());
-check("Bosch has 38 individual quotation choices", individualRows.filter((row) => row.brand === "Bosch").length, 38);
+check("Bosch individual quotation choices match its unpackaged Product Library records", individualRows.filter((row) => row.brand === "Bosch").length, individualProducts.filter((record) => record.brand === "Bosch").length);
 check("retired Blanco is absent from new quotation rows", rows.some((row) => row.brand === "Blanco"), false);
 check("new Euromaid cooktops are individual quotation choices", ["EC64GB", "EC64GS", "EC95GLB", "EC95GLS"].every((model) => individualRows.some((row) => row.model === model)), true);
 check("individual quote rows have stable unique IDs", new Set(individualRows.map((row) => row.id)).size, individualRows.length);

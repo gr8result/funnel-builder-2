@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import {
   ALL_GUIDED_REQUIREMENTS,
+  APPLIANCE_REQUIREMENTS,
   EXTERIOR_REQUIREMENTS,
-  KITCHEN_REQUIREMENTS,
   PRICE_STATES,
   areaTotals,
   createSelectionPayloadFromProduct,
@@ -40,8 +40,8 @@ const roofing = EXTERIOR_REQUIREMENTS.find((item) => item.requirementKey === "ro
 const windows = EXTERIOR_REQUIREMENTS.find((item) => item.requirementKey === "windows");
 const bricks = EXTERIOR_REQUIREMENTS.find((item) => item.requirementKey === "bricks");
 const cladding = EXTERIOR_REQUIREMENTS.find((item) => item.requirementKey === "cladding");
-const oven = KITCHEN_REQUIREMENTS.find((item) => item.requirementKey === "oven");
-const cooktop = KITCHEN_REQUIREMENTS.find((item) => item.requirementKey === "cooktop");
+const oven = APPLIANCE_REQUIREMENTS.find((item) => item.requirementKey === "oven");
+const cooktop = APPLIANCE_REQUIREMENTS.find((item) => item.requirementKey === "cooktop");
 
 assert.equal(variationFor({ selectedPrice: 1450, allowance: 1200, quantity: 1 }), 250, "variation should calculate upgrades");
 assert.equal(variationFor({ selectedPrice: 1050, allowance: 1200, quantity: 1 }), -150, "variation should calculate credits");
@@ -62,6 +62,7 @@ const currentProductPayload = createSelectionPayloadFromProduct({
     supplier: "Appliance supplier",
     allowance: 1200,
     clientPrice: 1450,
+    gstIncluded: false,
     linkedQuoteItemCode: "APPLIANCES",
     primaryImage: "https://example.test/oven.jpg",
     officialProductURL: "https://example.test/oven",
@@ -70,7 +71,7 @@ const currentProductPayload = createSelectionPayloadFromProduct({
 
 assert.equal(currentProductPayload.selected_details.productId, "master-oven-1", "selection commit preserves product id");
 assert.equal(currentProductPayload.selected_details.productCode, "OVEN-WH-600", "selection commit preserves product code");
-assert.equal(currentProductPayload.source_quote_row_id, "APPLIANCES", "quote linkage is preserved");
+assert.equal(currentProductPayload.source_quote_row_id, null, "another builder workspace does not inherit the primary builder's quotation row mapping");
 assert.equal(currentProductPayload.client_selection_price, 1450, "selected price is stored for current prices");
 assert.equal(currentProductPayload.variation_amount, 250, "variation is stored for current prices");
 assert.equal(currentProductPayload.selection_status, "selected", "committed selections are selected");
@@ -108,7 +109,7 @@ assert.equal(nextIncompleteRequirement(EXTERIOR_REQUIREMENTS, skipCompletedSelec
 const kitchenSelections = new Map([
   [oven.requirementKey, selection(oven)],
 ]);
-assert.equal(nextIncompleteRequirement(KITCHEN_REQUIREMENTS, kitchenSelections, oven)?.requirementKey, cooktop.requirementKey, "kitchen auto-advance stays within kitchen order");
+assert.equal(nextIncompleteRequirement(APPLIANCE_REQUIREMENTS, kitchenSelections, oven)?.requirementKey, cooktop.requirementKey, "appliance auto-advance stays within the appliance sequence");
 
 const allComplete = new Map(ALL_GUIDED_REQUIREMENTS.map((requirement) => [requirement.requirementKey, selection(requirement)]));
 assert.equal(nextIncompleteRequirement(ALL_GUIDED_REQUIREMENTS, allComplete, ALL_GUIDED_REQUIREMENTS.at(-1)), null, "all-complete state does not loop back to the first item");
@@ -118,7 +119,7 @@ changedSelectionMap.set(oven.requirementKey, selection(oven, { productCode: "NEW
 assert.equal(changedSelectionMap.get(oven.requirementKey).selected_details.productCode, "NEW", "change selection updates the existing requirement record");
 assert.equal(changedSelectionMap.size, 1, "change selection does not create a duplicate requirement record");
 
-const rebuiltMap = selectedByRequirement([...changedSelectionMap.values()], KITCHEN_REQUIREMENTS);
+const rebuiltMap = selectedByRequirement([...changedSelectionMap.values()], APPLIANCE_REQUIREMENTS);
 assert.equal(rebuiltMap.get(oven.requirementKey).selected_details.productCode, "NEW", "save/reload rebuild preserves committed selection identity");
 
 const totals = areaTotals([oven, cooktop], new Map([

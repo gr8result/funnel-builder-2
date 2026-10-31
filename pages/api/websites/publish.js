@@ -24,7 +24,6 @@ import {
   websiteContentHash,
   websitePersistenceHash,
 } from "../../../lib/website-builder/documentVersion";
-import { mergeWebsiteBuilderAssetSources } from "../../../lib/website-builder/mediaAssets";
 import {
   assertWebsiteUnlockedForMutation,
   getWebsiteUnlockTokenFromRequest,
@@ -282,14 +281,16 @@ async function handler(req, res) {
         custom_domain: requestedDomainForProject || incomingProject?.custom_domain || incomingProject?.customDomain || incomingProject?.publication?.custom_domain || "",
         primaryDomain: incomingProject?.primaryDomain || incomingProject?.primary_domain || incomingProject?.publication?.primaryDomain || "",
         primary_domain: incomingProject?.primary_domain || incomingProject?.primaryDomain || incomingProject?.publication?.primary_domain || "",
-        name: incomingProject?.name || "",
       })
     : null;
-  const hasIncomingBrandAssets = !!incomingProject?.brandAssets;
-  const hasAssembledBrandAssets = !!assembledSnapshot?.brandAssets;
-  const mergedBrandAssets = hasIncomingBrandAssets || hasAssembledBrandAssets
-    ? mergeWebsiteBuilderAssetSources(incomingProject?.brandAssets, assembledSnapshot?.brandAssets)
-    : assembledSnapshot?.brandAssets ?? incomingProject?.brandAssets ?? null;
+  if (!assembledSnapshot?.id) {
+    return res.status(409).json({ ok: false, code: "WEBSITE_PUBLISH_DRAFT_REQUIRED", error: "Save the complete website draft before publishing." });
+  }
+  // Assets are durable draft content too. A stale browser snapshot must not
+  // overwrite them while the page maps are being loaded from current storage.
+  const mergedBrandAssets = Object.prototype.hasOwnProperty.call(assembledSnapshot, "brandAssets")
+    ? assembledSnapshot.brandAssets
+    : incomingProject?.brandAssets ?? null;
   const project = withProjectPublicationIdentity({
     ...(assembledSnapshot || incomingProject || {}),
     customDomain: requestedDomainForProject || assembledSnapshot?.customDomain || incomingProject?.customDomain || incomingProject?.custom_domain || "",

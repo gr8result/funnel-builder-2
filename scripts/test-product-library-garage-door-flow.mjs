@@ -27,10 +27,11 @@ assert.ok(garageProducts.length >= 5, "Garage Doors must expose real B&D master 
 garageProducts.forEach((product) => {
   assert.equal(product.familyKey, "garage-doors", "Garage Door product must stay in Garage Doors");
   assert.equal(product.topLevelArea, "exterior", "Garage Door product must stay in Exterior");
-  assert.equal(product.manufacturer, "B&D Australia", "Garage Door products use verified B&D manufacturer data");
+  assert.ok(["B&D Australia", "Centurion Garage Doors"].includes(product.manufacturer), "Garage Door products must retain a verified supplier identity");
   assert.ok(product.primaryImageUrl, "Garage Door products must use exact/range garage-door imagery");
-  assert.ok(product.galleryImageUrls.length >= 1, "Garage Door detail must have a gallery");
-  assert.ok(product.variants.length >= 1, "Garage Door products must expose design/colour/size variants");
+  if (product.manufacturer === "B&D Australia") assert.ok(product.galleryImageUrls.length >= 1, "B&D Garage Door detail must retain its verified gallery");
+  else assert.match(product.primaryImageUrl, /^\/images\/product-library\/garage-doors\//, "Centurion Garage Door must use its exact local supplier image when no gallery is sourced");
+  assert.ok(product.variants.length >= 1 || product.attributes?.profileOptions?.length >= 1 || product.attributes?.sizeOptions?.length >= 1, "Garage Door products must expose sourced design/profile/size configuration options");
   assert.ok(product.officialProductUrl, "Garage Door detail must expose an official product URL field");
   assert.ok(product.specificationUrl, "Garage Door detail must expose a specification URL field");
   assert.equal(product.priceStatus, "quote_required", "Garage Door products must not invent current prices");
@@ -38,15 +39,17 @@ garageProducts.forEach((product) => {
   assert.notEqual(resolveProductLibraryImage({ product, familyKey: "garage-doors" }), GENERIC_IMAGE_URLS.cooktops, "Garage Door products must not resolve to appliance imagery");
 });
 
-const variant = garageProducts[0].variants[0];
+const bndPanelift = garageProducts.find((product) => product.productCode === "GARAGE-BND-PANELIFT-ICON");
+assert.ok(bndPanelift, "B&D Panelift Icon remains available as a source-verified garage door product");
+const variant = bndPanelift.variants[0];
 const selection = {
   selectionKey: GARAGE_DOOR_SELECTION_KEY,
   area: "exterior",
   familyKey: "garage-doors",
-  productCode: garageProducts[0].productCode,
-  productName: garageProducts[0].productName,
+  productCode: bndPanelift.productCode,
+  productName: bndPanelift.productName,
   size: variant.size,
-  price: garageProducts[0].clientPrice || 0,
+  price: bndPanelift.clientPrice || 0,
 };
 assert.equal(selection.selectionKey, GARAGE_DOOR_SELECTION_KEY, "Add to Selections must target the Garage Door selection slot");
 assert.equal(selection.area, "exterior", "Selection area must be Exterior");

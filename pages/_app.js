@@ -12,7 +12,10 @@ import { AuthProvider } from "../context/AuthContext";
 import { WorkspaceProvider } from "../hooks/useWorkspace";
 import { useHydrated } from "../hooks/useHydrated";
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/router";
+import Router, { useRouter } from "next/router";
+import { installNavDiagnostics } from "../lib/navDiagnostics"; // TEMP-NAVDIAG
+
+if (typeof window !== "undefined") installNavDiagnostics(Router); // TEMP-NAVDIAG
 
 function isBenignDevRuntimeNoise(error) {
   if (process.env.NODE_ENV !== "development") return false;
@@ -211,11 +214,9 @@ export default function MyApp({ Component, pageProps }) {
   const router = useRouter();
   const hydrated = useHydrated();
   const actualPath = String(router.asPath || "").split("?")[0];
-  // Keep recovery outside providers and Layout as well as the workbook.
-  // `hydrated` keeps the first client render identical to the server's: router.isReady
-  // is false while prerendering but already true on the first client render, so
-  // branching on it alone swapped the whole tree mid-hydration and React bailed out.
-  if (router.pathname === "/modules/estimate-builder" && (!hydrated || !router.isReady || router.query.safeMode === "1")) {
+  // Explicit takeoff recovery stays outside the workbook providers. Normal Estimate
+  // Builder routes must keep the same Auth/Workspace/Layout tree during hydration.
+  if (router.pathname === "/modules/estimate-builder" && router.query.safeMode === "1") {
     return <Component {...pageProps} />;
   }
   const isErrorRoute = router.pathname === "/404" || router.pathname === "/500" || router.pathname === "/_error";

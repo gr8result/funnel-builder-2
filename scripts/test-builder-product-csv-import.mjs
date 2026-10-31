@@ -3,9 +3,14 @@ import fs from 'node:fs/promises';
 import { PGlite } from '@electric-sql/pglite';
 import { parseBuilderCsv, previewBuilderCsv } from '../lib/product-library/builderCsvImport.js';
 import { mapDbProductToEntity } from '../lib/product-library/productLibraryDbMapper.js';
+import { getEffectiveProductCatalogue, hydrateBuilderCatalogue, setCatalogueStorage } from '../lib/product-library/catalogueService.js';
 import { createJobInclusionSnapshot } from '../lib/builders/selectionRegistry.js';
 import * as importer from '../lib/product-library/builderCsvImport.js';
 import * as registry from '../lib/builders/selectionRegistry.js';
+import * as requirementTaxonomy from '../lib/builders/selectionRequirementTaxonomy.js';
+import { plumbingLineFromProduct } from '../lib/builders/plumbingFixtureAllocation.js';
+import { plumbingSelectionPatch } from '../lib/builders/plumbingSelectionPatch.js';
+import { connectAllocatedSelectionsToQuotation } from '../lib/builders/allocatedSelectionQuotation.js';
 import { createRequire } from 'node:module';
 const db = new PGlite();
 const A = '11111111-1111-4111-8111-111111111111';
@@ -14,13 +19,13 @@ const U = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 let checks = 0;
 async function check(name, fn) { await fn(); console.log('PASS', name); checks++; }
 const csv = (price = 120) => `TenantId,Supplier,Item Code,Product,Category,Price,Trade Price,Unit,Active\n${B},Acme,TAP-1,Kitchen mixer,Kitchen Tapware,${price},80,each,yes`;
-async function preview(workspaceId, text = csv(), slotMappings = { 'Kitchen Tapware': 'kitchen_mixer' }) {
+async function preview(workspaceId, text = csv(), slotMappings = { 'Kitchen Tapware': 'kitchen_mixer' }, requirementMappings = {}) {
   const records = {};
   for (const [key, table] of Object.entries({ products: 'builder_products', suppliers: 'builder_product_suppliers', aliases: 'builder_selection_aliases' })) {
     // PostgreSQL JSON output matches the representation returned by PostgREST.
     records[key] = (await db.query(`select to_jsonb(t) as record from ${table} t where workspace_id=$1`, [workspaceId])).rows.map(row => row.record);
   }
-  const plan = previewBuilderCsv({ workspaceId, csv: text, slotMappings, ...records });
+  const plan = previewBuilderCsv({ workspaceId, csv: text, slotMappings, requirementMappings, ...records });
   const baseline = Object.fromEntries(Object.entries(records).map(([key, rows]) => [key, Object.fromEntries(rows.map(row => [row.id, row]))]));
   const batch = (await db.query('insert into builder_product_imports(workspace_id,created_by,plan,baseline) values($1,$2,$3,$4) returning id', [workspaceId, U, JSON.stringify(plan), JSON.stringify(baseline)])).rows[0].id;
   return { ...plan, batch };
@@ -44,9 +49,31 @@ try {
     assert.equal(parseBuilderCsv(csv()).mapping[0], '');
     assert.throws(() => parseBuilderCsv('Name,Name\na,b'), /unique/);
   });
-  await check('upload preview does not write products and unknown categories remain UNMAPPED', async () => {
-    assert.equal((await preview(A, csv(), {})).rows[0].action, 'UNMAPPED');
+  await check('new suppliers auto-classify by shared requirement without per-product slot mapping', async () => {
+    const plan = await preview(A, csv(), {});
+    assert.equal(plan.rows[0].action, 'NEW');
+    assert.deepEqual(plan.rows[0].requirementKeys, ['sink-mixer']);
+    assert.equal(plan.rows[0].slot, 'kitchen_mixer');
+    assert.equal(plan.rows[0].classificationStatus, 'CLASSIFIED');
+    assert.equal(plan.rows[0].quoteMappingStatus, 'REQUIREMENT_MAPPED');
     assert.equal((await products(A)).length, 0);
+  });
+  await check('broad taxonomy and contradictory slot require review; truly unknown products stay unclassified', async () => {
+    const broad = await preview(A, 'Supplier,SKU,Product\nAcme,PL-1,Plumbing Fixtures', {});
+    assert.equal(broad.rows[0].action, 'REVIEW_REQUIRED');
+    const conflict = await preview(A, 'Supplier,SKU,Product,Selection Slot\nAcme,CF-1,Kitchen Mixer,basin', {});
+    assert.equal(conflict.rows[0].action, 'REVIEW_REQUIRED');
+    const unknown = await preview(A, 'Supplier,SKU,Product,Category\nAcme,UN-1,Widget,Novel Items', {});
+    assert.equal(unknown.rows[0].action, 'UNMAPPED');
+  });
+  await check('reviewed requirement choice is committed as shared metadata', async () => {
+    const plan = await preview(A, 'Supplier,SKU,Product,Category\nAcme,RV-1,Tap,Custom Kitchen', {}, { 'Custom Kitchen': 'sink-mixer' });
+    assert.equal(plan.rows[0].action, 'NEW');
+    assert.deepEqual(plan.rows[0].requirementKeys, ['sink-mixer']);
+    await commit(A, plan);
+    const saved = (await products(A)).find(row => row.sku === 'RV-1');
+    assert.deepEqual(saved.metadata.productEntity.requirementKeys, ['sink-mixer']);
+    assert.equal(saved.metadata.requirementClassification.status, 'CLASSIFIED');
   });
   await check('identical supplier/SKU creates isolated products for two tenants', async () => {
     assert.equal((await commit(A, await preview(A))).NEW, 1);
@@ -57,7 +84,8 @@ try {
   });
   const originalB = await products(B);
   const schedule = (await db.query('insert into builder_inclusion_schedules(workspace_id,name,display_name) values($1,$2,$2) returning *', [A, 'Contract inclusions'])).rows[0];
-  const item = (await db.query(`insert into builder_inclusion_schedule_items(workspace_id,inclusion_schedule_id,selection_slot_id,default_product_id,allowance) values($1,$2,'kitchen_mixer',$3,'120'::jsonb) returning *`, [A, schedule.id, (await products(A))[0].id])).rows[0];
+  const kitchenMixerProduct = (await products(A)).find(row => row.sku === 'TAP-1');
+  const item = (await db.query(`insert into builder_inclusion_schedule_items(workspace_id,inclusion_schedule_id,selection_slot_id,default_product_id,allowance) values($1,$2,'kitchen_mixer',$3,'120'::jsonb) returning *`, [A, schedule.id, kitchenMixerProduct.id])).rows[0];
   const snapshot = createJobInclusionSnapshot(A, schedule, [item]);
   const project = (await db.query("insert into builder_commercial_projects(workspace_id,project_name,job_inclusion_schedule_id,job_inclusion_snapshot,contract_total) values($1,'Contracted job',$2,$3,120) returning id", [A, schedule.id, JSON.stringify(snapshot)])).rows[0];
   await db.query("insert into builder_client_selections(workspace_id,project_id,title,baseline_product_id,baseline_unit_price,active_unit_price) values($1,$2,'Mixer',$3,120,120)", [A, project.id, item.default_product_id]);
@@ -67,7 +95,7 @@ try {
     const plan = await preview(A, csv(150), {});
     assert.equal(plan.rows[0].action, 'UPDATE'); assert.equal(plan.rows[0].slot, 'kitchen_mixer');
     assert.equal((await commit(A, plan)).UPDATE, 1);
-    assert.equal(Number((await products(A))[0].upgrade_cost), 150);
+    assert.equal(Number((await products(A)).find(row => row.sku === 'TAP-1').upgrade_cost), 150);
     assert.deepEqual(await products(B), originalB);
     assert.equal((await commit(A, plan)).UPDATE, 1); // Idempotent retry, no duplicate writes.
   });
@@ -77,9 +105,56 @@ try {
     assert.equal(Number((await db.query('select allowance from builder_inclusion_schedule_items where id=$1', [item.id])).rows[0].allowance), 120);
   });
   await check('Product Library reload reads persisted import and repeated import is UNCHANGED', async () => {
-    const entity = mapDbProductToEntity((await products(A))[0]);
+    const entity = mapDbProductToEntity((await products(A)).find(row => row.sku === 'TAP-1'));
     assert.equal(entity.clientPrice, 150); assert.equal(entity.supplierSku, 'TAP-1'); assert.equal(entity.category, 'Kitchen Tapware');
     assert.equal((await preview(A, csv(150), {})).rows[0].action, 'UNCHANGED');
+  });
+  await check('CSV retains GST basis, price status, availability and supplier product reference', async () => {
+    const text = 'Supplier,SKU,Product,Category,Price,Cost,Unit,GST Included,Price Status,Availability,Supplier Product Reference\nAcme,REF-7,Kitchen mixer,Kitchen Tapware,132,80,EACH,Excluded,Verified,In Stock,SUP-REF-77';
+    const plan = await preview(A, text, {});
+    assert.equal(plan.rows[0].action, 'NEW');
+    await commit(A, plan);
+    const record = (await products(A)).find(product => product.sku === 'REF-7');
+    const entity = mapDbProductToEntity(record);
+    assert.equal(entity.gstIncluded, false);
+    assert.equal(entity.gstTreatment, 'GST exclusive');
+    assert.equal(entity.priceStatus, 'verified');
+    assert.equal(entity.availabilityStatus, 'in_stock');
+    assert.equal(entity.supplierProductRef, 'SUP-REF-77');
+  });
+  await check('CSV Product Library identity flows through Client Selections to priced quote and procurement', async () => {
+    const record = (await products(A)).find(product => product.sku === 'REF-7');
+    const storage = new Map();
+    setCatalogueStorage({ getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value) });
+    hydrateBuilderCatalogue(A, { products: await products(A) });
+    const entity = getEffectiveProductCatalogue({ organisationId: A }).products.find(product => product.productId === record.id);
+    assert(entity, 'imported product must be discoverable through the same selector Client Selections uses');
+    assert(!getEffectiveProductCatalogue({ organisationId: B }).products.some(product => product.productId === record.id), 'second builder cannot see the private product or its price');
+    const line = plumbingLineFromProduct(entity, { unitPrice: entity.clientPrice, unitAllowance: entity.builderCost, allocations: [{ location: 'Kitchen', quantity: 2 }] });
+    const selection = plumbingSelectionPatch({ requirementKey: 'sink-mixer', label: 'Kitchen Mixer', unit: 'EACH' }, [line]).patch.guidedSelection;
+    const book = { rooms: [{ id: 'kitchen', name: 'Kitchen', rows: [{ id: 'sink-mixer', guidedRequirementKey: 'sink-mixer', guidedSelection: selection }] }] };
+    const workbook = { jobId: 'csv-e2e-job', workspaceId: A, templateKey: 'builder-a-template', quotation: { 'PLUMBING FIXTURES & HOT WATER': { rows: [] } }, procurement: { items: [] } };
+    const synced = connectAllocatedSelectionsToQuotation(workbook, book);
+    const quote = Object.values(synced.quotation).flatMap(section => section.rows || []).find(row => row.productId === record.id);
+    const procurement = synced.procurement.items.find(item => item.productId === record.id);
+    assert(quote && procurement, 'canonical imported product is represented in quote and procurement');
+    assert.equal(quote.qty, 2); assert.equal(procurement.qty, 2);
+    assert.equal(quote.excelRate, 132, 'GST-exclusive imported price remains unchanged in quotation');
+    assert.equal(quote.productLibrarySnapshot.priceIncludesGst, false);
+    const replay = connectAllocatedSelectionsToQuotation(synced, book);
+    assert.equal(Object.values(replay.quotation).flatMap(section => section.rows || []).filter(row => row.productId === record.id).length, 1);
+    assert.equal(replay.procurement.items.filter(item => item.productId === record.id).length, 1, 'repeat sync remains exactly once');
+    await db.exec('create table catalogue_resume_test_jobs (id text primary key, workspace_id uuid not null, workbook jsonb not null, book jsonb not null)');
+    await db.query('insert into catalogue_resume_test_jobs values ($1,$2,$3,$4)', [workbook.jobId, A, JSON.stringify(replay), JSON.stringify(book)]);
+    const reopened = (await db.query('select workbook,book from catalogue_resume_test_jobs where id=$1 and workspace_id=$2', [workbook.jobId, A])).rows[0];
+    const reopenedQuote = Object.values(reopened.workbook.quotation).flatMap(section => section.rows || []).find(row => row.productId === record.id);
+    assert.equal(reopenedQuote.excelRate, 132);
+    assert.equal(reopenedQuote.qty, 2);
+    assert.deepEqual(reopened.book, JSON.parse(JSON.stringify(book)));
+    assert.equal((await db.query('select id from catalogue_resume_test_jobs where workspace_id=$1', [B])).rows.length, 0);
+    storage.clear();
+    hydrateBuilderCatalogue(A, { products: await products(A) });
+    assert.equal(getEffectiveProductCatalogue({ organisationId: A }).canonicalProducts.find(product => product.stableProductId === record.id).price, 132, 'database reload restores imported price without browser storage');
   });
   await check('cross-tenant preview IDs and non-admin commit rejected', async () => {
     const plan = await preview(A, csv(180));
@@ -92,7 +167,7 @@ try {
     const plan = await preview(A, csv(190));
     await db.query("update builder_products set description='Concurrent edit' where workspace_id=$1", [A]);
     await assert.rejects(commit(A, plan), /changed; preview again/);
-    assert.equal(Number((await products(A))[0].upgrade_cost), 150);
+    assert.equal(Number((await products(A)).find(row => row.sku === 'TAP-1').upgrade_cost), 150);
   });
   await check('invalid, duplicate/conflicting and unmapped rows can be excluded', async () => {
     const text = 'Supplier,SKU,Product,Selection Slot,Price\nAcme,NEW,Good,kitchen_mixer,25\nAcme,BAD,Bad,kitchen_mixer,no\nAcme,DUP,First,kitchen_mixer,10\nAcme,DUP,Second,kitchen_mixer,20\nAcme,UNKNOWN,Unknown,Uncertain,20';
@@ -128,26 +203,27 @@ try {
     const { createRoot } = require('react-dom/client');
     const source = await fs.readFile('components/product-library/BuilderCsvImport.jsx', 'utf8');
     const compiled = ts.transpileModule(source, { compilerOptions: { jsx: ts.JsxEmit.ReactJSX, module: ts.ModuleKind.CommonJS, esModuleInterop: true, target: ts.ScriptTarget.ES2022 } }).outputText;
-    const module = { exports: {} };
+    const compiledModule = { exports: {} };
     new Function('require', 'module', 'exports', compiled)(name => {
       if (name.includes('supabase-client')) return { supabase: { auth: { getSession: async () => ({ data: { session: { access_token: 'test-token' } } }) } } };
       if (name.includes('builderCsvImport')) return importer;
       if (name.includes('selectionRegistry')) return registry;
+      if (name.includes('selectionRequirementTaxonomy')) return requirementTaxonomy;
       if (name.includes('productLibraryDbMapper')) return { mapDbProductToEntity };
       return require(name);
-    }, module, module.exports);
-    const Component = module.exports.default;
+    }, compiledModule, compiledModule.exports);
+    const Component = compiledModule.exports.default;
     const originalFetch = globalThis.fetch;
     const requests = [];
     globalThis.fetch = async (_url, options) => {
       const body = JSON.parse(options.body); requests.push(body);
       assert.equal(body.workspace_id, A);
       if (body.action === 'preview') {
-        const plan = await preview(A, body.csv, body.slotMappings);
+        const plan = await preview(A, body.csv, body.slotMappings, body.requirementMappings);
         // The UI chose the nonstandard price header explicitly.
         const records = {};
         for (const [key, table] of Object.entries({ products: 'builder_products', suppliers: 'builder_product_suppliers', aliases: 'builder_selection_aliases' })) records[key] = (await db.query(`select to_jsonb(t) record from ${table} t where workspace_id=$1`, [A])).rows.map(row => row.record);
-        const mapped = previewBuilderCsv({ workspaceId: A, csv: body.csv, mapping: body.mapping, slotMappings: body.slotMappings, ...records });
+        const mapped = previewBuilderCsv({ workspaceId: A, csv: body.csv, mapping: body.mapping, slotMappings: body.slotMappings, requirementMappings: body.requirementMappings, ...records });
         await db.query('update builder_product_imports set plan=$1 where id=$2', [JSON.stringify(mapped), plan.batch]);
         return { ok: true, json: async () => ({ ...mapped, batchId: plan.batch }) };
       }
@@ -167,11 +243,11 @@ try {
       const price = document.querySelector('[aria-label="Map Builder Price"]');
       await React.act(async () => { price.value = 'price'; price.dispatchEvent(new dom.window.Event('change', { bubbles: true })); });
       await click('Validate and preview');
-      assert(document.body.textContent.includes('UNMAPPED'));
-      const select = document.querySelector('[aria-label="Selection Slot for Custom Kitchen"]');
-      await React.act(async () => { select.value = 'kitchen_mixer'; select.dispatchEvent(new dom.window.Event('change', { bubbles: true })); });
+      assert(document.body.textContent.includes('UNCLASSIFIED'));
+      const select = document.querySelector('[aria-label="Requirement for Custom Kitchen"]');
+      await React.act(async () => { select.value = 'sink-mixer'; select.dispatchEvent(new dom.window.Event('change', { bubbles: true })); });
       assert([...document.querySelectorAll('button')].find(node => node.textContent === 'Commit import').disabled);
-      await click('Revalidate mappings');
+      await click('Revalidate requirement choices');
       const confirm = [...document.querySelectorAll('input[type=checkbox]')].find(node => node.parentElement.textContent.includes('I confirm'));
       await React.act(async () => confirm.click());
       await click('Commit import');

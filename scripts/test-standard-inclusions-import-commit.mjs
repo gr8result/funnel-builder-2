@@ -26,7 +26,7 @@ const normalised = normaliseStandardInclusions({
   isDeleted: true,
   deletedAt: "2026-07-20T00:00:00.000Z",
   activeDocumentSource: "deleted",
-}, "qa-builder");
+}, "local-builder"); // Tenant workspace ids take the isolation branch, which passes stored state through unchanged.
 
 assert.equal(normalised.documentBuilder.id, importedDocument.id);
 assert.equal(normalised.documentBuilder.pages.length, 10);

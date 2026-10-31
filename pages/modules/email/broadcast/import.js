@@ -3,9 +3,11 @@ import { useState } from "react";
 import Head from "next/head";
 import { useRouter } from "next/router";
 import { supabase } from "../../../../utils/supabase-client";
+import { useWorkspace } from "../../../../hooks/useWorkspace";
 
 export default function BroadcastImport() {
   const router = useRouter();
+  const { workspaceId } = useWorkspace();
   const [fileName, setFileName] = useState("");
   const [subject, setSubject] = useState("");
   const [content, setContent] = useState("");
@@ -34,6 +36,11 @@ export default function BroadcastImport() {
       return;
     }
 
+    if (!workspaceId) {
+      alert("Select a builder workspace before importing a broadcast.");
+      return;
+    }
+
     setSaving(true);
     try {
       const { data } = await supabase.auth.getUser();
@@ -48,6 +55,7 @@ export default function BroadcastImport() {
 
       const { error } = await supabase.from("email_broadcasts").insert({
         user_id: user.id,
+        workspace_id: workspaceId,
         title,
         subject: subject || title,
         to_field: "",

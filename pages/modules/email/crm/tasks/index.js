@@ -6,6 +6,7 @@ import Head from "next/head";
 import Link from "next/link";
 import { supabase } from "../../../../../utils/supabase-client";
 import SubscriberAvatar from "../../../../../components/crm/SubscriberAvatar";
+import CrmTabs from "../../../../../components/crm/CrmTabs";
 import LeadDetailsModal from "../../../../../components/crm/LeadDetailsModal";
 import { useWorkspace } from "../../../../../hooks/useWorkspace";
 
@@ -584,6 +585,8 @@ export default function CRMTasks() {
       <Head>
         <title>CRM • Tasks & Reminders</title>
       </Head>
+
+      <CrmTabs active="activities" />
 
       {/* BANNERS ROW */}
       <div style={styles.bannerWrap}>

@@ -195,6 +195,7 @@ function createRoomRows(measurements = []) {
 // persisted openings. The schedule object itself is derived state and is never saved, so this
 // is the only way to get the same rows and counts the takeoff screen shows.
 export function createWindowAndDoorSchedules(openings = [], sheetLevels = {}) {
+  openings = openings.filter((opening) => opening.needsClassification !== true);
   const windows = [];
   const doors = [];
 
@@ -1079,7 +1080,7 @@ function buildForPages({ pages, completedFloorplans, completedWallRuns, placedOp
   const include = (item) => pages.includes(item.page);
   const floorplans = completedFloorplans.filter(include);
   const walls = completedWallRuns.filter(include);
-  const openings = placedOpenings.filter(include);
+  const openings = placedOpenings.filter((opening) => include(opening) && opening.needsClassification !== true);
   const pillars = completedPillars.filter(include);
   const finishes = completedAreas.filter((area) => include(area) && area.category !== 'Roof Area');
   const roofAreas = completedAreas.filter((area) => include(area) && area.category === 'Roof Area');
@@ -1188,6 +1189,7 @@ export function createWallLiningMeasurements(job = {}) {
 }
 
 function createMeasurementRecords({ completedFloorplans, completedWallRuns, placedOpenings, completedAreas, completedEaves, completedMeasurements, completedPillars = [], pixelsPerMm }) {
+  placedOpenings = placedOpenings.filter((opening) => opening.needsClassification !== true);
   const calibrated = Number.isFinite(Number(pixelsPerMm)) && Number(pixelsPerMm) > 0;
   const area = (item) => calibrated && item.nodes?.length >= 3
     ? polygonAreaM2(item.nodes, Number(pixelsPerMm)) : null;
@@ -1273,7 +1275,13 @@ export function createTakeoffSchedule({
   return {
     generatedAt: new Date().toISOString(),
     aiAnalysis,
-    measurementRecords: createMeasurementRecords({ completedFloorplans, completedWallRuns, placedOpenings, completedAreas, completedEaves, completedMeasurements, completedPillars, pixelsPerMm }),
+    measurementRecords: [...createMeasurementRecords({ completedFloorplans, completedWallRuns, placedOpenings, completedAreas, completedEaves, completedMeasurements, completedPillars, pixelsPerMm }),
+      ...(aiAnalysis?.rooms || []).filter(room => (room.actions || []).includes('Floor Tiling')).map(room => ({
+        id: `${room.id}:floor-tiling`, roomId: room.id, page: room.page, level: room.level,
+        kind: 'floorFinish', category: 'Tiles', label: `${room.name} floor tiling`,
+        quantity: room.reviewRequired ? null : room.areaM2, unit: 'm2', source: room.source,
+        nodes: room.polygon, pixelsPerMm: room.pixelsPerMm,
+      }))],
     jobSetupRows,
     sheetLevels: { ...sheetLevels },
     project: {
@@ -1777,6 +1785,7 @@ report(floorplans.filter((item) => !['Footprint', 'Living'].includes(item.catego
     diagnostics: review.diagnostics,
     projectName: schedule.project?.projectName || '', clientName: schedule.project?.clientName || '', siteAddress: schedule.project?.siteAddress || '',
     planFilename: schedule.project?.planFilename || '',
+    roomPolygons: schedule.aiAnalysis?.rooms || [],
     floorAreas: schedule.projectTotals?.floorAreas || [], roomList: schedule.projectTotals?.rooms || [],
     basicProjectMeasurements: flattenScheduleRows(schedule, 'projectTotals'),
     schedule, sheetLevels, dataInputFields: fields, cavitySliderSchedule, pillarSchedule,

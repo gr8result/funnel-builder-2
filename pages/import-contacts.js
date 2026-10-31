@@ -6,6 +6,7 @@ import Link from "next/link";
 import { supabase } from "../utils/supabase-client";
 import { useWorkspace } from "../hooks/useWorkspace";
 import { getAvatarForLead } from "../utils/avatar";
+import { parseMarketingConsent } from "../lib/marketingConsent";
 
 // ─── Platform definitions ──────────────────────────────────────────────────────
 const PLATFORMS = [
@@ -22,6 +23,8 @@ const PLATFORMS = [
       lastName:   ["Last Name", "last_name"],
       phone:      ["Phone Number", "phone", "SMS Number"],
       tags:       ["Tags", "Lists"],
+      emailMarketingConsent: ["Email Marketing Consent", "email_marketing_consent", "Email Subscription Status"],
+      smsMarketingConsent: ["SMS Marketing Consent", "sms_marketing_consent", "SMS Subscription Status"],
     },
   },
   {
@@ -38,6 +41,8 @@ const PLATFORMS = [
       lastName:   ["Last Name", "LNAME"],
       phone:      ["Phone", "Phone Number", "PHONE"],
       tags:       ["Tags", "TAGS", "Groups"],
+      emailMarketingConsent: ["Email Marketing Consent", "email_marketing_consent", "Email Marketing Permission"],
+      smsMarketingConsent: ["SMS Marketing Consent", "sms_marketing_consent", "SMS Marketing Permission"],
     },
   },
   {
@@ -53,6 +58,8 @@ const PLATFORMS = [
       lastName:   ["Last Name"],
       phone:      ["Phone Number", "Mobile Phone Number", "Phone"],
       tags:       ["Lifecycle Stage", "Lead Status"],
+      emailMarketingConsent: ["Email Marketing Consent", "email_marketing_consent", "Email Subscription Status"],
+      smsMarketingConsent: ["SMS Marketing Consent", "sms_marketing_consent", "SMS Subscription Status"],
     },
   },
   {
@@ -68,6 +75,8 @@ const PLATFORMS = [
       lastName:   ["last_name", "Last Name", "LNAME", "lastname", "surname", "family_name"],
       phone:      ["phone", "Phone", "Phone Number", "mobile", "Mobile", "cell"],
       tags:       ["tags", "Tags", "tag", "Tag", "group", "Group", "segment"],
+      emailMarketingConsent: ["email_marketing_consent", "Email Marketing Consent", "Email Opt In", "Email Subscription Status"],
+      smsMarketingConsent: ["sms_marketing_consent", "SMS Marketing Consent", "SMS Opt In", "SMS Subscription Status"],
       name:       ["name", "Name", "full_name", "Full Name", "display_name"],
     },
   },
@@ -103,7 +112,7 @@ function parseCSV(text) {
 // ─── Column auto-detect ───────────────────────────────────────────────────────
 function detectMapping(headers, platform) {
   const fieldMap = platform.fieldMap;
-  const mapping = { email: "", firstName: "", lastName: "", phone: "", tags: "", name: "" };
+  const mapping = { email: "", firstName: "", lastName: "", phone: "", tags: "", name: "", emailMarketingConsent: "", smsMarketingConsent: "" };
   const lowerHeaders = headers.map(h => h.toLowerCase());
 
   for (const [field, candidates] of Object.entries(fieldMap)) {
@@ -143,6 +152,12 @@ function buildLeads({ rows, headers, mapping, userId, workspaceId, platformName 
         phone: get("phone"),
         tags: get("tags"),
         source: platformName,
+        email_marketing_consent: parseMarketingConsent(get("emailMarketingConsent")),
+        email_marketing_consent_at: parseMarketingConsent(get("emailMarketingConsent")) ? new Date().toISOString() : null,
+        email_marketing_consent_source: parseMarketingConsent(get("emailMarketingConsent")) ? platformName : null,
+        sms_marketing_consent: parseMarketingConsent(get("smsMarketingConsent")),
+        sms_marketing_consent_at: parseMarketingConsent(get("smsMarketingConsent")) ? new Date().toISOString() : null,
+        sms_marketing_consent_source: parseMarketingConsent(get("smsMarketingConsent")) ? platformName : null,
         notes: "",
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -273,15 +288,21 @@ export default function ImportContacts() {
       if (!leads.length) { setError("No rows with valid email addresses found."); setImporting(false); return; }
 
       let imported = 0;
+      let duplicatesSkipped = 0;
       const chunkSize = 100;
       for (let i = 0; i < leads.length; i += chunkSize) {
         const chunk = leads.slice(i, i + chunkSize);
-        const { error: dbErr } = await supabase.from("leads").upsert(chunk, { onConflict: "user_id,email", ignoreDuplicates: true });
+        const { data: insertedRows, error: dbErr } = await supabase
+          .from("leads")
+          .upsert(chunk, { onConflict: "user_id,email", ignoreDuplicates: true })
+          .select("id");
         if (dbErr) throw dbErr;
-        imported += chunk.length;
+        const insertedCount = insertedRows?.length || 0;
+        imported += insertedCount;
+        duplicatesSkipped += chunk.length - insertedCount;
         await new Promise(r => setTimeout(r, 100));
       }
-      setImportResult({ total: leads.length, imported });
+      setImportResult({ total: leads.length, imported, duplicatesSkipped });
       setStep(3);
     } catch (err) {
       setError(`Import failed: ${err.message}`);
@@ -383,6 +404,8 @@ export default function ImportContacts() {
               { field: "lastName",  label: "Last name" },
               { field: "phone",     label: "Phone number" },
               { field: "tags",      label: "Tags / segment" },
+              { field: "emailMarketingConsent", label: "Email marketing consent" },
+              { field: "smsMarketingConsent", label: "SMS marketing consent" },
             ].map(({ field, label }) => (
               <div key={field}>
                 <label style={S.label}>{label}</label>
@@ -467,7 +490,7 @@ export default function ImportContacts() {
             {importResult.imported.toLocaleString()} contacts imported
           </div>
           <div style={{ fontSize: 14, color: "#9ca3af", marginBottom: 32 }}>
-            From {platform?.name} — duplicates were skipped automatically.
+            From {platform?.name}. {importResult.duplicatesSkipped.toLocaleString()} duplicates skipped.
           </div>
           <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
             <Link href="/leads">

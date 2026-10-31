@@ -1,6 +1,9 @@
 import { takeoffProcurementDetails, refreshTakeoffProcurementItems } from '../../../lib/construction-estimation/takeoffProcurement.js';
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
-import { withWorkspace } from "../../../lib/withWorkspace";
+import { withWorkspace, INTERNAL_COMMERCIAL_ROLES } from "../../../lib/withWorkspace";
+import { assertCommercialProjectAssociation } from "../../../lib/builders/commercialJobAssociation.js";
+import { commercialSnapshotSignature } from "../../../lib/builders/commercialSnapshotSignature.js";
+import { quotationBoqStatus } from "../../../lib/builders/quotationRateReview.js";
 import { quotationSectionsForFinalBoq, quoteLineTotal, quoteQuantity, quoteRate, shouldIncludeQuoteRowInFinalBoq } from "../../../lib/construction-estimation/finalQuotationBoq.js";
 
 export const config = {
@@ -31,9 +34,21 @@ async function handler(req, res) {
     const workbook = plainObject(body.workbook);
     const calculated = plainObject(body.calculated || body.calculatedWorkbookResult || body.preview);
     const projectInput = plainObject(body.project || body.projectMetadata || body.job || body.jobMetadata);
+    const snapshotOmittedSections = Array.isArray(body.workbook_snapshot_omitted_sections)
+      ? body.workbook_snapshot_omitted_sections.filter((section) => ["projectEstimateBuilder", "aiPlanTakeoffJob", "takeoffEngine"].includes(section))
+      : [];
+    const snapshotComplete = body.workbook_snapshot_complete !== false && snapshotOmittedSections.length === 0;
 
     if (!Object.keys(workbook).length) {
       return res.status(400).json({ ok: false, error: "workbook is required" });
+    }
+    const sourceJobId = firstText(workbook.jobId);
+    const sourceWorkspaceId = firstText(workbook.workspaceId, workbook.workspace_id);
+    if (!sourceJobId) {
+      return res.status(400).json({ ok: false, error: "A stable Estimate Builder job ID is required." });
+    }
+    if (sourceWorkspaceId && sourceWorkspaceId !== workspaceId) {
+      return res.status(409).json({ ok: false, error: "The workbook belongs to a different builder workspace." });
     }
     const quotation = plainObject(calculated.quotation);
     if (!Object.keys(calculated).length || !Object.keys(quotation).length) {
@@ -46,17 +61,41 @@ async function handler(req, res) {
       projectInput,
       workbook,
       calculated,
-      requestedProjectId: firstText(body.commercial_project_id, body.commercialProjectId, body.project_id),
+      requestedProjectId: uuidOrNull(firstText(body.commercial_project_id, body.commercialProjectId, body.project_id)),
     });
 
-    const snapshot = await createEstimateSnapshot({
+    const snapshotResult = await createEstimateSnapshot({
       workspaceId,
       userId: req.user.id,
       projectId: project.id,
       projectInput,
       workbook,
       calculated,
+      snapshotComplete,
+      snapshotOmittedSections,
     });
+    if (snapshotResult.reused) {
+      const counts = await countSnapshotRows(workspaceId, project.id, snapshotResult.snapshot.id);
+      const expected = expectedSnapshotCounts({ workspaceId, userId: req.user.id, projectId: project.id, snapshotId: snapshotResult.snapshot.id, workbook, calculated });
+      if (Object.keys(expected).some((key) => counts[key] !== expected[key])) {
+        return res.status(409).json({ ok: false, error: "The current commercial snapshot is incomplete. It was not duplicated; review its saved BOQ and procurement records before retrying." });
+      }
+      return res.status(200).json({
+        ok: true,
+        already_synced: true,
+        project_id: project.id,
+        snapshot_id: snapshotResult.snapshot.id,
+        counts,
+        workbook_snapshot_complete: snapshotResult.snapshot.workbook_metadata?.source_workbook_snapshot_complete !== false,
+        workbook_snapshot_omitted_sections: snapshotResult.snapshot.workbook_metadata?.source_workbook_snapshot_omitted_sections || [],
+        data: {
+          project: { id: project.id },
+          snapshot: { id: snapshotResult.snapshot.id, created_at: snapshotResult.snapshot.created_at },
+          ...counts,
+        },
+      });
+    }
+    const snapshot = snapshotResult.snapshot;
 
     const sectionRows = buildBoqSectionRows({
       workspaceId,
@@ -105,9 +144,11 @@ async function handler(req, res) {
         boq_items: boqRows.length,
         procurement_items: procurementRows.length,
       },
+      workbook_snapshot_complete: snapshot.workbook_metadata?.source_workbook_snapshot_complete !== false,
+      workbook_snapshot_omitted_sections: snapshot.workbook_metadata?.source_workbook_snapshot_omitted_sections || [],
       data: {
-        project,
-        snapshot,
+        project: { id: project.id },
+        snapshot: { id: snapshot.id, created_at: snapshot.created_at },
         boq_sections: sectionRows.length,
         boq_items: insertedBoqItems?.length || 0,
         procurement_items: insertedProcurementItems?.length || 0,
@@ -122,7 +163,7 @@ async function handler(req, res) {
   }
 }
 
-export default withWorkspace(handler);
+export default withWorkspace(handler, { roles: INTERNAL_COMMERCIAL_ROLES });
 
 async function createOrUpdateCommercialProject({
   workspaceId,
@@ -172,6 +213,7 @@ async function createOrUpdateCommercialProject({
 
   const existing = await findExistingProject(workspaceId, requestedProjectId, payload);
   if (existing?.id) {
+    assertProjectJobAssociation(existing, payload);
     const { data, error } = await supabaseAdmin
       .from(TABLES.projects)
       .update(payload)
@@ -201,7 +243,10 @@ async function findExistingProject(workspaceId, requestedProjectId, payload) {
       .eq("id", requestedProjectId)
       .maybeSingle();
     if (error) throw new Error(`Could not find commercial project: ${error.message}`);
-    if (data) return data;
+    if (data) {
+      assertProjectJobAssociation(data, payload);
+      return data;
+    }
   }
 
   if (payload.existing_project_id) {
@@ -213,18 +258,10 @@ async function findExistingProject(workspaceId, requestedProjectId, payload) {
       .eq("existing_project_id", payload.existing_project_id)
       .maybeSingle();
     if (error) throw new Error(`Could not find project by existing project id: ${error.message}`);
-    if (data) return data;
-  }
-
-  if (payload.source_registered_job_id) {
-    const { data, error } = await supabaseAdmin
-      .from(TABLES.projects)
-      .select("*")
-      .eq("workspace_id", workspaceId)
-      .eq("source_registered_job_id", payload.source_registered_job_id)
-      .maybeSingle();
-    if (error) throw new Error(`Could not find project by registered job id: ${error.message}`);
-    if (data) return data;
+    if (data) {
+      assertProjectJobAssociation(data, payload);
+      return data;
+    }
   }
 
   if (payload.source_workbook_job_id) {
@@ -235,15 +272,53 @@ async function findExistingProject(workspaceId, requestedProjectId, payload) {
       .eq("source_workbook_job_id", payload.source_workbook_job_id)
       .maybeSingle();
     if (error) throw new Error(`Could not find project by workbook job id: ${error.message}`);
-    if (data) return data;
+    if (data) {
+      assertProjectJobAssociation(data, payload);
+      return data;
+    }
+  }
+
+  if (payload.source_registered_job_id) {
+    const { data, error } = await supabaseAdmin
+      .from(TABLES.projects)
+      .select("*")
+      .eq("workspace_id", workspaceId)
+      .eq("source_registered_job_id", payload.source_registered_job_id)
+      .maybeSingle();
+    if (error) throw new Error(`Could not find project by registered job id: ${error.message}`);
+    if (data) {
+      assertProjectJobAssociation(data, payload);
+      return data;
+    }
   }
 
   return null;
 }
 
-async function createEstimateSnapshot({ workspaceId, userId, projectId, projectInput, workbook, calculated }) {
+function assertProjectJobAssociation(project, payload) {
+  assertCommercialProjectAssociation(project, {
+    workspaceId: payload.workspace_id,
+    jobId: payload.source_workbook_job_id,
+    registeredJobId: payload.source_registered_job_id,
+  });
+}
+
+async function createEstimateSnapshot({ workspaceId, userId, projectId, projectInput, workbook, calculated, snapshotComplete = true, snapshotOmittedSections = [] }) {
   const summary = plainObject(calculated.summary);
   const source = projectSourceFields(projectInput, workbook);
+  const signature = commercialSnapshotSignature({ workspaceId, projectId, jobId: source.source_workbook_job_id, workbook, calculated });
+  const { data: currentSnapshots, error: currentSnapshotsError } = await supabaseAdmin
+    .from(TABLES.snapshots)
+    .select("id,created_at,workbook_metadata")
+    .eq("workspace_id", workspaceId)
+    .eq("project_id", projectId)
+    .eq("source_workbook_job_id", source.source_workbook_job_id)
+    .eq("status", "current");
+  if (currentSnapshotsError) throw new Error(`Could not check the current snapshot: ${currentSnapshotsError.message}`);
+  if ((currentSnapshots || []).length > 1) throw new Error("Multiple current snapshots exist for this job. Resolve the duplicate commercial records before syncing.");
+  const matchingSnapshots = (currentSnapshots || []).filter((snapshot) => snapshot.workbook_metadata?.source_workbook_signature === signature);
+  if (matchingSnapshots.length > 1) throw new Error("Multiple current snapshots match this job revision. Resolve the duplicate commercial records before syncing.");
+  if (matchingSnapshots.length === 1) return { snapshot: matchingSnapshots[0], reused: true };
   const snapshotNumber = await nextSnapshotNumber(workspaceId, projectId);
   const payload = {
     workspace_id: workspaceId,
@@ -261,6 +336,9 @@ async function createEstimateSnapshot({ workspaceId, userId, projectId, projectI
     source_template_name: firstText(workbook.templateName, projectInput.templateName),
     summary,
     workbook_metadata: stripLargeFields({
+      source_workbook_signature: signature,
+      source_workbook_snapshot_complete: snapshotComplete,
+      source_workbook_snapshot_omitted_sections: snapshotOmittedSections,
       jobFileMeta: workbook.jobFileMeta,
       registeredJob: workbook.registeredJob,
       openedFileName: workbook.openedFileName,
@@ -293,10 +371,33 @@ async function createEstimateSnapshot({ workspaceId, userId, projectId, projectI
   const { data, error } = await supabaseAdmin
     .from(TABLES.snapshots)
     .insert(payload)
-    .select("*")
+    .select("id,created_at,workbook_metadata")
     .single();
   if (error) throw new Error(`Could not create estimate snapshot: ${error.message}`);
-  return data;
+  return { snapshot: data, reused: false };
+}
+
+function expectedSnapshotCounts({ workspaceId, userId, projectId, snapshotId, workbook, calculated }) {
+  const sections = buildBoqSectionRows({ workspaceId, userId, projectId, snapshotId, calculated });
+  const sectionMap = new Map(sections.map((section) => [section.source_section_key, `expected:${section.source_section_key}`]));
+  const boqItems = buildBoqItemRows({ workspaceId, userId, projectId, snapshotId, calculated, sectionMap });
+  const procurementItems = buildProcurementRows({ workspaceId, userId, projectId, snapshotId, workbook, calculated, boqItemMap: new Map() });
+  return { boq_sections: sections.length, boq_items: boqItems.length, procurement_items: procurementItems.length };
+}
+
+async function countSnapshotRows(workspaceId, projectId, snapshotId) {
+  const entries = [
+    ["boq_sections", TABLES.sections],
+    ["boq_items", TABLES.items],
+    ["procurement_items", TABLES.procurement],
+  ];
+  const results = await Promise.all(entries.map(async ([key, table]) => {
+    const { count, error } = await supabaseAdmin.from(table).select("id", { count: "exact", head: true })
+      .eq("workspace_id", workspaceId).eq("project_id", projectId).eq("snapshot_id", snapshotId);
+    if (error) throw new Error(`Could not verify ${key} for the current snapshot: ${error.message}`);
+    return [key, count || 0];
+  }));
+  return Object.fromEntries(results);
 }
 
 async function nextSnapshotNumber(workspaceId, projectId) {
@@ -364,7 +465,7 @@ function buildBoqItemRows({ workspaceId, userId, projectId, snapshotId, calculat
         rate_source: textOrNull(row.sourceOfRate),
         line_type: textOrNull(row.lineType),
         sort_order: sectionIndex * 10000 + rowIndex,
-        status: boqItemStatus(row),
+        status: quotationBoqStatus(row),
         source_row: stripLargeFields(row),
         metadata: stripLargeFields({
           source: "final_quotation_builder",
@@ -391,6 +492,7 @@ function buildProcurementRows({ workspaceId, userId, projectId, snapshotId, work
   const items = refreshTakeoffProcurementItems(calculated, Array.isArray(workbook.procurement?.items) ? workbook.procurement.items : []);
   return items.map((item) => {
     const sourceQuoteRowId = firstText(item.quoteRowId, item.source_quote_row_id, item.linkedQuoteRowId);
+    const pricePending = item.quoteRequired === true || item.costPending === true;
     return {
       workspace_id: workspaceId,
       project_id: projectId,
@@ -408,12 +510,18 @@ function buildProcurementRows({ workspaceId, userId, projectId, snapshotId, work
       estimated_total: moneyNumber(item.estimatedTotal),
       required_by: dateOrNull(item.requiredByDate),
       order_by: dateOrNull(item.orderByDate),
-      order_status: normaliseStatus(firstText(item.orderStatus), "not_started"),
+      order_status: pricePending ? "quote_required" : normaliseStatus(firstText(item.orderStatus), "not_started"),
       delivery_status: normaliseStatus(firstText(item.deliveryStatus), "not_required_yet"),
       status: item.removedFromQuote ? "removed_from_quote" : "active",
       source_item: stripLargeFields(item),
       metadata: stripLargeFields({
         supplier: item.supplier,
+        quoteRequired: pricePending,
+        costPending: item.costPending === true,
+        approvedForOrdering: item.approvedForOrdering === true,
+        selectionIdentityKey: item.selectionIdentityKey || null,
+        selectionOutcome: item.selectionOutcome || null,
+        quantityPending: item.quantityPending === true,
         ...(item.flooringType === "carpet" ? { quoteRequired: item.quoteRequired, quantityPending: item.quantityPending, costPending: item.costPending, netAreaM2: item.netAreaM2, estimatedOrderAreaM2: item.estimatedOrderAreaM2, materialRateExGst: item.materialRateExGst, locationSchedule: item.locationSchedule } : {}),
         supplierGroup: item.supplierGroup,
         canonicalQuantityKey: item.canonicalQuantityKey,
@@ -467,12 +575,6 @@ function workbookDataValue(workbook, key) {
     if (value !== undefined && value !== null && value !== "") return value;
   }
   return "";
-}
-
-function boqItemStatus(row) {
-  if (row.active === false || row.lineType === "Excluded item") return "excluded";
-  if (row.quoteRequired || row.lineType === "Quote required") return "quote_required";
-  return "active";
 }
 
 function allowed(value, values) {

@@ -25,6 +25,8 @@
     "artifacts/**/*",
     "test-artifacts/**/*",
     "archive/**/*",
-    ".history/**/*"
+    "recovery/**/*",
+    ".history/**/*",
+    "lib/construction-estimation/estimateBuilderWorkbookCalculations backup.js"
   ]
 }

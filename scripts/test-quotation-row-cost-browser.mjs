@@ -92,18 +92,24 @@ async function finalQuoteTotal() {
 
 // Everything the user sees for one quotation row (identified by its description input).
 async function readRow(rowId) {
-  return page.$eval(`#quote-edit-${rowId}`, (description) => {
+  return page.$$eval('input[id^="quote-edit-"]', (descriptions, targetId) => {
+    const description = descriptions.find((input) => input.id === `quote-edit-${targetId}` && input.getClientRects().length)
+      || descriptions.find((input) => input.id === `quote-edit-${targetId}`);
+    if (!description) throw new Error(`Quotation row ${targetId} is not rendered.`);
     const tr = description.closest('tr');
     const inputs = [...tr.querySelectorAll('input')];
     const index = inputs.indexOf(description);
     const cells = [...tr.children].map((td) => td.innerText.trim());
     const money = cells.filter((text) => /^\$[\d,]+\.\d\d$/.test(text));
     return {item:description.value, qty:inputs[index + 1]?.value ?? null, unit:inputs[index + 2]?.value ?? null, rate:inputs[index + 3]?.value ?? null, cells, cost:money.at(-1) ?? ''};
-  });
+  }, rowId);
 }
 
 async function setQty(rowId, next) {
-  await page.$eval(`#quote-edit-${rowId}`, (description, next) => {
+  await page.$$eval('input[id^="quote-edit-"]', (descriptions, targetId, next) => {
+    const description = descriptions.find((input) => input.id === `quote-edit-${targetId}` && input.getClientRects().length)
+      || descriptions.find((input) => input.id === `quote-edit-${targetId}`);
+    if (!description) throw new Error(`Quotation row ${targetId} is not rendered.`);
     const inputs = [...description.closest('tr').querySelectorAll('input')];
     const qty = inputs[inputs.indexOf(description) + 1];
     qty.focus();
@@ -112,8 +118,21 @@ async function setQty(rowId, next) {
     qty.dispatchEvent(new Event('input', {bubbles:true}));
     qty.dispatchEvent(new KeyboardEvent('keydown', {key:'Enter', bubbles:true}));
     qty.blur();
-  }, next);
-  await delay(1200);
+  }, rowId, next);
+  await page.waitForFunction((targetId, next) => {
+    const descriptions = [...document.querySelectorAll('input[id^="quote-edit-"]')];
+    const description = descriptions.find((input) => input.id === `quote-edit-${targetId}` && input.getClientRects().length)
+      || descriptions.find((input) => input.id === `quote-edit-${targetId}`);
+    if (!description) return false;
+    const inputs = [...description.closest('tr').querySelectorAll('input')];
+    const quantity = inputs[inputs.indexOf(description) + 1];
+    if (quantity?.value !== next) return false;
+    if (next !== '' && next !== '0') return true;
+    const cells = [...description.closest('tr').children].map((cell) => cell.innerText.trim());
+    const money = cells.filter((text) => /^\$[\d,]+\.\d\d$/.test(text));
+    return money.at(-1) === '$0.00';
+  }, {timeout:15000, polling:200}, rowId, next);
+  await delay(300);
 }
 
 // The section's own total, as shown in its header row.

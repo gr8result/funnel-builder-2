@@ -10,6 +10,7 @@ import {getEffectiveProductCatalogue} from '../lib/product-library/catalogueServ
 import {familyByKey} from '../lib/product-library/catalogueModel.js';
 import {applianceFallbackImage, productIsAppliance} from '../lib/product-library/applianceCataloguePresentation.js';
 import {productDisplayImage, productVerifiedImage} from '../lib/product-library/productPresentation.js';
+const imageComponent = fs.readFileSync('components/product-library/ProductLibraryProductImage.jsx', 'utf8');
 
 // Mirrors the branch order in components/product-library/ProductLibraryProductImage.jsx.
 function renderedImageSrc(product) {
@@ -18,16 +19,20 @@ function renderedImageSrc(product) {
   if (product.attributes?.internalAreasCatalogue) return verified || productDisplayImage(product, family);
   if (verified) return verified;
   if (productIsAppliance(product, family)) return applianceFallbackImage(product, family);
-  return productDisplayImage(product, family);
+  const fallback = productDisplayImage(product, family);
+  if (!fallback && product.sourceType === 'builder_configurable_generic' && product.imageStatus === 'missing') return 'awaiting-verification';
+  return fallback;
 }
 
 const products = getEffectiveProductCatalogue({includeDisabled: true}).products;
 assert(products.length > 2000, 'catalogue did not load');
+assert.match(imageComponent, /if \(!displayImage\) return <ProductImageAwaitingVerification/, 'products without a sourced image must show the explicit awaiting-verification state');
 
 const localPaths = new Set();
 for (const product of products) {
   const src = renderedImageSrc(product);
   assert(src, `no image src for ${product.familyKey} / ${product.productCode} / ${product.productName}`);
+  if (src === 'awaiting-verification') continue;
   if (src.startsWith('/')) localPaths.add(src.split('?')[0]);
 }
 for (const path of localPaths) assert(fs.existsSync(`public${decodeURI(path)}`), `missing file public${path}`);

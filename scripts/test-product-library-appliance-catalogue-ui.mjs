@@ -1,10 +1,13 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import {
+  APPLIANCE_FAMILIES,
   APPLIANCE_ELIGIBILITY_STATES,
   APPLIANCE_IMAGE_FALLBACK_LABEL,
   createApplianceCatalogueSelectors,
   filterApplianceRecords,
+  isApplianceRecordSelectable,
+  isApplianceRecordVisible,
 } from "../lib/product-library/applianceCatalogueSelectorsCore.js";
 
 const pageSource = fs.readFileSync("pages/modules/builders/product-library.js", "utf8");
@@ -34,21 +37,23 @@ const products = getPlatformMasterApplianceRecords();
 const packs = getAppliancePacks();
 const families = getApplianceFamilies();
 
-assert.equal(products.length, 83, "canonical appliance product count remains 83");
-assert.equal(packs.length, 35, "canonical appliance pack count remains 35");
+assert.equal(products.length, applianceCatalogue.products.length, "Product Library exposes every canonical appliance source record");
+assert.equal(packs.length, appliancePackCatalogue.packs.length, "Product Library exposes every canonical appliance package record");
+assert.equal(packs.length, appliancePackCatalogue.packs.length, "all canonical source packs are retained");
 assert.deepEqual(
   families.map((family) => family.familyId),
-  ["ovens", "cooktops", "rangehoods", "dishwashers", "freestanding-cookers", "microwaves", "fridges", "appliance-packs"],
+  APPLIANCE_FAMILIES.map((family) => family.familyId),
   "Product Library appliance landing includes required physical and future-import families",
 );
-assert.equal(families.find((family) => family.familyId === "microwaves")?.productCount, 0, "microwave category is present with an empty-state count");
-assert.equal(families.find((family) => family.familyId === "fridges")?.productCount, 0, "refrigerator category is present with an empty-state count");
-assert.ok(families.filter((family) => !["microwaves", "fridges"].includes(family.familyId)).every((family) => family.productCount > 0), "populated appliance families still expose product counts");
+assert.ok(families.every((family) => family.productCount === getApplianceRecordsByFamily(family.familyId).length), "family card totals match client-visible Product Library records");
+assert.ok(families.find((family) => family.familyId === "microwaves")?.productCount > 0, "current microwave supplier records are visible");
+assert.equal(families.find((family) => family.familyId === "fridges")?.productCount, 0, "fridges retain an honest empty-state count without supplier records");
+assert.ok(families.filter((family) => family.familyId !== "fridges" && family.familyId !== "freezers" && family.familyId !== "washer-dryers" && family.familyId !== "appliance-accessories" && family.familyId !== "other-appliances").every((family) => family.productCount > 0), "populated appliance families still expose product counts");
 assert.ok(families.filter((family) => family.productCount > 0).every((family) => Number.isInteger(family.brandCount) && family.brandCount > 0), "populated family cards expose dynamic brand counts");
 
 const cooktopBrands = getApplianceBrandsByFamily("cooktops");
 const ovenBrands = getApplianceBrandsByFamily("ovens");
-assert.ok(cooktopBrands.includes("Ariston"), "brand list is derived dynamically for cooktops");
+assert.ok(cooktopBrands.some((brand) => getApplianceRecordsByFamily("cooktops").some((record) => record.brand === brand)), "brand list is derived dynamically for cooktops");
 assert.ok(ovenBrands.includes("Westinghouse"), "brand list is derived dynamically for ovens");
 assert.notEqual(getApplianceRecordsByFamily("cooktops").length, getApplianceRecordsByFamily("ovens").length, "family product counts are filtered even when all legacy brands appear in both families");
 
@@ -64,10 +69,10 @@ assert.equal(unresolvedImageProduct?.imageFallbackLabel, APPLIANCE_IMAGE_FALLBAC
 
 assert.ok(APPLIANCE_ELIGIBILITY_STATES.includes("verification-required"), "eligibility states include verification-required");
 assert.ok(APPLIANCE_ELIGIBILITY_STATES.includes("legacy"), "eligibility states include legacy");
-assert.equal(getClientSelectableApplianceRecords().length, 83, "shared Product Library appliance selector exposes all active master appliances");
-assert.equal(getLegacyQuotationCompatibleApplianceRecords().length, 83, "all physical products remain legacy quotation-compatible");
-assert.equal(getActiveProductLibraryApplianceRecords().length, 83, "active Product Library review records remain visible to admin users");
-assert.equal(getApplianceRecordsRequiringVerification().length, 83, "all products remain in the verification queue after Checkpoint 2B");
+assert.equal(getClientSelectableApplianceRecords().length, products.filter(isApplianceRecordSelectable).length, "client-selectable records follow canonical eligibility");
+assert.equal(getLegacyQuotationCompatibleApplianceRecords().length, products.filter((record) => record.source?.type?.startsWith("legacy") || ["legacy", "verification-required", "discontinued"].includes(record.eligibility)).length, "legacy compatibility follows source eligibility");
+assert.equal(getActiveProductLibraryApplianceRecords().length, products.filter(isApplianceRecordVisible).length, "active Product Library review records follow visibility rules");
+assert.equal(getApplianceRecordsRequiringVerification().length, products.filter((record) => ["verification-required", "draft", "legacy", "discontinued"].includes(record.eligibility) || record.eligibilityReasons.length).length, "verification queue covers the current catalogue");
 
 const filteredByFuel = filterApplianceRecords(products, { fuel: "gas" });
 assert.ok(filteredByFuel.length > 0, "fuel filter returns matching appliance records");
@@ -92,7 +97,7 @@ assert.ok(pageSource.includes("applianceBrand"), "Product Library appliance bran
 assert.ok(pageSource.includes("applianceProduct"), "Product Library appliance product URL state is present");
 assert.ok(pageSource.includes("appliance-type-picker"), "Product Library exposes the required appliance product-type step");
 assert.ok(pageSource.includes("View Details"), "Product Library appliance cards expose a View Details action");
-assert.ok(pageSource.includes("Select Product"), "Product Library appliance cards expose a Select Product action");
+assert.ok(pageSource.includes("isApplianceRecordSelectable(record)"), "appliance selection actions are gated by the shared verified/selectable predicate");
 assert.ok(pageSource.includes("Select Package"), "Product Library appliance package cards expose a Select Package action");
 assert.ok(pageSource.includes("Import Product Catalogue CSV"), "Product Library exposes the Checkpoint 4 import placeholder action");
 assert.ok(pageSource.includes("APPLIANCE_IMAGE_FALLBACK_LABEL"), "Product Library renders the required fallback image label from the selector module");

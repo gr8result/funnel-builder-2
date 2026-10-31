@@ -47,6 +47,7 @@ const defaults = () => createEstimateBuilderWorkbookDefaults({}, { workspaceId: 
 const timeless = (value) => JSON.parse(JSON.stringify(value, (key, item) => /At$/.test(key) && typeof item === 'string' ? undefined : item));
 const load = (saved) => reconcileCabinetryQuotation(restoreCompleteWorkbook(defaults(), normalizeJobForCurrentSchema(saved)), owner);
 const seedLegacy = (database, workbook) => database.records.set(`job:${workbook.jobId}`, { type: 'job', key: `job:${workbook.jobId}`, jobId: workbook.jobId, schemaVersion: 1, revision: 4, savedAt: '2026-10-01T00:00:00.000Z', workbook: structuredClone(workbook) });
+const withoutSectionId = ({ sectionId, ...section }) => section;
 const results = {};
 const test = async (name, run) => { try { await run(); results[name] = 'PASS'; } catch (error) { results[name] = 'FAIL'; console.error(`FAIL ${name}:`, String(error.message).slice(0, 600)); } };
 
@@ -85,7 +86,11 @@ await test('A current job', async () => {
   const reloaded = load(database.records.get('job:new-job-1').workbook);
   assert.deepEqual(projectData(reloaded), projectData(job));
   assert.equal(normalizeJobForCurrentSchema(reloaded), reloaded, 'a current job is not rewritten');
-  assert.equal((await save(database, reloaded, '2026-10-05T01:01:00.000Z')).revision, 2);
+  database.records.set('active-job', { key: 'job:another-job' });
+  assert.equal((await save(database, { ...reloaded, savedAt: 'later', page: 'clientSelections' }, '2026-10-05T01:01:00.000Z')).revision, 1, 'Metadata-only repeat must not allocate another revision');
+  assert.equal(database.records.get('active-job').key, 'job:new-job-1', 'A no-op save still refreshes the active job pointer');
+  const edited = { ...reloaded, clientSelectionsBook: { rooms: [{ name: 'Kitchen', rows: [{ quantity: 2 }] }] } };
+  assert.equal((await save(database, edited, '2026-10-05T01:02:00.000Z')).revision, 2, 'A real selection edit must create its own verified revision');
 });
 
 await test('B old job missing cabinetryCatalogueAudit', async () => {
@@ -117,7 +122,8 @@ await test('C old job missing multiple new optional sections', async () => {
   const opened = load(structuredClone(older));
   for (const key of optional) assert.deepEqual(timeless(opened[key]), timeless(defaults()[key]), `${key} initialised from current defaults`);
   for (const key of Object.keys(projectData(older)).filter((key) => key !== 'quotation')) assert.deepEqual(opened[key], older[key], `${key} untouched`);
-  assert.deepEqual(opened.quotation['CUSTOM SECTION'], older.quotation['CUSTOM SECTION']);
+  assert.equal(opened.quotation['CUSTOM SECTION'].sectionId, 'quote-section:custom-section', 'an unnumbered legacy section gets a stable id derived from its name');
+  assert.deepEqual(withoutSectionId(opened.quotation['CUSTOM SECTION']), older.quotation['CUSTOM SECTION'], 'the section content is otherwise untouched');
   assert.equal(opened.quotation.CABINETRY.rows[5].quantity, 4);
   assert.equal((await save(database, opened, '2026-10-05T03:00:00.000Z')).revision, 5);
   // The shared normaliser fills only what is missing and never replaces a present section.
@@ -160,10 +166,56 @@ await test('E round trip', async () => {
   assert.equal(final.jobSchemaVersion, JOB_SCHEMA_VERSION); validateJobWorkbook(final);
   for (const key of Object.keys(projectData(original)).filter((key) => key !== 'quotation')) assert.deepEqual(final[key], original[key], `${key} retained`);
   assert.equal(final.data.carpetFloorFinishM2, 86.35);
-  assert.deepEqual(final.quotation['CUSTOM SECTION'], original.quotation['CUSTOM SECTION']);
-  assert.deepEqual(Object.keys(final.quotation), Object.keys(original.quotation));
+  assert.deepEqual(withoutSectionId(final.quotation['CUSTOM SECTION']), original.quotation['CUSTOM SECTION']);
+  assert.deepEqual(Object.keys(final.quotation), Object.keys(original.quotation), 'section order survives save and reopen');
+  const sectionIds = (book) => Object.values(book.quotation).map((section) => section.sectionId);
+  assert(sectionIds(final).every(Boolean) && new Set(sectionIds(final)).size === sectionIds(final).length, 'every section has one unique id');
+  assert.deepEqual(sectionIds(final), sectionIds(opened), 'section ids are identical after two save/reopen cycles');
+  assert.deepEqual(sectionIds(final), sectionIds(reopened));
   assert.deepEqual(final.quotation.CABINETRY.rows.map((row) => [row.id, row.quantity]), original.quotation.CABINETRY.rows.map((row) => [row.id, row.quantity]));
   assert.deepEqual(projectData(final), projectData(reopened), 'a second cycle changes nothing');
+});
+
+await test('F hand-arranged section and line order survives save/reopen', async () => {
+  const opened = load(oldJob());
+  const names = Object.keys(opened.quotation);
+  const arranged = ['CUSTOM SECTION', ...names.filter((name) => name !== 'CUSTOM SECTION')];
+  const book = { ...opened, quotation: Object.fromEntries(arranged.map((name) => [name, opened.quotation[name]])) };
+  const database = memoryDatabase();
+  await save(database, book, '2026-10-05T07:00:00.000Z');
+  const reopened = load(JSON.parse(JSON.stringify(database.records.get('job:old-job-1').workbook)));
+  const idOf = (name) => book.quotation[name].sectionId;
+  assert.deepEqual(Object.keys(reopened.quotation).map((name) => reopened.quotation[name].sectionId), arranged.map(idOf), 'sections keep the saved order, matched by section id');
+  assert.deepEqual(reopened.quotation.CABINETRY.rows.map((row) => row.id), opened.quotation.CABINETRY.rows.map((row) => row.id), 'line order is unchanged');
+});
+
+await test('G progress allocation percentage and override survive save/reopen', async () => {
+  const allocation = { stage: 'UNDERSLAB', sourceSection: 'PLUMBING', percent: '30', manualAmount: '$12,500.00', remainder: false };
+  const stored = oldJob();
+  stored.quotation = { ...stored.quotation, 'UNDERSLAB AND DRAINAGE': { rows: [{ id: 'quote-30075', item: 'Plumbers costs for under slab and drainage', progressAllocation: allocation, progressAllocationHistory: [{ kind: 'SUPERSEDED_CHARGE', value: '$3,800.00' }] }] } };
+  const database = memoryDatabase();
+  await save(database, load(stored), '2026-10-05T08:00:00.000Z');
+  const reopened = load(JSON.parse(JSON.stringify(database.records.get('job:old-job-1').workbook)));
+  const row = reopened.quotation['UNDERSLAB AND DRAINAGE'].rows[0];
+  assert.deepEqual(row.progressAllocation, allocation); assert.equal(row.progressAllocationHistory[0].value, '$3,800.00');
+  await save(database, reopened, '2026-10-05T08:01:00.000Z');
+  assert.deepEqual(load(JSON.parse(JSON.stringify(database.records.get('job:old-job-1').workbook))).quotation['UNDERSLAB AND DRAINAGE'].rows[0].progressAllocation, allocation, 'a second cycle changes nothing');
+});
+
+await test('H trade contracts, claims and audit survive save/reopen', async () => {
+  const { createTradeContract, getBuilderTemplate, setMilestoneField, setMilestoneCompletion, submitClaim, approveClaim, attachSubcontractPurchaseOrders } = await import('../lib/construction-estimation/tradePaymentSchedule.js');
+  const ctx = { builderId: owner, jobId: 'old-job-1', actor: 'Grant' };
+  let contract = createTradeContract({ template: getBuilderTemplate({}, owner, 'PLUMBING'), builderId: owner, jobId: 'old-job-1', contractAmount: 58270 }).contract;
+  contract = setMilestoneField(contract, 'ROUGH_IN', 'manualAmount', 25000, ctx).contract;
+  contract = approveClaim(submitClaim(setMilestoneCompletion(contract, 'UNDERSLAB', 'COMPLETE', ctx).contract, 'UNDERSLAB', { invoiceRef: 'INV-1' }, ctx).contract, 'UNDERSLAB', {}, ctx).contract;
+  const attached = attachSubcontractPurchaseOrders([], [contract]);
+  const stored = { ...oldJob(), tradeContracts: attached.contracts, purchaseOrders: attached.purchaseOrders };
+  const database = memoryDatabase();
+  await save(database, load(stored), '2026-10-05T09:00:00.000Z');
+  const reopened = load(JSON.parse(JSON.stringify(database.records.get('job:old-job-1').workbook)));
+  assert.deepEqual(reopened.tradeContracts, attached.contracts); assert.deepEqual(reopened.purchaseOrders, attached.purchaseOrders);
+  const { tradeContracts, ...withoutContracts } = reopened;
+  await assert.rejects(save(database, withoutContracts, '2026-10-05T09:01:00.000Z'), /missing saved section tradeContracts/, 'contracts cannot silently vanish from a later save');
 });
 
 // Optional: the same round trip on a real job workbook (large; pass --job=path).

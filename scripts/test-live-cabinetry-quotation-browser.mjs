@@ -64,14 +64,8 @@ try {
  const input=await page.waitForSelector('[data-testid="open-local-job-file-input"]');await input.uploadFile(fixture);
  for(let n=0;n<8;n++){await delay(400);await page.evaluate(()=>{for(const text of ['Discard Changes','Open Job','Open Job File','Keep Local'])[...document.querySelectorAll('button')].find(b=>!b.disabled&&b.innerText.trim()===text)?.click();});}
  await page.waitForFunction(()=>document.querySelectorAll('tr[data-cabinetry-import-key]').length===657,{timeout:180000});
- await page.$eval('[data-testid="cabinetry-replacement-picker"]',e=>e.open=true);
- assert.equal(await page.$eval('[data-testid="cabinetry-replacement-picker"] summary',e=>e.innerText.includes('657 products')),true);
- await page.select('select[aria-label="Cabinetry catalogue section"]','KITCHEN CABINETRY');
- await page.select('select[aria-label="Cabinetry finish range"]','STANDARD COLOURBOARD');
- await page.select('select[aria-label="Cabinetry catalogue product"]','final-cabinetry:8');
- await page.$eval('[data-testid="cabinetry-replacement-picker"] button',b=>b.click());
- await page.$eval('[data-testid="cabinetry-replacement-picker"] button',b=>b.click());
- await page.$eval('[data-testid="cabinetry-replacement-picker"]',e=>e.open=false);
+ // The quotation already holds every approved row, so there is no separate catalogue picker.
+ assert.equal(await page.$('[data-testid="cabinetry-replacement-picker"]'),null);
  const sections=await page.$$eval('[data-quote-section]',elements=>elements.map(e=>e.dataset.quoteSection));
  assert.deepEqual(sections.filter(s=>/CABINET|BENCHTOP|WARDROB/i.test(s)),['CABINETRY']);
  const products=await page.$$eval('[data-quote-section="CABINETRY"] tr[data-cabinetry-import-key]',rows=>rows.map(row=>({key:row.dataset.cabinetryImportKey, values:[...row.querySelectorAll('input')].map(i=>i.value)})));

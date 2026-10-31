@@ -1,3 +1,4 @@
+import WebsiteBuilderIcon from "../../../components/website-builder/WebsiteBuilderIcon";
 import Head from "next/head";
 import Link from "next/link";
 import dynamic from "next/dynamic";
@@ -417,13 +418,13 @@ function logWebsiteBuilderSaveDebug(label, details = {}) {
   console.info(`[WebsiteBuilderSave] ${label}`, details);
 }
 
-// â”€â”€â”€ Studio Loader â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Studio Loader ────────────────────────────────────────────────────────────
 const STUDIO_MESSAGES = [
-  "Loading workspaceâ€¦",
-  "Assembling blocksâ€¦",
-  "Fetching projectâ€¦",
-  "Preparing canvasâ€¦",
-  "Almost readyâ€¦",
+  "Loading workspace…",
+  "Assembling blocks…",
+  "Fetching project…",
+  "Preparing canvas…",
+  "Almost ready…",
 ];
 
 function StudioLoader({ label }) {
@@ -452,7 +453,7 @@ function StudioLoader({ label }) {
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 28 }}>
           {/* Wordmark */}
           <div style={{ fontSize: 16, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,.28)", fontWeight: 600 }}>
-            ðŸŒ&nbsp; GR8 Website Studio
+            <WebsiteBuilderIcon name="globe" />&nbsp; GR8 Website Studio
           </div>
 
           {/* Ring + glow orb */}
@@ -519,7 +520,7 @@ function StudioLoader({ label }) {
     </>
   );
 }
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────────────────────────────
 
 const PageBuilderCanvas = dynamic(() => import("../../../components/website-builder/PageBuilderCanvas"), {
   ssr: false,
@@ -844,9 +845,9 @@ function sanitizeDomainInput(value) {
 
 function isLegacyAiStarterProject(project) {
   if (!project || String(project?.mode || "").toLowerCase() !== "ai") return false;
-  // Already upgraded â€” the field is set by the upgrade itself on completion
+  // Already upgraded — the field is set by the upgrade itself on completion
   if (project?.brief?.aiStarterVersion) return false;
-  // User has manually saved content â€” never silently replace their work
+  // User has manually saved content — never silently replace their work
   if (project?.status === "saved") return false;
   if (project?.globalNavBlock || project?.globalFooterBlock) return false;
   const pageBlockEntries = Object.entries(project?.pageBlocks || {});
@@ -1024,7 +1025,7 @@ export default function VisualBuilderPage() {
       if (!data?.session) {
         authTimeoutRef.current = setTimeout(() => {
           authTimeoutRef.current = null;
-          // Still no session â€” redirect to login
+          // Still no session — redirect to login
           router.replace(`/login?next=${encodeURIComponent(router.asPath)}`);
         }, 8000);
       }
@@ -1124,7 +1125,7 @@ export default function VisualBuilderPage() {
           console.warn("Could not load website draft from the server", error);
         }
       } else if (nextProject && projectId && session?.access_token) {
-        // Local cache exists â€” still fetch server in background to pick up newer
+        // Local cache exists — still fetch server in background to pick up newer
         // server-side edits and any new pages added externally. Don't block the
         // initial render.
         fetchWebsiteProjectFromServer(session, projectId, { pageName: requestedPage }).then((remoteProject) => {
@@ -1181,7 +1182,7 @@ export default function VisualBuilderPage() {
               : localProject?.chaiData,
             __saveBaseUpdatedAt: remoteProject?.__saveBaseUpdatedAt || remoteProject?.updatedAt || localProject?.__saveBaseUpdatedAt || localProject?.updatedAt || "",
           });
-          // Only update React state with the new pages â€” no existing blocks change,
+          // Only update React state with the new pages — no existing blocks change,
           // so this won't disrupt any active editing.
           const refreshed = getWebsiteProject(projectId);
           if (refreshed && !cancelled) setProject(refreshed);
@@ -1251,7 +1252,7 @@ export default function VisualBuilderPage() {
 
       // Only reset activePage when the project itself changes (first load or different projectId).
       // Session token refreshes re-run this effect but must NOT snap the user back to the URL's
-      // ?page= param â€” that's what causes the "jumps to Home" bug.
+      // ?page= param — that's what causes the "jumps to Home" bug.
       const resolvedProjectId = nextProject?.id || projectId || "";
       if (activePageInitializedForRef.current !== resolvedProjectId) {
         activePageInitializedForRef.current = resolvedProjectId;
@@ -1277,7 +1278,7 @@ export default function VisualBuilderPage() {
     const upgradeLegacyAiProject = async () => {
       try {
         setIsUpgrading(true);
-        flashNotice("Rebuilding AI layout â€” this takes about 30 secondsâ€¦", "info", 60000);
+        flashNotice("Rebuilding AI layout — this takes about 30 seconds…", "info", 60000);
         const response = await fetch("/api/website/generate-site-content", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -1320,7 +1321,7 @@ export default function VisualBuilderPage() {
           setProject(latestProject);
           await syncProjectToServer(latestProject, { silent: true });
           setIsUpgrading(false);
-          flashNotice("AI website layout ready âœ“", "success");
+          flashNotice("AI website layout ready ✓", "success");
         }
       } catch (error) {
         console.error("Could not upgrade legacy AI project", error);
@@ -1861,7 +1862,7 @@ export default function VisualBuilderPage() {
       // Sending it would overwrite the server's freshly-committed blocks with
       // stale data, which then races the preview tab's server fetch and can
       // cause the preview to show an older version of the page.
-      // Simply discard the queue here â€” the next real autosave will re-sync.
+      // Simply discard the queue here — the next real autosave will re-sync.
       if (options?.force) {
         syncQueuedRef.current = null;
       } else if (syncQueuedRef.current && !syncTimerRef.current) {
@@ -2099,12 +2100,12 @@ export default function VisualBuilderPage() {
     });
     const savedProject = updateWebsiteProject(project.id, nextProjectForPatch);
 
-    // Storage quota exceeded â€” force immediate cloud sync so nothing is lost
+    // Storage quota exceeded — force immediate cloud sync so nothing is lost
     if (savedProject?._localSaveFailed) {
       const projectToSync = normalizeFooterNavigationForProject({ ...currentProject, ...patch, status: "saved", _localSaveFailed: undefined });
-      flashNotice("âš ï¸ Storage full â€” saving to cloud only. Do not close this tab.", "error", 10000);
+      flashNotice("⚠️ Storage full — saving to cloud only. Do not close this tab.", "error", 10000);
       void syncProjectToServer(projectToSync, { silent: false, force: true, pageName: activePage, saveSource: "manual-save", ...syncOptions }).then((synced) => {
-        if (synced && !synced?._saveError) flashNotice("âœ“ Saved and verified in cloud (local storage full)", "success", 6000);
+        if (synced && !synced?._saveError) flashNotice("✓ Saved and verified in cloud (local storage full)", "success", 6000);
       }).catch(() => {});
       return projectToSync;
     }
@@ -2118,7 +2119,7 @@ export default function VisualBuilderPage() {
 
     if (savedProject && latest) {
       setProject(latest);
-      if (successMessage) flashNotice("Savingâ€¦", "info", 5000);
+      if (successMessage) flashNotice("Saving…", "info", 5000);
       else clearNotice();
       void syncProjectToServer(latest, { silent: true, pageName: activePage, saveSource: "autosave", ...syncOptions }).then((synced) => {
         if (successMessage && synced && !synced?._saveError) flashNotice(successMessage, "success");
@@ -2130,10 +2131,10 @@ export default function VisualBuilderPage() {
     }
 
     if (!savedProject) {
-      flashNotice("âš ï¸ Could not save â€” storage full. Please click Save to force cloud sync.", "error", 8000);
+      flashNotice("⚠️ Could not save — storage full. Please click Save to force cloud sync.", "error", 8000);
     } else {
       setProject(savedProject);
-      if (successMessage) flashNotice("Savingâ€¦", "info", 5000);
+      if (successMessage) flashNotice("Saving…", "info", 5000);
       else clearNotice();
       void syncProjectToServer(savedProject, { silent: true, pageName: activePage, saveSource: "autosave", ...syncOptions }).then((synced) => {
         if (successMessage && synced && !synced?._saveError) flashNotice(successMessage, "success");
@@ -2345,7 +2346,7 @@ export default function VisualBuilderPage() {
     );
   }
 
-  // Strip blob: URLs from block props before persisting â€” blobs are in-memory
+  // Strip blob: URLs from block props before persisting — blobs are in-memory
   // only and die on page refresh, so they must never reach the server or localStorage.
   function stripBlobUrls(blocks) {
     if (!Array.isArray(blocks)) return blocks;
@@ -2393,7 +2394,7 @@ export default function VisualBuilderPage() {
     // treats as unsafe and strips downstream in this same save pipeline. Otherwise a value that
     // looks fine here (e.g. a data: URI or a signed storage URL briefly held in panel state) sails
     // through unprotected, gets wiped a few steps later, and there's no prior durable value left
-    // to fall back to â€” the image is just gone.
+    // to fall back to — the image is just gone.
     return !text
       || /^blob:/i.test(text)
       || /^file:/i.test(text)
@@ -2588,13 +2589,13 @@ export default function VisualBuilderPage() {
         return { ...(currentProject || {}), _saveError: true, _saveErrorMessage: message };
       }
       if (!currentProject?.id) {
-        console.error("[forceSaveBlockPage] project has no id â€” project state:", project);
-        flashNotice("Could not save â€” project not loaded yet. Please wait and try again.", "error");
+        console.error("[forceSaveBlockPage] project has no id — project state:", project);
+        flashNotice("Could not save — project not loaded yet. Please wait and try again.", "error");
         return null;
       }
 
       if (!isPreviewSave && syncInFlightRef.current) {
-        flashNotice("Savingâ€¦", "info", 5000);
+        flashNotice("Saving…", "info", 5000);
         await waitForActiveSaveToFinish();
         currentProject = getWebsiteProject(currentProject.id) || currentProject;
       }
@@ -2894,27 +2895,27 @@ export default function VisualBuilderPage() {
         matches: current?.publishedVersion ? current.publishedVersion === savedVersionSummary.projectVersion : current?.matches,
       }));
 
-      // â”€â”€ THEN refresh localStorage with the server-normalized project â”€â”€â”€â”€â”€â”€â”€
+      // ── THEN refresh localStorage with the server-normalized project ───────
       const savedProject = updateWebsiteProject(currentProject.id, projectToStore);
       const latest = savedProject && !savedProject._localSaveFailed
         ? getWebsiteProject(currentProject.id)
         : null;
 
       if (savedProject?._localSaveFailed || !savedProject) {
-        // localStorage full â€” data is already safe on the server, just warn
-        console.warn("[forceSaveBlockPage] localStorage full â€” data saved to server only");
+        // localStorage full — data is already safe on the server, just warn
+        console.warn("[forceSaveBlockPage] localStorage full — data saved to server only");
         setProject(projectToStore);
-        flashNotice(`âœ“ Saved to cloud â€” local storage full. Your work is safe.`, "success", 6000);
+        flashNotice(`✓ Saved to cloud — local storage full. Your work is safe.`, "success", 6000);
         return projectToStore;
       }
 
       if (latest) setProject(latest);
       clearNotice();
-      flashNotice(`Saved and verified âœ“ ${pageName}`, "success");
+      flashNotice(`Saved and verified ✓ ${pageName}`, "success");
       return latest || savedProject;
     } catch (unexpectedErr) {
       console.error("[forceSaveBlockPage] unexpected error:", unexpectedErr);
-      flashNotice("Save encountered an error â€” please try again.", "error");
+      flashNotice("Save encountered an error — please try again.", "error");
       return null;
     }
   }
@@ -3116,7 +3117,7 @@ export default function VisualBuilderPage() {
     const footerPatch = role === "footer"
       ? { globalFooter: footerBlockToGlobalFooter(block, buildFooterNavigationContext({ pages: project.pages || [] })) }
       : {};
-    saveProjectPatch({ [field]: block, ...footerPatch }, `Saved as global ${role === "nav" ? "navigation" : "footer"} â€” shows on every page`, { siteOnly: true, saveSource: "manual-save" });
+    saveProjectPatch({ [field]: block, ...footerPatch }, `Saved as global ${role === "nav" ? "navigation" : "footer"} — shows on every page`, { siteOnly: true, saveSource: "manual-save" });
   }
 
   function updateGlobalBlock(role, block) {
@@ -3371,7 +3372,7 @@ export default function VisualBuilderPage() {
         <Head><title>{displayName} | GR8 Website Studio</title></Head>
         <main style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: "#05070f", padding: 24, fontFamily: "system-ui,sans-serif" }}>
           <div style={{ display: "grid", gap: 14, width: "min(580px, 100%)", borderRadius: 18, padding: 28, background: "#0d1117", border: "1px solid rgba(99,102,241,.25)", boxShadow: "0 0 40px rgba(99,102,241,.1)" }}>
-            <div style={{ fontSize: 32 }}>ðŸŒ</div>
+            <div style={{ fontSize: 32 }}><WebsiteBuilderIcon name="globe" /></div>
             <div style={{ fontSize: 18, fontWeight: 600, color: "#f1f5f9" }}>Project not found</div>
             <div style={{ fontSize: 16, lineHeight: 1.7, color: "rgba(255,255,255,.5)", maxWidth: 520 }}>
               Project <code style={{ background: "rgba(255,255,255,.08)", padding: "2px 6px", borderRadius: 4, fontSize: 16 }}>{missingProjectId}</code> is not available in this session.
@@ -3389,7 +3390,7 @@ export default function VisualBuilderPage() {
     return (
       <>
         <Head><title>{displayName} | GR8 Website Studio</title></Head>
-        <StudioLoader label={projectId ? "Loading projectâ€¦" : undefined} />
+        <StudioLoader label={projectId ? "Loading project…" : undefined} />
       </>
     );
   }
@@ -3406,7 +3407,7 @@ export default function VisualBuilderPage() {
   // already syncs pageBlocks prop changes internally via its own effect, which preserves
   // scroll position and the selected block. Including block ids/count here forced a full
   // remount on every edit/save (autosave, background refresh, etc.), which destroyed and
-  // recreated the canvas â€” causing the flash/scroll-to-top and bypassing that effect's
+  // recreated the canvas — causing the flash/scroll-to-top and bypassing that effect's
   // "keep the live canvas as source of truth" guard against stale background updates.
   const canvasInstanceKey = `${studioProject?.id || ""}|${activeProjectPageName}`;
   const activePageEntry = Array.isArray(studioProject?.pages)
@@ -3449,10 +3450,10 @@ export default function VisualBuilderPage() {
           <section style={styles.bannerOuter}>
             <div style={styles.bannerInner}>
               <div style={styles.bannerLeft}>
-                <div style={styles.bannerIcon} aria-hidden>ðŸŒ</div>
+                <div style={styles.bannerIcon} aria-hidden><WebsiteBuilderIcon name="globe" /></div>
                 <div>
                   <strong style={styles.bannerTitle}>Website Studio</strong>
-                  <span style={styles.bannerSubtitle}>{displayName} Â· {activePage} page builder</span>
+                  <span style={styles.bannerSubtitle}>{displayName} · {activePage} page builder</span>
                 </div>
               </div>
               <div style={styles.bannerActions}>
@@ -3463,7 +3464,7 @@ export default function VisualBuilderPage() {
                       style={styles.secondaryLinkButton}
                       onClick={() => window.open(`/modules/website-builder/visit-report?projectId=${project.id}`, "_blank")}
                     >
-                      ðŸ“Š Visitor Report
+                      <WebsiteBuilderIcon name="chart" /> Visitor Report
                     </button>
                     <button
                       type="button"
@@ -3484,7 +3485,7 @@ export default function VisualBuilderPage() {
                       style={showSetupPanel ? styles.settingsBtnActive : styles.settingsBtn}
                       onClick={() => setShowSetupPanel(v => !v)}
                     >
-                      âš™ Site Settings
+                      <WebsiteBuilderIcon name="settings" /> Site Settings
                     </button>
                   </>
                 ) : null}
@@ -3503,10 +3504,10 @@ export default function VisualBuilderPage() {
             </div>
           </section>
 
-          {/* â”€â”€ Sticky area: tabs + canvas locks to top as banner scrolls away â”€â”€ */}
+          {/* ── Sticky area: tabs + canvas locks to top as banner scrolls away ── */}
           <div style={styles.stickyArea}>
 
-          {/* â”€â”€ Persistent pages bar â”€â”€ */}
+          {/* ── Persistent pages bar ── */}
           {project?.pages?.length > 0 && (
             <div style={styles.pagesBar}>
               <label style={styles.pagesBarPickerLabel}>
@@ -3566,7 +3567,7 @@ export default function VisualBuilderPage() {
                           title={`Delete ${entry.name}`}
                           onClick={() => handleDeletePage(entry.name)}
                           style={styles.pagesBarTabDelete}
-                        >Ã—</button>
+                        ><WebsiteBuilderIcon name="close" /></button>
                       )}
                     </div>
                   )
@@ -3582,7 +3583,7 @@ export default function VisualBuilderPage() {
             <div style={styles.newPagePanel} role="dialog" aria-label="Create new website page">
               <div style={styles.newPagePanelHeader}>
                 <strong>Create New Page</strong>
-                <button type="button" onClick={() => setShowNewPagePanel(false)} style={styles.newPageCloseBtn}>Ã—</button>
+                <button type="button" onClick={() => setShowNewPagePanel(false)} aria-label="Close new page dialog" style={styles.newPageCloseBtn}><WebsiteBuilderIcon name="close" /></button>
               </div>
               <div style={styles.newPageGrid}>
                 <label style={styles.newPageField}>
@@ -3634,7 +3635,7 @@ export default function VisualBuilderPage() {
             <div style={styles.setupDrawer}>
               <div style={styles.setupDrawerHeader}>
                 <strong style={styles.sectionTitle}>Site Settings</strong>
-                <button type="button" onClick={() => setShowSetupPanel(false)} style={styles.setupDrawerClose}>âœ• Close</button>
+                <button type="button" onClick={() => setShowSetupPanel(false)} style={styles.setupDrawerClose}><WebsiteBuilderIcon name="close" /> Close</button>
               </div>
             <section style={styles.navPanel}>
             <div style={styles.navPanelHead}>
@@ -3807,7 +3808,7 @@ export default function VisualBuilderPage() {
                             onClick={() => handleDeletePage(entry.name)}
                             style={styles.pagePillDelete}
                           >
-                            Ã—
+                            <WebsiteBuilderIcon name="close" />
                           </button>
                         )}
                       </div>
@@ -3843,7 +3844,7 @@ export default function VisualBuilderPage() {
                 <span>{activePageBlocks.length} blocks loaded</span>
               </div>
               {isUpgrading ? (
-                <StudioLoader label="Rebuilding AI layoutâ€¦" />
+                <StudioLoader label="Rebuilding AI layout…" />
               ) : (
                 <CanvasErrorBoundary resetKey={`${studioProject?.id || ""}:${activeProjectPageName}`}>
                   <PageBuilderCanvas

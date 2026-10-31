@@ -16,6 +16,7 @@ import { useRouter } from "next/router";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { Archive, ArrowLeft, Boxes, Check, Copy, Edit3, FileDown, FileUp, FolderOpen, ImagePlus, Package, Pencil, Plus, RefreshCw, Upload, X } from "lucide-react";
 import { useWorkspace } from "../../../hooks/useWorkspace";
+import { useBuilderCatalogue } from "../../../components/product-library/useBuilderCatalogue";
 import {
   AUSTRALIAN_REGIONS,
   BUILDER_PRODUCT_MODES,
@@ -53,6 +54,8 @@ import {
   getBuilderEnablementRefs,
   getEffectiveProductCatalogue,
   getMasterProducts,
+  flushBuilderCatalogueWrites,
+  setBuilderDatabaseProducts,
   updateBuilderProductOverride,
 } from "../../../lib/product-library/catalogueService";
 import {
@@ -161,6 +164,7 @@ export default function BuilderProductLibraryPage(props) {
 function BuilderProductLibraryPageContent({ embeddedInEstimateBuilder = false, workbook, projectId, onClientSelectionsSave, selectionBook, selectionMode } = {}) {
   const router = useRouter();
   const { workspaceId, activeWorkspace, loading: workspaceLoading } = useWorkspace();
+  const databaseCatalogue = useBuilderCatalogue(workspaceId);
   const furniturePicker = useDoorFurniturePicker({workbook, projectId, workspaceId, onClientSelectionsSave, selectionBook, selectionMode});
   const [categories, setCategories] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
@@ -203,6 +207,9 @@ function BuilderProductLibraryPageContent({ embeddedInEstimateBuilder = false, w
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  useEffect(() => {
+    if (databaseCatalogue.error) setError(databaseCatalogue.error);
+  }, [databaseCatalogue.error]);
 
   const selectedArea = TOP_LEVEL_AREAS.find((area) => area.key === selectedAreaKey) || null;
   const catalogueMode = typeof router.query.catalogue === "string" ? router.query.catalogue : "";
@@ -271,13 +278,13 @@ function BuilderProductLibraryPageContent({ embeddedInEstimateBuilder = false, w
     tenantId: workspaceId || "",
     builderId: workspaceId || "",
     catalogueVersion: "product-library.current",
-  }).products, [builderEnablements, catalogueRevision, masterProducts, workspaceId]);
+  }).products, [builderEnablements, catalogueRevision, databaseCatalogue.revision, masterProducts, workspaceId]);
   const managementCatalogueProducts = useMemo(() => getEffectiveProductCatalogue({
     tenantId: workspaceId || "",
     builderId: workspaceId || "",
     catalogueVersion: "product-library.current",
     includeDisabled: true,
-  }).products, [builderEnablements, catalogueRevision, masterProducts, workspaceId]);
+  }).products, [builderEnablements, catalogueRevision, databaseCatalogue.revision, masterProducts, workspaceId]);
   const roomProducts = useMemo(() => selectedRoom ? effectiveCatalogueProducts.filter((product) => productBelongsToRoom(product, selectedRoom.key)) : [], [effectiveCatalogueProducts, selectedRoom]);
   const exteriorSections = INTERNAL_CATALOGUE_SECTIONS[selectedRoomCategory?.key] || EXTERIOR_CATALOGUE_SECTIONS[selectedRoomCategory?.key] || [];
   const exteriorSectionKey = typeof router.query.exteriorSection === "string" && exteriorSections.some(([key]) => key === router.query.exteriorSection) ? router.query.exteriorSection : "all";
@@ -298,6 +305,7 @@ function BuilderProductLibraryPageContent({ embeddedInEstimateBuilder = false, w
   async function saveTrimRates(product, rates) {
     if (!workspaceId) throw Error('Choose a builder organisation before editing prices.');
     updateBuilderProductOverride(workspaceId, product.productCode, {builderPrice: rates.price_per_stock_length, customFields: {productAttributes: {...product.attributes,...rates,priceIncludesGst:true,priceBasis:'builder_catalogue_estimate',priceNote:'Editable builder catalogue rate, AUD including GST. Not a verified supplier price.'}}});
+    await flushBuilderCatalogueWrites(workspaceId);
     setCatalogueRevision(value=>value+1);
     setSuccess('Builder trim prices saved. Product Library selections and quotation prices use this rate.');
   }
@@ -732,6 +740,12 @@ function BuilderProductLibraryPageContent({ embeddedInEstimateBuilder = false, w
       setSuppliers(supplierResult.data || []);
       setManufacturers(manufacturerResult.data || []);
       setProducts(productResult.data || []);
+      setBuilderDatabaseProducts(workspaceId, (productResult.data || []).map(row => ({ ...row, metadata: { ...row.metadata, productEntity: {
+        ...row.metadata?.productEntity,
+        supplier: (supplierResult.data || []).find(supplier => supplier.id === row.supplier_id)?.supplier_name || row.metadata?.productEntity?.supplier || "",
+        brand: (manufacturerResult.data || []).find(brand => brand.id === row.manufacturer_id)?.manufacturer_name || row.metadata?.productEntity?.brand || "",
+      } } })));
+      setCatalogueRevision(value => value + 1);
     }
     setLoading(false);
   }
@@ -797,7 +811,7 @@ function BuilderProductLibraryPageContent({ embeddedInEstimateBuilder = false, w
       setSelectedAreaKey("");
       return;
     }
-    safeSelectionNavigate(router, embeddedInEstimateBuilder ? "/modules/estimate-builder" : "/modules/builders");
+    safeSelectionNavigate(router, embeddedInEstimateBuilder ? "/modules/estimate-builder" : "/modules/estimate-builder?page=projectDashboard");
   }
 
   function openFamily(familyKey) {
@@ -1071,6 +1085,7 @@ function BuilderProductLibraryPageContent({ embeddedInEstimateBuilder = false, w
   // Library action can replace or empty a committed family.
   function persistMasterCatalogue(nextProducts, nextEnablements = builderEnablements) {
     if (!workspaceId) return;
+    const previousRefs = new Map(getBuilderEnablementRefs(workspaceId).map(ref => [ref.masterProductCode, ref]));
     const staticCodes = new Set(getMasterProducts().map((product) => product.productCode));
     (Array.isArray(nextProducts) ? nextProducts : []).forEach((product) => {
       if (!product?.productCode || staticCodes.has(product.productCode)) return;
@@ -1085,6 +1100,9 @@ function BuilderProductLibraryPageContent({ embeddedInEstimateBuilder = false, w
       const patch = { enabled: ref.enabled !== false };
       const price = ref.clientPrice ?? ref.overrides?.clientPrice;
       if (price != null && Number.isFinite(Number(price))) patch.builderPrice = Number(price);
+      if (ref.selectionMode) patch.selectionMode = ref.selectionMode;
+      const previous = previousRefs.get(ref.masterProductCode);
+      if (previous && Object.entries(patch).every(([field, value]) => previous[field] === value)) return;
       updateBuilderProductOverride(workspaceId, ref.masterProductCode, patch);
     });
     setMasterProducts(getMasterProducts());
@@ -1275,8 +1293,11 @@ function BuilderProductLibraryPageContent({ embeddedInEstimateBuilder = false, w
     }
   }
 
-  function commitPackageImportPreview() {
+  async function commitPackageImportPreview() {
     if (!packageImportPreview) return;
+    setSaving(true);
+    setError("");
+    try {
     const result = commitProductLibraryPackageImport(packageImportPreview, managementCatalogueProducts);
     result.masterOverrides.forEach((row) => {
       const price = row.product.clientPrice ?? row.product.normalizedUnitPrice ?? row.product.rrp;
@@ -1296,9 +1317,16 @@ function BuilderProductLibraryPageContent({ embeddedInEstimateBuilder = false, w
       updateBuilderProductOverride(workspaceId || "", row.existingProduct?.productCode || row.product.productCode, patch);
     });
     persistMasterCatalogue(result.products);
+    await flushBuilderCatalogueWrites(workspaceId);
     setPackageImportPreview(null);
     setSelectedCatalogueItemIds([]);
     setSuccess(`Product Library import committed: ${result.created.length} builder-private products created, ${result.updated.length} updated, ${result.masterOverrides.length} matching master products updated by builder override, ${result.skipped.length} unchanged, ${result.invalid.length} invalid skipped. Client Selections and Quotation Builder will read through getEffectiveProductCatalogue.`);
+    } catch (saveError) {
+      setSuccess("");
+      setError(saveError.message || "Product Library import could not be saved to the database.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   function toggleBuilderProduct(masterProduct) {
@@ -1509,10 +1537,11 @@ function BuilderProductLibraryPageContent({ embeddedInEstimateBuilder = false, w
           : item)
         : [...builderEnablements, createBuilderProductReference(masterRecord, { organisationId: workspaceId, enabled: true, active: true, tier: BUILDER_PRODUCT_TIERS[0], selectionMode: BUILDER_PRODUCT_MODES[1], clientPrice: Number.isFinite(builderOverridePrice) ? builderOverridePrice : null })];
       persistMasterCatalogue(nextProducts, nextEnablements);
+      await flushBuilderCatalogueWrites(workspaceId);
       setProductForm(EMPTY_PRODUCT);
       setEditingProductId("");
       setSelectedProductCode(masterRecord.productCode);
-      setSuccess(`${masterRecord.productName} saved to the shared master catalogue.`);
+      setSuccess(`${masterRecord.productName} saved to this builder's catalogue.`);
     } catch (saveError) {
       setError(saveError.message || "Could not save product.");
     }

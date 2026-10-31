@@ -11,6 +11,7 @@ const A = '11111111-1111-4111-8111-111111111111';
 const B = '22222222-2222-4222-8222-222222222222';
 const USER_A = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const USER_B = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+const USER_NONE = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 let checks = 0;
 async function check(name, run) { await run(); checks += 1; console.log('PASS', name); }
 try {
@@ -19,11 +20,22 @@ try {
     create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
     create table public.workspaces (id uuid primary key, name text);
     create table public.workspace_members (workspace_id uuid, user_id uuid, role text, status text);
+    create table public.workspace_entitlements (workspace_id uuid, entitlement text);
+    create table public.communities (workspace_id uuid, name text);
+    alter table public.workspaces enable row level security;
     alter table public.workspace_members enable row level security;
-    insert into auth.users values ('${USER_A}'),('${USER_B}');
+    alter table public.workspace_entitlements enable row level security;
+    alter table public.communities enable row level security;
+    create policy members_read_workspace_members on public.workspace_members for select to authenticated using (
+      workspace_id in (select workspace_id from public.workspace_members where user_id = auth.uid() and status = 'active')
+    );
+    insert into auth.users values ('${USER_A}'),('${USER_B}'),('${USER_NONE}');
     insert into workspaces values ('${A}','Builder A'),('${B}','Builder B'),('${CURRENT_BUILDER_WORKSPACE_ID}','Current builder');
     insert into workspace_members values ('${A}','${USER_A}','owner','active'),('${B}','${USER_B}','owner','active');
-    grant usage on schema public,auth to authenticated; grant select on workspace_members to authenticated;`);
+    insert into workspace_entitlements values ('${A}','builder-a'),('${B}','builder-b');
+    insert into communities values ('${A}','Community A'),('${B}','Community B');
+    grant usage on schema public,auth to authenticated;
+    grant select on workspaces,workspace_members,workspace_entitlements,communities to authenticated;`);
   for (const filename of [
     '20260813091500_estimate_builder_commercial_backbone_stage1.sql',
     '20260813091600_builder_inclusion_templates.sql',
@@ -32,6 +44,9 @@ try {
     '20260813092400_seed_gr8_standard_specifications.sql',
     '20260813093000_selection_budget_manager.sql',
     '20261003000100_builder_selection_tenant_foundation.sql',
+    '20261010000100_builder_requirement_quote_mappings.sql',
+    '20261011000100_requirement_mapping_product_identity.sql',
+    '20261028000100_workspace_members_rls_recursion_fix.sql',
   ]) {
     const sql = (await fs.readFile(`supabase/migrations/${filename}`, 'utf8')).replace(/create extension if not exists pgcrypto;/gi, '');
     try { await db.exec(sql); } catch (error) { throw new Error(`${filename}: ${error.message}`, { cause: error }); }
@@ -44,21 +59,34 @@ try {
   for (const [workspace, section, row] of [[A,'section-a','row-a'],[B,'section-b','row-b']]) {
     await db.query(`insert into builder_selection_quote_mappings(workspace_id,selection_slot_id,template_id,quote_section_id,quote_row_id,status) values ($1,'kitchen_sink','template',$2,$3,'MAPPED')`, [workspace,section,row]);
     await db.query(`insert into builder_selection_configurations(workspace_id,selection_slot_id,builder_display_name,enabled) values ($1,'kitchen_sink','Kitchen Tapware',true)`, [workspace]);
+    await db.query(`insert into builder_requirement_quote_mappings(workspace_id,template_id,requirement_key,product_id,location_id,quote_section_id,quote_row_id,verified_by,verified_at) values ($1,'template','kitchen_sink',$2,'Kitchen',$3,$4,$5,now())`, [workspace, `product-${workspace === A ? 'a' : 'b'}`, section, row, workspace === A ? USER_A : USER_B]);
   }
   const asUser = async user => {
     await db.exec('reset role'); await db.query(`select set_config('request.jwt.claim.sub',$1,false)`,[user]); await db.exec('set role authenticated');
   };
   for (const [user, own, other] of [[USER_A,A,B],[USER_B,B,A]]) {
     await asUser(user);
-    for (const table of ['builder_products','builder_inclusion_schedules','builder_selection_quote_mappings','builder_selection_configurations']) {
+    for (const table of ['workspaces','workspace_members','workspace_entitlements','communities','builder_products','builder_inclusion_schedules','builder_selection_quote_mappings','builder_selection_configurations','builder_requirement_quote_mappings']) {
       await check(`${own === A ? 'A' : 'B'} cannot read the other builder's ${table} (actual PostgreSQL RLS)`,async () => {
         const all = (await db.query(`select * from ${table}`)).rows;
-        assert(all.length > 0); assert(all.every(row => row.workspace_id === own));
-        assert.equal((await db.query(`select * from ${table} where workspace_id = $1`,[other])).rows.length,0);
-        assert.equal((await db.query(`update ${table} set workspace_id = workspace_id where workspace_id = $1 returning id`,[other])).rows.length,0);
+        assert(all.length > 0); assert(all.every(row => (row.workspace_id || row.id) === own));
+        if (table !== 'workspaces') {
+          assert.equal((await db.query(`select * from ${table} where workspace_id = $1`,[other])).rows.length,0);
+          if (table.startsWith('builder_')) {
+            assert.equal((await db.query(`update ${table} set workspace_id = workspace_id where workspace_id = $1 returning id`,[other])).rows.length,0);
+          }
+        } else {
+          assert.equal((await db.query(`select * from ${table} where id = $1`,[other])).rows.length,0);
+        }
       });
     }
   }
+  await asUser(USER_NONE);
+  await check('non-member sees no workspaces, memberships, entitlements, or communities', async () => {
+    for (const table of ['workspaces','workspace_members','workspace_entitlements','communities']) {
+      assert.equal((await db.query(`select * from ${table}`)).rows.length,0,table);
+    }
+  });
   await asUser(USER_A);
   await check('forged tenant insert blocked by RLS',async () => {
     await assert.rejects(db.query(`insert into builder_inclusion_schedules(workspace_id,name,display_name) values ($1,'Forged','Forged')`,[B]),/row-level security/);

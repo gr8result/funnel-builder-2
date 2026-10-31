@@ -18,13 +18,13 @@ assert.ok(source.includes("const documentPages = useMemo(() => {"), "viewer must
 assert.ok(source.includes('{ value: "cover", label: "Cover", type: "cover", pageNumber: 1 }'), "page model must keep the cover page");
 assert.ok(source.includes('{ value: "project", label: "Project Summary", type: "project", pageNumber: 2 }'), "page model must keep the project summary page");
 assert.ok(!source.includes('{ value: "exterior-divider", label: "Exterior", type: "divider", pageNumber: 3 }'), "page model must not create a blank Exterior divider page");
-assert.ok(source.includes("paginateScheduleSections(effectiveScheduleSections).map((section, index) =>"), "page model must use paginated filtered schedule sections instead of raw room pages");
+assert.ok(source.includes("selectionsSchedule.pages.map((schedulePage) =>"), "page model must be the continuous three-section schedule, one entry per printed page");
+assert.ok(source.includes('import { buildSelectionsSchedule } from "../../../lib/builders/selectionsScheduleDocument.js";'), "the schedule body comes from the one schedule document model");
+assert.ok(!source.includes("paginateScheduleSections") && !source.includes("SCHEDULE_ROWS_PER_PAGE"), "category-per-page pagination must not return");
+assert.ok(!/<span>Exterior selections<\/span>/.test(source), "a page heading must come from its section, never a fixed Exterior label");
 assert.ok(source.includes('type: "schedule-section"'), "page model must render client-decision schedule section pages");
-assert.ok(source.includes('{ value: "outstanding", label: "Outstanding Client Decisions", type: "outstanding"'), "page model must include outstanding client decisions page");
-assert.ok(source.includes('{ value: "acknowledgement", label: "Review", type: "acknowledgement"'), "page model must include review acknowledgement page");
-["Roofing", "Bricks, Render and Cladding", "Windows and External Doors", "Garage Door", "External Lighting", "Exterior Paint and Colours", "Driveway"].forEach((section) => {
-  assert.ok(source.includes(`title: "${section}"`), `Exterior schedule must include ${section} section`);
-});
+assert.ok(!source.includes('type: "outstanding"'), "the body is cover, project summary, three sections and sign-off only");
+assert.ok(source.includes('{ value: "acknowledgement", label: "Sign-Off", type: "acknowledgement"'), "page model must end with the sign-off page");
 assert.ok(source.includes("const totalPageCount = documentPages.length"), "page count must be derived from the page model");
 assert.ok(source.includes("Page {activePageIndex + 1} of {totalPageCount}"), "page count must render in the toolbar");
 assert.ok(source.includes("function movePage(direction)"), "Previous/Next page navigation must be implemented");
@@ -62,11 +62,11 @@ assert.ok(source.includes(".page { width: 100%;"), "schedule page must not be ca
 assert.ok(source.includes(".coverPage { width: 100%; aspect-ratio: 297 / 210;"), "cover page aspect ratio must be preserved while scaling");
 assert.ok(source.includes(".infoPage { max-width: none; width: 100%;"), "project info page must not keep the old narrow max-width");
 assert.ok(source.includes(".contractPage { display: grid; grid-template-columns: minmax(0, 1fr);"), "room schedule must use a single wide column");
-assert.ok(source.includes('className="scheduleRowTable"'), "selection items must render as a landscape row schedule table");
-assert.ok(source.includes("function scheduleSectionsForEffectiveSelections"), "schedule preview must prefer persisted/effective client selections");
-assert.ok(source.includes("function scheduleSectionsForBook"), "schedule preview may fall back to filtered in-progress guided book selections");
-assert.ok(source.includes("function scheduleItemsForPersistedSelection"), "persisted project selections must be recoverable into preview rows");
-assert.ok(source.includes("function paginateScheduleSections"), "section rows must be paginated into landscape schedule pages");
+assert.ok(source.includes('className="ssTable"'), "selection items must render as a landscape row schedule table");
+assert.ok(source.includes("data-schedule-saved-records={selectionsSchedule.reconciliation.records.saved}"), "schedule status must distinguish unique saved records from expanded schedule entries");
+assert.ok(source.includes("template rows excluded"), "seeded template rows must not be reported as client selections");
+assert.ok(source.includes("function scheduleSourceBook"), "schedule preview must prefer persisted project selections and fall back to the working book");
+assert.ok(source.includes("function scheduleRowForPersistedSelection"), "persisted project selections must be recoverable into schedule rows");
 assert.ok(source.includes("function isSelectionsScheduleBookRow"), "schedule preview must filter technical/non-client rows");
 assert.ok(source.includes("function scheduleItemsForRow"), "schedule preview must flatten structured saved selections");
 assert.ok(source.includes("function windowScheduleItems"), "window selections must expand into scheduled window items");
@@ -75,6 +75,8 @@ assert.ok(source.includes("function exteriorColourScheduleItems"), "exterior col
 assert.ok(source.includes("function roofingScheduleItems"), "roofing packages must expose linked roof, fascia, gutter and downpipe items");
 assert.ok(source.includes(".scheduleRowImage img { width: 100%; height: 100%; object-fit: contain;"), "product images must not be cropped");
 assert.ok(source.includes("function BuilderSchedulePreflight"), "builder preflight must exist before generating the client schedule");
+assert.ok(source.includes("builderLogoFor({ builderName, logoUrl: cover.logoUrl || selectedProject?.builder_logo_url })"), "preflight must resolve only the matching builder's logo fallback");
+assert.ok(source.includes("builderLogoFor({ builderName, logoUrl: cover.logoUrl || selectedProject?.builder_logo_url })"), "GoodBuild preflight must use the existing branded logo fallback while other builders stay upload-gated");
 assert.ok(source.includes("Project data required before preview"), "builder preflight must block missing project data outside the PDF");
 assert.ok(!source.includes("Product image required"), "client document must not print image correction warnings");
 assert.ok(!source.includes("Catalogue correction required"), "client document must not print catalogue correction warnings");

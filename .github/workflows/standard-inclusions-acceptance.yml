@@ -1,0 +1,78 @@
+# Standard Inclusions V1 release acceptance: production build + isolated browser E2E.
+# Manual trigger only. Uses a disposable PGlite mock of Supabase on 127.0.0.1 and test users;
+# no repository secrets, production credentials or customer data are used.
+name: Standard Inclusions acceptance
+
+on:
+  workflow_dispatch:
+  # workflow_dispatch only works once this file is on the default branch; until then a push to
+  # this dedicated branch (and nothing else) runs it.
+  push:
+    branches: [standard-inclusions-acceptance]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: standard-inclusions-acceptance-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      CI: "true"
+      NEXT_TELEMETRY_DISABLED: "1"
+      NODE_OPTIONS: --max-old-space-size=6144
+      # Inlined into the client bundle at build time: must point at the local mock, never production.
+      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54415
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: anon-e2e
+      SUPABASE_URL: http://127.0.0.1:54415
+      SUPABASE_SERVICE_ROLE_KEY: service-e2e
+      SUPABASE_SERVICE_KEY: service-e2e
+      OPENAI_API_KEY: ""
+      ANTHROPIC_API_KEY: ""
+      SENDGRID_API_KEY: ""
+      RESEND_API_KEY: ""
+      SI_E2E_OUT: artifacts/test-results/standard-inclusions-e2e/ci
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.21.1
+          cache: npm
+
+      - name: Install dependencies (lockfile only)
+        run: npm ci
+
+      - name: Standard Inclusions regression tests (no server)
+        run: |
+          set -e
+          for test in scripts/test-standard-inclusions-*.mjs scripts/test-final-inclusions-schedule-generator.mjs scripts/test-project-inclusions-assignment-contract.mjs; do
+            case "$test" in *-e2e.mjs) continue ;; esac
+            echo "::group::$test"
+            node --import ./scripts/register-json-import.mjs "$test"
+            echo "::endgroup::"
+          done
+
+      - name: Production build
+        run: npm run build 2>&1 | tee build.log
+
+      - name: Browser E2E acceptance (production server on :3115)
+        env:
+          SI_E2E_SERVER: start
+          SI_E2E_DIST_DIR: .next
+        run: node --import ./scripts/register-json-import.mjs scripts/test-standard-inclusions-e2e.mjs
+
+      - name: Upload evidence (logs, screenshots, PDF, page renders)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: standard-inclusions-acceptance-${{ github.run_id }}
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            build.log
+            artifacts/test-results/standard-inclusions-e2e/ci/

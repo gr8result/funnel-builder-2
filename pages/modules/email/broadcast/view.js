@@ -5,10 +5,12 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { supabase } from "../../../../utils/supabase-client";
+import { useWorkspace } from "../../../../hooks/useWorkspace";
 import styles from "../../../../styles/email-crm.module.css";
 
 export default function ViewBroadcasts() {
   const router = useRouter();
+  const { workspaceId } = useWorkspace();
 
   const [user, setUser] = useState(null);
   const [broadcasts, setBroadcasts] = useState([]);
@@ -76,14 +78,31 @@ export default function ViewBroadcasts() {
       (lists || []).forEach((l) => (map[String(l.id)] = l.name || ""));
       setListsById(map);
 
-      const { data: bcasts, error: bErr } = await supabase
+      // Only this workspace's broadcasts. Legacy rows without a workspace stay quarantined until the
+      // reviewed backfill assigns them (supabase/review/central_contacts_backfill_draft.sql).
+      if (!workspaceId) {
+        setBroadcasts([]);
+        return;
+      }
+      const scoped = (query) => query.eq("workspace_id", workspaceId);
+
+      let { data: bcasts, error: bErr } = await scoped(supabase
         .from("email_broadcasts")
         .select(
-          "id, created_at, title, subject, preheader, audience_type, list_id, to_field, ab_enabled, ab_subject_a, ab_subject_b, html_content"
+          "id, created_at, title, subject, preheader, audience_type, list_id, to_field, ab_enabled, ab_subject_a, ab_subject_b, html_content, status, scheduled_at"
         )
-        .eq("user_id", u.id)
+        .eq("user_id", u.id))
         .order("created_at", { ascending: false })
         .limit(200);
+
+      if (bErr && /status|scheduled_at|column/i.test(String(bErr.message || ""))) {
+        ({ data: bcasts, error: bErr } = await scoped(supabase
+          .from("email_broadcasts")
+          .select("id, created_at, title, subject, preheader, audience_type, list_id, to_field, ab_enabled, ab_subject_a, ab_subject_b, html_content")
+          .eq("user_id", u.id))
+          .order("created_at", { ascending: false })
+          .limit(200));
+      }
 
       if (bErr) throw new Error("Failed to load broadcasts: " + bErr.message);
 
@@ -97,7 +116,7 @@ export default function ViewBroadcasts() {
 
   useEffect(() => {
     loadEverything();
-  }, []);
+  }, [workspaceId]);
 
   const openToEdit = (id) => router.push(`/modules/email/broadcast?mode=edit&broadcastId=${id}`);
 
@@ -116,7 +135,8 @@ export default function ViewBroadcasts() {
         .from("email_broadcasts")
         .delete()
         .eq("id", id)
-        .eq("user_id", u.id);
+        .eq("user_id", u.id)
+        .eq("workspace_id", workspaceId);
 
       if (dErr) throw new Error(dErr.message || "Delete failed");
 
@@ -168,6 +188,33 @@ export default function ViewBroadcasts() {
       );
     } catch (e) {
       alert("Error resending broadcast: " + (e.message || "Unknown error"));
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const cancelScheduledBroadcast = async (id) => {
+    try {
+      setBusyId(id);
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      if (sessionError || !token) throw new Error("Sign in again before cancelling this broadcast.");
+      if (!workspaceId) throw new Error("No active builder workspace was found.");
+
+      const response = await fetch("/api/email/cancel-scheduled-broadcast", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          "x-workspace-id": workspaceId,
+        },
+        body: JSON.stringify({ workspace_id: workspaceId, broadcast_id: id }),
+      });
+      const result = await response.json().catch(() => null);
+      if (!response.ok || !result?.ok) throw new Error(result?.error || "Broadcast cancellation failed.");
+      await loadEverything();
+    } catch (e) {
+      alert("Could not cancel scheduled broadcast: " + (e.message || "Unknown error"));
     } finally {
       setBusyId(null);
     }
@@ -358,13 +405,24 @@ export default function ViewBroadcasts() {
                         <div style={{ opacity: 0.85, fontSize: 16, marginTop: 2, color: "#e5e7eb" }}>
                           Subject: {subject || "—"}{" "}
                           {ab ? <span style={{ marginLeft: 8, color: "#fbbf24", fontWeight: 600 }}>A/B enabled</span> : null}
+                          {b.status === "scheduled" ? <span style={{ marginLeft: 8, color: "#93c5fd", fontWeight: 600 }}>Scheduled</span> : null}
                         </div>
                       </div>
 
                       <div style={{ fontWeight: 600, color: "#fff" }}>{recipientsLabel(b)}</div>
-                      <div style={{ color: "#e5e7eb", fontWeight: 600 }}>{safeDate(b.created_at)}</div>
+                      <div style={{ color: "#e5e7eb", fontWeight: 600 }}>{safeDate(b.status === "scheduled" ? b.scheduled_at : b.created_at)}</div>
 
                       <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", flexWrap: "wrap" }}>
+                        {b.status === "scheduled" ? (
+                          <button
+                            type="button"
+                            onClick={() => cancelScheduledBroadcast(id)}
+                            disabled={busyId === id}
+                            style={{ background: "#dc2626", color: "#fff", border: "none", borderRadius: 8, padding: "8px 12px", fontWeight: 600, cursor: "pointer", fontSize: 16 }}
+                          >
+                            {busyId === id ? "Cancelling..." : "Cancel schedule"}
+                          </button>
+                        ) : <>
                         <button
                           onClick={() => openToEdit(id)}
                           disabled={busyId === id}
@@ -418,6 +476,7 @@ export default function ViewBroadcasts() {
                         >
                           Delete
                         </button>
+                        </>}
                       </div>
                     </div>
                   );

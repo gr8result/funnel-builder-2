@@ -106,3 +106,5 @@ lib/construction-estimation/funnel-builder-clean.code-workspace 3.code-workspace
 artifacts/test-artifacts/
 test-artifacts/
 supabase/.temp/
+
+.landing-page-image-spend.json

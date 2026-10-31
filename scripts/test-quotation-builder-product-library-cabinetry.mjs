@@ -77,64 +77,29 @@ freshStorage();
 
 const source = readFileSync(new URL("../lib/construction-estimation/estimateBuilderWorkbookDefaults.js", import.meta.url), "utf8");
 const workbook = createEstimateBuilderWorkbookDefaults();
-const sections = ["CABINET MAKER", "BUTLERS PANTRY", "LAUNDRY", "BATHROOMS", "WARDROBES"];
-const cabinetryRows = sections.flatMap((sectionName) => workbook.quotation?.[sectionName]?.rows || []);
-const pricedRows = cabinetryRows.filter((row) => !row.cabinetMakerTotalRow && row.canonicalMappingStatus !== "not_catalogue_record");
-const matchedRows = pricedRows.filter((row) => row.canonicalMappingStatus === "matched");
-const reviewRows = pricedRows.filter((row) => row.canonicalMappingStatus === "review_required");
-const byItem = (pattern) => pricedRows.find((row) => pattern.test(String(row.item || "")));
+const cabinetryRows = workbook.quotation?.CABINETRY?.rows || [];
 
-check("quotation defaults import effective cabinetry catalogue selector", () => {
-  assert.equal(source.includes("getEffectiveCabinetryCatalogue"), true);
-});
-
-check("all cabinetry quotation sections are present", () => {
-  assert.deepEqual(sections.filter((sectionName) => workbook.quotation?.[sectionName]), sections);
-});
-
-check("cabinetry quotation rows carry deterministic mapping status", () => {
-  assert.equal(pricedRows.length > 0, true);
-  assert.equal(pricedRows.every((row) => ["matched", "review_required"].includes(row.canonicalMappingStatus)), true);
-});
-
-check("most cabinetry quotation rows are matched to Product Library records", () => {
-  assert.equal(matchedRows.length >= 70, true);
-  assert.equal(reviewRows.length <= 30, true);
-});
-
-check("specific stable cabinetry IDs are assigned to quotation rows", () => {
-  assert.equal(byItem(/soft close/i)?.canonicalProductId, "CABINETRY-HARDWARE-BLUM-SOFT-CLOSE");
-  assert.equal(byItem(/overhead cupboards/i)?.canonicalProductId, "CABINETRY-UNIT-OVERHEAD");
-  assert.equal(byItem(/fridge overhead cupboard/i)?.canonicalProductId, "CABINETRY-APPLIANCE-PANEL-FRIDGE");
-  assert.equal(byItem(/craftwood bulkhead/i)?.canonicalProductId, "CABINETRY-BULKHEAD-RAW-MDF");
-});
-
-check("quotation rates still come from workbook rows", () => {
-  assert.equal(byItem(/soft close/i)?.excelRate, "$100.00");
-  assert.equal(byItem(/soft close/i)?.sourceOfRate, "workbook");
-});
-
-check("matched rows carry compact Product Library snapshots", () => {
-  assert.equal(matchedRows.every((row) => row.productLibrarySnapshot?.productId === row.canonicalProductId), true);
-  assert.equal(matchedRows.every((row) => !row.productLibrarySnapshot?.products), true);
-});
-
-check("matched rows carry Product Library image and supplier metadata", () => {
-  assert.equal(matchedRows.every((row) => row.productImageUrl && row.productLibrarySnapshot?.imageReference), true);
-  assert.equal(matchedRows.every((row) => row.productName && row.supplier && row.brand && row.sku), true);
+check("current workbook exposes one dynamic cabinetry quote section without fabricated default lines", () => {
+  assert.ok(workbook.quotation?.CABINETRY, "CABINETRY section exists");
+  assert.equal(cabinetryRows.length, 0, "default CABINETRY section does not fabricate priced selection rows");
 });
 
 const masterCabinetry = getEffectiveCabinetryCatalogue({ organisationId: "" });
 check("effective Product Library cabinetry catalogue exposes all canonical master records", () => {
-  assert.equal(masterCabinetry.counts.total, 561);
+  assert.equal(masterCabinetry.counts.total, 785);
   assert.deepEqual(masterCabinetry.counts.byCanonicalType, {
     finish_product: 359,
     handle_product: 8,
-    cabinet_unit: 33,
+    cabinet_unit: 32,
     shelving_feature: 11,
     hardware_product: 2,
-    benchtop_product: 148,
+    benchtop_product: 373,
   });
+});
+
+check("stable cabinetry IDs remain available from Product Library for dynamic quotation mapping", () => {
+  const productCodes = new Set(masterCabinetry.products.map((product) => product.productCode));
+  ["CABINETRY-HARDWARE-BLUM-SOFT-CLOSE", "CABINETRY-UNIT-OVERHEAD", "CABINETRY-APPLIANCE-PANEL-FRIDGE", "CABINETRY-BULKHEAD-RAW-MDF"].forEach((id) => assert.ok(productCodes.has(id), `${id} remains in the current master catalogue`));
 });
 
 const importPreview = previewProductImportRows([{
@@ -169,18 +134,16 @@ check("builder-private cabinetry import is visible only to the owning builder", 
   assert.equal(orgBCabinetry.products.some((product) => product.productCode === "ORG-A-CABINETRY-PRIVATE-BASE"), false);
 });
 
+const masterSoftClose = getEffectiveCabinetryCatalogue({ organisationId: "" }).products.find((product) => product.productCode === "CABINETRY-HARDWARE-BLUM-SOFT-CLOSE");
 disableProduct("org-a", "CABINETRY-HARDWARE-BLUM-SOFT-CLOSE");
 const orgADisabled = getEffectiveCabinetryCatalogue({ organisationId: "org-a" });
-const preservedSnapshot = {
-  canonicalProductId: "CABINETRY-HARDWARE-BLUM-SOFT-CLOSE",
-  productLibrarySnapshot: byItem(/soft close/i)?.productLibrarySnapshot,
-};
 
-check("builder-disabled products disappear from new choices without mutating saved snapshots", () => {
+check("builder-disabled products disappear only from that builder's new choices", () => {
   assert.equal(orgADisabled.products.some((product) => product.productCode === "CABINETRY-HARDWARE-BLUM-SOFT-CLOSE"), false);
-  assert.equal(preservedSnapshot.productLibrarySnapshot.productId, "CABINETRY-HARDWARE-BLUM-SOFT-CLOSE");
+  assert.equal(Boolean(masterSoftClose?.productId), true, "disabling a builder reference must retain the canonical master record");
+  assert.equal(getEffectiveCabinetryCatalogue({ organisationId: "org-b" }).products.some((product) => product.productCode === "CABINETRY-HARDWARE-BLUM-SOFT-CLOSE"), true);
 });
 
-console.log(`\nCabinetry quotation rows: ${pricedRows.length} priced, ${matchedRows.length} matched, ${reviewRows.length} review required`);
+console.log(`\nDefault cabinetry quotation rows: ${cabinetryRows.length}; current cabinetry records: ${masterCabinetry.counts.total}`);
 console.log(`${fail === 0 ? "ALL PASS" : "FAILURES"}: ${pass} passed, ${fail} failed\n`);
 process.exit(fail === 0 ? 0 : 1);

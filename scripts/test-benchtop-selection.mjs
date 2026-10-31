@@ -149,7 +149,7 @@ assert.equal(benchQuantity(quoted), 8, 'no duplicate quantity anywhere in the be
 pass('changing a group mapping moves the Kitchen quantity from Mid Range Stone to High End Stone');
 
 // Main benchtop = Eclipse (High End), Island = a Prestige product (Mid Range): independent.
-const mixed = areas.map(area => ({ ...area, surface: stoneSurfaceForArea(area.id === ISLAND_AREA_ID ? prestige : eclipse, { room: 'Kitchen', area, setup, ranges }) }));
+const mixed = areas.map(area => ({ ...area, ...(area.id === ISLAND_AREA_ID ? { sameAsMain: false } : {}), surface: stoneSurfaceForArea(area.id === ISLAND_AREA_ID ? prestige : eclipse, { room: 'Kitchen', area, setup, ranges }) }));
 selection = selectionWith(mixed);
 assert.deepEqual(selection.locations[0].benchtopAreas.map(area => `${area.label}: ${area.surface.colourName} / ${area.surface.rangeKey}`), ['Main benchtop: Eclipse / high_end_stone', `Island benchtop: ${prestige.colourName} / mid_range_stone`]);
 quoted = quote(selection, quoted);
@@ -167,7 +167,7 @@ pass('main bench and island hold different surfaces on their own ranges; a delib
 const unclassified = areas.map(area => ({ ...area, surface: stoneSurfaceForArea(signature, { room: 'Kitchen', area, setup, ranges }) }));
 const pending = quote(selectionWith(unclassified));
 assert.equal(benchQuantity(pending), 0);
-assert(pending.cabinetryReconciliation.entries.some(entry => entry.flag === CABINETRY_SELECTION_REQUIRED && new RegExp(`Stone Ambassador ${signature.colourName} has no quotation range set`).test(entry.reason)));
+assert(pending.cabinetryReconciliation.entries.some(entry => entry.flag === CABINETRY_SELECTION_REQUIRED && entry.reason === 'Benchtop range not selected' && entry.selectedFinish === `Stone Ambassador ${signature.colourName}` && /Choose the benchtop range/.test(entry.action?.label)));
 assert.equal(benchQuantity(quote(normaliseCabinetrySelection({ locations: [{ location: 'Kitchen' }, { location: 'Laundry' }] }))), 0, 'rooms without benchtop areas create nothing');
 pass('an unmapped surface is flagged, and rooms without benchtop areas create nothing');
 

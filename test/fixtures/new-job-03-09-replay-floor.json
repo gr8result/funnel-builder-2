@@ -1,0 +1,19 @@
+{
+  "description": "Floors for the real-plan browser replay (scripts/test-takeoff-real-plan-replay-browser.mjs): the New Job 03/09 sheets through the actual AI Takeoff screen with the provider's saved responses, compared with the estimator's hand trace (300 mm wall tolerance). A change may improve on these but must not fall below them.",
+  "levels": {
+    "Ground Floor": {
+      "externalFound": 0.9,
+      "internalFound": 0.76,
+      "openingsWithin600mm": 14,
+      "measuredRooms": 8,
+      "largestRoomM2": 80
+    },
+    "Second Level": {
+      "externalFound": 0.94,
+      "internalFound": 0.85,
+      "openingsWithin600mm": 16,
+      "measuredRooms": 10,
+      "largestRoomM2": 40
+    }
+  }
+}

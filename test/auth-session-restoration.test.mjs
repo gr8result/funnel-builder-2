@@ -4,7 +4,7 @@ import { observeAuthSession } from "../lib/authSessionState.js";
 
 const signedIn = { access_token: "test-token", user: { id: "test-user" } };
 const tick = () => new Promise((resolve) => setImmediate(resolve));
-function setup(getSession) {
+function setup(getSession, timeoutMs) {
   let listener;
   const states = [];
   const scheduled = new Map();
@@ -16,6 +16,7 @@ function setup(getSession) {
   }, (state) => states.push(state), {
     schedule(fn) { const id = ++timerId; scheduled.set(id, fn); return id; },
     cancel(id) { scheduled.delete(id); },
+    timeoutMs,
   });
   return { observer, states, scheduled, event: (...args) => listener(...args), state: () => states.at(-1) };
 }
@@ -75,9 +76,30 @@ test("transient errors retain an established session; explicit logout clears it"
 test("confirmed missing session allows sign-in; disposed observers ignore results", async () => {
   const env = setup(async () => ({ data: { session: null }, error: null }));
   await tick();
+  const [retryId, retry] = [...env.scheduled.entries()][0];
+  env.scheduled.delete(retryId);
+  retry();
+  await tick();
   assert.equal(env.state().loading, false);
   assert.equal(env.state().error, null);
   env.observer.dispose();
   env.event("SIGNED_IN", signedIn);
   assert.equal(env.state().session, null);
+});
+
+test("a hung initial session read exits loading and can be retried", async () => {
+  let hung = true;
+  const env = setup(() => hung ? new Promise(() => {}) : Promise.resolve({ data: { session: signedIn }, error: null }), 25);
+  await tick();
+  const [timeoutId, timeout] = [...env.scheduled.entries()][0];
+  env.scheduled.delete(timeoutId);
+  timeout();
+  assert.equal(env.state().loading, false);
+  assert.equal(env.state().session, null, 'timeout does not invent a session');
+  assert.match(env.state().error.message, /timed out/i);
+  hung = false;
+  await env.observer.retry();
+  assert.equal(env.state().session, signedIn);
+  assert.equal(env.state().error, null);
+  env.observer.dispose();
 });

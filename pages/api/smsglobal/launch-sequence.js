@@ -4,6 +4,7 @@
 // ✅ Supports audience.type: 'lead' | 'manual' | 'list'
 // ✅ Robust lead phone picking (doesn't assume column names)
 // ✅ Robust sms_queue insert (tries multiple column name variants automatically)
+// ✅ Fallback to main SMSGlobal account for users without SMS subaccount
 // ✅ Multi-tenant safe for 'lead' (checks common ownership fields)
 // ✅ Uses service role for inserts
 //
@@ -18,6 +19,9 @@
 import { createClient } from "@supabase/supabase-js";
 import { guardSmsSend } from "../../../lib/smsValidation";
 import { getRequestDemoState, requestWorkspaceId } from "../../../lib/demoWorkspace";
+import { hasSmsMarketingConsent } from "../../../lib/marketingConsent";
+import { validateAustralianBrandedSenderId } from "../../../lib/smsSenderId";
+import { buildSmsSequenceQueueRows } from "../../../lib/smsglobal/marketingCampaign.mjs";
 
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -31,30 +35,8 @@ const SERVICE_KEY =
   process.env.SUPABASE_SERVICE_ROLE ||
   process.env.SUPABASE_SERVICE;
 
-const DEFAULT_SMS_ORIGIN = (process.env.DEFAULT_SMS_ORIGIN || "gr8result").trim();
-const SMSGLOBAL_ALLOWED_ORIGINS = String(
-  process.env.SMSGLOBAL_ALLOWED_ORIGINS || ""
-)
-  .split(",")
-  .map((x) => x.trim())
-  .filter(Boolean);
-
-// ✅ Fallback to main account for users without SMS subaccount
-const MAIN_SMS_API_KEY = process.env.SMSGLOBAL_API_KEY || "";
-const MAIN_SMS_API_SECRET = process.env.SMSGLOBAL_API_SECRET || "";
-
 function s(v) {
   return String(v ?? "").trim();
-}
-
-function pickAllowedOrigin(candidate) {
-  const cleaned = s(candidate);
-  if (!cleaned) return "";
-  if (!SMSGLOBAL_ALLOWED_ORIGINS.length) return cleaned;
-  const match = SMSGLOBAL_ALLOWED_ORIGINS.find(
-    (o) => o.toLowerCase() === cleaned.toLowerCase()
-  );
-  return match || "";
 }
 
 function json(res, status, body) {
@@ -139,13 +121,6 @@ function isOwnedByUser(lead, userId) {
   return false;
 }
 
-function unitToMinutes(unit) {
-  const u = s(unit).toLowerCase();
-  if (u === "days") return 24 * 60;
-  if (u === "hours") return 60;
-  return 1; // minutes default
-}
-
 // --- LIST MEMBERSHIP LOOKUP (tries a few common tables) ---
 async function getLeadIdsForList(supabaseAdmin, listId) {
   const lid = s(listId);
@@ -196,6 +171,8 @@ function buildInsertVariants({
   to_phone,
   body,
   workspace_id,
+  campaign_id,
+  contact_id,
   send_at_iso,
   scheduled_for,
   available_at,
@@ -203,6 +180,7 @@ function buildInsertVariants({
   sender_id,
   origin,
 }) {
+  const campaignFields = campaign_id ? { campaign_id, contact_id } : {};
   // We will try these shapes in order until one inserts without "column does not exist" errors.
   // Your sms_queue schema has: id, user_id, lead_id, step_no, to_phone, body, scheduled_for, status, 
   // provider_message_id, error, created_at, updated_at, origin, available_at, provider_id, last_error, sender_id
@@ -215,6 +193,7 @@ function buildInsertVariants({
       to_phone,
       body,
       workspace_id,
+      ...campaignFields,
       scheduled_for,
       status,
       available_at,
@@ -229,6 +208,7 @@ function buildInsertVariants({
       to_phone,
       body,
       workspace_id,
+      ...campaignFields,
       scheduled_for,
       status,
       available_at,
@@ -242,6 +222,7 @@ function buildInsertVariants({
       to_phone,
       body,
       workspace_id,
+      ...campaignFields,
       scheduled_for,
       sender_id,
       origin,
@@ -254,6 +235,7 @@ function buildInsertVariants({
       to_phone,
       body,
       workspace_id,
+      ...campaignFields,
       scheduled_for,
       status,
       sender_id,
@@ -267,6 +249,7 @@ function buildInsertVariants({
       to_phone,
       body,
       workspace_id,
+      ...campaignFields,
       scheduled_for,
       status,
       available_at,
@@ -280,6 +263,7 @@ function buildInsertVariants({
       to_phone,
       body,
       workspace_id,
+      ...campaignFields,
       scheduled_for,
       origin,
     },
@@ -366,6 +350,16 @@ export default async function handler(req, res) {
     body = req.body || {};
   }
   const workspaceId = requestWorkspaceId({ ...req, body });
+  if (!workspaceId) return json(res, 400, { ok: false, error: "Select a builder workspace before creating an SMS campaign." });
+  const { data: membership, error: membershipError } = await supabaseAdmin
+    .from("workspace_members")
+    .select("status")
+    .eq("workspace_id", workspaceId)
+    .eq("user_id", user.id)
+    .eq("status", "active")
+    .maybeSingle();
+  if (membershipError) return json(res, 500, { ok: false, error: "Could not verify workspace access." });
+  if (!membership) return json(res, 403, { ok: false, error: "You do not have access to this builder workspace." });
   const demoState = await getRequestDemoState({ ...req, body });
 
   // Fetch user's SMS account info
@@ -392,59 +386,38 @@ export default async function handler(req, res) {
     console.warn("⚠️ Error fetching SMS config:", err.message);
   }
 
-  // ✅ Fall back to main SMSGlobal account if user doesn't have subaccount configured
+  // Real builder campaigns require that builder's own provider credentials.
   if (!smsApiKey || !smsApiSecret) {
     if (demoState.isDemo) {
       smsApiKey = "demo";
       smsApiSecret = "demo";
       usingMainAccount = true;
-      console.log(`Demo workspace ${workspaceId} using simulated SMS campaign credentials`);
-    } else if (MAIN_SMS_API_KEY && MAIN_SMS_API_SECRET) {
-      smsApiKey = MAIN_SMS_API_KEY;
-      smsApiSecret = MAIN_SMS_API_SECRET;
-      usingMainAccount = true;
-      console.log(`📱 User ${user.id} using main SMS account (no subaccount configured)`);
     } else {
       return json(res, 403, {
         ok: false,
         error: "SMS not activated for this account.",
-        detail: "User's SMS subaccount not found and no main account fallback configured.",
+        detail: "Configure this builder's own SMSGlobal credentials before sending.",
       });
     }
   }
 
-  // Compute origin with ALLOWED_ORIGINS validation
+  // Marketing messages require an explicitly registered SMS sender ID.
   let finalOrigin;
-  if (usingMainAccount) {
-    // Using main account: validate against ALLOWED_ORIGINS
-    const rawOrigins = s(process.env.SMSGLOBAL_ALLOWED_ORIGINS || "");
-    const allowedOrigins = rawOrigins
-      .split(",")
-      .map(x => s(x).toLowerCase())
-      .filter(Boolean);
-    
-    // Try originSenderId first, then businessName
-    const candidateOrigin = s(originSenderId || businessName);
-    const candidateLower = candidateOrigin.toLowerCase();
-    
-    const isAllowed = allowedOrigins.length === 0 || allowedOrigins.includes(candidateLower);
-    
-    if (isAllowed && candidateOrigin) {
-      finalOrigin = candidateOrigin;
-      console.log(`📱 MAIN account: using allowed origin "${finalOrigin}"`);
-    } else {
-      finalOrigin = DEFAULT_SMS_ORIGIN || "gr8result";
-      console.log(`⚠️  MAIN account: user's origin "${candidateOrigin}" not in ALLOWED_ORIGINS [${rawOrigins}], using "${finalOrigin}"`);
-    }
+  const allowedOrigins = String(process.env.SMSGLOBAL_ALLOWED_ORIGINS || "")
+    .split(",")
+    .map((value) => s(value).toLowerCase())
+    .filter(Boolean);
+  const candidateOrigin = demoState.isDemo ? "demo" : s(originSenderId);
+  if (demoState.isDemo) {
+    finalOrigin = "demo";
+  } else if (!allowedOrigins.length) {
+    return json(res, 503, { ok: false, error: "SMS marketing is disabled until a registered sender ID is configured in SMSGLOBAL_ALLOWED_ORIGINS." });
+  } else if (!candidateOrigin || !allowedOrigins.some((origin) => origin.toLowerCase() === candidateOrigin.toLowerCase())) {
+    return json(res, 403, { ok: false, error: "This builder's sender ID is not registered and approved for SMS marketing." });
   } else {
-    // User has own subaccount: can use ANY sender_id they've registered with SMSGlobal
-    // NO ALLOWED_ORIGINS restriction for user subaccounts!
-    finalOrigin =
-      originSenderId || 
-      businessName || 
-      DEFAULT_SMS_ORIGIN || 
-      "gr8result";
-    console.log(`📱 USER subaccount: using origin "${finalOrigin}"`);
+    const senderIdCheck = validateAustralianBrandedSenderId(candidateOrigin);
+    if (!senderIdCheck.ok) return json(res, 400, { ok: false, error: senderIdCheck.error });
+    finalOrigin = candidateOrigin;
   }
 
   console.log("📱 Launching SMS campaign with origin:", {
@@ -460,10 +433,39 @@ export default async function handler(req, res) {
       "User should set their approved sender name in Account → SMS Activation first.");
   }
 
-  const audience = body.audience || {};
+  const campaignId = s(body.campaign_id);
+  let savedCampaign = null;
+  if (campaignId) {
+    if (process.env.MARKETING_CONTACTS_SCHEMA_READY !== "true") {
+      return json(res, 503, { ok: false, error: "Saved SMS campaigns require the central contacts migration." });
+    }
+    const { data, error } = await supabaseAdmin
+      .from("sms_marketing_campaigns")
+      .select("id,workspace_id,user_id,name,audience_type,lead_id,list_id,steps,scheduled_at,status")
+      .eq("id", campaignId)
+      .eq("workspace_id", workspaceId)
+      .eq("user_id", user.id)
+      .eq("status", "draft")
+      .maybeSingle();
+    if (error) return json(res, 503, { ok: false, error: "Could not verify the saved SMS campaign." });
+    if (!data) return json(res, 409, { ok: false, error: "Only your saved draft campaign can be launched." });
+    const { data: existingRows, error: existingError } = await supabaseAdmin
+      .from("sms_queue")
+      .select("id")
+      .eq("workspace_id", workspaceId)
+      .eq("campaign_id", campaignId)
+      .limit(1);
+    if (existingError) return json(res, 503, { ok: false, error: "Could not verify whether this campaign was already queued." });
+    if (existingRows?.length) return json(res, 409, { ok: false, error: "This campaign already has queued messages." });
+    savedCampaign = data;
+  }
+
+  const audience = savedCampaign
+    ? { type: savedCampaign.audience_type, lead_id: savedCampaign.lead_id, list_id: savedCampaign.list_id }
+    : body.audience || {};
   const audienceType = s(audience.type || body.audienceType || "lead").toLowerCase();
 
-  const stepsRaw = Array.isArray(body.steps) ? body.steps : [];
+  const stepsRaw = savedCampaign ? savedCampaign.steps : Array.isArray(body.steps) ? body.steps : [];
   if (!stepsRaw.length) return json(res, 400, { ok: false, error: "Missing steps" });
 
   const steps = stepsRaw
@@ -481,9 +483,7 @@ export default async function handler(req, res) {
   const recipients = [];
 
   if (audienceType === "manual") {
-    const phone = normalizePhoneForSend(audience.phone || audience.to || body.phone || body.to);
-    if (!phone) return json(res, 400, { ok: false, error: "Missing manual phone" });
-    recipients.push({ lead_id: null, to_phone: phone });
+    return json(res, 400, { ok: false, error: "Marketing SMS can only be sent to a CRM contact with recorded SMS consent." });
   } else if (audienceType === "lead") {
     const lead_id = s(audience.lead_id || body.lead_id || body.leadId);
     if (!lead_id) return json(res, 400, { ok: false, error: "Missing lead_id" });
@@ -492,6 +492,7 @@ export default async function handler(req, res) {
       .from("leads")
       .select("*")
       .eq("id", lead_id)
+      .eq("workspace_id", workspaceId)
       .maybeSingle();
 
     if (leadErr) {
@@ -499,18 +500,24 @@ export default async function handler(req, res) {
     }
     if (!lead) return json(res, 404, { ok: false, error: "Lead not found" });
 
-    if (!isOwnedByUser(lead, user.id)) {
-      return json(res, 403, { ok: false, error: "Not your lead" });
-    }
+    if (!hasSmsMarketingConsent(lead)) return json(res, 403, { ok: false, error: "This contact has no recorded SMS marketing consent or has opted out." });
 
     const phone = normalizePhoneForSend(pickLeadPhone(lead));
     if (!phone) return json(res, 400, { ok: false, error: "Lead has no phone number" });
 
-    recipients.push({ lead_id, to_phone: phone });
+    recipients.push({ lead_id, contact_id: lead.contact_id || null, to_phone: phone });
   } else if (audienceType === "list") {
     const list_id = s(audience.list_id || body.list_id || body.listId);
     if (!list_id) return json(res, 400, { ok: false, error: "Missing list_id" });
 
+    const { data: list, error: listError } = await supabaseAdmin
+      .from("lead_lists")
+      .select("id")
+      .eq("id", list_id)
+      .eq("workspace_id", workspaceId)
+      .maybeSingle();
+    if (listError) return json(res, 500, { ok: false, error: "Could not verify the selected contact list." });
+    if (!list) return json(res, 404, { ok: false, error: "The selected list was not found in this workspace." });
     const leadIds = await getLeadIdsForList(supabaseAdmin, list_id);
     if (!leadIds.length) {
       return json(res, 400, { ok: false, error: "No leads found in this list (membership table mismatch?)" });
@@ -523,6 +530,7 @@ export default async function handler(req, res) {
       const { data: leadRows, error } = await supabaseAdmin
         .from("leads")
         .select("*")
+        .eq("workspace_id", workspaceId)
         .in("id", chunk);
 
       if (error) {
@@ -530,15 +538,15 @@ export default async function handler(req, res) {
       }
 
       for (const lead of leadRows || []) {
-        if (!isOwnedByUser(lead, user.id)) continue;
+        if (!hasSmsMarketingConsent(lead)) continue;
         const phone = normalizePhoneForSend(pickLeadPhone(lead));
         if (!phone) continue;
-        recipients.push({ lead_id: s(lead.id), to_phone: phone });
+        recipients.push({ lead_id: s(lead.id), contact_id: lead.contact_id || null, to_phone: phone });
       }
     }
 
     if (!recipients.length) {
-      return json(res, 400, { ok: false, error: "No sendable leads in list (no phones or not owned by user)" });
+      return json(res, 400, { ok: false, error: "No contacts with recorded SMS marketing consent and a valid phone number were found in this list." });
     }
   } else {
     return json(res, 400, { ok: false, error: "Invalid audience.type" });
@@ -546,34 +554,18 @@ export default async function handler(req, res) {
 
   // Build sms_queue rows with cumulative delays
   const now = Date.now();
-  let cumulativeMinutes = 0;
-
-  const baseRows = [];
-  const available_at = new Date(now).toISOString();
-  for (let stepIndex = 0; stepIndex < steps.length; stepIndex++) {
-    const st = steps[stepIndex];
-    const addMinutes = Math.max(0, Number(st.delay || 0)) * unitToMinutes(st.unit);
-    cumulativeMinutes += addMinutes;
-
-    const sendAtMs = now + cumulativeMinutes * 60 * 1000;
-    const send_at_iso = new Date(sendAtMs).toISOString();
-
-    for (const r of recipients) {
-      baseRows.push({
-        user_id: user.id,
-        workspace_id: workspaceId || null,
-        lead_id: r.lead_id,
-        step_no: stepIndex + 1,
-        to_phone: r.to_phone,
-        body: st.message,
-        send_at_iso,
-        scheduled_for: send_at_iso,
-        available_at,
-        status: "queued",
-        origin: finalOrigin,  // Validated SMS origin (will be sent by flush worker)
-      });
-    }
-  }
+  const scheduledAt = savedCampaign?.scheduled_at ? Date.parse(savedCampaign.scheduled_at) : now;
+  if (!Number.isFinite(scheduledAt)) return json(res, 400, { ok: false, error: "Saved campaign schedule is invalid." });
+  const baseRows = buildSmsSequenceQueueRows({
+    userId: user.id,
+    workspaceId,
+    campaignId: campaignId || null,
+    recipients,
+    steps,
+    origin: finalOrigin,
+    scheduledAt: savedCampaign?.scheduled_at || null,
+    now,
+  });
 
   // ✅ Check SMS limit before enqueueing
   let smsGuard = null;
@@ -581,12 +573,7 @@ export default async function handler(req, res) {
     try {
       smsGuard = await guardSmsSend(user.id, baseRows.length);
     } catch (limitErr) {
-      return json(res, 429, {
-        ok: false,
-        error: limitErr.message,
-        code: limitErr.code,
-        details: limitErr.details,
-      });
+      return json(res, 429, { ok: false, error: limitErr.message, code: limitErr.code, details: limitErr.details });
     }
   } else {
     smsGuard = { demo: true, allowed: true, requested: baseRows.length };
@@ -600,6 +587,32 @@ export default async function handler(req, res) {
       detail: ins.error || ins,
       message: typeof ins?.error === "string" ? ins.error : ins?.error?.message,
     });
+  }
+
+  let campaignStatus = null;
+  if (savedCampaign) {
+    campaignStatus = scheduledAt > now ? "scheduled" : "queued";
+    const { data: updatedCampaign, error: campaignError } = await supabaseAdmin
+      .from("sms_marketing_campaigns")
+      .update({ status: campaignStatus, updated_at: new Date().toISOString() })
+      .eq("id", campaignId)
+      .eq("workspace_id", workspaceId)
+      .eq("user_id", user.id)
+      .eq("status", "draft")
+      .select("id")
+      .maybeSingle();
+    if (campaignError || !updatedCampaign) {
+      const { error: cleanupError } = await supabaseAdmin
+        .from("sms_queue")
+        .delete()
+        .eq("workspace_id", workspaceId)
+        .eq("campaign_id", campaignId)
+        .eq("status", "queued");
+      if (cleanupError) {
+        return json(res, 503, { ok: false, error: "Campaign queue was created but status could not be saved; do not relaunch until it is reviewed." });
+      }
+      return json(res, campaignError ? 503 : 409, { ok: false, error: "Campaign could not be claimed for launch; queued messages were removed." });
+    }
   }
 
   // Auto-flush queued SMS after queueing (like automation does for emails)
@@ -617,8 +630,6 @@ export default async function handler(req, res) {
     const flushUrl = cronKey
       ? `${siteUrl}/api/smsglobal/flush-queue?key=${encodeURIComponent(cronKey)}&limit=50`
       : `${siteUrl}/api/smsglobal/flush-queue?limit=50`;
-
-    console.log("Auto-flush URL:", flushUrl);
 
     const flushResponse = await fetch(flushUrl, {
       method: "GET",
@@ -649,6 +660,8 @@ export default async function handler(req, res) {
     queued: baseRows.length,
     usage: smsGuard || null,
     inserted_ids: ins.ids || [],
+    campaign_id: campaignId || null,
+    campaign_status: campaignStatus,
     used_variant: ins.used_variant,
     used_keys: ins.used_keys,
     auto_flush: flushResult,

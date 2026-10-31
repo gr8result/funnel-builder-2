@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const source = fs.readFileSync('pages/modules/builders/selections-book.js', 'utf8');
+const helper = source.slice(source.indexOf('const COVER_NON_METADATA_BRANCHES'), source.indexOf('\nfunction fieldByNames'));
+const collect = new Function('normaliseKey', `${helper}; return collectWorkbookFields;`)(v => String(v || '').toLowerCase().replace(/[^a-z0-9]/g, ''));
+const forbidden = new Proxy({}, { ownKeys() { throw new Error('Cover lookup traversed module payload'); } });
+const workbook = { data: { inputDataSheet: { rows: { projectName: { label: 'Project name', value: 'Test house' }, siteAddress: { value: 'Test address' } } } }, jobFileMeta: { clientName: 'Test client' }, quotation: forbidden, projectEstimateBuilder: forbidden, productLibrary: forbidden, aiPlanTakeoffJob: forbidden, clientSelectionsBook: forbidden };
+const one = collect({workbook});
+const aliases = collect({workbook, snapshot: {workbook_snapshot: workbook}, again: workbook});
+assert.deepEqual(aliases, one, 'Workbook aliases must not expand the field list');
+assert(one.some(field => field.value === 'Test house'));
+assert(one.some(field => field.key === 'clientname' && field.value === 'Test client'));
+assert(one.length < 20);
+const cyclic = { name: 'Project', value: 'Value' }; cyclic.self = cyclic;
+assert(collect(cyclic).length < 10, 'Metadata cycles terminate');
+console.log('PASS: cover metadata retains Job Setup values without scanning drawings/catalogues/quotation or duplicate workbooks.');

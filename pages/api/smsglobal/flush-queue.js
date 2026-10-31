@@ -7,6 +7,9 @@
 import { createClient } from "@supabase/supabase-js";
 import { sendSmsGlobal } from "../../../lib/smsglobal";
 import { isDemoWorkspace, recordDemoAction } from "../../../lib/demoWorkspace";
+import { hasSmsMarketingConsent } from "../../../lib/marketingConsent";
+import { validateAustralianBrandedSenderId } from "../../../lib/smsSenderId";
+import { assertSmsMarketingAllowed, withSmsOptOutFooter } from "../../../lib/smsglobal/marketingSendGuard.mjs";
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SERVICE_KEY =
@@ -15,11 +18,9 @@ const SERVICE_KEY =
   process.env.SUPABASE_SERVICE_KEY ||
   "";
 
-// ✅ Main account fallback
-const MAIN_SMS_API_KEY = process.env.SMSGLOBAL_API_KEY || "";
-const MAIN_SMS_API_SECRET = process.env.SMSGLOBAL_API_SECRET || "";
 const DEFAULT_SMS_ORIGIN = process.env.DEFAULT_SMS_ORIGIN || "gr8result";
 
+  // ✅ Main account fallback
 const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_KEY, {
   auth: { persistSession: false },
 });
@@ -61,11 +62,11 @@ async function getUserSettings(user_id) {
   const hasUserCreds = !!(account.sms_api_key && account.sms_api_secret);
   
   return {
-    sms_api_key: hasUserCreds ? account.sms_api_key : MAIN_SMS_API_KEY,
-    sms_api_secret: hasUserCreds ? account.sms_api_secret : MAIN_SMS_API_SECRET,
+    sms_api_key: account.sms_api_key,
+    sms_api_secret: account.sms_api_secret,
     sender_id: account.sender_id,
     business_name: account.business_name,
-    usingMainAccount: !hasUserCreds,
+    usingMainAccount: false,
   };
 }
 
@@ -101,8 +102,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ ok: false, error: "Method not allowed" });
   }
 
-  // Authentication check (allow in dev, require key in production)
-  const isDev = process.env.NODE_ENV === "development";
+  // Queue processing can trigger real provider delivery in every environment.
   const authHeader = String(req.headers?.authorization || "");
   const bearerToken = authHeader.toLowerCase().startsWith("bearer ")
     ? authHeader.slice(7).trim()
@@ -112,15 +112,12 @@ export default async function handler(req, res) {
                       process.env.AUTOMATION_CRON_KEY || 
                       process.env.SMSGLOBAL_CRON_KEY || 
                       "";
-  const hasValidSecret =
-    !expectedKey ||
-    providedKey === expectedKey ||
-    bearerToken === expectedKey;
+  const hasValidSecret = Boolean(expectedKey) && (providedKey === expectedKey || bearerToken === expectedKey);
   
-  if (!isDev && !hasValidSecret) {
+  if (!expectedKey || !hasValidSecret) {
     return res.status(401).json({ 
-      ok: false, 
-      error: "Unauthorized - invalid or missing cron key" 
+      ok: false,
+      error: expectedKey ? "Unauthorized - invalid or missing cron key" : "SMS queue processing is disabled until a cron secret is configured."
     });
   }
 
@@ -130,7 +127,7 @@ export default async function handler(req, res) {
     console.log("🔄 flush-queue: Starting to process SMS queue", {
       limit,
       isDev: process.env.NODE_ENV === "development",
-      hasAuth: !!providedKey || isDev,
+      hasAuth: Boolean(providedKey || bearerToken),
     });
     
     const rows = await fetchQueue(limit > 0 ? limit : 25);
@@ -153,8 +150,17 @@ export default async function handler(req, res) {
     for (const row of rows) {
       try {
         console.log(`📤 Processing SMS queue row ${row.id} for user ${row.user_id}`);
-        
-        await updateRow(row.id, { status: "pending", last_error: null });
+
+        const { data: claimed, error: claimError } = await supabaseAdmin
+          .from("sms_queue")
+          .update({ status: "processing", last_error: null })
+          .eq("id", row.id)
+          .eq("workspace_id", row.workspace_id)
+          .in("status", ["queued", "pending"])
+          .select("id")
+          .maybeSingle();
+        if (claimError) throw claimError;
+        if (!claimed?.id) continue;
 
         if (row.workspace_id && await isDemoWorkspace(row.workspace_id)) {
           const providerId = `demo_sms_${row.id}`;
@@ -198,6 +204,20 @@ export default async function handler(req, res) {
           throw new Error("Missing message body in queue row");
         }
 
+        if (!row.lead_id || !row.workspace_id) {
+          throw new Error("SMS marketing queue row is missing its CRM lead or builder workspace.");
+        }
+        const { data: contact, error: contactError } = await supabaseAdmin
+          .from("leads")
+          .select("id,workspace_id,sms_marketing_consent,sms_marketing_opt_out,sms_opt_out")
+          .eq("id", row.lead_id)
+          .eq("workspace_id", row.workspace_id)
+          .maybeSingle();
+        if (contactError) throw new Error("SMS consent data unavailable; apply the marketing consent migration before sending.");
+        if (!contact || !hasSmsMarketingConsent(contact)) throw new Error("Contact consent is missing or withdrawn; SMS was not sent.");
+        const { optOutNumber } = await assertSmsMarketingAllowed(supabaseAdmin, { workspaceId: row.workspace_id, phone: row.to_phone });
+        const messageBody = withSmsOptOutFooter(row.body, optOutNumber);
+
         // ✅ CRITICAL LOGIC FOR SENDER ID:
         // - If user has their OWN subaccount credentials: use their custom sender_id (NO restrictions)
         // - If using MAIN account credentials: ONLY use origins registered in main account (check ALLOWED_ORIGINS)
@@ -213,20 +233,25 @@ export default async function handler(req, res) {
             .map(s => s.trim().toLowerCase())
             .filter(Boolean);
           
-          const candidateOrigin = row.origin || settings.sender_id || settings.business_name || "";
+          const candidateOrigin = row.origin || settings.sender_id || "";
           const candidateLower = candidateOrigin.trim().toLowerCase();
-          const isAllowed = allowedOrigins.length === 0 || allowedOrigins.includes(candidateLower);
+          const isAllowed = allowedOrigins.length > 0 && allowedOrigins.includes(candidateLower);
           
           if (isAllowed && candidateOrigin.trim()) {
             origin = candidateOrigin.trim();
             console.log(`📱 MAIN account: using allowed origin "${origin}"`);
           } else {
-            origin = DEFAULT_SMS_ORIGIN || "gr8result";
-            console.log(`⚠️ MAIN account: "${candidateOrigin}" not in ALLOWED_ORIGINS, using "${origin}"`);
+            throw new Error("Sender ID is not present in SMSGLOBAL_ALLOWED_ORIGINS; SMS was not sent.");
           }
         } else {
           // User has own subaccount - can use ANY sender_id they've registered (NO ALLOWED_ORIGINS check)
-          origin = row.origin || settings.sender_id || settings.business_name || DEFAULT_SMS_ORIGIN || "gr8result";
+          origin = row.origin || settings.sender_id || "";
+          const allowedOrigins = String(process.env.SMSGLOBAL_ALLOWED_ORIGINS || "").split(",").map((value) => value.trim().toLowerCase()).filter(Boolean);
+          if (!allowedOrigins.length || !allowedOrigins.includes(origin.toLowerCase())) {
+            throw new Error("Sender ID is not explicitly registered in SMSGLOBAL_ALLOWED_ORIGINS; SMS was not sent.");
+          }
+          const senderIdCheck = validateAustralianBrandedSenderId(origin);
+          if (!senderIdCheck.ok) throw new Error(senderIdCheck.error);
           console.log(`📱 USER subaccount: using origin "${origin}"`);
         }
         
@@ -237,7 +262,7 @@ export default async function handler(req, res) {
           apiSecret: settings.sms_api_secret,
           origin,
           toPhone: row.to_phone,
-          message: row.body,
+          message: messageBody,
           workspaceId: row.workspace_id || null,
           userId: row.user_id || null,
         });
@@ -262,6 +287,7 @@ export default async function handler(req, res) {
           .insert({
             user_id: row.user_id,
             workspace_id: row.workspace_id || null,
+            ...(row.campaign_id ? { campaign_id: row.campaign_id, contact_id: row.contact_id || null } : {}),
             to_phone: row.to_phone,
             body: row.body,
             origin: origin,
@@ -298,6 +324,36 @@ export default async function handler(req, res) {
         });
         failed++;
       }
+    }
+
+    const campaignKeys = new Map();
+    for (const row of rows) {
+      if (row.campaign_id && row.workspace_id) campaignKeys.set(`${row.workspace_id}:${row.campaign_id}`, row);
+    }
+    for (const row of campaignKeys.values()) {
+      const { data: remaining, error: remainingError } = await supabaseAdmin
+        .from("sms_queue")
+        .select("id,status")
+        .eq("workspace_id", row.workspace_id)
+        .eq("campaign_id", row.campaign_id);
+      if (remainingError) {
+        console.warn(`Could not finalize SMS campaign ${row.campaign_id}: ${remainingError.message}`);
+        continue;
+      }
+      const statuses = (remaining || []).map((item) => String(item.status || "").toLowerCase());
+      const campaignStatus = statuses.includes("failed")
+        ? "failed"
+        : statuses.length === 0
+          ? "sent"
+          : null;
+      if (!campaignStatus) continue;
+      const { error: updateError } = await supabaseAdmin
+        .from("sms_marketing_campaigns")
+        .update({ status: campaignStatus, updated_at: nowIso() })
+        .eq("id", row.campaign_id)
+        .eq("workspace_id", row.workspace_id)
+        .in("status", ["scheduled", "queued"]);
+      if (updateError) console.warn(`Could not update SMS campaign ${row.campaign_id}: ${updateError.message}`);
     }
 
     console.log(`✅ flush-queue complete: ${sent} sent, ${failed} failed out of ${rows.length} processed`);

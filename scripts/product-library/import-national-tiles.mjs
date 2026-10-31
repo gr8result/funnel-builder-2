@@ -8,6 +8,7 @@
 // Usage: node scripts/product-library/import-national-tiles.mjs [--limit=N]
 import fs from "node:fs";
 import path from "node:path";
+import { tileApplicationsFromSupplierData } from "../../lib/product-library/tilingCatalogue.js";
 
 const SITEMAP = "https://www.nationaltiles.com.au/sitemap.xml";
 const OUTPUT = "data/product-library/catalogues/tiles/AU-NATIONAL-TILES-CATALOGUE.json";
@@ -64,7 +65,7 @@ function toRecord(entry, { product, specs }) {
   const perBox = money(priceSpecs.find((item) => item.referenceQuantity?.unitCode === "C62")?.price ?? offer.price);
   const coverage = money([].concat(product.additionalProperty || []).find((item) => /coverage per box/i.test(item.name || ""))?.value);
   const area = spec(specs, "Area");
-  const applications = [/floor/i.test(area) ? "floor" : "", /wall/i.test(area) ? "wall" : "", /pool/i.test(`${area} ${product.name}`) ? "pool" : "", /external|outdoor/i.test(`${area} ${product.name}`) ? "external" : ""].filter(Boolean);
+  const applications = tileApplicationsFromSupplierData({ area, categoryType: spec(specs, "Category Type"), productName: decode(product.name || "") });
   const thickness = spec(specs, "Thickness (mm)", "Thickness");
   const colour = spec(specs, "colour", "Colour") || spec(specs, "Primary Colour");
   const image = entry.image || [].concat(product.image || [])[0] || "";

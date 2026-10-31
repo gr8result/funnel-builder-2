@@ -13,7 +13,9 @@ try {
     const { externalizeTakeoffPlanPages: encode, materializeTakeoffPlanPages: decode, externalizeTakeoffRecoverySnapshot } = await import('data:text/javascript;base64,' + btoa(source));
     const pages = Array.from({ length: 5 }, (_, i) => ({ pageNumber: i + 1, width: 10, height: 10, dataUrl: `data:image/png;base64,c3ludGhldGlj${i}` }));
     const job = { takeoffId: 'synthetic', plan: { pages }, revision: 1 };
-    const input = { aiPlanTakeoffJob: job, takeoffEngine: { aiPlanTakeoffJob: job } };
+    const artwork = `data:image/png;base64,${'A'.repeat(2_000_000)}`;
+    const projectEstimateBuilder = { pages: [{ baseArtwork: artwork, design: { backgroundImageUrl: artwork }, importedDocument: { baseArtwork: artwork }, blocks: [{ text: 'Keep all quotation content' }] }] };
+    const input = { aiPlanTakeoffJob: job, takeoffEngine: { aiPlanTakeoffJob: job }, projectEstimateBuilder };
     const first = await encode(input);
     const second = await encode({ ...input, aiPlanTakeoffJob: { ...job, revision: 2 } });
     const restored = await decode(second);
@@ -25,6 +27,9 @@ try {
     try { await decode({ aiPlanTakeoffJob: { plan: { pages: [{ dataUrlAssetId: 'missing-test-asset' }] } } }); } catch { missingFails = true; }
     return {
       assetCount, missingFails,
+      artworkRoundTrip: JSON.stringify(restored.projectEstimateBuilder) === JSON.stringify(projectEstimateBuilder),
+      artworkUnchanged: input.projectEstimateBuilder.pages[0].baseArtwork === artwork,
+      compactArtwork: JSON.stringify(second.projectEstimateBuilder).length < 1000,
       snapshotRefsOnly: !JSON.stringify(snapshot).includes('data:image'),
       roundTrip: restored.aiPlanTakeoffJob.plan.pages.every((page, i) => page.dataUrl === pages[i].dataUrl),
       originalsPreserved: input.aiPlanTakeoffJob.plan.pages.every(page => Boolean(page.dataUrl) && !page.dataUrlAssetId),
@@ -32,7 +37,7 @@ try {
       sameAsset: first.aiPlanTakeoffJob.plan.pages[0].dataUrlAssetId === second.aiPlanTakeoffJob.plan.pages[0].dataUrlAssetId,
     };
   }, source);
-  assert.equal(result.assetCount, 5);
-  for (const key of ['missingFails', 'roundTrip', 'originalsPreserved', 'refsOnly', 'sameAsset', 'snapshotRefsOnly']) assert.equal(result[key], true, key);
+  assert.equal(result.assetCount, 6);
+  for (const key of ['missingFails', 'roundTrip', 'originalsPreserved', 'refsOnly', 'sameAsset', 'snapshotRefsOnly', 'artworkRoundTrip', 'artworkUnchanged', 'compactArtwork']) assert.equal(result[key], true, key);
   console.log('Plan storage passed:', JSON.stringify(result));
 } finally { await browser.close(); }

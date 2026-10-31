@@ -63,6 +63,7 @@ export function ObjectRenderer({
     transform: `rotate(${object.rotation || 0}deg)`,
     transformOrigin: "center center",
     zIndex: object.layer,
+    pointerEvents: object.type === "shape" && object.data?.brochurePhotography ? "none" : undefined,
     boxSizing: "border-box",
     cursor: editing && !object.locked ? (pendingActivation ? "pointer" : "move") : "default",
     outline: editing && selected ? "2px solid #2563eb" : pendingActivation && hovered ? "1px solid rgba(37, 99, 235, 0.55)" : "none",
@@ -124,6 +125,12 @@ function renderObjectContent(object, workbook, editor = {}) {
           width: "100%",
           height: "100%",
           outline: "none",
+          // App-wide div defaults must not override the document's measured typography.
+          fontSize: "inherit",
+          fontFamily: "inherit",
+          fontWeight: "inherit",
+          lineHeight: "inherit",
+          letterSpacing: "inherit",
           cursor: editor.editing ? "text" : "inherit",
           color: activationHidden ? "transparent" : "inherit",
           userSelect: activationHidden ? "none" : undefined,
@@ -147,11 +154,15 @@ function renderObjectContent(object, workbook, editor = {}) {
   }
   if (object.type === "image" || object.type === "logo") {
     const activationHidden = isActivationRegion(object) && !isAcceptedEdit(object);
-    return object.data?.imageRef ? (
-      <img src={object.data.imageRef} alt={object.data.alt || ""} style={{ width: "100%", height: "100%", objectFit: object.style?.objectFit || "cover", borderRadius: object.style?.borderRadius || 0, opacity: activationHidden ? 0 : 1 }} />
-    ) : (
+    if (!object.data?.imageRef) return (
       <div style={{ width: "100%", height: "100%", display: "grid", placeItems: "center", background: "#f3f4f6", color: "#6b7280" }}>Image</div>
     );
+    const photographicCover = object.data.brochurePhotography && object.style?.objectFit === "cover";
+    const image = <img src={object.data.imageRef} alt={object.data.alt || ""} style={{ width: "100%", height: "100%", objectFit: object.style?.objectFit || "cover", borderRadius: object.style?.borderRadius || 0, opacity: activationHidden || photographicCover ? 0 : 1 }} />;
+    // The PDF rasteriser supports background-size, but not img object-fit.
+    return photographicCover ? (
+      <div style={{ width: "100%", height: "100%", backgroundImage: `url(${JSON.stringify(object.data.imageRef)})`, backgroundSize: "cover", backgroundPosition: "center", opacity: activationHidden ? 0 : 1 }}>{image}</div>
+    ) : image;
   }
   if (object.type === "divider") {
     return <div style={{ width: "100%", height: object.style?.thickness || object.height, background: object.style?.color || "#111827" }} />;

@@ -12,6 +12,7 @@ import {
   normaliseExteriorColourArea,
 } from "../lib/builders/clientSelectionWorkflow.js";
 import { renderProductCardHtml, sanitiseClientSelection } from "../lib/builders/finalInclusionsSchedule.js";
+import { buildSelectionsSchedule } from "../lib/builders/selectionsScheduleDocument.js";
 
 const requirement = EXTERIOR_REQUIREMENTS.find((item) => item.requirementKey === "exterior-paint");
 assert.equal(requirement.label, "Exterior Colours");
@@ -86,11 +87,26 @@ assert.equal(selection.exteriorColourSelection.masterColourSchedule.some((compon
 
 const html = renderProductCardHtml(selection);
 assert.match(html, /Exterior Colour Schedule/);
-assert.match(html, /Painter's \/ Trade Coating Schedule/);
 assert.match(html, /Dieskau/);
 assert.match(html, /Lexicon Quarter/);
-assert.match(html, /Dulux Weathershield Low Sheen/);
-assert.match(html, /Dulux Weathershield Semi Gloss/);
+assert.doesNotMatch(html, /Painter's \/ Trade Coating Schedule|Dulux Weathershield Low Sheen|Dulux Weathershield Semi Gloss/, "paint-system details do not leak into the client's selected-colour product row");
+
+const scheduleSelection = { id: "exterior-colours", guidedRequirementKey: "exterior-paint", selectedProduct: selection.productName, guidedSelection: {
+  requirementKey: "exterior-paint", area: "exterior", requirementLabel: "Exterior Colours", productName: selection.productName,
+  clientColourSchedule: selection.clientColourSchedule, exteriorColourSelection: selection.exteriorColourSelection,
+} };
+const schedule = buildSelectionsSchedule({ rooms: [{ name: "Project", rows: [
+  { id: "roofing", guidedRequirementKey: "roofing", selectedProduct: "COLORBOND Roof", guidedSelection: { requirementKey: "roofing", area: "exterior", requirementLabel: "Roofing", productName: "COLORBOND Roof", roofingConfiguration: { profileName: "Custom Orb", colour: "Monument" }, roofPackage: { fascia: { productName: "COLORBOND Fascia", colour: "Monument" }, gutters: { productName: "COLORBOND Gutters", colour: "Monument" } } } },
+  scheduleSelection,
+  { id: "oven", guidedRequirementKey: "oven", selectedProduct: "Bosch Series 4 Oven", guidedSelection: { requirementKey: "oven", requirementLabel: "Oven", productName: "Bosch Series 4 Oven" } },
+  { id: "interior-paint", guidedRequirementKey: "interior-paint", selectedProduct: "Internal paint colours", guidedSelection: { requirementKey: "interior-paint", area: "interior", requirementLabel: "Internal Paint Colours", productName: "Internal paint colours", paintScheme: { defaults: { walls: { manufacturer: "Dulux", colourName: "Natural White", finish: "Low Sheen" } } } } },
+] }] });
+assert.deepEqual(schedule.sections.map((section) => section.title), ["Exterior Selections", "Interior Selections", "Painting Schedule"]);
+const paintedItems = schedule.sections.find((section) => section.key === "painting").groups.flatMap((group) => group.rows).map((row) => row.item);
+assert(paintedItems.includes("Window surrounds"));
+assert(paintedItems.includes("Eaves/soffits"));
+assert(!schedule.sections.find((section) => section.key === "exterior").groups.flatMap((group) => group.rows).some((row) => /surround|eaves|render/i.test(row.item)), "site-painted surfaces belong to Painting Schedule");
+assert(schedule.sections.find((section) => section.key === "exterior").groups.flatMap((group) => group.rows).some((row) => row.item === "Roof" && /Monument/.test(row.colourFinish)), "factory roof colour stays with Exterior Selections");
 
 const embeddedSource = fs.readFileSync(path.resolve("pages/modules/builders/selections-book.js"), "utf8");
 assert.match(embeddedSource, /GuidedExteriorColourWorkflow/);

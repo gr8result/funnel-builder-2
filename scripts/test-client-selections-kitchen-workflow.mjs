@@ -3,11 +3,11 @@ import {
   EXTERIOR_REQUIREMENTS,
   INTERIOR_REQUIREMENTS,
   KITCHEN_REQUIREMENTS,
+  APPLIANCE_REQUIREMENTS,
   PRICE_STATES,
   areaTotals,
   createSelectionPayloadFromProduct,
   filtersForRequirement,
-  kitchenRequirementByKey,
   priceStateForProduct,
   productsForRequirement,
   projectTotals,
@@ -15,6 +15,7 @@ import {
   statusForRequirement,
   statusTone,
   variationFor,
+  guidedRequirementByKey,
 } from "../lib/builders/clientSelectionWorkflow.js";
 import { createProductEntity, productLibrarySelectionsFromJobFile, writeProductLibrarySelectionToJobFile } from "../lib/product-library/catalogueModel.js";
 
@@ -23,9 +24,9 @@ const projectId = "project-test";
 const snapshotId = "snapshot-test";
 const sessionId = "session-test";
 
-const ovenRequirement = kitchenRequirementByKey("oven");
-const cooktopRequirement = kitchenRequirementByKey("cooktop");
-const sinkRequirement = kitchenRequirementByKey("sink");
+const ovenRequirement = guidedRequirementByKey("oven");
+const cooktopRequirement = guidedRequirementByKey("cooktop");
+const sinkRequirement = guidedRequirementByKey("sink");
 const bricksRequirement = EXTERIOR_REQUIREMENTS.find((item) => item.requirementKey === "bricks");
 const roofingRequirement = EXTERIOR_REQUIREMENTS.find((item) => item.requirementKey === "roofing");
 
@@ -39,6 +40,7 @@ const oven = createProductEntity({
   width: "900mm",
   finish: "Stainless steel",
   client_price: 1450,
+  gst_included: true,
   allowance: 1200,
   primary_image: "https://example.com/oven.jpg",
   official_product_url: "https://example.com/oven",
@@ -55,6 +57,7 @@ const cooktop = createProductEntity({
   width: "900mm",
   fuelType: "Gas",
   client_price: 850,
+  gst_included: true,
   allowance: 950,
   primary_image: "https://example.com/cooktop.jpg",
   active: "true",
@@ -93,9 +96,9 @@ const ovenPayload = createSelectionPayloadFromProduct({
   product: oven,
 });
 
-assert.equal(KITCHEN_REQUIREMENTS.length, 15, "Kitchen opens as a 15-item checklist");
-assert.equal(EXTERIOR_REQUIREMENTS.length, 15, "Exterior opens as a polished 15-card category showroom");
-assert.equal(INTERIOR_REQUIREMENTS.find((item) => item.requirementKey === "kitchen")?.imageKey, "kitchen", "Interior category card uses the Kitchen image key");
+assert.equal(KITCHEN_REQUIREMENTS.length, 1, "Kitchen contains cabinetry; appliances use their own guided area");
+assert.equal(EXTERIOR_REQUIREMENTS.length, 14, "Exterior shows the current 14-category selection set");
+assert.equal(INTERIOR_REQUIREMENTS.some((item) => item.requirementKey === "kitchen"), false, "legacy room selections are excluded from the active product categories");
 assert.equal(bricksRequirement.imageKey, "bricks", "Bricks category card uses the bricks image key");
 assert.equal(roofingRequirement.imageKey, "roofing", "Roofing category card uses the roofing image key");
 assert.ok(!EXTERIOR_REQUIREMENTS.some((item) => /roof colour/i.test(item.label)), "Roof colour is consolidated inside Roofing");
@@ -109,7 +112,7 @@ assert.equal(ovenPayload.selected_details.requirementKey, "oven", "Saved product
 assert.equal(ovenPayload.selected_details.quantity, 1, "Saved product retains quantity");
 assert.equal(ovenPayload.selected_details.allowance, 1200, "Saved product retains allowance");
 assert.equal(ovenPayload.selected_details.selectedPrice, 1450, "Saved product retains selected price");
-assert.equal(ovenPayload.variation_amount, 250, "Price variation calculates correctly");
+assert.equal(ovenPayload.variation_amount, 118.18, "GST-inclusive Product Library price compares to the allowance ex GST");
 assert.equal(statusForRequirement(ovenRequirement, ovenPayload), "complete", "Select updates completion status");
 assert.equal(statusTone(statusForRequirement(ovenRequirement, ovenPayload)), "green", "Complete status is green");
 assert.equal(variationFor({ selectedPrice: 850, allowance: 950, quantity: 1 }), -100, "Credits calculate correctly");
@@ -135,14 +138,14 @@ assert.equal(priceStateForProduct(sinkPending), PRICE_STATES.pending, "Unknown p
 assert.equal(statusForRequirement(sinkRequirement, sinkPayload), "complete", "Unresolved price can save as selected with variation pending");
 assert.equal(statusTone(statusForRequirement(sinkRequirement, sinkPayload)), "green", "Selected quote-required item turns green for auto-advance");
 
-const selectedMap = selectedByRequirement([ovenPayload, cooktopPayload, sinkPayload]);
+const selectedMap = selectedByRequirement([ovenPayload, cooktopPayload, sinkPayload], APPLIANCE_REQUIREMENTS);
 assert.equal(selectedMap.get("oven").selected_product_name, "Westinghouse 900mm Oven", "Left progress navigator can show selected Oven");
 assert.equal(selectedMap.get("cooktop").selected_product_name, "Fisher & Paykel 900mm Gas Cooktop", "Left progress navigator updates selected Cooktop");
 
-const kitchenTotals = areaTotals(KITCHEN_REQUIREMENTS, selectedMap);
-assert.equal(kitchenTotals.completed, 3, "Selected requirements count complete even when variation is pending");
-assert.equal(kitchenTotals.variation, 150, "Area variation updates from selected products");
-assert.equal(projectTotals([kitchenTotals]).variation, 150, "Running project variation updates");
+const appliancesTotals = areaTotals(APPLIANCE_REQUIREMENTS, selectedMap);
+assert.equal(appliancesTotals.completed, 2, "Selected oven and cooktop appear under Appliances; pending sink is a separate area");
+assert.equal(appliancesTotals.variation, -59.09, "Appliance variation compares inclusive Product Library prices ex GST to allowance");
+assert.equal(projectTotals([appliancesTotals]).variation, -59.09, "Running project variation uses the quote's ex-GST basis");
 
 const savedJob = writeProductLibrarySelectionToJobFile({}, {
   selectionKey: ovenPayload.selected_details.selectionKey,
@@ -155,22 +158,12 @@ const savedJob = writeProductLibrarySelectionToJobFile({}, {
 });
 assert.equal(productLibrarySelectionsFromJobFile(savedJob)[ovenPayload.selected_details.selectionKey].productName, "Westinghouse 900mm Oven", ".gr8job round trip preserves status/pricing shape");
 
-const pageSource = await import("node:fs/promises").then((fs) => fs.readFile(new URL("../pages/modules/builders/client-selections.js", import.meta.url), "utf8"));
-assert.ok(pageSource.includes("showroom-choose-area"), "Choose Area showroom screen has a stable test marker");
-assert.ok(pageSource.includes("showroom-exterior-categories"), "Exterior category screen has a stable test marker");
-assert.ok(pageSource.includes("showroom-interior-categories"), "Interior category screen has a stable test marker");
-assert.ok(pageSource.includes("showroom-kitchen-checklist"), "Kitchen checklist renders as a guided checklist");
-assert.ok(pageSource.includes("showroom-product-detail"), "Product detail opens as a showroom detail panel");
-assert.ok(pageSource.includes("Next Selection"), "Next Selection action is visible after selecting a product");
-assert.ok(pageSource.includes("Visualise Room"), "Room visualisation placeholder is reserved without building 3D");
-assert.ok(pageSource.includes("grid-template-columns: 1fr; } .requirementRow"), "Mobile layout collapses to card rows without table columns");
-assert.ok(!pageSource.includes("Category fallback"), "Checklist does not render competing product fallback");
-assert.ok(!pageSource.includes("selectionTable"), "Old schedule table is not the primary Client Selections workflow");
-assert.ok(!pageSource.includes("approved rows connected"), "Technical CSV row counts are hidden from clients");
-assert.ok(!pageSource.includes("source CSV"), "Source/debug CSV language is hidden from clients");
-assert.ok(!pageSource.includes("Add Product"), "Supplier admin add-product controls are hidden from clients");
-assert.ok(!pageSource.includes("Import Products"), "Supplier admin import controls are hidden from clients");
-assert.ok(!pageSource.includes("Product Library"), "Product Library admin navigation is hidden from clients");
-assert.ok(pageSource.includes("Back to Kitchen"), "Back returns to Kitchen checklist");
+const pageSource = await import("node:fs/promises").then((fs) => fs.readFile(new URL("../pages/modules/builders/selections-book.js", import.meta.url), "utf8"));
+assert.ok(pageSource.includes("GuidedSelectionsWorkflow"), "the active embedded Client Selections route renders the guided workflow");
+assert.ok(pageSource.includes('guidedScreen === "review"'), "the saved schedule remains behind its review step");
+assert.ok(pageSource.includes("guided-client-selections-home"), "the active guided home has a stable browser-test marker");
+assert.ok(pageSource.includes("guided-kitchen-checklist"), "the Kitchen cabinetry checklist has a stable browser-test marker");
+assert.ok(pageSource.includes("guided-left-progress-menu"), "the category progress navigator has a stable browser-test marker");
+assert.ok(!pageSource.includes("/modules/builders/client-selections"), "the active workflow does not route back to the legacy standalone showroom");
 
 console.log("Client Selections Kitchen workflow tests passed.");

@@ -17,7 +17,7 @@ import { createTakeoffAnalysisHandler } from '../lib/construction-estimation/aiT
 // -> RUN AI TAKEOFF (unconfigured server first, then configured) -> save -> reopen.
 const require = createRequire(import.meta.url);
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const out = path.join(root, 'artifacts/test-artifacts/takeoff-ai-stubbed');
+const out = path.resolve(process.env.GR8_TAKEOFF_TEST_OUTPUT_DIR || path.join(root, 'artifacts/test-artifacts/takeoff-ai-stubbed'));
 const componentPath = path.join(root, 'components/construction-estimation/ai-plan-takeoff/AIPlanTakeoffStandalone.jsx');
 const workbookHookPath = path.join(root, 'hooks/estimate-builder/useEstimateBuilderWorkbook.js');
 const takeoffDir = path.dirname(componentPath);
@@ -30,6 +30,10 @@ const evidence = (text, confidence = 0.92) => ({ page: 1, basis: 'OBSERVED', con
 const wallSystem = { constructionSystem: null, frameThicknessMm: null, exteriorFinish: null, exteriorFinishCustomLabel: null, customSystemLabel: null };
 const inspection = { page: 1, textDirection: 'left-to-right', rotationToUpright: 0, drawingType: 'floor_plan', relevant: true, level: 'Ground Floor',
   scale: { denominator: 100, basis: 'OBSERVED', confidence: 0.95, evidence: 'Printed SCALE 1:100.' }, writtenDimensions: [], review: [] };
+const evidenceFact = (text) => ({ basis: 'OBSERVED', confidence: 0.92, evidence: text });
+const planEvidence = { page: 1, levels: [], openingSchedule: [], windowCodeConvention: { order: 'height-width', ...evidenceFact('Australian height-first window code notation.') },
+  standardDoorHeight: { valueMm: null, ...evidenceFact('No standard door height is stated.') }, eaveWidth: { valueMm: null, ...evidenceFact('No eave width is stated.') },
+  roofPitch: { degrees: null, ...evidenceFact('No roof pitch is stated.') }, notes: [], review: [] };
 const measurement = {
   page: 1, level: 'Ground Floor',
   walls: [
@@ -43,7 +47,10 @@ const measurement = {
   ],
   pillars: [], eaves: [],
   buildingAreas: [{ detectionId: 'A01', ...evidence('Living area inside outer walls.'), type: 'Living', label: 'Living', nodes: [{ x: 0.2, y: 0.25 }, { x: 0.8, y: 0.25 }, { x: 0.8, y: 0.75 }, { x: 0.2, y: 0.75 }] }],
-  rooms: [{ page: 1, name: 'BED 1', x: 0.35, y: 0.5, basis: 'OBSERVED', confidence: 0.95, evidence: 'Label BED 1.' }, { page: 1, name: 'LIVING', x: 0.65, y: 0.5, basis: 'OBSERVED', confidence: 0.95, evidence: 'Label LIVING.' }],
+  rooms: [
+    { page: 1, name: 'BED 1', x: 0.35, y: 0.5, polygon: [{ x: 0.2, y: 0.25 }, { x: 0.5, y: 0.25 }, { x: 0.5, y: 0.75 }, { x: 0.2, y: 0.75 }], boundaryClosed: true, printedAreaM2: null, dimensionReferences: [], basis: 'OBSERVED', confidence: 0.95, evidence: 'Label BED 1 and its closed plan boundary.' },
+    { page: 1, name: 'LIVING', x: 0.65, y: 0.5, polygon: [{ x: 0.5, y: 0.25 }, { x: 0.8, y: 0.25 }, { x: 0.8, y: 0.75 }, { x: 0.5, y: 0.75 }], boundaryClosed: true, printedAreaM2: null, dimensionReferences: [], basis: 'OBSERVED', confidence: 0.95, evidence: 'Label LIVING and its closed plan boundary.' },
+  ],
   fixtures: [], documentedQuantities: [], review: [],
 };
 const providerCalls = [];
@@ -53,7 +60,7 @@ const fakeOpenAi = async (url, options) => {
   const scopeText = body.input[0].content.map((item) => item.text || '').join('\n');
   const scope = /Return only walls/.test(scopeText) ? 'geometry' : /Return only openings/.test(scopeText) ? 'items' : null;
   providerCalls.push({ url, format, scope, model: body.model });
-  let analysis = format === 'takeoff_inspect_v1' ? inspection : structuredClone(measurement);
+  let analysis = format === 'takeoff_inspect_v1' ? inspection : format === 'takeoff_evidence_v1' ? planEvidence : structuredClone(measurement);
   if (scope === 'geometry') Object.assign(analysis, { openings: [], rooms: [], fixtures: [], documentedQuantities: [] });
   if (scope === 'items') Object.assign(analysis, { walls: [], buildingAreas: [], pillars: [], eaves: [] });
   return { ok: true, status: 200, headers: { get: () => 'stub-provider-request' },
@@ -170,7 +177,7 @@ window.harness={snapshot,saveResults:()=>saveResults,saveInputs:()=>saveInputs,r
  setView({zoom,pan}){value('sheetViewStateRef').current[value('currentPage')]={scale:zoom,pos:pan};dispatch('stageScale',zoom);dispatch('stagePos',pan);},
  viewSize(){return {width:value('stageRef').current.width(),height:value('stageRef').current.height()};},
  point(point){const stage=value('stageRef').current,layer=value('layerRef').current,rect=stage.content.getBoundingClientRect(),visible=layer.getAbsoluteTransform().point(point);return {x:rect.left+visible.x*rect.width/stage.width(),y:rect.top+visible.y*rect.height/stage.height()};},
- async stored(){const db=await new Promise((resolve,reject)=>{const request=indexedDB.open('estimate-builder-template-db',2);request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});const record=await new Promise((resolve,reject)=>{const request=db.transaction('jobs','readonly').objectStore('jobs').get('job:'+jobId);request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});db.close();const materialized=await materializeTakeoffPlanPages(record.workbook);return JSON.parse(JSON.stringify({job:materialized.aiPlanTakeoffJob}));}
+ async stored(){const materialized=await materializeTakeoffPlanPages(currentSheet.getCurrentWorkbook());return JSON.parse(JSON.stringify({job:materialized.aiPlanTakeoffJob}));}
 };
 reactRoot.render(React.createElement(Shell));
 `);
@@ -262,6 +269,9 @@ try {
   await button('Calibrate');
   await clickPlan({ x: 240, y: 225 });
   await clickPlan({ x: 960, y: 225 });
+  await page.waitForSelector('[data-testid="calibration-confirmation"]');
+  await page.type('[data-testid="calibration-dimension-mm"]', '12000');
+  await page.click('[data-testid="confirm-calibration"]');
   await page.waitForFunction(() => harness.snapshot().pixelsPerMm > 0);
   state = await snapshot();
   report.cases.calibrated = state.pixelsPerMm;
@@ -290,8 +300,8 @@ try {
   report.cases.measureFailedMessage = await page.$eval('#ai-takeoff-status', (element) => element.textContent);
   assert.match(report.cases.measureFailedMessage, /could not measure the plan.*HTTP 500/, report.cases.measureFailedMessage);
   assert.equal((await snapshot()).completedWallRuns.length, 1, 'Failed measurement inserted nothing');
-  assert.deepEqual(apiRequests.filter((item) => item.mode === 'measure-fails').map((item) => `${item.action}:${item.scope || ''}`), ['inspect:', 'measure:geometry', 'measure:geometry'],
-    'Failed geometry half is retried once; the items half is never paid for after it fails.');
+  assert.deepEqual(apiRequests.filter((item) => item.mode === 'measure-fails').map((item) => `${item.action}:${item.scope || ''}`), ['inspect:', 'evidence:', 'evidence:', 'measure:geometry', 'measure:geometry'],
+    'Failed evidence is retried, then failed geometry is retried once; the items half is never requested after it fails.');
 
   // 7. Configured (fake provider): click RUN AI TAKEOFF and observe the busy state.
   serverMode = 'configured';
@@ -305,7 +315,7 @@ try {
     && !document.querySelector('#run-ai-takeoff').disabled, { timeout: 60000 });
   report.cases.completedMessage = await page.$eval('#ai-takeoff-status', (element) => element.textContent);
   assert.equal(report.cases.completedMessage, 'AI TAKEOFF COMPLETE', report.cases.completedMessage);
-  assert.deepEqual(apiRequests.filter((item) => item.mode === 'configured').map((item) => `${item.action}:${item.scope || ''}`), ['measure:geometry', 'measure:items', 'refine:geometry', 'refine:items'],
+  assert.deepEqual(apiRequests.filter((item) => item.mode === 'configured').map((item) => `${item.action}:${item.scope || ''}`), ['evidence:', 'measure:geometry', 'measure:items', 'refine:geometry', 'refine:items'],
     'Unchanged page is not re-inspected; halves run one at a time.');
   assert.deepEqual(providerCalls.slice(-4).map((item) => `${item.format}:${item.scope}`), ['takeoff_measure_v1:geometry', 'takeoff_measure_v1:items', 'takeoff_refine_v1:geometry', 'takeoff_refine_v1:items']);
   assert.ok(apiRequests.every((item) => item.authorization && item.imageBytes > 1000), 'Authenticated requests carry the rendered page image');

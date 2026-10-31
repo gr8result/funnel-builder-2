@@ -30,7 +30,7 @@ const STEPS = {
 
 export default function GanttBuilderPage({ sheet }) {
   const workbook = sheet?.workbook || {};
-  const jobId    = workbook?.openedFileName || workbook?.id || "";
+  const jobId    = workbook?.jobId || workbook?.openedFileName || workbook?.id || "";
 
   // ── State ──────────────────────────────────────────────────────────────────
   const [step,     setStep]     = useState(STEPS.idle);
@@ -60,10 +60,13 @@ export default function GanttBuilderPage({ sheet }) {
   // ── Auto-save ──────────────────────────────────────────────────────────────
 
   const persist = useCallback((updates) => {
-    const next = { ...project, ...updates, updatedAt: new Date().toISOString() };
+    const next = { ...project, projectStartDate, ...updates, updatedAt: new Date().toISOString() };
     setProject(next);
     saveGanttProject(next);
-  }, [project]);
+    // A moved task moves the forecast date of the payment milestone linked to it (approved and paid milestones are left alone).
+    // Deferred: persist can run inside a state updater, where the workbook must not be updated.
+    if (sheet?.linkTradeContractsToSchedule) setTimeout(() => sheet.linkTradeContractsToSchedule({ project: next, quiet: true }), 0);
+  }, [project, projectStartDate, sheet]);
 
   // ── Generate ───────────────────────────────────────────────────────────────
 

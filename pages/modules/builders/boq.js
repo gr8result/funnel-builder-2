@@ -13,8 +13,9 @@ const STATUS_OPTIONS = [
   { value: "archived", label: "Archived" },
 ];
 
-export default function BoqSnapshotViewerPage({ workbook = null } = {}) {
+export default function BoqSnapshotViewerPage({ workbook = null, embedded = false, commercialProjectId = "", snapshotId: linkedSnapshotId = "" } = {}) {
   const { workspaceId, activeWorkspace, loading: workspaceLoading } = useWorkspace();
+  const embeddedProjectId = String(commercialProjectId || workbook?.commercialProjectId || "");
   const [projects, setProjects] = useState([]);
   const [snapshots, setSnapshots] = useState([]);
   const [sections, setSections] = useState([]);
@@ -51,9 +52,9 @@ export default function BoqSnapshotViewerPage({ workbook = null } = {}) {
         setProjects([]);
         setSelectedProjectId("");
       } else {
-        const rows = data || [];
+        const rows = embedded ? (data || []).filter((project) => project.id === embeddedProjectId) : data || [];
         setProjects(rows);
-        setSelectedProjectId((current) => rows.find((project) => project.id === current)?.id || rows[0]?.id || "");
+        setSelectedProjectId((current) => embedded ? rows.find((project) => project.id === embeddedProjectId)?.id || "" : rows.find((project) => project.id === current)?.id || rows[0]?.id || "");
       }
       setLoading(false);
     }
@@ -62,10 +63,10 @@ export default function BoqSnapshotViewerPage({ workbook = null } = {}) {
     return () => {
       cancelled = true;
     };
-  }, [workspaceId]);
+  }, [workspaceId, embedded, embeddedProjectId]);
 
   useEffect(() => {
-    if (!workspaceId || !selectedProjectId) {
+    if (!workspaceId || !selectedProjectId || (embedded && selectedProjectId !== embeddedProjectId)) {
       setSnapshots([]);
       setSelectedSnapshotId("");
       return;
@@ -90,7 +91,7 @@ export default function BoqSnapshotViewerPage({ workbook = null } = {}) {
       } else {
         const rows = data || [];
         setSnapshots(rows);
-        setSelectedSnapshotId((current) => rows.find((snapshot) => snapshot.id === current)?.id || rows[0]?.id || "");
+        setSelectedSnapshotId((current) => embedded && linkedSnapshotId ? rows.find((snapshot) => snapshot.id === linkedSnapshotId)?.id || "" : rows.find((snapshot) => snapshot.id === current)?.id || rows[0]?.id || "");
       }
       setLoading(false);
     }
@@ -99,7 +100,7 @@ export default function BoqSnapshotViewerPage({ workbook = null } = {}) {
     return () => {
       cancelled = true;
     };
-  }, [workspaceId, selectedProjectId]);
+  }, [workspaceId, selectedProjectId, embedded, embeddedProjectId, linkedSnapshotId]);
 
   useEffect(() => {
     if (!workspaceId || !selectedProjectId || !selectedSnapshotId) {
@@ -287,7 +288,7 @@ export default function BoqSnapshotViewerPage({ workbook = null } = {}) {
               value={selectedProjectId}
               onChange={(event) => setSelectedProjectId(event.target.value)}
               style={styles.select}
-              disabled={workspaceLoading || loading || !projects.length}
+              disabled={embedded || workspaceLoading || loading || !projects.length}
             >
               {!projects.length ? <option value="">No synced projects found</option> : null}
               {projects.map((project) => (
@@ -305,7 +306,7 @@ export default function BoqSnapshotViewerPage({ workbook = null } = {}) {
               value={selectedSnapshotId}
               onChange={(event) => setSelectedSnapshotId(event.target.value)}
               style={styles.select}
-              disabled={workspaceLoading || loading || !snapshots.length}
+              disabled={embedded || workspaceLoading || loading || !snapshots.length}
             >
               {!snapshots.length ? <option value="">No snapshots found</option> : null}
               {snapshots.map((snapshot) => (
@@ -341,6 +342,7 @@ export default function BoqSnapshotViewerPage({ workbook = null } = {}) {
         {error ? <div style={styles.error}>{error}</div> : null}
         {workspaceLoading ? <div style={styles.notice}>Loading workspace...</div> : null}
         {!workspaceLoading && !workspaceId ? <div style={styles.notice}>Choose an active workspace to view commercial snapshots.</div> : null}
+        {embedded && !selectedProjectId ? <div role="status" style={styles.notice}>This job has no linked commercial project. No other project's BOQ is shown.</div> : null}
 
         <section style={styles.summaryGrid}>
           <SummaryCard label="Workspace" value={activeWorkspace?.name || "Active workspace"} helper={selectedProject?.status ? titleCase(selectedProject.status) : ""} />

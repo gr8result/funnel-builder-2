@@ -6,6 +6,7 @@ import { supabaseAdmin } from '../../../lib/supabaseAdmin';
 import { FUNNEL_TYPES, assemblePage } from '../../../modules/funnels/index.js';
 import { withAuth } from "../../../lib/withWorkspace";
 import { getLimit } from "../../../lib/featureGates";
+import { addBusinessBrandingHeader } from '../../../lib/businessBranding.js';
 
 function slugify(str) {
   return str
@@ -449,6 +450,7 @@ async function handler(req, res) {
       });
     }
 
+    content = addBusinessBrandingHeader(content, brand);
     stepInserts.push({
       funnel_id: funnel.id,
       title: page.title,

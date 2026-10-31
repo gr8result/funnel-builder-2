@@ -235,20 +235,8 @@ const MODULE_ITEMS = [
     activityLabel: "automation",
   },
   {
-    // Freedom: long-term investments and short-term trades. Entitled only by an
-    // explicit add-on row (no plan tier includes it), and every Freedom API route
-    // re-checks the entitlement server-side via withFreedomApi, so this card
-    // opening the module is not an access decision on its own.
-    id: "freedom",
-    title: "Freedom",
-    emoji: "📈",
-    desc: "Long-term investments and short-term trades",
-    color: "#14b8a6",
-    href: "/freedom",
-  },
-  {
     id: "evergreen_webinars",
-    title: "Evergreen Webinars",
+    title: "Webinars",
     emoji: "🎥",
     desc: "Automated webinar funnels",
     color: "#ef4444",
@@ -574,64 +562,6 @@ function SectionLabel({ label, note }) {
   );
 }
 
-// ─── Impact stats bar ───────────────────────────────────────────────────────
-function ImpactBar({ stats, loading }) {
-  const items = [
-    { emoji: "👥", label: "Total contacts",    key: "contacts",    color: "#ec4899" },
-    { emoji: "📧", label: "Emails sent (30d)", key: "emailsSent",  color: "#facc15" },
-    { emoji: "💬", label: "SMS sent (30d)",    key: "smsSent",     color: "#38bdf8" },
-    { emoji: "⚙️", label: "Live automations",  key: "automations", color: "#fb923c" },
-    { emoji: "🏗️", label: "Active funnels",    key: "funnels",     color: "#ef465d" },
-  ];
-
-  return (
-    <div style={{
-      width: "100%", maxWidth: 1320, marginBottom: 32,
-      background: "#0d1522", border: "1px solid #1e2d42",
-      borderRadius: 14, padding: "16px 20px",
-      display: "flex", alignItems: "stretch", gap: 12, flexWrap: "wrap",
-      justifyContent: "space-between",
-    }}>
-      <div style={{
-        display: "flex", alignItems: "center",
-        fontSize: 12, fontWeight: 700, color: "#4b6480",
-        textTransform: "uppercase", letterSpacing: "0.9px",
-        marginRight: 4, flexShrink: 0, writingMode: "horizontal-tb",
-      }}>
-        Your platform
-      </div>
-      {items.map(item => (
-        <div key={item.key} style={{
-          flex: "1 1 150px",
-          background: "#111827", borderRadius: 10, padding: "12px 16px",
-          border: `1px solid ${item.color}28`,
-          display: "flex", flexDirection: "column", gap: 4,
-        }}>
-          <div style={{ fontSize: 26, fontWeight: 700, color: "#f9fafb", lineHeight: 1 }}>
-            {loading || !stats ? "—" : (stats[item.key] ?? 0).toLocaleString()}
-          </div>
-          <div style={{ fontSize: 12, color: "#6b7280", display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}>
-            <span>{item.emoji}</span> {item.label}
-          </div>
-        </div>
-      ))}
-      <div style={{ display: "flex", alignItems: "flex-end", flexShrink: 0 }}>
-        <Link href="/import-contacts" style={{ textDecoration: "none" }}>
-          <div style={{
-            background: "linear-gradient(135deg, #2563eb, #4f46e5)",
-            borderRadius: 10, padding: "10px 16px",
-            fontSize: 13, fontWeight: 600, color: "#fff",
-            whiteSpace: "nowrap", cursor: "pointer",
-            display: "flex", alignItems: "center", gap: 6,
-          }}>
-            <span>📥</span> Import from Klaviyo / Mailchimp
-          </div>
-        </Link>
-      </div>
-    </div>
-  );
-}
-
 // ─── Dashboard page ───────────────────────────────────────────────────────────
 export default function Dashboard() {
   const { role, workspaceId } = useWorkspace();
@@ -641,7 +571,7 @@ export default function Dashboard() {
   const [setupContext, setSetupContext] = useState({ account: null });
   const [counts, setCounts] = useState({});
   const [loading, setLoading] = useState(true);
-  const [impactStats, setImpactStats] = useState(null);
+  const [, setImpactStats] = useState(null);
 
   useEffect(() => {
     async function loadWorkspace() {
@@ -731,7 +661,7 @@ export default function Dashboard() {
 
         setCounts(cm);
 
-        // Impact stats — graceful degradation if any table is missing
+        // Keep the underlying dashboard metrics available without rendering the removed strip.
         try {
           const since30d = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
           const [
@@ -748,15 +678,16 @@ export default function Dashboard() {
             supabase.from("funnels").select("id", { count: "exact", head: true }).eq("workspace_id", workspaceId),
           ]);
           setImpactStats({
-            contacts:    contactCount    ?? 0,
-            emailsSent:  emailCount      ?? 0,
-            smsSent:     smsCount        ?? 0,
+            contacts: contactCount ?? 0,
+            emailsSent: emailCount ?? 0,
+            smsSent: smsCount ?? 0,
             automations: automationCount ?? 0,
-            funnels:     funnelCount     ?? 0,
+            funnels: funnelCount ?? 0,
           });
         } catch {
-          // Non-critical — dashboard still works without impact stats
+          // Dashboard navigation remains available when a metrics table is unavailable.
         }
+
       } catch (err) {
         console.error("Dashboard load error:", err);
       } finally {
@@ -814,9 +745,6 @@ export default function Dashboard() {
           </p>
         </div>
       </div>
-
-      {/* Impact stats */}
-      <ImpactBar stats={impactStats} loading={loading} />
 
       {/* Core Platform */}
       <div style={{ width: "100%", maxWidth: 1320, marginBottom: 40 }}>

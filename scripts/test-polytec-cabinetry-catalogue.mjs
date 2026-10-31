@@ -8,6 +8,7 @@ import {
   buildCabinetrySelectionPayload,
   normaliseCabinetrySelection,
 } from "../lib/builders/cabinetryWorkflow.js";
+import { cabinetryScheduleCatalogue } from "../lib/construction-estimation/cabinetryRequirements.js";
 
 const ROOT = process.cwd();
 const cataloguePath = path.join(ROOT, "data/product-library/catalogues/cabinetry/AU-POLYTEC-CABINETRY-COLOURS.json");
@@ -83,6 +84,7 @@ assert.match(cabinetrySelectorSource, /AU-POLYTEC-CABINETRY-COLOURS\.js/, "The c
 assert.match(cabinetrySelectorSource, /cabinetryColourToMasterProduct/, "Product Library must map Polytec catalogue records through the shared colour adapter");
 
 const selected = active.find((record) => record.colourName === "Adriatic" && record.finish === "Venette") || active[0];
+const kitchenBaseUnit = cabinetryScheduleCatalogue("Kitchen").flatMap((group) => group.items).find((entry) => entry.label === "1 door base unit - 600mm");
 const selection = normaliseCabinetrySelection({
   locations: [{
     location: "Kitchen",
@@ -96,7 +98,7 @@ const selection = normaliseCabinetrySelection({
     handles: { base: { productName: "Handleless", productCode: "HANDLELESS" } },
     confirmedAt: "2026-08-31T00:00:00.000Z",
   }],
-  schedule: [{ componentId: "CAB-KIT-POL-1", location: "Kitchen", unitType: "Standard base unit", quantity: 3, notes: "Three base units", clientSelectableSurfaces: ["lowerDoorsDrawers"], handleQuantity: 3 }],
+  schedule: [{ componentId: "CAB-KIT-POL-1", location: "Kitchen", cabinetTypeId: kitchenBaseUnit.id, unitType: kitchenBaseUnit.label, quantity: 3, notes: "Three base units", clientSelectableSurfaces: ["lowerDoorsDrawers"], handleQuantity: 3 }],
 });
 const payload = buildCabinetrySelectionPayload({ projectId: "polytec-test", selection });
 assert.equal(payload.selected_details.cabinetrySelection.locations[0].defaultColour.id, selected.id, "selected exact Polytec colour/finish must persist");

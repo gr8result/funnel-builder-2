@@ -226,6 +226,29 @@ export default function BuilderQuoteApprovalsPage() {
 
     const type = approvalTypeOption(form.approvalType);
     const status = statusOption(form.status);
+    if (type.db === "original_quote" && ["sent", "approved"].includes(status.db)) {
+      try {
+        const { data: unresolvedRows, error: readinessError } = await supabase
+          .from("builder_boq_items")
+          .select("item_name")
+          .eq("workspace_id", workspaceId)
+          .eq("project_id", selectedProjectId)
+          .eq("snapshot_id", selectedSnapshotId)
+          .eq("status", "quote_required")
+          .limit(1);
+        if (readinessError) throw readinessError;
+        if (unresolvedRows?.length) {
+          setError("This quotation has unresolved commercial prices. Save it as a draft; sending or signing is blocked until every quote-required BOQ item is resolved.");
+          setSaving(false);
+          return;
+        }
+      } catch (error) {
+        setError(`Could not verify quotation readiness: ${error.message || "The quotation could not be checked."}`);
+        setSaving(false);
+        return;
+      }
+    }
+
     const relatedVariation = form.variationId ? variations.find((variation) => variation.id === form.variationId) : null;
     const relatedSelection = form.selectionId ? selections.find((selection) => selection.id === form.selectionId) : null;
     const approvedAmount = approvedAmountFor({ snapshot: selectedSnapshot, variation: relatedVariation, selection: relatedSelection });
@@ -631,4 +654,3 @@ const styles = {
   notes: { margin: "10px 0 0", color: "#334155", fontSize: 14, fontWeight: 650 },
   statusPill: { border: "1px solid", borderRadius: 999, padding: "4px 8px", fontSize: 12, fontWeight: 900, whiteSpace: "nowrap" },
 };
-

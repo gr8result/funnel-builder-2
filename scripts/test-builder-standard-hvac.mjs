@@ -1,0 +1,68 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import { resolveBuilderStandard, standardRangeDefaults, overrideStandardLocation, restoreStandardLocation } from '../lib/builders/builderStandardRange.js';
+import { catalogueSubcategoryForProduct } from '../lib/product-library/catalogueSectionRules.js';
+import { getMasterProducts } from '../lib/product-library/catalogueService.js';
+import { clientSelectionCategoryProducts } from '../lib/product-library/plumbingFixtureCatalogue.js';
+import { connectAllocatedSelectionsToQuotation } from '../lib/builders/allocatedSelectionQuotation.js';
+import { plumbingLineWithTotals } from '../lib/builders/plumbingFixtureAllocation.js';
+const products=[{productCode:'LIGHT-A',productName:'Standard Downlight A'},{productCode:'FAN-B',productName:'Standard Fan B'},
+  {productCode:'ALARM-C',productName:'Standard Smoke Alarm C'},{productCode:'FAN-UP',productName:'Upgrade Fan',clientPrice:165}];
+const workbook={standardInclusions:{standardProducts:{downlight:{productCode:'LIGHT-A'},'ceiling-fan':{productCode:'FAN-B'},'smoke-alarm':{productCode:'ALARM-C'}}},
+  quotation:{ELECTRICAL:{rows:[{id:'light',item:'Downlights',qty:24,excelRate:80,materialRate:10,labourRate:70,manualRate:''},
+    {id:'fan',item:'Ceiling fans',qty:4,excelRate:180,materialRate:100,labourRate:80,manualRate:''},
+    {id:'alarm',item:'Smoke alarms',qty:6,excelRate:110,materialRate:50,manualRate:''}]}}};
+const light=standardRangeDefaults(workbook,products,'interior-lighting');
+const fans=standardRangeDefaults(workbook,products,'ceiling-fan');
+assert.equal(light[0].productName,'Standard Downlight A');assert.equal(light[0].quantity,24);assert.equal(light[0].variation,0);
+assert.equal(fans[0].quantity,4);assert.equal(fans[0].variation,0);
+assert.equal(resolveBuilderStandard(workbook,products,'smoke-alarm').product.productName,'Standard Smoke Alarm C');
+assert.equal(resolveBuilderStandard({standardInclusions:{sections:[{title:'Electrical',bullets:['White ceiling fan - Builder supplied'] }]}},products,'ceiling-fan').source,'Builder Standard Inclusions');
+assert.equal(resolveBuilderStandard({},products,'ceiling-fan'),null,'No global default guessed');
+assert.equal(resolveBuilderStandard({standardInclusions:{standardProducts:{'ceiling-fan':'unavailable-included-code'}}},products,'ceiling-fan').source,'Builder Standard Inclusions','Never substitute a lower-priority product for a missing included reference');
+const otherBuilder={standardInclusions:{standardProducts:{'ceiling-fan':{productName:'Other builder fan',unitAllowance:90}}}};
+assert.equal(resolveBuilderStandard(otherBuilder,products,'ceiling-fan').product.productName,'Other builder fan');
+const preferred=[{productCode:'P',productName:'Preferred ceiling fan',selectionMode:'standard_included'}];
+assert.equal(resolveBuilderStandard({},preferred,'ceiling-fan').source,'Builder Product Library');
+const overrides=overrideStandardLocation(fans,fans[0],products[3],'Bedroom 1',1,{unitPrice:165});
+const unknownWorkbook={...workbook,quotation:{ELECTRICAL:{rows:[{id:'fan',item:'Ceiling fan',qty:4,excelRate:180}]}}};
+const unknownDefault=standardRangeDefaults(unknownWorkbook,products,'ceiling-fan');
+assert.equal(unknownDefault[0].variation,null,"a missing included material allowance remains pending, never zero");
+assert.equal(overrideStandardLocation(unknownDefault,unknownDefault[0],products[3],'Bedroom 1',1,{unitPrice:165}).find(l=>!l.isBuilderStandard).variation,null,'Missing included material allowance is pending, never zero');
+assert.equal(overrides.find(l=>l.isBuilderStandard).quantity,3);
+assert.equal(overrides.find(l=>!l.isBuilderStandard).variation,50);
+const restored=restoreStandardLocation(overrides,fans[0],'bedroom-1');assert.equal(restored.length,1);assert.equal(restored[0].quantity,4);assert.equal(restored[0].variation,0);
+const outside={...workbook,standardInclusions:{standardProducts:{'external-lighting':{productName:'Builder exterior wall light'}}},quotation:{ELECTRICAL:{rows:[{id:'outdoor',item:'Exterior wall light',qty:2,excelRate:120,materialRate:40}]}}};
+assert.equal(standardRangeDefaults(outside,products,'external-lighting')[0].quantity,2);
+assert.equal(standardRangeDefaults(outside,products,'interior-lighting').length,0,'Exterior fittings never also become interior defaults');
+const book=lines=>({rooms:[{rows:[{guidedSelection:{requirementKey:'ceiling-fan',plumbingAllocation:{lines}}}]}]});
+let updated=connectAllocatedSelectionsToQuotation(workbook,book(overrides));
+assert.equal(updated.quotation.ELECTRICAL.rows.length,3);
+assert.equal(updated.quotation.ELECTRICAL.rows[1].materialVariation,50);
+assert.equal(updated.quotation.ELECTRICAL.rows[1].manualRate,192.5);
+assert.equal(updated.quotation.ELECTRICAL.rows[1].labourRate,80);
+updated=connectAllocatedSelectionsToQuotation(updated,JSON.parse(JSON.stringify(book(overrides))));
+assert.equal(updated.quotation.ELECTRICAL.rows.length,3);assert.equal(updated.quotation.ELECTRICAL.rows[1].materialVariation,50);
+const again=overrideStandardLocation(overrides,fans[0],products[3],'Bedroom 1',1,{unitPrice:220});
+assert.equal(again.reduce((n,l)=>n+l.quantity,0),4);assert.equal(again.find(l=>l.isBuilderStandard).quantity,3);
+const full=overrideStandardLocation(fans,fans[0],products[3],'Bedrooms',4,{unitPrice:165});
+assert.equal(full.length,1);
+assert.throws(()=>overrideStandardLocation(full,fans[0],products[3],'Bedroom 2',1,{unitPrice:165}),/Only 0/);
+assert.equal(overrideStandardLocation(full,fans[0],products[3],'Bedrooms',4,{unitPrice:200})[0].quantity,4);
+const catalogue=getMasterProducts('standard-hvac-test');
+const hvac=clientSelectionCategoryProducts({requirementKey:'air-conditioning'},{products:catalogue});
+assert.equal(hvac.length,6);assert.equal(hvac.filter(p=>p.attributes.systemType==='Split').length,3);assert.equal(hvac.filter(p=>p.attributes.systemType==='Ducted').length,3);
+for(const p of hvac){assert(p.model);assert(p.sourceUrl);assert(p.attributes.coolingCapacityKw>0);assert(fs.existsSync(`public${p.primaryImageUrl}`));assert.equal(p.clientPrice,null);assert.equal(catalogueSubcategoryForProduct(p,'hvac'),p.attributes.systemType==='Ducted'?'ducted-systems':'split-systems');}
+assert(fs.existsSync('public/images/client-selections/air-conditioning.webp'));
+const ducted=hvac.find(p=>p.attributes.systemType==='Ducted');
+const airBook={standardInclusions:{standardProducts:{'air-conditioning':{productCode:ducted.productCode}}},quotation:{'AIR CONDITIONING':{rows:[{id:'ac',item:'Ducted air conditioning',qty:1,excelRate:10000,manualRate:''}]}}};
+const standard=standardRangeDefaults(airBook,hvac,'air-conditioning');assert.equal(standard[0].variation,0);
+const airSelections=lines=>({rooms:[{rows:[{guidedSelection:{requirementKey:'air-conditioning',plumbingAllocation:{lines}}}]}]});
+let airUpdated=connectAllocatedSelectionsToQuotation(airBook,airSelections(standard));assert.equal(airUpdated.quotation['AIR CONDITIONING'].rows.length,1);
+const selected=overrideStandardLocation(standard,standard[0],hvac.at(-1),'Whole project',1,{unitPrice:13200,hvac:{systemType:'Ducted',confirmationStatus:'Supplier / Design Confirmation Required'}});
+airUpdated=connectAllocatedSelectionsToQuotation(airUpdated,airSelections(selected));assert.equal(airUpdated.quotation['AIR CONDITIONING'].rows[0].materialVariation,2000);
+assert.equal(airUpdated.quotation['AIR CONDITIONING'].rows[0].manualRate,12000);
+airUpdated=connectAllocatedSelectionsToQuotation(airUpdated,JSON.parse(JSON.stringify(airSelections(selected))));assert.equal(airUpdated.quotation['AIR CONDITIONING'].rows.length,1);
+const pending=selected.map(l=>plumbingLineWithTotals({...l,unitPrice:null}));
+airUpdated=connectAllocatedSelectionsToQuotation(airUpdated,airSelections(pending));assert.equal(airUpdated.quotation['AIR CONDITIONING'].rows[0].manualRate,'');assert.equal(airUpdated.quotation['AIR CONDITIONING'].rows[0].materialVariation,null);
+console.log('PASS: 24 downlights, 4 fans, 6 smoke alarms; builder priority; room-only variation; immutable allowance; save/reload; 6 real HVAC systems; quote replacement and pending prices.');

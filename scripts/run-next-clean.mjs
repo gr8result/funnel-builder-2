@@ -115,15 +115,16 @@ if (await devPortInUse()) {
   process.exit(1);
 }
 
-// Port is free, so nothing can be harmed: any lock left behind is stale.
-if (existingLock) {
-  if (existingLock.pid && processExists(existingLock.pid)) {
-    console.warn(
-      `Clearing a stale ${distDir} lock (pid ${existingLock.pid} is no longer serving port ${Number(process.env.PORT) || 3000}).`
-    );
-  }
-  removeLock();
+// Non-dev commands share the same build directory too. A live build/start lock
+// must not be discarded just because it does not own the dev port.
+if (existingLock?.pid && existingLock.distDir === distDir && processExists(existingLock.pid)) {
+  console.error(
+    `A ${existingLock.mode || 'Next'} process is already running for ${distDir} (lock pid ${existingLock.pid}).\n` +
+    `Starting another process could corrupt the shared build output. Wait for it to exit, or verify and clear a stale lock manually.`
+  );
+  process.exit(1);
 }
+if (existingLock) removeLock();
 
 if (!acquireStartupLock()) {
   const current = readLock();

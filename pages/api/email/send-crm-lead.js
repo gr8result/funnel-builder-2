@@ -169,13 +169,12 @@ async function handler(req, res) {
 
         const { data: account } = await admin
           .from("accounts")
-          .select("business_name, brand_name, company_name, sendgrid_from_name, from_name, sendgrid_from_email, from_email, email, business_phone, phone, website, business_logo_url, business_logo, logo_url")
+          .select("business_name, brand_name, company_name, sendgrid_from_name, from_name, sendgrid_from_email, email, business_phone, phone, website, business_logo_url, business_logo, logo_url")
           .eq("user_id", userId)
           .maybeSingle();
 
         fromEmail =
           account?.sendgrid_from_email ||
-          account?.from_email ||
           companyEmailFromBody ||
           process.env.SENDGRID_FROM_EMAIL ||
           "no-reply@gr8result.com";

@@ -1,5 +1,5 @@
 import Head from "next/head";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import dynamic from "next/dynamic";
 import TakeoffRecoveryPanel from "../../../components/construction-estimation/ai-plan-takeoff/TakeoffRecoveryPanel";
@@ -19,6 +19,18 @@ function routePageFromRouter(router) {
   return new URLSearchParams(asPath.slice(asPath.indexOf("?") + 1)).get("page") || "";
 }
 
+export async function getServerSideProps(context) {
+  if (context.query?.page === "standardInclusions") {
+    return {
+      redirect: {
+        destination: "/modules/builders/standard-inclusions",
+        permanent: false,
+      },
+    };
+  }
+  return { props: {} };
+}
+
 export default function EstimateBuilderPage() {
   const router = useRouter();
   const hydrated = useHydrated();
@@ -29,11 +41,17 @@ export default function EstimateBuilderPage() {
   const organisationId = typeof router.query.organisationId === "string" ? router.query.organisationId : "";
   const initialPage = routePageFromRouter(router);
 
+  useEffect(() => {
+    if (!hydrated || !router.isReady || initialPage !== "standardInclusions") return;
+    void router.replace("/modules/builders/standard-inclusions");
+  }, [hydrated, initialPage, router]);
+
   // Recovery is an explicit route option, never the default Takeoff interface.
   // Gate on `hydrated` too so the first client render still matches the server's
   // placeholder; router.isReady alone is already true on that render and swapping
   // straight to the workbook breaks hydration.
   if (!hydrated || !router.isReady) return <p>Preparing Estimate Builder…</p>;
+  if (initialPage === "standardInclusions") return <p role="status">Opening Standard Inclusions…</p>;
   if (router.query.safeMode === "1") {
     return <TakeoffRecoveryPanel />;
   }

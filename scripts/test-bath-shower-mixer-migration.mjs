@@ -13,7 +13,7 @@ import { allocatedSelectionQuotationLines, connectAllocatedSelectionsToQuotation
 
 const legacyRequirement = { requirementKey: "shower-mixer", label: "Shower Mixer", areaKey: "plumbing-fixtures", areaLabel: "Plumbing Fixtures", unit: "EACH" };
 const bathRequirement = PLUMBING_FIXTURE_REQUIREMENTS.find((r) => r.requirementKey === "bath-mixer");
-const line = (id, name, price, allocations) => plumbingLineWithTotals({ lineId: id, productId: id, productCode: id, productName: name, brand: "Phoenix", supplier: "Harvey Norman Commercial", unit: "EACH", unitPrice: price, unitAllowance: 0, allocations });
+const line = (id, name, price, allocations) => plumbingLineWithTotals({ lineId: id, productId: id, productCode: id, productName: name, brand: "Phoenix", supplier: "Harvey Norman Commercial", unit: "EACH", unitPrice: price, priceIncludesGst: true, unitAllowance: 0, allocations });
 const row = (requirement, lines, item) => ({ id: `row-${requirement.requirementKey}`, item, guidedRequirementKey: requirement.requirementKey, ...plumbingSelectionPatch(requirement, lines, null, { projectId: "p", organisationId: "w", now: "2026-09-01T00:00:00.000Z" }).patch });
 
 // Saved before the merge: Vivid as a Bath Mixer x1 AND as a Shower Mixer x3, plus a second shower mixer.
@@ -44,7 +44,7 @@ assert.deepEqual(vividLine.allocations.map((a) => `${a.location} x${a.quantity}`
 assert.equal(vividLine.unitPrice, 229, "price preserved");
 assert.equal(merged.guidedSelection.quantity, 5);
 assert.equal(merged.guidedSelection.selectedTotal, beforeTotal, "selected total unchanged by the merge");
-assert.equal(merged.guidedSelection.variation, beforeTotal - 0, "variation = selected - allowance (0 allowance)");
+assert.equal(merged.guidedSelection.variation, 1004.55, "variation uses the GST-exclusive selected total against a zero allowance");
 assert.equal(migrateBathShowerMixerRooms(after), after, "idempotent: a refresh changes nothing");
 
 // Category structure: one Bath & Shower Mixers card, Bath Spouts and Shower Rails & Roses separate.

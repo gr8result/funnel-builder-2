@@ -4,6 +4,9 @@ import jsxA11yPlugin from "eslint-plugin-jsx-a11y";
 
 export default [
   {
+    ignores: ["lib/construction-estimation/estimateBuilderWorkbookCalculations backup.js"],
+  },
+  {
     ...nextPlugin.configs["core-web-vitals"],
     plugins: {
       ...nextPlugin.configs["core-web-vitals"].plugins,

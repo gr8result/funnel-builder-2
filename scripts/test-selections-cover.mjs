@@ -1,0 +1,36 @@
+﻿import fs from 'node:fs';
+import puppeteer from 'puppeteer';
+import { PDFDocument } from 'pdf-lib';
+import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
+import {builderLogoFor, createSelectionsCover, renderSelectionsCover, selectionsCoverCss} from '../lib/builders/selectionsCover.js';
+import {renderDynamicFinalInclusionsPdf} from '../lib/builders/finalInclusionsPdfExecution.js';
+import assert from 'node:assert/strict';
+const out='artifacts/test-artifacts/selections-cover';fs.mkdirSync(out,{recursive:true});
+const raw=JSON.parse(fs.readFileSync('recovery/quotation-changes-2026-10-03/browser-1-01-1f7.json'));const workbook=raw.workbook||raw;
+const before=JSON.stringify(workbook);const cover=createSelectionsCover({cover:workbook.clientSelectionsBook.cover,workbook});
+assert.equal(cover.clientName,'Bill and Mary New');assert.equal(cover.siteAddress,'2 ASTREET, SOMPLACE, QLD, 4557');assert.equal(cover.locality,'');assert.equal(JSON.stringify(workbook),before);
+assert.equal(builderLogoFor({builderName:'Goodbuild Quality Builders'}),'/assets/builders/goodbuild-logo.png');
+assert.equal(builderLogoFor({builderName:'Another Builder'}),'');
+assert.equal(builderLogoFor({builderName:'Another Builder',logoUrl:'/uploads/another-builder.svg'}),'/uploads/another-builder.svg');
+assert(!/Indicative Rate|Quote Required|Current Price/.test(JSON.stringify(cover)));
+assert(!('rooms' in cover));assert(!('documentIdentifier' in cover));
+const priority=createSelectionsCover({builder:{coverImageUrl:'https://example.com/builder.jpg',marketingImageUrl:'https://example.com/marketing.jpg'},project:{coverImageUrl:'https://example.com/project.jpg'}});assert.deepEqual(priority.heroImages.slice(0,3),['https://example.com/builder.jpg','https://example.com/project.jpg','https://example.com/marketing.jpg']);
+let html='<!doctype html><html><head><style>body{margin:0}'+selectionsCoverCss+'</style></head><body>'+renderSelectionsCover(cover)+'</body></html>';
+for(const asset of ['/assets/builders/goodbuild-logo.png','/assets/builders/standard-inclusions-hero.jpg'])html=html.replaceAll(asset,'data:image/'+(asset.endsWith('png')?'png':'jpeg')+';base64,'+fs.readFileSync('public'+asset).toString('base64'));
+const browser=await puppeteer.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true,timeout:60000,args:['--no-sandbox','--disable-dev-shm-usage'],defaultViewport:{width:1500,height:1100}});
+try{const page=await browser.newPage();await page.bringToFront();console.log('Loading cover HTML');await page.setContent(html,{waitUntil:'networkidle0'});
+console.log('Checking cover DOM');await page.waitForSelector('.brochureCover');await (await page.$('.brochureCover')).screenshot({path:out+'/cover-preview.png'});
+const metrics=await page.evaluate(()=>{const p=document.querySelector('.brochureCover');const r=p.getBoundingClientRect();return {width:r.width,height:r.height,text:p.innerText,broken:[...p.querySelectorAll('img')].filter(x=>!x.naturalWidth).length,overflow:[...p.querySelectorAll('*')].filter(x=>{const b=x.getBoundingClientRect();return b.bottom>r.bottom+1||b.right>r.right+1;}).map(x=>x.className)};});
+assert(Math.abs(metrics.width/metrics.height-297/210)<.002);assert.equal(metrics.broken,0);assert.deepEqual(metrics.overflow,[]);
+console.log('Rendering standalone cover PDF');await page.bringToFront();await page.pdf({timeout:60000,path:out+'/cover.pdf',preferCSSPageSize:true,printBackground:true});const doc=await PDFDocument.load(fs.readFileSync(out+'/cover.pdf'));assert.equal(doc.getPageCount(),1);assert(Math.abs(doc.getPage(0).getWidth()-841.89)<1);
+const snapshot={cover,project:{name:cover.projectName,clientName:cover.clientName,siteAddress:cover.siteAddress,currency:'AUD'},builder:{name:cover.builderName},documentStatus:'draft',version:'1.0',createdAt:'2026-10-03T12:00:00Z',selections:[],summary:{},selectionSession:{}};
+console.log('Rendering full schedule PDF');const pdf=await renderDynamicFinalInclusionsPdf(snapshot,{puppeteerLaunchOptions:{executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe'}});fs.writeFileSync(out+'/schedule.pdf',pdf.bytes);
+const parsedPdf=await getDocument({data:new Uint8Array(pdf.bytes)}).promise;
+const firstPageText=(await (await parsedPdf.getPage(1)).getTextContent()).items.map(item=>item.str).join(' ');
+assert.match(firstPageText,/Bill and Mary New/);
+assert.doesNotMatch(firstPageText,/Indicative Rate|Quote Required|Current Price|DRAFT|Document Information|Items|Pricing/);
+assert.equal(pdf.warnings.length,0);
+assert(pdf.validation.pages.every(page=>page.orientation==='landscape'));
+
+fs.writeFileSync(out+'/report.json',JSON.stringify({cover,metrics,pdf:pdf.validation,warnings:pdf.warnings},null,2));console.log(JSON.stringify({metrics,pdf:pdf.validation,warnings:pdf.warnings},null,2));
+}finally{await browser.close();}

@@ -24,7 +24,7 @@ function RoomsSchedule({ analysis, sheetLevels, disabled }) {
         style={{ ...buttonStyle, width: '100%', background: disabled || control.busy ? '#94a3b8' : '#1d4ed8', color: 'white' }}>
         {control.busy ? 'Reading room names…' : rooms.some((room) => room.source === 'plan') ? 'READ ROOMS FROM PLANS AGAIN' : 'READ ROOMS FROM PLANS'}
       </button>
-      <div style={{ color: '#64748b', marginTop: 4 }}>Reads the room names only. Walls, openings and areas already in the takeoff are not changed.</div>
+      <div style={{ color: '#64748b', marginTop: 4 }}>Detects room names and editable boundaries. Review amber boundaries on the plan before using their quantities.</div>
       {control.message && <div id="read-rooms-status" role="status" aria-live="polite" style={{ marginTop: 8, color: control.error ? '#b91c1c' : '#334155' }}>{control.message}</div>}
       {roomsByLevel(rooms).map((group) => (
         <div key={group.level} style={{ marginTop: 10 }} data-rooms-level={group.level}>
@@ -123,7 +123,7 @@ export function AiTakeoffAction({ analysis, schedule, sheetLevels = {}, disabled
             {review.checklist.map((item) => <div key={item.label} style={{ color: '#166534' }}>✓ {item.label}</div>)}
             {report.counts?.alreadyMeasured > 0 && <div style={{ color: '#475569' }}>{report.counts.alreadyMeasured} item{report.counts.alreadyMeasured === 1 ? '' : 's'} already in this takeoff {report.counts.alreadyMeasured === 1 ? 'was' : 'were'} kept, not added twice</div>}
             <div id="ai-takeoff-review-count" style={{ marginTop: 6, fontWeight: 700, color: review.decisions.length ? '#b45309' : '#166534' }}>
-              {review.decisions.length ? `⚠ ${review.decisions.length} item${review.decisions.length === 1 ? '' : 's'} require${review.decisions.length === 1 ? 's' : ''} confirmation` : '✓ Nothing needs confirmation'}
+              {review.decisions.length ? `⚠ ${review.decisions.length} item${review.decisions.length === 1 ? '' : 's'} require${review.decisions.length === 1 ? 's' : ''} confirmation` : rooms.some(room => room.reviewRequired) ? 'Room boundaries require confirmation on the plan' : '✓ Nothing needs confirmation'}
             </div>
           </div>
           {review.decisions.length > 0 && <div style={{ marginTop: 4 }}>

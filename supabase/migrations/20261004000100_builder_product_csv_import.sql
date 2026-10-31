@@ -10,7 +10,8 @@ create table public.builder_product_imports (
   report jsonb
 );
 alter table public.builder_product_imports enable row level security;
-revoke all on public.builder_product_imports from public, authenticated;
+-- Supabase default privileges also grant new objects to anon; revoke it explicitly.
+revoke all on public.builder_product_imports from public, anon, authenticated;
 grant select, insert on public.builder_product_imports to service_role;
 
 create function public.commit_builder_product_import(p_workspace uuid, p_user uuid, p_batch uuid, p_rows integer[])
@@ -69,5 +70,6 @@ begin
   update builder_product_imports set report=result where id=p_batch and workspace_id=p_workspace;
   return result;
 end $$;
-revoke all on function public.commit_builder_product_import(uuid,uuid,uuid,integer[]) from public, authenticated;
+-- p_user is supplied by the caller, so only the server (service_role) may execute this.
+revoke all on function public.commit_builder_product_import(uuid,uuid,uuid,integer[]) from public, anon, authenticated;
 grant execute on function public.commit_builder_product_import(uuid,uuid,uuid,integer[]) to service_role;

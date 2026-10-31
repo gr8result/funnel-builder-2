@@ -4,15 +4,40 @@
 // Usage: node --import ./scripts/register-extensionless-loader.mjs --import ./scripts/register-json-loader.mjs scripts/test-tiling-rooms.mjs
 import assert from "node:assert/strict";
 import { calculateTilingRoom, roomGeometry, tileOrder, tilingRoomInMm } from "../lib/builders/tilingCalculations.js";
-import { addTilingRoom, connectTilingSelectionsToQuotation, migrateLegacyTiling, newTilingRoom, suggestedTilingRooms, tilingSelectionPatch } from "../lib/builders/tilingRooms.js";
+import { addTilingRoom, connectTilingSelectionsToQuotation, migrateLegacyTiling, newTilingRoom, suggestedTilingRooms, TILING_SLOTS, tilingSelectionPatch } from "../lib/builders/tilingRooms.js";
 import { plumbingSelectionPatch } from "../lib/builders/plumbingSelectionPatch.js";
 import { plumbingLineWithTotals } from "../lib/builders/plumbingFixtureAllocation.js";
+import { TILES_REQUIREMENTS } from "../lib/builders/clientSelectionWorkflow.js";
+import { getEffectiveProductCatalogue } from "../lib/product-library/catalogueService.js";
+import { clientSelectionCategoryProducts, clientSelectionCategorySummaries } from "../lib/product-library/plumbingFixtureCatalogue.js";
+import { tileApplicationsFromSupplierData } from "../lib/product-library/tilingCatalogue.js";
 
 const close = (actual, expected, label) => assert.ok(Math.abs(actual - expected) < 0.005, `${label}: ${actual} != ${expected}`);
-const floorTile = { productId: "t-floor", productCode: "TIL-NT-FLOOR", productName: "Floor Tile", brand: "National Tiles", sku: "FLOOR", clientPrice: 39.95, attributes: { boxCoverageM2: 1.44, tileLengthMm: 600, tileWidthMm: 600, tileApplications: ["floor"] } };
-const wallTile = { productId: "t-wall", productCode: "TIL-NT-BELWP100", productName: "Rectified White Gloss Tile", brand: "National Tiles", sku: "BELWP100", clientPrice: 18.95, attributes: { boxCoverageM2: 1.44, tileLengthMm: 600, tileWidthMm: 300, tileApplications: ["wall"] } };
-const catalogue = new Map([floorTile, wallTile].map((p) => [p.productId, p]));
+assert.deepEqual(tileApplicationsFromSupplierData({ area: "Floor, Wall, Feature", categoryType: "Tiles", productName: "Honeycomb Mosaic Tile" }), ["floor", "wall", "feature", "mosaic"], "official area and product type expose feature and mosaic applications");
+assert.equal(TILING_SLOTS.find((entry) => entry.slot === "feature")?.application, "feature");
+assert.equal(TILING_SLOTS.find((entry) => entry.slot === "mosaic")?.application, "mosaic");
+const floorTile = { productId: "t-floor", productCode: "TIL-NT-FLOOR", productName: "Floor Tile", brand: "National Tiles", sku: "FLOOR", clientPrice: 39.95, material: "Ceramic", attributes: { boxCoverageM2: 1.44, tileLengthMm: 600, tileWidthMm: 600, tileApplications: ["floor"] } };
+const wallTile = { productId: "t-wall", productCode: "TIL-NT-BELWP100", productName: "Rectified White Gloss Tile", brand: "National Tiles", sku: "BELWP100", clientPrice: 18.95, material: "Ceramic", attributes: { boxCoverageM2: 1.44, tileLengthMm: 600, tileWidthMm: 300, tileApplications: ["wall"] } };
+const porcelainTile = { ...floorTile, productId: "t-porcelain", productName: "Porcelain Floor Tile", material: "Porcelain" };
+const catalogue = new Map([floorTile, wallTile, porcelainTile].map((p) => [p.productId, p]));
 const productById = (id) => catalogue.get(id) || null;
+const productLibraryTiles = getEffectiveProductCatalogue({ organisationId: "tiling-range-regression", familyKey: "tiles" }).products;
+const tileSummaries = clientSelectionCategorySummaries(TILES_REQUIREMENTS);
+assert.equal(tileSummaries["tiling-rooms"].count, productLibraryTiles.length, "Tiles & Stone summary reflects the complete selectable tile catalogue");
+assert.ok(tileSummaries["feature-tiles"].count > 0, "source-declared feature tiles are selectable");
+assert.ok(tileSummaries.mosaics.count > 0, "mosaic products remain selectable by their source classification");
+for (const [requirementKey, application] of [["floor-tiles", "floor"], ["wall-tiles", "wall"], ["feature-tiles", "feature"], ["external-tiles", "external"], ["mosaics", "mosaic"]]) {
+  assert.equal(tileSummaries[requirementKey].count, productLibraryTiles.filter((product) => product.attributes?.tileApplications?.includes(application)).length, `${requirementKey} summary follows declared tile applications`);
+}
+for (const application of ["feature", "mosaic"]) {
+  const products = productLibraryTiles.filter((product) => product.attributes?.tileApplications?.includes(application));
+  assert.ok(products.length > 0, `${application} products remain selectable`);
+  assert(products.every((product) => product.primaryImageUrl && product.imageStatus === "verified_exact" && product.description && product.priceUnit === "m2"), `${application} records retain verified images, descriptions and per-m² units`);
+  assert(products.every((product) => Number(product.clientPrice) > 0 ? product.priceStatus === "current" : ["quote_required", "price_pending"].includes(product.priceStatus)), `${application} records do not invent missing supplier prices`);
+}
+const floorWasteRange = clientSelectionCategoryProducts({ requirementKey: "floor-waste", areaKey: "tiles-stone" });
+assert.ok(floorWasteRange.length > 0, "the tagged floor waste range is available");
+assert.equal(tileSummaries["floor-waste"].count, floorWasteRange.length, "floor waste summary matches the live product selector");
 
 // Bathroom - Standard tiling, 2800 x 3600 x 2400mm, 900x900 shower (2 walls), 1700 bath, vanity.
 // Every linear dimension is millimetres; areas are m2.
@@ -73,7 +98,13 @@ assert.equal(addTilingRoom(suggested, { type: "ensuite", name: "Ensuite 2" }).ro
 const requirement = { requirementKey: "tiling-rooms", label: "Tiling (room by room)", areaKey: "tiles-stone", areaLabel: "Tiles & Stone", defaultAllowance: 0 };
 const patch = tilingSelectionPatch(requirement, [withTiles, ensuite], { productById, projectId: "p", organisationId: "w" });
 const reloaded = JSON.parse(JSON.stringify(patch));
-assert.deepEqual(reloaded.guidedSelection.tilingRooms, [withTiles, ensuite], "every room input persists");
+for (const [index, expected] of [withTiles, ensuite].entries()) {
+  const saved = reloaded.guidedSelection.tilingRooms[index];
+  for (const key of ["id", "name", "type", "spec", "dimensionUnit", "geometry", "components", "openings", "wastagePct", "products", "floorWastes"]) {
+    assert.deepEqual(saved[key], expected[key], `room ${expected.name}: ${key} persists`);
+  }
+}
+assert.deepEqual([reloaded.guidedSelection.tilingRooms[0].productSnapshots.floor.productId, reloaded.guidedSelection.tilingRooms[0].productSnapshots.floor.clientPrice, reloaded.guidedSelection.tilingRooms[0].productSnapshots.wall.productId], ["t-floor", 39.95, "t-wall"], "selected tile products keep a price and specification snapshot");
 assert.ok(reloaded.selectedCost > 0);
 
 // Quotation Builder + procurement: per-room sections, per-surface lines, labour kept separate.
@@ -84,12 +115,58 @@ assert.ok(bathroomSection && workbook.quotation["TILING - ENSUITE"], "a section 
 const line = (text) => bathroomSection.rows.find((r) => r.item.startsWith(text));
 close(line("Floor tiles").quantity, 11.09, "floor tile quote qty = order area");
 assert.equal(line("Shower wall tiles").unit, "M2");
+assert.equal(line("Floor tiles").productLibrarySnapshot.clientPrice, 39.95, "quote row carries the selected Product Library price snapshot");
 assert.ok(line("Labour - floor tiling") && line("Labour - wall tiling") && line("Labour - skirting tiles") && line("Labour - install linear drains"), "labour quantities by type");
 assert.equal(bathroomSection.rows.filter((r) => /^Floor waste|^Linear drain/.test(r.item)).length, 2);
 const floorItem = workbook.procurement.items.find((i) => i.id === "tiling:room-bathroom:floor");
 assert.equal(floorItem.qty, 8); assert.equal(floorItem.unit, "BOX");
+assert.equal(floorItem.productLibrarySnapshot.clientPrice, 39.95, "procurement carries the selected Product Library price snapshot");
+const originalFloorRate = line("Floor tiles").excelRate;
+const originalSelectionTotal = reloaded.selectedCost;
+catalogue.set("t-floor", { ...floorTile, clientPrice: 99.95 });
+const reopenedSelection = tilingSelectionPatch(requirement, JSON.parse(JSON.stringify(reloaded.guidedSelection.tilingRooms)), { productById }).guidedSelection;
+const reopenedBook = { rooms: [{ rows: [{ id: "row-tiling", guidedRequirementKey: "tiling-rooms", guidedSelection: reopenedSelection }] }] };
+const repricedWorkbook = connectTilingSelectionsToQuotation(workbook, reopenedBook, { productById });
+assert.equal(reopenedSelection.selectedPrice, originalSelectionTotal, "reopen does not silently adopt a later catalogue price");
+assert.equal(repricedWorkbook.quotation["TILING - BATHROOM"].rows.find((row) => row.id === "tiling:room-bathroom:floor").excelRate, originalFloorRate, "quotation rate remains on the saved tile snapshot");
+assert.equal(repricedWorkbook.procurement.items.find((item) => item.id === "tiling:room-bathroom:floor").productLibrarySnapshot.clientPrice, 39.95);
+catalogue.set("t-floor", floorTile);
 const again = connectTilingSelectionsToQuotation(workbook, book, { productById });
 assert.equal(again.quotation["TILING - BATHROOM"].rows.length, bathroomSection.rows.length, "re-running replaces, never duplicates");
+const manualTileWorkbook = { ...workbook, quotation: { ...workbook.quotation, "TILING - BATHROOM": { ...bathroomSection, rows: bathroomSection.rows.map(row => row.id === "tiling:room-bathroom:floor" ? { ...row, quantity: 99, qty: 99, quantityManualOverride: true } : row) } } };
+const refreshedManualTile = connectTilingSelectionsToQuotation(manualTileWorkbook, book, { productById });
+const preservedManualTile = refreshedManualTile.quotation["TILING - BATHROOM"].rows.find(row => row.id === "tiling:room-bathroom:floor");
+assert.deepEqual([preservedManualTile.quantity, preservedManualTile.quantityManualOverride], [99, true]);
+
+const repeatedWasteRoom = {
+  ...newTilingRoom({ type: "bathroom", name: "Repeated Waste", id: "room-repeated-waste" }),
+  floorWastes: [
+    { productId: "fw-insert", productName: "Tile Insert Floor Waste", application: "Shower", quantity: 1, unitPrice: 89, linear: false },
+    { productId: "fw-insert", productName: "Tile Insert Floor Waste", application: "Shower", quantity: 1, unitPrice: 89, linear: false },
+  ],
+};
+const repeatedPatch = tilingSelectionPatch(requirement, [repeatedWasteRoom], { productById });
+const repeatedQuote = connectTilingSelectionsToQuotation({ quotation: {}, procurement: { items: [] } }, { rooms: [{ rows: [{ guidedSelection: repeatedPatch.guidedSelection }] }] }, { productById });
+const repeatedWasteRows = repeatedQuote.quotation["TILING - REPEATED WASTE"].rows.filter((row) => row.id.includes("waste-fw-insert-Shower"));
+assert.equal(repeatedWasteRows.length, 1, "identical product/application allocations become one quote row");
+assert.equal(repeatedWasteRows[0].quantity, 2, "aggregation preserves each allocated unit");
+assert.equal(repeatedQuote.procurement.items.filter((item) => item.id === repeatedWasteRows[0].id).length, 1);
+
+const tileLayerRates = { quotation: { "TILE LAYER": { rows: [
+  { id: "normal-tiles-rate", item: "LAY NORMAL TILES", excelRate: "$50.00" },
+  { id: "porcelain-tiles-rate", item: "LAY PORCELAIN TILES", excelRate: "$70.00" },
+  { id: "floor-wastes-rate", item: "FLOOR WASTES", excelRate: "$45.00" },
+  { id: "mitre-cuts-rate", item: "MITRE CUTS", excelRate: "$40.00" },
+  { id: "speciality-rate", item: "SPECIALITY WORK", excelRate: "$50.00" },
+] } } };
+const pricedTiling = connectTilingSelectionsToQuotation(tileLayerRates, book, { productById });
+const pricedBathroom = pricedTiling.quotation["TILING - BATHROOM"].rows;
+assert.deepEqual([pricedBathroom.find((row) => row.item === "Labour - floor tiling").excelRate, pricedBathroom.find((row) => row.item === "Labour - floor tiling").quoteRequired], ["$50.00", false]);
+assert.equal(pricedBathroom.find((row) => row.item === "Labour - install linear drains").excelRate, "$45.00");
+const porcelainRoom = { ...newTilingRoom({ type: "bathroom", name: "Porcelain Room", id: "room-porcelain" }), geometry: { mode: "rectangle", widthMm: 2400, lengthMm: 3000 }, products: { floor: "t-porcelain" } };
+const porcelainBook = { rooms: [{ rows: [{ guidedSelection: tilingSelectionPatch(requirement, [porcelainRoom], { productById }).guidedSelection }] }] };
+const porcelainQuote = connectTilingSelectionsToQuotation(tileLayerRates, porcelainBook, { productById });
+assert.equal(porcelainQuote.quotation["TILING - PORCELAIN ROOM"].rows.find((row) => row.item === "Labour - floor tiling").excelRate, "$70.00");
 
 // Migration: saved Floor Wastes & Drains allocations move into their rooms; tile picks are kept.
 const wasteRequirement = { requirementKey: "floor-waste", label: "Floor Wastes & Drains", areaKey: "tiles-stone", areaLabel: "Tiles & Stone", unit: "EACH" };

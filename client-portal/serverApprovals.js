@@ -5,8 +5,23 @@ import {
   recordPortalAudit,
   supabaseAdmin,
 } from "./serverShared";
+import { planUpgradeClientResponse } from "../lib/standard-inclusions/upgradeVariation.mjs";
 
 const ALLOWED_ACTIONS = new Set(["approved", "changes_requested", "rejected"]);
+
+async function syncInclusionUpgradeResponse(approval, user) {
+  if (approval.related_table !== "builder_variations" || !approval.related_record_id) return;
+  const { data: variation, error } = await supabaseAdmin.from("builder_variations").select("*")
+    .eq("workspace_id", approval.workspace_id).eq("project_id", approval.project_id).eq("id", approval.related_record_id).maybeSingle();
+  if (error) throw error;
+  if (!variation) throw Error("The related variation could not be found.");
+  const patch = planUpgradeClientResponse(variation, approval.status, { now: approval.responded_at, clientName: approval.response_name, clientEmail: user.email });
+  if (!patch) return;
+  const updated = await supabaseAdmin.from("builder_variations").update(patch)
+    .eq("workspace_id", approval.workspace_id).eq("project_id", approval.project_id).eq("id", variation.id).eq("status", variation.status).select("id").maybeSingle();
+  if (updated.error) throw updated.error;
+  if (!updated.data) throw Error("The variation changed during client acceptance. Retry this response.");
+}
 
 export default async function clientPortalApprovalsHandler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ ok: false, error: "Method not allowed" });
@@ -32,6 +47,11 @@ export default async function clientPortalApprovalsHandler(req, res) {
   if (approvalError) return res.status(500).json({ ok: false, error: approvalError.message });
   if (!approval) return res.status(404).json({ ok: false, error: "Approval item not found." });
   if (!["awaiting_client", "viewed"].includes(approval.status)) {
+    if (approval.status === action && approval.response_user_id === auth.user.id && approval.related_table === "builder_variations") {
+      try { await syncInclusionUpgradeResponse(approval, auth.user); }
+      catch { return res.status(503).json({ ok: false, error: "Your response is saved, but the variation update is pending. Retry the same response; no payment has been recorded." }); }
+      return res.status(200).json({ ok: true, approval });
+    }
     return res.status(409).json({ ok: false, error: "This approval has already been responded to." });
   }
   if (action === "rejected" && approval.allow_reject === false) {
@@ -59,9 +79,13 @@ export default async function clientPortalApprovalsHandler(req, res) {
       updated_at: now,
     })
     .eq("id", approval.id)
+    .in("status", ["awaiting_client", "viewed"])
     .select("*")
-    .single();
+    .maybeSingle();
   if (error) return res.status(500).json({ ok: false, error: error.message });
+  if (!data) return res.status(409).json({ ok: false, error: "This approval changed while you were responding. Reload before continuing." });
+  try { await syncInclusionUpgradeResponse(data, auth.user); }
+  catch { return res.status(503).json({ ok: false, error: "Your response is saved, but the variation update is pending. Retry the same response; no payment has been recorded." }); }
   await recordPortalAudit({
     workspaceId: project.workspace_id,
     projectId: project.id,

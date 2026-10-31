@@ -25,6 +25,8 @@ import {
   normalizeUnsubscribeEmail,
   uniqEmails,
 } from "../../../lib/email/unsubscribe";
+import { hasEmailMarketingConsent } from "../../../lib/marketingConsent";
+import { resolveVerifiedSender } from "../../../lib/email/verifiedSender";
 
 const SUPABASE_URL =
   process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -59,7 +61,7 @@ async function getAccountBranding(userId) {
 
   const { data, error } = await supabaseAdmin
     .from("accounts")
-    .select("business_name, brand_name, company_name, sendgrid_from_name, from_name, sendgrid_from_email, from_email, email")
+    .select("business_name, brand_name, company_name, sendgrid_from_name, from_name, sendgrid_from_email, sendgrid_reply_to, email, dkim_verified, dkim_domain")
     .eq("user_id", userId)
     .maybeSingle();
 
@@ -104,6 +106,13 @@ async function handler(req, res) {
     if (req.method !== "POST")
       return res.status(405).json({ success: false });
 
+    if (req.body?.sendMode === "schedule") {
+      return res.status(501).json({
+        success: false,
+        error: "Scheduled broadcasts are not enabled because no persistent broadcast scheduler is configured. No email was sent.",
+      });
+    }
+
     const user = await getUserFromBearer(req);
     if (!user)
       return res
@@ -114,6 +123,31 @@ async function handler(req, res) {
     const workspaceId = requestWorkspaceId(req);
     const demoState = await getRequestDemoState(req);
     const isDemo = demoState.isDemo;
+
+    if (body.mode === "test") {
+      return res.status(400).json({
+        success: false,
+        error: "Test messages must use the dedicated /api/email/test-send endpoint.",
+      });
+    }
+
+    if (!workspaceId) {
+      return res.status(400).json({ success: false, error: "Select a builder workspace before sending a broadcast." });
+    }
+
+    const { data: membership, error: membershipError } = await supabaseAdmin
+      .from("workspace_members")
+      .select("role, status")
+      .eq("workspace_id", workspaceId)
+      .eq("user_id", user.id)
+      .eq("status", "active")
+      .maybeSingle();
+    if (membershipError) {
+      return res.status(500).json({ success: false, error: "Could not verify workspace access." });
+    }
+    if (!membership) {
+      return res.status(403).json({ success: false, error: "You do not have access to this workspace." });
+    }
 
     const {
       broadcastId,
@@ -133,11 +167,14 @@ async function handler(req, res) {
 
     const accountBranding = await getAccountBranding(user.id);
 
-    // Always send FROM the verified system sender — user's address goes in reply_to
-    const SYSTEM_FROM_EMAIL =
-      process.env.SENDGRID_FROM_EMAIL ||
-      process.env.SENDGRID_FROM ||
-      "no-reply@gr8result.com";
+    const configuredSender = resolveVerifiedSender(
+      accountBranding || {},
+      process.env.SENDGRID_FROM_EMAIL || process.env.SENDGRID_FROM || "",
+    );
+    if (!configuredSender.ok) {
+      return res.status(412).json({ success: false, error: configuredSender.error });
+    }
+    const SYSTEM_FROM_EMAIL = configuredSender.email;
     const SYSTEM_FROM_NAME =
       process.env.SENDGRID_FROM_NAME || "GR8 RESULT";
 
@@ -155,6 +192,7 @@ async function handler(req, res) {
     // Reply goes to the user's own address if they provided one
     const replyToEmail =
       (replyTo && isEmail(replyTo) && replyTo) ||
+      (accountBranding?.sendgrid_reply_to && isEmail(accountBranding.sendgrid_reply_to) && accountBranding.sendgrid_reply_to) ||
       (fromEmail && isEmail(fromEmail) && fromEmail) ||
       (accountBranding?.email && isEmail(accountBranding.email) && accountBranding.email) ||
       (user.email && isEmail(user.email) && user.email) ||
@@ -166,22 +204,85 @@ async function handler(req, res) {
         error: "Missing subject or html",
       });
 
-    let finalBroadcastId = broadcastId;
-    const normalizedAudienceType = audienceType === "list" ? "list" : "emails";
+    const normalizedAudienceType = String(audienceType || "").trim().toLowerCase();
+    if (!["list", "emails"].includes(normalizedAudienceType)) {
+      return res.status(400).json({ success: false, error: "Choose a valid broadcast audience." });
+    }
     const normalizedAudienceValue = String(audience || "").trim();
+    // ==========================================
+    // GET RECIPIENTS
+    // ==========================================
+
+    let finalRecipients = [];
+    if (normalizedAudienceType === "emails") {
+      const requested = Array.isArray(recipients) && recipients.length
+        ? recipients
+        : normalizedAudienceValue.split(/[,;\n]+/);
+      const requestedEmails = [...new Set(requested.map((email) => String(email || "").trim().toLowerCase()).filter(isEmail))];
+      if (!requestedEmails.length) {
+        return res.status(400).json({ success: false, error: "Enter at least one valid email address." });
+      }
+      const { data: contacts, error: contactsError } = await supabaseAdmin
+        .from("leads")
+        .select("email,email_marketing_consent,email_marketing_opt_out")
+        .eq("workspace_id", workspaceId)
+        .in("email", requestedEmails);
+      if (contactsError) {
+        return res.status(503).json({ success: false, error: "Email marketing consent data is unavailable. Apply the marketing consent migration before sending." });
+      }
+      const consented = new Set((contacts || []).filter(hasEmailMarketingConsent).map((contact) => String(contact.email || "").trim().toLowerCase()));
+      if (requestedEmails.some((email) => !consented.has(email))) {
+        return res.status(403).json({ success: false, error: "Every recipient must be a CRM contact with recorded email marketing consent and no opt-out." });
+      }
+      finalRecipients = requestedEmails;
+    } else {
+      if (!normalizedAudienceValue) {
+        return res.status(400).json({ success: false, error: "Choose a contact list before sending." });
+      }
+      const { data: list, error: listError } = await supabaseAdmin
+        .from("lead_lists")
+        .select("id")
+        .eq("id", normalizedAudienceValue)
+        .eq("workspace_id", workspaceId)
+        .maybeSingle();
+      if (listError) {
+        return res.status(500).json({ success: false, error: "Could not verify the selected contact list." });
+      }
+      if (!list) {
+        return res.status(404).json({ success: false, error: "The selected list was not found in this workspace." });
+      }
+      const { data: leads, error: leadsError } = await supabaseAdmin
+        .from("leads")
+        .select("email,email_marketing_consent,email_marketing_opt_out")
+        .eq("workspace_id", workspaceId)
+        .eq("list_id", normalizedAudienceValue);
+      if (leadsError) {
+        return res.status(503).json({ success: false, error: "Email marketing consent data is unavailable. Apply the marketing consent migration before sending." });
+      }
+      finalRecipients = [...new Set((leads || []).filter(hasEmailMarketingConsent).map((lead) => String(lead.email || "").trim().toLowerCase()).filter(isEmail))];
+    }
+
+    finalRecipients = await filterSuppressedRecipients(user.id, finalRecipients);
+
+    if (!finalRecipients.length)
+      return res.status(400).json({
+        success: false,
+        error: "No recipients available. The audience is empty or all matching emails are unsubscribed.",
+      });
+
+    let finalBroadcastId = broadcastId;
     const broadcastAudienceFields = {
       audience_type: normalizedAudienceType,
-      list_id: normalizedAudienceType === "list" && normalizedAudienceValue ? normalizedAudienceValue : null,
-      to_field: normalizedAudienceType === "emails" && normalizedAudienceValue ? normalizedAudienceValue : null,
+      list_id: normalizedAudienceType === "list" ? normalizedAudienceValue : null,
+      to_field: normalizedAudienceType === "emails" ? normalizedAudienceValue : null,
     };
 
-    // CREATE BROADCAST
     if (!finalBroadcastId) {
       const { data, error } = await supabaseAdmin
         .from("email_broadcasts")
         .insert({
           user_id: user.id,
-          workspace_id: workspaceId || null,
+          workspace_id: workspaceId,
           subject,
           from_name: senderName,
           from_email: senderEmail,
@@ -196,15 +297,10 @@ async function handler(req, res) {
         .select("id")
         .single();
 
-      if (error)
-        return res.status(500).json({
-          success: false,
-          error: error.message,
-        });
-
+      if (error) return res.status(500).json({ success: false, error: error.message });
       finalBroadcastId = data.id;
     } else {
-      await supabaseAdmin
+      const { data: updated, error } = await supabaseAdmin
         .from("email_broadcasts")
         .update({
           subject,
@@ -218,40 +314,14 @@ async function handler(req, res) {
           ...broadcastAudienceFields,
         })
         .eq("id", finalBroadcastId)
-        .eq("user_id", user.id);
+        .eq("user_id", user.id)
+        .eq("workspace_id", workspaceId)
+        .select("id");
+      if (error) return res.status(500).json({ success: false, error: error.message });
+      if (!updated?.length) {
+        return res.status(404).json({ success: false, error: "Broadcast not found in this workspace. Nothing was sent." });
+      }
     }
-
-    // ==========================================
-    // GET RECIPIENTS
-    // ==========================================
-
-    let finalRecipients = [];
-
-    // 1️⃣ Use explicit recipients if passed
-    if (Array.isArray(recipients) && recipients.length) {
-      finalRecipients = recipients.filter(isEmail);
-    }
-
-    // 2️⃣ Otherwise send to ALL leads for user
-    if (!finalRecipients.length) {
-      let leadQuery = supabaseAdmin
-        .from("leads")
-        .select("email");
-      leadQuery = workspaceId ? leadQuery.eq("workspace_id", workspaceId) : leadQuery.eq("user_id", user.id);
-      const { data } = await leadQuery;
-
-      finalRecipients = (data || [])
-        .map((r) => r.email)
-        .filter(isEmail);
-    }
-
-    finalRecipients = await filterSuppressedRecipients(user.id, finalRecipients);
-
-    if (!finalRecipients.length)
-      return res.status(400).json({
-        success: false,
-        error: "No recipients available. The audience is empty or all matching emails are unsubscribed.",
-      });
 
     let emailGuard = null;
     if (!isDemo) {

@@ -1,4 +1,5 @@
 {
+  "buildCommand": "node scripts/check-landing-pages-readiness.mjs --project-ref=bvtxfphktypdqmlnveqf --build",
   "functions": {
     "pages/api/social/ai-generate-images.js": {
       "maxDuration": 60
@@ -8,6 +9,10 @@
     }
   },
   "crons": [
+    {
+      "path": "/api/landing-pages/cron-sync",
+      "schedule": "30 2 * * *"
+    },
     {
       "path": "/api/automation/engine/tick",
       "schedule": "0 2 * * *"

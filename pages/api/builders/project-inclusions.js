@@ -50,4 +50,4 @@ async function handler(req, res) {
   }
 }
 
-export default withWorkspace(handler);
+export default withWorkspace(handler, { authTimeoutMs: 8000 });

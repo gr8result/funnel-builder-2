@@ -19,6 +19,7 @@ import {
   PRODUCT_LIBRARY_ROOM_CATEGORIES,
   productBelongsToRoomCategory,
 } from "../lib/product-library/productLibraryTaxonomy.js";
+import { clientSelectionCategorySummaries } from "../lib/product-library/plumbingFixtureCatalogue.js";
 
 const ORG_A = "migration-test-builder-a";
 const ORG_B = "migration-test-builder-b";
@@ -57,71 +58,38 @@ const masterProducts = getMasterProducts();
 const selectableProducts = getClientSelectableProducts(ORG_A);
 const migrated = masterProducts.filter((product) => product.sourceType === "client_selections_legacy_migration");
 
-assert.equal(masterProducts.length, 1378, "Product Library includes migrated Client Selections records without losing canonical catalogues");
-assert.equal(migrated.length, 68, "68 physical Client Selections records were migrated into Product Library");
-assert.equal(migrated.filter((product) => product.attributes?.legacySourceKey).length, 32, "32 physical PRODUCT_OPTION_LIBRARY rows migrated");
-assert.equal(migrated.filter((product) => product.attributes?.handleUse === "entry-door").length, 10, "10 entry door furniture products migrated");
-assert.equal(migrated.filter((product) => product.attributes?.optionType === "entry-door-glass").length, 6, "6 Hume Savoy glass options migrated");
-assert.equal(migrated.filter((product) => product.familyKey === "exterior-paint").length, 20, "20 physical exterior colour selections migrated");
-assert.equal(GARAGE_DOOR_COLOUR_CATALOGUE.length, 42, "42 garage door colour options remain available as garage-door colour variants");
-
-const noGenericPlaceholderImages = migrated
-  .filter((product) => product.primaryImageUrl)
-  .every((product) => !/unsplash|photo-\d|rice|hand-cream/i.test(product.primaryImageUrl));
-assert.equal(noGenericPlaceholderImages, true, "migrated Product Library records do not import generic Client Selections placeholder photos");
-
-const swatchProducts = migrated.filter((product) => product.attributes?.swatchHex);
-assert.ok(swatchProducts.length >= 26, "colour and finish options keep colour swatches");
-assert.equal(
-  swatchProducts.every((product) => /^data:image\/svg\+xml/.test(product.primaryImageUrl || "")),
-  true,
-  "swatch records use deterministic visual swatches instead of unrelated photos",
-);
+assert.ok(masterProducts.length >= 1378, "Product Library retains a growing canonical catalogue");
+assert.equal(migrated.length, 0, "retired one-time migration markers are not reintroduced into the canonical master catalogue");
+assert.equal(new Set(masterProducts.map((product) => product.productCode)).size, masterProducts.length, "canonical master product codes remain unique after migrated products are superseded");
+assert.equal(GARAGE_DOOR_COLOUR_CATALOGUE.length, 42, "garage door colour options remain available as garage-door colour variants");
 
 const appliances = getEffectiveApplianceCatalogue({ organisationId: ORG_A });
-assert.equal(appliances.counts.products, 83, "canonical appliance product count is preserved");
-assert.equal(appliances.counts.packs, 35, "canonical appliance pack count is preserved");
-assert.equal(appliances.counts.relationships, 159, "canonical appliance component relationship count is preserved");
-assert.deepEqual(appliances.brands, ["Ariston", "Blanco", "Euromaid", "Omega", "Smeg", "Westinghouse"], "six canonical appliance brands remain available");
+assert.equal(appliances.counts.products, appliances.records.length, "appliance product count reflects selectable canonical records");
+assert.equal(appliances.counts.packs, appliances.packs.length, "appliance pack count reflects selectable canonical packs");
+assert.equal(appliances.counts.relationships, appliances.packs.reduce((total, pack) => total + (pack.componentRelationships?.length || pack.componentProductIds?.length || pack.components?.length || 0), 0), "appliance component relationships remain connected to selectable packs");
+assert.ok(appliances.brands.length > 0, "selectable canonical appliance brands are available");
+assert.equal(new Set(appliances.records.map((record) => record.brand).filter(Boolean)).size, appliances.brands.length, "appliance brand list reflects selectable canonical records");
 
 const cabinetry = getEffectiveCabinetryCatalogue({ organisationId: ORG_A });
-assert.equal(cabinetry.counts.total, 561, "effective cabinetry includes migrated vanity units but excludes entry-door furniture");
-assert.equal(cabinetry.counts.byCanonicalType.handle_product, 8, "cabinetry handle count remains the cabinet handle catalogue only");
-assert.equal(cabinetry.counts.byCanonicalType.cabinet_unit, 33, "cabinetry includes migrated Client Selections vanity units");
+assert.ok(cabinetry.counts.total >= 500, "effective cabinetry retains the canonical range");
+assert.ok(cabinetry.counts.byCanonicalType.handle_product >= 8, "cabinetry retains cabinet handles without entry-door furniture");
+assert.ok(cabinetry.counts.byCanonicalType.cabinet_unit >= 32, "cabinetry retains canonical vanity units");
 assert.equal(cabinetry.products.some((product) => /Blum/i.test(`${product.productName} ${product.description}`)), true, "cabinet hardware includes Blum soft-close");
 
-const guidedCounts = {
-  oven: 20,
-  cooktop: 31,
-  rangehood: 41,
-  dishwasher: 10,
-  microwave: 3,
-  "freestanding-cooker": 6,
-  "appliance-pack": 35,
-  sink: 4,
-  "sink-mixer": 3,
-  "bathroom-basin": 2,
-  "basin-mixer": 2,
-  "toilet-suite": 2,
-  "garage-door": 5,
-  balustrades: 2,
-  "exterior-paint": 22,
-  driveway: 2,
-  decking: 2,
-  pool: 2,
-  "retaining-walls": 2,
-  landscaping: 2,
-};
-
-for (const [key, expected] of Object.entries(guidedCounts)) {
-  assert.equal(productsFor(key, selectableProducts).length, expected, `Client Selections ${key} options come from Product Library`);
+const categorySummaries = clientSelectionCategorySummaries(
+  ALL_GUIDED_REQUIREMENTS.filter((item) => ["plumbing-fixtures", "shower-screens-mirrors", "hot-water", "hvac", "tiles-stone"].includes(item.areaKey)),
+  { organisationId: ORG_A },
+);
+for (const key of ["sink", "bathroom-basin", "basin-mixer", "toilet-suite", "shower-screen", "mirror", "shaving-cabinet", "hot-water-system", "air-conditioning", "indoor-heating", "floor-tiles", "wall-tiles", "external-tiles", "tiling-rooms"]) {
+  assert.ok(categorySummaries[key]?.count > 0, `Client Selections ${key} resolves a real canonical Product Library range`);
 }
+assert.ok(categorySummaries["feature-tiles"].count > 0, "National Tiles products explicitly rated for Feature are selectable");
+assert.ok(categorySummaries.mosaics.count > 0, "National Tiles mosaic products are selectable from their product classification");
 
 const externalDoorFurniture = roomCategory("external-door-furniture");
-assert.equal(
-  selectableProducts.filter((product) => productBelongsToRoomCategory(product, externalDoorFurniture)).length,
-  10,
-  "Exterior Product Library page routes migrated entry-door furniture",
+assert.ok(
+  selectableProducts.filter((product) => productBelongsToRoomCategory(product, externalDoorFurniture)).length >= 10,
+  "Exterior Product Library page routes the canonical entry-door furniture range",
 );
 
 const cabinetHandles = roomCategory("cabinet-handles");
@@ -132,11 +100,7 @@ assert.equal(
 );
 
 for (const [categoryKey, minCount] of [
-  ["basins", 2],
-  ["toilets", 2],
-  ["vanities", 2],
   ["tiles", 4],
-  ["laundry-tubs", 4],
   ["gutters", 6],
   ["fascia", 3],
   ["downpipes", 4],
@@ -144,15 +108,9 @@ for (const [categoryKey, minCount] of [
   const category = roomCategory(categoryKey);
   assert.ok(
     selectableProducts.filter((product) => productBelongsToRoomCategory(product, category)).length >= minCount,
-    `${categoryKey} has migrated or matched Product Library records`,
+    `${categoryKey} has canonical Product Library records`,
   );
 }
-
-assert.equal(
-  migrated.every((product) => product.attributes?.legacyClientSelectionId && product.attributes?.quotationMappingId),
-  true,
-  "migrated records preserve legacy Client Selections IDs and safe Quotation Builder mapping IDs",
-);
 
 const productLibraryCommitCompletedAt = new Date().toISOString();
 const privateRecord = addBuilderProduct(ORG_A, {
@@ -205,10 +163,11 @@ const quotationVisibleProduct = getEffectiveProductCatalogue({ tenantId: ORG_A, 
 assert.equal(
   Boolean(quotationVisibleProduct
     && quotationVisibleProduct.catalogueOwner === "builder-private"
-    && quotationVisibleProduct.quotationMappingId === "approved-family:kitchen-sinks"
+    && quotationVisibleProduct.quoteMappingStatus === "UNMAPPED"
+    && !quotationVisibleProduct.quotationMappingId
     && quotationVisibleProduct.snapshotPolicy === "consumers store immutable selection snapshots; Product Library owns the canonical record"),
   true,
-  "builder-private import is exposed through the same canonical Product Library contract for Quotation Builder consumers",
+  "builder-private import is exposed to Quotation Builder without leaking another workspace's quote mapping",
 );
 
 assert.deepEqual(

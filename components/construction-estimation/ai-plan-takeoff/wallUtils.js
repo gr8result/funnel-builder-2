@@ -174,7 +174,7 @@ export function generateOffsetPolygon(nodes, thicknessMm, alignMode, pixelsPerMm
   const offsetSide = [];
 
   for (let i = 0; i < pts.length; i++) {
-    baseSide.push({ x: pts[i].x, y: pts[i].y });
+    // Centreline traces use equal offsets on both faces.
     let offsetVector = { x: 0, y: 0 };
 
     if (i === 0) {
@@ -200,9 +200,11 @@ export function generateOffsetPolygon(nodes, thicknessMm, alignMode, pixelsPerMm
       }
     }
 
+    const centered = alignMode === 'center';
+    baseSide.push({ x: pts[i].x - (centered ? offsetVector.x / 2 : 0), y: pts[i].y - (centered ? offsetVector.y / 2 : 0) });
     offsetSide.push({
-      x: pts[i].x + offsetVector.x,
-      y: pts[i].y + offsetVector.y,
+      x: pts[i].x + offsetVector.x * (centered ? 0.5 : 1),
+      y: pts[i].y + offsetVector.y * (centered ? 0.5 : 1),
     });
   }
 

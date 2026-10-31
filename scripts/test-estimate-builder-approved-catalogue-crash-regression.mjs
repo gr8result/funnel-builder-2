@@ -5,13 +5,15 @@ const selectionsSource = await readFile(new URL("../pages/modules/builders/selec
 const workbookSource = await readFile(new URL("../components/estimate-builder/EstimateBuilderWorkbook.js", import.meta.url), "utf8");
 const apiSource = await readFile(new URL("../pages/api/product-library/approved-client-selection-catalogue.js", import.meta.url), "utf8");
 
-assert.ok(apiSource.includes("req.query.organisationId || req.query.workspaceId"), "Approved catalogue API must accept organisationId or workspaceId");
+assert.ok(apiSource.includes("withWorkspace(handler)"), "Approved catalogue API must resolve its workspace through the authenticated workspace middleware");
+assert.ok(apiSource.includes("req.workspaceId !== CURRENT_BUILDER_WORKSPACE_ID"), "Approved catalogue API must not expose the current builder's quote sheet to another workspace");
+assert.ok(apiSource.includes("organisationId: req.workspaceId"), "Approved catalogue rows must be scoped to the authenticated workspace");
 assert.ok(apiSource.includes("res.status(200).json"), "Approved catalogue API must return a 200 payload on successful catalogue build");
 assert.ok(apiSource.includes("products: catalogue.products"), "Approved catalogue API payload must include products");
 
 assert.ok(!selectionsSource.includes('throw new Error("Approved catalogue API failed.")'), "Client Selections must not hard-throw on approved catalogue API failure");
-assert.ok(selectionsSource.includes("setApprovedCatalogueError(message)"), "Client Selections must store a recoverable approved catalogue error");
-assert.ok(selectionsSource.includes("Existing master catalogue products remain available."), "Client Selections must show a recoverable inline catalogue warning");
+assert.ok(selectionsSource.includes("setApprovedCatalogueError(loadError?.message || 'Approved quotation catalogue could not be loaded.')"), "Client Selections must store the current recoverable approved catalogue error");
+assert.ok(selectionsSource.includes("Existing master products and saved selections remain available."), "Client Selections must show a recoverable inline catalogue warning");
 assert.ok(!selectionsSource.includes("setApprovedCatalogueProducts([]);\n      setApprovedCatalogueAudit(null);"), "Client Selections must preserve last valid approved catalogue state on failure");
 assert.ok(!selectionsSource.includes('console.error("[Client Selections] approved catalogue load'), "Handled approved catalogue failures must not surface through Next runtime error overlay logging");
 

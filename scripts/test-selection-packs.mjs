@@ -5,8 +5,8 @@
 import assert from "node:assert/strict";
 import { getEffectiveProductCatalogue } from "../lib/product-library/catalogueService.js";
 import { guidedRequirementByKey, statusForRequirement } from "../lib/builders/clientSelectionWorkflow.js";
-import { plumbingLinesFromSelection, upsertPlumbingLine } from "../lib/builders/plumbingFixtureAllocation.js";
-import { plumbingSelectionPatch } from "../lib/builders/plumbingSelectionPatch.js";
+import { plumbingLineWithTotals, plumbingLinesFromSelection, plumbingLocationKey, upsertPlumbingLine } from "../lib/builders/plumbingFixtureAllocation.js";
+import { normalizeSelectionPackRoomAliases, plumbingSelectionPatch } from "../lib/builders/plumbingSelectionPatch.js";
 import { connectAllocatedSelectionsToQuotation } from "../lib/builders/allocatedSelectionQuotation.js";
 import { quoteQuantity, quotationSectionsForFinalBoq } from "../lib/construction-estimation/finalQuotationBoq.js";
 import {
@@ -19,6 +19,7 @@ import {
   getBuilderSelectionPackConfig,
   selectedSelectionPack,
   selectionPackChanges,
+  selectionPackLines,
   selectionPackComponentAlternatives,
   selectionPackRooms,
   substituteSelectionPackComponent,
@@ -55,6 +56,17 @@ assert.equal(generateCoordinatedPacks([], undefined).length, 0);
 const rooms = (names) => selectionPackRooms(GROUP, names);
 assert.equal(rooms(["Kitchen", "Laundry", "Main Bathroom", "Ensuite", "Powder Room", "Bedroom 1"]).quantity, 2);
 assert.equal(rooms(["Bathroom", "Ensuite", "Ensuite 2", "WC"]).quantity, 3);
+const numberedEnsuiteRooms = rooms(["Main Bathroom", "Ensuite", "2nd BEDROOM ENSUITE", "B2 Ensuite"]);
+assert.equal(plumbingLocationKey("2nd BEDROOM ENSUITE"), plumbingLocationKey("B2 Ensuite"));
+assert.equal(numberedEnsuiteRooms.quantity, 3, "2nd Bedroom Ensuite and B2 Ensuite are one third bathroom location");
+const numberedEnsuitePack = selectionPackLines(standard, numberedEnsuiteRooms.rooms, { allowancePerPack: offered.allowancePerPack });
+assert(numberedEnsuitePack.every(({ line }) => line.quantity === 3 && line.allocations.length === 3 && line.selectionPack.packQuantity === 3));
+const directAliasPack = selectionPackLines(standard, [
+  { label: "Main Bathroom", type: "bathroom", packs: 1 }, { label: "Ensuite", type: "ensuite", packs: 1 },
+  { label: "2nd BEDROOM ENSUITE", type: "ensuite", packs: 1 }, { label: "B2 Ensuite", type: "ensuite", packs: 1 },
+], { allowancePerPack: offered.allowancePerPack });
+assert(directAliasPack.every(({ line }) => line.quantity === 3 && line.allocations.length === 3 && line.selectionPack.packQuantity === 3));
+assert(numberedEnsuitePack.every(({ line }) => line.productId === standard.components.find((component) => component.requirementKey === line.selectionPack.componentKey)?.productId), "alias resolution preserves every selected pack product");
 assert.equal(rooms(["Main Bathroom", "Bathroom", "Bathroom Vanity", "Ensuite", "Ensuite Vanity"]).quantity, 2, "one room named three ways is one room");
 assert.equal(rooms(["Powder Room", "WC", "Laundry"]).quantity, 0);
 assert.equal(selectionPackRooms(GROUP, ["Main Bathroom", "Ensuite", "Bathroom Accessories"], {}, { notRooms: ["Bathroom Accessories", "Plumbing Fixtures"] }).quantity, 2, "a selection category is not a bathroom");
@@ -75,6 +87,48 @@ const commit = (changes) => {
     book = { rooms: [{ rows }] };
   });
 };
+
+// A previously saved pack may carry both spellings even after room-key rules are corrected.
+const legacyPackLines = selectionPackLines(standard, numberedEnsuiteRooms.rooms, { allowancePerPack: offered.allowancePerPack }).map(({ requirementKey, line }) => ({
+  requirementKey,
+  line: {
+    ...line,
+    allocations: [
+      { locationKey: "main-bathroom", location: "Main Bathroom", quantity: 1 },
+      { locationKey: "ensuite", location: "Ensuite", quantity: 1 },
+      { locationKey: "2nd-bedroom-ensuite", location: "2nd BEDROOM ENSUITE", quantity: 1 },
+      { locationKey: "b2-ensuite", location: "B2 Ensuite", quantity: 1 },
+    ],
+    selectionPack: { ...line.selectionPack, packQuantity: 4 },
+  },
+}));
+const legacyPackBook = { rooms: [{ id: "guided-bathroom-accessories", name: "Bathroom Accessories", rows: legacyPackLines.map(({ requirementKey, line }) => {
+  const requirement = guidedRequirementByKey(requirementKey);
+  const built = plumbingSelectionPatch(requirement, [plumbingLineWithTotals({ ...line, allocations: line.allocations.map((allocation, index) => ({ ...allocation, locationKey: ["main-bathroom", "ensuite", "2nd-bedroom-ensuite", "b2-ensuite"][index] })), selectionPack: { ...line.selectionPack, packQuantity: 4 } })], null);
+  return { id: requirementKey, guidedRequirementKey: requirementKey, ...built.patch };
+}) }] };
+const normalizedPackBook = normalizeSelectionPackRoomAliases(legacyPackBook);
+const normalizedPackLines = normalizedPackBook.rooms[0].rows.map((row) => plumbingLinesFromSelection(row.guidedSelection)[0]);
+assert(normalizedPackLines.every((line) => line.quantity === 3 && line.allocations.length === 3 && line.selectionPack.packQuantity === 3));
+assert(normalizeSelectionPackRoomAliases(normalizedPackBook) === normalizedPackBook, "saved room alias migration is idempotent");
+const normalizedSelectedPack = selectedSelectionPack(Object.fromEntries(normalizedPackLines.map((line) => [line.selectionPack.componentKey, [line]])), GROUP);
+assert.equal(normalizedSelectedPack.packQuantity, 3);
+assert.equal(normalizedSelectedPack.selectedTotal, standard.pricePerPack * 3);
+assert.equal(normalizedSelectedPack.allowanceTotal, offered.allowancePerPack * 3);
+assert.equal(normalizedSelectedPack.variation, (standard.pricePerPack - offered.allowancePerPack) * 3);
+const normalizedWorkbook = connectAllocatedSelectionsToQuotation({ quotation: {}, procurement: { items: [] } }, normalizedPackBook);
+const normalizedQuoteRows = Object.values(normalizedWorkbook.quotation).flatMap((group) => group.rows || []).filter((row) => row.selectionPack);
+const normalizedBoqRows = quotationSectionsForFinalBoq(normalizedWorkbook.quotation).flatMap((entry) => entry.rows).filter((row) => row.selectionPack);
+const normalizedProcurement = normalizedWorkbook.procurement.items.filter((item) => item.selectionPack);
+assert.equal(normalizedQuoteRows.length, 4); assert(normalizedQuoteRows.every((row) => row.qty === 3 && row.selectionPack.packQuantity === 3));
+assert.equal(normalizedBoqRows.length, 4); assert(normalizedBoqRows.every((row) => quoteQuantity(row) === 3));
+assert.equal(normalizedProcurement.length, 4); assert(normalizedProcurement.every((item) => item.qty === 3));
+const reopenedBook = normalizeSelectionPackRoomAliases(JSON.parse(JSON.stringify(normalizedPackBook)));
+const reopenedWorkbook = connectAllocatedSelectionsToQuotation(JSON.parse(JSON.stringify(normalizedWorkbook)), reopenedBook);
+const reopenedLines = reopenedBook.rooms[0].rows.map((row) => plumbingLinesFromSelection(row.guidedSelection)[0]);
+assert.deepEqual(reopenedLines.map((line) => [line.productId, line.quantity, line.variation, line.allocations]), normalizedPackLines.map((line) => [line.productId, line.quantity, line.variation, line.allocations]), "save/reopen preserves distinct locations, products and variations");
+assert.deepEqual(reopenedWorkbook.quotation, normalizedWorkbook.quotation, "repeated hydration does not restore the fourth accessory");
+assert.deepEqual(reopenedWorkbook.procurement, normalizedWorkbook.procurement, "repeated hydration keeps procurement quantities aligned");
 
 // A towel rail the client had already chosen individually must survive every pack operation.
 const ownRail = products.find((product) => product.productName === "Vela 600mm Single Towel Rail");

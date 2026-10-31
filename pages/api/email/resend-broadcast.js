@@ -23,6 +23,9 @@ import { createClient } from "@supabase/supabase-js";
 import { guardEmailSend } from "../../../lib/emailValidation";
 import { withAuth } from "../../../lib/withWorkspace";
 import { isDemoWorkspace, recordDemoAction } from "../../../lib/demoWorkspace";
+import { hasEmailMarketingConsent } from "../../../lib/marketingConsent";
+import { resolveVerifiedSender } from "../../../lib/email/verifiedSender";
+import { buildUnsubscribeUrls, injectUnsubscribeUrl, normalizeUnsubscribeEmail, uniqEmails } from "../../../lib/email/unsubscribe";
 
 const SUPABASE_URL =
   process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -46,7 +49,7 @@ async function getAccountBranding(userId) {
 
   const { data, error } = await supabase
     .from("accounts")
-    .select("business_name, brand_name, company_name, sendgrid_from_name, from_name, email")
+    .select("business_name, brand_name, company_name, sendgrid_from_name, from_name, email, sendgrid_from_email, dkim_verified, dkim_domain")
     .eq("user_id", userId)
     .maybeSingle();
 
@@ -61,6 +64,7 @@ async function handler(req, res) {
 
   try {
     const { broadcastId } = req.body || {};
+    const user = req.user;
     if (!broadcastId) {
       return res.status(400).json({ success: false, error: "Missing broadcastId" });
     }
@@ -70,25 +74,39 @@ async function handler(req, res) {
       .from("email_broadcasts")
       .select("*")
       .eq("id", broadcastId)
+      .eq("user_id", user.id)
       .single();
 
     if (loadErr || !broadcast) {
       return res.status(404).json({ success: false, error: "Broadcast not found" });
     }
-    const workspaceId = broadcast.workspace_id || req.workspaceId || null;
+    // No fallback: a broadcast without its own workspace is quarantined legacy data and cannot be resent.
+    const workspaceId = broadcast.workspace_id || null;
+    if (!workspaceId) return res.status(400).json({ success: false, error: "Broadcast is not linked to a builder workspace." });
+    const { data: membership, error: membershipError } = await supabase
+      .from("workspace_members")
+      .select("status")
+      .eq("workspace_id", workspaceId)
+      .eq("user_id", user.id)
+      .eq("status", "active")
+      .maybeSingle();
+    if (membershipError) return res.status(500).json({ success: false, error: "Could not verify workspace access." });
+    if (!membership) return res.status(403).json({ success: false, error: "You do not have access to this broadcast workspace." });
     const isDemo = req.isDemoWorkspace || await isDemoWorkspace(workspaceId);
 
     const subject = broadcast.subject;
     const html = broadcast.html_content;
-    const SYSTEM_FROM_EMAIL =
-      process.env.SENDGRID_FROM_EMAIL ||
-      process.env.SENDGRID_FROM ||
-      "no-reply@gr8result.com";
     const SYSTEM_FROM_NAME =
       process.env.SENDGRID_FROM_NAME || "GR8 RESULT";
     const accountBranding = await getAccountBranding(broadcast.user_id);
 
-    const senderEmail = SYSTEM_FROM_EMAIL;
+    const verifiedSender = resolveVerifiedSender(
+      accountBranding || {},
+      process.env.SENDGRID_FROM_EMAIL || process.env.SENDGRID_FROM || "",
+    );
+    if (!verifiedSender.ok) return res.status(412).json({ success: false, error: verifiedSender.error });
+
+    const senderEmail = verifiedSender.email;
     const senderName =
       String(
         broadcast.from_name ||
@@ -102,7 +120,7 @@ async function handler(req, res) {
     const replyToEmail =
       (broadcast.reply_to && isEmail(broadcast.reply_to) && broadcast.reply_to) ||
       (accountBranding?.email && isEmail(accountBranding.email) && accountBranding.email) ||
-      SYSTEM_FROM_EMAIL;
+      senderEmail;
 
     if (!subject || !html) {
       return res.status(400).json({
@@ -115,30 +133,38 @@ async function handler(req, res) {
     let recipients = [];
 
     if (broadcast.audience_type === "list" && broadcast.list_id) {
-      const { data: leads } = await supabase
+      const { data: leads, error: leadsError } = await supabase
         .from("leads")
-        .select("email")
+        .select("email,email_marketing_consent,email_marketing_opt_out")
+        .eq("workspace_id", workspaceId)
         .eq("list_id", broadcast.list_id)
         .limit(20000);
-
-      recipients = (leads || []).map((r) => r.email);
+      if (leadsError) return res.status(503).json({ success: false, error: "Consent data is unavailable. Apply the marketing consent migration before resending." });
+      recipients = (leads || []).filter(hasEmailMarketingConsent).map((r) => r.email);
     } else if (broadcast.to_field) {
-      recipients = String(broadcast.to_field)
+      const requested = String(broadcast.to_field)
         .split(/[,;\n]/)
-        .map((x) => x.trim());
+        .map((x) => normalizeUnsubscribeEmail(x));
+      const { data: leads, error: leadsError } = await supabase
+        .from("leads")
+        .select("email,email_marketing_consent,email_marketing_opt_out")
+        .eq("workspace_id", workspaceId)
+        .in("email", requested);
+      if (leadsError) return res.status(503).json({ success: false, error: "Consent data is unavailable. Apply the marketing consent migration before resending." });
+      recipients = (leads || []).filter(hasEmailMarketingConsent).map((lead) => lead.email);
     }
 
-    if (!recipients.length) {
-      const { data: priorSends } = await supabase
-        .from("email_sends")
-        .select("recipient_email,email")
-        .eq("broadcast_id", broadcastId)
-        .limit(20000);
-
-      recipients = (priorSends || []).map((row) => row.recipient_email || row.email || "");
-    }
-
-    recipients = recipients.filter(isEmail);
+    recipients = uniqEmails(recipients).filter(isEmail);
+    const { data: suppressionRows, error: suppressionError } = await supabase
+      .from("email_sends")
+      .select("recipient_email,email,to_email,unsubscribed,status")
+      .eq("user_id", broadcast.user_id)
+      .in("recipient_email", recipients);
+    if (suppressionError && recipients.length) return res.status(503).json({ success: false, error: "Unsubscribe suppression could not be verified; resend was stopped." });
+    const suppressed = new Set((suppressionRows || [])
+      .filter((row) => row.unsubscribed || ["unsubscribe", "unsubscribed"].includes(String(row.status || "").toLowerCase()))
+      .map((row) => normalizeUnsubscribeEmail(row.recipient_email || row.email || row.to_email)));
+    recipients = recipients.filter((email) => !suppressed.has(normalizeUnsubscribeEmail(email)));
 
     if (!recipients.length) {
       return res.status(400).json({
@@ -216,12 +242,17 @@ async function handler(req, res) {
       }
 
       try {
+        const normalizedTo = normalizeUnsubscribeEmail(to);
+        const { apiUrl: unsubscribeApiUrl, pageUrl: unsubscribePageUrl } = buildUnsubscribeUrls({ req, userId: broadcast.user_id, email: normalizedTo });
         const response = await sgMail.send({
-          to,
+          to: normalizedTo,
           from: { email: senderEmail, name: senderName },
           replyTo: replyToEmail,
           subject,
-          html,
+          html: injectUnsubscribeUrl(html, unsubscribePageUrl),
+            headers: unsubscribeApiUrl
+              ? { "List-Unsubscribe": `<${unsubscribeApiUrl}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" }
+            : undefined,
         });
 
         let messageId = null;

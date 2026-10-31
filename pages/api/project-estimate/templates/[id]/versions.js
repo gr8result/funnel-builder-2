@@ -5,7 +5,7 @@
 //      version history since they are never edited).
 
 import { supabaseAdmin } from "../../../../../lib/supabaseAdmin";
-import { withWorkspace } from "../../../../../lib/withWorkspace";
+import { withWorkspace, INTERNAL_COMMERCIAL_ROLES } from "../../../../../lib/withWorkspace";
 import { replaceTemplatePages, shapeTemplateRowForClient } from "../../../../../lib/projectEstimate/estimateBuilderDb";
 
 async function loadAuthorizedTemplate(id, workspaceId) {
@@ -97,4 +97,4 @@ async function handler(req, res) {
   return res.status(405).json({ ok: false, error: "Method not allowed" });
 }
 
-export default withWorkspace(handler);
+export default withWorkspace(handler, { roles: INTERNAL_COMMERCIAL_ROLES });

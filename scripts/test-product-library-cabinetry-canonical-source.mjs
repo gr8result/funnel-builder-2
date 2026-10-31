@@ -70,9 +70,9 @@ assert.ok(cabinetryHandles.some((product) => product.primaryImageUrl === "/image
 
 assert.deepEqual(CABINETRY_SCHEDULE_TYPE_OPTIONS, PRODUCT_LIBRARY_CABINETRY_SCHEDULE_TYPE_OPTIONS, "Client Selections cabinet schedule options should come from Product Library.");
 assert.deepEqual(WET_AREA_CABINETRY_SCHEDULE_TYPES, PRODUCT_LIBRARY_WET_AREA_CABINETRY_SCHEDULE_TYPES, "Client Selections wet-area cabinet schedule options should come from Product Library.");
-assert.equal(PRODUCT_LIBRARY_CABINETRY_STRUCTURAL_PRODUCTS.length, 44, "Product Library should expose the migrated cabinetry units, hardware, shelving and feature records.");
+assert.equal(PRODUCT_LIBRARY_CABINETRY_STRUCTURAL_PRODUCTS.length, 45, "Product Library should expose the current cabinetry units, hardware, shelving and feature records.");
 assert.equal(structuralCabinetry.length, PRODUCT_LIBRARY_CABINETRY_STRUCTURAL_PRODUCTS.length, "Master catalogue should include separated structural cabinetry records.");
-assert.equal(structuralByType.cabinet_unit, 31, "Cabinet unit / assembly records should be distinct from finishes and handles.");
+assert.equal(structuralByType.cabinet_unit, 32, "Cabinet unit / assembly records should be distinct from finishes and handles.");
 assert.equal(structuralByType.hardware_product, 2, "Hardware records should include soft-close and standard hardware options.");
 assert.equal(structuralByType.shelving_feature, 11, "Shelving, kick, bulkhead, appliance-panel and feature records should be separate canonical options.");
 [
@@ -103,7 +103,7 @@ const effective = getEffectiveCabinetryCatalogue({ organisationId: ORG_A });
 const scheduleProducts = structuralCabinetry.filter((product) => product.categoryKey === "Cabinetry Products");
 const clientScheduleProducts = getClientSelectableProducts(ORG_A).filter((product) => product.categoryKey === "Cabinetry Products");
 assert.deepEqual(new Set(clientScheduleProducts.map((product) => product.productId)), new Set(scheduleProducts.map((product) => product.productId)));
-assert.equal(scheduleProducts.length, 37);
+assert.equal(scheduleProducts.length, 38);
 assert.equal(scheduleProducts[0].productName, "Standard base unit");
 assert.equal(scheduleProducts.at(-1).productName, "Wardrobe hanging rail");
 assert.equal(structuralCabinetry.filter((product) => product.categoryKey === "Cabinet Hardware").length, 2);
@@ -115,8 +115,8 @@ for (const product of scheduleProducts) {
   assert.equal(product.masterGroup, "Cabinetry");
   const contract = effective.canonicalProducts.find((record) => record.stableProductId === product.productId);
   assert.equal(contract.categoryKey, "Cabinetry Products");
-  assert.equal(contract.quotationSection, "Cabinetry");
-  assert.equal(contract.quotationSubsection, "Cabinetry Products");
+  assert.equal(contract.quotationSection, "", "non-current builder contracts must not inherit the current builder's legacy quotation section");
+  assert.equal(contract.quotationSubsection, "", "non-current builder contracts must not inherit the current builder's legacy quotation subsection");
 }
 updateBuilderProductOverride(ORG_A, scheduleProducts[0].productCode, { builderPrice: 321, enabled: true });
 const pricedSchedule = getEffectiveCabinetryCatalogue({ organisationId: ORG_A }).canonicalProducts.find((record) => record.productCode === scheduleProducts[0].productCode);
@@ -128,7 +128,7 @@ assert.ok(getEffectiveCabinetryCatalogue({ organisationId: "builder-other" }).pr
 assert.equal(effective.serviceName, "getEffectiveCabinetryCatalogue", "Product Library should expose one shared cabinetry effective-catalogue service.");
 assert.equal(effective.counts.byCanonicalType.finish_product, 359, "Effective cabinetry catalogue should include all finish records.");
 assert.equal(effective.counts.byCanonicalType.handle_product, 8, "Effective cabinetry catalogue should include all handle records.");
-assert.equal(effective.counts.byCanonicalType.cabinet_unit, 33, "Effective cabinetry catalogue should include all migrated cabinet unit records, including two Client Selections vanity units.");
+assert.equal(effective.counts.byCanonicalType.cabinet_unit, 32, "Effective cabinetry catalogue should include all current canonical cabinet unit records.");
 assert.equal(effective.counts.byCanonicalType.hardware_product, 2, "Effective cabinetry catalogue should include migrated hardware records.");
 assert.equal(effective.counts.byCanonicalType.shelving_feature, 11, "Effective cabinetry catalogue should include migrated shelving and feature records.");
 assert.equal(effective.counts.byCanonicalType.benchtop_product, stoneSurfaces.length + laminateSurfaces.length, "Effective cabinetry catalogue should include all stone and verified laminate benchtop records.");

@@ -56,7 +56,18 @@ async function markEmailUnsubscribed({ userId, email }) {
     }
   }
 
-  return { updated, timestamp };
+  const { data: contacts, error: contactError } = await supabaseAdmin
+    .from("leads")
+    .update({
+      email_marketing_consent: false,
+      email_marketing_opt_out: true,
+      email_marketing_opt_out_at: timestamp,
+    })
+    .eq("user_id", userId)
+    .ilike("email", email)
+    .select("id");
+
+  return { updated, contactUpdated: !contactError && Array.isArray(contacts) ? contacts.length : 0, timestamp };
 }
 
 export default async function handler(req, res) {

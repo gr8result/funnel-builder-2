@@ -1,3 +1,4 @@
+import WebsiteBuilderIcon from "./WebsiteBuilderIcon";
 import { renderHeroBlock, shouldLogHeroVideoDebug } from "./website-renderer/wbHeroRendering.js";
 import React from "react";
 import { FaArrowDown, FaArrowRight } from "react-icons/fa";
@@ -411,7 +412,7 @@ const textSectionRichTextStyles = `
 
 /**
  * Two-column grid shell with a draggable vertical divider for the data-ribbon stats variant.
- * Drag the handle to change the left-column percentage (clamped 20â€“80 %).
+ * Drag the handle to change the left-column percentage (clamped 20–80 %).
  */
 function StatsSplitResizer({ editor, pct, gap, onResize, children }) {
   const [draft, setDraft] = React.useState(null);
@@ -487,10 +488,10 @@ function StatsSplitResizer({ editor, pct, gap, onResize, children }) {
  * The section is wrapped in a 360vh tall container and set to position:sticky;
  * top:0; height:100vh. Scroll progress through that 360vh drives 3 phases:
  *
- *   Phase 1 (p 0.00â€“0.40): Cards fly in from off-screen. Avatar goes from
- *     grayscale â†’ full colour.
- *   Phase 2 (p 0.40â€“0.62): Cards rest at their positions with an idle bob.
- *   Phase 3 (p 0.62â€“1.00): Cards converge toward the centre of the section
+ *   Phase 1 (p 0.00–0.40): Cards fly in from off-screen. Avatar goes from
+ *     grayscale → full colour.
+ *   Phase 2 (p 0.40–0.62): Cards rest at their positions with an idle bob.
+ *   Phase 3 (p 0.62–1.00): Cards converge toward the centre of the section
  *     (behind the avatar), scaling and fading to nothing.
  *
  * Uses [data-orbit-scroll-wrapper] to find the parent scroll container so it
@@ -858,7 +859,7 @@ function SideScrollAccordionBlock({ props, compact = false, editor = false, onCh
   );
 }
 
-// â”€â”€ WbTextEditableContent â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── WbTextEditableContent ──────────────────────────────────────────────────────
 // Uses the established inline RichText editor for text blocks.
 // This keeps editor behavior consistent across existing sites.
 
@@ -873,7 +874,7 @@ function WbTextEditableContent({ props, onChangeBlock, compact }) {
       className="wb-text-block"
       data-website-inline-editor="true"
       data-text-prop="text"
-      data-placeholder="Click to edit textâ€¦"
+      data-placeholder="Click to edit text…"
       contentEditable
       suppressContentEditableWarning
       onBlur={(event) => {
@@ -1480,7 +1481,7 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
                 onClick={editor ? () => patchTestimonial(idx, { rating: n }) : undefined}
                 onKeyDown={editor ? (e) => { if (e.key === "Enter") patchTestimonial(idx, { rating: n }); } : undefined}
                 style={{ fontSize: compact ? 15 : 18, color: n <= filled ? starAccent : "rgba(148,163,184,0.5)", cursor: editor ? "pointer" : "default", lineHeight: 1, userSelect: "none" }}
-              >â˜…</span>
+              ><WebsiteBuilderIcon name="star" /></span>
             ))}
           </div>
         );
@@ -1531,7 +1532,7 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
                 padding: editor ? "4px 6px" : 0,
                 margin: 0,
               }}
-              dangerouslySetInnerHTML={{ __html: asRichHtml(item.text || (editor ? "Click to edit quoteâ€¦" : "")) }}
+              dangerouslySetInnerHTML={{ __html: asRichHtml(item.text || (editor ? "Click to edit quote…" : "")) }}
             />
             <div style={{ ...sharedStyles.authorRow, justifyContent: isSpotlight ? "center" : undefined, marginTop: "auto", paddingTop: 16, background: "transparent" }}>
               {avatarSrcItem
@@ -1705,7 +1706,7 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
       };
       const splitPricingFeatureText = (value) => {
         const text = String(value || "");
-        const match = text.match(/^(.*?)\s*(?:â€”|â€“|-)\s+(.+)$/);
+        const match = text.match(/^(.*?)\s*(?:—|–|-)\s+(.+)$/);
         if (!match) return { label: text, value: "" };
         return {
           label: match[1].trim() || text,
@@ -2039,7 +2040,7 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
             if (!pricingVariant.planAccentColor) return null;
             const parsePx = (str) => parseFloat(String(str || "").replace(/[^0-9.]/g, "")) || 0;
             const fmtUSD = (v) => {
-              if (!Number.isFinite(v) || v <= 0) return "â€”";
+              if (!Number.isFinite(v) || v <= 0) return "—";
               const fixed = v.toFixed(2);
               const [whole, dec] = fixed.split(".");
               return `A$${whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}` + (dec ? `.${dec}` : "");
@@ -2879,7 +2880,7 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
       const statsHeaderDefaultWidth = Number(statsVariant.header?.maxWidth || 720);
       const statsHeaderWidth = props.statsHeaderWidth > 0 ? props.statsHeaderWidth : statsHeaderDefaultWidth;
 
-      // Inner header content (title + subtitle) â€” shared between resizer wrappers.
+      // Inner header content (title + subtitle) — shared between resizer wrappers.
       const _statsHeaderInner = (
         <div style={{ ...asStyleObject(statsVariant.header), maxWidth: "100%", width: "100%" }}>
           <h2
@@ -3325,7 +3326,7 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
         <ScrollReveal as="section" animationName={props.sectionAnimation || "fade-up"} delay={props.sectionAnimationDelay || 0.06} speed={props.sectionAnimationSpeed} disabled={editor} style={{ ...sharedStyles.cardSection(compact, props), ...fullWidthStyle(props, compact, editor), background: nlBg || "linear-gradient(135deg,#eff6ff,#dbeafe)" }}>
           <div style={sectionContentStyle(props, compact)}>
           <div style={{ maxWidth: 520, margin: "0 auto", textAlign: "center" }}>
-            <div style={{ fontSize: compact ? 28 : 40, marginBottom: 8 }}>{props.icon || "âœ‰ï¸"}</div>
+            <div style={{ fontSize: compact ? 28 : 40, marginBottom: 8 }}>{props.icon || <WebsiteBuilderIcon name="mail" />}</div>
             <h2
               contentEditable={editor} suppressContentEditableWarning
               onBlur={(e) => patchNl({ title: cleanInlineEditorHtml(e.currentTarget.innerHTML) })}
@@ -3362,7 +3363,7 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
           <div style={asStyleObject(trustBadgeSty.row)}>
             {asArray(props.badges).map((badge, idx) => (
               <ScrollReveal key={`${badge.label}-${idx}`} animationName="fade-up" delay={idx * 0.05} disabled={editor} style={asStyleObject(trustBadgeSty.badge)}>
-                <span style={asStyleObject(trustBadgeSty.icon)}>{badge.icon || "âœ“"}</span>
+                <span style={asStyleObject(trustBadgeSty.icon)}>{badge.icon || <WebsiteBuilderIcon name="check" />}</span>
                 <span style={{ fontSize: trustBadgeSty.badge?.fontSize ?? "inherit" }}>{badge.label || "Badge"}</span>
               </ScrollReveal>
             ))}
@@ -3396,7 +3397,7 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
       const marqueeFontWeight = String(props.fontWeight || "800");
       const marqueeFontStyle = String(props.fontStyle || "normal");
       const marqueeTextDecoration = String(props.textDecoration || "none");
-      const dividerText = String(props.dividerText || "âœ¦").trim() || "âœ¦";
+      const dividerText = String(props.dividerText || "✦").trim() || "✦";
       const accent = props.accentColor || "#7dd3fc";
 
       return (
@@ -3460,7 +3461,7 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
               }}
             >
               {repeated.map((item, idx) => {
-                // Normalize: plain string â†’ { text: item }, object stays as-is
+                // Normalize: plain string → { text: item }, object stays as-is
                 const norm = item && typeof item === "object" ? item : { text: String(item || "") };
                 const itemText = norm.text || "";
                 const itemIconKey = norm.iconName || norm.iconKey || null;
@@ -3956,12 +3957,12 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
                           suppressContentEditableWarning
                           onBlur={(e) => {
                             const text = e.currentTarget.textContent || "";
-                            const [location, timezone] = text.split(/\s+â€”\s+|\s+-\s+/);
+                            const [location, timezone] = text.split(/\s+—\s+|\s+-\s+/);
                             patchFooterGroup(groupIndex, { location: location || "", timezone: timezone || group.timezone || "" });
                           }}
                           style={inlineStyle({ fontSize: 15, color: ftLink, lineHeight: 1.45, fontWeight: 600 })}
                         >
-                          {`${group.location || "Sunshine Coast, Queensland"} â€” ${group.timezone || "UTC+10"}`}
+                          {`${group.location || "Sunshine Coast, Queensland"} — ${group.timezone || "UTC+10"}`}
                         </span>
                       </div>
                     );
@@ -3989,12 +3990,12 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
               </div>
 
               <div style={{ borderTop: `1px solid ${ftBorder}`, paddingTop: compact ? 14 : 18, display: "flex", alignItems: "center", justifyContent: compact ? "flex-start" : "space-between", gap: 14, flexWrap: "wrap" }}>
-                <span contentEditable={editor} suppressContentEditableWarning onBlur={(e) => patchFt({ copyrightText: e.currentTarget.textContent })} style={inlineStyle({ fontSize: 16, color: ftLink })}>{props.copyrightText || (editor ? "Â© 2025 Your Brand. All rights reserved." : "")}</span>
+                <span contentEditable={editor} suppressContentEditableWarning onBlur={(e) => patchFt({ copyrightText: e.currentTarget.textContent })} style={inlineStyle({ fontSize: 16, color: ftLink })}>{props.copyrightText || (editor ? "© 2025 Your Brand. All rights reserved." : "")}</span>
                 <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
                   {Array.isArray(extraLinks) && extraLinks.length ? extraLinks.map((link, index) => (
                     <a key={`footer-legal-${index}`} href={editor ? undefined : resolvePublishedNavHref(link, navigationContext)} style={{ color: ftLink, fontSize: 16, textDecoration: "none", letterSpacing: "0.04em", textTransform: "uppercase" }}>{link.label || "Link"}</a>
                   )) : null}
-                  {spotlightItems.length ? <span style={{ fontSize: 16, color: colorWithAlpha(ftLink, 0.9) }}>{spotlightItems.slice(0, 2).join(" â€¢ ")}</span> : null}
+                  {spotlightItems.length ? <span style={{ fontSize: 16, color: colorWithAlpha(ftLink, 0.9) }}>{spotlightItems.slice(0, 2).join(" • ")}</span> : null}
                 </div>
               </div>
             </div>
@@ -4031,7 +4032,7 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
       const chartBg = props.backgroundColor || "#0f172a";
       const chartTextColor = props.textColor || "#f8fafc";
       const chartHeading = props.heading || "Stop Paying Full Price";
-      const chartSubheading = props.subheading || "Every plan saves you real money â€” compared to buying each module separately";
+      const chartSubheading = props.subheading || "Every plan saves you real money — compared to buying each module separately";
       const chartAreaHeight = compact ? 150 : 300;
       const barW = compact ? 26 : 52;
       const barGapPx = compact ? 6 : 14;
@@ -4075,7 +4076,7 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
                 </p>
               </div>
 
-              {/* Annual savings â€” moved to top so it hits first */}
+              {/* Annual savings — moved to top so it hits first */}
               {props.showAnnualSavings !== false && (
                 <div style={{
                   background: "linear-gradient(135deg, rgba(99,102,241,0.14) 0%, rgba(124,58,237,0.09) 100%)",
@@ -4103,12 +4104,12 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
                     })}
                   </div>
                   <div style={{ color: colorWithAlpha(chartTextColor, 0.75), fontSize: compact ? 15 : 22, fontWeight: 600, lineHeight: 1.4 }}>
-                    That&apos;s real money back where it belongs â€” your business.
+                    That&apos;s real money back where it belongs — your business.
                   </div>
                 </div>
               )}
 
-              {/* Big savings cards â€” the hero of this section */}
+              {/* Big savings cards — the hero of this section */}
               <div style={{ display: "flex", gap: compact ? 10 : 18, marginBottom: compact ? 36 : 60, flexWrap: "wrap" }}>
                 {chartPlans.map((plan, idx) => {
                   const savings = (plan.individualPrice || 0) - (plan.billingPrice || 0);
@@ -4156,7 +4157,7 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
                 })}
               </div>
 
-              {/* Bar chart â€” annual savings per plan */}
+              {/* Bar chart — annual savings per plan */}
               <div style={{
                 background: "rgba(255,255,255,0.03)",
                 borderRadius: compact ? 14 : 24,
@@ -4425,7 +4426,7 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
                 onBlur={(e) => { if (editor && typeof onChangeBlock === "function") onChangeBlock({ ...props, subtitle: e.currentTarget.innerText.trim() }); }}
                 onKeyDown={editor ? (e) => { if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); } } : undefined}
                 style={{ color: "#9ca3af", fontSize: 18, textAlign: "center", marginBottom: 48, lineHeight: 1.6, outline: editor ? "1px dashed rgba(14,165,233,0.4)" : "none", padding: editor ? "2px 6px" : 0, borderRadius: 4, cursor: editor ? "text" : undefined }}
-                dangerouslySetInnerHTML={{ __html: props.subtitle || (editor ? "Add a subtitle hereâ€¦" : "") }}
+                dangerouslySetInnerHTML={{ __html: props.subtitle || (editor ? "Add a subtitle here…" : "") }}
               />
             )}
 
@@ -4490,7 +4491,7 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
                       onBlur={(e) => { if (editor && typeof onChangeBlock === "function") onChangeBlock({ ...props, planTagline: e.currentTarget.innerText.trim() }); }}
                       onKeyDown={editor ? (e) => { if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); } } : undefined}
                       style={{ color: "#4ade80", fontSize: 16, marginTop: 4, opacity: 0.8, display: "block", outline: editor ? "1px dashed rgba(14,165,233,0.4)" : "none", padding: editor ? "2px 6px" : 0, borderRadius: 4, cursor: editor ? "text" : undefined }}
-                    >{props.planTagline || (editor ? "Add plan taglineâ€¦" : "")}</span>
+                    >{props.planTagline || (editor ? "Add plan tagline…" : "")}</span>
                   )}
                 </div>
                 <div style={{ padding: "0 32px" }} />
@@ -4498,7 +4499,7 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
               </div>
 
               <div style={{ ...grid3, padding: "28px 36px", background: "rgba(20,83,45,0.6)", borderTop: "2px solid rgba(74,222,128,0.25)" }}>
-                <span style={{ fontWeight: 600, fontSize: 22, color: "#86efac", letterSpacing: "0.01em" }}>ðŸŽ‰ You save</span>
+                <span style={{ fontWeight: 600, fontSize: 22, color: "#86efac", letterSpacing: "0.01em" }}><WebsiteBuilderIcon name="celebration" /> You save</span>
                 <div style={{ padding: "0 32px" }} />
                 <span style={{ color: "#86efac", fontWeight: 600, fontSize: 36, textAlign: "right", letterSpacing: "-0.02em" }}>${ccSavings.toLocaleString()}/mo</span>
               </div>

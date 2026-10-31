@@ -3,6 +3,8 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { supabase } from "../../utils/supabase-client";
 import { isDeveloperEmail } from "../../lib/adminUsers";
+import { useBusinessBranding } from "../../hooks/useBusinessBranding";
+import { useAuth } from "../../context/AuthContext";
 import {
   BUSINESS_PROFILE_SECTIONS,
   VAULT_STATUS_LABELS,
@@ -65,8 +67,42 @@ function isDirectVideoUrl(url) {
   return /\.(mp4|webm|ogg|mov)(\?|#|$)/i.test(String(url || ""));
 }
 
+function SavedBrandingLogo({ documentId }) {
+  const [url, setUrl] = useState("");
+  const [error, setError] = useState("");
+  useEffect(() => {
+    const controller = new AbortController();
+    setUrl("");
+    setError("");
+    (async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (!data.session?.access_token) throw new Error("Please sign in to view your saved logo.");
+        const response = await fetch("/api/account/business-profile-document-url", {
+          method: "POST",
+          signal: controller.signal,
+          headers: { Authorization: `Bearer ${data.session.access_token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ documentId }),
+        });
+        const result = await response.json();
+        if (!response.ok || !result.url) throw new Error("Your saved logo could not be loaded.");
+        if (!controller.signal.aborted) setUrl(result.url);
+      } catch (failure) {
+        if (!controller.signal.aborted) setError(failure.message || "Your saved logo could not be loaded.");
+      }
+    })();
+    return () => controller.abort();
+  }, [documentId]);
+  return <div role="status" aria-live="polite" style={{ margin: "12px 0" }}>
+    {url ? <><img src={url} alt="Saved company logo" onError={() => setError("Your saved logo could not be displayed.")} style={{ display: "block", maxWidth: 240, maxHeight: 120, objectFit: "contain", background: "#fff", padding: 8, borderRadius: 6 }} /><p>Company logo saved</p></> : error ? null : <p>Loading saved logo...</p>}
+    {error ? <p role="alert">{error}</p> : null}
+  </div>;
+}
+
 export default function BusinessProfileVault() {
   const router = useRouter();
+  const { session } = useAuth();
+  const { branding, error: brandingError, loading: brandingLoading } = useBusinessBranding();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveState, setSaveState] = useState("Saved");
@@ -81,28 +117,34 @@ export default function BusinessProfileVault() {
   const [isDeveloper, setIsDeveloper] = useState(false);
   const [introVideoUploading, setIntroVideoUploading] = useState(false);
   const loadedRef = useRef(false);
+  const savedDataRef = useRef('');
+  const latestDataRef = useRef(data);
+  const saveQueueRef = useRef(Promise.resolve());
+  latestDataRef.current = data;
 
   const documentMap = useMemo(() => makeDocumentMap(documents), [documents]);
   const completion = useMemo(() => calculateVaultCompletion(data), [data]);
   const activeSection = BUSINESS_PROFILE_SECTIONS[activeStep];
   const isReview = activeStep === REVIEW_STEP;
 
-  async function getToken() {
-    const { data: sessionData } = await supabase.auth.getSession();
-    return sessionData?.session?.access_token || "";
-  }
-
   async function apiFetch(url, options = {}) {
-    const token = await getToken();
-    const response = await fetch(url, {
+    let token = session?.access_token || "";
+    const send = (accessToken) => fetch(url, {
       ...options,
       headers: {
         ...(options.headers || {}),
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${accessToken}`,
       },
     });
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(payload?.error || "Request failed");
+    let response = await send(token);
+    if (response.status === 401) {
+      const { data, error } = await supabase.auth.refreshSession(session || undefined);
+      if (error || !data.session?.access_token) throw new Error('Your session expired. Please sign in again.');
+      token = data.session.access_token;
+      response = await send(token);
+    }
+    const payload = await response.json().catch(() => null);
+    if (!response.ok || !payload) throw new Error("We couldn't load your business profile right now. Please try again.");
     return payload;
   }
 
@@ -112,7 +154,9 @@ export default function BusinessProfileVault() {
     try {
       const payload = await apiFetch("/api/account/business-profile-vault");
       setVault(payload.vault);
-      setData({ ...createEmptyVaultData(), ...(payload.vault?.data || {}) });
+      const loadedData = { ...createEmptyVaultData(), ...(payload.vault?.data || {}) };
+      savedDataRef.current = JSON.stringify(loadedData);
+      setData(loadedData);
       setDocuments(payload.documents || []);
       setSaveState("Saved");
       loadedRef.current = true;
@@ -134,25 +178,29 @@ export default function BusinessProfileVault() {
   }, []);
 
   useEffect(() => {
-    if (!loadedRef.current) return;
+    if (!loadedRef.current || JSON.stringify(data) === savedDataRef.current) return;
     setSaveState("Saving...");
-    const timeout = setTimeout(async () => {
-      setSaving(true);
-      try {
-        const payload = await apiFetch("/api/account/business-profile-vault", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ data }),
-        });
-        setVault(payload.vault);
-        setDocuments(payload.documents || documents);
-        setSaveState("Saved");
-      } catch (err) {
-        setSaveState("Save failed");
-        setError(err.message || "Auto-save failed.");
-      } finally {
-        setSaving(false);
-      }
+    const timeout = setTimeout(() => {
+      const snapshot = data;
+      saveQueueRef.current = saveQueueRef.current.catch(() => {}).then(async () => {
+        setSaving(true);
+        try {
+          const payload = await apiFetch("/api/account/business-profile-vault", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ data: snapshot }),
+          });
+          savedDataRef.current = JSON.stringify(snapshot);
+          setVault(payload.vault);
+          setSaveState(JSON.stringify(latestDataRef.current) === savedDataRef.current ? "Saved" : "Saving...");
+          if (snapshot.branding_assets) window.dispatchEvent(new Event('gr8:branding-updated'));
+        } catch (err) {
+          setSaveState("Save failed");
+          setError(err.message || "Auto-save failed.");
+        } finally {
+          setSaving(false);
+        }
+      });
     }, 700);
     return () => clearTimeout(timeout);
   }, [data]);
@@ -205,6 +253,7 @@ export default function BusinessProfileVault() {
             updateField(section.key, "verificationStatus", "Pending");
           }
           setUploadProgress((current) => ({ ...current, [key]: 100 }));
+          if (section.key === "branding_assets") window.dispatchEvent(new Event('gr8:branding-updated'));
         };
         request.onerror = () => {
           setError("Upload failed.");
@@ -295,8 +344,14 @@ export default function BusinessProfileVault() {
 
     if (field.type === "file") {
       const docs = documentMap[key] || [];
+      const selectedLogo = docs.find((document) => document.id === value) || docs[0];
       return (
         <div>
+          {section.key === "branding_assets" && /^(companyLogoUpload|alternateLogoUpload)$/.test(field.key) && selectedLogo ? <SavedBrandingLogo documentId={selectedLogo.id} /> : null}
+          {section.key === "branding_assets" && field.key === "companyLogoUpload" && !selectedLogo ? <div role="status" aria-live="polite">
+            {branding?.logo ? <><img src={branding.logo} alt="Saved company logo" style={{ display: "block", maxWidth: 240, maxHeight: 120, objectFit: "contain", background: "#fff", padding: 8, borderRadius: 6 }} /><p>Company logo saved</p></> : brandingLoading ? <p>Loading saved logo...</p> : null}
+            {brandingError ? <p role="alert">{brandingError}</p> : null}
+          </div> : null}
           <input
             type="file"
             onChange={(event) => uploadFile(section, field, event.target.files?.[0])}

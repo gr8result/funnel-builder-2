@@ -12,6 +12,9 @@
 import sgMail from "@sendgrid/mail";
 import { createClient } from "@supabase/supabase-js";
 import { guardEmailSend, recordEmailSent } from "../../../../lib/emailValidation";
+import { hasEmailMarketingConsent } from "../../../../lib/marketingConsent";
+import { resolveVerifiedSender } from "../../../../lib/email/verifiedSender";
+import { buildUnsubscribeUrls, injectUnsubscribeUrl, normalizeUnsubscribeEmail } from "../../../../lib/email/unsubscribe";
 
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -174,11 +177,12 @@ export default async function handler(req, res) {
     return res.status(405).json({ ok: false, error: "Method not allowed" });
   }
 
-  if (CRON_SECRET) {
-    const k = readAuthKey(req);
-    if (!k || k !== CRON_SECRET) {
-      return res.status(401).json({ ok: false, error: "Unauthorized (cron secret)" });
-    }
+  if (!CRON_SECRET) {
+    return res.status(503).json({ ok: false, error: "Autoresponder delivery is disabled until a cron secret is configured." });
+  }
+  const requestKey = readAuthKey(req);
+  if (!requestKey || requestKey !== CRON_SECRET) {
+    return res.status(401).json({ ok: false, error: "Unauthorized (cron secret)" });
   }
 
   const apiKey = getApiKey();
@@ -229,7 +233,6 @@ export default async function handler(req, res) {
   let failed = 0;
   const results = [];
 
-  const fromEmail = safeStr(process.env.SENDGRID_FROM_EMAIL) || "no-reply@gr8result.com";
   const fromName = safeStr(process.env.SENDGRID_FROM_NAME) || "GR8 RESULT";
 
   for (const row of due) {
@@ -239,6 +242,38 @@ export default async function handler(req, res) {
     const to = safeStr(row.to_email);
     const subject = safeStr(row.subject) || " ";
     const templatePath = safeStr(row.template_path);
+
+    const { data: contact, error: contactError } = await supabase
+      .from("leads")
+      .select("id,user_id,email,email_marketing_consent,email_marketing_opt_out")
+      .eq("id", row.lead_id || "")
+      .eq("user_id", row.user_id)
+      .maybeSingle();
+    if (contactError || !contact || !hasEmailMarketingConsent(contact)
+      || normalizeUnsubscribeEmail(contact.email || to) !== normalizeUnsubscribeEmail(to)) {
+      const reason = contactError
+        ? "Email consent data unavailable; apply the marketing consent migration before delivery."
+        : "Contact is missing, has no recorded email marketing consent, or has opted out.";
+      failed += 1;
+      results.push({ id, ok: false, error: reason });
+      await supabase.from("email_autoresponder_queue").update({ status: "failed", last_error: reason }).eq("id", id);
+      continue;
+    }
+
+    const { data: account, error: accountError } = await supabase
+      .from("accounts")
+      .select("sendgrid_from_email,sendgrid_from_name,dkim_verified,dkim_domain")
+      .eq("user_id", row.user_id)
+      .maybeSingle();
+    const verifiedSender = accountError
+      ? { ok: false, error: "Could not load sender verification settings." }
+      : resolveVerifiedSender(account || {}, process.env.SENDGRID_FROM_EMAIL || "");
+    if (!verifiedSender.ok) {
+      failed += 1;
+      results.push({ id, ok: false, error: verifiedSender.error });
+      await supabase.from("email_autoresponder_queue").update({ status: "failed", last_error: verifiedSender.error }).eq("id", id);
+      continue;
+    }
 
     // =========================
     // ✅ ADDED: LIMIT CHECK
@@ -308,11 +343,15 @@ export default async function handler(req, res) {
         .select("id")
         .single();
 
+      const unsubscribeUrls = buildUnsubscribeUrls({ req, userId: row.user_id, email: normalizeUnsubscribeEmail(to) });
       const msg = {
-        to,
-        from: { email: fromEmail, name: fromName },
+        to: normalizeUnsubscribeEmail(to),
+        from: { email: verifiedSender.email, name: safeStr(account?.sendgrid_from_name) || fromName },
         subject,
-        html,
+        html: injectUnsubscribeUrl(html, unsubscribeUrls.pageUrl),
+        headers: unsubscribeUrls.apiUrl
+          ? { "List-Unsubscribe": `<${unsubscribeUrls.apiUrl}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" }
+          : undefined,
       };
 
       const resp = await sgMail.send(msg);

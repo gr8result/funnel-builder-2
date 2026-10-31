@@ -55,10 +55,15 @@ if (fs.existsSync(`${baselineDir}/AU-APPLIANCE-CATALOGUE.json`)) {
   for (const previous of baseline.products) {
     const current = products.get(previous.productId);
     assert(current, `${previous.productId}: historical ID retained`);
-    if (!["Euromaid", "Whirlpool"].includes(previous.brandName)) assert.deepEqual(current, previous, `${previous.productId}: unrelated catalogue row unchanged`);
+    if (!["Euromaid", "Whirlpool"].includes(previous.brandName)) {
+      if (previous.productId === "product:appliances:rangehoods:omega:orc93xa") {
+        assert.equal(current.primaryImage, "/images/catalogues/appliances/products/omega/orc93xa.jpg", "ORC93XA must reference the verified local JPEG copy");
+        assert.deepEqual({ ...current, primaryImage: previous.primaryImage }, previous, `${previous.productId}: only the verified image extension changed`);
+      } else assert.deepEqual(current, previous, `${previous.productId}: unrelated catalogue row unchanged`);
+    }
     for (const price of ["costPrice", "sourceCostPrice", "sellPrice", "importedSourceCost", "tenantSellPrice"]) if (Object.hasOwn(previous, price)) assert.equal(current[price], previous[price], `${previous.productId}: original ${price} retained`);
   }
-  assert.equal(fs.readFileSync(`${root}/AU-APPLIANCE-PACKS.json`, "utf8"), fs.readFileSync(`${baselineDir}/AU-APPLIANCE-PACKS.json`, "utf8"), "Package file unchanged");
+  assert.deepEqual(read(`${root}/AU-APPLIANCE-PACKS.json`), read(`${baselineDir}/AU-APPLIANCE-PACKS.json`), "Package catalogue data unchanged");
 }
 assert.equal(selectors.getActiveProductLibraryApplianceRecords().filter((record) => record.brand === "Blanco").length, 0);
 console.log(JSON.stringify({ result: "PASS", brands: summary, totalHistoricalAndCurrent: products.size }, null, 2));

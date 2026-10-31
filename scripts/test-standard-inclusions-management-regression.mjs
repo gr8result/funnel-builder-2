@@ -7,6 +7,8 @@ const repoRoot = path.resolve(__dirname, "..");
 const sourcePath = path.join(repoRoot, "components", "estimate-builder", "EstimateBuilderWorkbook.js");
 const source = fs.readFileSync(sourcePath, "utf8");
 const editorSource = fs.readFileSync(path.join(repoRoot, "components", "document-engine", "editor", "DocumentPageBuilder.jsx"), "utf8");
+const librarySource = fs.readFileSync(path.join(repoRoot, "pages", "modules", "builders", "standard-inclusions.js"), "utf8");
+const brochureBuilderSource = fs.readFileSync(path.join(repoRoot, "pages", "modules", "builders", "standard-inclusions", "[scheduleId].js"), "utf8");
 
 function assert(condition, message) {
   if (!condition) {
@@ -88,5 +90,28 @@ assert(!activeBody.includes("createPremierInclusionsDocument("), "The three-page
 ["text", "image", "logo", "shape", "table", "icon"].forEach((type) => {
   assert(editorSource.includes(`"${type}"`), `Native editor must expose add control type: ${type}`);
 });
+
+["Package", "Inclusions & brands", "Images", "Design style", "Generate"].forEach((step) => {
+  assert(brochureBuilderSource.includes(`"${step}"`), `AI brochure builder must expose the ${step} step`);
+});
+["Budget", "Mid-range", "High-end", "Custom"].forEach((tier) => {
+  assert(brochureBuilderSource.includes(tier), `AI brochure builder must expose the ${tier} package`);
+});
+["Luxury", "Modern", "Coastal"].forEach((style) => {
+  assert(brochureBuilderSource.includes(`${style}:`), `AI brochure builder must expose the ${style} design`);
+});
+assert(librarySource.includes('workflowStatus: "Draft"'), "Creating a schedule must preserve a draft before AI generation");
+assert(!librarySource.includes('dialog === "create" ? "Generate schedule"'), "The library must not generate before the five-step workflow");
+assert(librarySource.includes("CREATE INCLUSIONS BROCHURE WITH AI"), "The Standard Inclusions homepage must lead with AI brochure creation");
+assert(librarySource.includes("Import Existing PDF"), "Existing PDF import must remain available as a secondary action");
+assert(!librarySource.includes("Build your schedule library"), "The homepage must not use the rejected upload-first empty state");
+assert(!librarySource.includes("Upload a current inclusions PDF to preserve it"), "The homepage must not imply that an existing PDF is required");
+["Edit", "Preview", "Manage"].forEach((action) => {
+  assert(librarySource.includes(` /> ${action}</button>`), `Schedule cards must expose ${action}`);
+});
+assert(brochureBuilderSource.includes("applyBrochurePresentation"), "Brochure presentation must remain a separate transformation");
+assert(brochureBuilderSource.includes("Structured inclusions, products and prices were preserved."), "Layout regeneration must explicitly preserve commercial data");
+assert(brochureBuilderSource.includes("Review Required"), "Genuine catalogue gaps must appear in a compact review panel");
+assert(brochureBuilderSource.includes("<DocumentPageBuilder"), "Generated brochures must open in the visual page editor");
 
 console.log("Standard Inclusions simplified native editor regression checks passed.");

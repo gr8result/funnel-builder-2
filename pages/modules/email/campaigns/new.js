@@ -465,11 +465,20 @@ export default function Newcampaigns() {
 
       setTestLoading(true);
 
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      const accessToken = sessionData?.session?.access_token;
+      if (sessionError || !accessToken) {
+        throw new Error("Your session has expired. Sign in again before sending a test.");
+      }
+
       const sendOne = async (html, subjectLabel) => {
         if (!html) return;
         const res = await fetch("/api/email/test-send", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
           body: JSON.stringify({
             fromEmail,
             fromName,

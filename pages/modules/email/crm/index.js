@@ -46,71 +46,73 @@ export default function CRMDashboard() {
 
       {/* === Page Content (Cards Grid) === */}
       <div style={styles.container}>
-        <h2 style={styles.sectionTitle}>CRM Modules</h2>
+        <h2 style={styles.sectionTitle}>Builder CRM</h2>
+        <div style={styles.journey} aria-label="Customer journey">
+          {["New Enquiry", "Consultation", "Quote Sent", "Accepted", "Project Created"].map((step, i, all) => (
+            <React.Fragment key={step}>
+              <span style={styles.journeyStep}>{step}</span>
+              {i < all.length - 1 ? <span aria-hidden="true">→</span> : null}
+            </React.Fragment>
+          ))}
+        </div>
 
         <div style={styles.grid3}>
           <Card
-            icon="👥"
-            title="Sales Teams"
-            text="Set up teams, managers, members, and revenue targets."
-            href="/modules/email/crm/teams"
-            color="#f97316"
-          />
-
-          <Card
             icon="📈"
-            title="CRM Pipeline"
-            text="Manage leads and move them between stages."
+            title="Enquiry Pipeline"
+            text="Track enquiries from first contact through to an accepted quote."
             href="/modules/email/crm/pipelines"
             color="#22c55e"
           />
 
           <Card
-            icon="🗂️"
-            title="CRM Workspace"
-            text="View and control multiple pipelines across your business."
-            href="/modules/email/crm/workspace"
-            color="#a855f7"
-          />
-
-          <Card
-            icon="📥"
-            title="Subscribers"
-            text="Manage all subscribers, lists, and segmentation."
-            href="/modules/email/lists"
-            color="#38bdf8"
-          />
-
-          <Card
             icon="🗓️"
-            title="Tasks & Reminders"
-            text="Stay organised with calls, meetings, and follow-ups."
+            title="Activities & Follow-ups"
+            text="Stay on top of calls, site meetings, and follow-ups."
             href="/modules/email/crm/tasks"
             color="#3b82f6"
           />
 
           <Card
-            icon="💼"
-            title="Deals & Revenue"
-            text="Track opportunities, anticipated revenue, and quote progress."
-            href="/modules/email/crm/deals"
-            color="#f43f5e"
+            icon="📊"
+            title="Reports"
+            text="Pipeline, revenue, team, product, and status reports."
+            href="/modules/email/crm/reports"
+            color="#06b6d4"
           />
 
           <Card
+            icon="🗂️"
+            title="Messaging Analytics"
+            text="Email and SMS performance across your contacts."
+            href="/modules/email/crm/workspace"
+            color="#a855f7"
+          />
+        </div>
+
+        <hr style={styles.divider} />
+
+        <h2 style={styles.sectionTitle}>Additional Sales Tools</h2>
+        <p style={styles.sectionNote}>
+          Optional tools for product, e-commerce and service sales. Construction quoting and project
+          financials stay in the Quotation Builder and Project Estimate.
+        </p>
+
+        <div style={styles.grid3}>
+          <Card
             icon="🧾"
-            title="Quotations"
-            text="Use quotation templates and manage the quotes linked to your leads."
+            title="Sales Quotations"
+            text="Quotation templates for non-construction sales linked to your leads."
             href="/modules/email/crm/quotes"
             color="#facc15"
           />
 
           <Card
-            icon="📊"
-            title="CRM Reports"
-            text="Generate forecasting, revenue, team, product, and status reports."
-            href="/modules/email/crm/reports"
-            color="#06b6d4"
+            icon="💼"
+            title="Deals & Revenue"
+            text="Track opportunities and anticipated revenue for product and service sales."
+            href="/modules/email/crm/deals"
+            color="#f43f5e"
           />
         </div>
       </div>
@@ -213,6 +215,23 @@ const styles = {
     padding: "0 20px",
   },
   sectionTitle: { fontSize: "30px", fontWeight: 600, marginBottom: "20px" },
+  sectionNote: { margin: "-8px 0 20px", fontSize: "16px", opacity: 0.8 },
+  divider: { border: 0, borderTop: "1px solid #263346", margin: "40px 0 28px" },
+  journey: {
+    display: "flex",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: "10px",
+    marginBottom: "24px",
+    fontSize: "16px",
+  },
+  journeyStep: {
+    padding: "6px 14px",
+    borderRadius: "999px",
+    border: "1px solid #263346",
+    background: "#0f1622",
+    fontWeight: 600,
+  },
 
   /* 3 wide layout */
   grid3: {

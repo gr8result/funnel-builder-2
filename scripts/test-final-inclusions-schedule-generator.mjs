@@ -15,6 +15,7 @@ import {
   renderProductCardHtml,
   reviewScheduleReadiness,
 } from "../lib/builders/finalInclusionsSchedule.js";
+import { buildSelectionsSchedule } from "../lib/builders/selectionsScheduleDocument.js";
 import {
   FinalInclusionsPdfError,
   createLocalFinalInclusionsStorage,
@@ -357,8 +358,21 @@ assert.equal(snapshot.selections.some((selection) => JSON.stringify(selection).i
 assert.equal(snapshot.selections.some((selection) => JSON.stringify(selection).includes("markup")), false, "internal cost fields are removed");
 
 const groups = groupSnapshotSelections(snapshot);
-assert.deepEqual(groups.map((group) => group.area), ["Bricks, Render and Cladding", "Windows and External Doors", "Interior", "Kitchen", "Bathrooms", "Bedrooms"], "sections are grouped in client-decision schedule order");
+assert.deepEqual(groups.map((group) => group.area), ["Bricks, Render and Cladding", "Windows and External Doors", "Interior", "Bathrooms", "Bedrooms", "Appliances"], "legacy grouping keeps the current selection category mapping");
 assert.equal(groups.find((group) => group.area === "Bedrooms").rooms.some((room) => room.room === "Bedrooms"), true, "bedrooms are collapsed into one room group");
+
+const approvedSchedule = buildSelectionsSchedule({ rooms: [{ name: "Project", rows: [
+  { id: "roof", guidedRequirementKey: "roofing", selectedProduct: "COLORBOND Custom Orb", guidedSelection: { requirementKey: "roofing", area: "exterior", requirementLabel: "Roofing", productName: "COLORBOND Custom Orb", roofingConfiguration: { profileName: "Custom Orb", colour: "Basalt" } } },
+  { id: "exterior-colours", guidedRequirementKey: "exterior-paint", selectedProduct: "Exterior Colour Schedule", guidedSelection: { requirementKey: "exterior-paint", area: "exterior", requirementLabel: "Exterior Colours", productName: "Exterior Colour Schedule", clientColourSchedule: [{ areaId: "main-rendered-walls", areaName: "Main rendered walls", material: "Render", finishType: "painted", colourName: "Dune", supplier: "Dulux" }] } },
+  { id: "oven", guidedRequirementKey: "oven", selectedProduct: "Bosch Series 4 Oven", guidedSelection: { requirementKey: "oven", requirementLabel: "Oven", productName: "Bosch Series 4 Oven", brand: "Bosch" } },
+  { id: "interior-paint", guidedRequirementKey: "interior-paint", selectedProduct: "Internal paint colours", guidedSelection: { requirementKey: "interior-paint", area: "interior", requirementLabel: "Internal Paint Colours", productName: "Internal paint colours", paintScheme: { defaults: { walls: { manufacturer: "Dulux", colourName: "Natural White", finish: "Low Sheen" } } } } },
+] }] });
+assert.deepEqual(approvedSchedule.sections.map((section) => section.title), ["Exterior Selections", "Interior Selections", "Painting Schedule"], "the active schedule model has exactly the approved three sections");
+const approvedSnapshot = createProjectInclusionsSnapshot({ project, workspaceId: "workspace-1", selections: scopedSelections, session, schedulePages: approvedSchedule.pages, createdAt: "2026-08-12T02:00:00.000Z" });
+const approvedHtml = renderFinalInclusionsScheduleHtml(approvedSnapshot);
+const approvedSections = [...approvedHtml.matchAll(/class="ssSection"[^>]*><td colspan="8">([^<]+)<\/td>/g)].map((match) => match[1]);
+assert.deepEqual(approvedSections, ["1. Exterior Selections", "2. Interior Selections", "3. Painting Schedule"]);
+assert.doesNotMatch(approvedHtml, /Document Information|Project and Financial Summary|Approval and Signing|Builder Review Items/);
 
 const ovenCard = renderProductCardHtml(snapshot.selections.find((selection) => selection.id === "sel-oven"), { currency: "AUD" });
 assert.match(ovenCard, /Serie 6 Built-In Oven/, "product card renders product name");
@@ -439,7 +453,7 @@ const closingValidation = await validatePdfBytes(closingPdfBytes, { expectedPage
 assert.equal(masterValidation.pages.every((page) => page.orientation === "portrait"), true, "master PDF dimensions and orientation are readable");
 assert.equal(closingValidation.pages.every((page) => page.orientation === "portrait"), true, "closing PDF dimensions and orientation are readable");
 
-const dynamicPdf = await renderDynamicFinalInclusionsPdf(snapshot);
+const dynamicPdf = await renderDynamicFinalInclusionsPdf(approvedSnapshot);
 assert.equal(dynamicPdf.validation.startsWithPdf, true, "dynamic PDF has valid PDF magic bytes");
 assert.equal(dynamicPdf.warnings.length, 0, "product images render without warnings");
 assert.equal(dynamicPdf.validation.pages.every((page) => page.orientation === "landscape"), true, "dynamic generated schedule pages are landscape A4");
@@ -459,20 +473,18 @@ assert.equal(mergedDirect.validation.startsWithPdf, true, "merged PDF has valid 
 assert.equal(mergedDirect.validation.pages.every((page) => page.orientation === "landscape"), true, "merged PDF pages are normalised to landscape A4");
 
 const textContent = await extractPdfText(mergedDirect.bytes);
-assert.match(textContent, /Inclusions and Selections Schedule/, "final PDF can be reopened and text read");
-assert.match(textContent.replace(/\s+/g, " "), /\+\$540\.00/, "final PDF contains the exact +$540.00 variation");
-assert.match(textContent, /Serie 6 Built-In Oven/, "final PDF contains the oven product");
-assert.match(textContent, /Gas Cooktop/, "final PDF contains the cooktop product");
-assert.match(textContent, /Undermount Basin/, "final PDF contains the sink product");
-assert.match(textContent, /Gooseneck Mixer/, "final PDF contains the tapware product");
-assert.match(textContent, /La Paloma Face Brick/, "final PDF contains the brick product");
-assert.match(textContent, /Corinthian Blonde Oak AWO 5G/, "final PDF contains the entry door product");
-assert.match(textContent, /Approved Family Product/, "final PDF contains the generic family product");
+assert.match(textContent, /Inclusions\s*&\s*Selections/, "final PDF can be reopened and its schedule title text read");
+assert.doesNotMatch(textContent, /\+\$\s?\d|Allowance|Variation/i, "client-facing schedule PDF does not expose quotation pricing");
+assert.match(textContent, /Custom Orb/, "final PDF contains the selected exterior roofing product");
+assert.match(textContent, /Bosch Series 4 Oven/, "final PDF contains the selected interior oven product");
+assert.match(textContent, /Main rendered walls/ , "final PDF contains the exterior colour selection in Painting Schedule");
+assert.match(textContent, /Natural White/, "final PDF contains the interior paint schedule");
+assert.match(textContent, /1\. Exterior Selections[\s\S]*2\. Interior Selections[\s\S]*3\. Painting Schedule/i, "final PDF keeps the approved three-section order");
 
 const storage = createLocalFinalInclusionsStorage({ rootDir: outputRoot });
 const storedV1 = await generateAndStoreFinalInclusionsPdf({
   snapshot: {
-    ...snapshot,
+    ...approvedSnapshot,
     masterPdfRef: { localPath: masterPdfPath, storagePath: masterPdfPath, pageCount: 10 },
     closingPdfRef: { localPath: closingPdfPath, storagePath: closingPdfPath, pageCount: 2 },
   },
@@ -494,7 +506,7 @@ assert.equal(v1File.validation.fileSizeBytes, storedV1.document.fileSizeBytes, "
 const standaloneStorage = createLocalFinalInclusionsStorage({ rootDir: path.join(outputRoot, "standalone") });
 const standalone = await generateAndStoreStandaloneFinalInclusionsPdf({
   snapshot: {
-    ...snapshot,
+    ...approvedSnapshot,
     masterPdfRef: null,
     closingPdfRef: null,
     masterTemplate: { id: "client-selections-schedule", version: "standalone", pageCount: 0 },
@@ -521,6 +533,7 @@ const snapshotV2 = createProjectInclusionsSnapshot({
   estimateSnapshot: { id: "estimate-1", snapshot_number: 3, source_quote_number: "Q-1001", final_quote_total: 650000 },
   generatedBy: "test-user",
   createdAt: "2026-08-12T04:05:00.000Z",
+  schedulePages: approvedSchedule.pages,
   masterTemplate: { id: "premier-master", version: "2026.08", pageCount: 10 },
   masterPdfRef: { localPath: masterPdfPath, storagePath: masterPdfPath, pageCount: 10 },
   closingPdfRef: { localPath: closingPdfPath, storagePath: closingPdfPath, pageCount: 2 },
@@ -562,6 +575,7 @@ const contractSnapshot = createProjectInclusionsSnapshot({
   generatedBy: "test-user",
   createdAt: "2026-08-12T05:00:00.000Z",
   documentStatus: "contract",
+  schedulePages: approvedSchedule.pages,
   previousDocuments: [storedV1.document, storedV2.document],
   builderProfile: { name: "GR8 Builder", licenceNumber: "QBCC 123456" },
   approval: { clientName: "Grant Client", builderName: "GR8 Builder", approvedAt: "2026-08-12T04:55:00.000Z" },
@@ -571,7 +585,8 @@ const contractSnapshot = createProjectInclusionsSnapshot({
 });
 assert.equal(contractSnapshot.readiness.canIssueFinal, true, "complete approved selections can issue a final contract schedule");
 const contractHtml = renderFinalInclusionsScheduleHtml(contractSnapshot);
-assert.match(contractHtml, /FINAL CONTRACT SCHEDULE/, "final contract HTML carries the final contract state");
+assert.match(contractHtml, /<body class="contract">/, "final contract document uses the contract state");
+assert.match(contractHtml, /<span>Contract &nbsp; \/ &nbsp; Version 1<\/span>/, "final contract cover carries the contract state and version");
 assert.doesNotMatch(contractHtml, /watermark">DRAFT/, "final contract HTML does not carry draft watermark");
 const storedContractV1 = await generateAndStoreFinalInclusionsPdf({
   snapshot: contractSnapshot,
@@ -583,18 +598,18 @@ const storedContractV1 = await generateAndStoreFinalInclusionsPdf({
 });
 assert.equal(storedContractV1.document.metadata.immutable, true, "issued contract schedule is immutable");
 assert.equal(storedContractV1.document.metadata.documentStatus, "contract", "issued contract schedule is marked as contract");
-const mutatedLiveSelections = contractReadySelections.map((selection) => selection.id === "sel-entry-door"
-  ? { ...selection, selected_product_name: "Changed Live Catalogue Door", selected_colour: "Changed Colour", updated_at: "2026-08-12T06:00:00.000Z" }
+const mutatedLiveSelections = contractReadySelections.map((selection) => selection.id === "sel-oven"
+  ? { ...selection, selected_product_name: "Changed Live Catalogue Oven", selected_colour: "Changed Colour", updated_at: "2026-08-12T06:00:00.000Z" }
   : selection);
-assert.match(renderFinalInclusionsScheduleHtml(storedContractV1.document.metadata.selectionSnapshot), /Corinthian Blonde Oak AWO 5G/, "stored contract snapshot keeps original product name after live data changes");
-assert.doesNotMatch(renderFinalInclusionsScheduleHtml(storedContractV1.document.metadata.selectionSnapshot), /Changed Live Catalogue Door/, "stored contract snapshot is not rewritten by live catalogue changes");
+assert.match(renderFinalInclusionsScheduleHtml(storedContractV1.document.metadata.selectionSnapshot), /Bosch Series 4 Oven/, "stored contract snapshot keeps original product name after live data changes");
+assert.doesNotMatch(renderFinalInclusionsScheduleHtml(storedContractV1.document.metadata.selectionSnapshot), /Changed Live Catalogue Oven/, "stored contract snapshot is not rewritten by live catalogue changes");
 assert.equal(isFinalInclusionsDocumentOutOfDate(storedContractV1.document, mutatedLiveSelections), true, "changed live selections require a new contract version instead of modifying the issued PDF");
 
 let rollbackError = null;
 const failedStorage = createLocalFinalInclusionsStorage({ rootDir: path.join(outputRoot, "failed") });
 try {
   await generateAndStoreFinalInclusionsPdf({
-    snapshot,
+    snapshot: approvedSnapshot,
     previousDocuments: [],
     masterPdfBytes,
     closingPdfBytes: null,
