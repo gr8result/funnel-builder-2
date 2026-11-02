@@ -15,6 +15,7 @@ import dotenv from 'dotenv';
 import net from 'node:net';
 import sharp from 'sharp';
 import { startMockSupabase } from './lib/mock-supabase-server.mjs';
+import { assertWindowsTestMemory, captureOwnedProcessIdentity, terminateOwnedProcessTree } from './lib/owned-test-process.mjs';
 import { slugify } from '../lib/landing-pages/pageModel.js';
 
 const REAL_AI = process.env.LP_E2E_REAL_AI === '1';
@@ -26,6 +27,8 @@ if (REAL_AI) {
 }
 const APP_PORT = Number(process.env.LP_E2E_PORT || (REAL_AI ? 3117 : 3107));
 const MOCK_PORT = Number(process.env.LP_E2E_DB_PORT || (REAL_AI ? 54409 : 54399));
+assert.notEqual(APP_PORT, 3000, 'The isolated app must never use port 3000.');
+assert.notEqual(MOCK_PORT, 3000, 'The mock database must never use port 3000.');
 const APP = `http://localhost:${APP_PORT}`;
 // First-visit compiles on a loaded machine can exceed four minutes per page.
 const SLOW_MS = Number(process.env.LP_E2E_SLOW_MS || 240_000);
@@ -85,12 +88,16 @@ const visualSignature = (document) => JSON.stringify({
   sections: document.sections.map((section) => [section.type, section.variant, section.style.background, section.style.align]),
 });
 
-let mock, next, browser;
+let mock, next, browser, nextIdentity;
 let fontFallbackStylesheets = 0;
+
 async function cleanup() {
-  try { await browser?.close(); } catch { /* ignore */ }
-  try { if (next && !next.killed) { if (process.platform === 'win32') spawn('taskkill', ['/pid', String(next.pid), '/T', '/F']); else next.kill('SIGTERM'); } } catch { /* ignore */ }
-  try { await mock?.close(); } catch { /* ignore */ }
+  const errors = [];
+  try { await browser?.close(); } catch (error) { errors.push(`Browser cleanup failed: ${error.message}`); }
+  try { await terminateOwnedProcessTree(next, nextIdentity, { port: APP_PORT, workspace: process.cwd() }); } catch (error) { errors.push(`Next cleanup failed: ${error.message}`); }
+  try { await mock?.close(); } catch (error) { errors.push(`Mock Supabase cleanup failed: ${error.message}`); }
+  for (const error of errors) console.error(error);
+  if (errors.length) process.exitCode = 1;
 }
 
 async function waitForHttp(url, timeoutMs) {
@@ -103,6 +110,7 @@ async function waitForHttp(url, timeoutMs) {
 }
 
 try {
+  await assertWindowsTestMemory();
   for (const port of [APP_PORT, MOCK_PORT]) {
     await new Promise((resolve, reject) => {
       const probe = net.createServer();
@@ -123,6 +131,7 @@ try {
     LANDING_PAGES_PUBLIC_URL: '', NEXT_PUBLIC_SITE_URL: '', APP_PUBLIC_URL: '',
   };
   next = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'dev', '-p', String(APP_PORT)], { env, stdio: ['ignore', 'pipe', 'pipe'] });
+  if (process.platform === 'win32') nextIdentity = await captureOwnedProcessIdentity(next, { port: APP_PORT, workspace: process.cwd() });
   const serverLog = fs.createWriteStream(path.join(OUT, 'next-dev.log'));
   serverLog.on('error', () => { /* the log file is diagnostics only */ });
   next.stdout.pipe(serverLog); next.stderr.pipe(serverLog);
@@ -322,7 +331,7 @@ try {
       const providerResponse = builder.waitForResponse((response) => response.url().includes('/api/landing-pages/pages/') && response.request().method() === 'POST' && JSON.parse(response.request().postData() || '{}').action === 'assistant', { timeout: SLOW_MS });
       const input = await builder.$('[data-testid="ai-input"]');
       await input.click({ clickCount: 3 }); await builder.keyboard.press('Backspace'); await input.type(instruction);
-      await builder.keyboard.press('Enter');
+      await clickText('button', 'Apply Changes');
       return (await providerResponse).json();
     };
     let proposed = await requestEdit();
@@ -350,25 +359,32 @@ try {
 
   let newImage;
   await step('6. generate a campaign hero image', async () => {
-    await builder.click(REAL_AI ? '[data-testid="canvas"] .lp-s-hero .lp-hero-image-empty' : '[data-testid="canvas"] .lp-s-hero .lp-img-edit');
+    await builder.click(REAL_AI ? '[data-testid="canvas"] .lp-s-hero .lp-hero-image-empty' : '[data-testid="canvas"] .lp-s-hero .lp-hero-replace');
+    await builder.waitForSelector('[data-testid="image-upload"]', { timeout: SLOW_MS });
     if (FIXTURES) {
-      const generatedResponse = builder.waitForResponse((response) => response.url().includes(`/api/landing-pages/campaigns/${campaignId}`) && response.request().method() === 'POST' && JSON.parse(response.request().postData() || '{}').action === 'generate-image', { timeout: 60_000 });
+      await builder.waitForSelector('[data-testid="image-generate"]', { timeout: SLOW_MS });
+      const generatedResponse = builder.waitForResponse((response) => response.url().includes(`/api/landing-pages/campaigns/${campaignId}`) && response.request().method() === 'POST' && JSON.parse(response.request().postData() || '{}').action === 'generate-image', { timeout: 60_000 }).catch(() => null);
       await builder.click('[data-testid="image-generate"]');
-      const generated = await (await generatedResponse).json();
+      const response = await generatedResponse;
+      assert(response, 'The image-generation request must complete.');
+      const generated = await response.json();
       assert.equal(generated.source, 'fixture', 'browser flow uses a deterministic fixture without provider calls');
       assert.equal(generated.stored, true);
       newImage = generated.url;
       await builder.waitForFunction(() => !document.querySelector('[data-testid="image-upload"]'), { timeout: 60_000 });
-      assert.match(newImage, /\/storage\/v1\/object\/public\/assets\/landing-pages\/.+ai-hero-image\.png$/i, 'generated image is stored under the campaign workspace');
+      assert(new URL(newImage).pathname.startsWith(`/storage/v1/object/public/assets/landing-pages/${WA}/campaign-${campaignId}/`), 'generated image is stored under the campaign workspace');
+      assert.match(newImage, /\/\d+-ai-hero\.png$/i, 'the fixture image uses the selected hero purpose');
       const storageKey = new URL(newImage).pathname.replace('/storage/v1/object/public/', '');
       assert(mock.files.has(storageKey), 'generated image bytes exist in isolated Supabase storage');
       return;
     }
     if (REAL_AI) {
       const generateFromProvider = async () => {
-        const responsePromise = builder.waitForResponse((response) => response.url().includes(`/api/landing-pages/campaigns/${campaignId}`) && response.request().method() === 'POST' && JSON.parse(response.request().postData() || '{}').action === 'generate-image', { timeout: 180_000 });
+        await builder.waitForSelector('[data-testid="image-generate"]', { timeout: SLOW_MS });
+        const responsePromise = builder.waitForResponse((response) => response.url().includes(`/api/landing-pages/campaigns/${campaignId}`) && response.request().method() === 'POST' && JSON.parse(response.request().postData() || '{}').action === 'generate-image', { timeout: 180_000 }).catch(() => null);
         await builder.click('[data-testid="image-generate"]');
         const response = await responsePromise;
+        assert(response, 'The provider image-generation request must complete.');
         assert.equal(response.status(), 200);
         const result = await response.json();
         assert.equal(result.source, 'openai', 'the authenticated image endpoint returned a real provider result');
@@ -397,7 +413,7 @@ try {
       assert.equal(beforeManual.sections[0].variant, 'split', 'adding an image persists the image layout');
       assert.equal(beforeManual.seo.ogImage, generated.url, 'the generated hero image is used for social previews by default');
 
-      await builder.click('[data-testid="canvas"] .lp-s-hero .lp-img-edit');
+      await builder.click('[data-testid="canvas"] .lp-s-hero .lp-hero-replace');
       const upload = await builder.$('[data-testid="image-upload"]');
       await upload.uploadFile(path.resolve('3-Mediterranean.jpg'));
       await builder.waitForFunction(() => !document.querySelector('[data-testid="image-upload"]'), { timeout: 60_000 });
@@ -408,7 +424,7 @@ try {
       assert.deepEqual(withoutHeroImage(afterManual), withoutHeroImage(beforeManual), 'manual replacement changes no unrelated page content');
       assert.equal(afterManual.seo.ogImage, manualUrl, 'manual replacement updates the default social preview image');
 
-      await builder.click('[data-testid="canvas"] .lp-s-hero .lp-img-edit');
+      await builder.click('[data-testid="canvas"] .lp-s-hero .lp-hero-replace');
       const regenerated = await generateFromProvider();
       assert.notEqual(regenerated.url, generated.url, 'AI regeneration creates a new persistent asset');
       newImage = regenerated.url;
@@ -441,8 +457,8 @@ try {
       const persisted = (await mock.pg.query('select document from landing_pages where id=$1', [pageId])).rows[0].document;
       assert.equal(persisted.sections[0].props.image.src, newImage, 'the regenerated hero image survives reload');
     }
-    for (const [name, width] of [['desktop', 1440], ['mobile', 390]]) {
-      await clickText('button[aria-pressed]', name === 'desktop' ? 'Desktop' : 'Mobile');
+    for (const [name, width] of [['desktop', 1440], ['tablet', 768], ['mobile', 390]]) {
+      await clickText('button[aria-pressed]', name[0].toUpperCase() + name.slice(1));
       await sleep(600);
       await capture(builder, { path: path.join(OUT, `04-editor-${name}.png`) });
       void width;
@@ -467,8 +483,8 @@ try {
   });
 
   if (FIXTURES) await step('8b. manual image replacement remains available', async () => {
-    await builder.click('[data-testid="canvas"] .lp-s-hero .lp-img-edit');
-    const input = await builder.$('[data-testid="image-upload"]');
+    await builder.click('[data-testid="canvas"] .lp-s-hero .lp-hero-replace');
+    const input = await builder.waitForSelector('[data-testid="image-upload"]', { timeout: SLOW_MS });
     await input.uploadFile(path.resolve('3-Mediterranean.jpg'));
     await builder.waitForFunction(() => !document.querySelector('[data-testid="image-upload"]'), { timeout: 60_000 });
     newImage = await builder.$eval('[data-testid="canvas"] .lp-s-hero img', (image) => image.src);
@@ -477,6 +493,42 @@ try {
     await waitSaved();
     const saved = (await mock.pg.query('select document from landing_pages where id=$1', [pageId])).rows[0].document;
     assert.equal(saved.seo.ogImage, newImage, 'manual image replacement updates the default social preview');
+  });
+
+  if (FIXTURES) await step('8c. incomplete photography blocks publish; manual section imagery completes the page', async () => {
+    await builder.click('[data-testid="publish-open"]');
+    await builder.waitForSelector('[data-testid="publish-confirm"][disabled]', { timeout: SLOW_MS });
+    await clickText('button', 'Cancel');
+    const addImage = async (file) => {
+      await clickText('[aria-label="Edit panel"] button', 'Add image');
+      const input = await builder.waitForSelector('[data-testid="image-upload"]', { timeout: SLOW_MS });
+      await input.uploadFile(path.resolve(file));
+      await builder.waitForFunction(() => !document.querySelector('[data-testid="image-upload"]'), { timeout: SLOW_MS });
+    };
+    await clickText('[aria-label="Edit panel"] button[role="tab"]', 'Edit');
+    await builder.click('[data-testid="canvas"] .lp-s-benefits');
+    await clickText('[aria-label="Edit panel"] button', 'Pain points / solutions');
+    await addImage('public/assets/home-bg4-1.jpg');
+    await builder.click('[data-testid="canvas"] .lp-s-gallery');
+    for (const file of [
+      'public/assets/builders/standard-inclusions-premier-kitchen.jpg',
+      'public/assets/builders/standard-inclusions-family-kitchen.jpg',
+      'public/assets/builders/standard-inclusions-kitchen-black-white.webp',
+      'public/assets/builders/standard-inclusions-construction-strip.png',
+    ]) {
+      await clickText('[aria-label="Edit panel"] button', '+ Add');
+      await addImage(file);
+    }
+    await builder.click('[data-testid="canvas"] .lp-s-about');
+    await addImage('public/assets/home-bg-dr2.jpg');
+    await builder.click('[data-testid="canvas"] .lp-s-enquiry');
+    await addImage('public/assets/home-bg4.jpg');
+    await builder.click('[data-testid="save"]');
+    await waitSaved();
+    const saved = (await mock.pg.query('select document from landing_pages where id=$1', [pageId])).rows[0].document;
+    assert.equal(saved.sections.find((section) => section.type === 'gallery').props.images.length, 4);
+    assert(saved.sections.find((section) => section.type === 'about').props.image.src);
+    assert(saved.sections.find((section) => section.type === 'enquiry').props.image.src);
   });
 
   await step('9. publish', async () => {
@@ -556,20 +608,29 @@ try {
     await visitor.setViewport({ width: 1440, height: 900 });
     await visitor.goto(`${publicUrl}?utm_source=facebook&utm_medium=social&utm_campaign=build-your-dream-home-in-2027`, { waitUntil: 'networkidle0' });
     await visitor.$eval('#enquire', (e) => e.scrollIntoView());
-    await visitor.click('.lp-form button[type=submit]');
-    await visitor.waitForSelector('.lp-err');
-    assert((await visitor.$$('.lp-err')).length >= 2, 'required-field validation shows before sending');
-    await visitor.type('#lpf-name', 'Jordan Rivers');
-    await visitor.type('#lpf-email', 'Jordan.Rivers@example.org');
-    await visitor.type('#lpf-phone', '0412 345 678');
-    if (await visitor.$('#lpf-suburb')) await visitor.type('#lpf-suburb', 'Kellyville');
-    if (await visitor.$('#lpf-project_type')) await visitor.select('#lpf-project_type', 'Consultation');
-    if (await visitor.$('#lpf-timeframe')) await visitor.select('#lpf-timeframe', '6–12 months');
-    if (await visitor.$('#lpf-message')) await visitor.type('#lpf-message', 'Four bedrooms, two living areas, on a 600 m² block.');
-    await visitor.click('.lp-consent input');
+    await visitor.click('#enquire .lp-form button[type=submit]');
+    await visitor.waitForSelector('#enquire .lp-err');
+    assert((await visitor.$$('#enquire .lp-err')).length >= 2, 'required-field validation shows before sending');
+    await visitor.type('#enquire [name="name"]', 'Jordan Rivers');
+    await visitor.type('#enquire [name="email"]', 'Jordan.Rivers@example.org');
+    await visitor.type('#enquire [name="phone"]', '0412 345 678');
+    if (await visitor.$('#enquire [name="suburb"]')) await visitor.type('#enquire [name="suburb"]', 'Kellyville');
+    if (await visitor.$('#enquire [name="project_type"]')) await visitor.select('#enquire [name="project_type"]', 'Consultation');
+    if (await visitor.$('#enquire [name="timeframe"]')) await visitor.select('#enquire [name="timeframe"]', '6–12 months');
+    if (await visitor.$('#enquire [name="message"]')) await visitor.type('#enquire [name="message"]', 'Four bedrooms, two living areas, on a 600 m² block.');
+    await visitor.click('#enquire .lp-consent input');
     await sleep(2800);
-    await visitor.click('.lp-form button[type=submit]');
-    await visitor.waitForSelector('.lp-thanks', { timeout: 60_000 });
+    const [submitted] = await Promise.all([
+      visitor.waitForResponse((response) => response.url().endsWith('/api/landing-pages/submit') && response.request().method() === 'POST', { timeout: 60_000 }),
+      visitor.click('#enquire .lp-form button[type=submit]'),
+    ]);
+    assert.equal(submitted.status(), 200, await submitted.text());
+    await visitor.waitForSelector('#enquire .lp-thanks', { timeout: 60_000 });
+    const repeated = await fetch(`${APP}/api/landing-pages/submit`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: submitted.request().postData(),
+    });
+    assert.equal(repeated.status, 200, await repeated.text());
+    assert.equal((await mock.pg.query('select id from landing_page_submissions where campaign_id=$1', [campaignId])).rows.length, 1, 'retrying the same enquiry does not duplicate submissions');
     await capture(visitor, { path: path.join(OUT, '07-enquiry-thank-you.png') });
   });
 
@@ -781,6 +842,41 @@ try {
       headline: document.sections.find((section) => section.type === 'hero')?.props.headline,
       industryCopy: document.sections.map((section) => section.props).filter(Boolean),
     })), null, 2));
+  });
+  await step('20. unpublish keeps the draft and version history while removing public access', async () => {
+    await builder.setViewport({ width: 1440, height: 960 });
+    await builder.goto(`${APP}/modules/landing-pages/editor/${pageId}`, { waitUntil: 'domcontentloaded', timeout: SLOW_MS });
+    await builder.waitForSelector('[data-testid="canvas"] .lp-s-hero h1', { timeout: SLOW_MS });
+    await builder.click('[data-testid="publish-open"]');
+    await mock.pg.exec(`create function test_unpublish_outage() returns trigger language plpgsql as $$
+      begin
+        if new.status = 'unpublished' then raise exception 'simulated unpublish outage'; end if;
+        return new;
+      end $$;
+      create trigger test_unpublish_outage before update on landing_pages for each row execute function test_unpublish_outage();`);
+    builder.once('dialog', (dialog) => dialog.accept());
+    const [failedResponse] = await Promise.all([
+      builder.waitForResponse((response) => response.url().includes(`/api/landing-pages/pages/${pageId}`) && response.request().method() === 'POST', { timeout: SLOW_MS }),
+      clickText('button', 'Take offline'),
+    ]);
+    assert.equal(failedResponse.status(), 500);
+    const failedBody = await failedResponse.json();
+    assert.equal(failedBody.retryable, true);
+    await builder.waitForFunction((message) => document.querySelector('[role="dialog"] [role="alert"]')?.textContent.includes(message), { timeout: 30_000 }, failedBody.error);
+    assert.equal((await mock.pg.query('select status from landing_pages where id=$1', [pageId])).rows[0].status, 'published', 'failed unpublish keeps the page live and permits retry');
+    await mock.pg.exec('drop trigger test_unpublish_outage on landing_pages; drop function test_unpublish_outage();');
+    builder.once('dialog', (dialog) => dialog.accept());
+    const [offlineResponse] = await Promise.all([
+      builder.waitForResponse((response) => response.url().includes(`/api/landing-pages/pages/${pageId}`) && response.request().method() === 'POST', { timeout: SLOW_MS }),
+      clickText('button', 'Take offline'),
+    ]);
+    assert.equal(offlineResponse.status(), 200, await offlineResponse.text());
+    const publicResponse = await fetch(publicUrl);
+    assert.equal(publicResponse.status, 404, 'unpublished page is not public');
+    const saved = (await mock.pg.query('select document,status,published_version_id from landing_pages where id=$1', [pageId])).rows[0];
+    assert.equal(saved.status, 'unpublished');
+    assert.equal(saved.document.sections.find((section) => section.type === 'hero').props.headline, 'Your 2027 home, designed around your family');
+    assert.equal((await mock.pg.query("select id from landing_page_versions where page_id=$1 and kind='publish'", [pageId])).rows.length, 2, 'published history is preserved');
   });
 } catch (e) {
   process.exitCode = 1;

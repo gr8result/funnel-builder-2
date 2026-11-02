@@ -59,6 +59,22 @@ export async function startMockSupabase({ port = 54399, seedSql = '' } = {}) {
     const clauses = [];
     for (const [k, raw] of params) {
       if (['select', 'order', 'limit', 'offset', 'on_conflict', 'columns'].includes(k)) continue;
+      if (k === 'or') {
+        const alternatives = raw.replace(/^\(|\)$/g, '').split(',');
+        const expressions = alternatives.map((alternative) => {
+          const [column, operator, ...parts] = alternative.split('.');
+          const arg = parts.join('.');
+          if (!columns[table]?.[column]) throw Object.assign(new Error(`column ${table}.${column} does not exist`), { code: '42703' });
+          if (operator === 'is' && arg === 'null') return `${qi(column)} is null`;
+          if (operator === 'eq') {
+            values.push(parseValue(arg));
+            return `${qi(column)} = $${values.length}`;
+          }
+          throw new Error(`unsupported or filter ${alternative}`);
+        });
+        clauses.push(`(${expressions.join(' or ')})`);
+        continue;
+      }
       if (!columns[table]?.[k]) throw Object.assign(new Error(`column ${table}.${k} does not exist`), { code: '42703' });
       const neg = raw.startsWith('not.');
       const v = neg ? raw.slice(4) : raw;
@@ -163,6 +179,7 @@ export async function startMockSupabase({ port = 54399, seedSql = '' } = {}) {
   }
 
   const server = http.createServer(async (req, res) => {
+    res.setHeader('Connection', 'close');
     res.setHeader('access-control-allow-origin', req.headers.origin || '*');
     res.setHeader('access-control-allow-headers', req.headers['access-control-request-headers'] || '*');
     res.setHeader('access-control-allow-methods', 'GET,POST,PATCH,PUT,DELETE,OPTIONS,HEAD');
@@ -192,6 +209,14 @@ export async function startMockSupabase({ port = 54399, seedSql = '' } = {}) {
         return json(res, 200, {});
       }
       if (url.pathname.startsWith('/rest/v1/')) return await rest(req, res, url, body);
+      if (url.pathname.startsWith('/storage/v1/object/list/')) {
+        const bucket = decodeURIComponent(url.pathname.replace('/storage/v1/object/list/', ''));
+        const prefix = `${bucket}/${String(body?.prefix || '').replace(/\/+$/, '')}`.replace(/\/+$/, '') + '/';
+        const entries = [...files.entries()].filter(([key]) => key.startsWith(prefix))
+          .map(([key, file]) => ({ name: key.slice(prefix.length), id: key, metadata: { mimetype: file.type } }))
+          .filter((entry) => !entry.name.includes('/'));
+        return json(res, 200, entries.slice(Number(body?.offset || 0), Number(body?.offset || 0) + Number(body?.limit || 100)));
+      }
       if (url.pathname.startsWith('/storage/v1/object/public/')) {
         const f = files.get(decodeURIComponent(url.pathname.replace('/storage/v1/object/public/', '')));
         if (!f) return json(res, 404, { message: 'not found' });

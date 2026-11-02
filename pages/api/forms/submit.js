@@ -5,7 +5,9 @@
 // 3) Adds to list (optional)
 // 4) Applies tags (optional)
 // 5) Sends notification (optional)
-// Hidden fields expected: funnel_id, step_id, list_id, notify_to, success_url, tags (comma/array)
+// Funnel forms include funnel_id, step_id and submission_key injected by /p/[slug].
+// Their owner, workspace, email list and notification recipient come from the published funnel, never the visitor.
+// Non-funnel email signup forms retain the existing list_id / notify_to / success_url / tags behavior.
 
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { sendEmail } from "../../../lib/sendEmail";
@@ -18,6 +20,7 @@ import {
 } from "../../../lib/emailDB";
 
 import { checkRateLimit, getIp } from "../../../lib/rateLimit";
+import { captureFunnelSubmission } from "../../../lib/funnels/formSubmissions";
 
 export const config = { api: { bodyParser: true } };
 
@@ -46,15 +49,40 @@ export default async function handler(req, res) {
     }
 
     if (funnel_id) {
-      const { data: step, error: stepError } = await supabaseAdmin
-        .from("funnel_steps")
-        .select("id")
-        .eq("id", step_id)
-        .eq("funnel_id", funnel_id)
-        .maybeSingle();
-
-      if (stepError) throw stepError;
-      if (!step) return res.status(400).send("Invalid funnel step");
+      const captured = await captureFunnelSubmission(body);
+      const target = captured.funnel;
+      if (!captured.duplicate && target.default_list_id) {
+        try {
+          const subscriber_id = await upsertSubscriber({ user_id: target.owner_user_id, email: captured.fields.email, name: captured.fields.name });
+          await addToList({ list_id: target.default_list_id, subscriber_id });
+          const tagArray = toTagArray(tags);
+          if (tagArray.length) {
+            const tagIds = await getOrCreateTags({ user_id: target.owner_user_id, tagNames: tagArray });
+            await tagSubscriber({ subscriber_id, tag_ids: tagIds });
+          }
+        } catch (error) {
+          console.warn("[funnels/forms] optional email-list delivery failed", error.message);
+        }
+      }
+      if (!captured.duplicate && target.notify_email) {
+        await safeNotify(target.notify_email, { subject: `New enquiry — ${target.name}`, html: renderEmail({ name, email, rest: captured.fields, tags }) });
+      }
+      if (String(req.headers.accept || "").includes("application/json")) {
+        return res.status(200).json({ ok: true, duplicate: captured.duplicate, crmSynced: captured.synced, queued: !captured.synced });
+      }
+      const fallback = `/p/${encodeURIComponent(target.slug)}?ok=1`;
+      let redirect = fallback;
+      if (success_url) {
+        try {
+          const next = new URL(success_url, "https://funnel.invalid");
+          const step = next.searchParams.get("step") || "";
+          if (/^\/p\/[a-z0-9-]+$/.test(next.pathname) && /^[1-9]\d*$/.test(step)) redirect = `/p/${encodeURIComponent(target.slug)}?step=${step}`;
+        } catch (error) {
+          console.warn("[funnels/forms] invalid success URL ignored", error.message);
+        }
+      }
+      res.setHeader("Location", redirect);
+      return res.status(302).end();
     }
 
     // Find owner via list (simple and reliable)
@@ -106,6 +134,7 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: true });
   } catch (e) {
     console.error("[forms/submit] error:", e);
+    if (e.status) return res.status(e.status).json({ ok: false, error: e.status >= 500 ? "We could not send your enquiry just now. Please try again." : e.message });
     return res.status(500).send("Server error");
   }
 }

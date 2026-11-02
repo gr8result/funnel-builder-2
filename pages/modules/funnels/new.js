@@ -11,6 +11,7 @@ import { FUNNEL_TYPES, assemblePage, getFunnelTemplateLibraryAssets } from '../.
 import { supabase } from '../../../lib/supabaseClient';
 import { getWebsiteBuilderAssets, saveWebsiteBuilderAssets } from '../../../lib/website-builder/projectStore';
 import { useBusinessBranding } from '../../../hooks/useBusinessBranding';
+import { useApiFetch } from '../../../hooks/useWorkspace';
 
 export default function NewFunnelWizard() {
   return (
@@ -22,6 +23,7 @@ export default function NewFunnelWizard() {
 
 function Wizard() {
   const { branding } = useBusinessBranding();
+  const apiFetch = useApiFetch();
   const [step, setStep] = useState(1);
   const [selectedType, setSelectedType] = useState(null);
   const [customTradeName, setCustomTradeName] = useState('');
@@ -330,13 +332,13 @@ function Wizard() {
       const brand = await buildBrandPayload();
       const { supabase } = await import('../../../lib/supabaseClient');
       const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch('/api/funnels/create-with-pages', {
+      const res = await apiFetch('/api/funnels/create-with-pages', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
         },
-        body: JSON.stringify({ funnelTypeId: selectedType.id, brand, userId: session?.user?.id, useAI: true }),
+        body: JSON.stringify({ funnelTypeId: selectedType.id, brand, useAI: true }),
       });
       const json = await res.json();
       if (json.ok && json.funnelId) {
@@ -369,44 +371,13 @@ function Wizard() {
       }
 
       const funnelName = customTradeName ? `${customTradeName} Funnel` : 'Blank Funnel';
-      const slug = `${funnelName}`
-        .toLowerCase()
-        .replace(/[^\w\s-]/g, '')
-        .replace(/\s+/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^[-]+|[-]+$/g, '')
-        .slice(0, 80) + '-' + Math.random().toString(36).slice(2, 7);
-
-      const funnelInsert = await supabase
-        .from('funnels')
-        .insert({
-          owner_user_id: userId,
-          name: funnelName,
-          slug,
-          status: 'draft',
-        })
-        .select('id')
-        .single();
-
-      if (funnelInsert.error || !funnelInsert.data?.id) {
-        throw new Error(funnelInsert.error?.message || 'Could not create blank funnel');
-      }
-
-      const stepInsert = await supabase
-        .from('funnel_steps')
-        .insert({
-          funnel_id: funnelInsert.data.id,
-          title: 'Page 1',
-          content: '',
-          order_index: 0,
-        });
-
-      if (stepInsert.error) {
-        await supabase.from('funnels').delete().eq('id', funnelInsert.data.id);
-        throw new Error(stepInsert.error.message || 'Could not create blank page');
-      }
-
-      window.location.href = `/modules/funnels/edit/${funnelInsert.data.id}`;
+      const response = await apiFetch('/api/funnels/manage', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'create', name: funnelName, content: buildStarterPageHtml(funnelName) }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result?.id) throw new Error(result?.error || 'Could not create blank funnel');
+      window.location.href = `/modules/funnels/edit/${result.id}`;
     } catch (e) {
       setError('Request failed: ' + e.message);
       setStartingFromScratch(false);
@@ -446,7 +417,10 @@ function Wizard() {
         <div style={{ maxWidth: 1320, margin: '0 auto', padding: '0 16px 32px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, padding: '0 0 24px', marginBottom: 24, borderBottom: '1px solid #2b3a6a' }}>
             <h2 style={{ color: '#e6eef5', fontSize: 20, fontWeight: 600, margin: 0 }}>Campaign Landing Page</h2>
-            <Link href="/modules/landing-pages?from=sales-funnels" style={{ color: '#fff', background: '#b5224a', padding: '12px 20px', borderRadius: 8, fontWeight: 600, textDecoration: 'none' }}>Create AI Landing Page</Link>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+              <Link href="/modules/funnels/templates" style={{ color: '#dbeafe', background: '#1e293b', padding: '12px 20px', borderRadius: 8, fontWeight: 600, textDecoration: 'none' }}>Browse Master Templates</Link>
+              <Link href="/modules/landing-pages?from=sales-funnels" style={{ color: '#fff', background: '#b5224a', padding: '12px 20px', borderRadius: 8, fontWeight: 600, textDecoration: 'none' }}>Create AI Landing Page</Link>
+            </div>
           </div>
           <div style={{ display: 'flex', gap: 0, alignItems: 'center', marginBottom: 40 }}>
             {[1, 2].map((n) => (

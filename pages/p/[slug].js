@@ -5,8 +5,9 @@
 //         /p/my-funnel?ok=1    → thank-you state
 
 import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Head from "next/head";
+import { stripFunnelRoutingInputs } from "../../lib/funnels/templateContent";
 
 function escapeHtml(value = "") {
   return String(value)
@@ -17,21 +18,20 @@ function escapeHtml(value = "") {
     .replace(/'/g, "&#39;");
 }
 
-function injectFunnelFormContext(content, funnelId, stepId) {
+function injectFunnelFormContext(content, funnelId, stepId, keyForForm) {
   if (!funnelId || !stepId) return content || "";
 
   const funnelInput = `<input type="hidden" name="funnel_id" value="${escapeHtml(funnelId)}" />`;
   const stepInput = `<input type="hidden" name="step_id" value="${escapeHtml(stepId)}" />`;
+  let formIndex = 0;
 
   return String(content || "").replace(
     /<form\b([^>]*)>([\s\S]*?)<\/form>/gi,
     (form, attributes, innerHtml) => {
       if (!/\baction\s*=\s*["']\/api\/forms\/submit["']/i.test(attributes)) return form;
+      const keyInput = `<input type="hidden" name="submission_key" value="${escapeHtml(keyForForm(formIndex++))}" />`;
 
-      const withoutContext = innerHtml
-        .replace(/<input\b[^>]*\bname\s*=\s*["']funnel_id["'][^>]*>/gi, "")
-        .replace(/<input\b[^>]*\bname\s*=\s*["']step_id["'][^>]*>/gi, "");
-      return `<form${attributes}>${funnelInput}${stepInput}${withoutContext}</form>`;
+      return `<form${attributes}>${funnelInput}${stepInput}${keyInput}${stripFunnelRoutingInputs(innerHtml)}</form>`;
     }
   );
 }
@@ -53,7 +53,7 @@ function buildMissingStepPreview(name = "Your funnel") {
 
 export default function PublicFunnelPage() {
   const router = useRouter();
-  const { slug, step: stepParam, ok, funnelId, preview, canvasWidth: canvasWidthParam, device } = router.query;
+  const { slug, step: stepParam, ok, funnelId, preview, previewToken, canvasWidth: canvasWidthParam, device } = router.query;
   const isPreviewMode = `${preview || ""}` === "1";
   const isMobilePreview = isPreviewMode && `${device || ""}` === "mobile";
 
@@ -61,6 +61,7 @@ export default function PublicFunnelPage() {
   const [funnel, setFunnel] = useState(null);
   const [steps, setSteps] = useState([]);
   const [currentStep, setCurrentStep] = useState(null);
+  const submissionKeys = useRef({});
 
   useEffect(() => {
     if (!slug && !funnelId) return;
@@ -72,6 +73,7 @@ export default function PublicFunnelPage() {
         if (preview === "1" && funnelId) {
           params.set("preview", "1");
           params.set("funnelId", funnelId);
+          if (previewToken) params.set("previewToken", previewToken);
         }
         const res = await fetch(`/api/funnels/public-page?${params.toString()}`);
         if (res.status === 404) { setState("notfound"); return; }
@@ -96,7 +98,7 @@ export default function PublicFunnelPage() {
         setState("error");
       }
     })();
-  }, [slug, stepParam, funnelId, preview]);
+  }, [slug, stepParam, funnelId, preview, previewToken]);
 
   useEffect(() => {
     if (!currentStep) return;
@@ -391,7 +393,11 @@ export default function PublicFunnelPage() {
       <div style={previewShellStyle || undefined}>
         <div
           dangerouslySetInnerHTML={{
-            __html: injectFunnelFormContext(currentStep.content, funnel?.id, currentStep.id),
+            __html: injectFunnelFormContext(currentStep.content, funnel?.id, currentStep.id, (index) => {
+              const key = `${currentStep.id}:${index}`;
+              if (!submissionKeys.current[key]) submissionKeys.current[key] = crypto.randomUUID();
+              return submissionKeys.current[key];
+            }),
           }}
           className="fb-preview-root"
           style={{ minHeight: "100vh" }}
