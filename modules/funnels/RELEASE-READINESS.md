@@ -18,16 +18,22 @@ demonstrated by release/smoke testing.
 
 ### Release identity and changed-file manifest
 
-Branch: `recovery/live-snapshot-20261031`.
+Release branch: `release/landing-pages-v1-20261102`.
 
 Validated base HEAD: `22d7b655068628a09978f6e4d714f3ee240b5a68`.
 
-**Release commit: NOT YET CREATED.** The validated Landing Pages changes are
-uncommitted in a shared worktree that also contains unrelated unfinished work.
-No commit was created because production sign-off did not authorize including
-or disturbing those unrelated changes. A release owner must create a scoped
-commit from the files below in an isolated clean worktree, then rerun the
-targeted checksum/diff verification before assigning the release commit hash.
+**Validated release payload commit:
+`158070c6f057daf97197bf22d30aefefb41aedc6`.**
+
+This commit was created in an isolated clean worktree from the validated base
+and contains exactly the 42 manifest files below. Source/isolated SHA-256 parity,
+the seven release-migration SHA-256 checksums, normalized-content parity for
+the seven unchanged prerequisite migrations, focused API/model/migration
+suites, targeted ESLint (zero errors), and unrelated-path diff review passed.
+The subsequent metadata-only commit records this immutable payload SHA in this
+document. The final 249/249 production build and browser suites apply to the
+byte-identical 42-file source copied into this payload; Git checkout filters
+only normalize line endings.
 
 Release source/documentation files:
 
