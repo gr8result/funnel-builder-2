@@ -8,6 +8,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import { PGlite } from '@electric-sql/pglite';
 
+// QB_MIGRATIONS_DIR lets the test run against another branch's migration set (e.g. the release candidate).
+const MIGRATIONS_DIR = process.env.QB_MIGRATIONS_DIR || 'supabase/migrations';
 const TARGET = '20261021000100_builder_commercial_internal_member_rls.sql';
 const MIGRATIONS = [
   '20260813091500_estimate_builder_commercial_backbone_stage1.sql',
@@ -34,9 +36,10 @@ users.unknown_role = { id: uid(), role: 'viewer', status: 'active', internal: fa
 users.inactive_estimator = { id: uid(), role: 'estimator', status: 'inactive', internal: false };
 users.client_in_A_owner_in_B = { id: uid(), role: 'client', status: 'active', internal: false, alsoOwnerOfB: true };
 
-const targetSql = await fs.readFile(`supabase/migrations/${TARGET}`, 'utf8');
+const targetSql = await fs.readFile(`${MIGRATIONS_DIR}/${TARGET}`, 'utf8');
 const listed = [...targetSql.matchAll(/^\s*'(builder_[a-z_]+|client_portal_[a-z_]+)'/gm)].map((m) => m[1]);
 assert(listed.length > 40, 'could not read the migration table list');
+const grantsMappingRead = /create policy tenant_read on public\.builder_requirement_quote_mappings/i.test(targetSql);
 
 async function build(includeTarget) {
   const db = new PGlite();
@@ -61,7 +64,7 @@ async function build(includeTarget) {
   }
   for (const file of MIGRATIONS) {
     if (file === TARGET && !includeTarget) continue;
-    const sql = (await fs.readFile(`supabase/migrations/${file}`, 'utf8')).replace(/create extension if not exists pgcrypto;/gi, '');
+    const sql = (await fs.readFile(`${MIGRATIONS_DIR}/${file}`, 'utf8')).replace(/create extension if not exists pgcrypto;/gi, '');
     try { await db.exec(sql); } catch (error) { throw new Error(`${file}: ${error.message}`, { cause: error }); }
   }
   await db.exec('grant select,insert,update,delete on all tables in schema public to authenticated');
@@ -116,7 +119,12 @@ for (const [key, user] of Object.entries(users)) {
   for (const table of tested) {
     const b = await access(before.db, user, table);
     const a = await access(after.db, user, table);
-    if (user.internal) {
+    if (user.internal && table === 'builder_requirement_quote_mappings' && grantsMappingRead) {
+      // Intended by the release-candidate migration: internal staff may read (not write) their own
+      // workspace's requirement mappings.
+      assert.deepEqual({ readB: a.readB, writeA: a.writeA }, { readB: b.readB, writeA: b.writeA }, `${key} write/cross-builder access to ${table} changed`);
+      assert(a.readA >= b.readA, `${key} lost read access to ${table}`);
+    } else if (user.internal) {
       assert.deepEqual(a, b, `${key} access to ${table} changed: before ${JSON.stringify(b)} after ${JSON.stringify(a)}`);
     } else {
       assert.equal(a.readA, 0, `${key} can still read ${table} in builder A`);
