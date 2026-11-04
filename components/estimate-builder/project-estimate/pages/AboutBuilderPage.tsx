@@ -33,12 +33,13 @@ const aboutStatDefaults = [
 
 const aboutPageStyles = {
   page: { ...styles.luxuryPage, ...styles.luxuryAboutWhyPage, gap: 14, padding: 40 },
-  top: { ...styles.luxuryAboutWhyTop, minHeight: 292, alignItems: "start" },
+  // Hero area kept at 256px so the statistics strip fits inside the A4 page and the PDF export bounds check passes.
+  top: { ...styles.luxuryAboutWhyTop, minHeight: 256, alignItems: "start" },
   copy: { ...styles.luxuryAboutWhyCopy, gap: 9 },
   title: { ...styles.luxuryAboutWhyTitle, fontSize: 32, lineHeight: 1.04 },
   body: { ...styles.luxuryAboutWhyBody, fontSize: 15, lineHeight: 1.45 },
-  imageStack: { ...styles.luxuryAboutWhyImageStack, minHeight: 292 },
-  heroImage: { ...styles.luxuryAboutWhyHeroImage, height: 252 },
+  imageStack: { ...styles.luxuryAboutWhyImageStack, minHeight: 256 },
+  heroImage: { ...styles.luxuryAboutWhyHeroImage, height: 216 },
   detailImage: { ...styles.luxuryAboutWhyImageInset, height: 118, width: "43%" },
   lower: { ...styles.luxuryAboutWhyLower, gap: 10, paddingTop: 12 },
   subhead: { ...styles.luxuryAboutWhySubhead, margin: "3px 0 0", fontSize: 22, lineHeight: 1.08 },
