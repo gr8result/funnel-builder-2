@@ -6,6 +6,9 @@ import { masterJobId, linkTakeoffToMasterJob } from "../../lib/construction-esti
 import EntryDoorFurnitureSchedule from './EntryDoorFurnitureSchedule.jsx';
 import CabinetryCataloguePicker from './CabinetryCataloguePicker.jsx';
 import CabinetryReconciliation from './CabinetryReconciliation.jsx';
+import SelectionReconcilePanel from './SelectionReconcilePanel.jsx';
+import ProductSelectionIntegrityPanel from './ProductSelectionIntegrityPanel.jsx';
+import { hasInternalCommercialAccess } from '../../lib/commercialAccess.js';
 import { useQuotationSubgroups } from './useQuotationSubgroups.js';
 import { buildQuotationSubgroups, visibleSubgroupRows } from '../../lib/construction-estimation/quotationSubgroups.js';
 import { cabinetryQuoteGroupStatus } from '../../lib/construction-estimation/cabinetryRequirements.js';
@@ -509,7 +512,7 @@ export default function EstimateBuilderWorkbook(props) {
 function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recentId = "", organisationId = "", initialPage = "" } = {}) {
   const router = useRouter();
   const sheet = useEstimateBuilderWorkbook({}, { previewMode });
-  const { workspaceId, loading: workspaceLoading } = useWorkspace();
+  const { workspaceId, role: workspaceRole, loading: workspaceLoading } = useWorkspace();
   const moduleWorkspaceId = organisationId || workspaceId;
   const saveStatusTimerRef = useRef(null);
   const modeHandledRef = useRef("");
@@ -902,17 +905,11 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
     }
   }
 
-  async function openLocalJobFilePicker() {
+  function openLocalJobFilePicker() {
     if (openingLocalJobFile) return;
     setJobFileError("");
     setOpenWorkbookMenu("");
-    setOpeningLocalJobFile(true);
-    try {
-      const result = await jobFile.open();
-      if (result?.ok === false && result.message) setJobFileError(result.message);
-    } finally {
-      setOpeningLocalJobFile(false);
-    }
+    localJobFileInputRef.current?.click();
   }
 
   async function closeActiveJob() {
@@ -927,6 +924,7 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
     const file = event.target.files?.[0] || null;
     event.target.value = "";
     if (!file) return;
+    setOpeningLocalJobFile(true);
     setJobFileError("");
     setLocalJobFilePrompt(null);
     try {
@@ -964,6 +962,8 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
     } catch (error) {
       const message = `${file?.name || "Selected file"}: ${error?.message || "This job file could not be opened."}`;
       setJobFileError(message);
+    } finally {
+      setOpeningLocalJobFile(false);
     }
   }
 
@@ -1549,6 +1549,15 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
                 canEditFormulas={isAdminMode}
               />
           )}
+          {activePageKey === "quotation" && hasInternalCommercialAccess(workspaceRole) ? (
+            <section data-testid="commercial-selection-review" aria-label="Commercial selection review">
+              {commercialModuleContext?.projectId ? (
+                <SelectionBaselineControl key={sheet.workbook.workspaceId || sheet.workbook.workspace_id} workbook={sheet.workbook} onApply={sheet.applySelectionBaseline} />
+              ) : null}
+              <ProductSelectionIntegrityPanel sheet={sheet} />
+              <SelectionReconcilePanel sheet={sheet} readonly={sheet.previewMode} />
+            </section>
+          ) : null}
           {activePageKey === "quotation" && <QuotationSheet sheet={sheet} onFormulaTarget={setFormulaTarget} />}
           {activePageKey === "standardInclusions" && <StandardInclusionsSheet sheet={sheet} />}
           {activePageKey === "productLibrary" && <EmbeddedProductLibraryPage embeddedInEstimateBuilder {...commercialModuleContext} />}
@@ -1562,8 +1571,6 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
           {['purchaseOrders', 'supplierProcurement', 'procurement'].includes(activePageKey) && <EntryDoorFurnitureSchedule workbook={sheet.workbook} />}
           {activePageKey === "purchaseOrders" && <CommercialPurchaseOrdersPage {...commercialModuleContext} />}
           {activePageKey === "clientSelections" && (
-            <>
-            {commercialModuleContext?.projectId && <SelectionBaselineControl key={sheet.workbook.workspaceId || sheet.workbook.workspace_id} workbook={sheet.workbook} onApply={sheet.applySelectionBaseline} />}
             <ClientSelectionsModuleHost
               moduleContext={commercialModuleContext}
               restoringActiveJob={explicitJobRestoreState.state === "restoring"}
@@ -1573,7 +1580,6 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
               onNewJob={() => setNewJobModalOpen(true)}
               showDeveloperControls={showDeveloperControls}
             />
-            </>
           )}
           {activePageKey === "budgetVsActual" && <CommercialBudgetVsActualPage {...commercialModuleContext} />}
           {activePageKey === "supplierProcurement" && <SupplierProcurementSheet navigateWorkspacePage={navigateWorkspacePage} />}

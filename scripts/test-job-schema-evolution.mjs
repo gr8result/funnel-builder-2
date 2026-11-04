@@ -82,10 +82,12 @@ await test('A current job', async () => {
   assert.equal(job.jobSchemaVersion, JOB_SCHEMA_VERSION);
   const first = await save(database, job, '2026-10-05T01:00:00.000Z');
   assert.equal(first.jobSchemaVersion, JOB_SCHEMA_VERSION); assert.equal(first.revision, 1);
+  assert(![...database.records.keys()].some((key) => key.startsWith('job:new-job-1:snapshot:revision-1-')), 'the current record is not duplicated as a snapshot');
   const reloaded = load(database.records.get('job:new-job-1').workbook);
   assert.deepEqual(projectData(reloaded), projectData(job));
   assert.equal(normalizeJobForCurrentSchema(reloaded), reloaded, 'a current job is not rewritten');
   assert.equal((await save(database, reloaded, '2026-10-05T01:01:00.000Z')).revision, 2);
+  assert(database.records.has('job:new-job-1:snapshot:revision-1-2026-10-05T01:00:00.000Z'), 'the superseded record remains available as the previous revision');
 });
 
 await test('B old job missing cabinetryCatalogueAudit', async () => {

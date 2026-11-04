@@ -48,7 +48,12 @@ export function useDoorFurniturePicker({workbook,projectId,workspaceId,onClientS
       const result=await onClientSelectionsSave(next);
       if(!result?.ok)throw Error(result?.message||'Selection could not be saved.');
       setSavedBook(next);
-      try{const payload=JSON.stringify({workspaceId,projectId,savedAt:next.updatedAt,book:next});localStorage.setItem(key,payload);localStorage.setItem(`gr8:embedded-selections-book:${workspaceId}:latest`,payload);}catch{}
+      try{
+        const savedAt=next.updatedAt||new Date().toISOString();
+        const payload=JSON.stringify({workspaceId,projectId,savedAt,book:next});
+        localStorage.setItem(key,payload);
+        localStorage.setItem(`gr8:embedded-selections-book:${workspaceId}:latest`,JSON.stringify({workspaceId,projectId,savedAt,storageKey:key}));
+      }catch{}
       setMessage(remove?'Selection removed.':`${product.productName} saved to chosen inclusions for ${targets.map(d=>d.doorReference).join(', ')}.`);setProduct(null);
     }catch(e){setError(e.message);}finally{setBusy(false);}
   }

@@ -210,11 +210,11 @@ check("selection categories never appear as project locations", () => {
   // No requirement area or category label is a location - whichever list it is used for.
   const names = projectLocationNames({ book, workbook: takeoffWorkbook });
   for (const label of [...ALL_GUIDED_REQUIREMENTS.map((item) => item.areaLabel), ...CLIENT_SELECTION_CATEGORIES.map((item) => item.label)]) {
-    if (label === "Kitchen") continue; // a real room as well as an area
+    if (["Kitchen", "Laundry"].includes(label)) continue;
     assert(isSelectionCategoryName(label), label);
     assert(!names.includes(label), label);
   }
-  assert(!isSelectionCategoryName("Main Bathroom") && !isSelectionCategoryName("Ensuite 2") && !isSelectionCategoryName("Kitchen"));
+  assert(!isSelectionCategoryName("Main Bathroom") && !isSelectionCategoryName("Ensuite 2") && !isSelectionCategoryName("Kitchen") && !isSelectionCategoryName("Laundry"));
   // Plumbing allocation, tiling and accessory packs read the same list: no category there either.
   for (const key of ["bathroom-basin", "toilet-suite", "floor-waste", "towel-rail"]) {
     assert(!plumbingLocationsForRequirement(key, names).some((location) => /accessories|fixtures|mirrors/i.test(location.label)), key);
@@ -327,19 +327,20 @@ check("each shower holds a different selection; quote-only stays unpriced", () =
   assert.equal(upsertPlumbingLine(lines, second).length, 3);
 });
 
-check("allowance and variation use the existing engine: 2 x $1,200 vs $1,650 + $1,350 = +$600", () => {
+check("supplier quote variation compares ex-GST rates against ex-GST allowances", () => {
   const quotedEnsuite = configuredLineFromProduct(regencyFrameless, { ...draftFromConfiguredLine(lines[0]), quotedPrice: 1650, quoteReference: "RQ-TEST-1" }, { existingLine: lines[0], lines });
   const quotedBathroom = configuredLineFromProduct(stegbarSemi, { ...draftFromConfiguredLine(lines[1]), quotedPrice: 1350, quoteReference: "SQ-TEST-2" }, { existingLine: lines[1], lines });
   assert.equal(quotedEnsuite.lineId, lines[0].lineId, "editing keeps the line");
   assert.deepEqual(quotedEnsuite.configurationOptions, lines[0].configurationOptions);
   lines = upsertPlumbingLine(upsertPlumbingLine(lines, quotedEnsuite), quotedBathroom);
+  const built = plumbingSelectionPatch(showerRequirement, lines, { plumbingAllocation: required });
+  lines = built.record.lines;
   const summary = plumbingAllocationSummary(lines);
   assert.equal(summary.allowanceTotal, 2400);
   assert.equal(summary.selectedTotal, 3000);
-  assert.equal(summary.variation, 600);
-  assert.deepEqual(lines.map((line) => line.variation), [450, 150]);
-  const built = plumbingSelectionPatch(showerRequirement, lines, { plumbingAllocation: required });
-  assert.equal(built.patch.upgradeCost, 600);
+  assert.equal(summary.variation, 327.27);
+  assert.deepEqual(lines.map((line) => line.variation), [300, 27.27]);
+  assert.equal(built.patch.upgradeCost, 327.27);
   assert.equal(built.patch.guidedSelection.priceState, "Current Price");
   assert.equal(statusForRequirement(showerRequirement, { selection_status: "selected", selected_details: built.patch.guidedSelection }), "complete");
   assert.deepEqual(built.patch.guidedSelection.locationAllocations.map((item) => item.location), ["Ensuite", "Bathroom"]);
@@ -348,10 +349,12 @@ check("allowance and variation use the existing engine: 2 x $1,200 vs $1,650 + $
 check("online product: supplier SKU and published price flow to the line", () => {
   const line = configuredLineFromProduct(stegbarOnline, { room: "Bathroom 2", quantity: 1, options: { size: "H1950 X W900 (mm)", glass: "Clear", finish: "Matt Black" }, unitAllowance: 300 });
   const variant = variantForOptions(stegbarOnline, line.configurationOptions);
+  const savedLine = plumbingSelectionPatch(showerRequirement, [line], null).record.lines[0];
   assert.equal(line.supplierCode, variant.sku);
   assert.equal(line.unitPrice, variant.price);
   assert.equal(line.priceSource, "catalogue-variant");
-  assert.equal(line.variation, variant.price - 300);
+  assert.equal(savedLine.priceIncludesGst, true, "explicit catalogue price basis is normalized when Client Selections saves");
+  assert.equal(savedLine.variation, Math.round((variant.price / 1.1 - 300) * 100) / 100, "variation uses the ex-GST catalogue price against the ex-GST allowance");
   assert.equal(line.configuration.widthMm, 900);
 });
 
@@ -373,7 +376,8 @@ check("selections flow into the Quotation Builder and Procurement", () => {
   assert.equal(ensuiteRow.quoteReference, "RQ-TEST-1");
   assert.match(ensuiteRow.description, /W 1200mm x H 2000mm/);
   assert.equal(ensuiteRow.allowanceTotal, 1200);
-  assert.equal(ensuiteRow.variation, 450);
+  assert.equal(ensuiteRow.variation, null, "unapproved inclusion baseline blocks posting the variation");
+  assert.equal(ensuiteRow.historicalVariation, 300, "the computed ex-GST difference remains available for review");
   assert.equal(bathroomRow.supplier, "Stegbar");
   assert.equal(mirrorRow.priceStatus, "Supplier Quote Required");
   assert.equal(mirrorRow.excelRate, "");
@@ -397,7 +401,9 @@ check("an existing fixed retail mirror keeps its Product Library price", () => {
   assert.equal(line.unitPrice, retail.clientPrice);
   assert.equal(line.priceSource, "catalogue-price");
   assert.equal(line.quantity, 2);
-  assert.equal(line.variation, (retail.clientPrice - 100) * 2);
+  const savedLine = plumbingSelectionPatch(requirement("mirror"), [line], null).record.lines[0];
+  assert.equal(savedLine.priceIncludesGst, true);
+  assert.equal(savedLine.variation, -38.18, "inclusive retail price is converted against the ex-GST allowance");
   assert.deepEqual(dimensionProblems(retail, {}), []);
 });
 

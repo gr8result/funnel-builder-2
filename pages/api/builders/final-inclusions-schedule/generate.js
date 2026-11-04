@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { supabaseAdmin } from "../../../../lib/supabaseAdmin";
-import { withWorkspace } from "../../../../lib/withWorkspace";
+import { withWorkspace, INTERNAL_COMMERCIAL_ROLES } from "../../../../lib/withWorkspace";
 import { createProjectInclusionsSnapshot } from "../../../../lib/builders/finalInclusionsSchedule.js";
 import {
   FinalInclusionsPdfError,
@@ -88,6 +88,10 @@ async function handler(req, res) {
     const masterPdf = masterRef ? await loadPdfSource(masterRef, { label: "master" }) : null;
     const closingPdf = closingRef ? await loadPdfSource(closingRef, { label: "closing" }) : null;
     const projectDetails = req.body?.projectDetails || {};
+    const schedulePages = Array.isArray(req.body?.previewSchedule?.pages) ? req.body.previewSchedule.pages : [];
+    if (standaloneClientSelectionsSchedule && !schedulePages.length) {
+      return res.status(422).json({ ok: false, error: "The schedule pages were not supplied. Reopen Review Schedule and generate again.", code: "SCHEDULE_PAGES_REQUIRED" });
+    }
     const snapshotProject = {
       ...project,
       project_name: projectDetails.projectName || project.project_name,
@@ -123,6 +127,8 @@ async function handler(req, res) {
       generatedBy: req.user?.id || "",
       documentStatus,
       previousDocuments,
+      cover: req.body?.previewSchedule?.cover || {},
+      schedulePages: schedulePages,
       builderProfile: req.body?.builderProfile || req.body?.builder || {},
       preparedBy: req.body?.preparedBy || req.user?.email || req.user?.id || "",
       reviewedBy: req.body?.reviewedBy || "",
@@ -181,8 +187,10 @@ async function handler(req, res) {
   }
 }
 
-export default withWorkspace(handler);
+export default withWorkspace(handler, { roles: INTERNAL_COMMERCIAL_ROLES });
 
+// The paginated schedule rows travel with the request, so allow more than the 1MB default.
+export const config = { api: { bodyParser: { sizeLimit: "8mb" } } };
 function cleanClientDocumentText(value = "") {
   const next = String(value || "").trim();
   if (!next) return "";

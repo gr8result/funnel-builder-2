@@ -1,4 +1,4 @@
-import { withWorkspace } from '../../../lib/withWorkspace';
+import { withWorkspace, INTERNAL_COMMERCIAL_ROLES } from '../../../lib/withWorkspace';
 import { supabaseAdmin } from '../../../lib/supabaseAdmin';
 import { createSelectionRepository, SELECTION_RESOURCES } from '../../../lib/builders/selectionRepository';
 import { SELECTION_SLOTS } from '../../../lib/builders/selectionRegistry';
@@ -13,13 +13,15 @@ export async function selectionFoundationHandler(req, res) {
         if (!SELECTION_RESOURCES[resource]) return res.status(400).json({ error: 'Unknown resource.' });
         return res.status(200).json({ records: await repository.list(resource) });
       }
-      const resources = ['configurations', 'aliases', 'schedules', 'mappings'];
+      const resources = ['configurations', 'aliases', 'schedules', 'mappings', 'requirementMappings'];
       const values = await Promise.all(resources.map(resourceName => repository.list(resourceName)));
       return res.status(200).json({ workspace_id: req.workspaceId, slots: SELECTION_SLOTS, ...Object.fromEntries(resources.map((name, index) => [name, values[index]])) });
     }
     if (req.method === 'POST') {
       if (!['owner', 'admin'].includes(req.memberRole)) return res.status(403).json({ error: 'Builder configuration requires an owner or admin.' });
-      const record = await repository.save(req.body?.resource, req.body?.record || {});
+      const record = await repository.save(req.body?.resource, req.body?.resource === 'requirementMappings'
+        ? { ...(req.body?.record || {}), verified_by: req.user?.id ?? null, verified_at: new Date().toISOString() }
+        : req.body?.record || {});
       return res.status(200).json({ record });
     }
     res.setHeader('Allow', 'GET, POST');
@@ -29,4 +31,4 @@ export async function selectionFoundationHandler(req, res) {
   }
 }
 
-export default withWorkspace(selectionFoundationHandler);
+export default withWorkspace(selectionFoundationHandler, { roles: INTERNAL_COMMERCIAL_ROLES });

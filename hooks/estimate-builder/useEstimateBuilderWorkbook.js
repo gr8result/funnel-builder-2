@@ -8,6 +8,11 @@ import { linkInternalPaintColoursToQuotation } from '../../lib/builders/internal
 import { connectElectricalScheduleToQuotation } from '../../lib/builders/electricalSchedule.js';
 import { applySelectionProduct, applyInclusionScheduleToQuote } from '../../lib/builders/selectionQuoteEngine.js';
 import { withStableQuoteTargets, preserveQuoteQuantityOwnership } from '../../lib/builders/selectionRegistry.js';
+import { deferUnapprovedQuotationChanges, planSelectionReconciliation, runSelectionConnectors } from '../../lib/builders/selectionReconciliation.js';
+import { refreshSelectionProcurementRequirements } from '../../lib/builders/selectionProcurementRequirements.js';
+import { selectionReconciliationFinancialImpact } from '../../lib/builders/quotationFinancialImpact.js';
+import { reconcileProductSelections } from '../../lib/builders/productSelectionIntegrity.js';
+import { normalizeQuotationStructure, quotationSectionOrderAfterNormalize } from '../../lib/construction-estimation/quotationStructure.js';
 import { takeoffProcurementDetails, assignPlasterboardSupplier, procurementSupplierKey } from '../../lib/construction-estimation/takeoffProcurement.js';
 import { masterJobId, linkTakeoffToMasterJob, mergeMasterJobSummaries, findMasterJobForProject } from '../../lib/construction-estimation/masterJob.js';
 import { normalizeTakeoffInputSection } from '../../lib/construction-estimation/takeoffInputRows.js';
@@ -16,13 +21,37 @@ import { withWallLiningMappings } from '../../lib/construction-estimation/quotat
 import { acknowledgeQuotationNotification } from '../../lib/construction-estimation/quotationNotifications.js';
 import { persistCompleteJob, jobContentSignature, restoreCompleteWorkbook, normalizeJobForCurrentSchema, isProtectedRecoveryRecord, PROTECTED_RECOVERY_JOB_KEY } from "../../lib/construction-estimation/jobPersistence.js";
 import { externalizeTakeoffPlanPages, materializeTakeoffPlanPages } from "../../components/construction-estimation/ai-plan-takeoff/planBlobStorage.js";
-import { getMasterProducts } from "../../lib/product-library/catalogueService.js";
+import { getMasterProducts, getEffectiveProductCatalogue } from "../../lib/product-library/catalogueService.js";
 
-// Product Library lookup for the tiling connector (tile sizes, box coverage, prices).
-let masterProductIndex = null;
-function masterProductById(id) {
-  if (!masterProductIndex) masterProductIndex = new Map(getMasterProducts().map((product) => [product.productId, product]));
-  return masterProductIndex.get(id) || null;
+// Product Library lookups are restricted to the active workbook workspace.
+function productByIdForWorkbook(workbook = {}) {
+  const workspaceId = String(workbook.workspaceId || workbook.workspace_id || "").trim();
+  if (!workspaceId || (typeof window !== "undefined" && browserWorkspaceId() !== workspaceId)) return () => null;
+  const catalogue = getEffectiveProductCatalogue({ organisationId: workspaceId, includeDisabled: true });
+  if (catalogue.organisationId !== workspaceId) return () => null;
+  const products = new Map(catalogue.products.map((product) => [String(product.productId), product]));
+  const productsByCode = new Map();
+  for (const product of catalogue.products) {
+    for (const code of [product.productCode, product.supplierCode, product.sku]) {
+      const normalized = String(code || "").trim().toLowerCase();
+      if (!normalized) continue;
+      const key = `${String(product.supplier || "").trim().toLowerCase()}\u0000${normalized}`;
+      const existing = productsByCode.get(key);
+      productsByCode.set(key, existing && existing.productId !== product.productId ? null : product);
+    }
+  }
+  const lookup = (productId) => products.get(String(productId || "")) || null;
+  lookup.byCode = (code, supplier = "") => productsByCode.get(`${String(supplier).trim().toLowerCase()}\u0000${String(code || "").trim().toLowerCase()}`) || null;
+  return lookup;
+}
+
+function bindSelectionFoundationToQuotation(workbook, foundation) {
+  const sectionId = (reference) => workbook.quotation?.[reference]?.id || reference;
+  return {
+    ...foundation,
+    mappings: (foundation.mappings || []).map((mapping) => ({ ...mapping, quote_section_id: sectionId(mapping.quote_section_id) })),
+    requirementMappings: foundation.requirementMappings || [],
+  };
 }
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { V4_DATA_SECTIONS, V4_WINDOW_TYPES } from "../../lib/construction-estimation/estimateWorksheetV4Schema.js";
@@ -261,6 +290,7 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
   const clientSelectionsSavePendingRef = useRef(null);
   const clientSelectionsSaveRunningRef = useRef(false);
   const saveClientSelectionsBookRef = useRef(null);
+  const builderRequirementMappingsRef = useRef([]);
   // Also migrate a job already open when this code is loaded, without resetting it.
   useEffect(() => {
     const owner = workbook.workspaceId || browserWorkspaceId();
@@ -2482,11 +2512,18 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
   // older book could be the one left in the job. A save still waiting when a newer one arrives
   // is superseded by it: every book is the complete selection state, so only the newest matters.
   function updateClientSelectionsBook(bookForSave = {}, options = {}) {
-    return new Promise((resolve, reject) => {
-      const waiters = [...(clientSelectionsSavePendingRef.current?.waiters || []), { resolve, reject }];
-      clientSelectionsSavePendingRef.current = { bookForSave, options, waiters };
-      drainClientSelectionsSaves();
-    });
+    const pending = clientSelectionsSavePendingRef.current;
+    if (pending) {
+      pending.bookForSave = bookForSave;
+      pending.options = options;
+      return pending.promise;
+    }
+    let resolve, reject;
+    const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
+    clientSelectionsSavePendingRef.current = { bookForSave, options, promise, resolve, reject };
+    if (typeof window !== "undefined") window.__memoryProbe?.selectionQueue?.(Number(clientSelectionsSaveRunningRef.current), 1);
+    drainClientSelectionsSaves();
+    return promise;
   }
 
   async function drainClientSelectionsSaves() {
@@ -2494,17 +2531,18 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     clientSelectionsSaveRunningRef.current = true;
     try {
       while (clientSelectionsSavePendingRef.current) {
-        const { bookForSave, options, waiters } = clientSelectionsSavePendingRef.current;
+        const { bookForSave, options, resolve, reject } = clientSelectionsSavePendingRef.current;
         clientSelectionsSavePendingRef.current = null;
         try {
           const result = await saveClientSelectionsBookRef.current(bookForSave, options);
-          waiters.forEach((waiter) => waiter.resolve(result));
+          resolve(result);
         } catch (error) {
-          waiters.forEach((waiter) => waiter.reject(error));
+          reject(error);
         }
       }
     } finally {
       clientSelectionsSaveRunningRef.current = false;
+      if (typeof window !== "undefined") window.__memoryProbe?.selectionQueue?.(0, 0);
     }
   }
 
@@ -2577,11 +2615,38 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
           lastModified: savedAt,
         },
       };
-      const connected = foundation ? connectTenantSelectionMetadata(nextWorkbook, nextBook, foundation, { productById: masterProductById }) : nextWorkbook;
-      // Paint colours are a specification on the estimate's own painting lines: no rows, quantities or rates change.
-      const withColours = linkInternalPaintColoursToQuotation(applyCabinetryRequirementsToQuotation(preserveQuoteQuantityOwnership(nextWorkbook, connected), owner), nextBook);
-      // Electrical point quantities: one quotation row per room and point (stable ids), priced from the estimate's own electrical rates.
-      return prepareWorkbookForJobSave(connectElectricalScheduleToQuotation(withColours, nextBook), savedAt);
+      const productById = productByIdForWorkbook(nextWorkbook);
+      const mappedFoundation = foundation ? bindSelectionFoundationToQuotation(nextWorkbook, foundation) : null;
+      const connected = mappedFoundation ? connectTenantSelectionMetadata(nextWorkbook, nextBook, mappedFoundation, { productById }) : nextWorkbook;
+      const selectionPipeline = runSelectionConnectors(connected, nextBook, { productById, productByCode: productById.byCode });
+      const selectionOwned = preserveQuoteQuantityOwnership(nextWorkbook, selectionPipeline);
+      const mappings = (mappedFoundation?.requirementMappings || builderRequirementMappingsRef.current)
+        .filter((mapping) => mapping.workspace_id === owner && mapping.status === "MAPPED");
+      const reconciled = planSelectionReconciliation({
+        workbook: selectionOwned,
+        book: nextBook,
+        productById,
+        productByCode: productById.byCode,
+        mappings,
+      });
+      if (reconciled.duplicates.length) {
+        const error = new Error("Client Selections maps multiple products to the same quotation row. Resolve the duplicate before saving.");
+        error.code = "DUPLICATE_SELECTION_QUOTATION_TARGET";
+        throw error;
+      }
+      const refreshed = refreshSelectionProcurementRequirements(
+        reconciled.workbook,
+        calculateEstimateBuilderWorkbook(structuredClone(reconciled.workbook)),
+      );
+      const quotation = normalizeQuotationStructure(refreshed.quotation);
+      const reconciledWorkbook = {
+        ...refreshed,
+        quotation,
+        quotationSectionOrder: quotationSectionOrderAfterNormalize(refreshed.quotationSectionOrder, quotation),
+      };
+      const financialImpact = selectionReconciliationFinancialImpact(source, reconciledWorkbook);
+      const safeWorkbook = deferUnapprovedQuotationChanges(source, reconciledWorkbook, financialImpact);
+      return prepareWorkbookForJobSave(safeWorkbook, savedAt);
     };
     // Taken after the network wait, immediately before the write: the job as it is now.
     const savedFrom = workbookRef.current;
@@ -2601,7 +2666,10 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     const live = workbookRef.current;
     if (workbookJobKey(live) === jobKey) {
       const applied = normalizeWorkbook(live === savedFrom ? draft : withSelections(live));
+      const savedSignature = jobContentSignature(applied);
       workbookRef.current = applied;
+      lastAutosaveSignatureRef.current = savedSignature;
+      setSavedContentSignature(savedSignature);
       setWorkbook((current) => {
         if (current === live) return applied;
         if (workbookJobKey(current) !== jobKey) return current;
@@ -2711,6 +2779,75 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     applySectionCsvImport,
     restoreSectionBackup,
     addQuoteLine,
+    previewSelectionReconciliation: (options = {}) => {
+      const current = workbookRef.current;
+      const productById = productByIdForWorkbook(current);
+      const plan = planSelectionReconciliation({ workbook: current, productById, productByCode: productById.byCode, mappings: builderRequirementMappingsRef.current, quotationEvidence: preview.quotation, ...options });
+      return { ...plan, financialImpact: selectionReconciliationFinancialImpact(current, plan.workbook) };
+    },
+    selectionRequirementMappings: builderRequirementMappingsRef.current,
+    productSelectionIntegrity: () => {
+      const current = workbookRef.current;
+      const auditCalculation = calculateEstimateBuilderWorkbook(structuredClone(current));
+      const auditWorkbook = { ...current, quotation: auditCalculation.quotation };
+      return reconcileProductSelections({ workbook: auditWorkbook, mappings: builderRequirementMappingsRef.current, productById: productByIdForWorkbook(current) });
+    },
+    loadBuilderRequirementMappings: async () => {
+      try {
+        const owner = browserWorkspaceId();
+        const { data: auth } = await supabase.auth.getSession();
+        const response = await fetch('/api/builders/selection-foundation?resource=requirementMappings', { headers: { Authorization: `Bearer ${auth?.session?.access_token || ''}`, 'x-workspace-id': owner } });
+        if (!response.ok) throw new Error(`status ${response.status}`);
+        const { records = [] } = await response.json();
+        builderRequirementMappingsRef.current = records.filter(record => record.workspace_id === owner && record.status === 'MAPPED');
+      } catch (error) {
+        builderRequirementMappingsRef.current = [];
+        console.warn('[Reconcile Selections] builder mappings unavailable; this job can still confirm its own mappings.', error?.message || error);
+      }
+      return builderRequirementMappingsRef.current;
+    },
+    applySelectionReconciliation: async (options = {}) => {
+      const { saveForBuilder = false, approvedFinancialImpact = null, acknowledgedPending = [], ...planOptions } = options;
+      const mappings = builderRequirementMappingsRef.current;
+      const current = workbookRef.current;
+      const productById = productByIdForWorkbook(current);
+      const plan = planSelectionReconciliation({ workbook: current, productById, productByCode: productById.byCode, mappings, ...planOptions });
+      if (plan.blocking.length) throw new Error('Reconcile Selections is blocked: verify the quantity changes first.');
+      const financialImpact = selectionReconciliationFinancialImpact(current, plan.workbook);
+      const approvalMatches = approvedFinancialImpact
+        && approvedFinancialImpact.before === financialImpact.before
+        && approvedFinancialImpact.after === financialImpact.after
+        && approvedFinancialImpact.delta === financialImpact.delta
+        && approvedFinancialImpact.signature === financialImpact.signature;
+      if (financialImpact.requiresApproval && !approvalMatches) throw new Error('Reconcile Selections requires approval of the displayed quotation changes.');
+      const recordedAt = new Date().toISOString();
+      updateWorkbookState({
+        ...plan.workbook,
+        selectionReconciliationPending: null,
+        selectionReconciliationDecisionLog: [...(current.selectionReconciliationDecisionLog || []), {
+          id: `selection-reconciliation:${recordedAt}`,
+          recordedAt,
+          jobId: current.jobId || workbookAttachedProjectId(current) || "",
+          workspaceId: current.workspaceId || browserWorkspaceId(),
+          financialImpact: { before: financialImpact.before, after: financialImpact.after, delta: financialImpact.delta, signature: financialImpact.signature, approved: Boolean(approvalMatches) },
+          acknowledgedPending: [...acknowledgedPending],
+        }],
+      });
+      const confirmedMappings = plan.applied.filter(entry => entry.action === 'CONFIRMED_MAPPING');
+      const fixtureMappings = plan.fixtureMappings || [];
+      const saveErrors = [];
+      if (saveForBuilder) {
+        const owner = browserWorkspaceId();
+        const { data: auth } = await supabase.auth.getSession();
+        for (const mapping of [...confirmedMappings.map(({ mapping }) => mapping), ...fixtureMappings]) {
+          try {
+            const response = await fetch('/api/builders/selection-foundation', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${auth?.session?.access_token || ''}`, 'x-workspace-id': owner }, body: JSON.stringify({ resource: 'requirementMappings', record: { template_id: mapping.template_id, requirement_key: mapping.requirement_key, product_id: mapping.product_id || '', location_id: mapping.metadata?.locationId || '', mode: mapping.mode || 'PRODUCT_ROW', quote_section_id: mapping.quote_section_id, quote_row_id: mapping.quote_row_id, status: 'MAPPED', metadata: mapping.metadata } }) });
+            if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || `status ${response.status}`);
+          } catch (error) { saveErrors.push(`${mapping.requirement_key}: ${error?.message || error}`); }
+        }
+      }
+      return { added: plan.changes.filter(change => change.kind === 'ADDED').length, replaced: plan.replacements.length, confirmedMappings: confirmedMappings.length + fixtureMappings.length, savedForBuilder: saveForBuilder ? confirmedMappings.length + fixtureMappings.length - saveErrors.length : 0, saveErrors, held: plan.held.length };
+    },
     addCabinetryCatalogueItem: importKey => updateWorkbookState(current => addCabinetryCatalogueItem(current, importKey, browserWorkspaceId())),
     setCabinetryRequirements: items => updateWorkbookState(current => applyCabinetryRequirementsToQuotation(setCabinetryRequirements(current, items), current.workspaceId || browserWorkspaceId())),
     duplicateQuoteLine,
