@@ -37,30 +37,34 @@ function fixRooms(node, depth = 0) {
   }
   for (const value of Object.values(node)) fixRooms(value, depth + 1);
 }
-function fixQuotation(node, file, depth = 0) {
+// A job package holds several quotation copies (estimate.quotation export copy, estimate.workbook.quotation
+// which the app loads and prices, quotation.json). Every copy is corrected; the walk continues past
+// each one (the first version stopped at the export copy and never reached the priced workbook copy).
+function fixQuotation(node, file, depth = 0, path = file) {
   if (!node || typeof node !== "object" || depth > 8) return;
   const q = node.quotation;
   if (q && typeof q === "object" && Object.values(q).some((s) => Array.isArray(s?.rows))) {
+    quotationCopies.push(`${path}.quotation`);
     if (node.quotationIssued || node.issuedAt || node.quotationLocked) throw new Error(`${file}: quotation is issued/locked - not modified`);
     for (const [name, section] of Object.entries(q)) {
       const seen = new Set();
       section.rows = (section.rows || []).filter((row) => {
         if (!/^tiling:[^:]+:waste-/.test(row?.id || "")) return true;
         const rate = num(row.manualRate || row.excelRate);
-        if (seen.has(row.id)) { rowChanges.push({ file, section: name, id: row.id, change: "removed duplicate row", amountExGst: num(row.quantity) * rate }); return false; }
+        if (seen.has(row.id)) { rowChanges.push({ copy: `${path}.quotation`, section: name, id: row.id, change: "removed duplicate row", amountExGst: num(row.quantity) * rate }); return false; }
         seen.add(row.id);
         const target = correctQty.get(row.id);
         if (target != null && !row.quantityManualOverride && num(row.quantity) !== target) {
-          rowChanges.push({ file, section: name, id: row.id, change: `quantity ${row.quantity} -> ${target}`, amountExGst: (num(row.quantity) - target) * rate });
+          rowChanges.push({ copy: `${path}.quotation`, section: name, id: row.id, change: `quantity ${row.quantity} -> ${target}`, amountExGst: (num(row.quantity) - target) * rate });
           row.quantity = target; row.qty = target;
         }
         return true;
       });
     }
-    return;
   }
-  for (const value of Object.values(node)) fixQuotation(value, file, depth + 1);
+  for (const [key, value] of Object.entries(node)) if (key !== "quotation") fixQuotation(value, file, depth + 1, `${path}.${key}`);
 }
+const quotationCopies = [];
 
 const jsonFiles = Object.keys(zip.files).filter((name) => name.endsWith(".json"));
 const docs = {};
@@ -82,5 +86,7 @@ zip.file("manifest.json", JSON.stringify(manifest, null, 2));
 fs.mkdirSync(path.dirname(path.resolve(output)), { recursive: true });
 fs.writeFileSync(output, await zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE" }));
 
-const removedRowsExGst = Math.round(rowChanges.reduce((s, c) => s + c.amountExGst, 0) * 100) / 100;
-console.log(JSON.stringify({ input, output, duplicateRoomEntries: removed, quotationRowChanges: rowChanges, quotationReductionExGst: removedRowsExGst }, null, 2));
+// Each copy holds the same rows, so the quotation reduction is reported per copy, not summed.
+const byCopy = Object.fromEntries(quotationCopies.map((copy) => [copy, Math.round(rowChanges.filter((c) => c.copy === copy).reduce((sum, c) => sum + c.amountExGst, 0) * 100) / 100]));
+const pricedCopy = quotationCopies.find((copy) => copy.endsWith(".workbook.quotation")) || "";
+console.log(JSON.stringify({ input, output, duplicateRoomEntries: removed.length, quotationCopies, quotationRowChanges: rowChanges, reductionExGstByCopy: byCopy, quotationReductionExGst: byCopy[pricedCopy] ?? null, pricedCopy }, null, 2));

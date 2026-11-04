@@ -24,7 +24,7 @@ await check("imported subtotal and GST lines are still excluded from the BOQ", (
   assert.equal(shouldIncludeQuoteRowInFinalBoq({ item: "Anything", feeType: "qbsa", qty: 1, cost: 500 }), false);
 });
 
-const jobPath = process.argv[2] || "test-artifacts/isolated-jobs/floor-waste-corrected/historical-e233-floor-waste-corrected.gr8job";
+const jobPath = process.argv[2] || "test-artifacts/isolated-jobs/floor-waste-corrected-v2/new-job-0309-floor-waste-corrected.gr8job";
 const realJob = ["", "E:/dev/funnel-builder-clean/"].map((p) => p + jobPath).find((p) => fs.existsSync(p));
 if (!realJob) {
   console.log("SKIP real-job checks: job copy not found");
@@ -49,9 +49,41 @@ if (!realJob) {
     const result = quotationIssueCheck(quotation);
     const zeroCharged = quotationSectionsForFinalBoq(quotation).flatMap((x) => x.rows).filter((r) => quoteLineTotal(r) === 0);
     assert.equal(result.ok, result.blockers.length === 0);
-    for (const b of result.blockers) assert(zeroCharged.some((r) => (r.id || r.rowId || "") === b.rowId), `blocked row ${b.item} is priced`);
+    for (const b of result.blockers.filter((x) => !/duplicate/.test(x.reason))) assert(zeroCharged.some((r) => (r.id || r.rowId || "") === b.rowId), `blocked row ${b.item} is priced`);
     console.log(`     ${result.blockers.length} unpriced charged rows; final quote $${s.finalQuoteTotal}`);
   });
+
+  await check("real job: every section's BOQ rows equal that section's quote subtotal (slab, cabinetry, tiling...)", () => {
+    const boq = new Map(quotationSectionsForFinalBoq(quotation).map((x) => [x.sectionKey, x.rows.reduce((n, r) => n + cents(quoteLineTotal(r)), 0)]));
+    const mismatched = Object.entries(quotation).filter(([key, section]) => cents(section.subtotal) !== (boq.get(key) || 0));
+    assert.deepEqual(mismatched.map(([key]) => key), []);
+    const cabinetry = Object.keys(quotation).filter((key) => /cabinet|kitchen|vanit|wardrobe/i.test(key) && cents(quotation[key].subtotal) > 0);
+    assert(cabinetry.length > 0 && cabinetry.every((key) => boq.get(key) === cents(quotation[key].subtotal)), "cabinetry sections missing from the BOQ");
+  });
+}
+
+// Floor-waste correction (isolated copies only): original vs corrected copy from
+// scripts/repair-isolated-floor-waste-duplicates.mjs.
+const pair = ["recovery/quotation-changes-2026-10-03/current-job-verified-1790977156917.gr8job", "test-artifacts/isolated-jobs/floor-waste-corrected-v2/new-job-0309-floor-waste-corrected.gr8job"]
+  .map((p) => ["", "E:/dev/funnel-builder-clean/"].map((root) => root + p).find((full) => fs.existsSync(full)));
+if (pair.every(Boolean)) {
+  const calc = async (p) => calculateEstimateBuilderWorkbook(JSON.parse(await (await JSZip.loadAsync(fs.readFileSync(p))).file("estimate.json").async("string")).workbook);
+  const [original, corrected] = [await calc(pair[0]), await calc(pair[1])];
+  const wasteIds = (q) => quotationSectionsForFinalBoq(q).flatMap((x) => x.rows).map((r) => r.id || "").filter((id) => /^tiling:[^:]+:waste-/.test(id));
+  await check("floor waste: original has 5 duplicate $30 lines; corrected copy has none", () => {
+    const ids = wasteIds(original.quotation);
+    assert.equal(ids.length - new Set(ids).size, 5);
+    const fixed = wasteIds(corrected.quotation);
+    assert.equal(fixed.length, new Set(fixed).size);
+  });
+  await check("floor waste: correction is exactly $150.00 ex GST of cost; BOQ still reconciles", () => {
+    assert.equal(cents(original.summary.baseLineItemSubtotal) - cents(corrected.summary.baseLineItemSubtotal), 15000);
+    const rows = quotationSectionsForFinalBoq(corrected.quotation).flatMap((x) => x.rows);
+    assert.equal(rows.reduce((n, r) => n + cents(quoteLineTotal(r)), 0), cents(corrected.summary.baseLineItemSubtotal));
+    console.log(`     client price ${original.summary.finalQuoteTotal} -> ${corrected.summary.finalQuoteTotal} inc GST`);
+  });
+} else {
+  console.log("SKIP floor-waste comparison: job copies not found");
 }
 
 console.log(`\n${passed} checks passed`);

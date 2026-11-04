@@ -105,6 +105,7 @@ try {
   let jobUrl;
   await step("2. Builder A creates a job from the File menu", async () => {
     await A1.page.goto(`${origin}/modules/estimate-builder`, { waitUntil: "networkidle2" });
+    await A1.page.waitForSelector("#estimate-builder-file-menu-button", { timeout: 240000 });
     await A1.page.click("#estimate-builder-file-menu-button");
     await clickButton(A1.page, "Create New Job");
     const dialog = await A1.page.waitForSelector('[role="dialog"][aria-label="Create new job"]');
@@ -138,30 +139,18 @@ try {
   });
 
   let issued = null;
-  await step("5. Issue to Project Commercials obeys the server missing-price check", async () => {
-    // The flag is stored per workspace (lib/builders/browserTenantStorage.js).
-    await A1.page.evaluate(() => {
-      const ws = localStorage.getItem("active_workspace_id") || "";
-      localStorage.setItem(ws ? `estimate-builder-show-developer-controls:workspace:${encodeURIComponent(ws)}` : "estimate-builder-show-developer-controls", "true");
-    });
-    await A1.page.reload({ waitUntil: "networkidle2" });
-    await clickButton(A1.page, "Sync to Project Commercials");
-    const outcome = await A1.page.waitForFunction(() => {
-      const t = document.body.innerText;
-      if (/Commercial snapshot synced/i.test(t)) return "synced";
-      if (/cannot be issued/i.test(t)) return "refused";
-      // A new job with no quotation rows is refused by the server (nothing to issue).
-      if (/quotation is required/i.test(t)) return "refused-empty";
-      if (/sync failed|could not sync/i.test(t)) return "error";
-      return null;
-    }, { timeout: 120000 }).then((h) => h.jsonValue());
-    const snaps = await admin(`/rest/v1/builder_estimate_snapshots?workspace_id=eq.${wsA.id}&select=id,final_quote_total,gst_total`, { method: "GET" });
-    const message = await A1.page.evaluate(() => document.body.innerText.match(/Sync failed[^\n]*\n?[^\n]*|Commercial snapshot synced[^\n]*/i)?.[0] || "");
-    assert.notEqual(outcome, "error", `sync returned an unexpected error: ${message}`);
-    if (outcome === "synced") assert.equal(snaps.length, 1, "UI said synced but no snapshot stored");
-    else assert.equal(snaps.length, 0, "refused issue still stored a snapshot");
-    issued = outcome === "synced";
-    return { outcome, message, snapshots: snaps };
+  await step("5. Visible Issue Quotation button refuses an empty quotation and stores nothing", async () => {
+    await A1.page.waitForSelector('[data-testid="issue-quotation-button"]');
+    const label = await A1.page.$eval('[data-testid="issue-quotation-button"]', (b) => b.innerText.trim());
+    assert.equal(label, "Issue Quotation to Project Commercials");
+    await A1.page.click('[data-testid="issue-quotation-button"]');
+    const message = await A1.page.waitForFunction(() => document.querySelector('[data-testid="issue-quotation-status"]')?.innerText || null).then((h) => h.jsonValue());
+    assert.match(message, /Quotation not issued/);
+    assert.match(message, /nothing to issue/i);
+    const snaps = await admin(`/rest/v1/builder_estimate_snapshots?workspace_id=eq.${wsA.id}&select=id`, { method: "GET" });
+    assert.equal(snaps.length, 0);
+    issued = false;
+    return { label, message: message.split("\n").slice(0, 2).join(" | "), snapshots: snaps.length };
   });
 
   await step("6. Estimator A2 (same workspace) and builder B open Quote Approvals at the same time", async () => {
@@ -214,6 +203,68 @@ try {
     const pages = (await PDFDocument.load(fs.readFileSync(file))).getPageCount();
     return { file: path.basename(file), bytes: fs.statSync(file).size, pages, status };
   });
+
+  // Real-job checks use ISOLATED copies only (QB_REAL_JOB = corrected copy with unpriced rows,
+  // QB_PRICED_JOB = the same copy with TEST DATA rates typed into those rows).
+  async function openJobFile(file, page = A1.page) {
+    await page.goto(`${origin}/modules/estimate-builder`, { waitUntil: "networkidle2" });
+    const input = await page.waitForSelector('[data-testid="open-local-job-file-input"]', { timeout: 240000 });
+    await input.uploadFile(file);
+    await page.waitForFunction(() => /Keep Local/.test(document.body.innerText) || /was validated and loaded/.test(document.body.innerText), { timeout: 300000 });
+    const keep = await page.evaluateHandle(() => [...document.querySelectorAll("button")].find((b) => b.innerText.trim() === "Keep Local") || null);
+    if (keep.asElement()) await keep.asElement().click();
+    await page.waitForSelector('[data-testid="issue-quotation-button"]', { timeout: 240000 });
+  }
+  const realJob = process.env.QB_REAL_JOB, pricedJob = process.env.QB_PRICED_JOB;
+  if (realJob && pricedJob) {
+    await step("9. Real job with unpriced rows: Issue lists the rows and stores nothing", async () => {
+      await openJobFile(realJob);
+      await A1.page.click('[data-testid="issue-quotation-button"]');
+      await A1.page.waitForSelector('[data-testid="issue-quotation-blockers"]', { timeout: 300000 });
+      const listed = await A1.page.$$eval('[data-testid="issue-quotation-blockers"] li', (li) => li.map((x) => x.innerText.trim()));
+      const message = await A1.page.$eval('[data-testid="issue-quotation-status"]', (el) => el.innerText.split("\n").slice(0, 2).join(" | "));
+      const dialog = await A1.page.$('[role="dialog"][aria-label="Issue quotation"]');
+      assert.equal(dialog, null, "confirmation dialog opened for an incomplete quotation");
+      assert(listed.length >= 12, `only ${listed.length} rows listed`);
+      const snaps = await admin(`/rest/v1/builder_estimate_snapshots?workspace_id=eq.${wsA.id}&select=id`, { method: "GET" });
+      assert.equal(snaps.length, 0);
+      return { message, firstRows: listed.slice(0, 3), lastLine: listed.at(-1) };
+    });
+
+    await step("10. Fully priced real job: confirm, double click, exactly one snapshot with the confirmed total", async () => {
+      // Fresh browser profile so only the priced copy is loaded (both copies share one job id).
+      const P = await contextPage(); activePage = P.page;
+      await signIn(P.page, a1);
+      await openJobFile(pricedJob, P.page);
+      await P.page.click('[data-testid="issue-quotation-button"]');
+      const dialog = await P.page.waitForSelector('[role="dialog"][aria-label="Issue quotation"]', { timeout: 300000 });
+      const dialogText = await dialog.evaluate((el) => el.innerText);
+      const confirmedTotal = Number((dialogText.match(/Final quote total:\s*\$([\d,]+\.\d{2})/) || [])[1]?.replace(/,/g, ""));
+      assert(confirmedTotal > 0, `no total in dialog: ${dialogText}`);
+      // Two clicks in the same tick: the second must be ignored (in-flight guard).
+      await P.page.$eval('[data-testid="confirm-issue-quotation"]', (b) => { b.click(); b.click(); });
+      const buttonWhileIssuing = await P.page.waitForFunction(() => {
+        const b = document.querySelector('[data-testid="issue-quotation-button"]');
+        return b && /Issuing/.test(b.innerText) ? { disabled: b.disabled, text: b.innerText } : null;
+      }, { timeout: 60000 }).then((h) => h.jsonValue()).catch(() => null);
+      const status = await P.page.waitForFunction(() => {
+        const t = document.querySelector('[data-testid="issue-quotation-status"]')?.innerText || "";
+        return /Quotation issued|Quotation not issued/.test(t) ? t : null;
+      }, { timeout: 300000 }).then((h) => h.jsonValue());
+      assert.match(status, /Quotation issued/, status);
+      const snaps = await admin(`/rest/v1/builder_estimate_snapshots?workspace_id=eq.${wsA.id}&select=id,snapshot_number,status,final_quote_total,gst_total,workbook_metadata`, { method: "GET" });
+      assert.equal(snaps.length, 1, `expected one snapshot, found ${snaps.length}`);
+      assert.equal(Math.round(Number(snaps[0].final_quote_total) * 100), Math.round(confirmedTotal * 100));
+      const items = await admin(`/rest/v1/builder_boq_items?snapshot_id=eq.${snaps[0].id}&select=source_quote_row_id,source_section_key`, { method: "GET" }).catch(() => admin(`/rest/v1/builder_boq_items?snapshot_id=eq.${snaps[0].id}&select=*`, { method: "GET" }));
+      const wasteIds = items.map((i) => i.source_quote_row_id || "").filter((id) => /^tiling:[^:]+:waste-/.test(id));
+      assert.equal(wasteIds.length, new Set(wasteIds).size, "duplicate floor-waste lines reached the BOQ");
+      return {
+        confirmedTotal, buttonWhileIssuing, status: status.split("\n").slice(0, 2).join(" | "),
+        snapshot: { number: snaps[0].snapshot_number, total: snaps[0].final_quote_total, gst: snaps[0].gst_total, omitted: snaps[0].workbook_metadata?.source_workbook_snapshot_omitted_sections },
+        boqItems: items.length, floorWasteLines: wasteIds.length,
+      };
+    });
+  }
 
   report.pageErrorCount = report.pageErrors.length;
 } catch (error) {

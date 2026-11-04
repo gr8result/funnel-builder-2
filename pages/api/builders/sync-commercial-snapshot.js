@@ -3,6 +3,7 @@ import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { withWorkspace } from "../../../lib/withWorkspace";
 import { quotationSectionsForFinalBoq, quoteLineTotal, quoteQuantity, quoteRate, shouldIncludeQuoteRowInFinalBoq } from "../../../lib/construction-estimation/finalQuotationBoq.js";
 import { quotationIssueCheck } from "../../../lib/construction-estimation/quotationIssueGate.js";
+import { INTERNAL_COMMERCIAL_ROLES } from "../../../lib/commercialAccess.js";
 
 export const config = {
   api: {
@@ -32,6 +33,11 @@ async function handler(req, res) {
     const workbook = plainObject(body.workbook);
     const calculated = plainObject(body.calculated || body.calculatedWorkbookResult || body.preview);
     const projectInput = plainObject(body.project || body.projectMetadata || body.job || body.jobMetadata);
+    // Large presentation/drawing sections the client leaves out of the snapshot (see
+    // lib/builders/commercialSnapshotWorkbook.js). Only known names are accepted.
+    const snapshotOmittedSections = Array.isArray(body.workbook_snapshot_omitted_sections)
+      ? body.workbook_snapshot_omitted_sections.filter((section) => ["projectEstimateBuilder", "aiPlanTakeoffJob", "takeoffEngine"].includes(section))
+      : [];
 
     if (!Object.keys(workbook).length) {
       return res.status(400).json({ ok: false, error: "workbook is required" });
@@ -62,6 +68,7 @@ async function handler(req, res) {
       projectInput,
       workbook,
       calculated,
+      snapshotOmittedSections,
     });
 
     const sectionRows = buildBoqSectionRows({
@@ -128,7 +135,9 @@ async function handler(req, res) {
   }
 }
 
-export default withWorkspace(handler);
+// Issuing a quotation is internal builder work; client-role members are refused (same list as the
+// 20261021000100 internal-member RLS migration and the Client Selections release).
+export default withWorkspace(handler, { roles: INTERNAL_COMMERCIAL_ROLES });
 
 async function createOrUpdateCommercialProject({
   workspaceId,
@@ -247,7 +256,7 @@ async function findExistingProject(workspaceId, requestedProjectId, payload) {
   return null;
 }
 
-async function createEstimateSnapshot({ workspaceId, userId, projectId, projectInput, workbook, calculated }) {
+async function createEstimateSnapshot({ workspaceId, userId, projectId, projectInput, workbook, calculated, snapshotOmittedSections = [] }) {
   const summary = plainObject(calculated.summary);
   const source = projectSourceFields(projectInput, workbook);
   const snapshotNumber = await nextSnapshotNumber(workspaceId, projectId);
@@ -266,16 +275,20 @@ async function createEstimateSnapshot({ workspaceId, userId, projectId, projectI
     source_template_key: firstText(workbook.templateKey, projectInput.templateKey),
     source_template_name: firstText(workbook.templateName, projectInput.templateName),
     summary,
-    workbook_metadata: stripLargeFields({
-      jobFileMeta: workbook.jobFileMeta,
-      registeredJob: workbook.registeredJob,
-      openedFileName: workbook.openedFileName,
-      sourceFileName: workbook.sourceFileName,
-      savedAt: workbook.savedAt,
-      templateKey: workbook.templateKey,
-      templateName: workbook.templateName,
-      clientPage: workbook.clientPage,
-    }),
+    workbook_metadata: {
+      ...stripLargeFields({
+        jobFileMeta: workbook.jobFileMeta,
+        registeredJob: workbook.registeredJob,
+        openedFileName: workbook.openedFileName,
+        sourceFileName: workbook.sourceFileName,
+        savedAt: workbook.savedAt,
+        templateKey: workbook.templateKey,
+        templateName: workbook.templateName,
+        clientPage: workbook.clientPage,
+      }),
+      source_workbook_snapshot_complete: snapshotOmittedSections.length === 0,
+      source_workbook_snapshot_omitted_sections: snapshotOmittedSections,
+    },
     workbook_snapshot: workbook,
     base_line_item_subtotal: moneyNumber(summary.baseLineItemSubtotal ?? summary.subtotalBeforeMargin),
     preliminaries_total: moneyNumber(summary.preliminaryCostsAmount),
