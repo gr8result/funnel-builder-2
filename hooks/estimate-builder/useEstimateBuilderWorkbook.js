@@ -1105,9 +1105,16 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     const previewRow = String(id || "").startsWith(WINDOW_SCHEDULE_UNPRICED_ROW_PREFIX)
       ? (preview?.quotation?.[section]?.rows || []).find((row) => row.id === id && !row.windowScheduleUnpricedHeading)
       : null;
+    // Door Takeoff product rows (e.g. internal door jambs) are also generated per calculation; their
+    // first price edit is saved the same way and the calculation keeps the price fields.
+    const takeoffPreviewRow = !previewRow && ["manualRate", "supplierQuote", "quotedSupplierRate", "notes"].includes(key)
+      ? (preview?.quotation?.[section]?.rows || []).find((row) => row.id === id && row.generatedTakeoffProductRow)
+      : null;
     const generatedRow = previewRow
       ? { id, section, item: previewRow.item, unit: previewRow.unit, quantity: "", quantityKey: previewRow.quantityKey, windowScheduleUnpricedRow: true, active: true, formulas: {} }
-      : null;
+      : takeoffPreviewRow
+        ? { id, section, item: takeoffPreviewRow.item, unit: takeoffPreviewRow.unit, quantity: "", quantityKey: takeoffPreviewRow.quantityKey, generatedTakeoffProductRow: true, active: true, formulas: {} }
+        : null;
     updateWorkbookState((current) => ({
       ...current,
       quotation: {

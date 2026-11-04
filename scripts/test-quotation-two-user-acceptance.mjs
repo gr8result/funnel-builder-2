@@ -60,7 +60,7 @@ function quotationPayload({ jobId, extraRows = [], rateBump = 0 }) {
   const gst = Math.round(base * 10) / 100;
   const summary = { baseLineItemSubtotal: base, subtotalBeforeGst: base, gstPercent: 10, gst, finalQuoteTotal: base + gst };
   const jobFileMeta = { jobId, jobName: `Acceptance ${jobId}` };
-  return { workbook: { id: jobId, jobFileMeta }, calculated: { quotation, summary }, project: { jobId, jobName: jobFileMeta.jobName } };
+  return { workbook: { id: jobId, jobId, jobFileMeta }, calculated: { quotation, summary }, project: { jobId, jobName: jobFileMeta.jobName } };
 }
 
 async function sync(user, workspaceId, payload, extra = {}) {
@@ -126,6 +126,12 @@ try {
 
   await check("4. Builder B cannot write into workspace A", async () => {
     const r = await sync(b, wsA.id, quotationPayload({ jobId: jobA }));
+    assert.equal(r.status, 403, JSON.stringify(r.body));
+    return { status: r.status };
+  });
+
+  await check("4b. A client-role member of workspace A cannot issue a quotation", async () => {
+    const r = await sync(c, wsA.id, quotationPayload({ jobId: jobA }));
     assert.equal(r.status, 403, JSON.stringify(r.body));
     return { status: r.status };
   });
