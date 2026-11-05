@@ -61,12 +61,12 @@ Original: `recovery/quotation-changes-2026-10-03/current-job-verified-1790977156
 
 Package `supabase/release/quotation-v1/` (apply in this order only; never the whole migrations folder):
 
-| File | Source | SHA-256 (LF, first 16) |
+| File | Source | SHA-256 (exact Git blob, first 16) |
 |---|---|---|
 | `01_20261010000100_builder_requirement_quote_mappings.sql` | byte-identical to `release/client-selections-20261021` | `6170f6453f0922e0` |
 | `02_20261011000100_requirement_mapping_product_identity.sql` | byte-identical to the Client Selections release | `fb8d732e4475e203` |
 | `03_20261021000100_builder_commercial_internal_member_rls.sql` | Client Selections release plus explicit `anon` execution revocation | `07367376855769d3` |
-| `04_20261028000100_workspace_members_rls_recursion_fix.sql` | Shared-tree recursion fix plus explicit helper execution grants | `713e9c6f25ef9b4b` |
+| `04_20261028000100_workspace_members_rls_recursion_fix.sql` | Shared-tree recursion fix plus explicit helper execution grants | `5de15875dda4358d` |
 
 The shared working tree has *different* versions of 01–03; do not apply those. Dependencies (checked by `00_precheck_readonly.sql`): `workspaces`, `workspace_members`, `workspace_entitlements`, `communities`, `builder_selection_is_config_admin`, `builder_selection_immutable_workspace`, `builder_commercial_set_updated_at` (from `20261003000100`). No V1 code depends on 01/02; 03 removes direct access to internal pricing tables for client-role members (verified: today they can read `builder_commercial_projects`); 04 fixes the live 42P17 recursion on `workspace_members`.
 
