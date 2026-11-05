@@ -1,5 +1,7 @@
+import { measureRoom, validateRoomSet } from './ai-integration/roomGeometry.js';
 import { associateTakeoffMeasurements, takeoffMaterialFields, takeoffThickness, openingQuantity, openingDimensions, openingHostId, uniqueTakeoffItems, brickSillLength, windowCodeForOpening, isCavitySlider, isRobeSlider, internalDoorPurchaseType, materialRound, EXTERIOR_WALL_SYSTEM_FIELD_KEYS, windowStyleLabel, isFixedWindowOpening, doorStyleLabel, brickOrderQuantities, internalDoorJambTrace, internalDoorReconciliationTrace, TAKEOFF_LEVELS } from '../../../lib/construction-estimation/takeoffMaterialQuantities.js';
 import { absentTakeoffMaterialFields } from '../../../lib/construction-estimation/takeoffAbsentMaterialFields.js';
+import { toCommonScale, sheetPixelsPerMm } from './sheetScale.js';
 import { ARCHITRAVE_DEFAULTS, ARCHITRAVE_RULES, packOpenings } from '../../../lib/construction-estimation/architraveCutting.js';
 import { INPUT_DATA_SHEET_TEMPLATE } from '../../../lib/construction-estimation/inputDataSheetTemplate.js';
 import { createAiScheduleRows, documentedInputCandidates } from './ai-integration/scheduleEvidence.js';
@@ -1269,17 +1271,23 @@ export function createTakeoffSchedule({
   jobSetupRows = {},
   sheetLevels = {},
   scheduleState = {},
+  sheetCalibrations = scheduleState.sheetCalibrations || {},
   aiAnalysis = scheduleState.aiAnalysis || null
 }) {
+  if (aiAnalysis?.rooms) aiAnalysis = { ...aiAnalysis, rooms: validateRoomSet(aiAnalysis.rooms.map(room =>
+    measureRoom(room, sheetPixelsPerMm(room.page, pixelsPerMm, sheetCalibrations)))) };
+  [completedWallRuns, placedOpenings, completedAreas, completedFloorplans, completedMeasurements, completedEaves, completedPillars] =
+    [completedWallRuns, placedOpenings, completedAreas, completedFloorplans, completedMeasurements, completedEaves, completedPillars]
+      .map(items => toCommonScale(items, pixelsPerMm, sheetCalibrations));
   const projectPages = Array.from({ length: totalPages || 1 }, (_, index) => index + 1);
   return {
     generatedAt: new Date().toISOString(),
     aiAnalysis,
     measurementRecords: [...createMeasurementRecords({ completedFloorplans, completedWallRuns, placedOpenings, completedAreas, completedEaves, completedMeasurements, completedPillars, pixelsPerMm }),
-      ...(aiAnalysis?.rooms || []).filter(room => (room.actions || []).includes('Floor Tiling')).map(room => ({
+      ...(aiAnalysis?.rooms || []).filter((room, index, rooms) => (room.actions || []).includes('Floor Tiling') && rooms.findIndex(other => other.id === room.id) === index).map(room => ({
         id: `${room.id}:floor-tiling`, roomId: room.id, page: room.page, level: room.level,
         kind: 'floorFinish', category: 'Tiles', label: `${room.name} floor tiling`,
-        quantity: room.reviewRequired ? null : room.areaM2, unit: 'm2', source: room.source,
+        quantity: room.excluded || !room.confirmed || room.reviewRequired ? null : room.areaM2, unit: 'm2', source: room.source,
         nodes: room.polygon, pixelsPerMm: room.pixelsPerMm,
       }))],
     jobSetupRows,
@@ -1291,7 +1299,7 @@ export function createTakeoffSchedule({
       planFilename,
       numberOfPlanSheets: totalPages || 1,
       storeyOrLevelName: projectInfo.storeyOrLevelName || `Sheet ${currentPage}`,
-      calibratedScaleBySheet: projectPages.map((page) => ({ page, pixelsPerMm: pixelsPerMm || null }))
+      calibratedScaleBySheet: projectPages.map((page) => ({ page, pixelsPerMm: sheetPixelsPerMm(page, pixelsPerMm, sheetCalibrations) }))
     },
     currentSheet: {
       page: currentPage,

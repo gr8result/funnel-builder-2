@@ -29,12 +29,16 @@ const signed = await auth.auth.signInWithPassword({ email: testAccount.data.user
 assert.equal(Boolean(signed.error), false, 'Dedicated test account sign-in succeeds');
 const authSession = signed.data.session;
 assert.ok(authSession?.access_token, 'Real authenticated session available');
-const apiOrigin = process.env.TAKEOFF_TEST_API_ORIGIN || 'http://127.0.0.1:3000';
+const apiOrigin = process.env.TAKEOFF_TEST_API_ORIGIN || '';
+const productionHandler = process.env.TAKEOFF_TEST_IN_PROCESS_API === '1'
+  ? (await import('../pages/api/ai/takeoff-analyse.js')).default : null;
+assert.ok(productionHandler || apiOrigin, 'Specify a separate test API origin or mount the real authenticated API handler in process.');
+assert.ok(!apiOrigin || new URL(apiOrigin).port !== '3000', 'Shared port 3000 is excluded from acceptance.');
 const planPath = process.env.TAKEOFF_TEST_PLAN || 'C:/Users/grant/Downloads/KRESS ROAD.pdf';
 assert.ok(fs.existsSync(planPath), 'Actual construction PDF exists');
 const require = createRequire(import.meta.url);
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const out = path.join(root, 'artifacts/test-artifacts/takeoff-ai-real');
+const out = path.resolve(root, process.env.TAKEOFF_TEST_ARTIFACT_DIR || 'artifacts/test-artifacts/takeoff-ai-real');
 const componentPath = path.join(root, 'components/construction-estimation/ai-plan-takeoff/AIPlanTakeoffStandalone.jsx');
 const workbookHookPath = path.join(root, 'hooks/estimate-builder/useEstimateBuilderWorkbook.js');
 const takeoffDir = path.dirname(componentPath);
@@ -104,7 +108,7 @@ function mapHooks(file, functionName, stack = new Set()) {
 const indexes = mapHooks(componentPath, 'AIPlanTakeoffStandalone').indexes;
 console.log('Building real Takeoff and workbook hook browser bundle.');
 const loader = path.join(out, 'jsx-loader.cjs');
-fs.writeFileSync(loader, `const ts=require(${JSON.stringify(require.resolve('typescript'))});module.exports=function(source){return ts.transpileModule(source,{fileName:this.resourcePath,compilerOptions:{jsx:ts.JsxEmit.React,module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2020}}).outputText;};`);
+fs.writeFileSync(loader, `const ts=require(${JSON.stringify(require.resolve('typescript'))});module.exports=function(source){return ts.transpileModule(source,{fileName:this.resourcePath,compilerOptions:{jsx:ts.JsxEmit.ReactJSX,module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2020}}).outputText;};`);
 const entry = path.join(out, 'browser-entry.cjs');
 fs.writeFileSync(entry, `
 const React=require('react');
@@ -115,6 +119,8 @@ const {createEstimateBuilderWorkbookDefaults}=require(${JSON.stringify(path.join
 const {createJobData,prepareAiPlanTakeoffJobForSave}=require(${JSON.stringify(path.join(takeoffDir, 'jobPersistence.js'))});
 const {createTakeoffSchedule}=require(${JSON.stringify(path.join(takeoffDir, 'takeoffSchedule.js'))});
 const {materializeTakeoffPlanPages}=require(${JSON.stringify(path.join(takeoffDir, 'planBlobStorage.js'))});
+const JobSetupTakeoffImport=require(${JSON.stringify(path.join(root, 'components/estimate-builder/JobSetupTakeoffImport.jsx'))}).default;
+const {calculateEstimateBuilderWorkbook}=require(${JSON.stringify(path.join(root, 'lib/construction-estimation/estimateBuilderWorkbookCalculations.js'))});
 const indexes=${JSON.stringify(indexes)};
 const jobId=${JSON.stringify(jobId)};
 const reactRoot=createRoot(document.getElementById('root'));
@@ -130,6 +136,8 @@ function snapshot(){
  result.imageReady=Boolean(value('image'));result.mounted=Boolean(findFiber(reactRoot._internalRoot.current));
  result.planPages=(value('planPages')||[]).map(p=>({pageNumber:p.pageNumber,hasImage:Boolean(p.dataUrl),dataUrlAssetId:p.dataUrlAssetId||null,logicalWidth:p.logicalWidth,logicalHeight:p.logicalHeight,pdfUnits:p.pdfUnits,textItemCount:p.textItems?.length||0}));
  result.schedule=createTakeoffSchedule({...result});
+ let analysisHook=findFiber(reactRoot._internalRoot.current)?.memoizedState;while(analysisHook){if(analysisHook.memoizedState?.schemaVersion==='ai-takeoff-analysis.v1')result.aiAnalysis=analysisHook.memoizedState;analysisHook=analysisHook.next;}
+ result.roomNodes=(value('stageRef')?.current?.find('Line')||[]).filter(n=>n.name().startsWith('room-boundary:')).map(n=>({name:n.name(),fill:n.fill()}));
  return JSON.parse(JSON.stringify(result));
 }
 const frame=()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
@@ -138,15 +146,19 @@ function Shell(){
  const [request,setRequest]=React.useState(null);
  const [visible,setVisible]=React.useState(true);
  const [mount,setMount]=React.useState(0);
+ const [setupRequest,setSetupRequest]=React.useState(null);
  const opened=React.useRef(false);
  React.useEffect(()=>{if(!sheet.hydrated||opened.current)return;const job=sheet.workbook.aiPlanTakeoffJob;if(job?.takeoffId){opened.current=true;setRequest({requestId:'startup-'+Date.now(),jobData:job});}},[sheet.hydrated,sheet.workbook]);
  control={async open(job){opened.current=true;setRequest({requestId:'open-'+Date.now(),jobData:job});},async reopen(){setVisible(false);await frame();const result=await currentSheet.openSavedJob('job:'+jobId);if(!result.ok)throw Error(result.message);setRequest({requestId:'reopen-'+Date.now(),jobData:result.workbook.aiPlanTakeoffJob});setMount(n=>n+1);setVisible(true);return result.key;}};
  if(!sheet.hydrated)return React.createElement('div',null,'Loading workbook');
- return visible?React.createElement(Takeoff,{key:mount,embedded:true,openTakeoffJobRequest:request,platformContext:{projectId:jobId,projectName:'Isolated Kress real AI acceptance',noJobOpen:false,isHydratingProject:false},onSaveToPlatform:async incoming=>{const workbook=currentSheet.getCurrentWorkbook();const prepared=prepareAiPlanTakeoffJobForSave(workbook.aiPlanTakeoffJob,incoming,jobId);const result=prepared.ok?await currentSheet.saveAiPlanTakeoffJob(prepared.job):prepared;saveResults.push(result);return result;}}):React.createElement('div',null,'Takeoff closed');
+ if(setupRequest)return React.createElement(JobSetupTakeoffImport,{sheet,takeoffJob:sheet.workbook.aiPlanTakeoffJob,projectId:jobId,jobName:'Disposable real-plan test',jobOpen:true,request:setupRequest,onRequestConsumed:()=>{},onOpenTakeoff:()=>setSetupRequest(null)});
+ return visible?React.createElement(Takeoff,{key:mount,embedded:true,openTakeoffJobRequest:request,onJobSetupUpdate:payload=>{setSetupRequest(payload);return {ok:true};},platformContext:{projectId:jobId,projectName:'Isolated Kress real AI acceptance',noJobOpen:false,isHydratingProject:false},onSaveToPlatform:async incoming=>{const workbook=currentSheet.getCurrentWorkbook();const prepared=prepareAiPlanTakeoffJobForSave(workbook.aiPlanTakeoffJob,incoming,jobId);const result=prepared.ok?await currentSheet.saveAiPlanTakeoffJob(prepared.job):prepared;saveResults.push(result);return result;}}):React.createElement('div',null,'Takeoff closed');
 }
 window.harness={snapshot,saveResults:()=>saveResults,ready:()=>Boolean(currentSheet?.hydrated),
  async seed(){const workbook={...createEstimateBuilderWorkbookDefaults(),jobId,projectId:jobId,commercialProjectId:jobId,projectName:'Isolated Kress real AI acceptance',registeredJob:{jobId,jobName:'Isolated Kress real AI acceptance'},jobFileMeta:{projectId:jobId,jobName:'Isolated Kress real AI acceptance'},aiPlanTakeoffJob:initialJob,takeoffEngine:{aiPlanTakeoffJob:initialJob}};const result=await currentSheet.loadJobFileData({workbook,jobName:'Isolated Kress real AI acceptance'},'isolated-kress-ai.gr8job');if(!result.ok)throw Error(result.message);await control.open(initialJob);return result;},
  reopen:()=>control.reopen(),
+ workbook:()=>JSON.parse(JSON.stringify(currentSheet.getCurrentWorkbook())),
+ quotation:()=>calculateEstimateBuilderWorkbook(currentSheet.getCurrentWorkbook()),
  setView({zoom,pan}){value('sheetViewStateRef').current[value('currentPage')]={scale:zoom,pos:pan};dispatch('stageScale',zoom);dispatch('stagePos',pan);},
  viewSize(){return {width:value('stageRef').current.width(),height:value('stageRef').current.height()};},
  point(point){const stage=value('stageRef').current,layer=value('layerRef').current,rect=stage.content.getBoundingClientRect(),visible=layer.getAbsoluteTransform().point(point);return {x:rect.left+visible.x*rect.width/stage.width(),y:rect.top+visible.y*rect.height/stage.height()};},
@@ -177,7 +189,9 @@ console.log('Browser bundle ready; starting isolated Chromium acceptance checks.
 
 const report = {
   scope: 'Actual Kress PDF uploaded through existing UI; real authenticated production API; existing canonical adapter, canvas, schedule and workbook IndexedDB persistence; isolated local test job and profile only.',
-  source: { path: planPath, bytes: fs.statSync(planPath).size, suppliedPages: 1, drawingSheet: '4 of 18', printedScale: '1:100', printedAreaM2: { Living: 221, Alfresco: 56.23, Garage: 40.31, Patio: 30.14, 'Side Patio': 7.59, Total: 355.27 }, areaTableOriginalPageNormalizedBounds: { x1: 0.815, y1: 0.772, x2: 0.966, y2: 0.968 }, scaleOriginalPageNormalizedBounds: { x1: 0.090, y1: 0.424, x2: 0.123, y2: 0.501 }, note: 'Benchmarks independently transcribed from the actual drawing. They are never sent to the provider or used to alter detections.' },
+  source: { path: planPath, bytes: fs.statSync(planPath).size, suppliedPages: 1,
+    printedAreaM2: process.env.TAKEOFF_TEST_PLAN ? {} : { Living: 221, Alfresco: 56.23, Garage: 40.31, Patio: 30.14, 'Side Patio': 7.59, Total: 355.27 },
+    apiMode: productionHandler ? 'actual withAuth-wrapped route mounted on isolated HTTP server' : apiOrigin },
   requests: previousReport?.requests || [], progress: previousReport?.progress || [], cases: {}, errors: [], dialogs: [],
 };
 const server = http.createServer(async (req, res) => {
@@ -192,6 +206,17 @@ const server = http.createServer(async (req, res) => {
       const record = { action: parsed.action, page: parsed.page?.pageNumber, logicalWidth: parsed.page?.logicalWidth, logicalHeight: parsed.page?.logicalHeight, imageRotation: parsed.page?.imageRotation, imageBytes: parsed.page?.imageDataUrl?.length || 0, startedAt: new Date().toISOString() };
       report.requests.push(record);
       console.log(`Real authenticated AI request: ${record.action}, sheet ${record.page}.`);
+      if (productionHandler) {
+        req.body = parsed; req.query = {};
+        res.status = status => { res.statusCode = status; return res; };
+        res.json = result => {
+          record.status = res.statusCode; record.completedAt = new Date().toISOString(); record.response = result;
+          fs.writeFileSync(path.join(out, 'api-responses.json'), JSON.stringify(report.requests, null, 2));
+          console.log(`AI ${record.action} returned HTTP ${record.status}.`);
+          res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(result)); return res;
+        };
+        await productionHandler(req, res); return;
+      }
       const upstream = await fetch(apiOrigin + req.url, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: req.headers.authorization || '' }, body, signal: AbortSignal.timeout(600000) });
       const responseBody = await upstream.text();
       record.status = upstream.status;
@@ -260,7 +285,7 @@ try {
     }
     const state = await snapshot();
     if (status.review && state.completedWallRuns.some(wall => wall.source === 'ai')) break;
-    if (/could not|failed|error|calibrate the plan|Use the existing Calibrate tool|conflicts across|before analysis continues|No measurable/i.test(status.text)) throw new Error(status.text);
+    if (/could not|failed|error|quota exhausted|no remaining credit|calibrate the plan|Use the existing Calibrate tool|conflicts across|before analysis continues|No measurable/i.test(status.text)) throw new Error(status.text);
     await new Promise(resolve => setTimeout(resolve, 1000));
   }
   }
@@ -315,6 +340,31 @@ try {
   await page.waitForFunction(id => !harness.snapshot().placedOpenings.some(item => item.id === id), {}, deletedOpening.id);
   report.cases.openingEditDelete = { editedId: opening.id, deletedId: deletedOpening.id };
 
+  if (process.env.TAKEOFF_TEST_ROOMS === '1') {
+    const room = (state.aiAnalysis?.rooms || []).find(r => r.polygon?.length >= 3 && r.areaM2 > 4);
+    assert.ok(room, 'Actual analysed plan has a room boundary to correct');
+    const inside = { x: room.polygon.reduce((n, p) => n + p.x, 0) / room.polygon.length,
+      y: room.polygon.reduce((n, p) => n + p.y, 0) / room.polygon.length };
+    await page.evaluate(() => { const box = document.querySelector('[data-testid="room-boundary-panel"] input[type="checkbox"]'); if (!box.checked) box.click(); });
+    await centre(inside); await clickPlan(inside);
+    await page.waitForFunction(id => harness.snapshot().aiAnalysis?.rooms.find(r => r.id === id)?.selected, {}, room.id);
+    await page.$eval(`input[aria-label="Colour for ${room.name}"]`, input => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, '#16a34a');
+      input.dispatchEvent(new Event('input', { bubbles: true })); input.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await page.waitForFunction(id => harness.snapshot().aiAnalysis?.rooms.find(r => r.id === id)?.displayColor === '#16a34a', {}, room.id);
+    await button('Adjust / redraw');
+    const corner = room.polygon[0], moved = { x: corner.x + 4, y: corner.y + 4 };
+    await centre(corner); await dragPlan(corner, moved); await button('Finish editing');
+    const changed = (await snapshot()).aiAnalysis.rooms.find(r => r.id === room.id);
+    assert.equal(changed.boundaryEdited, true);
+    assert.notEqual(changed.areaM2, room.areaM2);
+    assert.equal(changed.confirmed, false, 'Editing geometry does not automatically confirm it');
+    report.cases.roomCorrection = { id: room.id, beforeM2: room.areaM2, afterM2: changed.areaM2, displayColor: changed.displayColor, polygon: changed.polygon };
+    await page.screenshot({ path: path.join(out, 'room-corrected-recoloured.png') });
+    await page.evaluate(() => { const box = document.querySelector('[data-testid="room-boundary-panel"] input[type="checkbox"]'); if (box.checked) box.click(); });
+  }
+
   // Add an ordinary manual measurement on the blank paper margin.
   const count = (await snapshot()).completedWallRuns.length;
   await centre({ x: 90, y: 35 }); await button('Walls');
@@ -339,6 +389,11 @@ try {
   assert.deepEqual(state.placedOpenings.find(item => item.id === editedOpening.id), { ...editedOpening, openingType: editedOpening.type }, 'AI opening metadata and edits survive reopen');
   assert.ok(!state.placedOpenings.some(item => item.id === deletedOpening.id));
   assertSchedule(state);
+  if (report.cases.roomCorrection) {
+    const room = state.aiAnalysis.rooms.find(r => r.id === report.cases.roomCorrection.id);
+    assert.equal(room.displayColor, '#16a34a', 'Room colour survives reopening');
+    assert.deepEqual(room.polygon, report.cases.roomCorrection.polygon, 'Manual room boundary survives reopening');
+  }
   await page.screenshot({ path: path.join(out, '5-edited-saved-reopened.png') });
   const requestCount = report.requests.length;
   await page.click('#run-ai-takeoff'); await settle();
@@ -352,6 +407,25 @@ try {
   assert.ok(!state.placedOpenings.some(item => item.id === deletedOpening.id));
   assertSchedule(state);
   await page.screenshot({ path: path.join(out, '6-reloaded-real-ai-and-manual.png') });
+  if (report.cases.roomCorrection) {
+    const room = state.aiAnalysis.rooms.find(r => r.id === report.cases.roomCorrection.id);
+    assert.deepEqual(room.polygon, report.cases.roomCorrection.polygon, 'Rerun preserves the corrected room');
+    assert.equal(room.displayColor, '#16a34a');
+    assert.equal(new Set(state.aiAnalysis.rooms.map(r => r.id)).size, state.aiAnalysis.rooms.length);
+  }
+  if (process.env.TAKEOFF_TEST_JOB_SETUP === '1') {
+    await button('Takeoff Schedule', true);
+    await button('Export Takeoff to Job Setup');
+    await page.waitForSelector('[data-testid="job-setup-takeoff-import"]');
+    assert.equal(await page.$('[data-testid="takeoff-calibration-blocked"]'), null, 'Confirmed calibration reaches Job Setup');
+    await button('Import selected quantities');
+    await page.waitForFunction(() => Boolean(harness.workbook().takeoffEngine?.lastJobSetupSync));
+    const workbook = await page.evaluate(() => harness.workbook());
+    report.cases.jobSetup = { rows: workbook.data?.inputDataSheet?.rows, receipt: workbook.takeoffEngine?.lastJobSetupSync };
+    assert.ok(report.cases.jobSetup.receipt, 'Job Setup records the actual takeoff import');
+    report.cases.quotation = await page.evaluate(() => harness.quotation());
+    await page.screenshot({ path: path.join(out, '7-job-setup-import.png') });
+  }
   assert.deepEqual(report.errors, [], 'No browser runtime errors');
   assert.deepEqual(report.dialogs, ['Delete selected item?']);
   report.ok = true;

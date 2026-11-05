@@ -7,6 +7,16 @@ import { webcrypto } from 'node:crypto';
 import { restoreAnalysisCoordinates } from '../components/construction-estimation/ai-plan-takeoff/ai-integration/analysisPages.js';
 import { createJobData, createTakeoffContentChecksum, verifyAiPlanTakeoffSavedJob, prepareAiPlanTakeoffJobForSave } from '../components/construction-estimation/ai-plan-takeoff/jobPersistence.js';
 
+// Measurement finished: 'complete', or 'review' only because measured/proposed rooms await the builder's
+// explicit approval (rooms are never approved automatically). Any other outstanding item fails.
+const assertFinished = (analysis, message, allowed = []) => {
+  if (analysis.stage === 'complete') return;
+  assert.equal(analysis.stage, 'review', message || analysis.message);
+  const codes = (analysis.report?.review || []).filter((item) => ['builder', 'decision'].includes(item.audience)).map((item) => item.code);
+  assert.deepEqual([...new Set(codes)].sort(), [...new Set(['room-boundary-review', ...allowed])].sort(), `only room approval may hold the run in review: ${codes.join(', ')}`);
+};
+
+
 // Transport/image decoding are controlled here; orchestration, normalization,
 // canonical admission, React state, provenance and checksums are real modules.
 process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://takeoff-unit.invalid';
@@ -82,7 +92,7 @@ try {
   assert.equal(calls.length, 1, 'Scale confirmation happens before measurement request.');
   assert.equal(current.pixelsPerMm, null, 'Inspection does not silently calibrate.');
   await act(() => current.analysis.confirmScale());
-  assert.equal(current.analysis.stage, 'complete', current.analysis.message);
+  assertFinished(current.analysis, current.analysis.message);
   assert.deepEqual(calls.slice(1).map((item) => `${item.action}:${item.measurementScope}`), ['measure:geometry', 'measure:items', 'refine:geometry', 'refine:items'], 'Measurement halves run one at a time, then their geometry review halves.');
   assert.equal(evidenceCalls.length, 1, 'The whole plan set is read for evidence once, before any sheet is measured.');
   assert.ok(calls.slice(1).every((item) => item.planEvidence && typeof item.planEvidence === 'object'), 'Every measurement and refinement request carries the plan-set evidence.');
@@ -167,7 +177,7 @@ try {
     return measurement;
   };
   await act(() => current.analysis.run());
-  assert.equal(current.analysis.stage, 'complete', current.analysis.message);
+  assertFinished(current.analysis, current.analysis.message);
   assert.equal(current.pixelsPerMm, .03, 'Existing calibrated scale is used without another confirmation gate.');
   assert.equal(current.collections.completedWallRuns.length, 1, 'A failed optional refinement cannot discard a valid measured page.');
   assert.ok(current.analysis.report.review.some((item) => item.code === 'refinement-failed'));
@@ -183,7 +193,7 @@ try {
     ? { ...inspection, page: payload.page.pageNumber }
     : { ...measurement, page: payload.page.pageNumber };
   await act(() => current.analysis.run());
-  assert.equal(current.analysis.stage, 'complete', 'A second presentation of the same floor must not abort the full takeoff.');
+  assertFinished(current.analysis, 'A second presentation of the same floor must not abort the full takeoff.', ['duplicate-level']);
   assert.deepEqual(calls.slice(duplicateStart).filter((item) => item.action === 'measure' && item.measurementScope === 'geometry').map((item) => item.page.pageNumber), [1]);
   assert.equal(current.collections.completedWallRuns.length, 1, 'Duplicate floor presentations are not counted twice.');
   assert.ok(current.analysis.report.review.some((item) => item.code === 'duplicate-level'));
@@ -197,7 +207,7 @@ try {
     return payload.action === 'inspect' ? inspection : measurement;
   };
   await act(() => current.analysis.run());
-  assert.equal(current.analysis.stage, 'complete');
+  assertFinished(current.analysis, undefined, ['inspection-failed']);
   assert.equal(current.collections.completedWallRuns.length, 1, 'A failed supporting-page inspection cannot discard a successfully inspected floor plan.');
   assert.ok(current.analysis.report.review.some((item) => item.code === 'inspection-failed'));
 
@@ -238,7 +248,7 @@ try {
   await act(() => current.analysis.run());
   sequence = calls.slice(start).map((item) => `${item.action}:${item.measurementScope || ''}:${item.page.pageNumber}`);
   assert.deepEqual(sequence, ['measure:items:1', 'refine:geometry:1', 'refine:items:1'], 'Re-run never re-inspects unchanged pages nor repeats the successful geometry half.');
-  assert.equal(current.analysis.stage, 'complete', current.analysis.message);
+  assertFinished(current.analysis, current.analysis.message);
   assert.equal(current.collections.completedWallRuns.length, 1);
   assert.equal(current.analysis.report.requests.filter((item) => item.action === 'inspect' && item.cached).length, 2);
 
@@ -270,7 +280,7 @@ try {
     return measurement;
   };
   await act(() => current.analysis.run());
-  assert.equal(current.analysis.stage, 'complete', current.analysis.message);
+  assertFinished(current.analysis, current.analysis.message);
   assert.equal(stamps.length, 2);
   assert.ok(stamps[1] - stamps[0] >= 390, `Retry waited for retry-after (${stamps[1] - stamps[0]} ms).`);
   await resetRun(cachedInspections);

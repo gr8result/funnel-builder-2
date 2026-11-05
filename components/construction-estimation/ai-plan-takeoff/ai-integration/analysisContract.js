@@ -601,6 +601,9 @@ export function normalizePlanAnalysis({ context, responses = [], runId, modelVer
         Object.assign(detection, {
           x: chosen ? chosen.x : raw.x, y: chosen ? chosen.y : raw.y, type: raw.type, openingClass: raw.openingClass, widthMm, heightMm,
           ...(raw.needsClassification === true ? { needsClassification: true } : {}),
+          // Measured frame / rough opening / leaf widths, each only when the drawing shows it.
+          ...(raw.measurements && typeof raw.measurements === 'object' ? { measurements: Object.fromEntries(['frameWidthMm', 'roughOpeningMm', 'leafWidthMm']
+            .filter((key) => positive(raw.measurements[key])).map((key) => [key, Math.round(raw.measurements[key])])) } : {}),
           itemTag: tag || sizeCode || raw.detectionId, subType: resolveOpeningSubType({ ...raw, tag, sizeCode }), glassType,
           ...(location ? { location } : {}),
         });

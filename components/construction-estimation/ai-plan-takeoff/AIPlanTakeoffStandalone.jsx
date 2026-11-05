@@ -1,5 +1,6 @@
 import WallCandidatePanel from './WallCandidatePanel.jsx';
 import { RoomBoundaryLayer, RoomBoundaryPanel } from './RoomBoundaries.jsx';
+import { sheetPixelsPerMm, sameSheetScale } from './sheetScale.js';
 import { CabinetryMeasurementTag } from './CabinetryMeasurementTag.jsx';
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useAiTakeoffBridge } from './ai-integration/useAiTakeoffBridge.js';
@@ -16,6 +17,7 @@ import { RotateCw, Ruler, ChevronLeft, ChevronRight, DoorOpen, Square, Layers, T
 import { calculatePolygonAreaM2, findFloorplanCornerSnapPoint, resolveFloorplanFreePoint } from './floorplanGeometry';
 import { compactPdfLinework, readPdfPageLinework } from './geometry/pdfLinework.js';
 import { reconcileDrawnWall, snapWallPoint } from './manualWallEdit.js';
+import { confirmOpeningClass } from './manualOpeningEdit.js';
 import { AI_PLAN_TAKEOFF_EXTENSION, filenameWithoutKnownGr8Extension } from '../../../lib/gr8FileTypes.js';
 const AI_PLAN_TAKEOFF_FILE_DESCRIPTION = 'Gr8 Result AI Plan Takeoff';
 import { EXTERIOR_WALL_CLASSES, normaliseLevel, resolveTakeoffLevel, resolveExteriorClass, runLengthM, createExteriorClassificationTotals, resolveConstructionSystem, EXTERIOR_CONSTRUCTION_SYSTEMS, INTERIOR_CONSTRUCTION_SYSTEMS, CONSTRUCTION_SYSTEM_LABELS, CLADDING_PRODUCTS, CLADDING_PRODUCT_CUSTOM, ROOM_LOCATION_OPTIONS, ROOM_LOCATION_CUSTOM_KEY, resolveOpeningRoom, POST_CORE_TYPES, POST_CORE_TYPE_LABELS, TIMBER_POST_SIZE_OPTIONS, STEEL_SECTION_TYPES, POST_SURROUND_TYPES, POST_SURROUND_TYPE_LABELS, POST_BRICK_FINISH_OPTIONS, resolvePostColumnCore } from './takeoffRunData.js';
@@ -181,8 +183,8 @@ function normaliseRecoveredOpening(opening = {}, index = 0) {
     type: openingType,
     openingType,
     itemTag: label,
-    widthMm: Number(opening.widthMm || opening.width || 0),
-    heightMm: Number(opening.heightMm || opening.height || 0),
+    widthMm: opening.widthMm === null ? null : Number(opening.widthMm ?? opening.width ?? 0),
+    heightMm: opening.heightMm === null ? null : Number(opening.heightMm ?? opening.height ?? 0),
     openingClass: classifyOpeningValue(opening),
     hostWallId: opening.hostWallId || '',
     frameMaterial: opening.frameMaterial || '',
@@ -448,6 +450,26 @@ export default function AIPlanTakeoffStandalone({
   const [attachSaving, setAttachSaving] = useState(false);
   const [attachError, setAttachError] = useState('');
   const suppressUnsavedChangeRef = useRef(true);
+  // Lost-work guard: while a save to the job is still running, or the takeoff has unsaved changes,
+  // closing or reloading the tab asks first. Every save to the job goes through saveToPlatform.
+  const platformSavesInFlightRef = useRef(0);
+  const hasUnsavedChangesRef = useRef(false);
+  hasUnsavedChangesRef.current = hasUnsavedChanges;
+  const saveToPlatform = useCallback(async (job) => {
+    platformSavesInFlightRef.current += 1;
+    try { return await onSaveToPlatform(job); } finally { platformSavesInFlightRef.current -= 1; }
+  }, [onSaveToPlatform]);
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const guard = (event) => {
+      if (platformSavesInFlightRef.current <= 0 && !hasUnsavedChangesRef.current) return undefined;
+      event.preventDefault();
+      event.returnValue = 'A takeoff save is still running or has unsaved changes.';
+      return event.returnValue;
+    };
+    window.addEventListener('beforeunload', guard);
+    return () => window.removeEventListener('beforeunload', guard);
+  }, []);
   const [autosaveRequest, setAutosaveRequest] = useState(null);
   const masterTakeoffChangeRef = useRef(onMasterTakeoffChange);
   masterTakeoffChangeRef.current = onMasterTakeoffChange;
@@ -717,6 +739,11 @@ export default function AIPlanTakeoffStandalone({
       if (embedded && onSaveToPlatform && platformContext.jobId) await handleSaveJob();
     },
   });
+
+  useEffect(() => {
+    const scale = sheetPixelsPerMm(currentPage, pixelsPerMm, aiTakeoffAnalysis.sheetCalibrations);
+    if (scale > 0 && !sameSheetScale(scale, pixelsPerMm)) setPixelsPerMm(scale);
+  }, [currentPage, aiTakeoffAnalysis.sheetCalibrations, pixelsPerMm]);
 
   const takeoffContentChecksum = useMemo(() => checksumForTakeoffContent({
     rotation,
@@ -1688,7 +1715,7 @@ export default function AIPlanTakeoffStandalone({
     }
     manualSaveInFlightRef.current = true;
     try {
-      const result = await Promise.resolve(onSaveToPlatform(jobData));
+      const result = await Promise.resolve(saveToPlatform(jobData));
       const verifiedSave = requireVerifiedSave(result, jobData);
       if (!verifiedSave.ok) {
         setHasUnsavedChanges(true);
@@ -1975,7 +2002,7 @@ setSavedRevision(verifiedSave.revision);
       };
       setPlatformSaveMessage('Autosaving changes...');
       try {
-        const result = await Promise.resolve(onSaveToPlatform(jobWithChecksum));
+        const result = await Promise.resolve(saveToPlatform(jobWithChecksum));
         const verifiedSave = requireVerifiedSave(result, jobWithChecksum);
         if (!verifiedSave.ok) {
           setHasUnsavedChanges(true);
@@ -2132,7 +2159,7 @@ setSavedRevision(verifiedSave.revision);
           baseRevision: savedRevision,
           platformProject: buildJobData(takeoffJobData.jobName || file.name).platformProject
         };
-        const result = await Promise.resolve(onSaveToPlatform(submittedJob));
+        const result = await Promise.resolve(saveToPlatform(submittedJob));
         const verifiedSave = requireVerifiedSave(result, submittedJob);
         if (!verifiedSave.ok) {
           setHasUnsavedChanges(true);
@@ -2208,7 +2235,7 @@ setSavedRevision(verifiedSave.revision);
             baseRevision: savedRevision,
             platformProject: buildJobData(takeoffJobData.jobName || file.name).platformProject
           };
-          const result = await Promise.resolve(onSaveToPlatform(submittedJob));
+          const result = await Promise.resolve(saveToPlatform(submittedJob));
           const verifiedSave = requireVerifiedSave(result, submittedJob);
           if (!verifiedSave.ok) {
             setHasUnsavedChanges(true);
@@ -3713,6 +3740,7 @@ setSavedRevision(verifiedSave.revision);
   const selectedEave = activePageEaves.find(e => e.id === selectedEaveId);
   const selectedPillar = activePagePillars.find(p => p.id === selectedPillarId);
   const takeoffSchedule = React.useMemo(() => createTakeoffSchedule({
+    sheetCalibrations: aiTakeoffAnalysis.sheetCalibrations,
     aiAnalysis: aiTakeoffAnalysis.report,
     projectInfo,
     planFilename,
@@ -3728,7 +3756,7 @@ setSavedRevision(verifiedSave.revision);
     completedPillars,
     sheetLevels,
     jobSetupRows: platformContext.jobSetupRows || {}
-  }), [projectInfo, planFilename, totalPages, currentPage, pixelsPerMm, completedWallRuns, placedOpenings, completedAreas, completedFloorplans, completedMeasurements, completedEaves, completedPillars, sheetLevels, platformContext.jobSetupRows, aiTakeoffAnalysis.report]);
+  }), [projectInfo, planFilename, totalPages, currentPage, pixelsPerMm, completedWallRuns, placedOpenings, completedAreas, completedFloorplans, completedMeasurements, completedEaves, completedPillars, sheetLevels, platformContext.jobSetupRows, aiTakeoffAnalysis.report, aiTakeoffAnalysis.sheetCalibrations]);
   const scheduleSignature = React.useMemo(() => getScheduleSignature(takeoffSchedule), [takeoffSchedule]);
   const quoteSheetOutOfDate = !!lastQuoteSyncSignature && lastQuoteSyncSignature !== scheduleSignature;
 
@@ -4703,7 +4731,7 @@ setSavedRevision(verifiedSave.revision);
               <div style={{ border: '1px solid #cbd5e1', borderRadius: '6px', padding: '8px', display: 'grid', gap: '6px' }}>
                 <strong style={{ fontSize: '12px' }}>Selected wall</strong>
                 <label style={{ fontSize: '12px' }}>Category
-                  <select value={selectedWall.category || 'exterior'} onChange={(e) => { updateWallRunCategory(selectedWall.id, e.target.value); markTakeoffItemCompleted('wall-category-edit'); }} style={{ width: '100%', padding: '6px', marginTop: '4px' }}>
+                  <select data-testid="selected-wall-category" value={selectedWall.category || 'exterior'} onChange={(e) => { updateWallRunCategory(selectedWall.id, e.target.value); markTakeoffItemCompleted('wall-category-edit'); }} style={{ width: '100%', padding: '6px', marginTop: '4px' }}>
                     <option value="exterior">Exterior</option>
                     <option value="interior">Interior</option>
                   </select>
@@ -4833,10 +4861,17 @@ setSavedRevision(verifiedSave.revision);
                   return (
                     <>
                       <label style={{ fontSize: '12px' }}>Opening class
-                        <select value={opening?.openingClass || classifyOpeningValue(opening)} onChange={(e) => { setPlacedOpenings((prev) => prev.map((item) => item.id === opening.id ? { ...item, openingClass: e.target.value, needsClassification: false } : item)); markTakeoffItemCompleted('opening-class-edit'); }} style={{ width: '100%', padding: '6px', marginTop: '4px' }}>
+                        <select value={opening?.openingClass || classifyOpeningValue(opening)} onChange={(e) => { const value = e.target.value; setPlacedOpenings((prev) => prev.map((item) => item.id === opening.id ? confirmOpeningClass(item, value) : item)); markTakeoffItemCompleted('opening-class-edit'); }} style={{ width: '100%', padding: '6px', marginTop: '4px' }}>
                           {OPENING_CLASS_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
                         </select>
                       </label>
+                      {opening.needsClassification && <div data-testid="opening-needs-confirmation" style={{ color: '#92400e', fontSize: 12 }}>
+                        This measured frame has no confirmed opening type. Check the drawing and choose the class above before including it in quantities.
+                        <button type="button" data-testid="confirm-opening-type" onClick={() => {
+                          setPlacedOpenings(previous => previous.map(item => item.id === opening.id ? confirmOpeningClass(item, opening.openingClass || classifyOpeningValue(opening)) : item));
+                          markTakeoffItemCompleted('opening-type-confirmed');
+                        }}>Confirm opening type</button>
+                      </div>}
                       <label style={{ fontSize: '12px' }}>{opening?.type === 'window' ? 'Window' : 'Door'} Code / Tag
                         <input
                           value={opening?.itemTag || ''}

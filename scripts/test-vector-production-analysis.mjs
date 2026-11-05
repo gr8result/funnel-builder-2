@@ -26,11 +26,18 @@ const note={x:.3,y:.3,type:'door',openingClass:'Other Opening',basis:'OBSERVED',
 const untouched=JSON.stringify(divided),unconfirmed=vectorProductionAnalysis(empty,divided,spec);
 const confirmed=vectorProductionAnalysis({...empty,openings:[note]},divided,spec);
 assert.equal(confirmed.vector.report.documentedGapConfirmations,1);
-assert.equal(confirmed.vector.rooms.length,unconfirmed.vector.rooms.length+1,'only the documented measured span closes the partition');
+// The unconfirmed gap closes the partition only as a review span: rooms are flagged, nothing is quantified.
+const flaggedRooms=analysis=>analysis.vector.rooms.filter(room=>room.unconfirmedBoundaryGaps>0).length;
+assert.equal(confirmed.vector.rooms.length,unconfirmed.vector.rooms.length,'the partition separates the same rooms either way');
+assert.ok(flaggedRooms(unconfirmed)>=2,'rooms closed across the unconfirmed gap say so for review');
+assert.ok(unconfirmed.vector.rooms.filter(room=>room.unconfirmedBoundaryGaps).every(room=>/nothing drawn/.test(room.geometryReview)));
+assert.equal(unconfirmed.vector.reviewOpeningCandidates.length,1,'the unconfirmed gap is held for review, not dropped');
+assert.ok(!unconfirmed.response.openings.some(item=>item.openingClass==='Other Opening'),'the unconfirmed gap is not an admitted opening');
+assert.equal(flaggedRooms(confirmed),0,'only the documented measured span clears the review flag');
 assert.equal(confirmed.response.openings[0].openingClass,'Other Opening','a square-set opening must not become an internal hinged door');
 assert.equal(JSON.stringify(divided),untouched,'provider confirmation cannot mutate captured linework');
 for(const changed of [{explicitWidthMm:3000},{x:.9},{dimensionBasis:'ASSUMED'},{dimensionEvidence:''},{confidence:.6}]){
- const result=vectorProductionAnalysis({...empty,openings:[{...note,...changed}]},divided,spec);assert.equal(result.vector.report.documentedGapConfirmations,0,JSON.stringify(changed));assert.equal(result.vector.rooms.length,unconfirmed.vector.rooms.length);
+ const result=vectorProductionAnalysis({...empty,openings:[{...note,...changed}]},divided,spec);assert.equal(result.vector.report.documentedGapConfirmations,0,JSON.stringify(changed));assert.equal(result.vector.rooms.length,unconfirmed.vector.rooms.length);assert.equal(flaggedRooms(result),flaggedRooms(unconfirmed),`rejected confirmation leaves the rooms flagged ${JSON.stringify(changed)}`);
 }
 assert.equal(vectorProductionAnalysis({...empty,openings:[note,{...note}]},divided,spec).vector.report.documentedGapConfirmations,0,'duplicate/ambiguous annotations cannot confirm a gap');
 const provisional={...geometry,openings:geometry.openings.map(o=>({...o,needsClassification:true}))};
@@ -46,3 +53,17 @@ assert.equal(local.vector.rooms.length,2);assert.ok(local.vector.rooms.some(r=>r
 const manual=vectorProductionAnalysis(response,geometry,spec,{wallDecisions:{'linework:a':'exterior'}});
 assert.equal(manual.response.walls.find(w=>w.nodes[0].y===.1&&w.nodes[1].y===.1).category,'exterior','explicit estimator classification takes priority over saved AI semantics');
 console.log('Saved semantic evidence: local correction rebuild retains documented gaps and labels; manual decisions remain authoritative.');
+// Room names: labels printed in the PDF text layer name the measured rooms; provider labels (positions
+// typically 1-2 m out) are used only on sheets without text labels, and a room never gets both.
+{
+  // Rooms of the divided box: north half y 100-300, south half y 300-500 (logical px).
+  const providerRooms={...empty,rooms:[{name:'Kitchen',x:.3,y:.4,basis:'OBSERVED',confidence:.95,evidence:'Provider label'}]};
+  const fromProvider=vectorProductionAnalysis(providerRooms,divided,spec);
+  assert.ok(fromProvider.vector.rooms.some(room=>room.name==='Kitchen'),'without text labels the provider label names the room');
+  const text=[{name:'Bed 1',x:300,y:200},{name:'Robe',x:300,y:400}];
+  const fromText=vectorProductionAnalysis(providerRooms,divided,spec,{labels:text});
+  const names=fromText.vector.rooms.map(room=>room.name).sort();
+  assert.deepEqual(names,['Bed 1','Robe'],`text labels name the rooms; the provider label is not added (${names.join(', ')})`);
+  assert.ok(!names.some(name=>/Kitchen|\/| 2$/.test(name)),'no doubled or suffixed names');
+}
+console.log('Room labels: PDF text labels name measured rooms; provider labels only where the sheet has none.');

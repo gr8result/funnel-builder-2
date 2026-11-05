@@ -21,7 +21,7 @@ const workbookSource = readFileSync("components/estimate-builder/EstimateBuilder
 const workbookHookSource = readFileSync("hooks/estimate-builder/useEstimateBuilderWorkbook.js", "utf8");
 assert.match(workbookSource, /page:\s*"aiPlanTakeoff"/, "Project Dashboard card must target aiPlanTakeoff");
 assert.match(workbookSource, /<WorkspaceNavGroup pages=\{DASHBOARD_PROJECT_WORKFLOW_CARDS\}/, "Workspace left nav must render workflow cards");
-assert.match(workbookSource, /<AIPlanTakeoffPage \{\.\.\.takeoffEngineContext\} \/>/, "aiPlanTakeoff page must mount integrated page entry");
+assert.match(workbookSource, /<AIPlanTakeoffPage\b[^\n]*\{\.\.\.takeoffEngineContext\}[^\n]*\/>/, "aiPlanTakeoff page must mount integrated page entry");
 assert.match(workbookSource, /platformContext:\s*\{[\s\S]*projectId:/, "Takeoff page must receive current project identity");
 assert.match(workbookSource, /saveAiPlanTakeoffJob/, "Save Job must persist to the platform workbook");
 assert.equal(workbookHookSource.includes("materializeTakeoffPlanPages(savedRecord.workbook)"), true, "Takeoff save verification must materialize externalized plan pages before checking them");

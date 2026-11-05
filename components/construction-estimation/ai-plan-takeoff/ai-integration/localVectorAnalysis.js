@@ -31,7 +31,7 @@ export function buildLocalVectorAnalysis({ planPage, detected, pixelsPerMm, leve
   const normalized = normalizePlanAnalysis({ context, responses: [vector.response], runId, modelVersion: detected.engine, reviewedDetectionIds });
   const rooms = vector.rooms.map((room, index) => detectRoomBoundary(room, {
     page: planPage.pageNumber, level, width: planPage.logicalWidth, height: planPage.logicalHeight,
-    pixelsPerMm, walls: context.completedWallRuns || [], openings: context.placedOpenings || [],
+    pixelsPerMm, walls: context.completedWallRuns || [], openings: context.placedOpenings || [], measuredBoundary: true,
   }, index));
   return { ...normalized, vector, rooms, detected: production?.detected || detected };
 }

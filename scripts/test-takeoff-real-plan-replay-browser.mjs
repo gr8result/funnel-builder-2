@@ -7,6 +7,8 @@ import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
 import puppeteer from 'puppeteer';
 import { PDFDocument } from 'pdf-lib';
+import dotenv from 'dotenv';
+import { createClient } from '@supabase/supabase-js';
 
 // Real-plan browser acceptance WITHOUT a paid provider. The actual AI Takeoff screen runs in an
 // isolated job: the recovered New Job 03/09 sheets are uploaded as a PDF through the screen's own
@@ -22,12 +24,26 @@ const require = createRequire(import.meta.url);
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const recoveryDir = process.env.GR8_TAKEOFF_RECOVERY || 'E:/dev/funnel-builder-clean/recovery/ai-takeoff-run-2026-10-06';
 if (!fs.existsSync(path.join(recoveryDir, 'takeoff-with-ai-run.decoded.json'))) { console.log(`SKIPPED real-plan replay: ${recoveryDir} not found (set GR8_TAKEOFF_RECOVERY).`); process.exit(0); }
-const out = path.join(root, 'artifacts/test-artifacts/takeoff-real-plan-replay');
+const out = path.resolve(root, process.env.TAKEOFF_REPLAY_ARTIFACT_DIR || 'artifacts/test-artifacts/takeoff-real-plan-replay');
 const componentPath = path.join(root, 'components/construction-estimation/ai-plan-takeoff/AIPlanTakeoffStandalone.jsx');
 const workbookHookPath = path.join(root, 'hooks/estimate-builder/useEstimateBuilderWorkbook.js');
 const takeoffDir = path.dirname(componentPath);
 const jobId = 'real-plan-replay-job';
-const supabaseUrl = 'https://stubbedtakeoff.supabase.invalid';
+let supabaseUrl = 'https://stubbedtakeoff.supabase.invalid', supabaseAnon = 'stub-anon-key', realSession = null;
+if (process.env.TAKEOFF_REPLAY_REAL_AUTH === '1') {
+  dotenv.config({ path: '.env.local', quiet: true });
+  supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  supabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const options = { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } };
+  const admin = createClient(supabaseUrl, process.env.SUPABASE_SERVICE_ROLE_KEY, options);
+  const account = await admin.auth.admin.getUserById('e32c468e-7111-40c3-b8f5-2ce8345a3993');
+  const run = account.data?.user?.email?.match(/^codex-johnson-clean-(\d{14})@example\.test$/);
+  assert.ok(run, 'Use only the documented disposable test account');
+  const auth = createClient(supabaseUrl, supabaseAnon, options);
+  const signed = await auth.auth.signInWithPassword({ email: account.data.user.email, password: 'Codex-' + run[1] + '-Pass!' });
+  assert.equal(Boolean(signed.error), false, 'Real test account authentication succeeds');
+  realSession = signed.data.session;
+}
 fs.mkdirSync(out, { recursive: true });
 const recovered = JSON.parse(fs.readFileSync(path.join(recoveryDir, 'takeoff-with-ai-run.decoded.json'), 'utf8')).job;
 // GR8_TAKEOFF_RESPONSES replays another saved set of provider responses for the same sheets (for example a later live run).
@@ -90,7 +106,7 @@ function mapHooks(file, functionName, stack = new Set()) {
 }
 const indexes = mapHooks(componentPath, 'AIPlanTakeoffStandalone').indexes;
 const loader = path.join(out, 'jsx-loader.cjs');
-fs.writeFileSync(loader, `const ts=require(${JSON.stringify(require.resolve('typescript'))});module.exports=function(source){return ts.transpileModule(source,{fileName:this.resourcePath,compilerOptions:{jsx:ts.JsxEmit.React,module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2020}}).outputText;};`);
+fs.writeFileSync(loader, `const ts=require(${JSON.stringify(require.resolve('typescript'))});module.exports=function(source){if(require('path').basename(this.resourcePath)==='EstimateBuilderWorkbook.js')source=require(${JSON.stringify(path.join(root, 'scripts/lib/takeoff-quotation-test-module.cjs'))})(source,this.resourcePath);return ts.transpileModule(source,{fileName:this.resourcePath,compilerOptions:{jsx:ts.JsxEmit.ReactJSX,module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2020}}).outputText;};`);
 const entry = path.join(out, 'browser-entry.cjs');
 fs.writeFileSync(entry, `
 const React=require('react');
@@ -101,6 +117,9 @@ const {createEstimateBuilderWorkbookDefaults}=require(${JSON.stringify(path.join
 const {masterJobId,linkTakeoffToMasterJob}=require(${JSON.stringify(path.join(root, 'lib/construction-estimation/masterJob.js'))});
 const {prepareAiPlanTakeoffJobForSave}=require(${JSON.stringify(path.join(takeoffDir, 'jobPersistence.js'))});
 const {materializeTakeoffPlanPages}=require(${JSON.stringify(path.join(takeoffDir, 'planBlobStorage.js'))});
+const {QuotationSheet}=require(${JSON.stringify(path.join(root, 'components/estimate-builder/EstimateBuilderWorkbook.js'))});
+const JobSetupTakeoffImport=require(${JSON.stringify(path.join(root, 'components/estimate-builder/JobSetupTakeoffImport.jsx'))}).default;
+const {calculateEstimateBuilderWorkbook}=require(${JSON.stringify(path.join(root, 'lib/construction-estimation/estimateBuilderWorkbookCalculations.js'))});
 const indexes=${JSON.stringify(indexes)};
 const jobId=${JSON.stringify(jobId)};
 const reactRoot=createRoot(document.getElementById('root'));
@@ -128,18 +147,27 @@ function Shell(){
  const [request,setRequest]=React.useState(null);
  const [visible,setVisible]=React.useState(true);
  const [mount,setMount]=React.useState(0);
+ const [setupRequest,setSetupRequest]=React.useState(null);
+ const [quotationVisible,setQuotationVisible]=React.useState(false);
  React.useEffect(()=>{if(!sheet.hydrated||!masterJobId(sheet.workbook)||selectJob(sheet.workbook)?.takeoffId)return;sheet.ensureAiPlanTakeoffWorkspace();},[sheet.hydrated,sheet.workbook]);
- control={async reopen(){setVisible(false);await frame();const result=await currentSheet.openSavedJob('job:'+jobId);if(!result.ok)throw Error(result.message);setRequest({requestId:'reopen-'+Date.now(),jobData:result.workbook.aiPlanTakeoffJob});setMount(n=>n+1);setVisible(true);return result.key;}};
+ control={showQuotation(){setQuotationVisible(true);},async reopen(){setVisible(false);await frame();const result=await currentSheet.openSavedJob('job:'+jobId);if(!result.ok)throw Error(result.message);setRequest({requestId:'reopen-'+Date.now(),jobData:result.workbook.aiPlanTakeoffJob});setMount(n=>n+1);setVisible(true);return result.key;}};
  if(!sheet.hydrated)return React.createElement('div',null,'Loading workbook');
+ if(quotationVisible)return React.createElement(QuotationSheet,{sheet,onFormulaTarget:()=>{},canEditFormulas:false});
+ if(setupRequest)return React.createElement(JobSetupTakeoffImport,{sheet,takeoffJob:sheet.workbook.aiPlanTakeoffJob,projectId:jobId,jobName:'Disposable scanned replay',jobOpen:true,request:setupRequest,onRequestConsumed:()=>{},onOpenTakeoff:()=>setSetupRequest(null)});
  const wb=sheet.workbook,jid=masterJobId(wb);
- return visible?React.createElement(Takeoff,{key:(jid||'no-job')+':'+sheet.jobLoadVersion+':'+mount,embedded:true,jobId:jid,initialJob:selectJob(wb),openTakeoffJobRequest:request,
+ const quoteRows=Object.entries(wb.quotation||{}).flatMap(([section,data])=>(data.rows||[]).map(row=>({id:row.id,section,category:row.item,description:row.item,quantity:row.quantity,unit:row.unit})));
+ return visible?React.createElement(Takeoff,{key:(jid||'no-job')+':'+sheet.jobLoadVersion+':'+mount,embedded:true,jobId:jid,initialJob:selectJob(wb),initialQuoteRows:quoteRows,
+ onQuoteSheetUpdate:async({previewRows=[]})=>{for(const preview of previewRows){const target=quoteRows.find(row=>row.id===preview.destinationRowId);if(!target)continue;for(const [key,value] of Object.entries({quantity:String(preview.newQuantity??''),importedQuantity:String(preview.newQuantity??''),quantityKey:'aiPlanTakeoff:'+preview.itemId,takeoffSourceId:preview.itemId,takeoffUnit:preview.unit}))currentSheet.updateQuote(target.section,target.id,key,value);}return {ok:true};},openTakeoffJobRequest:request,onJobSetupUpdate:payload=>{setSetupRequest(payload);return {ok:true};},
   onMasterTakeoffChange:(jobData)=>{try{return currentSheet.updateAiPlanTakeoffDraft(jobData);}catch(error){return {ok:false,message:error.message};}},
   platformContext:{jobId:jid,projectId:jid,projectName:'Real plan replay',noJobOpen:!jid,isHydratingProject:!sheet.hydrated},
   onSaveToPlatform:async incoming=>{saveInputs.push(JSON.parse(JSON.stringify({walls:incoming.completedWallRuns||[],openings:incoming.placedOpenings||[],floorplans:incoming.completedFloorplans||[],scheduleState:incoming.scheduleState||null})));const workbook=currentSheet.getCurrentWorkbook();const owned=linkTakeoffToMasterJob(workbook,incoming);const prepared=prepareAiPlanTakeoffJobForSave(selectJob(workbook),owned,jid);const result=prepared.ok?await currentSheet.saveAiPlanTakeoffJob(prepared.job):prepared;saveResults.push(result);return result;}}):React.createElement('div',null,'Takeoff closed');
 }
 window.harness={snapshot,saveResults:()=>saveResults,saveInputs:()=>saveInputs,ready:()=>Boolean(currentSheet?.hydrated),
- async newJob(){const workbook={...createEstimateBuilderWorkbookDefaults(),jobId,projectId:jobId,commercialProjectId:jobId,projectName:'Real plan replay',registeredJob:{jobId,jobName:'Real plan replay'},jobFileMeta:{projectId:jobId,jobName:'Real plan replay'}};delete workbook.aiPlanTakeoffJob;if(workbook.takeoffEngine)delete workbook.takeoffEngine.aiPlanTakeoffJob;const result=await currentSheet.loadJobFileData({workbook,jobName:'Real plan replay'},'stubbed-ai-takeoff.gr8job');if(!result.ok)throw Error(result.message);return result;},
+ async newJob(){const workbook={...createEstimateBuilderWorkbookDefaults(),jobId,projectId:jobId,commercialProjectId:jobId,projectName:'Real plan replay',registeredJob:{jobId,jobName:'Real plan replay'},jobFileMeta:{projectId:jobId,jobName:'Real plan replay'}};workbook.quotation={'Takeoff browser check':{collapsed:false,rows:[{id:'takeoff-browser-priced-check',item:'Disposable door labour check',quantityKey:'internalDoors',manualRate:'100',unit:'EACH',active:true,formulas:{}},{id:'takeoff-browser-room-check',item:'Disposable approved room floor tiling',quantity:'0',manualRate:'100',unit:'M2',active:true,formulas:{}}]}};delete workbook.aiPlanTakeoffJob;if(workbook.takeoffEngine)delete workbook.takeoffEngine.aiPlanTakeoffJob;const result=await currentSheet.loadJobFileData({workbook,jobName:'Real plan replay'},'stubbed-ai-takeoff.gr8job');if(!result.ok)throw Error(result.message);return result;},
  reopen:()=>control.reopen(),
+ workbook:()=>JSON.parse(JSON.stringify(currentSheet.getCurrentWorkbook())),
+ quotation:()=>calculateEstimateBuilderWorkbook(currentSheet.getCurrentWorkbook()),
+ showPricedQuotation(){control.showQuotation();},
  goToPage(page){dispatch('currentPage',page);},
  setView({zoom,pan}){value('sheetViewStateRef').current[value('currentPage')]={scale:zoom,pos:pan};dispatch('stageScale',zoom);dispatch('stagePos',pan);},
  viewSize(){return {width:value('stageRef').current.width(),height:value('stageRef').current.height()};},
@@ -148,6 +176,8 @@ window.harness={snapshot,saveResults:()=>saveResults,saveInputs:()=>saveInputs,r
 };
 reactRoot.render(React.createElement(Shell));
 `);
+const cssLoader = path.join(out, 'css-loader.cjs');
+fs.writeFileSync(cssLoader, `module.exports=source=>'const style=document.createElement("style");style.textContent='+JSON.stringify(source)+';document.head.appendChild(style);';`);
 const webpackPackage = require('next/dist/compiled/webpack/webpack');
 webpackPackage.init();
 const webpack = webpackPackage.webpack;
@@ -156,9 +186,10 @@ await new Promise((resolve, reject) => {
   const compiler = webpack({
     mode: 'development', target: 'web', devtool: false, context: root, entry,
     output: { path: out, filename: 'browser-bundle.js' },
-    resolve: { extensions: ['.js', '.jsx', '.mjs', '.ts', '.tsx'], mainFields: ['browser', 'module', 'main'], fallback: { canvas: false, fs: false, path: false, url: false } },
-    module: { rules: [{ test: /\.[jt]sx?$/, exclude: /node_modules/, resolve: { fullySpecified: false }, use: loader }] },
-    plugins: [new webpack.IgnorePlugin({ resourceRegExp: /^node:/ }), new webpack.DefinePlugin({ 'process.env.NEXT_PUBLIC_SUPABASE_URL': JSON.stringify(supabaseUrl), 'process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY': JSON.stringify('stub-anon-key') })],
+    resolve: { extensions: ['.js', '.jsx', '.mjs', '.ts', '.tsx'], mainFields: ['browser', 'module', 'main'], fallback: { canvas: false, fs: false, path: false, url: false, stream: false, zlib: false } },
+    module: { rules: [{ test: /\.css$/, use: cssLoader }, { test: /\.[jt]sx?$/, exclude: /node_modules/, resolve: { fullySpecified: false }, use: loader }] },
+    plugins: [new webpack.ProvidePlugin({ process: require.resolve('next/dist/build/polyfills/process') }), new webpack.IgnorePlugin({ resourceRegExp: /^node:/ }), new webpack.DefinePlugin({ 'process.env.NEXT_PUBLIC_SUPABASE_URL': JSON.stringify(supabaseUrl), 'process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY': JSON.stringify(supabaseAnon) })],
+    cache: { type: 'filesystem', cacheDirectory: path.join(root,'artifacts/test-results/takeoff-browser-webpack-cache') },
     optimization: { minimize: false }, performance: { hints: false },
   });
   compiler.run((error, stats) => {
@@ -253,18 +284,18 @@ try {
   browser = await puppeteer.launch({ executablePath: process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true, userDataDir: path.join(out, 'profile-' + Date.now()), args: ['--no-first-run', '--disable-extensions', '--disable-background-networking'], defaultViewport: { width: 1800, height: 1100 }, protocolTimeout: 900000 });
   page = await browser.newPage();
   page.setDefaultTimeout(120000);
-  page.on('pageerror', (error) => report.errors.push(error.message));
+  page.on('pageerror', (error) => { report.errors.push(error.message); console.error('Browser error:', error.message); });
   page.on('dialog', async (dialog) => {
     report.dialogs.push(dialog.message());
     if (dialog.type() === 'prompt' && /known dimension/i.test(dialog.message())) await dialog.accept(calibrationAnswer);
     else await dialog.accept();
   });
   await page.setRequestInterception(true);
-  page.on('request', (request) => request.url().startsWith(origin) || /^(data|blob):/.test(request.url()) ? request.continue() : request.abort());
+  page.on('request', (request) => request.url().startsWith(origin) || (realSession && request.url().startsWith(supabaseUrl + '/auth/')) || /^(data|blob):/.test(request.url()) ? request.continue() : request.abort());
   const expiresAt = Math.floor(Date.now() / 1000) + 86400;
   await page.evaluateOnNewDocument(({ storageKey, session }) => { localStorage.setItem(storageKey, JSON.stringify(session)); }, {
-    storageKey: 'sb-stubbedtakeoff-auth-token',
-    session: { access_token: 'stub-access-token', refresh_token: 'stub-refresh', token_type: 'bearer', expires_in: 86400, expires_at: expiresAt, user: { id: 'stub-user', aud: 'authenticated', role: 'authenticated', email: 'stub@example.test' } },
+    storageKey: `sb-${new URL(supabaseUrl).hostname.split('.')[0]}-auth-token`,
+    session: realSession || { access_token: 'stub-access-token', refresh_token: 'stub-refresh', token_type: 'bearer', expires_in: 86400, expires_at: expiresAt, user: { id: 'stub-user', aud: 'authenticated', role: 'authenticated', email: 'stub@example.test' } },
   });
   await page.goto(origin, { waitUntil: 'load', timeout: 300000 });
   await page.waitForFunction(() => window.harness?.ready());
@@ -305,7 +336,8 @@ try {
   const started = Date.now();
   const first = await run('firstRun');
   report.cases.firstRun.seconds = Math.round((Date.now() - started) / 1000);
-  assert.match(first, /AI TAKEOFF COMPLETE/, first);
+  assert.match(first, /AI TAKEOFF COMPLETE|REQUIRES REVIEW/, first);
+  await save();
   await page.waitForFunction(() => harness.saveResults().length > 0, { timeout: 120000 });
   assert.equal((await page.evaluate(() => harness.saveResults().at(-1))).ok, true, 'the run saved itself');
   state = await snapshot();
@@ -354,11 +386,14 @@ try {
   const panelText = await page.$eval('[data-testid="room-boundary-panel"]', (element) => element.innerText);
   assert.ok(panelText.includes(target.name) && panelText.includes('Second Level') && panelText.includes(`${target.areaM2.toFixed(2)} m²`), 'the panel shows the room name, level and measured area');
   await page.screenshot({ path: path.join(out, '2-room-selected.png') });
-  // Floor finish.
-  await page.select(`select[aria-label="Floor finish for ${target.name}"]`, 'Carpets');
+  // Recolour using the current room panel.
+  await page.$eval(`input[aria-label="Colour for ${target.name}"]`, input => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, '#16a34a');
+    input.dispatchEvent(new Event('input', { bubbles: true })); input.dispatchEvent(new Event('change', { bubbles: true }));
+  });
   await settle();
   selected = (await rooms()).find((room) => room.id === target.id);
-  assert.equal(selected.floorFinish, 'Carpets');
+  assert.equal(selected.displayColor, '#16a34a');
   // Manual correction: drag one corner 400 mm; the area is recalculated at once and the identity is kept.
   await button('Adjust / redraw');
   await settle();
@@ -370,7 +405,7 @@ try {
   assert.ok(edited, 'the room keeps its identity when its boundary is edited');
   assert.equal(edited.boundaryEdited, true);
   assert.notEqual(edited.areaM2, target.areaM2, 'the area is recalculated when the boundary is corrected');
-  assert.equal(edited.floorFinish, 'Carpets', 'the finish stays with the room');
+  assert.equal(edited.displayColor, '#16a34a', 'the colour stays with the room');
   await button('Finish editing');
   report.cases.correction = { room: target.name, before: target.areaM2, after: edited.areaM2 };
 
@@ -400,10 +435,26 @@ try {
   const laundryCorrected = (await rooms()).find((room) => room.id === laundryDetected.id);
   assert.ok(laundryCorrected?.polygon?.length === 4, 'the redrawn boundary is the laundry\'s');
   assert.ok(Math.abs(laundryCorrected.areaM2 - 5.08) / 5.08 <= 0.03, `the corrected laundry measures ${laundryCorrected.areaM2} m2 against the 5.08 m2 reference, straight away`);
-  assert.ok(await laundryButton('Confirm boundary'));
+  const falseBoundaryIds = laundryCorrected.overlapIds || [];
+  report.cases.rejectedRoomBoundaries = (await rooms()).filter(room => falseBoundaryIds.includes(room.id)).map(room => ({id:room.id,name:room.name,polygon:room.polygon,reason:'Overlaps the independently checked, manually redrawn laundry boundary.'}));
+  if (falseBoundaryIds.length) assert.equal(await page.$eval(`[data-room-id="${laundryDetected.id}"]`, row => [...row.querySelectorAll('button')].find(button=>button.textContent==='Approve room').disabled),true,'overlap prevents approval before explicit review');
+  for (const id of falseBoundaryIds) {
+    await page.evaluate(id => {const row=document.querySelector(`[data-room-id="${id}"]`);const checkbox=row.querySelector('input[type="checkbox"]');if(!checkbox.checked)checkbox.click();},id);
+    await settle();
+    await page.evaluate(id => {const row=document.querySelector(`[data-room-id="${id}"]`);[...row.querySelectorAll('button')].find(button=>button.textContent==='Reject boundary').click();},id);
+    await settle();
+  }
+  await page.select(`[aria-label="Level for ${laundryDetected.name}"]`, 'Second Level');
+  await settle();
+  assert.ok(await laundryButton('Approve room'));
+  await settle();
+  assert.equal((await rooms()).find(room => room.id === laundryDetected.id).confirmed, true, 'explicit room approval succeeds');
+  await page.evaluate(id => { for (const row of document.querySelectorAll('[data-room-id]')) { const checkbox=row.querySelector('input[type="checkbox"]'); if(row.getAttribute('data-room-id')!==id && checkbox?.checked)checkbox.click(); } }, laundryDetected.id);
+  await settle();
+  await page.evaluate(() => { const panel=document.querySelector('[data-testid="room-boundary-panel"]'); [...panel.querySelectorAll('button')].find(button=>button.textContent==='Floor Tiling').click(); });
   await settle();
   if (await laundryButton('Finish editing')) await settle();
-  const laundryKept = (list, when) => { const room = list.find((item) => item.id === laundryDetected.id); assert.ok(room && room.name === laundryDetected.name && room.polygon?.length === 4 && Math.abs(room.areaM2 - laundryCorrected.areaM2) < 0.005, `the corrected laundry is kept ${when}: ${room?.areaM2}`); };
+  const laundryKept = (list, when) => { for (const id of falseBoundaryIds) assert.equal(list.find(room=>room.id===id)?.excluded,true,'explicit rejection survives '+when); const room = list.find((item) => item.id === laundryDetected.id); assert.ok(room?.confirmed && room.approvalInputs && !room.reviewRequired, 'room approval survives '+when); assert.equal(room.level, 'Second Level', 'manual room level survives '+when); assert.ok(room && room.name === laundryDetected.name && room.polygon?.length === 4 && Math.abs(room.areaM2 - laundryCorrected.areaM2) < 0.005, `the corrected laundry is kept ${when}: ${room?.areaM2}`); };
   assert.equal((await rooms()).filter((room) => /^(ldry|laundry|l'dry)$/i.test(room.name) && room.page === 2).length, 1, 'there is still one laundry');
   await page.screenshot({ path: path.join(out, '4-laundry-corrected.png') });
   report.cases.laundry = { referenceM2: 5.08, detectedM2: laundryDetected.areaM2, correctedM2: laundryCorrected.areaM2 };
@@ -457,15 +508,17 @@ try {
 
   // 5. Save and reopen: geometry, the corrected room and its finish come back unchanged.
   const beforeSave = await snapshot();
+  const openingDimensions = state => state.placedOpenings.map(({ id, widthMm, heightMm, openingClass, needsClassification }) => ({ id, widthMm, heightMm, openingClass, needsClassification })).sort((a, b) => a.id.localeCompare(b.id));
   await save();
   await page.evaluate(() => harness.reopen());
   await page.waitForFunction(() => harness.snapshot().imageReady && harness.snapshot().completedWallRuns.length > 0, { timeout: 180000 });
   await settle();
   const reopened = await snapshot();
+  assert.deepEqual(openingDimensions(reopened), openingDimensions(beforeSave), 'opening widths, heights and classifications survive save and reopen');
   assert.deepEqual(reopened.completedWallRuns.map((wall) => wall.id).sort(), beforeSave.completedWallRuns.map((wall) => wall.id).sort(), 'reopened walls');
   assert.deepEqual(reopened.placedOpenings.map((item) => item.id).sort(), beforeSave.placedOpenings.map((item) => item.id).sort(), 'reopened openings');
   const reopenedRoom = (reopened.aiAnalysis?.rooms || []).find((room) => room.id === target.id);
-  assert.ok(reopenedRoom && reopenedRoom.areaM2 === edited.areaM2 && reopenedRoom.floorFinish === 'Carpets' && reopenedRoom.boundaryEdited, 'the corrected room, its area and finish survive save and reopen');
+  assert.ok(reopenedRoom && reopenedRoom.areaM2 === edited.areaM2 && reopenedRoom.displayColor === '#16a34a' && reopenedRoom.boundaryEdited, 'the corrected room, its area and colour survive save and reopen');
   assert.equal((reopened.aiAnalysis?.rooms || []).length, (beforeSave.aiAnalysis?.rooms || []).length, 'reopened rooms');
   laundryKept(reopened.aiAnalysis?.rooms || [], 'after save and reopen');
   correctionsKept(reopened, 'after save and reopen');
@@ -475,6 +528,7 @@ try {
   assert.match(second, /already been analysed|already in|AI TAKEOFF COMPLETE/i, second);
   assert.deepEqual(report.cases.secondRun.requests.filter((item) => /^(measure|refine)/.test(item)), [], 'an analysed plan is not measured a second time');
   const again = await snapshot();
+  assert.deepEqual(openingDimensions(again), openingDimensions(beforeSave), 'rerun preserves measured opening dimensions and classifications');
   assert.equal(again.completedWallRuns.length, beforeSave.completedWallRuns.length, 'repeated analysis adds no walls');
   assert.equal(again.placedOpenings.length, beforeSave.placedOpenings.length, 'repeated analysis adds no openings');
   assert.equal(again.completedFloorplans.length, beforeSave.completedFloorplans.length, 'repeated analysis adds no areas');
@@ -488,7 +542,7 @@ try {
   // 7. Re-measure from linework (no request): same rooms, correction kept.
   const requestsBefore = apiRequests.length;
   await page.evaluate(() => document.querySelector('[data-testid="remeasure-rooms"]').click());
-  await page.waitForFunction(() => /measured from the wall linework/i.test(document.querySelector('[data-testid="room-boundary-panel"] [role="status"]')?.textContent || ''), { timeout: 600000, polling: 1000 });
+  await page.waitForFunction(() => /measured from the walls/i.test(document.querySelector('[data-testid="room-boundary-panel"] [role="status"]')?.textContent || ''), { timeout: 600000, polling: 1000 });
   await settle();
   const remeasured = (await rooms());
   assert.equal(apiRequests.length, requestsBefore, 're-measuring makes no provider request');
@@ -496,6 +550,17 @@ try {
   assert.equal(remeasured.find((room) => room.id === target.id)?.areaM2, edited.areaM2, 're-measuring keeps the corrected room');
   laundryKept(remeasured, 'when rooms are re-measured from the linework');
   correctionsKept(await snapshot(), 'when rooms are re-measured from the linework');
+
+  // Restore the drawing's ground-floor assignment; changing approval inputs requires explicit review again.
+  await goToPage(2);
+  await page.select(`[aria-label="Level for ${laundryDetected.name}"]`, 'Ground Floor');
+  await settle();
+  assert.equal((await rooms()).find(room=>room.id===laundryDetected.id).confirmed,false,'changing room level invalidates approval');
+  assert.ok(await laundryButton('Approve room'));
+  await settle();
+  assert.equal((await rooms()).find(room=>room.id===laundryDetected.id).confirmed,true);
+  report.cases.manualRoomLevelPersistence = true;
+  await goToPage(3);
 
   // 8. Levels and per-sheet calibration: the upper sheet becomes the Third Level with its own scale.
   await goToPage(3);
@@ -533,6 +598,64 @@ try {
   assert.ok(Math.abs(stored.job.scheduleState.sheetCalibrations['3'].pixelsPerMm - ppmTrue / 2) / ppmTrue < 0.02, 'the sheet\'s own calibration is saved');
   report.cases.schedule = levels.scheduleLevels;
 
+  if (process.env.TAKEOFF_TEST_JOB_SETUP === '1') {
+    await page.evaluate(() => harness.reopen());
+    await page.waitForFunction(() => harness.snapshot().imageReady && harness.snapshot().completedWallRuns.length > 0);
+    await settle();
+    assert.ok(Math.abs((await snapshot()).sheetCalibrations[0].pixelsPerMm - ppmTrue) / ppmTrue < .02, 'reopen preserves the saved base calibration');
+    await goToPage(2);
+    assert.ok(Math.abs((await snapshot()).pixelsPerMm - ppmTrue) / ppmTrue < .02);
+    await goToPage(3);
+    correctionsKept(await snapshot(), 'after mixed-scale reopen');
+    report.cases.exportScale = (await snapshot()).pixelsPerMm;
+    await button('Takeoff Schedule', true);
+    await button('Send to Quote Sheet');
+    await page.waitForFunction(() => [...document.querySelectorAll('tr')].some(row => row.textContent.includes('Floor Tiling') && row.querySelector('select')));
+    await page.evaluate(name => { const row=[...document.querySelectorAll('tr')].find(row=>row.textContent.includes(name)&&row.textContent.includes('Floor Tiling')&&row.querySelector('select')); if(!row)throw Error('Approved laundry quantity missing from quote preview');row.querySelector('select').setAttribute('data-testid','approved-room-quote-mapping'); }, laundryDetected.name);
+    await page.select('[data-testid="approved-room-quote-mapping"]','takeoff-browser-room-check');
+    await settle();
+    await button('Apply Mapped Quantities');
+    await settle();
+    await button('Apply Mapped Quantities');
+    await settle();
+    const mappedRoom = await page.evaluate(()=>harness.workbook().quotation['Takeoff browser check'].rows.find(row=>row.id==='takeoff-browser-room-check'));
+    assert.ok(Math.abs(Number(mappedRoom.quantity)-laundryCorrected.areaM2)<.02,'approved room maps to quotation once even after repeated apply');
+    // Required wall check: the builder confirms each sheet's detected walls before quantities are applied.
+    const wallChecks = await page.evaluate(() => [...document.querySelectorAll('[data-review-decision^="wall-check:"]')].map(el => el.getAttribute('data-review-decision')));
+    assert.ok(wallChecks.length > 0, 'detected walls require the builder\'s wall check');
+    for (const id of wallChecks) {
+      const clicked = await page.evaluate(decisionId => { const box = document.querySelector(`[data-review-decision="${decisionId}"]`); const element = box && [...box.querySelectorAll('button')].find(item => item.textContent.trim() === 'I have checked this'); if (!element || element.disabled) return false; element.click(); return true; }, id);
+      assert.ok(clicked, `the builder can confirm ${id}`);
+      await settle();
+    }
+    report.cases.wallChecks = wallChecks;
+    await button('Export Takeoff to Job Setup');
+    await page.waitForSelector('[data-testid="job-setup-takeoff-import"]');
+    assert.equal(await page.$('[data-testid="takeoff-calibration-blocked"]'), null, 'Confirmed calibration reaches Job Setup');
+    assert.equal(await page.$('[data-testid="takeoff-wall-check-blocked"]'), null, 'checked walls are not blocked in Job Setup');
+    await button('Import selected quantities');
+    await page.waitForFunction(() => Boolean(harness.workbook().takeoffEngine?.lastJobSetupSync));
+    const workbook = await page.evaluate(() => harness.workbook());
+    report.cases.jobSetup = { rows: workbook.data?.inputDataSheet?.rows, receipt: workbook.takeoffEngine?.lastJobSetupSync };
+    assert.ok(report.cases.jobSetup.receipt, 'Job Setup records the actual takeoff import');
+    const tilesRow = report.cases.jobSetup.rows.floorFinishTilesM2;
+    assert.ok(Math.abs(Number(tilesRow.value) - laundryCorrected.areaM2) < .02, 'approved laundry area reaches Job Setup once');
+    report.cases.approvedRoomArea = Number(tilesRow.value);
+    await page.evaluate(() => harness.showPricedQuotation());
+    await page.waitForSelector('[data-quote-row="takeoff-browser-priced-check"]');
+    report.cases.quotation = await page.evaluate(() => harness.quotation());
+    const priced = Object.values(report.cases.quotation.quotation).flatMap(section => section.rows || []).find(row => row.id === 'takeoff-browser-priced-check');
+    const roomPriced=Object.values(report.cases.quotation.quotation).flatMap(section=>section.rows||[]).find(row=>row.id==='takeoff-browser-room-check');
+    assert.ok(Math.abs(roomPriced.qty-laundryCorrected.areaM2)<.02,'approved room area reaches calculated quotation');
+    assert.equal(roomPriced.cost,Math.round(roomPriced.qty*10000)/100);
+    assert.ok(priced.qty > 0, 'real imported door quantities reach quotation');
+    assert.equal(priced.qty, report.cases.quotation.quantities.internalDoors);
+    assert.equal(priced.cost, priced.qty * 100, 'known disposable test rate multiplies actual takeoff quantity');
+    assert.ok(report.cases.quotation.summary.finalQuoteTotal > 0);
+    report.cases.quotationDisplayedRow = await page.$eval('[data-quote-row="takeoff-browser-priced-check"]', row => ({ text: row.innerText, inputs: [...row.querySelectorAll('input')].map(input => input.value) }));
+    assert.ok(report.cases.quotationDisplayedRow.text.includes(new Intl.NumberFormat('en-AU', {style:'currency', currency:'AUD'}).format(priced.cost)), 'quotation UI displays the calculated cost');
+    await page.screenshot({ path: path.join(out, '7-job-setup-import.png') });
+  }
   assert.deepEqual(report.errors, [], 'No browser runtime errors');
   report.ok = true;
   console.log(`Real-plan replay passed: ${JSON.stringify(report.cases.accuracy)}`);

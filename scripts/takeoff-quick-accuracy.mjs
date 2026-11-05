@@ -5,6 +5,7 @@
 //   node --import ./scripts/register-extensionless-loader.mjs --import ./scripts/register-json-loader.mjs \
 //     scripts/takeoff-quick-accuracy.mjs [--jesmond-pdf <pdf>] [--jesmond-reference <reference.json>] \
 //     [--liberty <frozen fixture dir>] [--cache <dir>] [--overrides '<json>'] [--json <out.json>] [--detail]
+//     [--ocr <tessdata dir>]   also run the local printed-label stage (tesseract.js, local language data)
 //
 // Pages are rendered once (raster for the ink check, linework, PDF text read exactly as the app does on
 // upload) and cached; reruns score in seconds. The reference is read only after the application
@@ -19,12 +20,17 @@ import { canonicalPlanReading, compareOpenings, compareRooms, compareWalls } fro
 import { buildLocalVectorAnalysis } from '../components/construction-estimation/ai-plan-takeoff/ai-integration/localVectorAnalysis.js';
 import { convertAiTakeoffDetections } from '../components/construction-estimation/ai-plan-takeoff/ai-integration/adapter.js';
 import { readPdfAnalysisEvidence } from '../components/construction-estimation/ai-plan-takeoff/ai-integration/analysisPages.js';
+import { recogniseOpeningLabels, createTesseractLabelReader } from '../components/construction-estimation/ai-plan-takeoff/geometry/localLabelOcr.js';
+import { applyPrintedLabels } from '../components/construction-estimation/ai-plan-takeoff/geometry/openingLabels.js';
 
 const require = createRequire(import.meta.url);
 const { createCanvas, loadImage } = require('@napi-rs/canvas');
 const root = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')), '..');
 const args = Object.fromEntries(process.argv.slice(2).map((arg, index, all) => (arg.startsWith('--') ? [arg.slice(2), all[index + 1]?.startsWith('--') ? true : all[index + 1]] : null)).filter(Boolean));
 const overrides = args.overrides ? JSON.parse(args.overrides) : {};
+const labelReader = args.ocr && args.ocr !== true
+  ? await createTesseractLabelReader({ createWorker: require('tesseract.js').createWorker, langPath: args.ocr, cachePath: path.join(root, 'artifacts/test-results/takeoff-ocr-cache'), toImage: (crop) => Buffer.from(crop.bytes) })
+  : null;
 const cacheDir = args.cache || path.join(root, 'artifacts/test-results/takeoff-quick-accuracy-cache');
 const ENGINE_DPI = 228.6;
 const plans = [];
@@ -81,6 +87,11 @@ for (const plan of plans) {
     const ppm = input.pixelsPerMm;
     const started = Date.now();
     const detected = detectVectorWalls(input.vectorSegments, { ...input, raster: pageRaster, textItems: input.textItems || [] }, overrides);
+    let labelReport = null;
+    if (labelReader) {
+      const read = await recogniseOpeningLabels({ raster: pageRaster, logicalWidth: input.logicalWidth, pixelsPerMm: ppm, walls: detected.walls, textItems: input.textItems || [], reader: labelReader });
+      labelReport = applyPrintedLabels(detected, read.labels, { pixelsPerMm: ppm });
+    }
     const level = pageSpec.level || 'Ground Floor';
     const pageNumber = input.pageNumber;
     const context = { jobId: 'quick-accuracy', takeoffId: 'quick-accuracy', documentHash: 'quick', pixelsPerMm: ppm,
@@ -103,7 +114,12 @@ for (const plan of plans) {
       openings: reference.openings.filter(onPage).map((item) => ({ ...item, ...rmm(item) })),
       rooms: reference.rooms.filter(onPage).map((room) => ({ ...room, polygon: room.polygon.map(rmm) })),
     };
-    void mm;
+    // Raw means measured pairs only: no classification or topology spans.
+    // Reference scoring remains downstream of every application stage.
+    const rawWalls = compareWalls(ref.walls, detected.walls.map(wall => ({ id: wall.id,
+      points: wall.nodes.map(mm), thicknessMm: wall.measuredThicknessMm })));
+    const rawOpenings = compareOpenings(ref.openings, detected.openings.filter(item => item.confirmed === true)
+      .map(item => ({ ...item, ...mm(item) })));
     const walls = compareWalls(ref.walls, accepted.walls);
     const openings = compareOpenings(ref.openings, accepted.openings);
     const roomCandidates = compareRooms(ref.rooms, candidates.rooms);
@@ -137,13 +153,39 @@ for (const plan of plans) {
       missingWalls: walls.missingWalls.length, falseLm: (walls.detectedLm - walls.supportedLm).toFixed(1),
       openings: `${openings.matched}/${openings.reference} (${openings.detected} read)`, openKind: pct(openings.kindAgreement), typeReview,
       roomsCandidate: `${roomCandidates.matched}/${roomCandidates.reference}`, roomsAccepted: `${roomsAccepted.matched}/${roomsAccepted.reference} (${accepted.rooms.length})`,
-      reviewWalls: prepared.vector?.wallReviewCandidates?.length ?? prepared.vector?.reviewWallCandidates?.length ?? '-', ms });
+      reviewWalls: prepared.vector?.wallReviewCandidates?.length ?? prepared.vector?.reviewWallCandidates?.length ?? '-',
+      counted: Object.entries(canonical.placedOpenings.filter((item) => !item.needsClassification).reduce((acc, item) => ({ ...acc, [item.openingClass]: (acc[item.openingClass] || 0) + 1 }), {})).map(([k, v]) => `${k.replace(/ Door$/, '').replace('Large Glazed/Stacker/Sliding', 'Sliding')} ${v}`).join(', '),
+      ...(labelReport ? { labels: `${labelReport.applied} applied, ${labelReport.resolved.length} settled, ${labelReport.split.length} split` } : {}), ms });
     detail.push({ plan: plan.name, page: pageSpec.page, walls: { missing: walls.missingWalls, false: walls.falseWalls },
       openings: { missed: openings.missed.map((item) => ({ id: item.id, kind: item.kind, widthMm: item.widthMm })), extra: openings.extra.map((item) => ({ id: item.id, kind: item.kind, widthMm: item.widthMm, x: Math.round(item.x), y: Math.round(item.y) })) },
       rooms: roomCandidates.rows.map((row) => ({ name: row.name, iou: Math.round(row.iou * 100) / 100, areaError: row.areaError === null ? null : Math.round(row.areaError * 1000) / 10 })),
-      raw: { detectorWalls: detected.walls.length, detectorOpenings: detected.openings.length } });
+      raw: { detectorWalls: detected.walls.length, detectorOpenings: detected.openings.length,
+        wallRecall: pct(rawWalls.recall), wallPrecision: pct(rawWalls.precision),
+        confirmedOpenings: rawOpenings.detected, openingsMatched: rawOpenings.matched,
+        openingReference: rawOpenings.reference, note: 'Measured wall pairs only; excludes confirmed-opening topology spans.' },
+      stages: { modelWalls: Object.keys(prepared.vector.level.walls).length,
+        modelOpenings: Object.keys(prepared.vector.level.openings).length,
+        wallsWithheldAtClassification: prepared.vector.reviewWallCandidates.length,
+        openingSpansWithheldAtClassification: prepared.vector.reviewBridgeCandidates.length,
+        classifiedWalls: prepared.vector.response.walls.length,
+        normalizedWalls: prepared.batch.detections.filter(item => item.kind === 'wall').length,
+        normalizedOpenings: prepared.batch.detections.filter(item => item.kind === 'opening').length,
+        openingsWithheldAtClassification: prepared.vector.reviewOpeningCandidates.length,
+        admittedWalls: accepted.walls.length, admittedOpenings: accepted.openings.length },
+      labels: labelReport ? { ...labelReport, assignments: labelReport.assignments.map((a) => ({ text: a.label.text, opening: a.opening.id, kind: a.opening.kind, widthMm: a.opening.widthMm, agrees: a.fit.agrees })) } : null,
+      classified: (detected.classification || []).filter((r) => r.element !== 'wall').map((r) => ({ id: r.id, element: r.element, confidence: r.confidence, evidence: r.evidence.map((e) => `${e.rule}(${e.weight}): ${e.detail}`) })),
+      structures: (detected.structures || []).map((x) => ({ element: x.element, thicknessMm: x.thicknessMm, label: x.label })),
+      placed: canonical.placedOpenings.map((item) => ({ id: item.id || item.detectionId, type: item.type, openingClass: item.openingClass, subType: item.subType, leafWidthMm: item.leafWidthMm,
+        widthMm: item.widthMm ?? item.width, leafMm: item.leafMm, frameWidthMm: item.frameWidthMm, roughOpeningMm: item.roughOpeningMm, needsClassification: Boolean(item.needsClassification),
+        x: Math.round((item.x ?? 0) / ppm), y: Math.round((item.y ?? 0) / ppm), evidence: item.evidence })),
+      review: {
+        openings: prepared.vector.reviewOpeningCandidates.map((item) => ({ host: item.hostDetectionKey, kind: item.openingKind, widthMm: item.widthMm,
+          x: Math.round(item.nodes[0].x / ppm), y: Math.round(item.nodes[0].y / ppm), reason: item.reason })),
+        walls: prepared.vector.reviewWallCandidates.map((item) => ({ key: item.detectionKey || item.id, lengthMm: Math.round(item.lengthMm || 0),
+          thicknessMm: item.thicknessMm, reason: item.reason })) } });
   }
 }
 console.table(rows);
 if (args.detail) console.log(JSON.stringify(detail, null, 1));
 if (args.json && args.json !== true) fs.writeFileSync(args.json, JSON.stringify({ overrides, rows, detail }, null, 2));
+if (labelReader) await labelReader.terminate();

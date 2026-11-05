@@ -657,11 +657,12 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
   const activeVisual = workspaceVisual(activePageKey);
   const ActivePageIcon = activeVisual.Icon;
   const openJobDetails = openJobHeaderDetails(sheet.workbook);
+  const hasOpenTakeoff = Boolean(selectAiPlanTakeoffJob(sheet.workbook));
   const hasOpenWorkbook = !openJobDetails.noJobOpen;
   const activeCommercialProjectId = openJobDetails.noJobOpen ? "" : (sheet.workbook?.commercialProjectId || sheet.workbook?.projectId || commercialSyncStatus.projectId || "");
   const activeBuilderJobId = openJobDetails.noJobOpen ? "" : (sheet.workbook.jobId || activeCommercialProjectId || openJobDetails.projectId || "");
   useEffect(() => {
-    if (previewMode || mode || !sheet.hydrated || !openJobDetails.noJobOpen) return;
+    if (previewMode || mode || !sheet.hydrated || !openJobDetails.noJobOpen || hasOpenTakeoff) return;
     if (typeof window === "undefined") return;
     const explicitJobKey = String(
       builderSessionStorage.getItem("estimate-builder-explicit-active-job-key")
@@ -687,7 +688,7 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
     }).catch((error) => {
       setExplicitJobRestoreState({ state: "failed", key: explicitJobKey, message: error?.message || "The active job could not be restored for this module." });
     });
-  }, [activePageKey, explicitJobRestoreState.state, mode, openJobDetails.noJobOpen, previewMode, sheet.hydrated]);
+  }, [activePageKey, explicitJobRestoreState.state, hasOpenTakeoff, mode, openJobDetails.noJobOpen, previewMode, sheet.hydrated]);
   useEffect(() => {
     if (openJobDetails.noJobOpen) return;
     explicitJobRestoreAttemptRef.current = "";

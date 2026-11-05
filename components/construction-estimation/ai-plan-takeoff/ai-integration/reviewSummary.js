@@ -70,6 +70,24 @@ export function buildTakeoffReview({ records = [], analysis = null, jobSetupRows
   const add = (decision) => { if (!resolved[decision.id]) decisions.push(decision); };
   const ids = (items) => items.map((item) => String(item.id));
 
+  // Walls read from the drawing are checked by the builder, sheet by sheet, before their quantities are
+  // final. Joinery, benches, robes and similar double lines can be read as walls and are not reliably
+  // told apart automatically, so this is a required manual check, not a confidence score. The check
+  // records the walls it covered: a wall detected later reopens it; walls deleted after it do not.
+  const detectedWalls = walls.filter((item) => item.source === 'ai');
+  for (const page of [...new Set(detectedWalls.map((item) => item.page))].sort((a, b) => a - b)) {
+    const onPage = detectedWalls.filter((item) => item.page === page);
+    const checked = resolved[`wall-check:${page}`];
+    const covered = new Set(checked?.wallIds || []);
+    if (checked && onPage.every((item) => covered.has(String(item.id)))) continue;
+    decisions.push({
+      id: `wall-check:${page}`, topic: 'wall-check', pages: [page], wallIds: ids(onPage),
+      title: `Check the walls detected on sheet ${page}`,
+      detail: `${plural(onPage.length, 'wall')} (${metres(onPage)} lm) were read from the drawing. Kitchen and laundry joinery, benches, robes and other double lines can be read as walls and are not reliably told apart automatically. Look over this sheet, delete anything that is not a wall (select it and delete, or "Not a wall" in the review list), then confirm. Wall quantities are not applied until every sheet is checked.`,
+      action: { type: 'acknowledge' },
+    });
+  }
+
   const unassigned = usable.filter((item) => (!item.level || item.level === 'Unassigned') && ['floorArea', 'wall', 'roofArea', 'eave', 'pillar'].includes(item.kind));
   if (unassigned.length) {
     const pages = [...new Set(unassigned.map((item) => item.page))].sort((a, b) => a - b);

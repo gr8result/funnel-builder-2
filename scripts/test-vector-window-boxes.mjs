@@ -47,10 +47,21 @@ for (const scale of [0.0283, 0.09]) for (const angle of [0, Math.PI / 2]) {
   assert.equal(bank.length, 1, `an unlabelled bank of boxes is one window ${where}`);
   assert.equal(bank[0].kind, 'window', `bank read as ${bank[0].kind}, not a garage door`);
   assert.ok(Math.abs(bank[0].widthMm - 2700) <= 50, `bank width ${bank[0].widthMm}`);
+  // Mullions with no size label per panel: kept as one opening but flagged, so quantities wait for the builder.
+  assert.equal(bank[0].needsClassification, true, `an unlabelled multi-panel box needs the builder to confirm the window count ${where}`);
+  assert.equal(bank[0].panelCount, 3, `the panel count is reported ${where}`);
+  assert.match(bank[0].evidence, /confirm whether this is one window or 3/);
+  assert.notEqual(mid[0].needsClassification, true, `a single-panel box is not flagged ${where}`);
   const garage = near([2500, D], 200);
   assert.equal(garage.length, 1, `garage opening found ${where}`); assert.equal(garage[0].kind, 'garage-door', 'an uncapped single line across a wide gap stays a garage door');
   // The boxes themselves are never walls.
   const boxWalls = found.walls.filter((wall) => wall.measuredThicknessMm > 120);
   assert.equal(boxWalls.length, 0, `no wall from a window box (${boxWalls.map((w) => Math.round(w.measuredThicknessMm)).join(', ')}) ${where}`);
+  const labels = [1250, 2150, 3050].map(y => ({ text: '1809FG', ...P([W + 400, y]) }));
+  const labelled = detectVectorWalls(segments, { ...context, textItems: labels });
+  const panels = labelled.openings.filter(o => labels.some(label => Math.hypot(o.x - label.x, o.y - label.y) <= 450 * scale));
+  assert.equal(panels.length, 3, `three separate size labels distinguish windows from mullions ${where}`);
+  assert.ok(panels.every(o => o.kind === 'window' && Math.abs(o.widthMm - 900) < 30));
+  assert.ok(panels.every(o => o.needsClassification !== true), `labelled panels are resolved windows ${where}`);
 }
 console.log('Window boxes: mid-wall, corner and unlabelled bank read as windows; uncapped wide opening stays a garage door; boxes are not walls.');

@@ -228,7 +228,11 @@ function resolveEnd(level, point, options, outward = null) {
   if (bestNode) return bestNode.id;
   let bestSegment = null;
   for (const segment of networkSegments(level)) {
+    // Measured linework cannot turn sideways onto a nearby parallel face.
+    // Collinear endpoint joining is handled separately below.
     const hit = project(point, segment.a, segment.b);
+    if (options.measuredLinework && outward && hit.distance > options.snapMm
+      && angleBetween(outward, sub(segment.b, segment.a)) < options.joinAngle) continue;
     if (hit.raw <= 0 || hit.raw >= 1) continue;
     const reach = meetReach(segment, point, outward, options);
     if (hit.distance <= reach && (!bestSegment || hit.distance < bestSegment.hit.distance)) bestSegment = { segment, hit };
@@ -281,13 +285,16 @@ function planarize(level, options) {
 
 // The parts of a straight run [a, b] not already covered by a wall on the same line: a wall drawn
 // or detected along an existing wall is that wall, not a second one.
-function uncoveredIntervals(level, a, b, half, options) {
+function uncoveredIntervals(level, a, b, half, options, measuredOpening = false) {
   const length = dist(a, b), direction = unit(sub(b, a));
   let intervals = [[0, length]];
   for (const segment of networkSegments(level, { separators: false })) {
     const segmentDirection = unit(sub(segment.b, segment.a));
     if (angleBetween(direction, segmentDirection) > options.collinearAngle) continue;
-    const reach = Math.max(half, segment.half, options.snapMm);
+    // A nearby parallel face is not the measured host line of an aperture.
+    // Preserve the established overlap rule for manually corrected geometry.
+    const reach = measuredOpening && !level.walls[segment.owner]?.locked && !level.walls[segment.owner]?.edited
+      ? options.snapMm : Math.max(half, segment.half, options.snapMm);
     const offset = (point) => Math.abs(cross(direction, sub(point, a)));
     if (offset(segment.a) > reach || offset(segment.b) > reach) continue;
     const s0 = dot(sub(segment.a, a), direction), s1 = dot(sub(segment.b, a), direction);
@@ -319,6 +326,8 @@ function insertWallPiece(level, a, b, spec, options) {
     const index = owner ? owner.nodeIds.indexOf(node.id) : -1;
     const neighbour = owner ? level.nodes[owner.nodeIds[index === 0 ? 1 : index - 1]] : null;
     const outward = neighbour ? unit(sub(node, neighbour)) : null;
+    if (options.measuredLinework && outward && hit.distance > options.snapMm
+      && angleBetween(outward, sub(B, A)) < options.joinAngle) continue;
     if (hit.distance > meetReach({ a: A, b: B, half }, node, outward, options)) continue;
     level.nodes[node.id] = { ...node, x: hit.foot.x, y: hit.foot.y };
   }
@@ -338,7 +347,7 @@ function insertWall(level, spec, options) {
   const a = { x: spec.a.x, y: spec.a.y }, b = { x: spec.b.x, y: spec.b.y };
   if (dist(a, b) < options.minWallMm) return [];
   const half = thicknessOf(spec.thicknessMm) / 2;
-  const pieces = uncoveredIntervals(level, a, b, half, options);
+  const pieces = uncoveredIntervals(level, a, b, half, options, Boolean(options.measuredLinework && spec.attributes?.spansOpening));
   const ids = [];
   pieces.forEach(([p, q], index) => {
     const id = insertWallPiece(level, p, q, { ...spec, id: index === 0 ? spec.id : undefined }, options);
@@ -399,6 +408,16 @@ function joinFreeEnds(level, options) {
     for (const id of free) {
       const node = level.nodes[id], outward = outwardAt(level, id);
       if (!node || !outward) continue;
+      // Earlier joins may move a T junction into snap reach after insertion.
+      // Reuse that existing junction; endpoint projections deliberately exclude it.
+      if (options.measuredLinework) {
+        const owners = Object.values(level.walls).filter(wall => wall.nodeIds.includes(id));
+        const junction = Object.values(level.nodes).filter(other => other.id !== id
+          && nodeDegree(level, other.id) >= 2 && dist(node, other) <= options.snapMm
+          && !owners.some(wall => wall.nodeIds.includes(other.id)))
+          .sort((a, b) => dist(node, a) - dist(node, b))[0];
+        if (junction) { mergeNodeInto(level, id, junction.id); changed = true; break; }
+      }
       // Collinear partner pointing back at this end.
       const partner = free.filter((other) => other !== id && level.nodes[other]).map((other) => {
         const there = level.nodes[other], back = outwardAt(level, other);
@@ -433,6 +452,8 @@ function joinFreeEnds(level, options) {
       for (const segment of networkSegments(level)) {
         if (segment.u === id || segment.v === id) continue;
         const hit = project(node, segment.a, segment.b);
+        if (options.measuredLinework && hit.distance > options.snapMm
+          && angleBetween(outward, sub(segment.b, segment.a)) < options.joinAngle) continue;
         if (hit.raw <= 0 || hit.raw >= 1) continue;
         if (hit.distance > meetReach(segment, node, outward, options)) continue;
         if (dot(sub(hit.foot, node), outward) < -options.snapMm) continue;
@@ -688,7 +709,11 @@ export function mergeDetections(level, detections = {}, overrides = {}) {
       report.wallOutcomes.push(outcome); continue;
     }
     const half = thicknessOf(detection.thicknessMm) / 2;
-    const segments = networkSegments(next, { separators: false });
+    const direction = unit(sub(detection.b, detection.a));
+    const measuredOpening = options.measuredLinework && detection.attributes?.spansOpening;
+    const segments = networkSegments(next, { separators: false }).filter(segment => !measuredOpening
+      || next.walls[segment.owner]?.locked || next.walls[segment.owner]?.edited
+      || [segment.a, segment.b].every(point => Math.abs(cross(direction, sub(point, detection.a))) <= options.snapMm));
     const existingShare = shareAlong(detection.a, detection.b, half, segments, options);
     if (existingShare >= options.replaceShare) {
       const owner = absorb(next, detection, segments, options);

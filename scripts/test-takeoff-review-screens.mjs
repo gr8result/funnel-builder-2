@@ -58,13 +58,14 @@ try {
   });
   await act(() => root.render(panel(takeoff)));
   const result = document.getElementById('ai-takeoff-result');
-  assert.match(result.textContent, /AI TAKEOFF COMPLETE/);
+  // Not presented as complete while decisions (including the required wall check) are open.
+  assert.match(result.textContent, /AI TAKEOFF REQUIRES REVIEW/);
   assert.match(result.textContent, /✓ 1 window identified/);
   assert.match(result.textContent, /✓ 1 internal door identified/);
   assert.match(result.textContent, /✓ External walls measured — 7\.0 lm/);
   const decisions = [...result.querySelectorAll('[data-review-decision]')];
-  assert.deepEqual(decisions.map((item) => item.dataset.reviewDecision), ['external-wall-type:Ground Floor', 'ceiling-height:Ground Floor', 'internal-wall-type', 'door-height']);
-  assert.match(document.getElementById('ai-takeoff-review-count').textContent, /⚠ 4 items require confirmation/);
+  assert.deepEqual(decisions.map((item) => item.dataset.reviewDecision), ['wall-check:1', 'external-wall-type:Ground Floor', 'ceiling-height:Ground Floor', 'internal-wall-type', 'door-height']);
+  assert.match(document.getElementById('ai-takeoff-review-count').textContent, /⚠ 5 items require confirmation/);
   const diagnostics = document.getElementById('ai-takeoff-diagnostics');
   assert.equal(diagnostics.open, false, 'technical diagnostics are collapsed');
   assert.match(diagnostics.querySelector('summary').textContent, /Advanced AI diagnostics \(\d+\)/);
@@ -83,7 +84,7 @@ try {
   const answered = { ...takeoff };
   for (const [decision, value] of answers) Object.assign(answered, applyReviewDecision(decision, value, answered));
   await act(() => root.render(panel(answered)));
-  assert.match(document.getElementById('ai-takeoff-review-count').textContent, /⚠ 2 items require confirmation/);
+  assert.match(document.getElementById('ai-takeoff-review-count').textContent, /⚠ 3 items require confirmation/, 'the two answered items clear; the wall check and the rest remain');
 
   // ---- Job Setup: Import takeoff quantities ---------------------------------------------------
   const { default: JobSetupTakeoffImport } = await load('../components/estimate-builder/JobSetupTakeoffImport.jsx');
@@ -93,11 +94,15 @@ try {
   await act(async () => { [...document.querySelectorAll('button')].find((button) => button.textContent === 'Import takeoff quantities').click(); await new Promise((resolve) => setTimeout(resolve, 20)); });
   const summary = document.querySelector('[data-testid="takeoff-review-summary"]');
   assert.ok(summary, text().slice(0, 400));
-  assert.match(summary.textContent, /AI Takeoff Complete/);
+  // Items still need confirmation, so Job Setup must not call the takeoff complete.
+  assert.match(summary.textContent, /AI Takeoff requires review/);
+  assert.doesNotMatch(summary.textContent, /AI Takeoff Complete/);
   assert.match(summary.textContent, /✓ 1 window identified/);
-  assert.match(summary.textContent, /⚠ 4 items require confirmation/);
+  assert.match(summary.textContent, /⚠ 5 items require confirmation/);
+  // Detected walls not yet checked by the builder: Job Setup will not apply the quantities.
+  assert.ok(document.querySelector('[data-testid="takeoff-wall-check-blocked"]'), 'Job Setup shows the wall check is required');
   const required = document.querySelector('[data-testid="takeoff-requires-review"]');
-  assert.equal(required.querySelectorAll('[data-review-decision]').length, 4);
+  assert.equal(required.querySelectorAll('[data-review-decision]').length, 5);
   assert.match(required.textContent, /Ground Floor: what are the external walls built from\?/);
   assert.match(required.textContent, /Open AI Plan Takeoff to answer these/);
   assert.ok(!/Some exterior walls have no material classification|enter wall or ceiling heights/.test(required.textContent), 'a general warning is not repeated beside the review item that asks the same question');

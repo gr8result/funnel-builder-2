@@ -3,7 +3,7 @@ import { roomQuantityRows } from './roomGeometry.js';
 // remains the sole source of measured area/length/count inputs; printed totals
 // remain visible benchmarks and are never silently substituted for geometry.
 export function createAiScheduleRows(analysis, pages) {
-  const eligible = (item) => pages.includes(item.page) && item.basis !== 'ASSUMED' && item.confidence >= 0.5;
+  const eligible = (item) => !item.excluded && pages.includes(item.page) && item.basis !== 'ASSUMED' && item.confidence >= 0.5;
   const row = (item, index, section, quantity, unit, category) => ({
     ...item, section, itemId: `ai-evidence-${section}-${item.page}-${index}`,
     planSheet: item.page, category, quantity, unit, source: 'ai',

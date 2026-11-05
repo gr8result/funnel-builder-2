@@ -7,6 +7,7 @@ const MASTER_JOB_FORMAT_NAME = "GR8 Master Job Package";
 const MASTER_JOB_SCHEMA_VERSION = "gr8job.package.v1";
 const MASTER_JOB_PACKAGE_VERSION = 3;
 const BACKUP_VERSION_LIMIT = 5;
+const DOWNLOAD_URL_REVOKE_DELAY_MS = 10 * 60 * 1000;
 const MODULE_SECTION_KEYS = {
   jobSetup: "job-details",
   takeoff: "takeoff",
@@ -125,6 +126,10 @@ export function supportsFileSystemAccess(): boolean {
   if (typeof window === "undefined") return false;
   const fileWindow = window as FilePickerWindow;
   return typeof fileWindow.showOpenFilePicker === "function" && typeof fileWindow.showSaveFilePicker === "function";
+}
+
+function supportsReliableSavePicker(): boolean {
+  return supportsFileSystemAccess();
 }
 
 function slugFileName(name: string): string {
@@ -426,7 +431,7 @@ function timestampForBackup(date = new Date()): string {
 
 function timestampForBackupFileName(date = new Date()): string {
   const pad = (value: number) => String(value).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}${pad(date.getMinutes())}`;
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
 }
 
 async function existingZipBackups(existingBytes?: ArrayBuffer): Promise<Array<{ path: string; bytes: ArrayBuffer }>> {
@@ -530,6 +535,23 @@ function validateSavedPackage(verified: JobFileData, expected: JobFileData, sect
   if (missingSection) {
     throw new Error(`Saved job verification failed: ${missingSection} section was missing after read-back.`);
   }
+}
+
+async function downloadVerifiedPackage(job: JobFileData, fileName: string): Promise<JobFileResult> {
+  const packaged = await serializeJobPackage(job, null);
+  const verificationFile = new File([packaged.blob], fileName, { type: JOB_FILE_MIME });
+  const verified = await readJob(verificationFile);
+  validateSavedPackage(verified, packaged.data, expectedPackageSections(job));
+  triggerDownload(packaged.blob, fileName);
+  return {
+    ok: true,
+    cancelled: false,
+    handle: null,
+    fileName,
+    data: verified,
+    storageLocation: "download",
+    message: `Backup copy downloaded after package validation: ${fileName}`,
+  };
 }
 
 function formatSaveTime(date = new Date()): string {
@@ -636,10 +658,22 @@ function triggerDownload(blob: Blob, fileName: string): void {
   const link = document.createElement("a");
   link.href = url;
   link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
+  let clicked = false;
+  try {
+    document.body.appendChild(link);
+    link.click();
+    clicked = true;
+  } finally {
+    link.remove();
+    if (clicked) {
+      // Large jobs can take several minutes for Chromium to consume from the Blob URL.
+      // Revoking while that transfer is active leaves a corrupt .crdownload.
+      const timer = globalThis.setTimeout(() => URL.revokeObjectURL(url), DOWNLOAD_URL_REVOKE_DELAY_MS);
+      if (typeof timer === "object" && timer && "unref" in timer) timer.unref();
+    } else {
+      URL.revokeObjectURL(url);
+    }
+  }
 }
 
 async function openFileInput(accept = `${JOB_FILE_EXTENSION},application/json`): Promise<File | null> {
@@ -837,15 +871,18 @@ export async function writeJob(handle: JobFileHandle, job: Partial<JobFileData>)
 
   const packaged = await serializeJobPackage(payload, null);
   const fallbackName = buildSuggestedName(payload.jobName || "Job");
+  const verificationFile = new File([packaged.blob], fallbackName, { type: JOB_FILE_MIME });
+  const verified = await readJob(verificationFile);
+  validateSavedPackage(verified, packaged.data, sections);
   triggerDownload(packaged.blob, fallbackName);
   return {
     ok: true,
     cancelled: false,
     handle: null,
     fileName: fallbackName,
-    data: packaged.data,
+    data: verified,
     storageLocation: "download",
-    message: `Downloaded new complete job file: ${fallbackName}. The original computer file was not overwritten.`,
+    message: `Downloaded and validated a new complete job file: ${fallbackName}. The original computer file was not overwritten.`,
   };
 }
 
@@ -934,14 +971,52 @@ export async function saveJob(job: Partial<JobFileData>, currentHandle: JobFileH
 }
 
 export async function downloadBackupCopy(job: Partial<JobFileData>): Promise<JobFileResult> {
-  const payload = normalizeJobData({ ...job, lastModified: new Date().toISOString() });
-  const packaged = await serializeJobPackage(payload, null);
-  const workbook = payload.workbook && typeof payload.workbook === "object" ? payload.workbook as Record<string, unknown> : {};
+  const workbook = job.workbook && typeof job.workbook === "object" ? job.workbook as Record<string, unknown> : {};
   const sourceFileName = String(workbook.openedFileName || workbook.sourceFileName || "").replace(/\.gr8job$/i, "");
-  const baseName = slugFileName(sourceFileName || payload.jobName || payload.jobNumber || "Job");
+  const baseName = slugFileName(sourceFileName || job.jobName || job.jobNumber || "Job");
   const fileName = `${baseName} - Backup ${timestampForBackupFileName()}.gr8job`;
-  triggerDownload(packaged.blob, fileName);
-  return { ok: true, cancelled: false, handle: null, fileName, data: packaged.data, storageLocation: "download", message: `Backup copy downloaded: ${fileName}` };
+
+  if (supportsReliableSavePicker()) {
+    try {
+      const handle = await (window as FilePickerWindow).showSaveFilePicker?.({
+        suggestedName: fileName,
+        types: JOB_FILE_TYPES,
+        excludeAcceptAllOption: false,
+      });
+      if (!handle) return { ok: true, cancelled: true };
+      const payload = normalizeJobData(job);
+      const sections = expectedPackageSections(payload);
+      const packaged = await serializeJobPackage(payload, null);
+      const writable = await handle.createWritable();
+      try {
+        await writable.write(packaged.blob);
+        await writable.close();
+      } catch (error) {
+        await writable.abort?.().catch(() => {});
+        throw error;
+      }
+      const verificationFile = await handle.getFile();
+      const verified = await readJob(verificationFile);
+      validateSavedPackage(verified, packaged.data, sections);
+      return {
+        ok: true,
+        cancelled: false,
+        handle: null,
+        fileName: handle.name,
+        data: packaged.data,
+        storageLocation: "computer-file",
+        message: `Backup copy saved and verified: ${handle.name}`,
+      };
+    } catch (error: unknown) {
+      if (isFileSystemAccessContextError(error)) {
+        return downloadVerifiedPackage(normalizeJobData(job), fileName);
+      }
+      if (isAbortLikeFileSystemError(error)) return { ok: true, cancelled: true };
+      throw error;
+    }
+  }
+
+  return downloadVerifiedPackage(normalizeJobData(job), fileName);
 }
 
 function isStaleFileHandleError(message: string): boolean {
@@ -954,7 +1029,7 @@ function isStaleFileHandleError(message: string): boolean {
 }
 
 export async function saveJobAs(job: Partial<JobFileData>): Promise<JobFileResult> {
-  if (!supportsFileSystemAccess()) {
+  if (!supportsReliableSavePicker()) {
     return writeJob(null, job);
   }
 
@@ -969,6 +1044,9 @@ export async function saveJobAs(job: Partial<JobFileData>): Promise<JobFileResul
     if (!handle) return { ok: true, cancelled: true };
     return writeJob(handle, job);
   } catch (error: unknown) {
+    if (isFileSystemAccessContextError(error)) {
+      return writeJob(null, job);
+    }
     if (isAbortLikeFileSystemError(error)) {
       return { ok: true, cancelled: true };
     }
@@ -990,6 +1068,7 @@ function isFileSystemAccessContextError(error: unknown): boolean {
   const name = String((error as { name?: string })?.name || "");
   const message = String((error as { message?: string })?.message || error || "").toLowerCase();
   return name === "NotAllowedError" || name === "SecurityError"
+    || message.includes("intercepted by page.setinterceptfilechooserdialog")
     || message.includes("not allowed by the user agent or the platform")
     || (message.includes("not allowed") && message.includes("current context"));
 }

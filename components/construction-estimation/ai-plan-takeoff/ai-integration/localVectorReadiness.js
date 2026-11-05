@@ -14,7 +14,7 @@ export function localVectorReadiness({ analysis = {}, vector = {}, detected = {}
   const unhosted = Number(vector.report?.openingsWithoutWall) || 0;
   const uncertainHostOpenings = Number(vector.report?.openingsOnUnclassifiedWalls) || 0;
   const unknown = (detected.openings || []).filter(o => !o.bridgeOnly && o.confirmed === false).length;
-  const roomReview = rooms.filter(r => r.reviewRequired || !r.confirmed).length;
+  const roomReview = rooms.filter(r => !r.excluded && (r.reviewRequired || !r.confirmed)).length;
   add('vector-unclassified-walls', unclassified, `${unclassified} measured wall segments remain visible as review-only candidates; classify them before including them in quantities.`);
   add('vector-unclassified-bridges', unclassifiedBridges, `${unclassifiedBridges} confirmed-opening bridge spans have no established wall class and remain excluded from wall quantities.`);
   add('vector-unhosted-openings', unhosted, `${unhosted} detected openings could not be attached to their measured host walls.`);

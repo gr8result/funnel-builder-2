@@ -131,17 +131,30 @@ export function levelFromLinework(geometry, spec, { level = null, labels = [], b
     }
     if (!bridge || found.bridgeOnly) continue;
     const hostWallDetectionKey = bridged ? `linework-bridge:${found.id}` : found.hostWallIds?.[0] ? `linework:${found.hostWallIds[0]}` : null;
-    openings.push({ ...centre, widthMm: Math.round(found.leafMm || found.widthMm || 0), kind, detectionKey: `linework-opening:${found.id}`,
+    openings.push({ ...centre, widthMm: Math.round(found.leafCount === 2 ? found.widthMm : found.leafMm || found.widthMm || 0), kind, detectionKey: `linework-opening:${found.id}`,
       ...(hostWallDetectionKey ? { hostWallDetectionKey } : {}),
-      attributes: { ...(found.needsClassification ? { needsClassification: true } : {}), ...(found.confirmed === false ? { unconfirmed: true } : {}), ...(found.kind && found.kind !== kind ? { type: found.kind } : {}), ...(found.evidence ? { evidence: found.evidence } : {}) } });
+      attributes: { ...(found.measurements && Object.keys(found.measurements).length ? { measurements: found.measurements } : {}), ...(found.needsClassification ? { needsClassification: true } : {}), ...(found.confirmed === false ? { unconfirmed: true } : {}), ...(found.kind && found.kind !== kind ? { type: found.kind } : {}), ...(found.evidence ? { evidence: found.evidence } : {}),
+        // A printed size label that agreed with the measured opening: its height (widths stay measured).
+        ...(found.labels?.length && found.heightMm > 0 ? { heightMm: found.heightMm, printedLabel: found.labels[0].text } : {}) } });
   }
   const base = level || createLevel(spec);
-  const merged = mergeDetections(base, { walls: [...walls, ...bridges], openings, rooms: labels.map((label) => ({ ...toMm(label, ppm), name: label.name })) });
+  const merged = mergeDetections(base, { walls: [...walls, ...bridges], openings, rooms: labels.map((label) => ({ ...toMm(label, ppm), name: label.name })) }, { measuredLinework: true });
   return { level: merged.level, report: { ...merged.report, bridges: bridges.length, measuredWalls: walls.length } };
 }
 
-export function vectorAnalysisFromLinework(geometry, spec, { labels = [], wallDecisions = {}, classifications = {} } = {}) {
-  const built = levelFromLinework(geometry, spec, { labels });
+// Gaps nothing confirms, up to this width, are kept as unconfirmed openings for builder review (the wall
+// line continues across them so rooms can close). They never count as verified openings.
+export const UNCONFIRMED_GAP_REVIEW_MAX_MM = 2500;
+
+export function vectorAnalysisFromLinework(geometry, spec, { labels = [], wallDecisions = {}, classifications = {}, bridgeUnconfirmedMaxMm = UNCONFIRMED_GAP_REVIEW_MAX_MM } = {}) {
+  // Retaining and other external structures found by the classification stage are not house walls.
+  // They are listed for review only; once the builder confirms one as Internal or External it is
+  // measured like any wall (the decision is keyed to the structure's stable detection key).
+  const structures = (geometry.structures || []).map((item, index) => ({ ...item, id: item.id || `vs-${index + 1}` }));
+  const confirmedStructures = structures.filter((item) => ['interior', 'exterior'].includes(wallDecisions[`linework:${item.id}`]));
+  if (confirmedStructures.length) geometry = { ...geometry, walls: [...(geometry.walls || []), ...confirmedStructures.map((item) => ({ id: item.id, nodes: item.nodes,
+    measuredThicknessMm: item.thicknessMm, lengthMm: Math.round(Math.hypot(item.nodes[1].x - item.nodes[0].x, item.nodes[1].y - item.nodes[0].y) / spec.pixelsPerMm) }))] };
+  const built = levelFromLinework(geometry, spec, { labels, bridgeUnconfirmedMaxMm });
   let level = built.level;
   const report = built.report;
   for (const wall of Object.values(level.walls)) {
@@ -160,6 +173,24 @@ export function vectorAnalysisFromLinework(geometry, spec, { labels = [], wallDe
     else if (['interior', 'exterior'].includes(choices[0])) level = updateWall(level, wall.id, { category: choices[0] });
   }
   const categories = wallCategories(level);
+  // Enclosure edges of a filled pier are useful to the room model, but do not
+  // become linear wall quantities without an explicit estimator decision.
+  const quantityReviews = new Map([
+    ...(geometry.walls || []).filter(wall => wall.quantityReview).map(wall => [`linework:${wall.id}`, wall.quantityReview]),
+    ...(geometry.openings || []).filter(opening => opening.quantityReview).map(opening => [`linework-bridge:${opening.id}`, opening.quantityReview]),
+    // The line across an unconfirmed gap closes rooms but is not wall until the builder confirms the gap.
+    ...(geometry.openings || []).filter(opening => opening.confirmed === false && !opening.quantityReview)
+      .map(opening => [`linework-bridge:${opening.id}`, 'Span across an unconfirmed gap in the wall line; it closes the room boundary but is excluded from wall quantities until the gap is confirmed.']),
+  ]);
+  const modelQuantityReviews = new Map();
+  for (const wall of Object.values(level.walls)) {
+    const keys = [wall.detectionKey, ...(wall.absorbedKeys || [])].filter(Boolean);
+    if (wall.categorySource !== 'manual' && keys.length && keys.every(key => quantityReviews.has(key))) {
+      categories[wall.id] = null;
+      modelQuantityReviews.set(wall.id, quantityReviews.get(keys[0]));
+    }
+  }
+
   const detectionIds = new Map();
   const wallLineage = [];
   const reviewWallCandidates = Object.values(level.walls).flatMap((wall) => {
@@ -177,9 +208,19 @@ export function vectorAnalysisFromLinework(geometry, spec, { labels = [], wallDe
       thicknessMm: wall.thicknessMm,
       category: null,
       status: 'review-required',
-      reason: 'Measured connected wall geometry has no closed-face evidence to establish internal or external classification.',
+      reason: modelQuantityReviews.get(wall.id) || 'Measured connected wall geometry has no closed-face evidence to establish internal or external classification.',
     }];
   });
+  for (const item of structures) {
+    if (wallDecisions[`linework:${item.id}`]) continue; // confirmed (now a wall above) or rejected
+    reviewWallCandidates.push({
+      id: `review-structure-${item.id}`, modelWallId: null, detectionKey: `linework:${item.id}`, absorbedKeys: [], page: spec.page,
+      nodes: item.nodes.map((point) => ({ x: point.x, y: point.y })),
+      normalizedNodes: item.nodes.map((point) => ({ x: point.x / spec.logicalWidth, y: point.y / spec.logicalHeight })),
+      thicknessMm: Math.round(item.thicknessMm), category: null, status: 'review-required', element: item.element || 'retaining', confidence: item.confidence,
+      reason: `${item.element === 'retaining' ? 'Retaining or external structure' : 'External structure'}${item.label ? ` (labelled "${item.label}")` : ''}: not part of the house walls or rooms. Confirm it as External to measure it, or mark it Not a wall.`,
+    });
+  }
   const reviewBridgeCandidates = Object.values(level.walls).flatMap((wall) => {
     const category = categories[wall.id];
     if (!wall.detectionKey?.startsWith('linework-bridge:') || category === 'exterior' || category === 'interior') return [];
@@ -192,7 +233,7 @@ export function vectorAnalysisFromLinework(geometry, spec, { labels = [], wallDe
       thicknessMm: wall.thicknessMm,
       category: null,
       status: 'review-required',
-      reason: 'Confirmed-opening topology span has no closed-face evidence to establish internal or external classification; it is excluded from wall quantities.',
+      reason: modelQuantityReviews.get(wall.id) || 'Confirmed-opening topology span has no closed-face evidence to establish internal or external classification; it is excluded from wall quantities.',
     }];
   });
   const walls = Object.values(level.walls).flatMap((wall, index) => {
@@ -252,19 +293,25 @@ export function vectorAnalysisFromLinework(geometry, spec, { labels = [], wallDe
       x: position.x * spec.pixelsPerMm / spec.logicalWidth,
       y: position.y * spec.pixelsPerMm / spec.logicalHeight,
       widthMm: opening.widthMm,
-      ...(opening.attributes?.needsClassification ? { needsClassification: true } : {}),
+      ...(opening.attributes?.measurements ? { measurements: opening.attributes.measurements } : {}),
+      ...(opening.attributes?.heightMm > 0 ? { heightMm: opening.attributes.heightMm } : {}),
+      ...(opening.attributes?.needsClassification || opening.attributes?.unconfirmed ? { needsClassification: true } : {}),
+      ...(opening.attributes?.unconfirmed ? { unconfirmed: true, reviewReason: 'A gap in the wall line with no door, window or opening symbol drawn. Confirm what it is before its quantity is used.' } : {}),
       dimensionBasis: 'DERIVED',
       dimensionEvidence: `Opening width measured from calibrated linework on sheet ${spec.page}.`,
       subType: subtype,
       basis: 'OBSERVED',
-      confidence: 0.8,
-      evidence: opening.attributes?.evidence || `Opening evidence measured on sheet ${spec.page}.`,
+      confidence: opening.attributes?.unconfirmed ? 0.7 : 0.8,
+      evidence: `${opening.attributes?.evidence || `Opening evidence measured on sheet ${spec.page}.`}${opening.attributes?.printedLabel && !String(opening.attributes?.evidence || '').includes('printed label') ? `; printed label "${opening.attributes.printedLabel}"` : ''}`,
     }];
   });
+  const unconfirmedSpanWallIds = new Set(reviewBridgeCandidates.filter((item) => /unconfirmed gap/.test(item.reason)).map((item) => item.modelWallId));
   const rooms = computeRooms(level).map((room, index) => {
     const polygon = room.floor.map((point) => ({ x: point.x * spec.pixelsPerMm / spec.logicalWidth, y: point.y * spec.pixelsPerMm / spec.logicalHeight }));
     const centre = polygon.reduce((sum, point) => ({ x: sum.x + point.x / polygon.length, y: sum.y + point.y / polygon.length }), { x: 0, y: 0 });
+    const unconfirmedGaps = (room.wallIds || []).filter((id) => unconfirmedSpanWallIds.has(id)).length;
     return {
+      ...(unconfirmedGaps ? { unconfirmedBoundaryGaps: unconfirmedGaps } : {}),
       id: `vector-room-${spec.page}-${index + 1}`,
       lineworkRoomId: `vector-room-${spec.page}-${index + 1}`,
       name: room.name || `Unlabelled room ${index + 1}`,
@@ -274,7 +321,9 @@ export function vectorAnalysisFromLinework(geometry, spec, { labels = [], wallDe
       confidence: 0.8,
       confirmed: false,
       boundaryClosed: true,
-      geometryReview: 'Confirm this room boundary and assign its plan label.',
+      geometryReview: unconfirmedGaps
+        ? `This boundary is closed across ${unconfirmedGaps} gap${unconfirmedGaps > 1 ? 's' : ''} with nothing drawn to say what ${unconfirmedGaps > 1 ? 'they are' : 'it is'}. Confirm ${unconfirmedGaps > 1 ? 'them' : 'it'}, then confirm this room boundary and assign its plan label.`
+        : 'Confirm this room boundary and assign its plan label.',
       evidence: 'Boundary is a closed face of the connected vector wall model.',
     };
   }).filter((room) => room.polygon.length >= 3);

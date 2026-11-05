@@ -28,7 +28,7 @@ function scheduleForJob(job, workbook) {
     jobSetupRows: workbook.data?.inputDataSheet?.rows || {},
   });
   // Mis-calibrated sheets must not become quotation quantities (see takeoffCalibrationGate.js).
-  const calibration = takeoffCalibrationCheck(job);
+  const calibration = takeoffCalibrationCheck(job, schedule);
   return calibration.ok ? schedule : { ...schedule, calibrationBlocked: calibration };
 }
 
@@ -104,7 +104,7 @@ export default function JobSetupTakeoffImport({ sheet, takeoffJob, projectId, jo
     setError("");
     setMessage("");
     setAllowMismatch(false);
-    const requestCalibration = takeoffCalibrationCheck(takeoffJob || {});
+    const requestCalibration = takeoffCalibrationCheck(takeoffJob || {}, request.schedule);
     setSource({ name: request.planFilename || "Current takeoff", schedule: request.schedule, payload: request, options: request.provenance || {}, calibrationBlocked: requestCalibration.ok ? null : requestCalibration });
     const previous = workbook.takeoffEngine?.lastJobSetupSync?.payload;
     const requestSheetLevels = request.sheetLevels || {};
@@ -157,6 +157,11 @@ export default function JobSetupTakeoffImport({ sheet, takeoffJob, projectId, jo
   }, [payload, otherWarnings]);
   const reviewCount = reviewSummary.decisions.length + reviewSummary.extra.length;
   const calibrationBlocked = source?.calibrationBlocked || source?.schedule?.calibrationBlocked || null;
+  // Detected walls are checked by the builder sheet by sheet in AI Plan Takeoff before any takeoff
+  // quantity is applied (joinery can be read as walls; see reviewSummary.js).
+  const wallCheckPages = reviewSummary.decisions.filter((decision) => decision.topic === "wall-check").flatMap((decision) => decision.pages || []);
+  const wallCheckBlocked = wallCheckPages.length ? { message: `Check the detected walls on sheet ${wallCheckPages.join(", ")} in AI Plan Takeoff (delete anything that is not a wall, then confirm) before these quantities are applied.` } : null;
+  const importBlocked = calibrationBlocked || wallCheckBlocked;
   const selectedKeys = preview.rows.filter((row) => selected[row.destinationKey] && !["unavailable", "unchanged"].includes(row.status)).map((row) => row.destinationKey);
 
   async function startImport() {
@@ -226,7 +231,7 @@ export default function JobSetupTakeoffImport({ sheet, takeoffJob, projectId, jo
 
   async function importSelected() {
     setError("");
-    if (calibrationBlocked) { setError(calibrationBlocked.message); return; }
+    if (importBlocked) { setError(importBlocked.message); return; }
     setBusy(true);
     try {
       const result = await sheet.importJobSetupTakeoff(payload, selectedKeys, { allowProjectMismatch: allowMismatch });
@@ -280,7 +285,7 @@ export default function JobSetupTakeoffImport({ sheet, takeoffJob, projectId, jo
             </label>
           </div>}
           {(reviewSummary.checklist.length > 0 || reviewCount > 0) && <div data-testid="takeoff-review-summary" style={{ background: "#fff", border: "1px solid #cbd5e1", borderRadius: 6, padding: 12, margin: "10px 0" }}>
-            <strong style={{ fontSize: 16 }}>{source.schedule?.aiAnalysis ? "AI Takeoff Complete" : "Takeoff summary"}</strong>
+            <strong style={{ fontSize: 16 }}>{source.schedule?.aiAnalysis ? (source.schedule.aiAnalysis.status === "complete" && !reviewCount ? "AI Takeoff Complete" : "AI Takeoff requires review") : "Takeoff summary"}</strong>
             {reviewSummary.checklist.map((item) => <div key={item.label} style={{ color: "#166534", marginTop: 4 }}>✓ {item.label}</div>)}
             <div style={{ marginTop: 8, fontWeight: 700, color: reviewCount ? "#b45309" : "#166534" }}>{reviewCount ? `⚠ ${reviewCount} item${reviewCount === 1 ? "" : "s"} require${reviewCount === 1 ? "s" : ""} confirmation` : "✓ Nothing needs confirmation"}</div>
           </div>}
@@ -321,7 +326,8 @@ export default function JobSetupTakeoffImport({ sheet, takeoffJob, projectId, jo
         </>}
         <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
           {calibrationBlocked && <p role="alert" data-testid="takeoff-calibration-blocked" style={{ color: "#b91c1c", fontWeight: 600 }}>{calibrationBlocked.message}</p>}
-          <button type="button" style={{ ...buttonStyle, background: "#0f766e", color: "#fff", opacity: !selectedKeys.length || busy || calibrationBlocked ? 0.5 : 1 }} disabled={!selectedKeys.length || busy || Boolean(calibrationBlocked)} onClick={importSelected}>Import selected quantities</button>
+          {wallCheckBlocked && <p role="alert" data-testid="takeoff-wall-check-blocked" style={{ color: "#b91c1c", fontWeight: 600 }}>{wallCheckBlocked.message}</p>}
+          <button type="button" style={{ ...buttonStyle, background: "#0f766e", color: "#fff", opacity: !selectedKeys.length || busy || importBlocked ? 0.5 : 1 }} disabled={!selectedKeys.length || busy || Boolean(importBlocked)} onClick={importSelected}>Import selected quantities</button>
           <button type="button" style={buttonStyle} onClick={() => setOpen(false)}>Cancel</button>
           {!source && <button type="button" style={buttonStyle} onClick={onOpenTakeoff}>Open AI Plan Takeoff</button>}
         </div>

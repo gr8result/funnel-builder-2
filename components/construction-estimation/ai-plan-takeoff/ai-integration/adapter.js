@@ -301,6 +301,9 @@ export function convertAiTakeoffDetections(batch, context) {
         // Null dimensions deliberately prevent area/architrave calculations.
         widthMm: optionalPositive(detection.widthMm, `${label} widthMm`),
         heightMm: optionalPositive(detection.heightMm, `${label} heightMm`),
+        // Separate measurements: the overall frame, the rough opening in the wall and the door leaf.
+        ...Object.fromEntries(['frameWidthMm', 'roughOpeningMm', 'leafWidthMm'].filter((key) => detection.measurements?.[key] != null)
+          .map((key) => [key, optionalPositive(detection.measurements[key], `${label} ${key}`)])),
         itemTag: optionalText(detection.itemTag, `${label} itemTag`, `${type === 'window' ? 'W' : 'D'} AI ${detection.detectionId}`),
         subType: optionalText(detection.subType, `${label} subType`, type === 'window' ? 'standard' : openingClass),
         glassType: optionalText(detection.glassType, `${label} glassType`),

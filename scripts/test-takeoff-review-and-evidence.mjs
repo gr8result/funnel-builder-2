@@ -165,7 +165,7 @@ assert.equal(canonical.placedOpenings.find((item) => item.widthMm === 820).heigh
 const takeoff = { ...canonical, completedMeasurements: [], pixelsPerMm: 0.1, totalPages: 1, sheetLevels: { 1: 'Ground Floor' }, scheduleState: { aiAnalysis: output.analysis } };
 let payload = createJobSetupPayload(createTakeoffSchedule(takeoff), { sheetLevels: takeoff.sheetLevels });
 const ids = payload.review.decisions.map((item) => item.id);
-assert.deepEqual(ids, ['external-wall-type:Ground Floor', 'ceiling-height:Ground Floor', 'internal-wall-type', 'door-height', 'opening-size', 'eave-width'], 'each actionable open question appears once; hostless geometry remains withheld');
+assert.deepEqual(ids, ['wall-check:1', 'external-wall-type:Ground Floor', 'ceiling-height:Ground Floor', 'internal-wall-type', 'door-height', 'opening-size', 'eave-width'], 'each actionable open question appears once (detected walls need the builder wall check); hostless geometry remains withheld');
 assert.ok(payload.review.decisions.every((item) => item.title && item.detail && item.action?.type), 'every review item says what to confirm and how');
 assert.ok(payload.review.diagnostics.some((text) => /Wall thicknesses are not legible/.test(text)), 'the AI notes are kept, as diagnostics');
 assert.ok(!payload.warnings.some((text) => /not legible|manual default|not documented/.test(text)), 'AI diagnostics are never Job Setup warnings');
@@ -182,7 +182,7 @@ answer('eave-width', 600);
 assert.deepEqual([takeoff.completedWallRuns[0].exteriorType, takeoff.completedWallRuns[0].frameThicknessMm, takeoff.completedWallRuns[0].wallHeightM], ['Rendered Brick Veneer', 70, 2.7]);
 assert.deepEqual([takeoff.completedWallRuns[1].thicknessMm, takeoff.completedWallRuns[1].constructionSystem], [90, 'internal_timber_frame'], 'a 90 mm internal wall stays a 90 mm wall');
 payload = createJobSetupPayload(createTakeoffSchedule(takeoff), { sheetLevels: takeoff.sheetLevels });
-assert.deepEqual(payload.review.decisions.map((item) => item.id), ['opening-size'], 'only canonical, hosted openings can receive further decisions');
+assert.deepEqual(payload.review.decisions.map((item) => item.id).filter((id) => !id.startsWith('wall-check:')), ['opening-size'], 'only canonical, hosted openings can receive further decisions');
 assert.equal(payload.dataInputFields.lowerInternal90mmWallsLm > 0, true, '90 mm internal framing reaches its own Job Setup quantity');
 assert.deepEqual(applyReviewDecision({ action: { field: 'heightMm', targets: ['x'] } }, 99999, takeoff), {}, 'an implausible answer changes nothing');
 

@@ -1,5 +1,5 @@
 import { readRoomRaster } from './roomBoundaryVision.js';
-import { detectRoomBoundary, measureRoom } from './roomGeometry.js';
+import { detectRoomBoundary, measureRoom, approveRoom } from './roomGeometry.js';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { fingerprintTakeoffDocument, fingerprintTakeoffPage } from './documentIdentity.js';
 import { prepareAnalysisPage, prepareGeometryReviewImage, restoreAnalysisCoordinates } from './analysisPages.js';
@@ -10,14 +10,18 @@ import { ROOMS_RUN_ID, addManualRoom, floorPlanSheets, mergeRoomReadings, remove
 import { compactPlanEvidence, evidenceRotation, mergePlanEvidence, projectDefaultsFromJobSetup } from './planEvidence.js';
 import { applyReviewDecision, reviewAudience } from './reviewSummary.js';
 import { fuseSheetLinework } from '../geometry/lineworkFusion.js';
-import { JOB_SCALE_KEY, jobPixelsPerMm, sheetPixelsPerMm as scaleOfSheet } from '../sheetScale.js';
+import { JOB_SCALE_KEY, jobPixelsPerMm, sheetPixelsPerMm as scaleOfSheet, rescaleRunLengths } from '../sheetScale.js';
 import { cropPlanRegion, readPlanRaster } from '../geometry/planRaster.js';
 import { detectPlanGeometry } from '../geometry/planGeometry.js';
 import { collectRegionOpenings, planRegions } from '../geometry/planRegions.js';
 import { detectVectorWalls } from '../geometry/vectorWalls.js';
+import { roomsFromWallRuns, reviewCandidateResponse } from '../geometry/planModelAdapter.js';
 import { buildLocalVectorAnalysis, roomLabelsFromText } from './localVectorAnalysis.js';
 import { localVectorReadiness } from './localVectorReadiness.js';
 import { vectorProductionAnalysis } from './vectorProductionAnalysis.js';
+import { refreshAnalysisReadiness as refreshVectorReview } from './analysisReadiness.js';
+import { readPrintedOpeningLabels } from './printedLabels.js';
+import { addTrainingExample, buildTrainingExample } from './trainingCapture.js';
 
 const RUN_ID = 'ai-takeoff-v3-linework';
 const LOCAL_VECTOR_RUN_ID = 'ai-takeoff-vector-v3';
@@ -33,9 +37,9 @@ const imageBytes = (page) => Math.ceil(String(page?.imageDataUrl || '').length *
 
 function sanitizeCalibrations(saved) {
   if (!saved || typeof saved !== 'object' || Array.isArray(saved)) return {};
-  return Object.fromEntries(Object.entries(saved).filter(([page, entry]) => Number.isInteger(Number(page)) && Number(page) > 0
-    && Number.isFinite(Number(entry?.pixelsPerMm)) && Number(entry.pixelsPerMm) > 0)
-    .map(([page, entry]) => [page, { pixelsPerMm: Number(entry.pixelsPerMm), calibratedAt: String(entry.calibratedAt || '') }]));
+  return Object.fromEntries(Object.entries(saved).filter(([page, entry]) => Number.isInteger(Number(page)) && Number(page) >= JOB_SCALE_KEY
+    && Number.isFinite(Number(entry?.pixelsPerMm ?? entry)) && Number(entry?.pixelsPerMm ?? entry) > 0)
+    .map(([page, entry]) => [page, { pixelsPerMm: Number(entry?.pixelsPerMm ?? entry), calibratedAt: String(entry?.calibratedAt || '') }]));
 }
 
 // Supporting-page text as reading-order lines (cells joined by " | ") rather than
@@ -92,7 +96,17 @@ export function useAiTakeoffAnalysis(options) {
   const [sheetCalibrations, setSheetCalibrations] = useState({});
   const recordSheetCalibration = useCallback((page, pixelsPerMm) => {
     if (!(Number(page) > 0) || !(Number(pixelsPerMm) > 0)) return;
-    calibrationsRef.current = { ...calibrationsRef.current, [Number(page)]: { pixelsPerMm: Number(pixelsPerMm), calibratedAt: new Date().toISOString() } };
+    const previous = calibrationsRef.current;
+    const base = jobPixelsPerMm(latest.current.pixelsPerMm, previous) || Number(pixelsPerMm);
+    const calibratedAt = new Date().toISOString();
+    const next = { ...previous, [JOB_SCALE_KEY]: previous[JOB_SCALE_KEY] || { pixelsPerMm: base, calibratedAt },
+      [Number(page)]: { pixelsPerMm: Number(pixelsPerMm), calibratedAt } };
+    latest.current.bridge.updateObjects(collections => ({ ...collections,
+      completedWallRuns: rescaleRunLengths(collections.completedWallRuns, p => scaleOfSheet(p, base, previous), p => scaleOfSheet(p, base, next)),
+      completedEaves: rescaleRunLengths(collections.completedEaves, p => scaleOfSheet(p, base, previous), p => scaleOfSheet(p, base, next)),
+      completedMeasurements: rescaleRunLengths(collections.completedMeasurements, p => scaleOfSheet(p, base, previous), p => scaleOfSheet(p, base, next)),
+    }));
+    calibrationsRef.current = next;
     setSheetCalibrations(calibrationsRef.current);
   }, []);
   const sheetScale = (page) => scaleOfSheet(page, latest.current.pixelsPerMm, calibrationsRef.current);
@@ -118,8 +132,9 @@ export function useAiTakeoffAnalysis(options) {
     setInspections(inspectionsRef.current);
     halves.current.clear();
     setScaleProposal(null);
-    setReport(saved || null);
-    setStage(saved && saved.status !== 'rooms' ? (saved.status === 'review' ? 'review' : 'complete') : 'idle');
+    const restored = refreshVectorReview(saved || null);
+    setReport(restored);
+    setStage(restored && restored.status !== 'rooms' ? (restored.status === 'review' ? 'review' : 'complete') : 'idle');
     setMessage('');
   }, []);
 
@@ -129,6 +144,12 @@ export function useAiTakeoffAnalysis(options) {
   const [roomsState, setRoomsState] = useState({ busy: false, message: '', error: false });
   const reportRef = useRef(null);
   reportRef.current = report;
+  useEffect(() => {
+    if (report?.status === 'review' && stage === 'complete') {
+      setStage('review');
+      setMessage('AI TAKEOFF REQUIRES REVIEW — check unresolved walls, openings and room boundaries below.');
+    }
+  }, [report?.status, stage]);
   const readRooms = async () => {
     if (pending.current || roomsState.busy) return;
     const current = latest.current;
@@ -194,7 +215,7 @@ export function useAiTakeoffAnalysis(options) {
   const updateRooms = useCallback((ids, patch) => {
     if (latest.current.readOnly) return;
     setReport(current => refreshVectorReview(reportWithRooms(current, (current?.rooms || []).map(room => ids.includes(room.id)
-      ? measureRoom({ ...room, ...patch, ...(patch.polygon ? { boundaryEdited: true, confirmed: false, boundaryClosed: false } : {}) }, calibrationsRef.current[room.page]?.pixelsPerMm || latest.current.pixelsPerMm) : room))));
+      ? (patch.confirmed === true ? approveRoom : measureRoom)({ ...room, ...patch, ...(typeof patch.level === 'string' ? { levelEdited: true } : {}), ...(typeof patch.name === 'string' ? { nameEdited: true, label: room.label || room.name } : {}), ...(patch.polygon ? { boundaryEdited: true, confirmed: false, boundaryClosed: false } : {}) }, calibrationsRef.current[room.page]?.pixelsPerMm || latest.current.pixelsPerMm) : room))));
     latest.current.markCompleted?.('room-boundary-updated');
   }, []);
 
@@ -214,10 +235,19 @@ export function useAiTakeoffAnalysis(options) {
       const level = current.sheetLevels?.[page] || merged.find((room) => room.page === page)?.level || 'Unassigned';
       const sheetRuns = runs.filter((run) => (Number(run.page) || 1) === page);
       const spec = { id: `page-${page}`, name: level, page, pixelsPerMm, logicalWidth: planPage.logicalWidth, logicalHeight: planPage.logicalHeight };
-      const detected = roomsFromWallRuns(sheetRuns, spec, roomLabelsFromText(planPage))
-        .map((room, index) => detectRoomBoundary(room, { page, level, width: planPage.logicalWidth, height: planPage.logicalHeight, pixelsPerMm, walls: sheetRuns, openings: current.placedOpenings }, index));
+      const existingRooms = merged.filter(room => room.page === page);
+      const labels = existingRooms.length ? existingRooms.map(room => ({ name: room.label || room.name,
+        x: room.x * planPage.logicalWidth, y: room.y * planPage.logicalHeight })) : roomLabelsFromText(planPage);
+      const detected = roomsFromWallRuns(sheetRuns, spec, labels)
+        .map((room, index) => detectRoomBoundary(room, { page, level, width: planPage.logicalWidth, height: planPage.logicalHeight, pixelsPerMm, walls: sheetRuns, openings: current.placedOpenings, measuredBoundary: true }, index));
       count += detected.length;
-      merged = mergeRoomReadings(merged, [{ page, level, rooms: detected }]);
+      // Re-measuring must not delete labelled rooms when the current walls do not close,
+      // or add anonymous faces over existing rooms. Only replace an unambiguous label match.
+      const readings = existingRooms.length ? existingRooms.map(old => {
+        const matches = detected.filter(room => room.name === (old.label || old.name));
+        return matches.length === 1 ? { ...matches[0], id: old.id, x: old.x, y: old.y } : old;
+      }) : detected;
+      merged = mergeRoomReadings(merged, [{ page, level, rooms: readings }]);
     }
     setReport((previous) => refreshVectorReview(reportWithRooms(previous || reportRef.current, merged)));
     current.markCompleted?.('room-boundaries-detected');
@@ -268,8 +298,8 @@ export function useAiTakeoffAnalysis(options) {
   };
   useEffect(() => {
     setReport(current => {
-      if (!current?.rooms?.some(room => room.polygon && room.pixelsPerMm !== (sheetCalibrations[room.page]?.pixelsPerMm || options.pixelsPerMm || null))) return current;
-      return reportWithRooms(current, current.rooms.map(room => room.polygon ? measureRoom(room, sheetCalibrations[room.page]?.pixelsPerMm || options.pixelsPerMm) : room));
+      if (!current?.rooms?.some(room => room.polygon && room.pixelsPerMm !== scaleOfSheet(room.page, options.pixelsPerMm, sheetCalibrations))) return current;
+      return reportWithRooms(current, current.rooms.map(room => room.polygon ? measureRoom(room, scaleOfSheet(room.page, options.pixelsPerMm, sheetCalibrations)) : room));
     });
   }, [options.pixelsPerMm, sheetCalibrations]);
 
@@ -418,6 +448,7 @@ export function useAiTakeoffAnalysis(options) {
       // cannot be measured keeps the plan reading's positions and says so.
       const linework = {};
       const vectorReadings = [];
+      const measuredRoomPages = new Set();
       for (const [index, response] of responses.entries()) {
         if (response.drawingType !== 'floor_plan') continue;
         const pageNumber = response.page || response.pageNumber;
@@ -450,15 +481,25 @@ export function useAiTakeoffAnalysis(options) {
           const styledVectors = planPage.vectorSegments?.some(segment => segment.paint === 'stroke' && Number.isFinite(segment.widthPx) && typeof segment.color === 'string');
           if (styledVectors) {
             const detected = detectVectorWalls(planPage.vectorSegments, { ...sheet, raster, textItems: planPage.textItems || [] });
+            // Printed size labels, read locally from the sheet image; off when the takeoff says so.
+            let printedLabels = { report: null, warning: null };
+            if (latest.current.printedLabels !== false) {
+              setMessage(`Reading printed door and window labels on sheet ${pageNumber}…`);
+              printedLabels = await readPrintedOpeningLabels({ detected, raster, logicalWidth: sheet.logicalWidth, pixelsPerMm: sheetPixelsPerMm, textItems: planPage.textItems || [] });
+              assertCurrent(work, true);
+              if (printedLabels.warning) work.warnings.push({ page: pageNumber, code: 'printed-labels', message: printedLabels.warning });
+            }
             const measured = vectorProductionAnalysis(response, detected, {
               id: `page-${pageNumber}`, name: response.level, page: pageNumber, pixelsPerMm: sheetPixelsPerMm,
               logicalWidth: sheet.logicalWidth, logicalHeight: sheet.logicalHeight,
-            });
+            }, { labels: roomLabelsFromText(planPage) });
             responses[index] = { ...measured.response, drawingType: response.drawingType };
+            measuredRoomPages.add(pageNumber);
             vectorReadings.push({ page: pageNumber, vector: measured.vector, detected: measured.detected,
               reviewIdentity: `${work.documentHash}:${pageNumber}:${sheetPixelsPerMm}`,
               semanticInput: { page: pageNumber, level: response.level, walls: response.walls || [], openings: response.openings || [], rooms: response.rooms || [], review: [] } });
-            linework[pageNumber] = { ...measured.vector.report, engine: detected.engine, detector: detected.stats };
+            linework[pageNumber] = { ...measured.vector.report, engine: detected.engine, detector: detected.stats,
+              ...(printedLabels.report ? { printedLabels: { ...printedLabels.report, weak: printedLabels.report.weak.length, unassigned: printedLabels.report.unassigned.length } } : {}) };
             continue;
           }
           const fused = fuseSheetLinework(response, raster, sheet,
@@ -469,6 +510,7 @@ export function useAiTakeoffAnalysis(options) {
               vectorLinework: planPage?.vectorSegments || [],
             });
           responses[index] = { ...fused.response, drawingType: response.drawingType };
+          if (fused.geometry.engine !== 'not-run') measuredRoomPages.add(pageNumber);
           linework[pageNumber] = { ...fused.report, gaps: { ...fused.report.gaps, unconfirmed: fused.geometry.openings.filter((gap) => !gap.confirmed) }, proposedRooms: fused.geometry.rooms.filter((room) => !room.verified) };
         } catch (error) {
           assertCurrent(work, true);
@@ -495,26 +537,29 @@ export function useAiTakeoffAnalysis(options) {
       const result = batch.detections.length ? await latest.current.bridge.appendDetections(batch, { signal: work.signal })
         : { status: analysis.alreadyMeasured.length ? 'unchanged' : 'review', added: 0 };
       assertCurrent(work, true);
-      const completed = {
+      let completed = {
         ...analysis, runId: RUN_ID, documentHash: work.documentHash, provider: 'OpenAI', modelVersion: work.model,
         inspections: work.inspections, scale: work.scale, requests: work.requests,
         completedAt: new Date().toISOString(), added: result.added, status: result.status,
       };
       completed.linework = { ...(completed.linework || {}), ...linework };
       completed.rooms = reportRef.current?.rooms || completed.rooms;
+      // Builder decisions (wall checks, acknowledged items) on this same plan survive a rerun.
+      if (reportRef.current?.documentHash === work.documentHash && reportRef.current?.resolvedDecisions) completed.resolvedDecisions = reportRef.current.resolvedDecisions;
       for (const response of responses) {
         const pageNumber = response.page || response.pageNumber;
         const planPage = work.planPages.find(page => page.pageNumber === pageNumber);
         if (!planPage || !response.rooms?.length) continue;
         const raster = await readRoomRaster(planPage.dataUrl);
         assertCurrent(work, true);
-        const detected = response.rooms.map((room, index) => detectRoomBoundary(room, { page: pageNumber, level: response.level, width: planPage.logicalWidth, height: planPage.logicalHeight, pixelsPerMm: calibrationsRef.current[pageNumber]?.pixelsPerMm || work.pixelsPerMm, walls: latest.current.completedWallRuns, openings: latest.current.placedOpenings, raster }, index));
+        const detected = response.rooms.map((room, index) => detectRoomBoundary(room, { page: pageNumber, level: response.level, width: planPage.logicalWidth, height: planPage.logicalHeight, pixelsPerMm: calibrationsRef.current[pageNumber]?.pixelsPerMm || work.pixelsPerMm, walls: latest.current.completedWallRuns, openings: latest.current.placedOpenings, raster, measuredBoundary: measuredRoomPages.has(pageNumber) }, index));
         completed.rooms = mergeRoomReadings(completed.rooms, [{ page: pageNumber, level: response.level, rooms: detected }]);
       }
       if (vectorReadings.length) {
         completed.linework = { ...completed.linework, ...Object.fromEntries(vectorReadings.map((reading) => [reading.page, {
           ...reading.vector.report, engine: reading.detected.engine, detector: reading.detected.stats,
           openings: reading.detected.openings.length, rooms: reading.vector.rooms.length,
+          ...(completed.linework?.[reading.page]?.printedLabels ? { printedLabels: completed.linework[reading.page].printedLabels } : {}),
         }])) };
         completed.vectorPlanEvidence = Object.fromEntries(vectorReadings.map(reading => [reading.reviewIdentity, reading.semanticInput]));
         completed.wallReviewCandidates = vectorReadings.flatMap(reading => reading.vector.reviewWallCandidates);
@@ -526,6 +571,7 @@ export function useAiTakeoffAnalysis(options) {
         if (issues.length || completed.unresolved?.length) { completed.status = 'review'; completed.completedAt = null; }
       }
       completed.counts = { ...completed.counts, review: completed.review.length, rooms: completed.rooms.length, roomBoundaries: completed.rooms.filter(room => room.polygon?.length >= 3).length, roomsForReview: completed.rooms.filter(room => room.reviewRequired).length };
+      completed = refreshVectorReview(completed);
       latest.current.onDetectedLevels?.(analysis.pages);
       setReport(completed);
       latest.current.markCompleted('ai-takeoff-analysis');
@@ -578,6 +624,13 @@ export function useAiTakeoffAnalysis(options) {
         pixelsPerMm, logicalWidth: planPage.logicalWidth, logicalHeight: planPage.logicalHeight, raster,
         textItems: planPage.textItems || [],
       });
+      // Printed size labels, read locally from the sheet image; off when the takeoff says so.
+      let printedLabels = { report: null, warning: null };
+      if (latest.current.printedLabels !== false) {
+        setMessage(`Reading printed door and window labels on sheet ${planPage.pageNumber}…`);
+        printedLabels = await readPrintedOpeningLabels({ detected, raster, logicalWidth: planPage.logicalWidth, pixelsPerMm, textItems: planPage.textItems || [] });
+        assertCurrent(work, true);
+      }
       const level = current.sheetLevels?.[planPage.pageNumber] || 'Unassigned';
       const context = {
         ...identity,
@@ -599,6 +652,14 @@ export function useAiTakeoffAnalysis(options) {
         wallDecisions[candidate.detectionKey] = wallDecision.value;
       }
       wallReviewDecisions[reviewIdentity] = wallDecisions;
+      // Opt-in only: the builder's decision kept in this job's own report as a training example.
+      let trainingExamples = saved?.trainingExamples || [];
+      if (wallDecision && latest.current.trainingCapture === true) {
+        const candidate = saved.wallReviewCandidates.find(item => item.id === wallDecision.id && item.page === planPage.pageNumber);
+        trainingExamples = addTrainingExample(trainingExamples, buildTrainingExample({
+          identity: { jobId: current.jobId, takeoffId: current.takeoffId, documentHash: identity.documentHash }, page: planPage.pageNumber, pixelsPerMm,
+          detected, detectionKey: candidate.detectionKey, decision: wallDecision.value, segments: planPage.vectorSegments || [] }));
+      }
       const { vector, batch, analysis, rooms: readings, detected: admittedGeometry } = buildLocalVectorAnalysis({ planPage, detected, pixelsPerMm, level, context, runId, wallDecisions, semanticInput: saved?.vectorPlanEvidence?.[reviewIdentity] || null, admitReviewedWallKeys: wallDecision && wallDecision.value !== 'reject'
         ? [saved.wallReviewCandidates.find(item => item.id === wallDecision.id && item.page === planPage.pageNumber).detectionKey] : [] });
       const admission = batch.detections.length
@@ -608,7 +669,11 @@ export function useAiTakeoffAnalysis(options) {
       const rooms = mergeRoomReadings(reportRef.current?.rooms, [{ page: planPage.pageNumber, level, rooms: readings }]);
       const readiness = localVectorReadiness({ analysis, vector, detected: admittedGeometry, rooms, admission });
       const completed = {
-        ...analysis, review: [...analysis.review, ...readiness.issues], provider: 'GR8 Result local vector engine', modelVersion: detected.engine, runId,
+        ...analysis, review: [...analysis.review, ...readiness.issues, ...(printedLabels.warning ? [{ page: planPage.pageNumber, code: 'printed-labels', message: printedLabels.warning }] : [])],
+        provider: 'GR8 Result local vector engine', modelVersion: detected.engine, runId,
+        ...(trainingExamples.length ? { trainingExamples } : {}),
+        ...(saved?.resolvedDecisions ? { resolvedDecisions: saved.resolvedDecisions } : {}),
+        printedLabels: { ...(saved?.printedLabels || {}), [planPage.pageNumber]: printedLabels.report ? { ...printedLabels.report, weak: printedLabels.report.weak.length, unassigned: printedLabels.report.unassigned.length } : null },
         localVectorPage: planPage.pageNumber, wallReviewAction: Boolean(wallDecision),
         wallReviewDecisions, vectorPlanEvidence: saved?.vectorPlanEvidence || {},
         wallReviewCandidates: [...(saved?.wallReviewCandidates || []).filter(item => item.page !== planPage.pageNumber), ...vector.reviewWallCandidates],
@@ -751,7 +816,9 @@ export function useAiTakeoffAnalysis(options) {
     if (latest.current.readOnly || !decision) return;
     latest.current.bridge.updateObjects((collections) => applyReviewDecision(decision, value, collections));
     if (['acknowledge', 'rerun'].includes(decision.action?.type)) {
-      setReport((current) => (current ? { ...current, resolvedDecisions: { ...(current.resolvedDecisions || {}), [decision.id]: { resolvedAt: new Date().toISOString() } } } : current));
+      // A wall check also records exactly which walls it covered (see reviewSummary.js).
+      setReport((current) => (current ? { ...current, resolvedDecisions: { ...(current.resolvedDecisions || {}), [decision.id]: { resolvedAt: new Date().toISOString(),
+        ...(Array.isArray(decision.wallIds) ? { wallIds: decision.wallIds.map(String) } : {}) } } } : current));
     }
   };
 

@@ -1,5 +1,7 @@
 // Additive storage: legacy records and assets are never pruned or migrated here.
 // Assets commit before a referencing job/revision can be committed by its caller.
+import { knownAsset, rememberAssetId } from '../../../lib/construction-estimation/knownAssetIds.js';
+
 const DATABASE = 'gr8-takeoff-plan-assets-v1';
 function openAssets() {
   return new Promise((resolve, reject) => {
@@ -9,7 +11,32 @@ function openAssets() {
     request.onerror = () => reject(request.error);
   });
 }
+// Every save externalizes the same unchanged images again. Encoding and hashing each one (often
+// ~90 MB of proposal artwork) on every save only produced large short-lived buffers, which is what
+// pushed the tab towards out-of-memory during repeated saves. Remember each stored image's id for
+// this session (bounded; the strings are the ones the open job already holds) and confirm the asset
+// is still present with a key lookup, re-encoding only when it is not.
+function rememberAsset(dataUrl, id, byteLength) { rememberAssetId(dataUrl, id, byteLength); }
+function assetByteLength(dataUrl) {
+  return knownAsset(dataUrl)?.byteLength ?? new TextEncoder().encode(dataUrl).length;
+}
+async function assetPresent(id) {
+  const db = await openAssets();
+  try {
+    return await new Promise((resolve, reject) => {
+      const request = db.transaction('blobs', 'readonly').objectStore('blobs').getKey(id);
+      request.onsuccess = () => resolve(request.result !== undefined);
+      request.onerror = () => reject(request.error);
+    });
+  } finally { db.close(); }
+}
 async function putAsset(dataUrl) {
+  const known = knownAsset(dataUrl);
+  if (known && await assetPresent(known.id)) return known.id;
+  const id = await storeAsset(dataUrl);
+  return id;
+}
+async function storeAsset(dataUrl) {
   const bytes = new TextEncoder().encode(dataUrl);
   // Hash only this individual plan asset, never a job/revision collection.
   const digest = await crypto.subtle.digest('SHA-256', bytes);
@@ -24,6 +51,7 @@ async function putAsset(dataUrl) {
       tx.oncomplete = resolve;
       tx.onabort = tx.onerror = () => reject(tx.error || new Error('Plan asset transaction failed.'));
     });
+    rememberAsset(dataUrl, id, bytes.length);
     return id;
   } finally { db.close(); }
 }
@@ -36,7 +64,9 @@ export async function readPlanAsset(id) {
       request.onerror = () => reject(request.error);
     });
     if (!(blob instanceof Blob) || !blob.size) throw new Error(`Missing plan asset ${id}; saved source was not modified.`);
-    return await blob.text();
+    const text = await blob.text();
+    rememberAsset(text, id, blob.size);
+    return text;
   } finally { db.close(); }
 }
 async function transformJob(job, encode, assets = new Map()) {
@@ -48,13 +78,22 @@ async function transformJob(job, encode, assets = new Map()) {
       if (encode && typeof page?.dataUrl === 'string' && page.dataUrl.startsWith('data:')) {
         const { dataUrl, ...metadata } = page;
         if (!assets.has(dataUrl)) assets.set(dataUrl, putAsset(dataUrl));
-        result.push({ ...metadata, dataUrlAssetId: await assets.get(dataUrl), dataUrlBytes: new TextEncoder().encode(dataUrl).length });
+        const dataUrlAssetId = await assets.get(dataUrl);
+        result.push({ ...metadata, dataUrlAssetId, dataUrlBytes: assetByteLength(dataUrl) });
       } else if (!encode && page?.dataUrlAssetId && !(typeof page?.dataUrl === 'string' && page.dataUrl.startsWith('data:'))) {
         // Only reach for the local asset store when the page has no image of its own.
         // A job file carried from another machine embeds the image but keeps the asset
         // id from where it was saved; preferring the id there would look up an asset
         // this profile has never held, throw, and leave the takeoff page blank.
-        result.push({ ...page, dataUrl: await readPlanAsset(page.dataUrlAssetId) });
+        // A job opened in a browser that never held this image (e.g. a job file whose plan images
+        // stayed in another profile's asset store) must still open: keep the page and its asset id
+        // unchanged, so nothing is lost and a later save keeps the reference. Only the image is absent.
+        let dataUrl = null;
+        try { dataUrl = await readPlanAsset(page.dataUrlAssetId); } catch (error) {
+          if (!/^Missing plan asset /.test(error?.message || '')) throw error;
+          console.warn(`[Plan assets] ${error.message} The page opens without its image.`);
+        }
+        result.push(dataUrl === null ? page : { ...page, dataUrl });
       } else result.push(page);
     }
     return result;

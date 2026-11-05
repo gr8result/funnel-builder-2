@@ -28,7 +28,8 @@ assert.match(source, /widthMm: openingWidthMm/, "Placed openings must use the ma
 // The pointer crosshair is the topmost child of the Konva layer and is drawn at the cursor, so if it
 // listens for events it sits under every click and swallows the selection of whatever markup is
 // beneath it. Selection of walls, areas and openings then fails everywhere on the sheet.
-const crosshairStart = source.indexOf("{mouseHoverPos && (");
+// The crosshair may be hidden for tools that draw their own pointer feedback (the Rooms tool).
+const crosshairStart = source.search(/\{mouseHoverPos && (?:activeTool !== 'rooms' && )?\(\s*<Group x=\{mouseHoverPos\.x\}/);
 assert.ok(crosshairStart >= 0, "Pointer crosshair indicator must exist");
 const crosshair = source.slice(crosshairStart, source.indexOf("</Layer>", crosshairStart));
 assert.match(crosshair, /<Group x=\{mouseHoverPos\.x\} y=\{mouseHoverPos\.y\} listening=\{false\}>/, "Pointer crosshair group must not listen for pointer events");

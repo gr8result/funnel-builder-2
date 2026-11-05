@@ -45,17 +45,31 @@ const sorted = (rooms) => [...rooms].sort((a, b) => BUILDING_LEVELS.indexOf(a.le
 // readings: [{ page, level, rooms: [{ name, x, y, basis, confidence, evidence }] }]
 export function mergeRoomReadings(existing = [], readings = []) {
   const pagesRead = new Set(readings.map((reading) => reading.page));
-  const kept = (existing || []).filter((room) => room.source === 'manual' || room.confirmed || room.boundaryEdited || !pagesRead.has(room.page));
+  // Keep manual polygons, but refresh their sheet scale. For an approved detected
+  // boundary, a changed rerun polygon must invalidate its recorded approval.
+  existing = (existing || []).map(old => {
+    const reading = readings.find(item => item.page === old.page);
+    const incoming = reading?.rooms?.find(room => room.id === old.id ||
+      (nameKey(old.label || old.name) === nameKey(room.name) && Math.hypot(old.x-room.x, old.y-room.y)<0.04));
+    if (!incoming || !(old.confirmed || old.boundaryEdited)) return old;
+    return { ...old, ...Object.fromEntries(['pixelsPerMm', 'pageWidth', 'pageHeight'].filter(key => Object.hasOwn(incoming, key)).map(key => [key, incoming[key]])),
+      ...(old.levelEdited ? {} : { level: reading.level, levelId: reading.level }),
+      ...(!old.boundaryEdited && incoming.polygon?.length >= 3 ? {polygon:incoming.polygon} : {}) };
+  });
+  const kept = (existing || []).filter((room) => room.source === 'manual' || room.confirmed || room.boundaryEdited || room.excluded || !pagesRead.has(room.page));
   const read = readings.flatMap((reading) => (reading.rooms || [])
     .map((room) => ({ ...room, page: reading.page, level: reading.level, name: clean(room.name), x: Number(room.x) || 0, y: Number(room.y) || 0,
       basis: room.basis || 'OBSERVED', confidence: Number.isFinite(room.confidence) ? room.confidence : 0, evidence: clean(room.evidence), source: 'plan' }))
     .filter((room) => room.name && room.name.length <= 60));
   const manualNames = new Set(kept.filter((room) => room.source === 'manual').map((room) => nameKey(room.name)));
-  const protectedRooms = kept.filter(room => room.confirmed || room.boundaryEdited);
+  const protectedRooms = kept.filter(room => room.confirmed || room.boundaryEdited || room.excluded);
   const matched = read.filter(room => !protectedRooms.some(old => old.page === room.page && (old.id === room.id || (nameKey(old.label || old.name) === nameKey(room.name) && Math.hypot(old.x-room.x,old.y-room.y)<0.04))))
     .map(room => {
       const old = existing?.find(old => old.page === room.page && (old.id === room.id || (nameKey(old.label || old.name) === nameKey(room.name) && Math.hypot(old.x-room.x,old.y-room.y)<0.04)));
-      return old ? {...room,id:old.id||room.id,selected:old.selected||false,actions:old.actions||[],wallHeightM:old.wallHeightM} : room;
+      return old ? {...room,id:old.id||room.id,selected:old.selected||false,actions:old.actions||[],wallHeightM:old.wallHeightM,
+        ...(old.nameEdited ? { name: old.name, nameEdited: true, label: old.label || room.name } : {}),
+        ...(old.levelEdited ? { level: old.level, levelId: old.level, levelEdited: true } : {}),
+        ...(old.displayColor ? { displayColor: old.displayColor } : {})} : room;
     });
   // A room the estimator already added by hand is not added again when the plan names it too.
   return validateRoomSet(uniquelyNamed(sorted([...kept, ...matched.filter((room) => !manualNames.has(nameKey(room.name)))])));

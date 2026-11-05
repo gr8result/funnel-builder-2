@@ -9,8 +9,12 @@ const observed=item=>item?.basis==='OBSERVED'&&item.confidence>=.85&&typeof item
 // The provider supplies semantics. Its approximate coordinates are used only to
 // associate those semantics with measured objects, never as replacement geometry.
 export function vectorProductionAnalysis(response,detected,spec,{wallDecisions={},labels:extraLabels=[]}={}){
-  const labels=[...extraLabels,...(response.rooms||[]).filter(r=>r.name&&validPoint(r)&&r.basis!=='ASSUMED'&&r.confidence>=.5)
-    .map(r=>({name:r.name,x:r.x*spec.logicalWidth,y:r.y*spec.logicalHeight}))];
+  // Room names printed in the PDF's own text layer sit exactly where the drawing puts them; provider label
+  // positions are typically 1-2 m out. When the sheet carries text labels they name the rooms, and provider
+  // labels are used only for sheets without them (scans, outlined text), so one room never gets two names.
+  const providerLabels=(response.rooms||[]).filter(r=>r.name&&validPoint(r)&&r.basis!=='ASSUMED'&&r.confidence>=.5)
+    .map(r=>({name:r.name,x:r.x*spec.logicalWidth,y:r.y*spec.logicalHeight}));
+  const labels=extraLabels.length?[...extraLabels]:providerLabels;
   // A documented annotation may confirm an existing measured gap. It cannot
   // create a new span or move its measured ends; ambiguous matches stay open.
   const annotations=(response.openings||[]).filter(raw=>observed(raw)&&raw.confidence>=.9&&validOpening(raw)&&validPoint(raw)

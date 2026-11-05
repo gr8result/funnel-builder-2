@@ -118,7 +118,7 @@ export function AiTakeoffAction({ analysis, schedule, sheetLevels = {}, disabled
       {pending && <button type="button" onClick={analysis.cancel} style={{ ...buttonStyle, display: 'block', marginTop: 8 }}>Cancel analysis</button>}
       {report && report.status !== 'rooms' && (
         <div id="ai-takeoff-result" style={{ marginTop: 12 }}>
-          <strong>{report.status === 'review' ? 'AI TAKEOFF REQUIRES REVIEW' : 'AI TAKEOFF COMPLETE'}</strong>
+          <strong>{report.status === 'review' || review.decisions.length ? 'AI TAKEOFF REQUIRES REVIEW' : 'AI TAKEOFF COMPLETE'}</strong>
           <div style={{ marginTop: 8 }}>
             {review.checklist.map((item) => <div key={item.label} style={{ color: '#166534' }}>✓ {item.label}</div>)}
             {report.counts?.alreadyMeasured > 0 && <div style={{ color: '#475569' }}>{report.counts.alreadyMeasured} item{report.counts.alreadyMeasured === 1 ? '' : 's'} already in this takeoff {report.counts.alreadyMeasured === 1 ? 'was' : 'were'} kept, not added twice</div>}
