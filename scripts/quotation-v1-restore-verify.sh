@@ -9,11 +9,23 @@ set -euo pipefail
 dir="${1:?backup directory required}"; container="${2:-supabase_db_gr8-quotation-acceptance}"
 case "$container" in supabase_db_*) ;; *) echo "Refusing: $container is not a local Supabase DB container."; exit 2;; esac
 ( cd "$dir" && sha256sum -c --quiet SHA256SUMS ) || { echo "Checksum mismatch - backup is not intact."; exit 1; }
+# Wait for a real login: on some images the postgres role is created after the server starts accepting connections.
+for _ in $(seq 1 120); do docker exec "$container" psql -U postgres -Atc "select 1" >/dev/null 2>&1 && break; sleep 5; done
+docker exec "$container" psql -U postgres -Atc "select 1" >/dev/null 2>&1 || { echo "Target database is not accepting postgres logins."; exit 1; }
 existing=$(docker exec "$container" psql -U postgres -Atc "select count(*) from pg_tables where schemaname='public' and tablename like 'builder_%'")
 [ "$existing" = "0" ] || { echo "Refusing: target already has $existing builder tables. Use a freshly started empty stack."; exit 2; }
 docker exec -i "$container" psql -U postgres -q -v ON_ERROR_STOP=0 < "$dir/roles.sql" > "$dir/restore-roles.log" 2>&1 || true
-{ echo "SET session_replication_role = replica;"; cat "$dir/schema.sql" "$dir/data.sql"; } \
-  | docker exec -i "$container" psql -U postgres -q -v ON_ERROR_STOP=1 --single-transaction > "$dir/restore.log" 2>&1 \
+# Local Postgres 17 images cannot create the legacy pgsodium extension (production has it from an
+# earlier major version). Its CREATE line is skipped only when nothing else in the backup uses it.
+pgsodium_refs=$(grep -ci "pgsodium" "$dir/schema.sql" || true)
+skip_pgsodium=0
+if [ "$pgsodium_refs" = "1" ] && grep -q '^CREATE EXTENSION IF NOT EXISTS "pgsodium";' "$dir/schema.sql" && ! grep -aqi "pgsodium" "$dir/data.sql"; then
+  skip_pgsodium=1; echo "note: skipping 'CREATE EXTENSION pgsodium' - no other object or data in the backup uses it"
+fi
+{ echo "SET session_replication_role = replica;"
+  if [ "$skip_pgsodium" = 1 ]; then grep -v '^CREATE EXTENSION IF NOT EXISTS "pgsodium";$' "$dir/schema.sql"; else cat "$dir/schema.sql"; fi
+  cat "$dir/data.sql"; } \
+  | docker exec -i "$container" sh -lc 'PGPASSWORD="$POSTGRES_PASSWORD" exec psql -U supabase_admin -d postgres -q -v ON_ERROR_STOP=1 --single-transaction' > "$dir/restore.log" 2>&1 \
   || { echo "RESTORE FAILED - see $dir/restore.log"; tail -5 "$dir/restore.log"; exit 1; }
 mismatch=0; checked=0
 while IFS='=' read -r table expected; do

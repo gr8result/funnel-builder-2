@@ -43,7 +43,7 @@ const grantsMappingRead = /create policy tenant_read on public\.builder_requirem
 
 async function build(includeTarget) {
   const db = new PGlite();
-  await db.exec(`create role authenticated; create schema auth;
+  await db.exec(`create role anon; create role authenticated; create schema auth;
     create table auth.users (id uuid primary key);
     create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
     create table public.workspaces (id uuid primary key, name text);

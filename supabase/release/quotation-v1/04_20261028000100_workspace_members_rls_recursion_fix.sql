@@ -18,6 +18,9 @@ as $$
   );
 $$;
 
+revoke all on function public.is_workspace_member(uuid) from public, anon;
+grant execute on function public.is_workspace_member(uuid) to authenticated;
+
 alter table public.workspaces enable row level security;
 alter table public.workspace_members enable row level security;
 alter table public.workspace_entitlements enable row level security;
