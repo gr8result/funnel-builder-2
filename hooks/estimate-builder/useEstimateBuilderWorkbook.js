@@ -6511,10 +6511,6 @@ function sanitizeWorkbookForTemplate(sourceWorkbook = {}, options = {}) {
 }
 
 function compactWorkbookForStorage(workbook = {}) {
-  return { ...workbook };
-}
-
-function legacyCompactWorkbookForStorage(workbook = {}) {
   const {
     importedWorkbook,
     importedSheets,
@@ -7580,9 +7576,15 @@ async function saveStoredJob(workbook, savedAt = new Date().toISOString(), optio
 async function saveVerifiedStoredJob(workbook, options = {}) {
   const savedAt = options.savedAt || new Date().toISOString();
   const record = await saveStoredJob(workbook, savedAt, options);
+  const savedRecord = await loadStoredJob(record.key);
+  const expectedFingerprint = workbookPersistenceFingerprint(record.workbook);
+  const storedFingerprint = workbookPersistenceFingerprint(savedRecord?.workbook || {});
+  if (!savedRecord?.workbook || storedFingerprint !== expectedFingerprint) {
+    throw new Error("Saved job verification failed. The stored job does not match the completed write.");
+  }
   return { ok: true, key: record.key, jobId: record.jobId, revision: record.revision,
-    checksum: record.checksum, savedAt, payloadBytes: jsonByteLength(record.workbook),
-    quotationRows: countQuotationRows(record.workbook.quotation), source: options.source || "manual" };
+    checksum: savedRecord.checksum || record.checksum, savedAt, payloadBytes: jsonByteLength(savedRecord.workbook),
+    quotationRows: countQuotationRows(savedRecord.workbook.quotation), source: options.source || "manual" };
 }
 
 function workbookAutosaveSignature(workbook = {}) {

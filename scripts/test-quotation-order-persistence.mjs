@@ -120,7 +120,7 @@ check("Client Selections sync does not push manually placed lines to the end", (
   workbook = { ...workbook, quotation: stampQuotationOrder({ ...workbook.quotation, [sectionName]: { ...workbook.quotation[sectionName], rows: moved } }) };
   const arrangedIds = workbook.quotation[sectionName].rows.map((row) => row.id);
   const synced = connectAllocatedSelectionsToQuotation(workbook, book([line("a", "Screen A"), line("b", "Screen B"), line("c", "Screen C")]));
-  assert.notDeepEqual(synced.quotation[sectionName].rows.map((row) => row.id).slice(0, 4), arrangedIds, "the raw sync does rebuild the array");
+  assert.deepEqual(synced.quotation[sectionName].rows.map((row) => row.id).slice(0, 4), arrangedIds, "sync preserves the saved arrangement");
   const restored = applyPersistedQuotationOrder(synced.quotation)[sectionName].rows.map((row) => row.id);
   assert.deepEqual(restored.filter((id) => !id.endsWith(":c")), arrangedIds, "saved lines keep their saved positions");
   assert.equal(restored.length, 5, "the new selection is added, not dropped");

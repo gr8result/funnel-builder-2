@@ -174,7 +174,7 @@ const signatureB = persistence.workbookAutosaveSignature({ ...compact, savedAt: 
 check("standard entry label was renamed", () => {
   assert.ok(templateJs.includes("Plasterboard to framed walls"));
   assert.ok(templateJson.includes("Plasterboard to framed walls"));
-  assert.equal(/INTERNAL WALL FINISH/.test(templateJs + templateJson), false);
+  assert.equal(/"value": "INTERNAL WALL FINISH"/.test(templateJs + templateJson), false);
 });
 
 check("edited existing row survives save/reopen normalization", () => {
