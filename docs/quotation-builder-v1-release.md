@@ -37,6 +37,15 @@ Stack `gr8-quotation-acceptance` (127.0.0.1:55521/55522); app = production build
 | Migration rehearsal | PASS | Pre-check and post-check run; rollback of 20261021 restores the old model (client can read again, 8/9) and re-apply restores 9/9 |
 | Backup / restore rehearsal | PASS | Backup script against the isolated stack; restore into a fresh Supabase stack: 201 tables, 0 row mismatches, 350/350 policies; app 9/9 against the restored copy |
 
+Production backup verification completed on 5 November 2026 without writing to production:
+
+- Source project: `bvtxfphktypdqmlnveqf`; backup started at 05:14 AEST and completed at 05:29 AEST.
+- Protected backup: `quotation-v1-prod-20261105-0514`; `roles.sql`, `schema.sql` and the 1.52 GB `data.sql` match `SHA256SUMS`.
+- Fresh isolated restore: 349/349 manifest tables, 63,736/63,736 rows, 0 mismatches and 575/575 public policies.
+- The production dump intentionally excludes Supabase's internal migration-history schema; `supabase migration list --linked` was captured separately before deployment.
+- The four packaged migrations apply in order to the restored production snapshot. The exact post-check passes, migration 03 rollback passes, and reapplication restores all restrictive policies.
+- Local Supabase bootstraps the inverse `cli_login_postgres`/`postgres` membership, so that one production role grant cannot be reproduced without creating a circular membership. The role dump is intact and all non-conflicting role settings were verified.
+
 Known pre-existing test failures not caused by this release (identical with the changes reverted): save/reopen source-text checks for later persistence work, Bosch catalogue count, cabinetry catalogue/taxonomy, entry-door price, inclusions schedule order, wall-linings fixture missing.
 
 ## 3. Floor-waste discrepancy (verified, real job untouched)
@@ -56,12 +65,12 @@ Package `supabase/release/quotation-v1/` (apply in this order only; never the wh
 |---|---|---|
 | `01_20261010000100_builder_requirement_quote_mappings.sql` | byte-identical to `release/client-selections-20261021` | `6170f6453f0922e0` |
 | `02_20261011000100_requirement_mapping_product_identity.sql` | byte-identical to the Client Selections release | `fb8d732e4475e203` |
-| `03_20261021000100_builder_commercial_internal_member_rls.sql` | byte-identical to the Client Selections release | `5b43d2626bd0d092` |
-| `04_20261028000100_workspace_members_rls_recursion_fix.sql` | byte-identical to the shared tree (Product Library) | `8936c24e4abe248d` |
+| `03_20261021000100_builder_commercial_internal_member_rls.sql` | Client Selections release plus explicit `anon` execution revocation | `07367376855769d3` |
+| `04_20261028000100_workspace_members_rls_recursion_fix.sql` | Shared-tree recursion fix plus explicit helper execution grants | `713e9c6f25ef9b4b` |
 
 The shared working tree has *different* versions of 01–03; do not apply those. Dependencies (checked by `00_precheck_readonly.sql`): `workspaces`, `workspace_members`, `workspace_entitlements`, `communities`, `builder_selection_is_config_admin`, `builder_selection_immutable_workspace`, `builder_commercial_set_updated_at` (from `20261003000100`). No V1 code depends on 01/02; 03 removes direct access to internal pricing tables for client-role members (verified: today they can read `builder_commercial_projects`); 04 fixes the live 42P17 recursion on `workspace_members`.
 
-Low-severity note: the helper functions in 03/04 remain executable by `anon` through Supabase default grants; they return false without a signed-in user, so nothing is exposed. Optional follow-up for the owning sessions: `revoke execute on function public.is_workspace_member(uuid), public.builder_commercial_is_internal_member(uuid) from anon;`.
+The helper functions in 03/04 explicitly revoke execution from both `PUBLIC` and `anon`, then grant it only to `authenticated`. The post-check verifies those privileges.
 
 From an empty database (fresh environments only): 4 repo migrations fail only on ordering and apply on a second pass; 12 need legacy tables no migration creates (`accounts`, `profiles`, `leads`, `vendors`, `sms_queue`, `gantt_*`). Production is unaffected; a baseline migration is needed before any new environment.
 

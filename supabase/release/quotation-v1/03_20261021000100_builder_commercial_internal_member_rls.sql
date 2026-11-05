@@ -23,7 +23,7 @@ as $$
   );
 $$;
 
-revoke all on function public.builder_commercial_is_internal_member(uuid) from public;
+revoke all on function public.builder_commercial_is_internal_member(uuid) from public, anon;
 grant execute on function public.builder_commercial_is_internal_member(uuid) to authenticated;
 
 do $$
