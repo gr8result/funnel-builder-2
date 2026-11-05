@@ -6,6 +6,9 @@ import { masterJobId, linkTakeoffToMasterJob } from "../../lib/construction-esti
 import EntryDoorFurnitureSchedule from './EntryDoorFurnitureSchedule.jsx';
 import CabinetryCataloguePicker from './CabinetryCataloguePicker.jsx';
 import CabinetryReconciliation from './CabinetryReconciliation.jsx';
+import SelectionReconcilePanel from './SelectionReconcilePanel.jsx';
+import ProductSelectionIntegrityPanel from './ProductSelectionIntegrityPanel.jsx';
+import { hasInternalCommercialAccess } from '../../lib/commercialAccess.js';
 import { useQuotationSubgroups } from './useQuotationSubgroups.js';
 import { buildQuotationSubgroups, visibleSubgroupRows } from '../../lib/construction-estimation/quotationSubgroups.js';
 import { cabinetryQuoteGroupStatus } from '../../lib/construction-estimation/cabinetryRequirements.js';
@@ -48,7 +51,8 @@ import { calculateEstimateBuilderWorkbook, V4_DEFAULT_FORMULAS } from "../../lib
 import { applyPersistedQuotationOrder, stampQuotationOrder } from "../../lib/construction-estimation/quotationOrder";
 import { windowDoorSizeCodeForRow } from "../../lib/construction-estimation/estimateBuilderWorkbookDefaults";
 import { SUBCONTRACTOR_QUOTE_DEDUCTIONS, V4_DATA_SECTIONS } from "../../lib/construction-estimation/estimateWorksheetV4Schema";
-import { quoteLineTotal, quoteQuantity, quoteRate } from "../../lib/construction-estimation/finalQuotationBoq";
+import { quotationSectionsForFinalBoq, quoteLineTotal, quoteQuantity, quoteRate } from "../../lib/construction-estimation/finalQuotationBoq";
+import { quotationIssueCheck } from "../../lib/construction-estimation/quotationIssueGate";
 import { syncCommercialSnapshot } from "../../lib/builders/syncCommercialSnapshot";
 import { BUILDER_INCLUSION_SECTION_TITLES, normaliseEstimateInclusions, selectedEstimateInclusionsPackage } from "../../lib/builders/estimateInclusions";
 import { normaliseStandardInclusions, selectedStandardInclusionsPackage } from "../../lib/builders/standardInclusions";
@@ -508,7 +512,7 @@ export default function EstimateBuilderWorkbook(props) {
 function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recentId = "", organisationId = "", initialPage = "" } = {}) {
   const router = useRouter();
   const sheet = useEstimateBuilderWorkbook({}, { previewMode });
-  const { workspaceId, loading: workspaceLoading } = useWorkspace();
+  const { workspaceId, role: workspaceRole, loading: workspaceLoading } = useWorkspace();
   const moduleWorkspaceId = organisationId || workspaceId;
   const saveStatusTimerRef = useRef(null);
   const modeHandledRef = useRef("");
@@ -526,7 +530,9 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
   const [openingLocalJobFile, setOpeningLocalJobFile] = useState(false);
   const [localJobFilePrompt, setLocalJobFilePrompt] = useState(null);
   const [saveStatus, setSaveStatus] = useState({ state: "idle", label: "", detail: "" });
-  const [commercialSyncStatus, setCommercialSyncStatus] = useState({ state: "idle", message: "", projectId: "", snapshotId: "", syncedAt: "" });
+  const [commercialSyncStatus, setCommercialSyncStatus] = useState({ state: "idle", message: "", projectId: "", snapshotId: "", syncedAt: "", blockers: [] });
+  const [issueConfirm, setIssueConfirm] = useState(null);
+  const issueInFlightRef = useRef(false);
   const [explicitJobRestoreState, setExplicitJobRestoreState] = useState({ state: "idle", key: "", message: "" });
   const explicitJobRestoreAttemptRef = useRef("");
   const [showDeveloperControls, setShowDeveloperControls] = useState(false);
@@ -899,17 +905,11 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
     }
   }
 
-  async function openLocalJobFilePicker() {
+  function openLocalJobFilePicker() {
     if (openingLocalJobFile) return;
     setJobFileError("");
     setOpenWorkbookMenu("");
-    setOpeningLocalJobFile(true);
-    try {
-      const result = await jobFile.open();
-      if (result?.ok === false && result.message) setJobFileError(result.message);
-    } finally {
-      setOpeningLocalJobFile(false);
-    }
+    localJobFileInputRef.current?.click();
   }
 
   async function closeActiveJob() {
@@ -924,6 +924,7 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
     const file = event.target.files?.[0] || null;
     event.target.value = "";
     if (!file) return;
+    setOpeningLocalJobFile(true);
     setJobFileError("");
     setLocalJobFilePrompt(null);
     try {
@@ -961,6 +962,8 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
     } catch (error) {
       const message = `${file?.name || "Selected file"}: ${error?.message || "This job file could not be opened."}`;
       setJobFileError(message);
+    } finally {
+      setOpeningLocalJobFile(false);
     }
   }
 
@@ -1004,20 +1007,32 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
     setNewJobForm({ jobName: "", clientName: "", jobNumber: "", address: "", notes: "" });
   }
 
+  const issueStatus = (state, message, extra = {}) => setCommercialSyncStatus({ state, message, projectId: "", snapshotId: "", syncedAt: "", blockers: [], ...extra });
+
+  // Step 1 of issuing: check locally, then ask the builder to confirm. Nothing is sent yet.
+  function requestQuotationIssue() {
+    if (previewMode || isCommercialSyncing || issueInFlightRef.current) return;
+    if (openJobDetails.noJobOpen) return issueStatus("error", "Open a job before issuing a quotation.");
+    if (!workspaceId) return issueStatus("error", workspaceLoading ? "Workspace is still loading. Please try again in a moment." : "Choose an active workspace before issuing the quotation.");
+    const calculated = calculateEstimateBuilderWorkbook(sheet.workbook);
+    const chargedRows = quotationSectionsForFinalBoq(calculated.quotation || {}).reduce((count, section) => count + section.rows.length, 0);
+    if (!chargedRows) return issueStatus("error", "There is nothing to issue yet: the quotation has no charged rows.");
+    const check = quotationIssueCheck(calculated.quotation || {});
+    if (!check.ok) return issueStatus("error", check.message, { blockers: check.blockers });
+    setIssueConfirm({ chargedRows, total: calculated.summary?.finalQuoteTotal || 0, gst: calculated.summary?.gst || 0 });
+  }
+
   async function handleCommercialSnapshotSync() {
-    if (previewMode || isCommercialSyncing) return;
+    if (previewMode || isCommercialSyncing || issueInFlightRef.current) return;
+    setIssueConfirm(null);
     if (!workspaceId) {
-      setCommercialSyncStatus({
-        state: "error",
-        message: workspaceLoading ? "Workspace is still loading. Please try again in a moment." : "Choose an active workspace before syncing to Project Commercials.",
-        projectId: "",
-        snapshotId: "",
-        syncedAt: "",
-      });
+      issueStatus("error", workspaceLoading ? "Workspace is still loading. Please try again in a moment." : "Choose an active workspace before issuing the quotation.");
       return;
     }
 
-    setCommercialSyncStatus({ state: "syncing", message: "Syncing commercial snapshot...", projectId: "", snapshotId: "", syncedAt: "" });
+    // Guards against a double click before the "syncing" state has rendered.
+    issueInFlightRef.current = true;
+    issueStatus("syncing", "Issuing quotation to Project Commercials...");
     try {
       const calculated = calculateEstimateBuilderWorkbook(sheet.workbook);
       const result = await syncCommercialSnapshot({
@@ -1028,22 +1043,13 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
       });
       const projectId = result?.project_id || result?.data?.project?.id || "";
       const snapshotId = result?.snapshot_id || result?.data?.snapshot?.id || "";
-      const syncedAt = result?.data?.snapshot?.created_at || new Date().toISOString();
-      setCommercialSyncStatus({
-        state: "success",
-        message: `Commercial snapshot synced${snapshotId ? `: ${snapshotId}` : ""}`,
-        projectId,
-        snapshotId,
-        syncedAt,
-      });
+      const snapshot = result?.data?.snapshot || {};
+      const syncedAt = snapshot.created_at || new Date().toISOString();
+      issueStatus("success", `Quotation issued to Project Commercials${snapshot.snapshot_number ? ` as snapshot ${snapshot.snapshot_number}` : ""}: ${money(snapshot.final_quote_total ?? calculated.summary?.finalQuoteTotal ?? 0)} including GST.`, { projectId, snapshotId, syncedAt });
     } catch (error) {
-      setCommercialSyncStatus({
-        state: "error",
-        message: error?.message || "Commercial snapshot sync failed.",
-        projectId: "",
-        snapshotId: "",
-        syncedAt: "",
-      });
+      issueStatus("error", error?.message || "The quotation could not be issued.", { blockers: Array.isArray(error?.blockers) ? error.blockers : [] });
+    } finally {
+      issueInFlightRef.current = false;
     }
   }
 
@@ -1334,8 +1340,9 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
           data-testid="open-local-job-file-input"
         />
 
-        {showDeveloperControls && commercialSyncStatus.state !== "idle" && (
+        {commercialSyncStatus.state !== "idle" && (
           <div
+            data-testid="issue-quotation-status"
             style={{
               ...styles.commercialSyncStatus,
               ...(commercialSyncStatus.state === "error" ? styles.commercialSyncStatusError : {}),
@@ -1343,11 +1350,37 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
             }}
             role={commercialSyncStatus.state === "error" ? "alert" : "status"}
           >
-            <strong>{commercialSyncStatus.state === "success" ? "Synced" : commercialSyncStatus.state === "error" ? "Sync failed" : "Syncing"}</strong>
+            <strong>{commercialSyncStatus.state === "success" ? "Quotation issued" : commercialSyncStatus.state === "error" ? "Quotation not issued" : "Issuing"}</strong>
             <span>{commercialSyncStatus.message}</span>
             {commercialSyncStatus.syncedAt ? <small>{new Date(commercialSyncStatus.syncedAt).toLocaleString()}</small> : null}
+            {commercialSyncStatus.blockers?.length ? (
+              <ul data-testid="issue-quotation-blockers" style={{ flexBasis: "100%", margin: "4px 0 0", paddingLeft: 20, fontWeight: 600 }}>
+                {commercialSyncStatus.blockers.slice(0, 12).map((blocker, index) => (
+                  <li key={`${blocker.sectionKey}-${blocker.rowId}-${index}`}>{blocker.section}: {blocker.item}{blocker.location ? ` (${blocker.location})` : ""} - {blocker.reason}</li>
+                ))}
+                {commercialSyncStatus.blockers.length > 12 ? <li>and {commercialSyncStatus.blockers.length - 12} more</li> : null}
+              </ul>
+            ) : null}
+            {commercialSyncStatus.state !== "syncing" ? (
+              <button type="button" style={styles.secondaryButton} onClick={() => issueStatus("idle", "")}>Dismiss</button>
+            ) : null}
           </div>
         )}
+
+        {issueConfirm ? (
+          <div style={styles.modalBackdrop}>
+            <div style={styles.newJobModal} role="dialog" aria-modal="true" aria-label="Issue quotation">
+              <div style={styles.eyebrow}>Issue Quotation</div>
+              <h2 style={styles.jobPickerTitle}>Issue this quotation to Project Commercials?</h2>
+              <p>This records the quotation as the current commercial snapshot for this job and replaces any earlier issued snapshot. All {issueConfirm.chargedRows} charged rows have confirmed prices.</p>
+              <p><strong>Final quote total: {money(issueConfirm.total)}</strong> (includes GST of {money(issueConfirm.gst)})</p>
+              <div style={styles.jobPickerActions}>
+                <button type="button" style={styles.secondaryButton} onClick={() => setIssueConfirm(null)}>Cancel</button>
+                <button type="button" data-testid="confirm-issue-quotation" style={styles.primaryButton} disabled={isCommercialSyncing} onClick={handleCommercialSnapshotSync}>Issue Quotation</button>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         <ProjectCompactBanner
           moduleTitle={activeVisual.title}
@@ -1415,14 +1448,15 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
                     />
                     <button type="button" style={styles.bannerBackButton} onClick={() => navigateWorkspacePage("projectDashboard")}>Back to Project Workspace</button>
                   </div>
-                  {showDeveloperControls ? (
+                  {!openJobDetails.noJobOpen && !previewMode ? (
                     <button
                       type="button"
+                      data-testid="issue-quotation-button"
                       style={{ ...styles.commercialSyncButton, ...(isCommercialSyncing ? styles.commercialSyncButtonDisabled : {}) }}
-                      disabled={isCommercialSyncing || workspaceLoading}
-                      onClick={handleCommercialSnapshotSync}
+                      disabled={isCommercialSyncing || workspaceLoading || Boolean(issueConfirm)}
+                      onClick={requestQuotationIssue}
                     >
-                      {isCommercialSyncing ? "Syncing..." : "Sync to Project Commercials"}
+                      {isCommercialSyncing ? "Issuing..." : "Issue Quotation to Project Commercials"}
                     </button>
                   ) : null}
                   <div data-testid="job-persistence-status" role="status">
@@ -1515,6 +1549,15 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
                 canEditFormulas={isAdminMode}
               />
           )}
+          {activePageKey === "quotation" && hasInternalCommercialAccess(workspaceRole) ? (
+            <section data-testid="commercial-selection-review" aria-label="Commercial selection review">
+              {commercialModuleContext?.projectId ? (
+                <SelectionBaselineControl key={sheet.workbook.workspaceId || sheet.workbook.workspace_id} workbook={sheet.workbook} onApply={sheet.applySelectionBaseline} />
+              ) : null}
+              <ProductSelectionIntegrityPanel sheet={sheet} />
+              <SelectionReconcilePanel sheet={sheet} readonly={sheet.previewMode} />
+            </section>
+          ) : null}
           {activePageKey === "quotation" && <QuotationSheet sheet={sheet} onFormulaTarget={setFormulaTarget} />}
           {activePageKey === "standardInclusions" && <StandardInclusionsSheet sheet={sheet} />}
           {activePageKey === "productLibrary" && <EmbeddedProductLibraryPage embeddedInEstimateBuilder {...commercialModuleContext} />}
@@ -1528,8 +1571,6 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
           {['purchaseOrders', 'supplierProcurement', 'procurement'].includes(activePageKey) && <EntryDoorFurnitureSchedule workbook={sheet.workbook} />}
           {activePageKey === "purchaseOrders" && <CommercialPurchaseOrdersPage {...commercialModuleContext} />}
           {activePageKey === "clientSelections" && (
-            <>
-            {commercialModuleContext?.projectId && <SelectionBaselineControl key={sheet.workbook.workspaceId || sheet.workbook.workspace_id} workbook={sheet.workbook} onApply={sheet.applySelectionBaseline} />}
             <ClientSelectionsModuleHost
               moduleContext={commercialModuleContext}
               restoringActiveJob={explicitJobRestoreState.state === "restoring"}
@@ -1539,7 +1580,6 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
               onNewJob={() => setNewJobModalOpen(true)}
               showDeveloperControls={showDeveloperControls}
             />
-            </>
           )}
           {activePageKey === "budgetVsActual" && <CommercialBudgetVsActualPage {...commercialModuleContext} />}
           {activePageKey === "supplierProcurement" && <SupplierProcurementSheet navigateWorkspacePage={navigateWorkspacePage} />}
@@ -1982,7 +2022,7 @@ const DASHBOARD_PROJECT_RESOURCE_CARDS = [
   },
   {
     title: "Standard Inclusions",
-    subtitle: "Classic, Premier, Premium and custom inclusion templates.",
+    subtitle: "Premier inclusions schedule (default). Classic and Premium are not available yet.",
     page: "standardInclusions",
     visualKey: "standardInclusions",
     badge: "Templates",

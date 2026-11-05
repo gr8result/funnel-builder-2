@@ -15,7 +15,7 @@
 //      is opened for a job).
 
 import { supabaseAdmin } from "../../../../lib/supabaseAdmin";
-import { withWorkspace } from "../../../../lib/withWorkspace";
+import { withWorkspace, INTERNAL_COMMERCIAL_ROLES } from "../../../../lib/withWorkspace";
 import { assignCurrentStandardInclusionsToProject } from "../../../../lib/builders/projectInclusionsAssignment";
 import {
   fetchInstanceWithPages,
@@ -126,4 +126,4 @@ async function handler(req, res) {
   return res.status(405).json({ ok: false, error: "Method not allowed" });
 }
 
-export default withWorkspace(handler);
+export default withWorkspace(handler, { roles: INTERNAL_COMMERCIAL_ROLES });

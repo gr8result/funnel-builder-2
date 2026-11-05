@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { calculateTilingRoom, formatLm, formatM2, formatMm, isFloorAreaRoom, roomIsExternal, roomFloorTiled, roomGeometry, STANDARD_BATH_SPLASHBACK_HEIGHT_MM, TILING_ROOM_TYPES, TILING_SPECS, tilingRoomInMm, tilingRoomStatus, tilingRoomType } from "../../lib/builders/tilingCalculations.js";
 import { addTilingRoom, applyFloorTile, newFloorArea, renameFloorArea, takeoffExternalRoomsToAdd, tilingRoomFromTakeoff, applyTilingScheme, roomHasTileScheme, setTilingSchemeDefault, suggestedTilingRooms, TILING_PATTERNS, TILING_SLOTS, tilingProductTotals, tilingSchemeDefaultRoom, tilingSchemePreview, tilingSchemeTargets } from "../../lib/builders/tilingRooms.js";
 import { takeoffOpeningsForRoom } from "../../lib/builders/tilingTakeoff.js";
+import { roomHasFloorWaste } from "../../lib/builders/tilingFloorWasteDuplicates.js";
 
 const money = (value) => (value === null || value === undefined || value === "" ? "Price required" : new Intl.NumberFormat("en-AU", { style: "currency", currency: "AUD" }).format(Number(value)));
 const num = (value) => (value === "" || value === null || value === undefined ? "" : value);
@@ -516,7 +517,8 @@ function FloorWastes({ room, products, onChange }) {
         <Field label="Quantity" step="1" value={quantity} onChange={(value) => setQuantity(value)} />
       </div>
       {product ? <ProductLine product={product} /> : null}
-      <button type="button" className="tl-primary" disabled={!product || !(Number(quantity) > 0)} data-testid="tiling-waste-add"
+      {product && roomHasFloorWaste(room, product.productId, application) ? <p className="tl-muted" data-testid="tiling-waste-duplicate">Already added to {room.name} for {application}. Remove the existing line and add it again with the total quantity.</p> : null}
+      <button type="button" className="tl-primary" disabled={!product || !(Number(quantity) > 0) || roomHasFloorWaste(room, product.productId, application)} data-testid="tiling-waste-add"
         onClick={() => { set([...wastes, { productId: product.productId, productName: `${product.brand} ${product.productName}`.trim(), application, quantity: Number(quantity), unitPrice: unitPrice(product), linear: /channel|linear|strip/i.test(product.productName || "") }]); setProductId(""); setQuantity(1); }}>Add to {room.name}</button>
     </div>
   );

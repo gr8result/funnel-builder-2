@@ -5,7 +5,17 @@ import puppeteer from "puppeteer";
 
 dotenv.config({ path: ".env.local", quiet: true });
 const authOrigin = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const baseUrl = process.env.AUTH_TEST_URL || "http://localhost:3000/modules/estimate-builder?page=dataInput";
+// Port 3000 is reserved for the developer's own server and must never be touched by tests.
+// The target must be supplied explicitly, e.g. AUTH_TEST_URL=http://localhost:3107/modules/estimate-builder?page=dataInput
+const baseUrl = process.env.AUTH_TEST_URL;
+if (!baseUrl) {
+  console.error("AUTH_TEST_URL is required (a non-3000 URL). Refusing to run.");
+  process.exit(2);
+}
+if (new URL(baseUrl).port === "3000") {
+  console.error("AUTH_TEST_URL uses port 3000, which is off limits. Refusing to run.");
+  process.exit(2);
+}
 const storageKey = `sb-${new URL(authOrigin).hostname.split(".")[0]}-auth-token`;
 const user = { id: "d267b1e8-2bcd-43d2-b4eb-9ec049d131e6", email: "support@gr8result.com", aud: "authenticated", role: "authenticated", app_metadata: {}, user_metadata: {} };
 const token = (expires) => [Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url"), Buffer.from(JSON.stringify({ sub: user.id, exp: expires, role: "authenticated" })).toString("base64url"), "simulated-test-signature"].join(".");

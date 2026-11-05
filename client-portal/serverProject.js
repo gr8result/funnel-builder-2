@@ -20,11 +20,6 @@ function boolMeta(value, keys) {
   return keys.some((key) => metadata?.[key] === true || value?.[key] === true);
 }
 
-function notHiddenMeta(value, keys) {
-  const metadata = value?.metadata || value?.source_metadata || {};
-  return keys.every((key) => metadata?.[key] !== false);
-}
-
 function mapDocument(document) {
   const metadata = document.metadata || {};
   return {
@@ -163,7 +158,7 @@ export default async function clientPortalProjectHandler(req, res) {
       .order("created_at", { ascending: false }),
     supabaseAdmin
       .from("builder_client_selections")
-      .select("id, category, subcategory, supplier, product_name, selected_product_name, colour, finish, image_url, required_by, status, selection_status, client_visible, client_status, metadata, created_at")
+      .select("id, category, subcategory, supplier, product_name, selected_product_name, colour, finish, image_url, required_by, status, selection_status, is_active, client_visible, client_status, metadata, created_at")
       .eq("workspace_id", project.workspace_id)
       .eq("project_id", project.id)
       .order("created_at", { ascending: false }),
@@ -217,14 +212,14 @@ export default async function clientPortalProjectHandler(req, res) {
     .filter((document) => boolMeta(document, ["clientVisible", "client_visible", "visibleInClientPortal"]))
     .map(mapDocument);
   const visibleSelections = (selectionsResult.data || [])
-    .filter((selection) => boolMeta(selection, ["clientVisible", "client_visible", "clientPublished"]))
+    .filter((selection) => selection.is_active !== false && boolMeta(selection, ["clientVisible", "client_visible", "clientPublished"]) && !boolMeta(selection, ["internalOnly"]))
     .map(mapSelection);
   const visibleVariations = (variationsResult.data || [])
-    .filter((variation) => boolMeta(variation, ["clientVisible", "client_visible", "clientPublished"]) && notHiddenMeta(variation, ["internalOnly"]))
+    .filter((variation) => boolMeta(variation, ["clientVisible", "client_visible", "clientPublished"]) && !boolMeta(variation, ["internalOnly"]))
     .map((variation) => {
       const itemsByVariationId = new Map();
       (variationItemsResult.data || [])
-        .filter((item) => item.variation_id === variation.id && notHiddenMeta(item, ["internalOnly"]))
+        .filter((item) => item.variation_id === variation.id && !boolMeta(item, ["internalOnly"]))
         .forEach((item) => {
           const rows = itemsByVariationId.get(item.variation_id) || [];
           rows.push(item);

@@ -6,6 +6,7 @@
 // Light fittings and ceiling fans are chosen in Lighting & Ceiling Fans, never here.
 // Readable text is never below 16px.
 import { useEffect, useMemo, useRef, useState } from "react";
+import { resolveBuilderStandard } from '../../lib/builders/builderStandardRange.js';
 import ProjectRoomManager from "./ProjectRoomManager.jsx";
 import { ROOM_LOCATION_OPTIONS } from "../construction-estimation/ai-plan-takeoff/takeoffRunData.js";
 import {
@@ -19,7 +20,16 @@ const ROOM_TYPES = ROOM_LOCATION_OPTIONS.filter((type) => type.key !== "exterior
 
 // projectRooms: the project's canonical rooms ({ id, name, roomType }). roomManager: the project
 // room manager's actions (Manage Rooms edits the project's list, never a list kept here).
-export default function ElectricalScheduleWorkflow({ savedSchedule = null, projectRooms = [], roomManager = null, inclusions = {}, workbook = {}, onSave, onBack, backLabel = "← Interior" }) {
+export default function ElectricalScheduleWorkflow({ savedSchedule = null, projectRooms = [], roomManager = null, inclusions = {}, workbook = {}, standardProducts = [], onSave, onBack, backLabel = "← Interior" }) {
+  const includedFixtures = ['smoke-alarm', 'exhaust-fan'].flatMap(key => {
+    const standard = resolveBuilderStandard({...workbook, standardInclusions: inclusions}, standardProducts, key);
+    if (!standard || standard.included === false) return [];
+    const pattern = key === 'smoke-alarm' ? /smoke alarm|smoke detector/i : /exhaust|heat.*light|tastic/i;
+    const quantity = Object.entries(workbook.quotation || {}).filter(([name]) => /electrical/i.test(name) && !/CLIENT SELECTIONS/i.test(name))
+      .flatMap(([,group]) => group.rows || []).filter(row => pattern.test(row.item || row.description || ''))
+      .reduce((n,row) => n + (Number(row.qty ?? row.quantity) || 0),0);
+    return quantity ? [{key, ...standard, quantity}] : [];
+  });
   const roomNames = useMemo(() => projectRooms.map((room) => room.name), [projectRooms]);
   const [managingRooms, setManagingRooms] = useState(false);
   const baseline = useMemo(() => electricalInclusionBaseline(inclusions, roomNames), [inclusions, roomNames]);
@@ -215,6 +225,11 @@ export default function ElectricalScheduleWorkflow({ savedSchedule = null, proje
         {status}
       </header>
 
+      {includedFixtures.length > 0 && <aside className="esw-included" data-testid="electrical-standard-fixtures">
+        <strong>BUILDER STANDARD · INCLUDED IN BASE PRICE</strong>
+        {includedFixtures.map(item => <p key={item.key}><b>{item.product.productName}</b> · Qty {item.quantity} · Standard selected · $0 variation</p>)}
+        <p>No client action required for these included fixtures.</p>
+      </aside>}
       {baseline.fromInclusions ? (
         <aside className="esw-included" data-testid="electrical-included">
           <strong>Included in your home</strong>
