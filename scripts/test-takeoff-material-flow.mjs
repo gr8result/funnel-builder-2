@@ -338,6 +338,8 @@ async function checkManualSave({ editDuringSave = false, verified = true } = {})
     rememberRecentJob: noop, rememberRecentEstimateFile: noop, setRecentJobs: noop,
     loadRecentEstimateJobs: noop, setRecentEstimateFiles: noop, loadRecentEstimateFiles: noop,
     setLastSavedAt: noop, lastAutosaveSignatureRef: {}, workbookAutosaveSignature: JSON.stringify,
+    // saveDraft writes the stored revision back into the React state as well as the ref.
+    setWorkbook: noop,
   };
   const saveDraft = new Function(...Object.keys(dependencies), `${saveSource}; return saveDraft;`)(...Object.values(dependencies));
   await saveDraft();
@@ -346,7 +348,10 @@ async function checkManualSave({ editDuringSave = false, verified = true } = {})
     assert.notEqual(status.state, 'saved');
   } else {
     assert.equal(savedSignature, JSON.stringify(initial), 'Manual save tracks the live snapshot before storage normalization');
-    assert.equal(JSON.stringify(workbookRef.current) !== savedSignature, editDuringSave, 'Only subsequent edits remain dirty');
+    // After a save the live workbook is the saved draft; storage-only metadata (the fixture's templateName)
+    // is not a content edit, so compare content without it.
+    const liveContent = { ...workbookRef.current, templateName: initial.templateName };
+    assert.equal(JSON.stringify(liveContent) !== savedSignature, editDuringSave, 'Only subsequent edits remain dirty');
   }
 }
 await checkManualSave();

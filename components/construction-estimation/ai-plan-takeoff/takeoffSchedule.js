@@ -106,11 +106,31 @@ function makeRow(section, itemId, category, quantity, unit, extra = {}) {
 }
 
 function createFloorAreaRows(floorplans = [], pixelsPerMm) {
+  const individual = floorplans.map((item, index) => makeRow(
+    'Floor Areas',
+    String(item.id || `floor-area-${index + 1}`),
+    item.label || FLOOR_AREA_LABELS[item.type] || item.type || 'Floor area',
+    polygonAreaM2(item.nodes, pixelsPerMm),
+    'm2',
+    {
+      planSheet: Number(item.page || 1),
+      level: item.level || '',
+      areaType: item.type || 'Other',
+      source: item.source || 'manual',
+      commercialStatus: item.source === 'ai' && item.confirmed !== true ? 'Review required' : 'Approved',
+      reviewRequired: item.source === 'ai' && item.confirmed !== true,
+      notes: item.source === 'ai' && item.confirmed !== true
+        ? 'AI-detected outline: inspect and approve before it can enter Job Setup or quotation.'
+        : 'Measured polygon area.',
+    },
+  ));
   const rows = Object.keys(FLOOR_AREA_LABELS).map((type) => {
-    const quantity = floorplans
-      .filter((item) => item.type === type)
-      .reduce((sum, item) => sum + polygonAreaM2(item.nodes, pixelsPerMm), 0);
-    return makeRow('Floor Areas', `floor_${type}`, FLOOR_AREA_LABELS[type], quantity, 'm2');
+    const matching = individual.filter((item) => item.areaType === type);
+    return makeRow('Floor Area Totals', `floor_${type}`, FLOOR_AREA_LABELS[type], matching.reduce((sum, item) => sum + item.quantity, 0), 'm2', {
+      commercialStatus: matching.some((item) => item.reviewRequired) ? 'Contains unapproved areas' : 'Approved',
+      reviewRequired: matching.some((item) => item.reviewRequired),
+      notes: matching.length ? `${matching.length} measured outline${matching.length === 1 ? '' : 's'}.` : 'No measured outline.',
+    });
   });
 
   const footprint = rows.find((row) => row.itemId === 'floor_Footprint')?.quantity || 0;
@@ -132,7 +152,7 @@ function createFloorAreaRows(floorplans = [], pixelsPerMm) {
   rows.push(makeRow('Floor Areas', 'floor_total_living', 'Total living area', totalLiving, 'm2'));
   rows.push(makeRow('Floor Areas', 'floor_total_under_roof', 'Total under-roof area', footprint, 'm2'));
   rows.push(makeRow('Floor Areas', 'floor_garage_check', 'Garage', garage, 'm2'));
-  return rows;
+  return [...individual, ...rows];
 }
 
 function createFloorFinishRows(finishes = [], pixelsPerMm) {
@@ -1401,6 +1421,7 @@ export function exportScheduleToExcelXml(schedule) {
 export function createQuotePreviewRows(schedule, quoteSheetRows = [], mappings = {}) {
   const rows = flattenScheduleRows(schedule, 'projectTotals')
     .filter((row) => row.section !== 'Windows' && row.section !== 'Doors')
+    .filter((row) => row.reviewRequired !== true && row.commercialStatus !== 'Review required')
     .filter((row) => Number(row.quantity) !== 0)
     .map((row) => {
       const mappedRowId = mappings[row.itemId];
@@ -1475,7 +1496,14 @@ export function createJobSetupPayload(schedule, options = {}) {
   const incomplete = measurements.filter((item) => item.quantity === null);
   report(incomplete, 'This measurement needs a calibrated scale or valid geometry.');
   if (incomplete.length) warnings.push(`${incomplete.length} measurement(s) need calibration or valid geometry before import.`);
-  const usable = measurements.filter((item) => item.quantity !== null);
+  const unapprovedFloorAreas = measurements.filter((item) => item.kind === 'floorArea' && item.source === 'ai' && item.confirmed !== true);
+  report(unapprovedFloorAreas, 'Approve this AI-detected floor-area outline before importing it.');
+  if (unapprovedFloorAreas.length) warnings.push(`${unapprovedFloorAreas.length} AI-detected floor-area outline(s) require approval before Job Setup or quotation.`);
+  const unapprovedDocumentedAreas = (schedule.aiAnalysis?.documentedAreas || []).filter((item) => item.confirmed !== true);
+  report(unapprovedDocumentedAreas, 'Confirm this printed plan area before importing it as a commercial quantity.');
+  if (unapprovedDocumentedAreas.length) warnings.push(`${unapprovedDocumentedAreas.length} printed plan area(s) require confirmation before Job Setup or quotation.`);
+  const usable = measurements.filter((item) => item.quantity !== null
+    && !(item.kind === 'floorArea' && item.source === 'ai' && item.confirmed !== true));
   const unassigned = usable.filter((item) => item.level === 'Unassigned' && ['floorArea', 'wall', 'roofArea', 'eave', 'pillar'].includes(item.kind));
   report(unassigned, 'Assign this plan sheet to a building level before importing level quantities.');
   if (unassigned.length) warnings.push('Assign the measured plan sheets to building levels. A PDF sheet number does not identify a storey.');
@@ -1485,7 +1513,7 @@ export function createJobSetupPayload(schedule, options = {}) {
   add('clientName', schedule.project?.clientName, 'Takeoff client');
   add('projectAddress', schedule.project?.siteAddress, 'Takeoff site address');
 
-  const highestMeasuredLevel = Math.max(0, ...measurements.filter((item) => ['wall', 'floorArea'].includes(item.kind)).map((item) => Object.keys(IMPORT_LEVELS).indexOf(item.level) + 1));
+  const highestMeasuredLevel = Math.max(0, ...usable.filter((item) => ['wall', 'floorArea'].includes(item.kind)).map((item) => Object.keys(IMPORT_LEVELS).indexOf(item.level) + 1));
   if (highestMeasuredLevel > 1) add('floorCount', highestMeasuredLevel === 3 ? 'Three storey' : 'Two storey', 'Highest assigned measured building level');
 
   for (const { key, candidates, conflict } of documentedInputCandidates(schedule.aiAnalysis)) {
@@ -1615,7 +1643,7 @@ export function createJobSetupPayload(schedule, options = {}) {
 
   const plasterRows = [];
   Object.entries(IMPORT_LEVELS).forEach(([level, prefix]) => {
-    const floorplans = measurements.filter((item) => item.kind === 'floorArea' && item.level === level);
+    const floorplans = usable.filter((item) => item.kind === 'floorArea' && item.level === level);
     const floorTypes = { Patio: `${prefix}PatioAreaM2`, Garage: `${prefix}GarageAreaM2`, Alfresco: `${prefix}AlfrescoAreaM2`, Porch: `${prefix}PorchAreaM2` };
     if (prefix !== 'third') Object.assign(floorTypes, { Deck: `${prefix}OtherAreaM2`, Other: `${prefix}OtherAreaM2` });
     if (prefix === 'lower') floorTypes.Balcony = 'lowerOtherAreaM2';
@@ -1630,7 +1658,7 @@ export function createJobSetupPayload(schedule, options = {}) {
     const footprints = floorplans.filter((item) => item.category === 'Footprint');
     // A level with no traced outline still has its areas when the plan's own area table states
     // them clearly. Measured geometry always wins; a printed figure only fills a gap.
-    const stated = (schedule.aiAnalysis?.documentedAreas || []).filter((item) => item.level === level && Number(item.valueM2) > 0);
+    const stated = (schedule.aiAnalysis?.documentedAreas || []).filter((item) => item.confirmed === true && item.level === level && Number(item.valueM2) > 0);
     const statedArea = (type) => {
       const matches = stated.filter((item) => item.type === type);
       return matches.length && new Set(matches.map((item) => item.valueM2)).size === 1 ? matches[0] : null;
@@ -1788,8 +1816,30 @@ report(floorplans.filter((item) => !['Footprint', 'Living'].includes(item.catego
   // One review for both screens: what was established, what a person must decide, and the
   // AI's own technical notes kept apart as diagnostics.
   const review = buildTakeoffReview({ records: measurements, analysis: schedule.aiAnalysis, jobSetupRows: schedule.jobSetupRows });
+  const roomBlockers = (schedule.aiAnalysis?.rooms || []).filter((room) => !room.excluded
+    && (!room.confirmed || room.reviewRequired || !(Number(room.areaM2) > 0)));
+  const commercialBlockers = [
+    ...review.decisions.map((decision) => ({ id: decision.id, title: decision.title, detail: decision.detail })),
+    ...unapprovedFloorAreas.map((item) => ({
+      id: `floor-area:${item.id}`,
+      title: `${item.label || item.category || 'Floor area'} requires approval`,
+      detail: `Sheet ${item.page}: inspect the measured ${item.quantity ?? 'unknown'} ${item.unit || 'm2'} outline and approve or reject it.`,
+    })),
+    ...unapprovedDocumentedAreas.map((item, index) => ({
+      id: `documented-area:${item.id || index}`,
+      title: `${item.label || 'Printed plan area'} requires confirmation`,
+      detail: `Sheet ${item.page}: confirm the printed ${item.valueM2} m2 figure before commercial use.`,
+    })),
+    ...roomBlockers.map((room) => ({
+      id: `room:${room.id}`,
+      title: `${room.name || 'Room'} is not commercially approved`,
+      detail: room.reviewReasons?.join(' ') || 'Draw or inspect the room boundary, then approve or reject it.',
+    })),
+  ];
   return {
     review,
+    commercialReady: commercialBlockers.length === 0,
+    commercialBlockers,
     diagnostics: review.diagnostics,
     projectName: schedule.project?.projectName || '', clientName: schedule.project?.clientName || '', siteAddress: schedule.project?.siteAddress || '',
     planFilename: schedule.project?.planFilename || '',

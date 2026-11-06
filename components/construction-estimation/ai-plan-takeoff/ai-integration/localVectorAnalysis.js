@@ -3,7 +3,7 @@ import { vectorAnalysisFromLinework } from '../geometry/planModelAdapter.js';
 import { normalizePlanAnalysis } from './analysisContract.js';
 import { detectRoomBoundary } from './roomGeometry.js';
 
-const roomLabelPattern = /^(bed(room)?\s*\d*|master bedroom|living( room)?|kitchen|dining|e-?suite|ens(uite)?|wir|robe|bath(room)?|powder|l'?dry|laundry|home office|office|study|pantry|outdoor terrace|terrace|balcony|lobby|store|garage|entry|alfresco|patio)$/i;
+const roomLabelPattern = /^(bed(room)?\s*\d*|master(?:\s+bed(?:room)?)?|living(?:\s+room)?|family|kitchen|dining|media|foyer|entry|hall(?:way)?|e-?suite|ens(?:uite)?|wir|w\.?i\.?r\.?|wil|w\.?i\.?l\.?|robe|linen(?:\s*\d*)?|bath(?:room)?|wc|pwd|powder|l'?dry|laundry|home\s+office|office|study|pan|pantry|workshop|w\/?shop|outdoor\s+terrace|terrace|balcony|lobby|store|garage|alfresco|patio)$/i;
 
 export function roomLabelsFromText(planPage) {
   const labels = (planPage.textItems || []).filter((item) => typeof item.text === 'string' && roomLabelPattern.test(item.text.trim())

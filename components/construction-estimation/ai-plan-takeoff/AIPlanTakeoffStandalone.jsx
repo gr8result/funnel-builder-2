@@ -32,6 +32,7 @@ import {
   flattenScheduleRows,
   getScheduleSignature
 } from './takeoffSchedule';
+import { buildProfessionalTakeoffReportHtml } from './takeoffReport.js';
 
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 const PDFJS_WORKER_SRC = '/pdfjs/pdf.worker.min.mjs';
@@ -197,6 +198,8 @@ function normaliseRecoveredOpening(opening = {}, index = 0) {
 }
 
 function normaliseRecoveredFloorplan(floorplan = {}, index = 0) {
+  const source = floorplan.source || 'manual';
+  const confirmed = floorplan.confirmed === true || source !== 'ai';
   return {
     ...floorplan,
     id: floorplan.id || `recovered-floorplan-${index + 1}`,
@@ -205,7 +208,10 @@ function normaliseRecoveredFloorplan(floorplan = {}, index = 0) {
     label: floorplan.label || floorplan.roomName || floorplan.type || `Recovered area ${index + 1}`,
     type: floorplan.type || 'Room',
     color: floorplan.color || 'rgba(14, 165, 233, 0.12)',
-    stroke: floorplan.stroke || '#0284c7'
+    stroke: floorplan.stroke || '#0284c7',
+    source,
+    confirmed,
+    reviewRequired: source === 'ai' && !confirmed,
   };
 }
 
@@ -3118,7 +3124,10 @@ setSavedRevision(verifiedSave.revision);
         label: conf.label,
         color: conf.color,
         stroke: conf.stroke,
-        nodes: [...activeAreaPolyline]
+        nodes: [...activeAreaPolyline],
+        source: 'manual',
+        confirmed: true,
+        reviewRequired: false,
       };
       setCompletedFloorplans((prev) => [...prev, newFloorplan]);
       setSelectedFloorplanId(newFloorplan.id);
@@ -3252,7 +3261,7 @@ setSavedRevision(verifiedSave.revision);
           if (fp.id === id) {
             const updatedNodes = [...fp.nodes];
             updatedNodes[vertexIndex] = { x: pos.x, y: pos.y };
-            return { ...fp, nodes: updatedNodes };
+            return { ...fp, nodes: updatedNodes, confirmed: false, reviewRequired: true, approvedAt: null };
           }
           return fp;
         }));
@@ -3368,7 +3377,7 @@ setSavedRevision(verifiedSave.revision);
           const p2 = nodes[(vertexIndex + 1) % nodes.length];
           const midPoint = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
           nodes.splice(vertexIndex + 1, 0, midPoint);
-          return { ...fp, nodes };
+          return { ...fp, nodes, confirmed: false, reviewRequired: true, approvedAt: null };
         }
         return fp;
       }));
@@ -3422,7 +3431,7 @@ setSavedRevision(verifiedSave.revision);
       setCompletedFloorplans((prev) => prev.map((fp) => {
         if (fp.id === id && fp.nodes.length > 3) {
           const nodes = fp.nodes.filter((_, idx) => idx !== vertexIndex);
-          return { ...fp, nodes };
+          return { ...fp, nodes, confirmed: false, reviewRequired: true, approvedAt: null };
         }
         return fp;
       }));
@@ -3466,10 +3475,23 @@ setSavedRevision(verifiedSave.revision);
           label: conf.label,
           color: conf.color,
           stroke: conf.stroke
+          , confirmed: false
+          , reviewRequired: true
+          , approvedAt: null
         };
       }
       return fp;
     }));
+  };
+
+  const approveSelectedFloorplan = () => {
+    if (!selectedFp || selectedFp.nodes?.length < 3 || !(calculatePolygonAreaM2(selectedFp.nodes, pixelsPerMm) > 0)) {
+      alert('A valid calibrated floor-area boundary is required before approval.');
+      return;
+    }
+    setCompletedFloorplans((prev) => prev.map((fp) => fp.id === selectedFp.id
+      ? { ...fp, confirmed: true, reviewRequired: false, approvedAt: new Date().toISOString() }
+      : fp));
   };
 
   const updateWallRun = (wallId, changes) => {
@@ -3780,27 +3802,17 @@ setSavedRevision(verifiedSave.revision);
   };
 
   const handleExportPdfSchedule = () => {
-    const rows = flattenScheduleRows(takeoffSchedule, 'projectTotals');
-    const html = `
-      <html>
-        <head><title>Takeoff Schedule</title></head>
-        <body style="font-family: Arial, sans-serif;">
-          <h1>Takeoff Schedule</h1>
-          <p><strong>Project:</strong> ${takeoffSchedule.project.projectName || ''}</p>
-          <p><strong>Client:</strong> ${takeoffSchedule.project.clientName || ''}</p>
-          <p><strong>Site:</strong> ${takeoffSchedule.project.siteAddress || ''}</p>
-          <table border="1" cellspacing="0" cellpadding="5">
-            <thead><tr><th>Section</th><th>Item ID</th><th>Category</th><th>Quantity</th><th>Unit</th></tr></thead>
-            <tbody>${rows.map((row) => `<tr><td>${row.section}</td><td>${row.itemId}</td><td>${row.category}</td><td>${row.quantity}</td><td>${row.unit}</td></tr>`).join('')}</tbody>
-          </table>
-        </body>
-      </html>`;
+    const html = buildProfessionalTakeoffReportHtml(takeoffSchedule);
     const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      printWindow.document.write(html);
-      printWindow.document.close();
-      printWindow.print();
+    if (!printWindow) {
+      setPlatformSaveMessage('The commercial report could not open because the browser blocked the print window.');
+      alert('Allow pop-ups for GR8 Result, then choose Print / Save Commercial PDF Report again.');
+      return;
     }
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
   };
 
   const handleSendToJobSetup = () => {
@@ -3822,6 +3834,17 @@ setSavedRevision(verifiedSave.revision);
       sheetLevels,
     });
     setJobSetupPayload(payload);
+    if (!payload.commercialReady) {
+      const message = [
+        'Takeoff is not ready for commercial transfer.',
+        '',
+        ...payload.commercialBlockers.slice(0, 12).map((item) => `• ${item.title}: ${item.detail}`),
+        ...(payload.commercialBlockers.length > 12 ? [`• ${payload.commercialBlockers.length - 12} more review items`] : []),
+      ].join('\n');
+      setPlatformSaveMessage(`Resolve ${payload.commercialBlockers.length} required review item(s) before exporting to Job Setup.`);
+      alert(message);
+      return;
+    }
     if (embedded && onJobSetupUpdate) {
       Promise.resolve(onJobSetupUpdate(payload)).then((result) => {
         if (result?.ok === false) throw new Error(result.message || 'Job Setup import could not be prepared.');
@@ -3860,6 +3883,19 @@ setSavedRevision(verifiedSave.revision);
   };
 
   const handlePrepareQuotePreview = () => {
+    const payload = createJobSetupPayload(takeoffSchedule, {
+      jobId: platformContext.jobId || openedTakeoffJob?.masterJobId || '',
+      takeoffId: openedTakeoffJob?.takeoffId || '',
+      revision: savedRevision,
+      projectId: openedTakeoffJob?.associatedProjectId || platformContext.projectId || '',
+      sheetLevels,
+    });
+    if (!payload.commercialReady) {
+      setJobSetupPayload(payload);
+      setPlatformSaveMessage(`Resolve ${payload.commercialBlockers.length} required review item(s) before sending quantities to quotation.`);
+      alert(`Takeoff is not ready for quotation. Resolve or reject the ${payload.commercialBlockers.length} required review item(s) shown in the Takeoff review.`);
+      return;
+    }
     setQuotePreviewRows(createQuotePreviewRows(takeoffSchedule, quoteSheetRows, scheduleMappings));
   };
 
@@ -4720,6 +4756,17 @@ setSavedRevision(verifiedSave.revision);
                 {GLASS_TYPE_OPTIONS.filter((option) => option !== 'Unspecified').map((option) => <option key={option} value={option}>{option}</option>)}
               </select>
             </div>
+            <div style={{ fontSize: '12px', color: selectedFp.confirmed ? '#166534' : '#9a3412', fontWeight: 'bold' }}>
+              {selectedFp.confirmed ? 'Approved for commercial quantities' : 'Review required — excluded from Job Setup and quotation'}
+            </div>
+            {!selectedFp.confirmed && (
+              <button
+                onClick={approveSelectedFloorplan}
+                style={{ padding: '7px', background: '#166534', color: '#fff', border: 0, borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+              >
+                Approve measured floor area
+              </button>
+            )}
           </div>
         )}
 
@@ -5422,7 +5469,12 @@ setSavedRevision(verifiedSave.revision);
                 onClick={() => selectOnly('floorplan', fp.id)}
                 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '14px', background: fp.id === selectedFloorplanId ? '#bbdefb' : '#e3f2fd', padding: '6px 8px', borderRadius: '4px', cursor: 'pointer', border: fp.id === selectedFloorplanId ? '1px solid #1976d2' : 'none' }}
               >
-                <span><strong>[Plan] {fp.label}:</strong> {calculatePolygonAreaM2(fp.nodes, pixelsPerMm).toFixed(2)} m²</span>
+                <span>
+                  <strong>[Plan] {fp.label}:</strong> {calculatePolygonAreaM2(fp.nodes, pixelsPerMm).toFixed(2)} m²
+                  <small style={{ display: 'block', color: fp.confirmed ? '#166534' : '#9a3412' }}>
+                    {fp.confirmed ? 'Approved' : 'Review required — not priced'}
+                  </small>
+                </span>
                 <Trash2 size={16} style={{ cursor: 'pointer', color: '#d32f2f' }} onClick={(e) => { e.stopPropagation(); deleteMarkupItem('floorplan', fp.id); }} />
               </div>
             ))}
@@ -5581,7 +5633,7 @@ setSavedRevision(verifiedSave.revision);
           <div style={{ padding: '10px 16px', display: 'flex', gap: '8px', alignItems: 'center', borderBottom: '1px solid #d1d5db', background: '#f3f4f6' }}>
             <button onClick={handleExportExcel} style={{ padding: '8px 10px', background: '#0f766e', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Export Excel</button>
             <button onClick={handleExportCsv} style={{ padding: '8px 10px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Export CSV</button>
-            <button onClick={handleExportPdfSchedule} style={{ padding: '8px 10px', background: '#7c2d12', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Export PDF Schedule</button>
+            <button onClick={handleExportPdfSchedule} style={{ padding: '8px 10px', background: '#7c2d12', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Print / Save Commercial PDF Report</button>
             <button disabled={isRecoveryPreview} onClick={handleSendToJobSetup} style={{ padding: '8px 10px', background: isRecoveryPreview ? '#94a3b8' : '#4b5563', color: '#fff', border: 'none', borderRadius: '4px', cursor: isRecoveryPreview ? 'not-allowed' : 'pointer', fontWeight: 'bold' }}>Export Takeoff to Job Setup</button>
             <button disabled={isRecoveryPreview} onClick={handlePrepareQuotePreview} style={{ padding: '8px 10px', background: isRecoveryPreview ? '#94a3b8' : (quoteSheetOutOfDate ? '#f57c00' : '#111827'), color: '#fff', border: 'none', borderRadius: '4px', cursor: isRecoveryPreview ? 'not-allowed' : 'pointer', fontWeight: 'bold' }}>
               {quoteSheetOutOfDate ? 'Update from Takeoff' : 'Send to Quote Sheet'}
@@ -5633,7 +5685,7 @@ setSavedRevision(verifiedSave.revision);
               {renderScheduleRows('Roof Areas', takeoffSchedule.projectTotals.roofAreas)}
               {renderScheduleRows('Roof and Eaves', takeoffSchedule.projectTotals.roofAndEaves)}
               {renderScheduleRows('Floor Finishes', takeoffSchedule.projectTotals.floorFinishes)}
-              {renderScheduleRows('Rooms and Measurements', takeoffSchedule.projectTotals.rooms)}
+              {renderScheduleRows('Room-by-room areas and approved finishes', takeoffSchedule.projectTotals.rooms)}
               {renderScheduleRows('Custom Takeoffs', takeoffSchedule.projectTotals.customTakeoffs)}
             </div>
 

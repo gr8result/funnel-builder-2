@@ -74,7 +74,7 @@ function sampleAlong(pieces, other, options) {
         const hit = project(point, candidate.a, candidate.b);
         if (hit.distance <= options.wallReachMm && (!best || hit.distance < best.distance)) best = { candidate, distance: hit.distance };
       }
-      samples.push({ point, t, match: best });
+      samples.push({ point, t, wall: piece.wall, match: best });
     }
     return { piece, length, samples };
   });
@@ -117,13 +117,31 @@ export function compareWalls(reference, detected, overrides = {}) {
   // Thickness and category, length-weighted over matched reference samples.
   const thicknessErrors = [];
   let categoryChecked = 0, categoryAgreed = 0;
+  const categoryByWall = new Map();
   for (const { piece, length, samples } of ref) {
     const unit = length / samples.length;
     for (const sample of samples) {
       if (!sample.match) continue;
       const found = sample.match.candidate.wall;
       if (Number.isFinite(found.thicknessMm) && Number.isFinite(piece.wall.thicknessMm)) thicknessErrors.push(Math.abs(found.thicknessMm - piece.wall.thicknessMm));
-      if (piece.wall.category) { categoryChecked += unit; if (found.category === piece.wall.category) categoryAgreed += unit; }
+      if (piece.wall.category) {
+        categoryChecked += unit;
+        if (found.category === piece.wall.category) categoryAgreed += unit;
+        const categoryRow = categoryByWall.get(piece.wall.id) || {
+          wallId: piece.wall.id,
+          expected: piece.wall.category,
+          checkedMm: 0,
+          mismatchMm: 0,
+          detectedCategories: {},
+          detectedThicknesses: {},
+        };
+        categoryRow.checkedMm += unit;
+        if (found.category !== piece.wall.category) categoryRow.mismatchMm += unit;
+        categoryRow.detectedCategories[found.category || 'unclassified'] = (categoryRow.detectedCategories[found.category || 'unclassified'] || 0) + unit;
+        const thickness = Number.isFinite(Number(found.thicknessMm)) ? Math.round(Number(found.thicknessMm)) : 'unknown';
+        categoryRow.detectedThicknesses[thickness] = (categoryRow.detectedThicknesses[thickness] || 0) + unit;
+        categoryByWall.set(piece.wall.id, categoryRow);
+      }
     }
   }
   const offsets = ref.flatMap(({ samples }) => samples.filter((sample) => sample.match).map((sample) => sample.match.distance));
@@ -149,6 +167,15 @@ export function compareWalls(reference, detected, overrides = {}) {
     readWalls: readWalls.length, falseWalls: readWalls.filter((wall) => wall.share < 0.5).map((wall) => ({ id: wall.id, lengthMm: Math.round(wall.lengthMm), supportedShare: wall.share })),
     missed: stretches(ref, (sample) => sample.match, options),
     extra: stretches(det, (sample) => sample.match, options),
+    categoryMismatches: [...categoryByWall.values()]
+      .filter((item) => item.mismatchMm >= options.minMissedRunMm)
+      .map((item) => ({
+        ...item,
+        checkedMm: Math.round(item.checkedMm),
+        mismatchMm: Math.round(item.mismatchMm),
+        detectedCategories: Object.fromEntries(Object.entries(item.detectedCategories).map(([key, value]) => [key, Math.round(value)])),
+        detectedThicknesses: Object.fromEntries(Object.entries(item.detectedThicknesses).map(([key, value]) => [key, Math.round(value)])),
+      })),
   };
 }
 

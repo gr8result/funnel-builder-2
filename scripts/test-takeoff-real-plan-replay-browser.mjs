@@ -610,7 +610,14 @@ try {
     report.cases.exportScale = (await snapshot()).pixelsPerMm;
     await button('Takeoff Schedule', true);
     await button('Send to Quote Sheet');
-    await page.waitForFunction(() => [...document.querySelectorAll('tr')].some(row => row.textContent.includes('Floor Tiling') && row.querySelector('select')));
+    if (process.env.TAKEOFF_EXPECT_COMMERCIAL_BLOCK === '1') {
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      const blockingDialog = report.dialogs.find(message => message.includes('not ready for quotation'));
+      assert.match(blockingDialog, /Resolve or reject the \d+ required review item/);
+      assert.equal(await page.$('[data-testid="approved-room-quote-mapping"]'), null, 'No quote mapping is prepared while required review remains.');
+      report.cases.commercialGate = { blocked: true, message: blockingDialog };
+    } else {
+      await page.waitForFunction(() => [...document.querySelectorAll('tr')].some(row => row.textContent.includes('Floor Tiling') && row.querySelector('select')));
     await page.evaluate(name => { const row=[...document.querySelectorAll('tr')].find(row=>row.textContent.includes(name)&&row.textContent.includes('Floor Tiling')&&row.querySelector('select')); if(!row)throw Error('Approved laundry quantity missing from quote preview');row.querySelector('select').setAttribute('data-testid','approved-room-quote-mapping'); }, laundryDetected.name);
     await page.select('[data-testid="approved-room-quote-mapping"]','takeoff-browser-room-check');
     await settle();
@@ -655,6 +662,7 @@ try {
     report.cases.quotationDisplayedRow = await page.$eval('[data-quote-row="takeoff-browser-priced-check"]', row => ({ text: row.innerText, inputs: [...row.querySelectorAll('input')].map(input => input.value) }));
     assert.ok(report.cases.quotationDisplayedRow.text.includes(new Intl.NumberFormat('en-AU', {style:'currency', currency:'AUD'}).format(priced.cost)), 'quotation UI displays the calculated cost');
     await page.screenshot({ path: path.join(out, '7-job-setup-import.png') });
+    }
   }
   assert.deepEqual(report.errors, [], 'No browser runtime errors');
   report.ok = true;

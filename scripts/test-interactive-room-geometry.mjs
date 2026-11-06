@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
-import { detectRoomBoundary, measureRoom, roomQuantityRows, roomContains, validateRoomSet } from '../components/construction-estimation/ai-plan-takeoff/ai-integration/roomGeometry.js';
+import { detectRoomBoundary, approveRoom, measureRoom, roomQuantityRows, roomContains, validateRoomSet } from '../components/construction-estimation/ai-plan-takeoff/ai-integration/roomGeometry.js';
 import { mergeRoomReadings } from '../components/construction-estimation/ai-plan-takeoff/ai-integration/roomSchedule.js';
 import { restoreAnalysisCoordinates } from '../components/construction-estimation/ai-plan-takeoff/ai-integration/analysisPages.js';
 import { createTakeoffSchedule, createJobSetupPayload, createQuotePreviewRows, applyQuotePreviewRows } from '../components/construction-estimation/ai-plan-takeoff/takeoffSchedule.js';
 const polygon=[{x:0,y:0},{x:40,y:0},{x:40,y:30},{x:0,y:30}];
-const room=measureRoom({id:'bath',page:2,level:'Ground Floor',name:'Main Bathroom',polygon,confidence:0.99,boundaryClosed:true,actions:['Floor Tiling']},0.01);
+const room=approveRoom(measureRoom({id:'bath',page:2,level:'Ground Floor',name:'Main Bathroom',polygon,confidence:0.99,boundaryClosed:true,actions:['Floor Tiling']},0.01));
 assert.equal(room.areaM2,12);assert.equal(room.perimeterM,14);assert.equal(room.reviewRequired,false);
 assert(roomContains(polygon,{x:20,y:15}));assert(!roomContains(polygon,{x:50,y:15}));
 assert.equal(measureRoom(room,0.02).areaM2,3);
@@ -14,10 +14,10 @@ assert(measureRoom({...room,polygon:[polygon[0],polygon[2],polygon[1],polygon[3]
 assert(measureRoom({...room,printedAreaM2:20},0.01).reviewRequired);
 assert(measureRoom({...room,dimensionReferences:[{p1:{x:0,y:0},p2:{x:40,y:0},valueMm:3000,basis:'OBSERVED',confidence:0.99}]},0.01).reviewRequired);
 assert(validateRoomSet([room,{...room,id:'duplicate'}]).every(r=>r.reviewRequired),'Overlapping rooms are withheld');
-assert(validateRoomSet([room,{...room,id:'adjacent',polygon:polygon.map(p=>({...p,x:p.x+40}))}]).every(r=>!r.reviewRequired),'Shared edges do not count as overlaps');
+assert(validateRoomSet([room,approveRoom({...room,id:'adjacent',polygon:polygon.map(p=>({...p,x:p.x+40}))})]).every(r=>!r.reviewRequired),'Shared edges do not count as overlaps');
 assert.equal(roomQuantityRows([{...room,actions:['Painting'],wallHeightM:2.4}])[0].quantity,33.6);
 assert.equal(roomQuantityRows([{...room,actions:['Painting'],wallHeightM:2.4}])[0].unit,'m²');
-const changed=measureRoom({...room,polygon:[{x:0,y:0},{x:50,y:0},{x:50,y:30},{x:0,y:30}]},0.01);
+const changed=approveRoom(measureRoom({...room,polygon:[{x:0,y:0},{x:50,y:0},{x:50,y:30},{x:0,y:30}]},0.01));
 const schedule=createTakeoffSchedule({aiAnalysis:{rooms:[changed]},totalPages:2,currentPage:2,pixelsPerMm:0.01,sheetLevels:{2:'Ground Floor'}});
 assert.equal(createJobSetupPayload(schedule).dataInputFields.floorFinishTilesM2,15);
 const preview=createQuotePreviewRows(schedule,[{id:'quote-tiles',category:'Main Bathroom — Floor Tiling',quantity:1}]);
