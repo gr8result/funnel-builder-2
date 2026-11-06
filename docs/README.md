@@ -9,7 +9,6 @@ scraped pages) lives outside this tree — see [Where the generated files went](
 |---|---|
 | [`architecture/`](architecture/) | System architecture, schemas, field maps, and the platform modularisation programme |
 | [`catalogue/`](catalogue/) | Product Library / master catalogue documentation and generated import reports |
-| [`freedom/`](freedom/) | Freedom Trader module reports (holdings, trades, access repairs) |
 | [`security/`](security/) | Security triage and route-access reviews |
 | [`reports/`](reports/) | One-off repair and incident reports |
 | (root of `docs/`) | Dated working notes and per-feature audits |
@@ -50,12 +49,6 @@ full history of each one. The moves follow the plan already written in
 | `PRODUCT_LIBRARY_CSV_IMPORT_GUIDE.md` | `docs/catalogue/` |
 | `PRODUCT_LIBRARY_SYNC_IMPLEMENTATION_REPORT.md` | `docs/catalogue/` |
 | `PRODUCT_LIBRARY_TAXONOMY_CORRECTION_REPORT.md` | `docs/catalogue/` |
-| `CMC_ORDERS_IMPORT_REPORT.md` | `docs/freedom/` |
-| `FREEDOM_ACCESS_REPAIR_REPORT.md` | `docs/freedom/` |
-| `FREEDOM_CMC_HOLDINGS_UPDATE_REPORT.md` | `docs/freedom/` |
-| `FREEDOM_MY_TRADES_REPAIR_REPORT.md` | `docs/freedom/` |
-| `FREEDOM_TIGER_HOLDINGS_UPDATE_REPORT.md` | `docs/freedom/` |
-| `HOLDINGS_DASHBOARD_IMPLEMENTATION.md` | `docs/freedom/` |
 | `UNAUTHENTICATED_ROUTE_TRIAGE.md` | `docs/security/` |
 | `JOB_PERSISTENCE_REPAIR_REPORT.md` | `docs/reports/` |
 | `RECOVERY_COPY_ON_WRITE_REPAIR.md` | `docs/reports/` |
@@ -71,10 +64,9 @@ full history of each one. The moves follow the plan already written in
 | `supabase-schema.sql` | `supabase/supabase-schema.sql` | Belongs with the rest of the Supabase definitions |
 | `docker-compose*.yml`, `ecosystem.config.cjs`, `reset-dev.ps1` | [`deploy/`](../deploy/) | See `deploy/README.md` for how to run them from the new location |
 | `emailQueueWorker.js` | `platform-core/notifications/emailQueueWorker.js` | Platform service, not a root script |
-| `verify-holdings.js`, `agent.js` | `scripts/` | One-off helper scripts |
+| `agent.js` | `scripts/` | One-off helper script |
 | `test-artifacts/`, `test-results/` | [`artifacts/`](../artifacts/) | Both are test output — see `artifacts/README.md` |
 | `backups/`, `2208a52a-8175-477e-823c-fc6de7fe4afe/` | [`archive/`](../archive/) | Local one-off snapshots — see `archive/README.md` |
-| `eng.traineddata` | `.cache/tesseract/` (git-ignored) | tesseract.js download cache; `lib/freedom/tradeImport.js` now sets `cachePath` so it lands there |
 
 ### Renamed
 

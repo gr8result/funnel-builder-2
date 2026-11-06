@@ -10,6 +10,16 @@
 - M1 implementation commit: `1cdab216d19a33782077826a6b2ab51cd91e039e`
 - Precedes: M2 (enforcement adoption). No security wrapper has been applied.
 
+> **Status update, 2026-11-07 — Freedom Investment removed.** The Freedom Investment module
+> (all `/api/freedom/*`, `/api/freedom-trader/*`, `/api/freedom-portfolio/*` and
+> `/api/freedom-investment/*` routes, the `freedom` entitlement and its pages, components and
+> libraries) has been deleted from GR8 Result and preserved in a separate local archive.
+> Every Freedom route in this report is **historical / removed** and no longer reachable in this
+> codebase. The findings are kept as an audit record: if any of that code is restored elsewhere,
+> the issues listed here (no authentication, service-role database access, paid-API exposure)
+> must be fixed before it is deployed. Route counts and batch sizes below are as audited on
+> 2026-09-04 and still include the removed Freedom routes.
+
 ## Protected pre-existing work — untouched
 
 | Item | Count |
@@ -50,6 +60,10 @@ So the exposed surface is **138 routes, not 89**. The 89 are classified in full 
 
 ### 1.2 The single most serious finding
 
+> **Historical / removed (2026-11-07):** this route was deleted with the Freedom Investment module
+> and is no longer exposed. Removing the code does not remove the tables listed below; any that
+> still exist in the database keep their own RLS settings and should be reviewed separately.
+
 **`/api/freedom/[resource]` — one unauthenticated endpoint exposing 36 database tables to full CRUD.**
 
 - Methods: `GET`, `POST`, `PUT`, `PATCH`, `DELETE` (file lines 62, 93, 100, 118)
@@ -66,7 +80,7 @@ So the exposed surface is **138 routes, not 89**. The 89 are classified in full 
 `portfolios`, `portfolio_holdings`, `transactions`, `cash_balance` and `performance_history` are
 financial position records. Anyone who can reach the URL can read, modify or delete them.
 
-### 1.3 Freedom is worse than previously reported
+### 1.3 Freedom is worse than previously reported (historical — Freedom removed 2026-11-07)
 
 The earlier statement was "32 of 33 Freedom routes are unauthenticated". Measured against genuine
 auth signals, the true figure is **33 of 33**. The one route previously counted as authenticated
@@ -265,7 +279,11 @@ and `DELETE` with identical (absent) protection, so read and destructive access 
 
 ---
 
-## 4. Freedom security table — all 33 routes
+## 4. Freedom security table — all 33 routes (historical / removed)
+
+> **Removed 2026-11-07.** None of the routes in this section exist in GR8 Result any more. Rows 28–46
+> in §2 and the `freedom*` entries in §3.1, §3.6 and §5 refer to the same removed routes. The table is
+> kept as the security record for the archived code.
 
 **Genuine authentication: 0 of 33.** No Freedom route touches `accounts`, `profiles` or `workspaces`,
 so there is no per-user or per-workspace isolation either. Every route below requires the `freedom`
@@ -344,7 +362,7 @@ server-held API keys. Anyone can drive billable usage.
 | `/api/website/lead-capture` | insert | website_leads | Public lead capture — acceptable, needs rate limiting |
 | `/api/founding-growth-partner/interest` | insert | founding_growth_partner_enquiries | Public enquiry form — acceptable, needs rate limiting |
 
-**Highest priority for M2:** `freedom/[resource]`, `automation/flows/[id]/reset`,
+**Highest priority for M2:** `freedom/[resource]` (removed 2026-11-07), `automation/flows/[id]/reset`,
 `marketplace-user-upsert`, `lists/intake/[listId]`, `lead/submit`, and the four Twilio/SMSGlobal
 webhooks.
 
@@ -420,7 +438,7 @@ involved, this group deserves review in the same batch as the unauthenticated af
 
 | Batch | Scope | Routes | Rationale |
 |---|---|---:|---|
-| **M2.1** | Freedom lockdown | 33 | Highest severity. Authenticate all, then apply `freedom`. `freedom/[resource]` first |
+| ~~**M2.1**~~ | ~~Freedom lockdown~~ | 33 | **No longer needed — Freedom removed 2026-11-07.** Originally: highest severity; authenticate all, then apply `freedom`, `freedom/[resource]` first |
 | **M2.2** | Unauthenticated writes | 23 | Stops anonymous data mutation |
 | **M2.3** | Webhook signatures | 10 | Twilio, SMSGlobal, second SendGrid consumer |
 | **M2.4** | Service-role without session | 34 | The miscounted set from section 3.1; includes auth and password-reset primitives |
@@ -451,13 +469,13 @@ M2.1 through M2.3 close active exposure and should not wait on the entitlement r
 
 | # | Question | Why it needs an owner decision |
 |---|---|---|
-| 1 | Is Freedom's data shared by design today? | 33 routes have no tenancy. Determines whether M5A backfills one workspace or many |
+| 1 | ~~Is Freedom's data shared by design today?~~ | **Resolved — Freedom removed 2026-11-07.** Originally: 33 routes have no tenancy; determined whether M5A backfills one workspace or many |
 | 2 | `/api/marketplace-user-upsert` creates users unauthenticated — is this the intended signup path? | Determines public-with-verification versus authenticated |
 | 3 | `/api/affiliate/login` issues access via service role | Needs a defined session model before it can be wrapped |
 | 4 | `/api/marketplace-password-reset/*` | Credential reset flow; confirm the token model before changing |
 | 5 | `/api/lists/intake/[listId]` uses `list_api_keys` | Is this a public intake API for customers? If so it needs documented key auth, not a login |
 | 6 | `/api/standard-inclusions/onlyoffice/callback` | OnlyOffice document callback; confirm the expected verification |
-| 7 | Delete `/api/_debug-env` and the four Freedom test endpoints? | Recommend yes |
+| 7 | Delete `/api/_debug-env` and the four Freedom test endpoints? | Recommend yes. The Freedom test endpoints were removed with Freedom on 2026-11-07; `/api/_debug-env` still needs a decision |
 | 8 | Commit the deletion of `pages/api/affiliate/links,.js`? | Tracked, absent from disk, comma in filename |
 | 9 | Which routes may keep service-role access after M2? | Some legitimately need it; each should be justified |
 

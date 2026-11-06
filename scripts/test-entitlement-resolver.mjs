@@ -35,7 +35,7 @@ const eq = (a, b, msg) => { assert.deepEqual(a, b, msg); checks += 1; };
     "product_library_read", "client_selections", "standard_inclusions",
     "boq", "variations", "supplier_procurement", "document_vault",
     "rfi_reports", "gantt_chart", "job_board", "client_portal",
-    "freedom", "leads", "crm", "website_builder",
+    "leads", "crm", "website_builder",
   ];
   for (const code of approved) {
     ok(Object.values(MODULE_CODES).includes(code), `${code} must be an approved module code`);
@@ -68,10 +68,6 @@ ok(!ALL_MODULE_CODES.includes("job_details"), "job_details must not exist as a c
 
   ok(!BUNDLES.builder_suite.includes("estimating_catalogue"),
     "estimating_catalogue is granted, not bundled directly");
-  for (const members of Object.values(BUNDLES)) {
-    ok(!members.includes("freedom"), "freedom must appear in no bundle");
-  }
-
   ok(isBundleCode("builder_suite"), "builder_suite is a bundle");
   ok(!isBundleCode("estimate_builder"), "estimate_builder is a module, not a bundle");
 
@@ -86,7 +82,6 @@ ok(!ALL_MODULE_CODES.includes("job_details"), "job_details must not exist as a c
   const out = expandBundles(new Set(["builder_suite"]));
   for (const m of BUNDLES.builder_suite) ok(out.has(m), `builder_suite must expand to include ${m}`);
   ok(out.has("builder_suite"), "the bundle code itself is retained so its origin stays visible");
-  ok(!out.has("freedom"), "builder_suite must not confer freedom");
 }
 
 // -------------------------------------------------------------------- grants
@@ -131,7 +126,6 @@ ok(!ALL_MODULE_CODES.includes("job_details"), "job_details must not exist as a c
   ok(suite.has("estimating_catalogue"), "builder_suite reaches estimating_catalogue through a grant");
   ok(suite.has("product_library_read"), "builder_suite reaches product_library_read through a grant");
   ok(suite.has("client_portal"), "builder_suite includes client_portal");
-  ok(!suite.has("freedom"), "builder_suite must never confer freedom");
   ok(!suite.has("crm"), "builder_suite must not confer crm");
 }
 
@@ -178,7 +172,6 @@ ok(!ALL_MODULE_CODES.includes("job_details"), "job_details must not exist as a c
   const none = resolveEntitlements({});
   eq(none.modules.size, 0, "no input must yield no entitlements");
   ok(!none.has("estimate_builder"), "empty entitlement set grants nothing");
-  ok(!hasModuleAccess({}, "freedom"), "hasModuleAccess is closed by default");
 }
 
 // ------------------------------------------------------------ server resolver
@@ -200,7 +193,6 @@ ok(!ALL_MODULE_CODES.includes("job_details"), "job_details must not exist as a c
   eq(suite.planId, "professional", "resolver reports the plan id");
   ok(suite.has("estimate_builder"), "ws-suite may use estimate_builder");
   ok(suite.has("product_library_read"), "ws-suite reaches granted codes");
-  ok(!suite.has("freedom"), "ws-suite may not use freedom");
 
   ok(await resolver.workspaceHasModule("ws-suite", "boq"), "workspaceHasModule resolves true");
   ok(!(await resolver.workspaceHasModule("ws-leads", "crm")), "leads-only workspace has no crm");

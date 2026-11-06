@@ -4,7 +4,6 @@ dotenv.config({path:'.env.local',quiet:true});dotenv.config({path:'.env',quiet:t
 const url=process.env.NEXT_PUBLIC_SUPABASE_URL;
 const admin=createClient(url,process.env.SUPABASE_SERVICE_ROLE_KEY||process.env.SUPABASE_SERVICE_KEY,{auth:{persistSession:false}});
 const authClient=createClient(url,process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,{auth:{persistSession:false}});
-const before=fs.readFileSync('tmp/freedom-trades.json');
 const users=await admin.auth.admin.listUsers({perPage:1000});if(users.error)throw users.error;
 const user=users.data.users.filter(u=>u.email_confirmed_at && isDeveloperEmail(u.email)).sort((a,b)=>Date.parse(b.last_sign_in_at||0)-Date.parse(a.last_sign_in_at||0))[0];
 if(!user)throw Error('No existing verified platform admin found');

@@ -31,9 +31,6 @@ export const MODULE_CODES = Object.freeze({
   JOB_BOARD: "job_board",
   CLIENT_PORTAL: "client_portal",
 
-  // Independent
-  FREEDOM: "freedom",
-
   // Sales / marketing
   LEADS: "leads",
   CRM: "crm",
