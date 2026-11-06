@@ -70,7 +70,7 @@ assert.deepEqual(provider.text.format.schema.required, TAKEOFF_EVIDENCE_SCHEMA.r
 assert.equal(provider.input[0].content.filter((item) => item.type === 'input_image').length, 2, 'every supplied sheet is read together');
 const measureRequest = validateTakeoffAnalysisRequest({ ...base, action: 'measure', measurementScope: 'geometry', pixelsPerMm: 0.02, planEvidence: compactPlanEvidence(evidence, defaults) });
 assert.ok(buildTakeoffProviderRequest(measureRequest, 'gpt-5.4').input[0].content.some((item) => item.type === 'input_text' && /^PLAN-SET EVIDENCE/.test(item.text)), 'the geometry half is no longer measured from an isolated image');
-assert.match(buildTakeoffProviderRequest(measureRequest, 'gpt-5.4').input[0].content[0].text, /ALWAYS return exactly one Footprint polygon/);
+assert.match(buildTakeoffProviderRequest(measureRequest, 'gpt-5.4').input[0].content[0].text, /On a floor-plan page return exactly one Footprint polygon/);
 assert.throws(() => validateTakeoffAnalysisRequest({ ...base, action: 'inspect', planEvidence: {} }), /planEvidence/);
 
 // ---- Calibration: the estimator's calibration is authoritative ------------------------------------
@@ -123,10 +123,10 @@ const hinged = canonical.placedOpenings.find((item) => item.widthMm === 820);
 assert.deepEqual([hinged.heightMm, hinged.subType, hinged.location], [2040, 'Internal', 'BED 2'], 'a door with only its width printed takes the plan-set door height and its room');
 assert.equal(canonical.placedOpenings.find((item) => item.widthMm === 720).subType, 'Cavity');
 const far = byTag('0612');
-assert.equal(far.hostWallId, '', 'an opening with no wall nearby is still counted');
-assert.equal(canonical.placedOpenings.length, 5, 'every observed opening is counted');
+assert.equal(far, undefined, 'an opening with no nearby host is withheld');
+assert.equal(canonical.placedOpenings.length, 4, 'only uniquely hosted openings enter accepted geometry');
 assert.equal(canonical.completedEaves[0].widthMm, 600, 'the Job Setup eave width fills an undocumented eave');
-assert.deepEqual(output.analysis.review.filter((item) => item.audience === 'decision').map((item) => item.code), ['evidence-conflict'], 'the only decision is the ceiling height the two sheets disagree about');
+assert.deepEqual(output.analysis.review.filter((item) => item.audience === 'decision').map((item) => item.code), ['evidence-conflict'], 'the conflicting ceiling height requires confirmation');
 
 // What the estimator already traced is authoritative: nothing is added a second time.
 const existing = {
@@ -148,7 +148,7 @@ const traced = { completedWallRuns: [...existing.completedWallRuns, { id: 'manua
 output = normalize({ ...context, ...traced });
 canonical = convertAiTakeoffDetections(output.batch, { ...context, ...traced });
 assert.equal(canonical.completedWallRuns.length, 0, 'an unmatched AI wall is not added beside the estimator trace');
-assert.deepEqual(canonical.placedOpenings.map((item) => item.type), ['door', 'door'], 'unmatched AI windows are not added to a sheet whose windows are already placed; its doors, which the estimator has not placed, are');
+assert.deepEqual(canonical.placedOpenings.map((item) => item.type), [], 'doors whose only possible manual host is spatially distant are withheld');
 assert.deepEqual(output.analysis.notAdded.map((item) => item.kind).sort(), ['opening', 'opening', 'wall']);
 assert.equal(output.analysis.review.filter((item) => item.code === 'possible-missing-openings' && item.audience === 'decision').length, 2, 'each possible missed opening is put to the builder, by room');
 assert.ok(!output.analysis.review.some((item) => item.code === 'possible-missing-walls'), 'a shorter AI measurement than the trace raises nothing');
@@ -162,13 +162,13 @@ assert.equal(canonical.placedOpenings.find((item) => item.widthMm === 820).heigh
 
 // ---- The builder review ---------------------------------------------------------------------------
 const takeoff = { ...canonical, completedMeasurements: [], pixelsPerMm: 0.1, totalPages: 1, sheetLevels: { 1: 'Ground Floor' }, scheduleState: { aiAnalysis: output.analysis } };
-let payload = createJobSetupPayload(createTakeoffSchedule(takeoff), { sheetLevels: takeoff.sheetLevels });
+let payload = createJobSetupPayload(createTakeoffSchedule(takeoff), { sheetLevels: takeoff.sheetLevels, reviewOnly: true });
 const ids = payload.review.decisions.map((item) => item.id);
-assert.deepEqual(ids, ['external-wall-type:Ground Floor', 'ceiling-height:Ground Floor', 'internal-wall-type', 'door-height', 'opening-size', 'opening-wall', 'eave-width'], 'each open question appears once, whatever the number of walls or openings behind it');
+assert.deepEqual(ids, ['external-wall-type:Ground Floor', 'ceiling-height:Ground Floor', 'internal-wall-type', 'door-height', 'opening-size', 'eave-width'], 'each open question appears once, whatever the number of walls or openings behind it');
 assert.ok(payload.review.decisions.every((item) => item.title && item.detail && item.action?.type), 'every review item says what to confirm and how');
 assert.ok(payload.review.diagnostics.some((text) => /Wall thicknesses are not legible/.test(text)), 'the AI notes are kept, as diagnostics');
 assert.ok(!payload.warnings.some((text) => /not legible|manual default|not documented/.test(text)), 'AI diagnostics are never Job Setup warnings');
-assert.ok(payload.review.checklist.some((item) => /3 windows identified/.test(item.label)));
+assert.ok(payload.review.checklist.some((item) => /2 windows identified/.test(item.label)));
 assert.ok(payload.review.checklist.some((item) => /2 internal doors identified \(1 cavity\/sliding\)/.test(item.label)));
 
 // Answering a review item changes the objects it names; the item then clears on its own.
@@ -180,8 +180,8 @@ answer('door-height', 2040);
 answer('eave-width', 600);
 assert.deepEqual([takeoff.completedWallRuns[0].exteriorType, takeoff.completedWallRuns[0].frameThicknessMm, takeoff.completedWallRuns[0].wallHeightM], ['Rendered Brick Veneer', 70, 2.7]);
 assert.deepEqual([takeoff.completedWallRuns[1].thicknessMm, takeoff.completedWallRuns[1].constructionSystem], [90, 'internal_timber_frame'], 'a 90 mm internal wall stays a 90 mm wall');
-payload = createJobSetupPayload(createTakeoffSchedule(takeoff), { sheetLevels: takeoff.sheetLevels });
-assert.deepEqual(payload.review.decisions.map((item) => item.id), ['opening-size', 'opening-wall'], 'only what genuinely cannot be established remains');
+payload = createJobSetupPayload(createTakeoffSchedule(takeoff), { sheetLevels: takeoff.sheetLevels, reviewOnly: true });
+assert.deepEqual(payload.review.decisions.map((item) => item.id), ['opening-size'], 'only what genuinely cannot be established remains');
 assert.equal(payload.dataInputFields.lowerInternal90mmWallsLm > 0, true, '90 mm internal framing reaches its own Job Setup quantity');
 assert.deepEqual(applyReviewDecision({ action: { field: 'heightMm', targets: ['x'] } }, 99999, takeoff), {}, 'an implausible answer changes nothing');
 
@@ -203,7 +203,7 @@ assert.equal(rows.floor_total_under_roof, 49, 'gross footprint is reported separ
 assert.equal(createJobSetupPayload(schedule, {}).dataInputFields.lowerFloorAreaM2, 45);
 const printed = { completedFloorplans: [area('g', 'Garage', square(100, 100, 300, 300))], pixelsPerMm: 0.1, totalPages: 1, sheetLevels: { 1: 'Ground Floor' },
   scheduleState: { aiAnalysis: { review: [], documentedAreas: [{ level: 'Ground Floor', type: 'Living', valueM2: 148.02, label: 'GND FL LIVING AREA', page: 2 }, { level: 'Ground Floor', type: 'Garage', valueM2: 40.23, label: 'GARAGE AREA', page: 2 }, { level: 'Second Level', type: 'Balcony', valueM2: 16.37, label: 'BALCONY AREA', page: 2 }] } } };
-const printedFields = createJobSetupPayload(createTakeoffSchedule(printed), {}).dataInputFields;
+const printedFields = createJobSetupPayload(createTakeoffSchedule(printed), { reviewOnly: true }).dataInputFields;
 assert.equal(printedFields.lowerFloorAreaM2, 148.02, 'with no outline traced, the living area printed in the plan area table is used');
 assert.equal(printedFields.lowerGarageAreaM2, 4, 'measured geometry always wins over a printed figure');
 assert.equal(printedFields.balconyAreaM2, 16.37);

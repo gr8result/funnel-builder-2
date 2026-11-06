@@ -23,7 +23,7 @@ assert.equal(request.measurementScope, 'rooms');
 for (const action of ['inspect', 'refine']) assert.throws(() => validateTakeoffAnalysisRequest({ ...payload, action }), error => error.status === 400, `${action} cannot be a rooms request`);
 const provider = buildTakeoffProviderRequest(request, DEFAULT_TAKEOFF_MODEL);
 const properties = provider.text.format.schema.properties;
-for (const key of ['walls', 'openings', 'buildingAreas', 'pillars', 'eaves', 'fixtures', 'documentedQuantities']) assert.equal(properties[key].maxItems, 0, `${key} cannot be returned by a rooms read`);
+for (const key of ['walls', 'openings', 'buildingAreas', 'pillars', 'eaves', 'roofMeasurements', 'fixtures', 'documentedQuantities']) assert.equal(properties[key].maxItems, 0, `${key} cannot be returned by a rooms read`);
 assert(properties.rooms.maxItems > 0);
 const promptText = provider.input[0].content.filter(part => part.type === 'input_text').map(part => part.text).join('\n');
 assert(/ROOM NAMES/.test(promptText) && /Do not measure or trace anything/.test(promptText) && /Ground Floor/.test(promptText));
@@ -33,13 +33,13 @@ assert.equal(provider.reasoning.effort, 'low'); assert.equal(provider.max_output
 pass('a rooms request asks only for room names and can return nothing else');
 
 // ---- the read: one provider request per floor-plan sheet ----
-const room = (page, name, x, y) => ({ page, name, x, y, basis: 'OBSERVED', confidence: 0.95, evidence: `"${name.toUpperCase()}" lettered on the plan.` });
+const room = (page, name, x, y) => ({ page, name, x, y, nodes: [], showerWallNodes: [], ceilingHeightMm: null, splashbackLengthM: null, splashbackHeightMm: null, basis: 'OBSERVED', confidence: 0.95, evidence: `"${name.toUpperCase()}" lettered on the plan.` });
 // The room labels on a two-storey plan set: sheet 2 is the ground floor, sheet 3 the upper floor.
 const model = {
   2: ['Alfresco', 'Family', 'Dining', 'Kitchen', 'Pantry', 'WC', 'Laundry', 'Workshop', 'Garage', 'Media', 'Foyer', 'Study', 'Patio'],
   3: ['WIR', 'Bed 1', 'Ensuite', 'Bed 3', 'WC', 'Bath', 'Bed 4', 'Ensuite', 'Bed 2', 'Robe', 'Rumpus', 'Balcony'],
 };
-const empty = page => ({ page, level: 'Ground Floor', walls: [], openings: [], pillars: [], eaves: [], buildingAreas: [], rooms: [], fixtures: [], documentedQuantities: [], review: [] });
+const empty = page => ({ page, level: 'Ground Floor', walls: [], openings: [], pillars: [], eaves: [], roofMeasurements: [], buildingAreas: [], rooms: [], fixtures: [], documentedQuantities: [], review: [] });
 let calls = 0;
 const fetchImpl = async (_url, options) => {
   calls += 1;
@@ -106,3 +106,7 @@ assert(action.includes('id="read-rooms-from-plans"') && action.includes('READ RO
 assert(hook.includes('measurementScope: ROOMS_SCOPE') && !/readRooms[\s\S]{0,3000}appendDetections/.test(hook.slice(hook.indexOf('const readRooms'), hook.indexOf('const addRoom'))), 'reading rooms never adds geometry to the canvas');
 pass('the takeoff has a Read Rooms from Plans action that leaves the canvas alone');
 console.log('\nRooms from plans: all checks passed');
+
+const changedScope = reportWithRooms({ status: 'complete', scopeResult: { complete: true, checklist: [] } }, rooms);
+assert.equal(changedScope.status, 'review');
+assert.equal(changedScope.scopeResult.complete, false, 'room changes invalidate finish quantities');

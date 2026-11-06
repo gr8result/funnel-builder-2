@@ -34,7 +34,8 @@ const schedule = createTakeoffSchedule({ ...canonical, pixelsPerMm: .1, schedule
 assert.equal(schedule.projectTotals.rooms[0].category, 'Kitchen');
 assert.equal(schedule.projectTotals.customTakeoffs.find((row) => row.category === 'WC — Bathroom').quantity, 2);
 assert.ok(flattenScheduleRows(schedule).some((row) => row.category === 'Living area' && row.quantity === 65), 'Printed benchmark remains visible alongside geometry.');
-const payload = createJobSetupPayload(schedule, { jobId: context.jobId, takeoffId: context.takeoffId });
+assert.throws(() => createJobSetupPayload(schedule), /geometry has not passed/, 'Incomplete AI analysis cannot enter the estimate.');
+const payload = createJobSetupPayload(schedule, { jobId: context.jobId, takeoffId: context.takeoffId, reviewOnly: true });
 assert.equal(payload.dataInputFields.internalDoorOpeningsQty, 20);
 assert.equal(payload.dataInputFields.lowerFloorAreaM2, 64, 'Printed benchmark never overwrites measured geometry.');
 assert.equal(payload.dataInputFields.roofPitchDegrees, 22.5);
@@ -45,7 +46,10 @@ assert.ok(payload.unsupported.some((item) => /No matching Job Setup/.test(item.r
 let workbook = createEstimateBuilderWorkbookDefaults();
 workbook.jobId = context.jobId;
 workbook.aiPlanTakeoffJob = { ...canonical, pixelsPerMm: .1, scheduleState: { aiAnalysis: analysis } };
-workbook = applyJobSetupImport(workbook, payload, Object.keys(payload.dataInputFields));
+assert.throws(() => applyJobSetupImport(workbook, payload, Object.keys(payload.dataInputFields)), /geometry has not passed/);
+// Exercise existing quantity calculations separately with a deliberately manual test takeoff.
+const manualPayload = { ...payload, schedule: { ...payload.schedule, aiAnalysis: null } };
+workbook = applyJobSetupImport(workbook, manualPayload, Object.keys(payload.dataInputFields));
 const reopened = JSON.parse(JSON.stringify(workbook));
 assert.equal(reopened.data.inputDataSheet.rows.internalDoorOpeningsQty.value, '20');
 assert.equal(createTakeoffSchedule(reopened.aiPlanTakeoffJob).projectTotals.rooms[0].category, 'Kitchen');
@@ -56,8 +60,8 @@ const labour = Object.values(calculated.quotation).flatMap((section) => section.
 assert.equal(labour.qty, 16);
 assert.match(labour.derivedQuantityExplanation, /20.*4.*16/);
 const conflicting = createTakeoffSchedule({ ...canonical, pixelsPerMm: .1, aiAnalysis: { ...analysis, documentedQuantities: [...analysis.documentedQuantities, { ...evidence, page: 1, label: 'roofPitchDegrees', value: 30, unit: 'degrees' }] } });
-assert.equal(createJobSetupPayload(conflicting).dataInputFields.roofPitchDegrees, undefined);
+assert.equal(createJobSetupPayload(conflicting, { reviewOnly: true }).dataInputFields.roofPitchDegrees, undefined);
 const rotated = restoreAnalysisCoordinates({ pillars: [{ nodes: rectangle }], eaves: [{ nodes: rectangle }] }, 90);
 assert.deepEqual(rotated.pillars[0].nodes[0], { x: .1, y: .9 });
 assert.deepEqual(rotated.eaves[0].nodes[0], { x: .1, y: .9 });
-console.log('PASS: actual normalization → canonical schedule → Job Setup import → quotation → reopen; rooms, fixtures, roofs, eaves, posts, unknown dimensions, conflicts and 20 - 4 = 16.');
+console.log('PASS: AI review/import guards and explicit manual schedule → Job Setup → quotation → reopen; rooms, fixtures, roofs, eaves, posts, unknown dimensions, conflicts and 20 - 4 = 16.');

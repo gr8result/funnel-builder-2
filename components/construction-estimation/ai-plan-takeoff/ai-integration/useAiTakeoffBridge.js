@@ -7,6 +7,8 @@ export const AI_TAKEOFF_COLLECTIONS = [
   'completedAreas', 'completedMeasurements', 'completedEaves', 'completedPillars',
 ];
 
+export const isAutomatedTakeoffObject = (item) => item?.source === 'ai' && (String(item.ai?.runId || '').startsWith('ai-takeoff') || item.ai?.scopeDerived === true);
+
 const sameRun = (a, b) => ['jobId', 'takeoffId', 'documentHash', 'runId'].every((key) => a?.[key] === b?.[key]);
 
 // This hook owns admission/idempotence only. Geometry remains in the existing
@@ -44,7 +46,11 @@ export function useAiTakeoffBridge(options) {
       completedWallRuns: current.collections.completedWallRuns,
       // What is already in the takeoff is authoritative: the analysis never re-adds it.
       placedOpenings: current.collections.placedOpenings,
+      completedPillars: current.collections.completedPillars,
+      completedMeasurements: current.collections.completedMeasurements,
       completedEaves: current.collections.completedEaves,
+      completedAreas: current.collections.completedAreas,
+      completedFloorplans: current.collections.completedFloorplans,
     };
   }, []);
 
@@ -60,13 +66,14 @@ export function useAiTakeoffBridge(options) {
     return keys.length > 0;
   }, []);
 
-  const appendDetections = useCallback(async (batch, { signal } = {}) => {
+  const appendDetections = useCallback(async (batch, { signal, replaceAnalysis = false } = {}) => {
     const assertNotCancelled = () => {
       if (signal?.aborted) throw Object.assign(new Error('AI Takeoff import was cancelled. No objects were inserted.'), { name: 'AbortError' });
     };
     assertNotCancelled();
     // Snapshot the request so a caller cannot mutate it during document hashing.
     const submitted = structuredClone(batch);
+    if (submitted.geometryValidation && !submitted.geometryValidation.passed) throw new Error('AI geometry validation failed. No objects were inserted.');
     const initial = latest.current;
     const generation = initial.lifecycle.hydrationVersion;
     const context = await getContext();
@@ -79,26 +86,26 @@ export function useAiTakeoffBridge(options) {
     }
     const canonical = convertAiTakeoffDetections(submitted, { ...context, completedWallRuns: current.collections.completedWallRuns });
     const receipt = Object.fromEntries(['jobId', 'takeoffId', 'documentHash', 'runId'].map((key) => [key, submitted[key]]));
-    if (receiptsRef.current.some((item) => sameRun(item, receipt))) return { status: 'duplicate', added: 0 };
+    if (!replaceAnalysis && receiptsRef.current.some((item) => sameRun(item, receipt))) return { status: 'duplicate', added: 0 };
 
-    const existing = AI_TAKEOFF_COLLECTIONS.flatMap((key) => current.collections[key]);
+    const existing = AI_TAKEOFF_COLLECTIONS.flatMap((key) => current.collections[key]).filter((item) => !replaceAnalysis || !isAutomatedTakeoffObject(item));
     const ids = new Set(existing.map((item) => String(item.id)));
     const additions = AI_TAKEOFF_COLLECTIONS.flatMap((key) => canonical[key]);
-    if (!additions.length) throw new Error('The AI batch contains no supported takeoff objects.');
+    if (!additions.length && !replaceAnalysis) throw new Error('The AI batch contains no supported takeoff objects.');
     if (additions.some((item) => ids.has(String(item.id)))) throw new Error('An AI object ID already exists. No objects were imported.');
 
     // No awaits after admission: all six updates and the durable receipt are one
     // React batch. Functional appends also retain manual edits queued this turn.
     assertNotCancelled();
     for (const key of AI_TAKEOFF_COLLECTIONS) {
-      if (canonical[key].length) current.setters[key]((previous) => [...previous, ...canonical[key]]);
+      if (replaceAnalysis || canonical[key].length) current.setters[key]((previous) => [...previous.filter((item) => !replaceAnalysis || !isAutomatedTakeoffObject(item)), ...canonical[key]]);
     }
-    const nextReceipts = [...receiptsRef.current, receipt];
+    const nextReceipts = [...receiptsRef.current.filter((item) => !sameRun(item, receipt)), receipt];
     receiptsRef.current = nextReceipts;
     setAppliedRuns(nextReceipts);
     current.markCompleted('ai-takeoff-import');
     return { status: 'appended', added: additions.length };
   }, [getContext]);
 
-  return { getContext, appendDetections, updateObjects, appliedRuns, restoreAppliedRuns };
+  return { collections: () => latest.current.collections, getContext, appendDetections, updateObjects, appliedRuns, restoreAppliedRuns };
 }

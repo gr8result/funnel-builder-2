@@ -85,8 +85,8 @@ assert.equal(output.batch.detections.find((item) => item.kind === 'opening').hei
 assert.ok(output.analysis.review.some((item) => item.code === 'missing-dimension'));
 output = normalize([{ ...response, walls: [{ ...wall, basis: 'ASSUMED' }], fixtures: [{ ...response.fixtures[0], basis: 'ASSUMED' }] }]);
 assert.equal(output.batch.detections.filter((item) => item.kind === 'wall').length, 0, 'an assumed wall is withheld');
-assert.equal(output.batch.detections.find((item) => item.kind === 'opening').unhosted, true, 'an observed opening is still counted when its wall is withheld, without a wall link');
-assert.equal(convertAiTakeoffDetections(output.batch, context).placedOpenings[0].hostWallId, '', 'a counted opening with no wall uses the canvas no-host state');
+assert.equal(output.batch.detections.filter((item) => item.kind === 'opening').length, 0, 'an opening whose host wall is withheld cannot enter accepted geometry');
+assert.equal(convertAiTakeoffDetections(output.batch, context).placedOpenings.length, 0);
 assert.equal(output.analysis.fixtures.length, 0);
 output = normalize([{ ...response, buildingAreas: [footprint, garage, { ...garage, detectionId: 'porch', type: 'Porch' }] }]);
 assert.equal(output.batch.detections.filter((item) => item.kind === 'floorplan').length, 2, 'overlapping ancillary areas cannot both contribute');
@@ -95,21 +95,21 @@ assert.equal(convertAiTakeoffDetections(output.batch, context).completedFloorpla
 output = normalize([{ ...response, walls: [wall, { ...wall, detectionId: 'wall-copy', nodes: [...wall.nodes].reverse() }] }]);
 assert.equal(output.batch.detections.filter((item) => item.kind === 'wall').length, 1, 'reversed duplicate wall geometry is not counted twice');
 
-output = normalize([{ ...response, openings: [{ ...window, y: 0.125 }] }]);
+output = normalize([{ ...response, openings: [{ ...window, y: 0.1125 }] }]);
 canonical = convertAiTakeoffDetections(output.batch, context);
 assert.equal(canonical.placedOpenings[0].y, 80, 'nearby opening points are projected onto the logical host trace');
 assert.equal(canonical.placedOpenings[0].ai.analysisEvidence.fields.location.basis, 'DERIVED');
-assert.match(canonical.placedOpenings[0].ai.analysisEvidence.fields.location.evidence, /200.0 mm/);
+assert.match(canonical.placedOpenings[0].ai.analysisEvidence.fields.location.evidence, /100.0 mm/);
 output = normalize([{ ...response, openings: [{ ...window, y: 0.8 }] }]);
-assert.equal(output.batch.detections.find((item) => item.kind === 'opening').unhosted, true, 'a spatially distant host is never accepted; the opening is counted without a wall link');
+assert.equal(output.batch.detections.filter((item) => item.kind === 'opening').length, 0, 'a distant opening is withheld rather than counted in accepted geometry');
 assert.ok(output.analysis.review.some((item) => /too far/.test(item.message)));
 
 output = normalize([{ ...response, openings: [{ ...window, hostDetectionId: null }] }]);
 assert.equal(output.batch.detections.filter((item) => item.kind === 'opening').length, 1, 'Independent item pass links an observed opening to its unique nearby measured wall.');
 assert.equal(output.batch.detections.find((item) => item.kind === 'opening').analysisEvidence.fields.hostWall.basis, 'DERIVED');
 output = normalize([{ ...response, walls: [wall, { ...wall, detectionId: 'nearby-wall', nodes: wall.nodes.map((node) => ({ ...node, y: node.y + .001 })) }], openings: [{ ...window, hostDetectionId: null }] }]);
-assert.equal(output.batch.detections.filter((item) => item.kind === 'opening').length, 1, 'An opening where two walls meet is still counted, attached to the nearest.');
-assert.ok(output.analysis.review.some((item) => item.code === 'host-ambiguous' && item.audience === 'diagnostic'));
+assert.equal(output.batch.detections.filter((item) => item.kind === 'opening').length, 0, 'An ambiguous wall association is withheld.');
+assert.ok(output.analysis.review.some((item) => item.code === 'withheld' && /equally close/.test(item.message)));
 
 const frontPatio = { ...garage, detectionId: 'front-patio', type: 'Patio', label: 'Patio' };
 const sidePatio = { ...garage, detectionId: 'side-patio', type: 'Patio', label: 'Side Patio', nodes: [{ x: 0.4, y: 0.1 }, { x: 0.5, y: 0.1 }, { x: 0.5, y: 0.3 }, { x: 0.4, y: 0.3 }] };

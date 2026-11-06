@@ -104,6 +104,20 @@ try {
   await act(() => observed.bridge.restoreAppliedRuns());
   assert.deepEqual(observed.bridge.appliedRuns, [], 'new-workspace reset clears only the run receipts');
   assert.deepEqual(observed.collections, initialCollections);
+  // A corrected rerun atomically replaces automatic objects and retains hand traces.
+  await replace({ ...emptyCollections(), completedWallRuns: [manualWall, { ...manualWall, id: 'old-ai', source: 'ai', ai: { runId: 'ai-takeoff-v1' } }] });
+  const repaired = await batchFor('ai-takeoff-v2-validated-scope');
+  const beforeRejection = structuredClone(observed.collections);
+  await act(async () => {
+    await assert.rejects(observed.bridge.appendDetections({ ...repaired, geometryValidation: { passed: false } }, { replaceAnalysis: true }), /validation failed/);
+  });
+  assert.deepEqual(observed.collections, beforeRejection, 'a failed rerun preserves the previous model');
+  await act(async () => { await observed.bridge.appendDetections({ ...repaired, geometryValidation: { passed: true } }, { replaceAnalysis: true }); });
+  assert.equal(observed.collections.completedWallRuns.length, 4);
+  assert.deepEqual(observed.collections.completedWallRuns[0], manualWall);
+  assert.ok(!observed.collections.completedWallRuns.some((w) => w.id === 'old-ai'));
+  await act(async () => { await observed.bridge.appendDetections({ ...repaired, geometryValidation: { passed: true } }, { replaceAnalysis: true }); });
+  assert.equal(observed.collections.completedWallRuns.length, 4, 'a corrected rerun never accumulates duplicate geometry');
   console.log('AI Takeoff bridge runtime checks passed: atomic rejection, concurrent dedupe, manual coexistence, async guards, immutable submission and receipt restoration.');
 } finally {
   await act(() => root.unmount());

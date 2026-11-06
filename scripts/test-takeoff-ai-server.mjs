@@ -12,7 +12,7 @@ const inspect = {
   scale: { denominator: 100, basis: 'OBSERVED', confidence: 0.95, evidence: 'Printed scale 1:100' },
   writtenDimensions: [], review: [],
 };
-const measure = { page: 1, level: 'Ground Floor', walls: [], openings: [], pillars: [], eaves: [], buildingAreas: [], rooms: [], fixtures: [], documentedQuantities: [], review: [] };
+const measure = { page: 1, level: 'Ground Floor', walls: [], openings: [], pillars: [], eaves: [], buildingAreas: [], roofMeasurements: [], rooms: [], fixtures: [], documentedQuantities: [], review: [] };
 const response = (analysis, overrides = {}) => ({
   ok: true, status: 200, headers: { get: () => 'test-provider-request' },
   json: async () => ({ id: 'test-response', model: 'gpt-5.4-test-snapshot', status: 'completed', output: [{ type: 'message', content: [{ type: 'output_text', text: JSON.stringify(analysis) }] }], ...overrides }),
@@ -43,7 +43,7 @@ const refinePayload = { ...payload, action: 'refine', pixelsPerMm: 0.02835,
   previousAnalysis: measure, geometryPreviewDataUrl: imageDataUrl };
 const refineRequest = validateTakeoffAnalysisRequest(refinePayload);
 const refineProviderRequest = buildTakeoffProviderRequest(refineRequest, DEFAULT_TAKEOFF_MODEL);
-assert.equal(refineProviderRequest.reasoning.effort, 'medium');
+assert.equal(refineProviderRequest.reasoning.effort, 'high');
 assert.equal(refineProviderRequest.text.format.name, 'takeoff_refine_v1');
 assert.equal(refineProviderRequest.input[0].content.length, 4);
 assert.equal(refineProviderRequest.input[0].content[1].image_url, payload.page.imageDataUrl, 'unannotated source image stays first');

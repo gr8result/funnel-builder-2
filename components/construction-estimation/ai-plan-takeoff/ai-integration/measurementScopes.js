@@ -17,6 +17,7 @@ export function mergeMeasurementScopes(geometry, items) {
     pillars: geometry.pillars.map((item) => ({ ...item, detectionId: prefix(item.detectionId) })),
     eaves: geometry.eaves.map((item) => ({ ...item, detectionId: prefix(item.detectionId) })),
     buildingAreas: geometry.buildingAreas.map((item) => ({ ...item, detectionId: prefix(item.detectionId) })),
+    roofMeasurements: (geometry.roofMeasurements || []).map((item) => ({ ...item, detectionId: prefix(item.detectionId) })),
     openings: items.openings.map((item) => ({ ...item, detectionId: item.detectionId.startsWith('items:') ? item.detectionId : `items:${item.detectionId}`, hostDetectionId: null })),
     rooms: items.rooms, fixtures: items.fixtures, documentedQuantities: items.documentedQuantities,
     review: [...new Set([...geometry.review, ...items.review])],

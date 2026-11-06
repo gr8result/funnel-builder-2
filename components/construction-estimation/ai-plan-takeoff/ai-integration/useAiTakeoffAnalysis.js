@@ -6,9 +6,17 @@ import { normalizePlanAnalysis, resolveAnalysisScale } from './analysisContract.
 import { MEASUREMENT_SCOPES, ROOMS_SCOPE, mergeMeasurementScopes } from './measurementScopes.js';
 import { ROOMS_RUN_ID, addManualRoom, floorPlanSheets, mergeRoomReadings, removeRoom as removeScheduleRoom, reportWithRooms } from './roomSchedule.js';
 import { compactPlanEvidence, evidenceRotation, mergePlanEvidence, projectDefaultsFromJobSetup } from './planEvidence.js';
+import { validateGeometryModel, signatureFromSchedule } from './geometryValidation.js';
+import { emptyScopeProfile, sanitizeScopeProfile, buildInclusionScope } from './inclusionScope.js';
+import { createMeasurementRecords } from '../takeoffSchedule.js';
+import { isAutomatedTakeoffObject, AI_TAKEOFF_COLLECTIONS } from './useAiTakeoffBridge.js';
+import { convertAiTakeoffDetections } from './adapter.js';
 import { applyReviewDecision, reviewAudience } from './reviewSummary.js';
 
-const RUN_ID = 'ai-takeoff-v1';
+const RUN_ID = 'ai-takeoff-v2-validated-scope';
+const signatureForCollections = (collections, pixelsPerMm) => signatureFromSchedule({
+  measurementRecords: createMeasurementRecords({ ...collections, pixelsPerMm }), project: { calibratedScaleBySheet: [{ pixelsPerMm }] },
+});
 const nextFrame = () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 const closeScale = (a, b) => a > 0 && b > 0 && Math.abs(a - b) / b < 0.000001;
 const CONTEXT_TEXT_CHARS = 20000;
@@ -63,6 +71,9 @@ export function useAiTakeoffAnalysis(options) {
   const pending = useRef(null);
   const controller = useRef(null);
   const [report, setReport] = useState(null);
+  const [scopeProfile, setScopeProfile] = useState(() => sanitizeScopeProfile(options.scopeProfile));
+  const scopeProfileRef = useRef(scopeProfile);
+  scopeProfileRef.current = scopeProfile;
   const [stage, setStage] = useState('idle');
   const [message, setMessage] = useState('');
   const [scaleProposal, setScaleProposal] = useState(null);
@@ -92,7 +103,10 @@ export function useAiTakeoffAnalysis(options) {
     setMessage('Analysis cancelled. Existing takeoff objects were preserved.');
   }, []);
 
-  const restoreReport = useCallback((saved = null, savedInspections = null, savedCalibrations = null) => {
+  const restoreReport = useCallback((saved = null, savedInspections = null, savedCalibrations = null, savedScopeProfile = null) => {
+    const restoredScope = sanitizeScopeProfile(savedScopeProfile || saved?.scopeProfile || latest.current.scopeProfile);
+    scopeProfileRef.current = restoredScope;
+    setScopeProfile(restoredScope);
     calibrationsRef.current = sanitizeCalibrations(savedCalibrations);
     setSheetCalibrations(calibrationsRef.current);
     controller.current?.abort();
@@ -103,7 +117,7 @@ export function useAiTakeoffAnalysis(options) {
     halves.current.clear();
     setScaleProposal(null);
     setReport(saved || null);
-    setStage(saved && saved.status !== 'rooms' ? (saved.status === 'review' ? 'review' : 'complete') : 'idle');
+    setStage(saved && saved.status !== 'rooms' ? (saved.geometryValidation?.passed && saved.scopeResult?.complete ? 'complete' : 'review') : 'idle');
     setMessage('');
   }, []);
 
@@ -239,7 +253,8 @@ export function useAiTakeoffAnalysis(options) {
   const measure = async (work) => {
     try {
       const current = assertCurrent(work);
-      const context = await current.bridge.getContext();
+      const originalContext = await current.bridge.getContext();
+      const context = { ...originalContext, ...Object.fromEntries(AI_TAKEOFF_COLLECTIONS.filter((key) => Array.isArray(originalContext[key])).map((key) => [key, originalContext[key].filter((item) => !isAutomatedTakeoffObject(item))])) };
       if (context.documentHash !== work.documentHash) throw new Error('The plan document changed. Run AI Takeoff again.');
       work.pixelsPerMm = context.pixelsPerMm;
       const projectDefaults = projectDefaultsFromJobSetup(latest.current.jobSetupRows || {});
@@ -263,16 +278,20 @@ export function useAiTakeoffAnalysis(options) {
           });
         const primary = { ...prepared, drawingType: inspection.drawingType, level: inspection.level };
         const scoped = (action, measurementScope, extra = {}) => ({
-          action, measurementScope, ...work.identity, page: primary, pixelsPerMm: context.pixelsPerMm,
+          action, measurementScope, ...work.identity, page: primary, pixelsPerMm: context.pixelsPerMm, scopeProfile: scopeProfileRef.current,
           ...(measurementScope === 'items' ? { contextPages } : {}), planEvidence: sharedEvidence, ...extra,
         });
-        const halfKey = (action, scope, previous = '') => [work.documentHash, inspection.page, rotation, context.pixelsPerMm, action, scope, previous].join('|');
+        const halfKey = (action, scope, previous = '') => [work.documentHash, inspection.page, rotation, context.pixelsPerMm, action, scope, JSON.stringify(sharedEvidence), previous].join('|');
         try {
           // Geometry then items, one at a time: a failure stops before the next paid
           // request and the shared request prefix can be served from the provider cache.
           const measured = {};
           for (const scope of MEASUREMENT_SCOPES) measured[scope] = await requestHalf(work, halfKey('measure', scope), scoped('measure', scope));
           const firstPass = mergeMeasurementScopes(measured.geometry.analysis, measured.items.analysis);
+          const previewAnalysis = normalizePlanAnalysis({ context, responses: [{ ...restoreAnalysisCoordinates(firstPass, rotation), drawingType: inspection.drawingType }], runId: RUN_ID, modelVersion: measured.items.model, planEvidence, projectDefaults });
+          const previewCanonical = convertAiTakeoffDetections(previewAnalysis.batch, context);
+          const validationFeedback = validateGeometryModel({ canonical: previewCanonical, context, analysis: previewAnalysis.analysis }).blockers
+            .filter((item) => item.code !== 'missing-floor-plan' || inspection.drawingType !== 'roof_plan').map((item) => item.message).slice(0, 40).join('\n').slice(0, 18000);
           work.model = measured.items.model;
           setMessage(`Checking geometry against the drawing — sheet ${inspection.page}…`);
           const refined = { geometry: measured.geometry.analysis, items: measured.items.analysis };
@@ -280,7 +299,7 @@ export function useAiTakeoffAnalysis(options) {
           for (const scope of MEASUREMENT_SCOPES) {
             try {
               geometryPreviewDataUrl ??= await prepareGeometryReviewImage(prepared, firstPass);
-              const checked = await requestHalf(work, halfKey('refine', scope, JSON.stringify(firstPass)), scoped('refine', scope, { previousAnalysis: firstPass, geometryPreviewDataUrl }));
+              const checked = await requestHalf(work, halfKey('refine', scope, JSON.stringify(firstPass)), scoped('refine', scope, { previousAnalysis: firstPass, geometryPreviewDataUrl, validationFeedback }));
               refined[scope] = checked.analysis;
               work.model = checked.model;
             } catch (error) {
@@ -307,7 +326,7 @@ export function useAiTakeoffAnalysis(options) {
       setStage('building');
       setMessage('Building Takeoff Schedule…');
       const { batch, analysis } = normalizePlanAnalysis({
-        context: { ...context, completedFloorplans: latest.current.completedFloorplans || [], sheetLevels: latest.current.sheetLevels || {} },
+        context: { ...context, completedFloorplans: context.completedFloorplans || [], sheetLevels: latest.current.sheetLevels || {} },
         responses, runId: RUN_ID, modelVersion: work.model, planEvidence, projectDefaults,
       });
       const scaleReview = [...(work.scale?.review || []), ...(work.scale?.notes || [])].map((item) => ({ message: typeof item === 'string' ? item : item.message, code: 'scale-review' }));
@@ -320,22 +339,29 @@ export function useAiTakeoffAnalysis(options) {
       analysis.counts.decisions = analysis.review.filter((item) => item.audience === 'decision').length;
       analysis.planEvidence = { ...planEvidence, openingSchedule: planEvidence.openingSchedule.slice(0, 150) };
       analysis.projectDefaults = projectDefaults;
+      analysis.scopeProfile = scopeProfileRef.current;
+      const canonical = convertAiTakeoffDetections(batch, context);
+      analysis.geometrySignature = signatureForCollections(Object.fromEntries(AI_TAKEOFF_COLLECTIONS.map((key) => [key, [...(context[key] || []), ...(canonical[key] || [])]])), context.pixelsPerMm);
+      analysis.geometryValidation = validateGeometryModel({ canonical, context, analysis });
+      batch.geometryValidation = analysis.geometryValidation;
+      analysis.scopeResult = buildInclusionScope({ profile: scopeProfileRef.current, rooms: analysis.rooms.map((room) => ({ ...room, ...(analysis.roomGeometry.find((r) => r.page === room.page && r.name === room.name && r.x === room.x && r.y === room.y) || {}) })),
+        roofMeasurements: analysis.roofMeasurements, context, canonical, geometryValidation: analysis.geometryValidation, planEvidence, projectDefaults });
       // Nothing new to add because the estimator already measured it is a finished run, not a failed one.
-      const result = batch.detections.length ? await latest.current.bridge.appendDetections(batch, { signal: work.signal })
-        : { status: analysis.alreadyMeasured.length ? 'unchanged' : 'review', added: 0 };
+      const result = !analysis.geometryValidation.passed ? { status: 'review', added: 0 } : await latest.current.bridge.appendDetections(batch, { signal: work.signal, replaceAnalysis: true });
       assertCurrent(work, true);
+      if (analysis.geometryValidation.passed) latest.current.bridge.updateObjects((collections) => ({ completedAreas: [...context.completedAreas, ...canonical.completedAreas, ...analysis.scopeResult.areas] }));
       const completed = {
         ...analysis, runId: RUN_ID, documentHash: work.documentHash, provider: 'OpenAI', modelVersion: work.model,
         inspections: work.inspections, scale: work.scale, requests: work.requests,
-        completedAt: new Date().toISOString(), added: result.added, status: result.status,
+        analysedAt: new Date().toISOString(), ...(analysis.geometryValidation.passed && analysis.scopeResult.complete ? { completedAt: new Date().toISOString() } : {}), added: result.added,
+        admissionStatus: result.status, status: analysis.geometryValidation.passed && analysis.scopeResult.complete ? result.status : 'review',
       };
       latest.current.onDetectedLevels?.(analysis.pages);
       setReport(completed);
       latest.current.markCompleted('ai-takeoff-analysis');
-      setStage(result.status === 'review' ? 'review' : 'complete');
-      setMessage(result.status === 'review' ? 'AI TAKEOFF REQUIRES REVIEW — no reliable geometry was accepted. Review the drawing evidence below.'
-        : result.status === 'duplicate' ? 'This analysis run is already in the takeoff.'
-          : result.status === 'unchanged' ? 'AI TAKEOFF COMPLETE — everything found on the plans is already in this takeoff.' : 'AI TAKEOFF COMPLETE');
+      setStage(completed.status === 'review' ? 'review' : 'complete');
+      setMessage(!analysis.geometryValidation.passed ? `AI TAKEOFF REQUIRES REVIEW — ${analysis.geometryValidation.blockers.length} geometry checks failed. No new geometry was inserted.`
+        : !analysis.scopeResult.complete ? 'GEOMETRY VALIDATED — takeoff scope is incomplete. Resolve the missing categories before importing quantities.' : 'AI TAKEOFF COMPLETE');
       setScaleProposal(null);
       // React must commit geometry, receipts and evidence before the existing
       // save action builds its payload. Never save the previous render's arrays.
@@ -352,6 +378,7 @@ export function useAiTakeoffAnalysis(options) {
     if (current.readOnly || !current.jobId || !current.takeoffId || !current.planPages.length) {
       setStage('error'); setMessage('Open an editable job and upload its construction plan first.'); return;
     }
+    if (!scopeProfileRef.current.schedule) { setStage('error'); setMessage('Select an inclusion schedule and configure its scope before running AI Takeoff.'); return; }
     const abort = new AbortController();
     controller.current = abort;
     const work = {
@@ -364,11 +391,6 @@ export function useAiTakeoffAnalysis(options) {
     try {
       work.documentHash = await fingerprintTakeoffDocument(work.planPages);
       assertCurrent(work);
-      if (latest.current.bridge.appliedRuns.some((receipt) => receipt.documentHash === work.documentHash
-        && receipt.takeoffId === work.takeoffId && receipt.runId === RUN_ID)) {
-        pending.current = null;
-        setStage('complete'); setMessage('This plan has already been analysed. Review the existing takeoff.'); return;
-      }
       work.identity = { jobId: work.jobId, takeoffId: work.takeoffId, documentHash: work.documentHash, runId: RUN_ID };
       for (const page of work.planPages) {
         assertCurrent(work);
@@ -434,6 +456,30 @@ export function useAiTakeoffAnalysis(options) {
     } catch (error) { fail(error, work); }
   };
 
+  const updateScopeProfile = (value) => {
+    if (pending.current || latest.current.readOnly) return;
+    const profile = sanitizeScopeProfile(value);
+    scopeProfileRef.current = profile;
+    setScopeProfile(profile);
+    latest.current.markCompleted('ai-takeoff-scope');
+    if (!report?.geometryValidation?.passed) return;
+    const collections = latest.current.bridge.collections();
+    if (signatureForCollections(collections, latest.current.pixelsPerMm) !== report.geometrySignature) {
+      setReport((previous) => ({ ...previous, scopeProfile: profile, status: 'review', geometryValidation: { version: 1, passed: false, blockers: [{ code: 'geometry-changed', message: 'Geometry or calibration changed. Rerun the plan validation before applying a different specification.' }] } }));
+      setStage('review'); setMessage('Geometry changed after validation. Rerun AI Takeoff.'); return;
+    }
+    const context = { ...collections, jobId: latest.current.jobId, takeoffId: latest.current.takeoffId, documentHash: report.documentHash,
+      pixelsPerMm: latest.current.pixelsPerMm, pages: latest.current.planPages.map((p) => ({ pageNumber: p.pageNumber, logicalWidth: p.logicalWidth, logicalHeight: p.logicalHeight })) };
+    const canonical = { completedWallRuns: [], placedOpenings: [], completedFloorplans: [], completedAreas: [], completedEaves: [] };
+    const geometryValidation = validateGeometryModel({ canonical, context, analysis: report });
+    const scopeResult = buildInclusionScope({ profile, rooms: report.rooms.map((room) => ({ ...room, ...(report.roomGeometry?.find((r) => r.page === room.page && r.name === room.name && r.x === room.x && r.y === room.y) || {}) })),
+      roofMeasurements: report.roofMeasurements, context, canonical, geometryValidation, planEvidence: report.planEvidence, projectDefaults: report.projectDefaults });
+    latest.current.bridge.updateObjects((current) => ({ completedAreas: [...current.completedAreas.filter((a) => !a.ai?.scopeDerived), ...scopeResult.areas] }));
+    setReport((previous) => ({ ...previous, scopeProfile: profile, geometryValidation, geometrySignature: signatureForCollections(collections, context.pixelsPerMm), scopeResult, status: geometryValidation.passed && scopeResult.complete ? 'unchanged' : 'review' }));
+    setStage(geometryValidation.passed && scopeResult.complete ? 'complete' : 'review');
+    setMessage('Inclusion scope recalculated from the saved geometry.');
+  };
+
   const confirmScale = async () => {
     const work = pending.current;
     if (!work || !scaleProposal) return;
@@ -480,5 +526,5 @@ export function useAiTakeoffAnalysis(options) {
     await measure(work);
   };
 
-  return { report, inspections, sheetCalibrations, recordSheetCalibration, resolveDecision, restoreReport, stage, message, scaleProposal, rooms: { ...roomsState, read: readRooms, add: addRoom, remove: removeRoom }, run, confirmScale, cancel, useManualCalibration, continueManualCalibration, hasCalibration: options.pixelsPerMm > 0 };
+  return { report, scopeProfile, updateScopeProfile, inspections, sheetCalibrations, recordSheetCalibration, resolveDecision, restoreReport, stage, message, scaleProposal, rooms: { ...roomsState, read: readRooms, add: addRoom, remove: removeRoom }, run, confirmScale, cancel, useManualCalibration, continueManualCalibration, hasCalibration: options.pixelsPerMm > 0 };
 }

@@ -59,14 +59,14 @@ globalThis.fetch = async (url, options) => {
   const analysis = payload.action === 'inspect' ? response : { pillars: [], eaves: [], ...response, ...Object.fromEntries(scopeEmpty.map((key) => [key, []])) };
   return { ok: true, status: 200, json: async () => ({ ok: true, provider: 'openai', model: 'unit-model', requestId: 'unit-request', analysis }) };
 };
-let configuration = { jobId: 'unit-job', takeoffId: 'unit-takeoff', planPages: [page], lifecycle: { hydrationVersion: 0 }, readOnly: false };
+let configuration = { scopeProfile: { schedule: 'Classic' }, jobId: 'unit-job', takeoffId: 'unit-takeoff', planPages: [page], lifecycle: { hydrationVersion: 0 }, readOnly: false };
 let current;
 const dirty = [];
 function Harness() {
   const [pixelsPerMm, setPixelsPerMm] = useState(null);
   const [collections, setCollections] = useState(Object.fromEntries(AI_TAKEOFF_COLLECTIONS.map((key) => [key, []])));
   const bridge = useAiTakeoffBridge({ ...configuration, pixelsPerMm, collections,
-    setters: Object.fromEntries(AI_TAKEOFF_COLLECTIONS.map((key) => [key, (update) => setCollections((previous) => ({ ...previous, [key]: update(previous[key]) }))])),
+    setters: Object.fromEntries(AI_TAKEOFF_COLLECTIONS.map((key) => [key, (update) => setCollections((previous) => ({ ...previous, [key]: typeof update === 'function' ? update(previous[key]) : update }))])),
     markCompleted: (reason) => dirty.push(reason) });
   const analysis = useAiTakeoffAnalysis({ ...configuration, pixelsPerMm, setPixelsPerMm: (value) => flushSync(() => setPixelsPerMm(value)), bridge,
     objectCount: Object.values(collections).reduce((sum, items) => sum + items.length, 0), markCompleted: (reason) => dirty.push(reason) });
@@ -82,13 +82,12 @@ try {
   assert.equal(calls.length, 1, 'Scale confirmation happens before measurement request.');
   assert.equal(current.pixelsPerMm, null, 'Inspection does not silently calibrate.');
   await act(() => current.analysis.confirmScale());
-  assert.equal(current.analysis.stage, 'complete', current.analysis.message);
+  assert.equal(current.analysis.stage, 'review', current.analysis.message);
   assert.deepEqual(calls.slice(1).map((item) => `${item.action}:${item.measurementScope}`), ['measure:geometry', 'measure:items', 'refine:geometry', 'refine:items'], 'Measurement halves run one at a time, then their geometry review halves.');
   assert.equal(evidenceCalls.length, 1, 'The whole plan set is read for evidence once, before any sheet is measured.');
   assert.ok(calls.slice(1).every((item) => item.planEvidence && typeof item.planEvidence === 'object'), 'Every measurement and refinement request carries the plan-set evidence.');
-  assert.equal(current.collections.completedWallRuns.length, 1);
-  assert.equal(current.collections.completedWallRuns[0].source, 'ai');
-  assert.equal(current.collections.completedWallRuns[0].ai.analysisEvidence.basis, 'OBSERVED');
+  assert.equal(current.collections.completedWallRuns.length, 0);
+  assert.ok(current.analysis.report.geometryValidation.blockers.length > 0, 'Incomplete exterior geometry is not admitted.');
   assert.equal(current.analysis.report.rooms[0].name, 'Kitchen');
   await act(() => current.analysis.run());
   assert.equal(calls.length, 5, 'An already admitted run never repeats a paid analysis.');
@@ -167,9 +166,9 @@ try {
     return measurement;
   };
   await act(() => current.analysis.run());
-  assert.equal(current.analysis.stage, 'complete', current.analysis.message);
+  assert.equal(current.analysis.stage, 'review', current.analysis.message);
   assert.equal(current.pixelsPerMm, .03, 'Existing calibrated scale is used without another confirmation gate.');
-  assert.equal(current.collections.completedWallRuns.length, 1, 'A failed optional refinement cannot discard a valid measured page.');
+  assert.equal(current.collections.completedWallRuns.length, 0, 'A failed optional refinement cannot discard a valid measured page.');
   assert.ok(current.analysis.report.review.some((item) => item.code === 'refinement-failed'));
 
   configuration = { ...configuration, planPages: [page, { ...page, pageNumber: 2 }] };
@@ -183,9 +182,9 @@ try {
     ? { ...inspection, page: payload.page.pageNumber }
     : { ...measurement, page: payload.page.pageNumber };
   await act(() => current.analysis.run());
-  assert.equal(current.analysis.stage, 'complete', 'A second presentation of the same floor must not abort the full takeoff.');
+  assert.equal(current.analysis.stage, 'review', 'A second presentation of the same floor must not abort the full takeoff.');
   assert.deepEqual(calls.slice(duplicateStart).filter((item) => item.action === 'measure' && item.measurementScope === 'geometry').map((item) => item.page.pageNumber), [1]);
-  assert.equal(current.collections.completedWallRuns.length, 1, 'Duplicate floor presentations are not counted twice.');
+  assert.equal(current.collections.completedWallRuns.length, 0, 'Duplicate floor presentations are not counted twice.');
   assert.ok(current.analysis.report.review.some((item) => item.code === 'duplicate-level'));
 
   await act(() => {
@@ -197,8 +196,8 @@ try {
     return payload.action === 'inspect' ? inspection : measurement;
   };
   await act(() => current.analysis.run());
-  assert.equal(current.analysis.stage, 'complete');
-  assert.equal(current.collections.completedWallRuns.length, 1, 'A failed supporting-page inspection cannot discard a successfully inspected floor plan.');
+  assert.equal(current.analysis.stage, 'review');
+  assert.equal(current.collections.completedWallRuns.length, 0, 'A failed supporting-page inspection cannot discard a successfully inspected floor plan.');
   assert.ok(current.analysis.report.review.some((item) => item.code === 'inspection-failed'));
 
   // ---- Request efficiency: context, inspection cache, half retries, retry-after, hard stops ----
@@ -238,8 +237,8 @@ try {
   await act(() => current.analysis.run());
   sequence = calls.slice(start).map((item) => `${item.action}:${item.measurementScope || ''}:${item.page.pageNumber}`);
   assert.deepEqual(sequence, ['measure:items:1', 'refine:geometry:1', 'refine:items:1'], 'Re-run never re-inspects unchanged pages nor repeats the successful geometry half.');
-  assert.equal(current.analysis.stage, 'complete', current.analysis.message);
-  assert.equal(current.collections.completedWallRuns.length, 1);
+  assert.equal(current.analysis.stage, 'review', current.analysis.message);
+  assert.equal(current.collections.completedWallRuns.length, 0);
   assert.equal(current.analysis.report.requests.filter((item) => item.action === 'inspect' && item.cached).length, 2);
 
   // Saved inspections restored on reopen still prevent re-inspection; a changed page image is re-inspected.
@@ -270,7 +269,7 @@ try {
     return measurement;
   };
   await act(() => current.analysis.run());
-  assert.equal(current.analysis.stage, 'complete', current.analysis.message);
+  assert.equal(current.analysis.stage, 'review', current.analysis.message);
   assert.equal(stamps.length, 2);
   assert.ok(stamps[1] - stamps[0] >= 390, `Retry waited for retry-after (${stamps[1] - stamps[0]} ms).`);
   await resetRun(cachedInspections);
@@ -306,6 +305,33 @@ try {
   }
   assert.deepEqual(current.collections, emptyCollections(), 'Failed runs insert nothing.');
 
+  // A fully reconstructed model is admitted, while its predecessor's AI traces are replaced.
+  configuration = { ...configuration, planPages: [page], jobSetupRows: { roofPitchDegrees: { value: '22.5' } } };
+  await render(); await resetRun();
+  const corners = [{ x: .1, y: .1 }, { x: .9, y: .1 }, { x: .9, y: .9 }, { x: .1, y: .9 }];
+  const room = (name, left, right) => ({ name, page: 1, x: (left + right) / 2, y: .5, nodes: [{ x: left, y: .1 }, { x: right, y: .1 }, { x: right, y: .9 }, { x: left, y: .9 }], ...observedEvidence });
+  const completeMeasurement = { ...measurement,
+    walls: [{ ...measurement.walls[0], detectionId: 'outer', constructionSystem: 'brick_veneer', frameThicknessMm: 70, exteriorFinish: 'face_brick', nodes: [...corners, corners[0]] },
+      { ...measurement.walls[0], detectionId: 'inner', category: 'interior', constructionSystem: 'internal_timber_frame', thicknessMm: 90, frameThicknessMm: 90, exteriorFinish: null, nodes: [{ x: .5, y: .1 }, { x: .5, y: .9 }] }],
+    rooms: [room('Kitchen', .1, .5), room('Living', .5, .9)], buildingAreas: [{ ...observedEvidence, page: 1, detectionId: 'floor', type: 'Footprint', label: 'Footprint', nodes: corners },
+      { ...observedEvidence, page: 1, detectionId: 'roof', type: 'Roof Area', label: 'Roof', nodes: corners }],
+    eaves: [{ ...observedEvidence, page: 1, detectionId: 'eaves', widthMm: 600, nodes: corners.slice(0, 2) }] };
+  const profile = { schedule: 'Classic', rules: ['Bedrooms', 'Wet areas', 'Living areas', 'Outdoor areas', 'Garage / storage'].map((group) => ({ group, floorFinish: 'Tiles', wallTiling: 'none', splashback: 'none' })),
+    roofNotApplicable: ['Fascia', 'Gutters', 'Downpipes', 'Ridges', 'Hips', 'Valleys'] };
+  await act(() => current.analysis.updateScopeProfile(profile));
+  getResponse = async (payload) => payload.action === 'inspect' ? inspection : completeMeasurement;
+  await act(() => current.analysis.run());
+  assert.equal(current.analysis.stage, 'complete', current.analysis.message);
+  assert.equal(current.collections.completedWallRuns.length, 2);
+  assert.equal(current.collections.completedAreas.filter((a) => a.ai?.scopeDerived).length, 2, 'Validated room finishes reach the existing floor-covering arrays.');
+  assert.equal(current.collections.completedAreas.filter((a) => a.category === 'Roof Area').length, 1, 'The admitted roof survives the subsequent finish update.');
+  const paidBeforeScopeChange = calls.length;
+  await act(() => current.analysis.updateScopeProfile({ ...profile, schedule: 'Premium', rules: profile.rules.map((r) => ({ ...r, floorFinish: 'Hybrid' })) }));
+  assert.equal(calls.length, paidBeforeScopeChange, 'A schedule change makes no paid provider calls.');
+  assert.equal(current.collections.completedAreas.filter((a) => a.ai?.scopeDerived && a.category === 'Hybrid').length, 2);
+  await act(() => current.analysis.run());
+  assert.equal(current.collections.completedWallRuns.length, 2, 'A successful corrected rerun replaces rather than duplicates automatic geometry.');
+  assert.equal(current.analysis.report.geometryValidation.passed, true);
   const rotated ={ walls: [{ nodes: [{ x: .2, y: .3 }, { x: .4, y: .5 }] }], openings: [{ x: .6, y: .7 }], buildingAreas: [], rooms: [], fixtures: [] };
   assert.deepEqual(restoreAnalysisCoordinates(rotated, 270).walls[0].nodes, [{ x: .7, y: .2 }, { x: .5, y: .4 }]);
   assert.ok(Math.abs(restoreAnalysisCoordinates(rotated, 90).openings[0].y - .4) < 1e-10);
