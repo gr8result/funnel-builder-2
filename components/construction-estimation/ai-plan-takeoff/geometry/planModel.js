@@ -996,6 +996,79 @@ export function computeRooms(level, overrides = {}) {
   return rooms.map((room) => ({ id: room.labelId ? `room:${room.labelId}` : `face:${signatureOf([...room.wallIds, ...room.separatorIds])}`, name: room.name || null, nameSource: room.nameSource || null, ...room }));
 }
 
+// Room types that are closed off from the spaces around them (a pantry, robe, laundry, bathroom or
+// bedroom), as opposed to living, dining, kitchen, entry and hall spaces that are often open plan.
+export const ENCLOSED_ROOM_LABEL = /^(pan|pantry|wil|w\.i\.l\.?|wir|w\.i\.r\.?|robe|linen|store|l'?dry|laundry|powder|pwd|wc|toilet|bath|bathroom|ens|ensuite|e-suite|bed|bedroom|master|media)\b/i;
+
+/**
+ * Virtual room dividers (separators) where the drawing shows a room ends without a wall: the line of a
+ * drawn wall that stops is carried across the open threshold to the drawn wall it faces, when that is
+ * what separates an enclosed room's printed label from the other labels sharing its floor. A divider
+ * bounds rooms only; it is never a wall and never a wall quantity. Nothing is added where the drawing
+ * gives no wall end, no facing wall or no labels to separate.
+ * @param labels [{ x, y, name }] in mm
+ * @returns {{ level, dividers: [{ separatorId, fromWall, toWall, lengthMm, separates }] }}
+ */
+export function inferThresholdDividers(level, labels = [], overrides = {}) {
+  const options = { thresholdMaxMm: 3000, dividerMinRoomM2: 1, enclosedRoomLabel: ENCLOSED_ROOM_LABEL, ...PLAN_MODEL_DEFAULTS, ...overrides };
+  let next = clone(level);
+  const dividers = [];
+  const named = labels.filter((label) => Number.isFinite(label.x) && Number.isFinite(label.y) && label.name);
+  const labelsIn = (room) => named.filter((label) => pointInPolygon(label, room.boundary));
+  const unresolved = new Set();
+  for (let pass = 0; pass < named.length; pass += 1) {
+    const rooms = computeRooms(next, options);
+    const room = rooms.find((item) => { const inside = labelsIn(item); return inside.length >= 2 && inside.some((label) => options.enclosedRoomLabel.test(label.name.trim()) && !unresolved.has(label)); });
+    if (!room) break;
+    const inside = labelsIn(room);
+    const target = inside.find((label) => options.enclosedRoomLabel.test(label.name.trim()) && !unresolved.has(label));
+    const onBoundaryOrInside = (point) => pointInPolygon(point, room.boundary)
+      || room.boundary.some((c, j) => project(point, c, room.boundary[(j + 1) % room.boundary.length]).distance < 1);
+    const candidates = [];
+    for (const wall of Object.values(next.walls)) {
+      for (const index of [0, wall.nodeIds.length - 1]) {
+        const v = next.nodes[wall.nodeIds[index]], neighbour = next.nodes[wall.nodeIds[index === 0 ? 1 : index - 1]];
+        if (!v || !neighbour || !onBoundaryOrInside(v)) continue;
+        const d = unit(sub(v, neighbour));
+        let hit = null;
+        for (const segment of networkSegments(next)) {
+          if (segment.u === v.id || segment.v === v.id) continue;
+          const e = sub(segment.b, segment.a), denom = cross(d, e);
+          if (Math.abs(denom) < EPS) continue;
+          const t = cross(sub(segment.a, v), e) / denom, s = cross(sub(segment.a, v), d) / denom;
+          if (t <= options.minWallMm || t > options.thresholdMaxMm || s < -EPS || s > 1 + EPS) continue;
+          if (!hit || t < hit.t) hit = { t, point: add(v, mul(d, t)), owner: segment.owner };
+        }
+        if (!hit || !pointInPolygon(add(v, mul(d, hit.t / 2)), room.boundary)) continue;
+        candidates.push({ v, wall, ...hit });
+      }
+    }
+    candidates.sort((p, q) => p.t - q.t);
+    let accepted = null;
+    for (const candidate of candidates) {
+      const trial = addSeparator(next, { a: candidate.v, b: candidate.point }, options);
+      if (!trial.separatorId) continue;
+      const after = computeRooms(trial.level, options);
+      const own = after.find((item) => pointInPolygon(target, item.boundary));
+      if (!own || own.areaM2 < options.dividerMinRoomM2 || labelsIn(own).length !== 1) continue;
+      const rest = after.find((item) => item !== own && labelsIn(item).some((label) => inside.includes(label)));
+      if (!rest || rest.areaM2 < options.dividerMinRoomM2) continue;
+      accepted = { candidate, trial };
+      break;
+    }
+    if (!accepted) { unresolved.add(target); continue; }
+    next = accepted.trial.level;
+    const { candidate } = accepted;
+    const toWall = next.walls[candidate.owner];
+    const separator = next.separators[accepted.trial.separatorId];
+    Object.assign(separator, { source: 'detected', basis: 'open-threshold', detectionKey: `threshold:${candidate.wall.detectionKey || candidate.wall.id}`,
+      evidence: `Open threshold: the line of drawn wall ${candidate.wall.detectionKey || candidate.wall.id} carried ${Math.round(candidate.t)} mm across open floor to drawn wall ${toWall?.detectionKey || candidate.owner}, separating "${target.name}" from ${inside.filter((label) => label !== target).map((label) => `"${label.name}"`).join(', ')}.` });
+    dividers.push({ separatorId: separator.id, fromWall: candidate.wall.detectionKey || candidate.wall.id, toWall: toWall?.detectionKey || candidate.owner,
+      lengthMm: Math.round(candidate.t), separates: [target.name, ...inside.filter((label) => label !== target).map((label) => label.name)] });
+  }
+  return { level: next, dividers };
+}
+
 /** Name the room containing a point (mm). An estimator's name is never replaced by analysis. */
 export function nameRoomAt(level, point, name, { source = 'manual' } = {}, overrides = {}) {
   const next = clone(level);
@@ -1020,12 +1093,15 @@ export function wallCategories(level) {
     const owners = face.nodeIds.map((id, i) => edgeOf(edges, id, face.nodeIds[(i + 1) % face.nodeIds.length])).filter((edge) => edge?.kind === 'wall').map((edge) => edge.owner);
     for (const id of owners) (Math.sign(face.signedArea) === BOUNDED_SIGN ? enclosed : outside).add(id);
   }
-  const bounded = faces.filter(face => Math.sign(face.signedArea) === BOUNDED_SIGN
-    && Math.abs(face.signedArea) >= PLAN_MODEL_DEFAULTS.minRoomM2 * 1e6)
-    .map(face => face.nodeIds.map(id => level.nodes[id]));
+  const bounded = boundedFacePolygons(level, faces);
+  // A wall on the outer face of one piece of the network can still have a room of another piece on its
+  // far side (a house drawn as blocks whose outlines do not join). External means outside lies beyond
+  // one face: rooms on both sides along (nearly) all of the wall = internal. A wall with a run outside is
+  // external here; splitWallsByExposure cuts such a wall into its external and internal runs first.
+  const roomsBothSides = (wall) => roomsBothSidesShare(wallPoints(level, wall), wall.thicknessMm, bounded) >= 0.9;
   return Object.fromEntries(Object.values(level.walls).map((wall) => {
     if (wall.categorySource === 'manual' || wall.categorySource === 'plan-evidence') return [wall.id, wall.category];
-    if (outside.has(wall.id)) return [wall.id, 'exterior'];
+    if (outside.has(wall.id)) return [wall.id, roomsBothSides(wall) ? 'interior' : 'exterior'];
     if (enclosed.has(wall.id)) return [wall.id, 'interior'];
     if (wall.category) return [wall.id, wall.category];
     // A partition need not itself close a room. A measured wall wholly inside
@@ -1054,6 +1130,81 @@ export function wallCategories(level) {
     });
     return [wall.id, inside ? 'interior' : null];
   }));
+}
+
+// Share of a wall run (sampled every 200 mm, just beyond each face) with a room on both sides.
+function roomsBothSidesShare(points, thicknessMm, bounded) {
+  const half = (thicknessMm || 0) / 2 + 150;
+  let samples = 0, both = 0;
+  for (let i = 1; i < points.length; i += 1) {
+    const a = points[i - 1], b = points[i], length = dist(a, b);
+    if (length < EPS) continue;
+    const n = { x: -(b.y - a.y) / length, y: (b.x - a.x) / length };
+    const steps = Math.max(1, Math.floor(length / 200));
+    for (let k = 0; k < steps; k += 1) {
+      const at = add(a, mul(sub(b, a), (k + 0.5) / steps));
+      samples += 1;
+      if ([1, -1].every((side) => bounded.some((polygon) => pointInPolygon(add(at, mul(n, side * half)), polygon)))) both += 1;
+    }
+  }
+  return samples ? both / samples : 0;
+}
+
+function boundedFacePolygons(level, faces) {
+  return faces.filter(face => Math.sign(face.signedArea) === BOUNDED_SIGN && Math.abs(face.signedArea) >= PLAN_MODEL_DEFAULTS.minRoomM2 * 1e6)
+    .map(face => face.nodeIds.map(id => level.nodes[id]));
+}
+
+/**
+ * Split detected walls where their exposure changes: a run of wall with outside beyond one face and a
+ * run of the same wall with rooms on both sides are separate walls (one external, one internal), cut at
+ * the junction node between them. Openings move to the piece they stand in. Estimator-edited, locked
+ * and plan-evidence walls are left as they are.
+ */
+export function splitWallsByExposure(level) {
+  const next = clone(level);
+  const { faces, edges } = networkFaces(next);
+  const outsideEdges = new Set(), faceEdges = new Set();
+  for (const face of faces) {
+    face.nodeIds.forEach((id, i) => {
+      const v = face.nodeIds[(i + 1) % face.nodeIds.length], key = id < v ? `${id}|${v}` : `${v}|${id}`;
+      faceEdges.add(key);
+      if (Math.sign(face.signedArea) !== BOUNDED_SIGN) outsideEdges.add(key);
+    });
+  }
+  const bounded = boundedFacePolygons(next, faces);
+  for (const wall of Object.values(next.walls)) {
+    if (wall.nodeIds.length < 3 || wall.locked || wall.edited || wall.categorySource === 'manual' || wall.categorySource === 'plan-evidence') continue;
+    const exposure = wall.nodeIds.slice(1).map((v, i) => {
+      const u = wall.nodeIds[i], key = u < v ? `${u}|${v}` : `${v}|${u}`;
+      if (!faceEdges.has(key)) return null; // a dangling tail bounds nothing: it stays with its neighbours
+      if (!outsideEdges.has(key)) return 'enclosed';
+      return roomsBothSidesShare([next.nodes[u], next.nodes[v]], wall.thicknessMm, bounded) > 0.5 ? 'enclosed' : 'outside';
+    });
+    for (let i = 1; i < exposure.length; i += 1) if (exposure[i] === null) exposure[i] = exposure[i - 1];
+    for (let i = exposure.length - 2; i >= 0; i -= 1) if (exposure[i] === null) exposure[i] = exposure[i + 1];
+    if (exposure.includes(null)) continue;
+    if (new Set(exposure).size < 2) continue;
+    const runs = [];
+    exposure.forEach((value, i) => { if (!runs.length || runs[runs.length - 1].value !== value) runs.push({ value, from: i, to: i + 1 }); else runs[runs.length - 1].to = i + 1; });
+    const chain = [...wall.nodeIds], original = clone(wall);
+    const lengths = [0];
+    for (let i = 1; i < chain.length; i += 1) lengths.push(lengths[i - 1] + dist(next.nodes[chain[i - 1]], next.nodes[chain[i]]));
+    const pieces = runs.map((run, index) => {
+      const id = index === 0 ? wall.id : nextId(next, 'w');
+      if (index > 0) next.walls[id] = { ...clone(original), id };
+      next.walls[id].nodeIds = chain.slice(run.from, run.to + 1);
+      next.walls[id].attributes = { ...(wall.attributes || {}), exposureSplitFrom: wall.id };
+      return { id, start: lengths[run.from], end: lengths[run.to] };
+    });
+    for (const opening of Object.values(next.openings)) {
+      if (opening.wallId !== wall.id) continue;
+      const piece = pieces.find((item) => opening.offsetMm <= item.end + EPS) || pieces[pieces.length - 1];
+      opening.wallId = piece.id; opening.offsetMm = Math.max(0, opening.offsetMm - piece.start);
+    }
+    for (const name of next.roomNames) if (name.wallIds.includes(wall.id)) name.wallIds = [...new Set([...name.wallIds, ...pieces.map((item) => item.id)])];
+  }
+  return next;
 }
 
 /** Set a wall's thickness or category by hand; the wall becomes locked. */

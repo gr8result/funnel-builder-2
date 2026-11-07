@@ -6,7 +6,7 @@
 // is bridged with wall of the host's thickness and the opening is placed on it. A gap nothing confirms
 // is left open: it may be a passage, and closing it would invent a room boundary.
 // Coordinates: the engine's logical plan pixels in, millimetres (pixels / pixelsPerMm) out.
-import { computeRooms, createLevel, deleteWall, updateWall, mergeDetections, openingPosition, wallCategories, wallPoints } from './planModel.js';
+import { computeRooms, createLevel, deleteWall, inferThresholdDividers, splitWallsByExposure, updateWall, mergeDetections, openingPosition, wallCategories, wallPoints } from './planModel.js';
 
 const toMm = (point, pixelsPerMm) => ({ x: point.x / pixelsPerMm, y: point.y / pixelsPerMm });
 
@@ -72,7 +72,9 @@ export function roomsFromWallRuns(runs, spec, labels = []) {
     a: toMm(run.nodes[i], ppm), b: toMm(node, ppm), thicknessMm: Math.round(run.thicknessMm || 90),
     category: run.category === 'exterior' ? 'exterior' : 'interior', detectionKey: `wall-run:${index}:${i}`,
   })));
-  const { level } = mergeDetections(createLevel(spec), { walls, rooms: labels.map((label) => ({ ...toMm(label, ppm), name: label.name })) });
+  const roomLabels = labels.map((label) => ({ ...toMm(label, ppm), name: label.name }));
+  const walled = mergeDetections(createLevel(spec), { walls }).level;
+  const { level } = mergeDetections(inferThresholdDividers(walled, roomLabels).level, { rooms: roomLabels });
   const slug = (value) => String(value).replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').slice(0, 60);
   return computeRooms(level).map((room) => {
     const polygon = room.floor.map((point) => ({ x: point.x * ppm / spec.logicalWidth, y: point.y * ppm / spec.logicalHeight }));
@@ -120,7 +122,8 @@ export function levelFromLinework(geometry, spec, { level = null, labels = [], b
     const kind = openingKindOf(found);
     const bridge = found.confirmed !== false || (bridgeUnconfirmedMaxMm > 0 && found.widthMm <= bridgeUnconfirmedMaxMm);
     const direction = found.direction || (found.axis === 'h' ? { x: 1, y: 0 } : found.axis === 'v' ? { x: 0, y: 1 } : null);
-    const bridged = bridge && direction && found.widthMm > 0 && !found.inWall;
+    // The front of joinery set into a niche is not a boundary: the niche belongs to the room.
+    const bridged = bridge && direction && found.widthMm > 0 && !found.inWall && !found.joineryFront;
     if (bridged) {
       const bridgeCentre = Number.isFinite(found.bridgeX) && Number.isFinite(found.bridgeY)
         ? toMm({ x: found.bridgeX, y: found.bridgeY }, ppm) : centre;
@@ -138,8 +141,13 @@ export function levelFromLinework(geometry, spec, { level = null, labels = [], b
         ...(found.labels?.length && found.heightMm > 0 ? { heightMm: found.heightMm, printedLabel: found.labels[0].text } : {}) } });
   }
   const base = level || createLevel(spec);
-  const merged = mergeDetections(base, { walls: [...walls, ...bridges], openings, rooms: labels.map((label) => ({ ...toMm(label, ppm), name: label.name })) }, { measuredLinework: true });
-  return { level: merged.level, report: { ...merged.report, bridges: bridges.length, measuredWalls: walls.length } };
+  const roomLabels = labels.map((label) => ({ ...toMm(label, ppm), name: label.name }));
+  const merged = mergeDetections(base, { walls: [...walls, ...bridges], openings }, { measuredLinework: true });
+  // Virtual room dividers (open thresholds) before rooms are named, so each name lands in its own room.
+  const divided = inferThresholdDividers(merged.level, roomLabels, { measuredLinework: true });
+  // Walls cut where their exposure changes (external run / internal run), before rooms are named.
+  const named = mergeDetections(splitWallsByExposure(divided.level), { rooms: roomLabels }, { measuredLinework: true });
+  return { level: named.level, report: { ...merged.report, roomsNamed: named.report.roomsNamed, bridges: bridges.length, measuredWalls: walls.length, dividers: divided.dividers } };
 }
 
 // Gaps nothing confirms, up to this width, are kept as unconfirmed openings for builder review (the wall
@@ -306,12 +314,18 @@ export function vectorAnalysisFromLinework(geometry, spec, { labels = [], wallDe
     }];
   });
   const unconfirmedSpanWallIds = new Set(reviewBridgeCandidates.filter((item) => /unconfirmed gap/.test(item.reason)).map((item) => item.modelWallId));
-  const rooms = computeRooms(level).map((room, index) => {
+  // A face enclosed only by the rims of a cross-hatched pier is the solid pier, not floor.
+  const pierRimKeys = new Set((geometry.walls || []).filter((wall) => wall.pierRim).map((wall) => `linework:${wall.id}`));
+  const isPierRim = (id) => { const wall = level.walls[id]; const keys = [wall?.detectionKey, ...(wall?.absorbedKeys || [])].filter(Boolean); return keys.length > 0 && keys.every((key) => pierRimKeys.has(key)); };
+  const rooms = computeRooms(level).filter((room) => !(room.wallIds.length && !room.separatorIds.length && room.wallIds.every(isPierRim))).map((room, index) => {
     const polygon = room.floor.map((point) => ({ x: point.x * spec.pixelsPerMm / spec.logicalWidth, y: point.y * spec.pixelsPerMm / spec.logicalHeight }));
     const centre = polygon.reduce((sum, point) => ({ x: sum.x + point.x / polygon.length, y: sum.y + point.y / polygon.length }), { x: 0, y: 0 });
     const unconfirmedGaps = (room.wallIds || []).filter((id) => unconfirmedSpanWallIds.has(id)).length;
+    const virtualBoundaries = (room.separatorIds || []).map((id) => level.separators[id]).filter(Boolean)
+      .map((separator) => ({ id: separator.id, basis: separator.basis || 'separator', source: separator.source, evidence: separator.evidence || null }));
     return {
       ...(unconfirmedGaps ? { unconfirmedBoundaryGaps: unconfirmedGaps } : {}),
+      ...(virtualBoundaries.length ? { virtualBoundaries } : {}),
       id: `vector-room-${spec.page}-${index + 1}`,
       lineworkRoomId: `vector-room-${spec.page}-${index + 1}`,
       name: room.name || `Unlabelled room ${index + 1}`,
@@ -321,7 +335,9 @@ export function vectorAnalysisFromLinework(geometry, spec, { labels = [], wallDe
       confidence: 0.8,
       confirmed: false,
       boundaryClosed: true,
-      geometryReview: unconfirmedGaps
+      geometryReview: virtualBoundaries.some((item) => item.source === 'detected')
+        ? `Part of this boundary is a virtual divider (no wall): ${virtualBoundaries.filter((item) => item.source === 'detected').map((item) => item.evidence).join(' ')} It is not a wall quantity. Confirm the divider, then confirm this room boundary and assign its plan label.`
+        : unconfirmedGaps
         ? `This boundary is closed across ${unconfirmedGaps} gap${unconfirmedGaps > 1 ? 's' : ''} with nothing drawn to say what ${unconfirmedGaps > 1 ? 'they are' : 'it is'}. Confirm ${unconfirmedGaps > 1 ? 'them' : 'it'}, then confirm this room boundary and assign its plan label.`
         : 'Confirm this room boundary and assign its plan label.',
       evidence: 'Boundary is a closed face of the connected vector wall model.',
@@ -335,6 +351,11 @@ export function vectorAnalysisFromLinework(geometry, spec, { labels = [], wallDe
     reviewWallCandidates,
     reviewBridgeCandidates,
     reviewOpeningCandidates,
+    // Room boundaries with no wall: they divide room polygons and are never wall quantities.
+    virtualDividers: Object.values(level.separators).filter((separator) => separator.source === 'detected').map((separator) => ({
+      id: separator.id, basis: separator.basis, detectionKey: separator.detectionKey, evidence: separator.evidence,
+      nodes: separator.nodeIds.map((id) => ({ x: level.nodes[id].x * spec.pixelsPerMm, y: level.nodes[id].y * spec.pixelsPerMm })),
+      lengthMm: Math.round(Math.hypot(level.nodes[separator.nodeIds[1]].x - level.nodes[separator.nodeIds[0]].x, level.nodes[separator.nodeIds[1]].y - level.nodes[separator.nodeIds[0]].y)) })),
     report: { ...report,
       unclassifiedWalls: reviewWallCandidates.length,
       unclassifiedBridges: Object.values(level.walls).filter((wall) => wall.detectionKey?.startsWith('linework-bridge:') && !['exterior', 'interior'].includes(categories[wall.id])).length,

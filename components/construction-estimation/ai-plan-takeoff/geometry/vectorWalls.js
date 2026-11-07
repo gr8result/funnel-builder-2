@@ -1266,7 +1266,7 @@ export function detectVectorWalls(segments, context, overrides = {}) {
     const { a, b } = endpoints(wall);
     const horizontal = Math.abs(Math.sin(wall.angle)) < 1e-3, vertical = Math.abs(Math.cos(wall.angle)) < 1e-3;
     return { id: `vw-${index + 1}`, nodes: [a, b], axis: horizontal ? 'h' : vertical ? 'v' : 'd', angle: wall.angle, measuredThicknessMm: Math.round(wall.thicknessMm * 10) / 10,
-      ...(pairIsPierRim(wall, piers, mmPx) ? { quantityReview: 'Compact cross-hatched pier rim: retain enclosure geometry, review separately from linear wall quantities.' } : {}),
+      ...(pairIsPierRim(wall, piers, mmPx) ? { pierRim: true, quantityReview: 'Compact cross-hatched pier rim: retain enclosure geometry, review separately from linear wall quantities.' } : {}),
       lengthMm: Math.round(wall.lengthMm), pens: [...new Set(wall.faces.map((face) => facePen(face, wall.lo, wall.hi)))] };
   });
   const hostIdsFor = (opening) => {
@@ -1291,8 +1291,11 @@ export function detectVectorWalls(segments, context, overrides = {}) {
   for (const opening of openings) {
     opening.hostWallIds = hostIdsFor(opening);
     if (opening.evidence === 'a glass line across the gap' && opening.hostWallIds.length === 2
-      && opening.hostWallIds.every(id => out.find(wall => wall.id === id)?.quantityReview))
+      && opening.hostWallIds.every(id => out.find(wall => wall.id === id)?.pierRim)) {
+      // The front of joinery set between two piers (a shelf niche): the niche is part of the room.
       opening.quantityReview = 'A single shelf line between filled piers is not independent door or window evidence.';
+      opening.joineryFront = true;
+    }
   }
   // Separate classification stage: what each measured pair and opening is, with evidence.
   const classified = overrides.classify === false ? null
