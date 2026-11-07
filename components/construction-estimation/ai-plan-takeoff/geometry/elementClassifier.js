@@ -35,11 +35,18 @@ export const CLASSIFIER_DEFAULTS = {
   retainingLabelReachMm: 1500,
   retainingThicknessMm: [140, 320],
   retainingMinLengthMm: 1500,
+  servicesBoxMaxSideMm: 1000,   // a stack or duct box side; longer pairs are walls
+  servicesBoxReachMm: 800,      // both ends of a boxing pair lie this close to where the note's leader ends
+  doorLeafLengthToleranceMm: 60, // an open door's leaf read as a pair: its length is the leaf width
+  doorLeafGapToleranceMm: 100,   // ... and the gap it swings from is that wide
+  doorLeafJambReachMm: 150,      // ... with the leaf's hinge end this close to the gap's jamb
 };
 
 const JOINERY_WORDS = /\b(bench|benchtop|fridge|robe|wir|shelf|shelves|cupboard|pantry|cabinet|cabinetry|joinery|vanity|overhead|bulkhead|island|desk|dw|dishwasher|oven|cooktop|linen|drawers?)\b/i;
 const STRUCTURE_WORDS = /\b(wall|stud|block|brick|masonry|frame|framing|bearing)\b/i;
 const RETAINING_WORDS = /\b(retaining|retaining wall|boundary wall|block wall|crib wall|landscape wall)\b/i;
+// Notes naming a services enclosure (stair "risers" are deliberately not included).
+const SERVICES_WORDS = /\b(plumbing stack|stack|duct shaft|services duct|service duct|sewer vent|vent stack)\b/i;
 
 function frameOf(a, b) {
   const L = Math.hypot(b.x - a.x, b.y - a.y);
@@ -55,6 +62,168 @@ function distanceToWall(w, p, mmPx) {
   const s = along(f, p) - f.s0, c = Math.abs(across(f, p) - f.c0);
   const out = Math.max(0, -s, s - f.L), off = Math.max(0, c - (w.measuredThicknessMm || 0) / 2 * mmPx);
   return Math.hypot(out, off);
+}
+
+// The text layer gives each item's origin and length but not its rotation, so a line of text may run
+// along +x, -x, +y or -y from its origin (rotated sheets print notes vertically).
+const textBaselines = (t) => [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dy]) => ({ a: { x: t.x, y: t.y }, b: { x: t.x + dx * t.width, y: t.y + dy * t.width } }));
+function pointSegmentDistance(p, a, b) {
+  const dx = b.x - a.x, dy = b.y - a.y, L2 = dx * dx + dy * dy;
+  const k = L2 ? Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / L2)) : 0;
+  return Math.hypot(p.x - a.x - k * dx, p.y - a.y - k * dy);
+}
+
+/** Note blocks: each line matching `words`, with the lines of the same size printed beside it (any orientation). */
+function noteBlocks(textItems, words) {
+  const items = (textItems || []).filter((t) => Number.isFinite(t.x) && Number.isFinite(t.y) && t.width > 0 && t.height > 0);
+  return items.filter((t) => words.test(String(t.text || ''))).map((seed) => {
+    const block = [seed];
+    for (let grew = true; grew;) {
+      grew = false;
+      for (const t of items) {
+        if (block.includes(t) || Math.abs(t.height - seed.height) > 0.25 * seed.height) continue;
+        if (block.some((b) => textBaselines(b).some((e) => pointSegmentDistance(t, e.a, e.b) <= 1.8 * seed.height))) { block.push(t); grew = true; }
+      }
+    }
+    return { label: seed.text, block, reach: 1.5 * seed.height };
+  });
+}
+
+/** Strokes, plus arrowheads (small filled triangles; the tip is the vertex with the sharpest angle). */
+function leaderLinework(segments, mmPx) {
+  const strokes = segments.filter((s) => s.paint !== 'fill' && Math.hypot(s.x2 - s.x1, s.y2 - s.y1) > 0.5);
+  const fills = new Map();
+  for (const s of segments) if (s.paint === 'fill') { const k = `${s.path}|${s.subpath}`; if (!fills.has(k)) fills.set(k, []); fills.get(k).push(s); }
+  const arrows = [];
+  for (const parts of fills.values()) {
+    const pts = [];
+    for (const s of parts) for (const p of [{ x: s.x1, y: s.y1 }, { x: s.x2, y: s.y2 }]) if (!pts.some((q) => Math.hypot(q.x - p.x, q.y - p.y) < 0.3)) pts.push(p);
+    if (pts.length !== 3) continue;
+    const size = Math.max(...pts.map((p) => Math.max(...pts.map((q) => Math.hypot(q.x - p.x, q.y - p.y)))));
+    if (size < 50 * mmPx || size > 1500 * mmPx) continue;
+    const angle = (i) => { const [p, q, r] = [pts[i], pts[(i + 1) % 3], pts[(i + 2) % 3]];
+      const u = { x: q.x - p.x, y: q.y - p.y }, v = { x: r.x - p.x, y: r.y - p.y };
+      return Math.acos(Math.max(-1, Math.min(1, (u.x * v.x + u.y * v.y) / Math.hypot(u.x, u.y) / Math.hypot(v.x, v.y)))); };
+    const tipIndex = [0, 1, 2].sort((i, j) => angle(i) - angle(j))[0];
+    if (angle(tipIndex) > Math.PI / 4) continue;
+    const base = pts.filter((_, i) => i !== tipIndex);
+    arrows.push({ tip: pts[tipIndex], base: { x: (base[0].x + base[1].x) / 2, y: (base[0].y + base[1].y) / 2 }, size });
+  }
+  return { strokes, arrows };
+}
+
+/**
+ * Where a note's leaders end: chains of strokes starting beside the note text, followed while the
+ * continuation is unambiguous. Returns the arrowhead (when the chain ends in one) and the chain's end.
+ */
+function leaderEnds(note, strokes, arrows) {
+  const nearText = (p) => note.block.some((t) => textBaselines(t).some((e) => pointSegmentDistance(p, e.a, e.b) <= note.reach));
+  const out = [];
+  // A leader is drawn as its own small path; wall, grid and tile linework sits in long paths.
+  const pathSize = new Map();
+  for (const s of strokes) pathSize.set(s.path, (pathSize.get(s.path) || 0) + 1);
+  const leaderLike = (s) => s.path === undefined || (pathSize.get(s.path) || 0) <= 4;
+  // Leaders leave a note from the start or end of one of its lines, not from the middle of the text.
+  const atLineEnd = (p) => note.block.some((t) => textBaselines(t).some((e) => Math.min(Math.hypot(p.x - e.a.x, p.y - e.a.y), Math.hypot(p.x - e.b.x, p.y - e.b.y)) <= note.reach));
+  for (const first of strokes) {
+    if (!leaderLike(first)) continue;
+    for (const startEnd of [0, 1]) {
+      const start = startEnd ? { x: first.x2, y: first.y2 } : { x: first.x1, y: first.y1 };
+      if (!atLineEnd(start)) continue;
+      let seg = first, end = startEnd ? { x: first.x1, y: first.y1 } : { x: first.x2, y: first.y2 }, arrow = null, steps = 0;
+      const seen = new Set([seg]);
+      for (; steps < 8; steps++) {
+        arrow = arrows.find((a) => Math.hypot(a.base.x - end.x, a.base.y - end.y) <= Math.max(2, 0.25 * a.size)) || null;
+        if (arrow) break;
+        const next = strokes.filter((s) => !seen.has(s) && leaderLike(s) && (Math.hypot(s.x1 - end.x, s.y1 - end.y) <= 0.75 || Math.hypot(s.x2 - end.x, s.y2 - end.y) <= 0.75));
+        const pick = next.length === 1 ? next[0] : next.filter((s) => s.path === seg.path).length === 1 ? next.find((s) => s.path === seg.path) : null;
+        if (!pick) break;
+        seen.add(pick); seg = pick;
+        end = Math.hypot(pick.x1 - end.x, pick.y1 - end.y) <= 0.75 ? { x: pick.x2, y: pick.y2 } : { x: pick.x1, y: pick.y1 };
+      }
+      const target = arrow ? arrow.tip : end;
+      if (nearText(target)) continue;
+      out.push({ arrow, end, target, strokes: seen.size });
+    }
+  }
+  return out;
+}
+
+/**
+ * Structures a retaining note points at with a leader: note lines (the matching line and the lines
+ * printed with it) -> a chain of strokes starting beside the text -> a filled arrowhead -> the pair of
+ * parallel face lines the arrow tip lands on, at a retaining-wall thickness. Dashed faces are bridged.
+ */
+export function leaderPointedStructures(segments, textItems, mmPx, options = CLASSIFIER_DEFAULTS) {
+  const notes = noteBlocks(textItems, RETAINING_WORDS);
+  if (!notes.length) return [];
+  const { strokes, arrows } = leaderLinework(segments, mmPx);
+  const found = [];
+  for (const note of notes) {
+    for (const { arrow } of leaderEnds(note, strokes, arrows)) {
+      if (!arrow) continue;
+      const pair = facePairAt(arrow.tip, strokes, mmPx, options);
+      if (!pair) continue;
+      if (found.some((f) => Math.hypot(f.nodes[0].x - pair.nodes[0].x, f.nodes[0].y - pair.nodes[0].y) < 1 && Math.hypot(f.nodes[1].x - pair.nodes[1].x, f.nodes[1].y - pair.nodes[1].y) < 1)) continue;
+      found.push({ element: 'retaining', nodes: pair.nodes, thicknessMm: pair.thicknessMm, confidence: 0.75, label: note.label,
+        evidence: [`the note "${note.block.map((t) => t.text).join(' / ')}" points here with a leader and arrowhead`,
+          `${pair.thicknessMm} mm between two parallel face lines ${Math.round(pair.lengthMm)} mm long (faces drawn over ${Math.round(pair.coverage[0] * 100)}% and ${Math.round(pair.coverage[1] * 100)}% of that length; dashed lengths bridged)`] });
+    }
+  }
+  return found;
+}
+
+/**
+ * Small boxes a services note (plumbing stack, duct) points into: every short pair lying entirely
+ * within `reachMm` of the leader's end is boxing around a pipe or duct, not a room wall.
+ */
+export function servicesBoxingPoints(segments, textItems, mmPx) {
+  const notes = noteBlocks(textItems, SERVICES_WORDS);
+  if (!notes.length) return [];
+  const { strokes, arrows } = leaderLinework(segments, mmPx);
+  return notes.flatMap((note) => leaderEnds(note, strokes, arrows).map(({ target }) => ({ point: target, label: note.label })));
+}
+
+/** The parallel face pair an arrow tip lands on: the tip's face line and a partner at retaining thickness. */
+function facePairAt(tip, strokes, mmPx, options) {
+  const minLen = 500 * mmPx, onTol = 1.5, lineTol = 0.6, gap = 600 * mmPx;
+  const host = strokes.filter((s) => Math.hypot(s.x2 - s.x1, s.y2 - s.y1) >= minLen && pointSegmentDistance(tip, { x: s.x1, y: s.y1 }, { x: s.x2, y: s.y2 }) <= onTol)
+    .sort((p, q) => Math.hypot(q.x2 - q.x1, q.y2 - q.y1) - Math.hypot(p.x2 - p.x1, p.y2 - p.y1))[0];
+  if (!host) return null;
+  const f = frameOf({ x: host.x1, y: host.y1 }, { x: host.x2, y: host.y2 });
+  const parallel = strokes.filter((s) => { const L = Math.hypot(s.x2 - s.x1, s.y2 - s.y1);
+    return L >= 2 && Math.abs(((s.x2 - s.x1) * f.n.x + (s.y2 - s.y1) * f.n.y) / L) < 0.02; })
+    .map((s) => { const a = along(f, { x: s.x1, y: s.y1 }), b = along(f, { x: s.x2, y: s.y2 });
+      return { c: (across(f, { x: s.x1, y: s.y1 }) + across(f, { x: s.x2, y: s.y2 })) / 2, lo: Math.min(a, b), hi: Math.max(a, b) }; });
+  const sTip = along(f, tip), cA = across(f, tip);
+  const runAt = (c) => {
+    const pieces = parallel.filter((p) => Math.abs(p.c - c) <= lineTol).sort((p, q) => p.lo - q.lo);
+    const runs = [];
+    for (const p of pieces) { const last = runs[runs.length - 1]; if (last && p.lo <= last.hi + gap) { last.hi = Math.max(last.hi, p.hi); last.pieces.push(p); } else runs.push({ lo: p.lo, hi: p.hi, pieces: [p] }); }
+    return runs.find((r) => sTip >= r.lo - onTol && sTip <= r.hi + onTol) || null;
+  };
+  const drawn = (run, lo, hi) => {
+    const parts = run.pieces.map((p) => [Math.max(lo, p.lo), Math.min(hi, p.hi)]).filter(([a, b]) => b > a).sort((p, q) => p[0] - q[0]);
+    let total = 0, reach = lo; for (const [a, b] of parts) { if (b > reach) { total += b - Math.max(a, reach); reach = b; } } return total;
+  };
+  const runA = runAt(cA); if (!runA) return null;
+  let best = null;
+  for (const c of [...new Set(parallel.map((p) => Math.round(p.c * 10) / 10))]) {
+    const t = Math.abs(c - cA) / mmPx; if (t < options.retainingThicknessMm[0] || t > options.retainingThicknessMm[1]) continue;
+    const runB = runAt(c); if (!runB) continue;
+    const lo = Math.max(runA.lo, runB.lo), hi = Math.min(runA.hi, runB.hi); if (hi - lo < options.retainingMinLengthMm * mmPx) continue;
+    const coverage = [drawn(runA, lo, hi) / (hi - lo), drawn(runB, lo, hi) / (hi - lo)];
+    if (Math.min(...coverage) < 0.6) continue;
+    const score = (hi - lo) * Math.min(...coverage);
+    if (!best || score > best.score) best = { score, lo, hi, c, coverage };
+  }
+  if (!best) return null;
+  // Face A's position: length-weighted over its pieces inside the pair.
+  const inA = runA.pieces.map((p) => ({ c: p.c, w: Math.max(0, Math.min(best.hi, p.hi) - Math.max(best.lo, p.lo)) })).filter((p) => p.w > 0);
+  const faceA = inA.reduce((s, p) => s + p.c * p.w, 0) / inA.reduce((s, p) => s + p.w, 0);
+  const mid = (faceA + best.c) / 2;
+  const point = (s) => ({ x: f.u.x * s + f.n.x * mid, y: f.u.y * s + f.n.y * mid });
+  return { nodes: [point(best.lo), point(best.hi)], thicknessMm: Math.round(Math.abs(best.c - faceA) / mmPx), lengthMm: (best.hi - best.lo) / mmPx, coverage: best.coverage };
 }
 
 /**
@@ -222,6 +391,46 @@ export function classifyDrawingElements({ walls, openings, rejected = [], straig
     structures.push({ element: 'retaining', nodes: [item.a, item.b], L: f.L, u: f.u, thicknessMm: t, confidence: 0.8, label: label.text,
       evidence: [`${Math.round(t)} mm pair ${Math.round(f.L / mmPx)} mm long that the detector set aside (${item.reason})`, `labelled "${label.text}"`] });
   }
+  // A retaining note placed away from its wall points at it with a leader ending in an arrowhead. The
+  // wall is the parallel pair of face lines the arrow tip lands on (a face may be dashed where it runs
+  // under a slab above). Only pairs no wall and no structure above already covers.
+  if (segments?.length) {
+    for (const found of leaderPointedStructures(segments, textItems, mmPx, options)) {
+      const f = frameOf(found.nodes[0], found.nodes[1]);
+      const lo = Math.min(along(f, found.nodes[0]), along(f, found.nodes[1])), hi = Math.max(along(f, found.nodes[0]), along(f, found.nodes[1]));
+      const onLine = (s) => Math.abs(Math.abs(f.u.x * s.u.x + f.u.y * s.u.y) - 1) < 1e-3 && Math.abs(across(f, s.nodes[0]) - f.c0) <= 25 * mmPx;
+      const overlaps = (s) => Math.min(along(f, s.nodes[0]), along(f, s.nodes[1])) < hi - 100 * mmPx && Math.max(along(f, s.nodes[0]), along(f, s.nodes[1])) > lo + 100 * mmPx;
+      if (structures.some((s) => onLine(s) && overlaps(s))) continue;
+      // House walls the detector measured on this same pair are pieces of the labelled retaining wall:
+      // they stay in the room geometry but are measured with the structure, never as house walls.
+      const pieces = kept.filter((w) => { const s = { nodes: w.nodes, u: frameOf(w.nodes[0], w.nodes[1]).u };
+        return onLine(s) && overlaps(s) && Math.abs((w.measuredThicknessMm || 0) - found.thicknessMm) <= 40
+          && Math.min(along(f, w.nodes[0]), along(f, w.nodes[1])) >= lo - 100 * mmPx && Math.max(along(f, w.nodes[0]), along(f, w.nodes[1])) <= hi + 100 * mmPx; });
+      // A pair that partly overlaps a different house wall is not cleanly a separate structure.
+      const clash = kept.some((w) => !pieces.includes(w) && overlaps({ nodes: w.nodes }) && onLine({ nodes: w.nodes, u: frameOf(w.nodes[0], w.nodes[1]).u }));
+      if (clash) continue;
+      for (const w of pieces) {
+        w.retainingPiece = true;
+        w.quantityReview = `Part of the labelled retaining wall ("${found.label}"): measured with that structure, not as a house wall.`;
+        w.classification = { element: 'retaining', confidence: found.confidence };
+        records.get(w.id)?.evidence.push({ rule: 'retaining-leader', weight: 0, detail: found.evidence[0] });
+      }
+      structures.push({ ...found, coversWallIds: pieces.map((w) => w.id), L: f.L, u: f.u,
+        evidence: pieces.length ? [...found.evidence, `includes ${pieces.length} measured pair${pieces.length > 1 ? 's' : ''} on the same line (${pieces.map((w) => w.id).join(', ')})`] : found.evidence });
+    }
+    // Boxing around a pipe or duct a services note points into: short pairs wholly beside the leader's
+    // end. Kept as geometry (it bounds the room) but not measured as house walls.
+    for (const { point, label } of servicesBoxingPoints(segments, textItems, mmPx)) {
+      for (const w of kept) {
+        if (w.retainingPiece || w.servicesBoxing || (w.lengthMm || Infinity) > options.servicesBoxMaxSideMm) continue;
+        if (!w.nodes.every((p) => Math.hypot(p.x - point.x, p.y - point.y) <= options.servicesBoxReachMm * mmPx)) continue;
+        w.servicesBoxing = true;
+        w.quantityReview = `Boxing around the services the note "${label}" points to: not a room wall; measure it with the services (lined boxing) if it is required.`;
+        w.classification = { element: 'services', confidence: 0.8 };
+        records.get(w.id)?.evidence.push({ rule: 'services-leader', weight: 0, detail: `the note "${label}" points into this box` });
+      }
+    }
+  }
 
   // --- Opening measurements: frame, rough opening and leaf are separate, each only when drawn.
   for (const o of openings) {
@@ -247,6 +456,28 @@ export function classifyDrawingElements({ walls, openings, rejected = [], straig
     gap.bridgeOnly = true;
     gap.evidence = `${gap.evidence || 'gap'}; the wall gap of the ${Math.round(doors[0].leafMm)} mm door read from its swing`;
     doors[0].measurements = { ...doors[0].measurements, roughOpeningMm: Math.round(gap.widthMm) };
+  }
+
+  // A door drawn open: its leaf is a short double line the detector can read as a wall pair, and the
+  // swing is then hung on that "wall". The pair is the leaf when it is the door's leaf length, one end
+  // meets nothing and the other end sits at the jamb of a gap of the same width - the door's real opening.
+  for (const door of [...openings]) {
+    if (door.kind !== 'door' || !Number.isFinite(door.leafMm) || (door.hostWallIds || []).length !== 1) continue;
+    const leaf = kept.find((w) => w.id === door.hostWallIds[0]);
+    if (!leaf || Math.abs((leaf.lengthMm || 0) - door.leafMm) > options.doorLeafLengthToleranceMm) continue;
+    const ends = leaf.nodes.map((p) => kept.some((o) => o !== leaf && distanceToWall(o, p, mmPx) <= ((leaf.measuredThicknessMm || 0) / 2 + options.endReachMm) * mmPx));
+    if (ends.filter(Boolean).length > 1) continue;
+    const gap = openings.find((g) => g !== door && g.kind !== 'door' && g.direction && !g.bridgeOnly && Math.abs((g.widthMm || 0) - door.leafMm) <= options.doorLeafGapToleranceMm
+      && Math.abs(g.direction.x * (leaf.nodes[1].x - leaf.nodes[0].x) + g.direction.y * (leaf.nodes[1].y - leaf.nodes[0].y)) < 0.2 * (leaf.lengthMm || 1) * mmPx
+      && leaf.nodes.some((p) => [-1, 1].some((side) => Math.hypot(p.x - (g.x + side * g.direction.x * g.widthMm / 2 * mmPx), p.y - (g.y + side * g.direction.y * g.widthMm / 2 * mmPx)) <= options.doorLeafJambReachMm * mmPx)));
+    if (!gap) continue;
+    const r = records.get(leaf.id);
+    if (r) { r.element = 'door-leaf'; r.confidence = 0.85; r.evidence.push({ rule: 'open-door-leaf', weight: -0.9, detail: `the ${Math.round(door.leafMm)} mm leaf of a door drawn open (its swing is hung on it; its hinge end is at the jamb of the ${Math.round(gap.widthMm)} mm gap ${gap.id})` }); }
+    kept.splice(kept.indexOf(leaf), 1); removed.push({ wall: leaf, record: r });
+    Object.assign(gap, { kind: 'door', leafMm: door.leafMm, confirmed: true, needsClassification: false,
+      evidence: `door swing (${Math.round(door.leafMm)} mm leaf) drawn open across ${gap.evidence ? `"${gap.evidence}"` : 'the gap'}; the gap is its opening`,
+      measurements: { ...(gap.measurements || {}), leafWidthMm: Math.round(door.leafMm), roughOpeningMm: Math.round(gap.widthMm) } });
+    openings.splice(openings.indexOf(door), 1);
   }
 
   const list = [...records.values()].map((r) => ({ ...r, confidence: Math.round((r.confidence ?? 0) * 100) / 100 }));

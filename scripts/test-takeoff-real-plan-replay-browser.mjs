@@ -285,6 +285,14 @@ try {
   page = await browser.newPage();
   page.setDefaultTimeout(120000);
   page.on('pageerror', (error) => { report.errors.push(error.message); console.error('Browser error:', error.message); });
+  // Crash diagnosis: a renderer crash ('error' event) or a lost browser is recorded with the time and the
+  // page's JS heap at the last sample, so a failure can be tied to memory or to the application.
+  report.memory = [];
+  page.on('error', (error) => { report.crash = { at: new Date().toISOString(), kind: 'renderer crashed', message: error.message, lastMemory: report.memory.at(-1) || null }; console.error('Renderer crashed:', error.message); });
+  browser.on('disconnected', () => { report.disconnectedAt = report.disconnectedAt || new Date().toISOString(); });
+  page.on('console', (message) => { if (message.type() === 'error' && /memory|allocation|Array buffer/i.test(message.text())) report.errors.push(`console: ${message.text()}`); });
+  const heapSampler = setInterval(() => { page.metrics().then((m) => { report.memory.push({ at: new Date().toISOString(), jsHeapMB: Math.round(m.JSHeapUsedSize / 1048576), jsHeapTotalMB: Math.round(m.JSHeapTotalSize / 1048576) }); if (report.memory.length > 600) report.memory.shift(); }).catch(() => {}); }, 10000);
+  heapSampler.unref();
   page.on('dialog', async (dialog) => {
     report.dialogs.push(dialog.message());
     if (dialog.type() === 'prompt' && /known dimension/i.test(dialog.message())) await dialog.accept(calibrationAnswer);
@@ -636,6 +644,26 @@ try {
       await settle();
     }
     report.cases.wallChecks = wallChecks;
+    // Generate the commercial takeoff report with the screen's own button and keep the printed HTML.
+    await page.evaluate(() => { const open = window.open; window.open = (...args) => { const opened = open.apply(window, args); if (opened) opened.print = () => {}; return opened; }; });
+    const reportTarget = new Promise((resolve) => browser.once('targetcreated', resolve));
+    await button('Print / Save Commercial PDF Report');
+    const reportPage = await (await reportTarget).page();
+    await reportPage.waitForFunction(() => document.body && document.body.innerText.includes('Commercial Takeoff Report'), { timeout: 60000 });
+    const reportHtml = await reportPage.content();
+    fs.writeFileSync(path.join(out, 'takeoff-report.html'), reportHtml);
+    await reportPage.screenshot({ path: path.join(out, '6-takeoff-report.png'), fullPage: false }).catch(() => {});
+    await reportPage.close();
+    const reportRows = [...reportHtml.matchAll(/<tr class="[^"]*">([\s\S]*?)<\/tr>/g)].map((match) => [...match[1].matchAll(/<td>([\s\S]*?)<\/td>/g)].map((cell) => cell[1].replace(/<[^>]+>/g, '').trim()));
+    const laundryRow = reportRows.find((cells) => cells[0]?.startsWith(`${laundryDetected.name} — Floor area`));
+    assert.ok(laundryRow, 'the approved laundry room is a row of the printed report');
+    assert.equal(laundryRow[1], laundryCorrected.areaM2.toFixed(2), 'the printed report shows the corrected laundry area, rounded to 0.01 m2');
+    assert.equal(laundryRow[3], 'Approved', 'the printed laundry row is approved');
+    assert.match(laundryRow[4], /Sheet \d+ · .+:floor-area/, 'the printed row traces to its sheet and item id');
+    const unrounded = reportRows.filter((cells) => /^-?\d+\.\d{3,}$/.test(cells[1] || ''));
+    assert.deepEqual(unrounded, [], 'printed quantities are rounded');
+    report.cases.takeoffReport = { rows: reportRows.length, laundry: laundryRow.slice(0, 5), file: 'takeoff-report.html' };
+    report.memory.push({ step: 'report', at: new Date().toISOString(), ...(await page.metrics().then((m) => ({ jsHeapMB: Math.round(m.JSHeapUsedSize / 1048576) })).catch(() => ({}))) });
     await button('Export Takeoff to Job Setup');
     await page.waitForSelector('[data-testid="job-setup-takeoff-import"]');
     assert.equal(await page.$('[data-testid="takeoff-calibration-blocked"]'), null, 'Confirmed calibration reaches Job Setup');

@@ -160,7 +160,9 @@ export function vectorAnalysisFromLinework(geometry, spec, { labels = [], wallDe
   // measured like any wall (the decision is keyed to the structure's stable detection key).
   const structures = (geometry.structures || []).map((item, index) => ({ ...item, id: item.id || `vs-${index + 1}` }));
   const confirmedStructures = structures.filter((item) => ['interior', 'exterior'].includes(wallDecisions[`linework:${item.id}`]));
-  if (confirmedStructures.length) geometry = { ...geometry, walls: [...(geometry.walls || []), ...confirmedStructures.map((item) => ({ id: item.id, nodes: item.nodes,
+  // A confirmed structure replaces the measured pieces of it the detector also found (same wall).
+  const replaced = new Set(confirmedStructures.flatMap((item) => item.coversWallIds || []));
+  if (confirmedStructures.length) geometry = { ...geometry, walls: [...(geometry.walls || []).filter((wall) => !replaced.has(wall.id)), ...confirmedStructures.map((item) => ({ id: item.id, nodes: item.nodes,
     measuredThicknessMm: item.thicknessMm, lengthMm: Math.round(Math.hypot(item.nodes[1].x - item.nodes[0].x, item.nodes[1].y - item.nodes[0].y) / spec.pixelsPerMm) }))] };
   const built = levelFromLinework(geometry, spec, { labels, bridgeUnconfirmedMaxMm });
   let level = built.level;
@@ -201,9 +203,13 @@ export function vectorAnalysisFromLinework(geometry, spec, { labels = [], wallDe
 
   const detectionIds = new Map();
   const wallLineage = [];
+  // Pieces of a retaining structure are reviewed (and measured) through that structure's entry.
+  const retainingPieceKeys = new Set((geometry.walls || []).filter((wall) => wall.retainingPiece).map((wall) => `linework:${wall.id}`));
   const reviewWallCandidates = Object.values(level.walls).flatMap((wall) => {
     const category = categories[wall.id];
     if (wall.detectionKey?.startsWith('linework-bridge:')) return [];
+    const wallKeys = [wall.detectionKey, ...(wall.absorbedKeys || [])].filter(Boolean);
+    if (wallKeys.length && wallKeys.every((key) => retainingPieceKeys.has(key)) && wall.categorySource !== 'manual') return [];
     if (category === 'exterior' || category === 'interior') return [];
     return [{
       id: `review-wall-${wall.id}`,

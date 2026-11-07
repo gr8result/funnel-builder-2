@@ -5,7 +5,17 @@ const escapeHtml = (value) => String(value ?? '')
   .replace(/"/g, '&quot;')
   .replace(/'/g, '&#39;');
 
-const value = (row) => row.quantity ?? row.lengthM ?? row.netAreaM2 ?? '';
+// Printed quantities are rounded for reading (the stored values keep full precision): areas and
+// lengths in metres to 2 decimals, millimetres and counts to whole numbers.
+export function formatReportQuantity(raw, unit = '') {
+  if (raw === null || raw === undefined || raw === '') return '';
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return String(raw);
+  const u = String(unit).toLowerCase();
+  if (/^(mm|no|nr|qty|ea|each|item|items|count)$/.test(u) || (!u && Number.isInteger(n))) return String(Math.round(n));
+  return n.toFixed(2);
+}
+const value = (row) => formatReportQuantity(row.quantity ?? row.lengthM ?? row.netAreaM2 ?? '', row.unit);
 const trace = (row) => [
   row.level || row.floor || '',
   row.planSheet || row.page ? `Sheet ${row.planSheet || row.page}` : '',

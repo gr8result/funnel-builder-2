@@ -11,6 +11,10 @@ export function roomLabelsFromText(planPage) {
     name: item.text.trim(), x: item.x + Math.max(0, Number(item.width) || 0) / 2,
     y: item.y - Math.max(0, Number(item.height) || 0) / 2,
   }));
+  // Room names read locally from the sheet image where the PDF has no text for them (outlined glyphs).
+  for (const item of planPage.ocrRoomLabels || []) {
+    if (typeof item.text === 'string' && Number.isFinite(item.x) && Number.isFinite(item.y)) labels.push({ name: item.text.trim(), x: item.x, y: item.y });
+  }
   return labels;
 }
 

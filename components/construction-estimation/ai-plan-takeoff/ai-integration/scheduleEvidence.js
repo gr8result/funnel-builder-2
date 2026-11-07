@@ -46,6 +46,14 @@ export function createAiScheduleRows(analysis, pages) {
     customTakeoffs: [
       ...(analysis?.fixtures || []).filter(eligible).map((item, i) => row(item, i, 'Custom Takeoffs', item.quantity, 'No', `${item.type}${item.room ? ` — ${item.room}` : ''}`)),
       ...(analysis?.documentedQuantities || []).filter(eligible).map((item, i) => row(item, i, 'Drawing evidence', item.value, item.unit, item.label)),
+      // Outdoor recesses in the building outline, measured from the plan: listed for external works
+      // (paving, soffits, screening). They are not rooms and never add to floor or ceiling area.
+      ...(analysis?.externalAreas || []).filter((item) => pages.includes(item.page) && Number(item.areaM2) > 0).map((item) => ({
+        section: 'External Areas', itemId: `external-area-${item.page}-${item.id}`, planSheet: item.page, floor: item.level, level: item.level,
+        category: 'External recess (outdoor area, not a room)', quantity: item.areaM2, unit: 'm2', source: 'plan',
+        commercialStatus: 'Measured — outdoor area, excluded from floor area', reviewRequired: false,
+        notes: `${item.basis || ''} ${item.evidence || ''}${item.mouthMm ? ` Open mouth ${Math.round(item.mouthMm)} mm.` : ''}`.trim(),
+      })),
     ],
   };
 }

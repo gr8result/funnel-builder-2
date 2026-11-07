@@ -337,6 +337,16 @@ export function applyOpeningLabels(openings, association, overrides = {}) {
       perpMm: pair.perpMm, alongMm: pair.alongMm, widthAgrees: fit.agrees, differenceMm: fit.differenceMm ?? null };
     opening.labels = [...(opening.labels || []), evidence];
     const strong = label.confidence >= o.minLabelConfidence && parsed.knownSuffix && fit.agrees;
+    if (!strong && label.confidence >= o.minLabelConfidence && parsed.knownSuffix && !opening.needsClassification && conflicts(opening.kind, parsed)) {
+      // A clearly read label of a different kind (and a different width) beside it: neither reading can be
+      // trusted, so it is held for the builder rather than counted as what the symbol alone suggested.
+      opening.labelConflict = `printed label "${parsed.text}" reads as ${parsed.kind} ${parsed.widthMm || parsed.leafWidthMm || ''} wide, the drawn symbol as a ${Math.round(opening.widthMm)} mm ${opening.kind}`;
+      opening.needsClassification = true;
+      opening.evidence = `${opening.evidence || opening.kind}; ${opening.labelConflict}: confirm which it is and its width`;
+      report.conflicts.push({ id: opening.id, drawn: opening.kind, label: parsed.text });
+      report.weak.push({ id: opening.id, ...evidence });
+      continue;
+    }
     if (!strong) { report.weak.push({ id: opening.id, ...evidence }); continue; }
     const m = opening.measurements = { ...(opening.measurements || {}) };
     if (parsed.form === 'code' || parsed.form === 'explicit') {
