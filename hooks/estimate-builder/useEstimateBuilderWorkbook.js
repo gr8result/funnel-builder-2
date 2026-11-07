@@ -13,6 +13,8 @@ import { refreshSelectionProcurementRequirements } from '../../lib/builders/sele
 import { selectionReconciliationFinancialImpact } from '../../lib/builders/quotationFinancialImpact.js';
 import { reconcileProductSelections } from '../../lib/builders/productSelectionIntegrity.js';
 import { normalizeQuotationStructure, quotationSectionOrderAfterNormalize } from '../../lib/construction-estimation/quotationStructure.js';
+import { placeDisplacedQuoteSections } from '../../lib/construction-estimation/quotationSectionPlacement.js';
+import { applyGeneratedRowSafeguards } from '../../lib/construction-estimation/quotationTemplateRates.js';
 import { takeoffProcurementDetails, assignPlasterboardSupplier, procurementSupplierKey } from '../../lib/construction-estimation/takeoffProcurement.js';
 import { masterJobId, linkTakeoffToMasterJob, mergeMasterJobSummaries, findMasterJobForProject } from '../../lib/construction-estimation/masterJob.js';
 import { normalizeTakeoffInputSection } from '../../lib/construction-estimation/takeoffInputRows.js';
@@ -3099,9 +3101,12 @@ function normalizeWorkbook(workbook = {}) {
   // Old Cabinet Schedule lines are moved onto the canonical cabinet items in the same pass.
   workbook = migrateWorkbookCabinetSchedules(normalizeJobForCurrentSchema(workbook));
   const restored = restoreCompleteWorkbook(defaults, workbook);
+  // Generated Client Selections rows on every load: exact-clone floor wastes charged once, blank generated
+  // tiling labour / electrical point rates filled from the dated template schedule (builder rates untouched).
+  restored.quotation = applyGeneratedRowSafeguards(restored.quotation);
   // A targeted selection save owns its existing quote structure, including on file reopen.
   if (workbook.selectionQuoteEngineVersion === 1 && workbook.quotation) {
-    return applyCabinetryRequirementsToQuotation(reconcileCabinetryQuotation({ ...restored, quotation: workbook.quotation }, owner), owner);
+    return applyCabinetryRequirementsToQuotation(reconcileCabinetryQuotation({ ...restored, quotation: applyGeneratedRowSafeguards(workbook.quotation) }, owner), owner);
   }
   if (!owner || owner === CURRENT_BUILDER_WORKSPACE_ID) {
     restored.quotation = withEntryDoorLibraryQuotation(restored.quotation);
@@ -5854,7 +5859,8 @@ function normalizeQuoteSectionOrder(savedOrder = [], quotation = {}) {
   sections.forEach((section) => {
     if (!seen.has(section)) ordered.push(section);
   });
-  return moveFixOutMaterialsGroupAfterStairs(moveQuoteSectionNamesAfter(
+  // Displaced group headings and auto-appended Client Selections sections go back beside their trade.
+  return placeDisplacedQuoteSections(moveFixOutMaterialsGroupAfterStairs(moveQuoteSectionNamesAfter(
     moveQuoteSectionNamesAfter(
       moveQuoteSectionNamesAfter(
           moveQuoteSectionNamesAfter(
@@ -5870,7 +5876,7 @@ function normalizeQuoteSectionOrder(savedOrder = [], quotation = {}) {
     ),
     ["appliance package", "appliances & white goods"],
     "cabinet maker",
-  ));
+  )));
 }
 
 function moveQuoteSectionNamesAfterNumber(sections = [], sectionBaseNames = [], afterNumber = "", quotation = {}) {

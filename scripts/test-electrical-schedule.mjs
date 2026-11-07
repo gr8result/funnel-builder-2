@@ -116,7 +116,8 @@ schedule = setRoom(normaliseElectricalSchedule(null, rooms), 'Kitchen', { points
 workbook = connectElectricalScheduleToQuotation(workbook, bookWith(schedule));
 let kitchen = scheduleRows(workbook).find(row => row.id === 'electrical-schedule:kitchen:double-gpo');
 assert.deepEqual([kitchen.item, kitchen.location, kitchen.quantity, kitchen.qty, kitchen.excelRate, kitchen.rateSourceRowId, kitchen.source], ['Double Powerpoint - Kitchen', 'Kitchen', 6, 6, '$150.00', 'quote-1209', ELECTRICAL_SCHEDULE_SOURCE]);
-assert.equal(scheduleRows(workbook).find(row => row.electricalPointKey === 'rangehood').excelRate, '', 'an ambiguous rate is left for the estimator');
+// Two estimate rangehood rows are never guessed between; the point takes the labelled template rate (hotfix 2026-11-07).
+{ const hood = scheduleRows(workbook).find(row => row.electricalPointKey === 'rangehood'); assert.deepEqual([hood.excelRate, hood.rateSourceRowId, /Template estimate rate/.test(hood.priceStatus)], [95, '', true], 'an ambiguous estimate rate falls back to the template rate, not to either estimate row'); }
 pass('Kitchen Double Powerpoints = 6 reaches the quotation at the estimate rate');
 
 schedule = setRoom(schedule, 'Bedroom 1', { points: { 'double-gpo': 4 }, status: ELECTRICAL_ROOM_STATUS.confirmed });

@@ -16,6 +16,8 @@ const cents = (n) => Math.round(Number(n || 0) * 100);
 await check("engine rate rows whose names contain fee words stay in the BOQ", () => {
   assert.equal(shouldIncludeQuoteRowInFinalBoq({ item: "TOTAL GROUND FLOOR AREA", lineType: "Standard rate item", qty: 225.56, finalRateUsed: "$125.00", cost: 28195 }), true);
   assert.equal(shouldIncludeQuoteRowInFinalBoq({ item: "OVERHEAD CUPBOARDS - STD COLOUR BOARD", lineType: "Standard rate item", qty: 3, finalRateUsed: "$400", cost: 1200 }), true);
+  // Hotfix 2026-11-07: final cabinetry product rows carry no lineType; "Overhead cabinet" was dropped from the BOQ ($8,150 on the real job).
+  assert.equal(shouldIncludeQuoteRowInFinalBoq({ id: "final-cabinetry:22", item: "Overhead cabinet - 2 door - standard height", cabinetryRowType: "product", qty: 2, manualRate: 950, cost: 1900 }), true);
 });
 
 await check("imported subtotal and GST lines are still excluded from the BOQ", () => {
