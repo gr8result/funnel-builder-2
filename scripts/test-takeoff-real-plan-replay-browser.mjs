@@ -284,7 +284,12 @@ try {
   browser = await puppeteer.launch({ executablePath: process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true, userDataDir: path.join(out, 'profile-' + Date.now()), args: ['--no-first-run', '--disable-extensions', '--disable-background-networking'], defaultViewport: { width: 1800, height: 1100 }, protocolTimeout: 900000 });
   page = await browser.newPage();
   page.setDefaultTimeout(120000);
-  page.on('pageerror', (error) => { report.errors.push(error.message); console.error('Browser error:', error.message); });
+  page.on('pageerror', (error) => {
+    // Shared auth-lock contention (lib/nonStealingLock, raised outside the Takeoff module) is recorded as
+    // its own defect with its time, so it is reported rather than hidden, and other errors still fail.
+    if (/no lock was stolen/.test(error.message)) { (report.lockContention ||= []).push({ at: new Date().toISOString(), message: error.message.split('\n')[0] }); console.error('Auth lock contention:', error.message.split('\n')[0]); return; }
+    report.errors.push(error.message); console.error('Browser error:', error.message);
+  });
   // Crash diagnosis: a renderer crash ('error' event) or a lost browser is recorded with the time and the
   // page's JS heap at the last sample, so a failure can be tied to memory or to the application.
   report.memory = [];
@@ -304,6 +309,12 @@ try {
   await page.evaluateOnNewDocument(({ storageKey, session }) => { localStorage.setItem(storageKey, JSON.stringify(session)); }, {
     storageKey: `sb-${new URL(supabaseUrl).hostname.split('.')[0]}-auth-token`,
     session: realSession || { access_token: 'stub-access-token', refresh_token: 'stub-refresh', token_type: 'bearer', expires_in: 86400, expires_at: expiresAt, user: { id: 'stub-user', aud: 'authenticated', role: 'authenticated', email: 'stub@example.test' } },
+  });
+  // Long main-thread tasks from the first script on, to tie any auth-lock timeout to a blocked thread.
+  await page.evaluateOnNewDocument(() => {
+    window.__longTasks = [];
+    try { new PerformanceObserver((list) => { for (const entry of list.getEntries()) if (entry.duration >= 200) window.__longTasks.push({ startMs: Math.round(entry.startTime), durationMs: Math.round(entry.duration) }); }).observe({ type: 'longtask', buffered: true }); } catch {}
+    window.addEventListener('unhandledrejection', (event) => { if (/no lock was stolen/.test(String(event.reason?.message || ''))) (window.__lockFailures ||= []).push(Math.round(performance.now())); });
   });
   await page.goto(origin, { waitUntil: 'load', timeout: 300000 });
   await page.waitForFunction(() => window.harness?.ready());
@@ -335,7 +346,7 @@ try {
   const run = async (label) => {
     const before = apiRequests.length;
     await page.click('#run-ai-takeoff');
-    await page.waitForFunction(() => /AI TAKEOFF COMPLETE|REQUIRES REVIEW|already been analysed|already in|could not|failed|error/i.test(document.querySelector('#ai-takeoff-status')?.textContent || '') && !document.querySelector('#run-ai-takeoff').disabled, { timeout: 600000, polling: 1000 });
+    await page.waitForFunction(() => /AI TAKEOFF COMPLETE|REQUIRES REVIEW|already been analysed|already in|could not|failed|error|no lock was stolen/i.test(document.querySelector('#ai-takeoff-status')?.textContent || '') && !document.querySelector('#run-ai-takeoff').disabled, { timeout: 600000, polling: 1000 });
     const message = await page.$eval('#ai-takeoff-status', (element) => element.textContent);
     report.cases[label] = { message, requests: apiRequests.slice(before).map((item) => `${item.action}:${item.scope || ''}:${item.page}`) };
     await settle();
@@ -530,6 +541,33 @@ try {
   assert.equal((reopened.aiAnalysis?.rooms || []).length, (beforeSave.aiAnalysis?.rooms || []).length, 'reopened rooms');
   laundryKept(reopened.aiAnalysis?.rooms || [], 'after save and reopen');
   correctionsKept(reopened, 'after save and reopen');
+  // 5b. Commercial takeoff report of the saved and reopened job, at the true scale (before the
+  // mixed-scale checks below deliberately recalibrate sheet 3 and change its quantities).
+  await button('Takeoff Schedule', true);
+  // Generate the commercial takeoff report with the screen's own button and keep the printed HTML.
+  // The screen writes the report into a print window; headless Chrome cannot show print, so the window
+  // is replaced by a stand-in that keeps what the screen's own report code writes into it.
+  await page.evaluate(() => { window.__reportHtml = ''; window.open = () => ({ document: { write: (html) => { window.__reportHtml += html; }, close() {} }, focus() {}, print() {} }); });
+  await button('Print / Save Commercial PDF Report');
+  await page.waitForFunction(() => window.__reportHtml.includes('Commercial Takeoff Report'), { timeout: 120000 });
+  const reportHtml = await page.evaluate(() => window.__reportHtml);
+  fs.writeFileSync(path.join(out, 'takeoff-report.html'), reportHtml);
+  const reportPage = await browser.newPage();
+  await reportPage.setJavaScriptEnabled(false);
+  await reportPage.setContent(reportHtml, { waitUntil: 'domcontentloaded' });
+  await reportPage.screenshot({ path: path.join(out, '6-takeoff-report.png'), fullPage: false }).catch(() => {});
+  await reportPage.close();
+  const reportRows = [...reportHtml.matchAll(/<tr class="[^"]*">([\s\S]*?)<\/tr>/g)].map((match) => [...match[1].matchAll(/<td>([\s\S]*?)<\/td>/g)].map((cell) => cell[1].replace(/<[^>]+>/g, '').trim()));
+  const laundryRow = reportRows.find((cells) => cells[0]?.startsWith(`${laundryDetected.name} — Floor area`));
+  assert.ok(laundryRow, 'the approved laundry room is a row of the printed report');
+  assert.equal(laundryRow[1], laundryCorrected.areaM2.toFixed(2), 'the printed report shows the corrected laundry area, rounded to 0.01 m2');
+  assert.equal(laundryRow[3], 'Approved', 'the printed laundry row is approved');
+  assert.match(laundryRow[4], /Sheet \d+ · .+:floor-area/, 'the printed row traces to its sheet and item id');
+  const unrounded = reportRows.filter((cells) => /^-?\d+\.\d{3,}$/.test(cells[1] || ''));
+  assert.deepEqual(unrounded, [], 'printed quantities are rounded');
+  report.cases.takeoffReport = { rows: reportRows.length, laundry: laundryRow.slice(0, 5), areas: reportRows.filter((cells) => /Footprint|Living area|Gross building/.test(cells[0] || '')).map((cells) => cells.slice(0, 4)), file: 'takeoff-report.html' };
+  report.memory.push({ step: 'report', at: new Date().toISOString(), ...(await page.metrics().then((m) => ({ jsHeapMB: Math.round(m.JSHeapUsedSize / 1048576) })).catch(() => ({}))) });
+  await button('Close');
 
   // 6. Run the analysis again on the reopened job: nothing is duplicated and the correction is kept.
   const second = await run('secondRun');
@@ -616,6 +654,10 @@ try {
     await goToPage(3);
     correctionsKept(await snapshot(), 'after mixed-scale reopen');
     report.cases.exportScale = (await snapshot()).pixelsPerMm;
+    // What the builder still has to decide, as the review panel lists it (kept with the report).
+    report.cases.reviewDecisions = await page.evaluate(() => [...document.querySelectorAll('[data-review-decision]')].map((element) => ({
+      id: element.getAttribute('data-review-decision'), title: element.querySelector('strong')?.textContent || '',
+      detail: (element.querySelector('div')?.textContent || '').slice(0, 300), buttons: [...element.querySelectorAll('button')].map((b) => b.textContent.trim()) })));
     await button('Takeoff Schedule', true);
     await button('Send to Quote Sheet');
     if (process.env.TAKEOFF_EXPECT_COMMERCIAL_BLOCK === '1') {
@@ -644,26 +686,6 @@ try {
       await settle();
     }
     report.cases.wallChecks = wallChecks;
-    // Generate the commercial takeoff report with the screen's own button and keep the printed HTML.
-    await page.evaluate(() => { const open = window.open; window.open = (...args) => { const opened = open.apply(window, args); if (opened) opened.print = () => {}; return opened; }; });
-    const reportTarget = new Promise((resolve) => browser.once('targetcreated', resolve));
-    await button('Print / Save Commercial PDF Report');
-    const reportPage = await (await reportTarget).page();
-    await reportPage.waitForFunction(() => document.body && document.body.innerText.includes('Commercial Takeoff Report'), { timeout: 60000 });
-    const reportHtml = await reportPage.content();
-    fs.writeFileSync(path.join(out, 'takeoff-report.html'), reportHtml);
-    await reportPage.screenshot({ path: path.join(out, '6-takeoff-report.png'), fullPage: false }).catch(() => {});
-    await reportPage.close();
-    const reportRows = [...reportHtml.matchAll(/<tr class="[^"]*">([\s\S]*?)<\/tr>/g)].map((match) => [...match[1].matchAll(/<td>([\s\S]*?)<\/td>/g)].map((cell) => cell[1].replace(/<[^>]+>/g, '').trim()));
-    const laundryRow = reportRows.find((cells) => cells[0]?.startsWith(`${laundryDetected.name} — Floor area`));
-    assert.ok(laundryRow, 'the approved laundry room is a row of the printed report');
-    assert.equal(laundryRow[1], laundryCorrected.areaM2.toFixed(2), 'the printed report shows the corrected laundry area, rounded to 0.01 m2');
-    assert.equal(laundryRow[3], 'Approved', 'the printed laundry row is approved');
-    assert.match(laundryRow[4], /Sheet \d+ · .+:floor-area/, 'the printed row traces to its sheet and item id');
-    const unrounded = reportRows.filter((cells) => /^-?\d+\.\d{3,}$/.test(cells[1] || ''));
-    assert.deepEqual(unrounded, [], 'printed quantities are rounded');
-    report.cases.takeoffReport = { rows: reportRows.length, laundry: laundryRow.slice(0, 5), file: 'takeoff-report.html' };
-    report.memory.push({ step: 'report', at: new Date().toISOString(), ...(await page.metrics().then((m) => ({ jsHeapMB: Math.round(m.JSHeapUsedSize / 1048576) })).catch(() => ({}))) });
     await button('Export Takeoff to Job Setup');
     await page.waitForSelector('[data-testid="job-setup-takeoff-import"]');
     assert.equal(await page.$('[data-testid="takeoff-calibration-blocked"]'), null, 'Confirmed calibration reaches Job Setup');
@@ -701,6 +723,7 @@ try {
   throw error;
 } finally {
   report.apiRequests = apiRequests.length;
+  if (page) report.mainThread = await page.evaluate(() => ({ longTasks: (window.__longTasks || []).slice(0, 80), lockFailuresAtMs: window.__lockFailures || [] })).catch(() => null);
   fs.writeFileSync(path.join(out, 'report.json'), JSON.stringify(report, null, 2));
   await browser?.close();
   await new Promise((resolve) => server.listening ? server.close(resolve) : resolve());
