@@ -3157,6 +3157,10 @@ function QuotationSheet({ sheet, onFormulaTarget }) {
   function collapseAllQuoteSectionsLocal() {
     setCollapsedSectionOverrides(Object.fromEntries(sheet.quoteSections.map((name) => [name, true])));
   }
+  // Opens every category and sub-category (sub-categories only show inside an open parent).
+  function expandAllQuoteSectionsLocal() {
+    setCollapsedSectionOverrides(Object.fromEntries(sheet.quoteSections.map((name) => [name, false])));
+  }
 
   // Takeoff openings (from the AI Plan Takeoff Window Schedule) with no exact row in the Section 53
   // WINDOWS price list - each is a visible unpriced line in Section 53 requiring a rate, and is
@@ -3566,6 +3570,7 @@ function QuotationSheet({ sheet, onFormulaTarget }) {
         <div style={styles.tabBar}>
           <button style={styles.primaryButton} onClick={openOrderManager}>Manage Section Order</button>
           <button style={styles.secondaryButton} onClick={() => sheet.renumberQuoteDisplay?.()}>Renumber Display</button>
+          <button style={styles.secondaryButton} onClick={expandAllQuoteSectionsLocal}>Expand All</button>
           <button style={styles.secondaryButton} onClick={collapseAllQuoteSectionsLocal}>Collapse All</button>
           {sheet.renumberReport && (
             <span style={sheet.renumberReport.ok ? styles.okPill : styles.warningPill}>{sheet.renumberReport.message}</span>
