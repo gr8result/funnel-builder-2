@@ -554,6 +554,45 @@ export function detectVectorWalls(segments, context, overrides = {}) {
   }
   const piers = crossHatchedPiers(straight, mmPx);
   const basinPaths = basinRimPaths(straight, mmPx);
+  // A wall whose other face is broken (where a partition meets it in a T) reads as several pairs on the
+  // same two face positions sharing one unbroken face line. For the clean-long-wall test they are one
+  // wall: its pieces are judged by their combined length, not each on its own. Each break must be a T:
+  // a perpendicular pair fills it and runs on away from the wall (block or dashed patterns do not).
+  const cleanRunMm = new Map();
+  const partitionFills = (p, lo, hi, brokenC, awaySign) => all.some((r) => {
+    if (Math.abs(Math.cos(r.angle - p.angle)) > 0.01) return false;
+    const u = { x: Math.cos(p.angle), y: Math.sin(p.angle) }, n = { x: -u.y, y: u.x };
+    const { a, b } = endpoints(r);
+    const along = (a.x * u.x + a.y * u.y + b.x * u.x + b.y * u.y) / 2;
+    if (Math.abs(along - (lo + hi) / 2) > 10 * mmPx || Math.abs(r.thicknessMm - (hi - lo) / mmPx) > 15) return false;
+    const c0 = a.x * n.x + a.y * n.y, c1 = b.x * n.x + b.y * n.y;
+    const near = awaySign > 0 ? Math.min(c0, c1) : Math.max(c0, c1), far = awaySign > 0 ? Math.max(c0, c1) : Math.min(c0, c1);
+    return Math.abs(near - brokenC) <= (r.thicknessMm / 2 + 20) * mmPx && awaySign * (far - brokenC) >= options.minOverlapMm * mmPx;
+  });
+  {
+    const list = all.filter(candidate => candidate.occupied < 0.1).sort((p, q) => p.angle - q.angle || p.c0 - q.c0);
+    const parent = list.map((_, index) => index);
+    const find = (i) => (parent[i] === i ? i : (parent[i] = find(parent[i])));
+    for (let i = 0; i < list.length; i += 1) for (let j = i + 1; j < list.length; j += 1) {
+      const p = list[i], q = list[j];
+      if (q.angle !== p.angle || q.c0 - p.c0 > mmPx) break;
+      if (Math.abs(p.c1 - q.c1) > mmPx) continue;
+      // The shared face must be drawn across the break between them (a row of blocks or a dashed
+      // pattern breaks both faces and stays separate pieces).
+      const lo = Math.min(p.hi, q.hi), hi = Math.max(p.lo, q.lo);
+      const drawnAcross = (face) => hi <= lo || face.pieces.reduce((sum, piece) => sum + Math.max(0, Math.min(piece.hi, hi) - Math.max(piece.lo, lo)), 0) >= 0.9 * (hi - lo);
+      const shared = p.faces.find(face => q.faces.includes(face) && drawnAcross(face));
+      if (!shared) continue;
+      if (hi > lo) {
+        const brokenC = shared === p.faces[0] ? p.c1 : p.c0;
+        if (!partitionFills(p, lo, hi, brokenC, brokenC > shared.c ? 1 : -1)) continue;
+      }
+      parent[find(i)] = find(j);
+    }
+    const totals = new Map();
+    list.forEach((candidate, index) => totals.set(find(index), (totals.get(find(index)) || 0) + candidate.lengthMm));
+    list.forEach((candidate, index) => cleanRunMm.set(candidate, totals.get(find(index))));
+  }
   let pool = [];
   for (const candidate of all) {
     if (pairUsesBasinRim(candidate, basinPaths)) { reject(candidate, 'face belongs to a basin rim with an inset rim and drawn tap'); continue; }
@@ -563,7 +602,7 @@ export function detectVectorWalls(segments, context, overrides = {}) {
       && candidate.c0 >= Math.min(box.inner, box.c0, box.c1) - 3 * mmPx
       && candidate.c1 <= Math.max(box.inner, box.c0, box.c1) + 3 * mmPx);
     if (projectedFrame) { reject(candidate, 'inside a fully capped projected frame adjoining a measured wall'); continue; }
-    if (!fits(candidate.thicknessMm) && !(candidate.occupied < 0.1 && candidate.lengthMm >= options.cleanLongWallMm)) { reject(candidate, 'thickness not one the drawing uses for walls'); continue; }
+    if (!fits(candidate.thicknessMm) && !(candidate.occupied < 0.1 && (cleanRunMm.get(candidate) || candidate.lengthMm) >= options.cleanLongWallMm)) { reject(candidate, 'thickness not one the drawing uses for walls'); continue; }
     if (candidate.occupied > options.occupiedShare) { reject(candidate, 'another line runs between the faces (joinery, a frame, or the outer faces of a multi-leaf wall)'); continue; }
     // Collinear detail outside this candidate must not change its pen. A stair
     // tread can extend a wall face with a different weight; inspect the actual
@@ -678,6 +717,25 @@ export function detectVectorWalls(segments, context, overrides = {}) {
       flushWall(); current = { ...next };
     }
     flushWall();
+  }
+  // A wall that changes thickness along its run keeps one face line. A gap between two such pieces
+  // (nothing else on the line between them) is a gap in that wall like any other.
+  for (const wall of walls) {
+    const faces = [wall.c0, wall.c1];
+    let best = null;
+    for (const other of walls) {
+      if (other === wall || other.angle !== wall.angle || sameLine(other, wall)) continue;
+      if (!faces.some(c => [other.c0, other.c1].some(oc => Math.abs(c - oc) <= options.collinearMm * mmPx))) continue;
+      const gapMm = (other.lo - wall.hi) / mmPx;
+      if (gapMm < options.openingMinMm || gapMm > options.openingMaxMm) continue;
+      if (!best || other.lo < best.lo) best = other;
+    }
+    if (!best) continue;
+    const between = walls.some(other => other !== wall && other !== best && other.angle === wall.angle
+      && other.hi > wall.hi && other.lo < best.lo
+      && Math.max(other.c0, other.c1) >= Math.min(wall.c0, best.c0) && Math.min(other.c0, other.c1) <= Math.max(wall.c1, best.c1));
+    if (between) continue;
+    openingsFromGaps.push({ host: [wall, best], lo: wall.hi, hi: best.lo, c: (wall.c + best.c) / 2, angle: wall.angle, thicknessMm: (wall.thicknessMm + best.thicknessMm) / 2 });
   }
 
   const projectedWindowBox = (gap, half, lines) => readProjectedWindowBox(gap, half, lines, straight, mmPx, options);

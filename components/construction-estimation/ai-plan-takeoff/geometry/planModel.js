@@ -32,6 +32,7 @@ export const PLAN_MODEL_DEFAULTS = {
   minRoomM2: 0.3,           // smaller enclosed faces are wall junction slivers, not rooms
   roomNameShare: 0.5,       // a room keeps its name while it shares this much of its walls with the named one
   healAngle: 0.01,          // a node inside one wall's chain, this straight, is removed when nothing else uses it
+  jambReachMm: 400,         // the span across an opening that stops this short of its jamb is carried to it (frames and returns are narrower)
 };
 
 const EPS = 1e-9;
@@ -431,6 +432,22 @@ function joinFreeEnds(level, options) {
         mergeNodeInto(level, partner.other, id);
         changed = true; break;
       }
+      // The same, where the wall on the line ahead already ends at a junction (a corner or T): this end
+      // joins that junction. The junction stays where it is; the gap is still too narrow for an opening.
+      const ownerIds = new Set(Object.values(level.walls).filter((wall) => wall.nodeIds.includes(id)).map((wall) => wall.id));
+      const junction = Object.values(level.walls).filter((wall) => !ownerIds.has(wall.id)).flatMap((wall) => [0, wall.nodeIds.length - 1].map((index) => {
+        const endId = wall.nodeIds[index];
+        if (endId === id || nodeDegree(level, endId) < 2) return null;
+        const there = level.nodes[endId], before = level.nodes[wall.nodeIds[index === 0 ? 1 : index - 1]];
+        const back = unit(sub(there, before));
+        if (dot(back, outward) > -Math.cos(options.collinearAngle * 3)) return null;
+        const gap = dot(sub(there, node), outward), offset = Math.abs(cross(outward, sub(there, node)));
+        return gap >= -options.snapMm && gap <= options.collinearJoinMm && offset <= options.snapMm ? { endId, gap } : null;
+      })).filter(Boolean).sort((p, q) => p.gap - q.gap)[0];
+      if (junction) {
+        mergeNodeInto(level, id, junction.endId);
+        changed = true; break;
+      }
       // A corner both walls stop short of: they meet where their centrelines cross.
       const corner = free.filter((other) => other !== id && level.nodes[other]).map((other) => {
         const there = level.nodes[other], back = outwardAt(level, other);
@@ -464,6 +481,86 @@ function joinFreeEnds(level, options) {
         insertIntoChain(level, best.segment.owner, best.segment.u, best.segment.v, id);
         changed = true; break;
       }
+    }
+    if (!changed) return;
+  }
+}
+
+// The span across an opening ends at the opening's jambs, and a jamb is always wall. A span is sized
+// from what was measured in the gap (a leaf, a frame), so where the jamb has a frame, a short return
+// or a nib too short to read as wall, the span stops short and the room leaks through. Each free span
+// end is carried to its jamb by the shortest of: a wall node just ahead (within the wall's thickness
+// either side of the span's line), a wall it runs into, or the line of a wall ending nearby (the
+// missing return is added). Nothing is carried further than jambReachMm or across another wall.
+function closeOpeningJambs(level, options) {
+  const reach = options.jambReachMm;
+  if (!(reach > 0)) return;
+  const crossesNetwork = (p, q, except) => networkSegments(level).some((segment) => !except.has(segment.u) && !except.has(segment.v)
+    && segmentCrossing(p, q, segment.a, segment.b));
+  for (let pass = 0; pass < 100; pass += 1) {
+    let changed = false;
+    for (const span of Object.values(level.walls)) {
+      if (!span.attributes?.spansOpening) continue;
+      for (const id of [span.nodeIds[0], span.nodeIds[span.nodeIds.length - 1]]) {
+        if (nodeDegree(level, id) !== 1) continue;
+        const node = level.nodes[id], outward = outwardAt(level, id);
+        if (!node || !outward) continue;
+        const half = (span.thicknessMm || 0) / 2;
+        let best = null;
+        // A wall node just ahead.
+        for (const other of Object.values(level.nodes)) {
+          if (other.id === id || span.nodeIds.includes(other.id) || nodeDegree(level, other.id) < 1) continue;
+          const along = dot(sub(other, node), outward), lateral = Math.abs(cross(outward, sub(other, node)));
+          const otherHalf = Math.max(0, ...Object.values(level.walls).filter((wall) => wall.nodeIds.includes(other.id)).map((wall) => (wall.thicknessMm || 0) / 2));
+          if (along < -options.snapMm || along > reach || lateral > Math.max(half, otherHalf) + options.snapMm) continue;
+          const cost = dist(node, other);
+          if (crossesNetwork(node, other, new Set([id, other.id]))) continue;
+          if (!best || cost < best.cost) best = { cost, apply: () => mergeNodeInto(level, id, other.id) };
+        }
+        // A wall it runs into.
+        for (const segment of networkSegments(level)) {
+          if (segment.owner === span.id || angleBetween(outward, sub(segment.b, segment.a)) < options.joinAngle) continue;
+          const denom = cross(outward, sub(segment.b, segment.a));
+          if (Math.abs(denom) < EPS) continue;
+          const t = cross(sub(segment.a, node), sub(segment.b, segment.a)) / denom;
+          const s = cross(sub(segment.a, node), outward) / denom;
+          if (t < 0 || t > reach || s <= EPS || s >= 1 - EPS) continue;
+          const point = add(node, mul(outward, t));
+          if (crossesNetwork(node, point, new Set([id, segment.u, segment.v]))) continue;
+          if (!best || t < best.cost) best = { cost: t, apply: () => {
+            level.nodes[id] = { id, x: point.x, y: point.y };
+            insertIntoChain(level, segment.owner, segment.u, segment.v, id);
+          } };
+        }
+        // The line of a wall ending nearby: the return between them is missing.
+        for (const wall of Object.values(level.walls)) {
+          if (wall.id === span.id || wall.attributes?.spansOpening) continue;
+          for (const endId of [wall.nodeIds[0], wall.nodeIds[wall.nodeIds.length - 1]]) {
+            const end = level.nodes[endId];
+            const neighbour = level.nodes[wall.nodeIds[endId === wall.nodeIds[0] ? 1 : wall.nodeIds.length - 2]];
+            if (!end || !neighbour || endId === id) continue;
+            const along = unit(sub(end, neighbour));
+            if (angleBetween(outward, along) < options.joinAngle) continue;
+            const denom = cross(outward, along);
+            if (Math.abs(denom) < EPS) continue;
+            const t = cross(sub(end, node), along) / denom, u = cross(sub(end, node), outward) / denom;
+            if (t < 0 || t > reach || u <= options.snapMm || u > reach) continue;
+            const point = add(node, mul(outward, t));
+            if (crossesNetwork(node, point, new Set([id, endId])) || crossesNetwork(end, point, new Set([id, endId]))) continue;
+            const cost = t + u;
+            if (!best || cost < best.cost) best = { cost, apply: () => {
+              level.nodes[id] = { id, x: point.x, y: point.y };
+              const stubId = nextId(level, 'w');
+              level.walls[stubId] = { id: stubId, nodeIds: [endId, id], thicknessMm: wall.thicknessMm, category: wall.category || null,
+                categorySource: wall.category ? wall.categorySource : null, source: 'detected',
+                detectionKey: wall.detectionKey ? `${wall.detectionKey}:jamb-return` : null, locked: false, edited: false,
+                attributes: { jambReturn: true, ...(span.detectionKey ? { jambOf: span.detectionKey } : {}) } };
+            } };
+          }
+        }
+        if (best) { best.apply(); changed = true; }
+      }
+      if (changed) break;
     }
     if (!changed) return;
   }
@@ -745,6 +842,8 @@ export function mergeDetections(level, detections = {}, overrides = {}) {
     if (placeOpening(next, { ...detection, source: 'detected' }, options)) report.openingsAdded += 1; else report.openingsWithoutWall += 1;
   }
   joinFreeEnds(next, options);
+  planarize(next, options);
+  closeOpeningJambs(next, options);
   planarize(next, options);
   if (detections.rooms?.length) {
     const rooms = computeRooms(next, options);
