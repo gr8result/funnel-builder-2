@@ -847,11 +847,20 @@ export function mergeDetections(level, detections = {}, overrides = {}) {
   planarize(next, options);
   if (detections.rooms?.length) {
     const rooms = computeRooms(next, options);
+    // Every printed name inside one room names it: an open-plan floor carries all of them ("kitchen /
+    // dining / living room"). An estimator's name is never replaced.
+    const byRoom = new Map();
     for (const label of detections.rooms) {
       const room = rooms.find((item) => pointInPolygon(label, item.boundary));
       if (!room || room.nameSource === 'manual') continue;
-      if (room.name) continue;
-      next.roomNames.push({ id: nextId(next, 'r'), wallIds: room.wallIds, name: label.name, source: 'detected' });
+      if (!byRoom.has(room)) byRoom.set(room, []);
+      if (!byRoom.get(room).includes(label.name)) byRoom.get(room).push(label.name);
+    }
+    for (const [room, names] of byRoom) {
+      const name = names.join(' / ');
+      const existing = room.labelId ? next.roomNames.find((item) => item.id === room.labelId) : null;
+      if (existing) { if (existing.source !== 'manual' && existing.name !== name) existing.name = name; continue; }
+      next.roomNames.push({ id: nextId(next, 'r'), wallIds: room.wallIds, name, source: 'detected' });
       report.roomsNamed += 1;
     }
   }
@@ -951,7 +960,45 @@ function floorPolygon(level, nodeIds, edges) {
       out.push(add(points[i], mul(previous.inward, flip * previous.half)), add(points[i], mul(current.inward, flip * current.half)));
     } else out.push(corner);
   }
-  return out;
+  return cleanFloorPolygon(out, shoelace(points));
+}
+
+// An inset outline can fold where a short edge is shorter than the inset or the wall thickness changes
+// at a corner: spikes that double back and small loops turned inside out. Remove repeated, straight-
+// through and doubling-back points, then split at any crossing and keep the main loop that turns the
+// same way as the room outline. The result is a simple polygon.
+function cleanFloorPolygon(polygon, outlineSignedArea) {
+  const sign = Math.sign(outlineSignedArea) || 1;
+  const tidyPoints = (points) => {
+    let list = points.slice();
+    for (let changed = true, guard = 0; changed && list.length > 3 && guard < 1000; guard += 1) {
+      changed = false;
+      for (let i = 0; i < list.length && list.length > 3; i += 1) {
+        const prev = list[(i - 1 + list.length) % list.length], here = list[i], next = list[(i + 1) % list.length];
+        const a = sub(here, prev), b = sub(next, here);
+        const tiny = Math.hypot(a.x, a.y) < 0.5;
+        const straight = Math.abs(cross(unit(a), unit(b))) < 1e-6;
+        if (tiny || straight) { list.splice(i, 1); changed = true; break; }
+      }
+    }
+    return list;
+  };
+  const split = (points, depth = 0) => {
+    if (depth > 40 || points.length < 4) return [points];
+    const n = points.length;
+    for (let i = 0; i < n; i += 1) for (let j = i + 2; j < n; j += 1) {
+      if (i === 0 && j === n - 1) continue;
+      const hit = segmentCrossing(points[i], points[(i + 1) % n], points[j], points[(j + 1) % n]);
+      if (!hit) continue;
+      const first = [...points.slice(0, i + 1), hit.point, ...points.slice(j + 1)];
+      const second = [hit.point, ...points.slice(i + 1, j + 1)];
+      return [...split(tidyPoints(first), depth + 1), ...split(tidyPoints(second), depth + 1)];
+    }
+    return [points];
+  };
+  const loops = split(tidyPoints(polygon)).filter((loop) => loop.length >= 3 && Math.sign(shoelace(loop)) === sign);
+  if (!loops.length) return polygon;
+  return loops.sort((p, q) => Math.abs(shoelace(q)) - Math.abs(shoelace(p)))[0];
 }
 
 const signatureOf = (wallIds) => [...wallIds].sort().join(',');
@@ -1067,6 +1114,53 @@ export function inferThresholdDividers(level, labels = [], overrides = {}) {
       lengthMm: Math.round(candidate.t), separates: [target.name, ...inside.filter((label) => label !== target).map((label) => label.name)] });
   }
   return { level: next, dividers };
+}
+
+/**
+ * External recesses: notches in the outside of the building where the wall outline steps in and back
+ * out to the same line (a lightwell, niche or porch beside the walls). The notch is closed only across
+ * its open mouth, between the two outline corners on that line; nothing is drawn there, so it is an
+ * external area, never a room. Measured to the outer wall faces and the mouth line.
+ * @returns [{ id, nodeIds, mouth: [{x,y},{x,y}], mouthMm, polygon, areaM2, evidence }]
+ */
+export function externalRecesses(level, overrides = {}) {
+  const options = { mouthMinMm: 300, mouthMaxMm: 3000, minAreaM2: 0.5, lineToleranceMm: 60, maxChain: 12, ...PLAN_MODEL_DEFAULTS, ...overrides };
+  const { faces, edges } = networkFaces(level);
+  const outer = faces.filter((face) => Math.sign(face.signedArea) !== BOUNDED_SIGN).sort((a, b) => Math.abs(b.signedArea) - Math.abs(a.signedArea))[0];
+  if (!outer || outer.nodeIds.length < 4) return [];
+  const ids = outer.nodeIds, n = ids.length, P = ids.map((id) => level.nodes[id]);
+  const segments = networkSegments(level);
+  const found = [];
+  const used = new Set();
+  for (let i = 0; i < n; i += 1) {
+    let best = null;
+    for (let k = 2; k <= Math.min(options.maxChain, n - 2); k += 1) {
+      const j = (i + k) % n, a = P[i], b = P[j];
+      const horizontal = Math.abs(a.y - b.y) <= options.lineToleranceMm, vertical = Math.abs(a.x - b.x) <= options.lineToleranceMm;
+      if (!horizontal && !vertical) continue;
+      const mouthMm = dist(a, b);
+      if (mouthMm < options.mouthMinMm || mouthMm > options.mouthMaxMm) continue;
+      const chain = Array.from({ length: k + 1 }, (_, m) => (i + m) % n);
+      // Every corner between lies to one side of the mouth line, set back from it.
+      const offsets = chain.slice(1, -1).map((m) => horizontal ? P[m].y - (a.y + b.y) / 2 : P[m].x - (a.x + b.x) / 2);
+      const along = chain.slice(1, -1).map((m) => horizontal ? P[m].x : P[m].y);
+      const [lo, hi] = horizontal ? [Math.min(a.x, b.x), Math.max(a.x, b.x)] : [Math.min(a.y, b.y), Math.max(a.y, b.y)];
+      if (!offsets.length || !(offsets.every((v) => v > 100) || offsets.every((v) => v < -100))) continue;
+      if (along.some((v) => v < lo - options.lineToleranceMm || v > hi + options.lineToleranceMm)) continue;
+      // The mouth crosses no wall: it is open.
+      if (segments.some((s) => s.u !== ids[i] && s.v !== ids[i] && s.u !== ids[j] && s.v !== ids[j] && segmentCrossing(a, b, s.a, s.b))) continue;
+      const nodeIds = chain.map((m) => ids[m]);
+      const polygon = floorPolygon(level, nodeIds, edges);
+      const areaM2 = Math.abs(shoelace(polygon)) / 1e6;
+      if (areaM2 < options.minAreaM2) continue;
+      if (!best || mouthMm < best.mouthMm) best = { nodeIds, mouth: [a, b], mouthMm, polygon, areaM2 };
+    }
+    if (!best || best.nodeIds.some((id, m) => m > 0 && m < best.nodeIds.length - 1 && used.has(id))) continue;
+    best.nodeIds.slice(1, -1).forEach((id) => used.add(id));
+    found.push({ id: `recess:${best.nodeIds.join('-')}`, ...best, mouthMm: Math.round(best.mouthMm), areaM2: Math.round(best.areaM2 * 100) / 100,
+      evidence: `The wall outline steps in and returns to the same line; the ${Math.round(best.mouthMm)} mm mouth between the two corners has nothing drawn across it, so this is external area, not a room.` });
+  }
+  return found;
 }
 
 /** Name the room containing a point (mm). An estimator's name is never replaced by analysis. */

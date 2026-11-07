@@ -27,8 +27,12 @@ export function createAiScheduleRows(analysis, pages) {
     };
     const id = item.id || `room-area-${item.page}-${index}`;
     const name = item.name || `Room ${index + 1}`;
+    // Measurement bases from the plan model, shown with their basis and source.
+    const bases = item.measurementBases;
+    const basisNote = bases ? ` Basis: net usable floor area ${bases.netUsableFloorAreaM2} m² (${bases.basis.netUsableFloorAreaM2}) Gross room area ${bases.grossRoomAreaM2} m² (${bases.basis.grossRoomAreaM2}) Floor-finish area ${bases.floorFinishAreaM2} m² (${bases.basis.floorFinishAreaM2}) Source: ${bases.source}` : '';
+    if (bases) base.notes = `${base.notes}${basisNote}`;
     return [
-      { ...base, itemId: `${id}:floor-area`, category: `${name} — Floor area` },
+      { ...base, itemId: `${id}:floor-area`, category: `${name} — Floor area`, ...(bases ? { measurementBasis: 'net usable floor area' } : {}) },
       {
         ...base,
         itemId: `${id}:ceiling-area`,

@@ -17,6 +17,7 @@
 //
 // Rules are general (no plan names, coordinates or object ids). Every decision is explainable from
 // the evidence list it records.
+import { dimensionedThicknesses } from './dimensionLinework.js';
 
 export const CLASSIFIER_DEFAULTS = {
   removeAt: 0.85,          // confidence at which a non-wall reading removes the pair from the walls
@@ -60,7 +61,7 @@ function distanceToWall(w, p, mmPx) {
  * @param {{ walls: any[], openings: any[], rejected: any[], straight: any[], textItems?: any[], mmPx: number }} input
  * @returns {{ walls: any[], openings: any[], removed: any[], structures: any[], records: any[], stats: object }}
  */
-export function classifyDrawingElements({ walls, openings, rejected = [], straight = [], textItems = [], mmPx }, overrides = {}) {
+export function classifyDrawingElements({ walls, openings, rejected = [], straight = [], segments = null, textItems = [], mmPx }, overrides = {}) {
   const options = { ...CLASSIFIER_DEFAULTS, ...overrides };
   const records = new Map();
   const note = (id, rule, weight, detail) => { const r = records.get(id); r.evidence.push({ rule, weight, detail }); };
@@ -74,6 +75,18 @@ export function classifyDrawingElements({ walls, openings, rejected = [], straig
     endsMeet.set(w.id, ends);
     const met = ends.filter(Boolean).length;
     note(w.id, 'connections', met === 2 ? 0.3 : met === 1 ? 0.1 : -0.2, `${met} of 2 ends meet another wall`);
+  }
+
+  // --- Dimensioned as a wall: the drawing's own dimension chain measures this pair's two faces as a
+  // printed wall thickness. Support only; a pair without it is not thereby joinery.
+  const dimensioned = segments ? dimensionedThicknesses(segments, textItems, mmPx) : [];
+  for (const w of walls) {
+    const [a, b] = w.nodes, half = (w.measuredThicknessMm || 0) / 2 * mmPx, tol = 15 * mmPx;
+    const horizontal = Math.abs(a.y - b.y) <= 0.5 && Math.abs(a.x - b.x) > 0.5, vertical = Math.abs(a.x - b.x) <= 0.5 && Math.abs(a.y - b.y) > 0.5;
+    if (!horizontal && !vertical) continue;
+    const c = horizontal ? (a.y + b.y) / 2 : (a.x + b.x) / 2, axis = horizontal ? 'y' : 'x';
+    const hit = dimensioned.find((d) => d.axis === axis && Math.abs(d.lo - (c - half)) <= tol && Math.abs(d.hi - (c + half)) <= tol);
+    if (hit) { w.dimensionedAsWallMm = hit.valueMm; note(w.id, 'dimension-chain', 0.3, `the drawing's dimension chain measures both faces as a ${hit.valueMm} mm wall`); }
   }
 
   // --- Repeated identical pairs at a regular spacing: a table, schedule grid or other notation.

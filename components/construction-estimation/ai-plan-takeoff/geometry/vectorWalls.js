@@ -17,7 +17,7 @@
 // Coordinates are the page's logical pixels (viewport scale 1); sizes are millimetres through
 // pixelsPerMm. Pure: segments (and optionally the rendered raster) in, walls and openings out.
 
-import { crossHatchedPiers, pairIsPierRim } from './hatchedPiers.js';
+import { crossHatchedPiers, crossHatchedRegions, pairIsPierRim } from './hatchedPiers.js';
 import { classifyDrawingElements } from './elementClassifier.js';
 import { squareSetAssemblies, isSquareSetHost } from './squareSetLinework.js';
 import { basinRimPaths, pairUsesBasinRim } from './basinLinework.js';
@@ -1299,7 +1299,7 @@ export function detectVectorWalls(segments, context, overrides = {}) {
   }
   // Separate classification stage: what each measured pair and opening is, with evidence.
   const classified = overrides.classify === false ? null
-    : classifyDrawingElements({ walls: out, openings, rejected, straight, textItems: context.textItems, mmPx }, overrides.classifier);
+    : classifyDrawingElements({ walls: out, openings, rejected, straight, segments: (segments || []).filter(onPage), textItems: context.textItems, mmPx }, overrides.classifier);
   if (classified) {
     const keptIds = new Set(classified.walls.map((wall) => wall.id));
     for (const { wall, record } of classified.removed) rejected.push({ reason: `${record.element}: ${record.evidence.filter((e) => e.weight < 0).map((e) => e.detail).join('; ')}`,
@@ -1307,7 +1307,7 @@ export function detectVectorWalls(segments, context, overrides = {}) {
     for (const opening of openings) if (opening.hostWallIds) opening.hostWallIds = opening.hostWallIds.filter((id) => keptIds.has(id));
   }
   return {
-    engine: 'vector-walls-3', walls: classified ? classified.walls : out, openings, rejected,
+    engine: 'vector-walls-3', walls: classified ? classified.walls : out, openings, rejected, hatchedRegions: crossHatchedRegions(straight, mmPx),
     ...(classified ? { structures: classified.structures, classification: classified.records } : {}),
     stats: { ...(classified ? { classifier: classified.stats } : {}), annotatedNiches: measuredNiches.length, projectedFrames: projectedFrames.length, projectedFrameOpeningsAdded: frameStats.added, projectedFramePiecesMerged: frameStats.merged, directionsDeg: directions.map((value) => Math.round(value / deg * 10) / 10), thicknessModesMm: modes.map((value) => Math.round(value)), wallPens: [...wallPens], candidates: all.length, accepted: out.length, rejected: rejected.length },
   };
