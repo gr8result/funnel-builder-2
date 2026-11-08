@@ -12,7 +12,8 @@ import { parseWindowSizeCode } from './ai-integration/analysisContract.js';
 import { DOOR_SUBTYPE_LABELS } from '../../../lib/construction-estimation/takeoffMaterialQuantities.js';
 import { externalizeTakeoffRecoverySnapshot, materializeTakeoffPlanPages, materializeTakeoffRecoverySnapshot } from './planBlobStorage.js';
 import { getPlanDisplayIdentity, getTakeoffLifecycle, loadTakeoffPlanImage, createTakeoffObjectUrl, revokeTakeoffObjectUrl, logTakeoffPlanLoad, describePlanPageReferences } from './takeoffLifecycle.js';
-import { Stage, Layer, Image as KonvaImage, Line, Circle, Text, Rect, Group } from 'react-konva';
+import { Stage, Layer, Image as KonvaImage, Line, Circle, Text, Rect, Group, RegularPolygon, Label, Tag } from 'react-konva';
+import { openingMarkerStyle, openingSizeLabel, applyOpeningQuickEdit, approveOpening, OPENING_MARKER_COLOURS } from './openingMarkers.js';
 import { RotateCw, Ruler, ChevronLeft, ChevronRight, DoorOpen, Square, Layers, Trash2, Home, Compass, Download, Upload, MousePointer2, RectangleVertical } from 'lucide-react';
 import { calculatePolygonAreaM2, findFloorplanCornerSnapPoint, resolveFloorplanFreePoint } from './floorplanGeometry';
 import { compactPdfLinework, readPdfPageLinework } from './geometry/pdfLinework.js';
@@ -551,6 +552,8 @@ export default function AIPlanTakeoffStandalone({
   const [glassType, setGlassType] = useState('Clear');
   const [placedOpenings, setPlacedOpenings] = useState([]);
   const [selectedOpeningId, setSelectedOpeningId] = useState(null);
+  // Opening whose quick-edit popup is open beside its marker on the plan.
+  const [quickEditOpeningId, setQuickEditOpeningId] = useState(null);
   const [selectedMeasurementId, setSelectedMeasurementId] = useState(null);
 
   // Area & Floorcoverings state
@@ -6170,7 +6173,11 @@ setSavedRevision(verifiedSave.revision);
               const itemTag = String(op.itemTag || op.label || `${tagPrefix}${idx + 1}`);
               const dynamicTag = `${tagPrefix}${idx + 1}: ${itemTag.includes(': ') ? itemTag.split(': ')[1] : itemTag}`;
               const isSelected = op.id === selectedOpeningId;
-              const openingWidthPx = Math.max((Number(op.widthMm) || 0) * (pixelsPerMm || 1), 22 / stageScale);
+              // A small centre marker (circle = window, triangle = door) coloured by review state,
+              // with the size beside it - the drawing underneath stays visible.
+              const marker = openingMarkerStyle(op);
+              const markerRadius = 7 / stageScale;
+              const sizeLabel = openingSizeLabel(op, dynamicTag.split(': ')[0]);
               return (
                 <Group
                   key={op.id}
@@ -6181,31 +6188,24 @@ setSavedRevision(verifiedSave.revision);
                   onDragStart={() => {
                     if (!selectModeActive) return;
                     selectOnly('opening', op.id);
+                    setQuickEditOpeningId(null);
                     setDraggingItem({ type: 'opening', id: op.id });
                   }}
                   onClick={(e) => {
                     if (!selectModeActive) return;
                     e.cancelBubble = true;
                     selectOnly('opening', op.id);
+                    if (!isRecoveryPreview) setQuickEditOpeningId(op.id);
                   }}
                 >
-                  <Rect
-                    x={-(openingWidthPx / 2)}
-                    y={-10 / stageScale}
-                    width={openingWidthPx}
-                    height={20 / stageScale}
-                    fill={isSelected ? '#ffa726' : (op.type === 'window' ? '#ffe0b2' : '#ffcdd2')}
-                    stroke={isSelected ? '#e65100' : (op.type === 'window' ? '#e65100' : '#c62828')}
-                    strokeWidth={(isSelected ? 2.5 : 1.5) / stageScale}
-                  />
-                  <Text
-                    x={-(openingWidthPx / 2)}
-                    y={-24 / stageScale}
-                    text={dynamicTag}
-                    fontSize={11 / stageScale}
-                    fill="#111"
-                    fontStyle="bold"
-                  />
+                  {isSelected && <Circle radius={markerRadius * 1.9} stroke="#0f172a" strokeWidth={2 / stageScale} dash={[3 / stageScale, 2 / stageScale]} />}
+                  {marker.shape === 'circle'
+                    ? <Circle name="opening-marker" radius={markerRadius} fill={marker.fill} stroke={isSelected ? '#0f172a' : marker.stroke} strokeWidth={(isSelected ? 2.5 : 1.5) / stageScale} />
+                    : <RegularPolygon name="opening-marker" sides={3} radius={markerRadius * 1.25} fill={marker.fill} stroke={isSelected ? '#0f172a' : marker.stroke} strokeWidth={(isSelected ? 2.5 : 1.5) / stageScale} />}
+                  <Label x={markerRadius * 1.8} y={-7 / stageScale} rotation={-(Number(rotation) || 0)} listening={false}>
+                    <Tag fill="rgba(255,255,255,0.88)" stroke={marker.stroke} strokeWidth={0.75 / stageScale} cornerRadius={3 / stageScale} />
+                    <Text text={sizeLabel} fontSize={11 / stageScale} padding={2 / stageScale} fill="#0f172a" fontStyle="bold" />
+                  </Label>
                 </Group>
               );
             })}
@@ -6599,6 +6599,60 @@ setSavedRevision(verifiedSave.revision);
             )}
           </Layer>
         </Stage>
+        {(() => {
+          // Quick edit beside the clicked opening marker: size and code, plus explicit approval.
+          const opening = quickEditOpeningId && quickEditOpeningId === selectedOpeningId ? activePageOpenings.find((item) => item.id === quickEditOpeningId) : null;
+          if (!opening || isRecoveryPreview) return null;
+          const marker = openingMarkerStyle(opening);
+          // The plan layer may be rotated as well as zoomed and panned: place the popup through its own transform.
+          const onScreen = layerRef.current?.getAbsoluteTransform?.().point({ x: opening.x, y: opening.y })
+            || { x: opening.x * stageScale + stagePos.x, y: opening.y * stageScale + stagePos.y };
+          const left = Math.max(8, Math.min(canvasSize.width - 268, onScreen.x + 18));
+          const top = Math.max(8, Math.min(canvasSize.height - 210, onScreen.y - 20));
+          const save = (form, approve) => {
+            const data = new FormData(form);
+            setPlacedOpenings((previous) => previous.map((item) => {
+              if (item.id !== opening.id) return item;
+              const edited = applyOpeningQuickEdit(item, { heightMm: data.get('heightMm'), widthMm: data.get('widthMm'), itemTag: data.get('itemTag') });
+              return approve ? approveOpening(edited) : edited;
+            }));
+            markTakeoffItemCompleted(approve ? 'opening-approved' : 'opening-quick-edit');
+            setQuickEditOpeningId(null);
+          };
+          return (
+            <form
+              key={opening.id}
+              data-testid="opening-quick-edit"
+              onSubmit={(event) => { event.preventDefault(); save(event.currentTarget, false); }}
+              onKeyDown={(event) => { if (event.key === 'Escape') setQuickEditOpeningId(null); }}
+              style={{ position: 'absolute', left, top, width: 250, background: '#fff', border: `2px solid ${marker.stroke}`, borderRadius: 8, boxShadow: '0 6px 18px rgba(15,23,42,0.25)', padding: 10, display: 'grid', gap: 8, fontSize: 14, zIndex: 20 }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <strong>{opening.type === 'window' ? 'Window' : 'Door'} size</strong>
+                <span style={{ fontSize: 12, color: marker.stroke, fontWeight: 700 }}>{marker.status === 'standard' ? 'Placed by builder' : OPENING_MARKER_COLOURS[marker.status].label}</span>
+              </div>
+              <label style={{ display: 'grid', gap: 2 }}>Code / tag
+                <input name="itemTag" defaultValue={opening.itemTag || ''} style={{ padding: 6, fontSize: 14 }} />
+              </label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <label style={{ display: 'grid', gap: 2, flex: 1 }}>Height (mm)
+                  <input name="heightMm" type="number" min="1" step="1" defaultValue={opening.heightMm || ''} autoFocus style={{ padding: 6, fontSize: 14, width: '100%' }} />
+                </label>
+                <label style={{ display: 'grid', gap: 2, flex: 1 }}>Width (mm)
+                  <input name="widthMm" type="number" min="1" step="1" defaultValue={opening.widthMm || ''} style={{ padding: 6, fontSize: 14, width: '100%' }} />
+                </label>
+              </div>
+              {opening.needsClassification && <div style={{ color: '#92400e', fontSize: 13 }}>Confirm the opening type in the side panel before approving.</div>}
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                <button type="submit" data-testid="opening-quick-save" style={{ padding: '6px 10px' }}>Save</button>
+                <button type="button" data-testid="opening-quick-approve" disabled={opening.needsClassification}
+                  onClick={(event) => save(event.currentTarget.form, true)}
+                  style={{ padding: '6px 10px', background: OPENING_MARKER_COLOURS.approved.fill, color: '#fff', border: 'none', borderRadius: 4 }}>Save &amp; approve</button>
+                <button type="button" onClick={() => setQuickEditOpeningId(null)} style={{ padding: '6px 10px' }}>Close</button>
+              </div>
+            </form>
+          );
+        })()}
       </div>
     </div>
   );
