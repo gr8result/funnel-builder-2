@@ -144,14 +144,24 @@ function createFloorAreaRows(floorplans = [], pixelsPerMm) {
   // Living area is normally not outlined on its own: it is the footprint less the garage,
   // alfresco and other named areas. Showing 0 here because no polygon is typed "Living" reads as
   // "this house has no living area"; show the same derived figure the totals use.
+  // A derived figure is only as approved as the outlines it is calculated from. Without this the
+  // derived Living row read "Approved" (and reached the quote preview) while the footprint was not.
+  const derivedStatus = (sources) => (sources.some((row) => row?.reviewRequired)
+    ? { commercialStatus: 'Contains unapproved areas', reviewRequired: true }
+    : { commercialStatus: 'Approved', reviewRequired: false });
+  const footprintRow = rows.find((row) => row.itemId === 'floor_Footprint');
+  const garageRow = rows.find((row) => row.itemId === 'floor_Garage');
+  const derivedLivingSources = [footprintRow, ...rows.filter((row) => !['floor_Footprint', 'floor_Living'].includes(row.itemId) && row.quantity > 0)];
   if (livingRow && !livingMeasured && footprint > 0) {
     livingRow.quantity = round(totalLiving);
     livingRow.notes = 'Gross footprint less the separately named areas.';
+    Object.assign(livingRow, derivedStatus(derivedLivingSources));
   }
 
-  rows.push(makeRow('Floor Areas', 'floor_total_living', 'Total living area', totalLiving, 'm2'));
-  rows.push(makeRow('Floor Areas', 'floor_total_under_roof', 'Total under-roof area', footprint, 'm2'));
-  rows.push(makeRow('Floor Areas', 'floor_garage_check', 'Garage', garage, 'm2'));
+  rows.push(makeRow('Floor Areas', 'floor_total_living', 'Total living area', totalLiving, 'm2',
+    derivedStatus(livingMeasured ? [livingRow] : derivedLivingSources)));
+  rows.push(makeRow('Floor Areas', 'floor_total_under_roof', 'Total under-roof area', footprint, 'm2', derivedStatus([footprintRow])));
+  rows.push(makeRow('Floor Areas', 'floor_garage_check', 'Garage', garage, 'm2', derivedStatus([garageRow])));
   return [...individual, ...rows];
 }
 
