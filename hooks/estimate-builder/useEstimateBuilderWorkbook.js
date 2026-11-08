@@ -12,7 +12,7 @@ import { deferUnapprovedQuotationChanges, planSelectionReconciliation, runSelect
 import { refreshSelectionProcurementRequirements } from '../../lib/builders/selectionProcurementRequirements.js';
 import { selectionReconciliationFinancialImpact } from '../../lib/builders/quotationFinancialImpact.js';
 import { reconcileProductSelections } from '../../lib/builders/productSelectionIntegrity.js';
-import { normalizeQuotationStructure, quotationSectionOrderAfterNormalize } from '../../lib/construction-estimation/quotationStructure.js';
+import { preserveQuotationStructure, quotationSectionOrderAfterNormalize } from '../../lib/construction-estimation/quotationStructure.js';
 import { takeoffProcurementDetails, assignPlasterboardSupplier, procurementSupplierKey } from '../../lib/construction-estimation/takeoffProcurement.js';
 import { masterJobId, linkTakeoffToMasterJob, mergeMasterJobSummaries, findMasterJobForProject } from '../../lib/construction-estimation/masterJob.js';
 import { normalizeTakeoffInputSection } from '../../lib/construction-estimation/takeoffInputRows.js';
@@ -2638,7 +2638,8 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
         reconciled.workbook,
         calculateEstimateBuilderWorkbook(structuredClone(reconciled.workbook)),
       );
-      const quotation = normalizeQuotationStructure(refreshed.quotation);
+      // The builder's categories keep their names, order and hierarchy (no merging into fixed trades).
+      const quotation = preserveQuotationStructure(refreshed.quotation);
       const reconciledWorkbook = {
         ...refreshed,
         quotation,

@@ -1,3 +1,4 @@
+import { clientSelectionTradeParentNames } from "../../lib/construction-estimation/quoteTradeHierarchy.js";
 import { browserTenantKey, builderLocalStorage, builderSessionStorage } from '../../lib/builders/browserTenantStorage.js';
 import SelectionBaselineControl from './SelectionBaselineControl.jsx';
 import ClientSelectionsErrorBoundary from './ClientSelectionsErrorBoundary.jsx';
@@ -3295,7 +3296,7 @@ function QuotationSheet({ sheet, onFormulaTarget }) {
           />
           <button
             type="button"
-            style={styles.sectionHeaderButton}
+            style={options.nested ? styles.nestedSectionHeaderButton : styles.sectionHeaderButton}
             onClick={(event) => {
               event.preventDefault();
               event.stopPropagation();
@@ -3304,8 +3305,8 @@ function QuotationSheet({ sheet, onFormulaTarget }) {
           >
               <span>{quoteSectionDisplayLabel(savedSection.displayName || options.label || section)}</span>
             <span style={styles.sectionTotalStack}>
-              <strong>{money(sectionTotal)}</strong>
-              <small>{quotePercentOfTotal(sectionTotal, sheet.preview.summary.finalQuoteTotal)}</small>
+              <strong style={options.nested ? styles.nestedSectionTotalAmount : styles.sectionTotalAmount}>{money(sectionTotal)}</strong>
+              <small style={options.nested ? styles.nestedSectionTotalPercent : styles.sectionTotalPercent}>{quotePercentOfTotal(sectionTotal, sheet.preview.summary.finalQuoteTotal)}</small>
             </span>
           </button>
         </div>
@@ -3677,7 +3678,7 @@ function QuotationSheet({ sheet, onFormulaTarget }) {
             if (fixOutMaterialsParent && isFixOutMaterialsSubsection(section)) return null;
             if (cabinetMakerParent && isCabinetMakerSubsection(section)) return null;
             if (appliancePackageParent && isApplianceBrandSubsection(section)) return null;
-            const childSections = isConcreteSlabSection(section)
+            const builtInChildSections = isConcreteSlabSection(section)
               ? sheet.quoteSections.filter((item) => isConcreteSlabSubsection(item))
               : isWallFramesSection(section)
                 ? orderedFramingSubsections(sheet.quoteSections)
@@ -3718,6 +3719,7 @@ function QuotationSheet({ sheet, onFormulaTarget }) {
                                                   : isWindowsGroupSection(section)
                                                     ? sheet.quoteSections.filter((item) => isWindowsGroupSubsection(item))
                                                     : [];
+            const childSections = [...builtInChildSections, ...clientSelectionChildSections(section, sheet.quoteSections).filter((item) => !builtInChildSections.includes(item))];
             const sectionTotal = childSections.length
               ? childSections.reduce((sum, item) => sum + (sheet.preview.quotation[item]?.subtotal || 0), sheet.preview.quotation[section]?.subtotal || 0)
               : undefined;
@@ -19041,7 +19043,26 @@ function topLevelQuoteSections(sections = []) {
   return sections.filter((section) => !isGroupedQuoteSubsection(section, sections));
 }
 
+// Client Selections and room tiling sections show under the builder's existing trade (display only;
+// see lib/construction-estimation/quoteTradeHierarchy.js).
+function clientSelectionParentSection(section, sections = []) {
+  const name = quoteSectionBaseName(section);
+  for (const parentName of clientSelectionTradeParentNames(name)) {
+    const parent = sections.find((item) => item !== section && quoteSectionBaseName(item) === parentName && !isBuiltInGroupedQuoteSubsection(item, sections));
+    if (parent) return parent;
+  }
+  return null;
+}
+
+function clientSelectionChildSections(parent, sections = []) {
+  return sections.filter((item) => item !== parent && clientSelectionParentSection(item, sections) === parent);
+}
+
 function isGroupedQuoteSubsection(section, sections = []) {
+  return isBuiltInGroupedQuoteSubsection(section, sections) || Boolean(clientSelectionParentSection(section, sections));
+}
+
+function isBuiltInGroupedQuoteSubsection(section, sections = []) {
   if (isConcreteSlabSubsection(section)) return true;
   if (sections.some((item) => isWallFramesSection(item)) && isWallFramesSubsection(section)) return true;
   if (sections.some((item) => isWallFramesSection(item)) && isFramingMovedSubsection(section)) return true;
@@ -19082,6 +19103,11 @@ function expandManagedQuoteSectionOrder(topLevelOrder = [], allSections = []) {
 }
 
 function quoteChildSectionsForParent(section, sections = []) {
+  const builtIn = builtInQuoteChildSectionsForParent(section, sections);
+  return [...builtIn, ...clientSelectionChildSections(section, sections).filter((item) => !builtIn.includes(item))];
+}
+
+function builtInQuoteChildSectionsForParent(section, sections = []) {
   if (isConcreteSlabSection(section)) return sections.filter((item) => isConcreteSlabSubsection(item));
   if (isWallFramesSection(section)) return orderedFramingSubsections(sections);
   if (isRoofFramingSection(section)) return sections.filter((item) => isRoofFramingSubsection(item));
@@ -20231,10 +20257,15 @@ const styles = {
   section: { background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 10, overflow: "hidden" },
   sectionHeader: { width: "100%", display: "grid", gridTemplateColumns: "78px 44px minmax(0, 1fr)", alignItems: "stretch", background: "#ecfdf5", border: 0, borderBottom: "1px solid #99f6e4", color: "#0f172a" },
   nestedSectionHeader: { width: "100%", display: "grid", gridTemplateColumns: "78px 44px minmax(0, 1fr)", alignItems: "stretch", background: "#eff6ff", border: 0, borderBottom: "1px solid #bfdbfe", color: "#0f172a" },
-  sectionGroupInput: { width: 58, height: 42, alignSelf: "center", justifySelf: "center", border: "1px solid #020617", borderRadius: 4, padding: "6px 6px", fontSize: 16, fontWeight: 900, textAlign: "center", background: "#020617", color: "#ffffff", boxSizing: "border-box" },
-  sectionStageInput: { width: 34, height: 34, alignSelf: "center", justifySelf: "center", border: "2px solid #f59e0b", borderRadius: 3, padding: "5px 4px", fontSize: 15, fontWeight: 900, textAlign: "center", background: "#fef3c7", color: "#7c2d12", boxSizing: "border-box" },
-  sectionHeaderButton: { width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, background: "transparent", border: 0, color: "#0f172a", padding: "14px 16px 14px 0", fontSize: 34, lineHeight: 1.15, fontWeight: 600, textTransform: "uppercase", cursor: "pointer", textAlign: "left" },
-  sectionTotalStack: { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 3, whiteSpace: "nowrap", textAlign: "right" },
+  sectionGroupInput: { width: 52, height: 30, alignSelf: "center", justifySelf: "center", border: "1px solid #020617", borderRadius: 4, padding: "4px 6px", fontSize: 14, fontWeight: 900, textAlign: "center", background: "#020617", color: "#ffffff", boxSizing: "border-box" },
+  sectionStageInput: { width: 30, height: 28, alignSelf: "center", justifySelf: "center", border: "2px solid #f59e0b", borderRadius: 3, padding: "3px 4px", fontSize: 13, fontWeight: 900, textAlign: "center", background: "#fef3c7", color: "#7c2d12", boxSizing: "border-box" },
+  sectionHeaderButton: { width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, background: "transparent", border: 0, color: "#0f172a", padding: "8px 14px 8px 0", fontSize: 16, lineHeight: 1.25, fontWeight: 700, textTransform: "uppercase", cursor: "pointer", textAlign: "left" },
+  nestedSectionHeaderButton: { width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, background: "transparent", border: 0, color: "#1e293b", padding: "6px 14px 6px 0", fontSize: 14, lineHeight: 1.25, fontWeight: 600, textTransform: "uppercase", cursor: "pointer", textAlign: "left" },
+  sectionTotalStack: { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 1, whiteSpace: "nowrap", textAlign: "right" },
+  sectionTotalAmount: { fontSize: 16, fontWeight: 700 },
+  nestedSectionTotalAmount: { fontSize: 14, fontWeight: 700 },
+  sectionTotalPercent: { fontSize: 12, fontWeight: 500, color: "#475569", textTransform: "none" },
+  nestedSectionTotalPercent: { fontSize: 11, fontWeight: 500, color: "#475569", textTransform: "none" },
   staticSectionHeader: { background: "#ecfdf5", borderBottom: "1px solid #99f6e4", color: "#0f172a", padding: "14px 16px", fontSize: 34, lineHeight: 1.15, fontWeight: 600, textTransform: "uppercase", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 },
   headerButton: { background: "#ffffff", color: "#0f172a", border: "1px solid #99f6e4", borderRadius: 6, padding: "6px 9px", fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" },
   subSection: { borderTop: "1px solid #e2e8f0", background: "#ffffff" },
