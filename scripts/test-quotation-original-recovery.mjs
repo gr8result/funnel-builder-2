@@ -20,7 +20,9 @@ await check("cabinetry migration keeps every builder cabinet section, rows and o
   quotation["WATERPROOFING (107)"] = { rows: [row("w1", "Membrane")] };
   const workbook = { workspaceId: WS, quotation, quotationSectionOrder: Object.keys(quotation) };
   const out = reconcileCabinetryQuotation(workbook, WS);
-  for (const name of LEGACY) assert.deepEqual(out.quotation[name], quotation[name], `${name} changed or removed`);
+  // A stable section id may be added; everything else must be identical.
+  const noId = ({ sectionId, ...rest }) => rest;
+  for (const name of LEGACY) assert.deepEqual(noId(out.quotation[name]), noId(quotation[name]), `${name} changed or removed`);
   assert.ok(out.quotation.CABINETRY, "CABINETRY section added");
   assert.deepEqual(out.quotationSectionOrder, ["FIX OUT (88)", ...LEGACY, "CABINETRY", "WATERPROOFING (107)"]);
 });
