@@ -67,8 +67,10 @@ for (const pageNumber of pages) {
     beforeM2: Math.round(areaM2((response.buildingAreas.find((a) => a.detectionId === area.detectionId)?.nodes || []).map(toPx)) * 100) / 100,
     afterM2: Math.round(areaM2(area.nodes.map(toPx)) * 100) / 100,
     constraint: area.wallConstraint || null,
+    readingMm: (response.buildingAreas.find((r) => r.detectionId === area.detectionId)?.nodes || []).map(toPx).map((p) => ({ x: Math.round(p.x / ppm), y: Math.round(p.y / ppm) })),
+    resultMm: area.nodes.map(toPx).map((p) => ({ x: Math.round(p.x / ppm), y: Math.round(p.y / ppm) })),
   }));
-  const handTrace = (job.completedFloorplans || []).filter((f) => Number(f.page) === pageNumber).map((f) => ({ type: f.type, m2: Math.round(areaM2(f.nodes) * 100) / 100 }));
+  const handTrace = (job.completedFloorplans || []).filter((f) => Number(f.page) === pageNumber).map((f) => ({ type: f.type, m2: Math.round(areaM2(f.nodes) * 100) / 100, nodesMm: f.nodes.map((p) => ({ x: Math.round(p.x / ppm), y: Math.round(p.y / ppm) })) }));
   out.pages[pageNumber] = { engine: fused.report.engine, measuredWalls: fused.report.measuredWalls, exteriorWallLm: Math.round(exteriorLm * 100) / 100, areas, handTrace };
   console.log(`\nSheet ${pageNumber}: ${fused.report.measuredWalls} measured walls, ${out.pages[pageNumber].exteriorWallLm} m external`);
   for (const a of areas) console.log(`  ${a.type.padEnd(10)} ${a.id.padEnd(22)} before ${a.beforeM2.toFixed(2).padStart(7)}  after ${a.afterM2.toFixed(2).padStart(7)}${a.constraint ? `  [${a.constraint.status}${a.constraint.movedEdges !== undefined ? `, ${a.constraint.movedEdges}/${a.constraint.edges} edges on walls` : ''}]` : ''}`);

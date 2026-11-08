@@ -45,7 +45,7 @@ function meet(p, u, q, v) {
  * @param nodes footprint outline in millimetres (sheet frame)
  * @param walls measured supports in mm: external walls { id, nodes, thicknessMm } and drawn outdoor
  *   outlines { id, nodes, closed: true, kind: 'outline' } (thickness 0: the line itself is the edge)
- * @returns {{ nodes, status, edges, movedEdges, supportedShare, beforeM2, afterM2, moves, reason? }}
+ * @returns {{ nodes, status, edges, movedEdges, supportedShare, unsupportedLengthMm, beforeM2, afterM2, moves, reason? }}
  */
 export function constrainFootprintToWalls(nodes, walls, overrides = {}) {
   const options = { ...FOOTPRINT_CONSTRAINT_DEFAULTS, ...overrides };
@@ -88,6 +88,7 @@ export function constrainFootprintToWalls(nodes, walls, overrides = {}) {
   });
   const moves = lines.map((line, index) => (line.moved ? { edge: index, onto: line.kind, id: line.wallId, shiftMm: Math.round(line.shift) } : null)).filter(Boolean);
   const supportedShare = perimeter ? supported / perimeter : 0;
+  const unsupportedLengthMm = lines.filter((line) => !line.moved && line.length >= options.minEdgeMm).reduce((sum, line) => sum + line.length, 0);
   if (!moves.length) return { ...base, supportedShare, status: 'unverified', reason: 'no edge runs along a measured external wall or drawn outdoor outline' };
   // Each corner is where its two (possibly moved) edge lines meet; a straight-through corner keeps
   // the moved end of the edge it starts.
@@ -96,7 +97,7 @@ export function constrainFootprintToWalls(nodes, walls, overrides = {}) {
     return meet(before.p, before.u, after.p, after.u) || (after.moved ? after.p : node);
   });
   const afterM2 = Math.abs(signedArea(next)) / 1e6;
-  const result = { ...base, supportedShare, moves };
+  const result = { ...base, supportedShare, unsupportedLengthMm, moves };
   if (selfCrossing(next)) return { ...result, status: 'rejected', reason: 'moving the edges onto the walls made the outline cross itself' };
   if (Math.abs(afterM2 - beforeM2) > options.maxAreaChangeShare * beforeM2) return { ...result, status: 'rejected', reason: `moving the edges onto the walls changed the area by ${Math.round(100 * Math.abs(afterM2 - beforeM2) / beforeM2)}%` };
   return { ...result, nodes: next, afterM2, movedEdges: moves.length, status: supportedShare >= options.minSupportedShare ? 'constrained' : 'partial' };

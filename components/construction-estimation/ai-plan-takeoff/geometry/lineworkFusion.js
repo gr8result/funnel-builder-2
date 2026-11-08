@@ -567,6 +567,11 @@ export function fuseSheetLinework(response, raster, sheet, existing = {}, overri
     const wallConstraint = { status: fit.status, edges: fit.edges, movedEdges: fit.movedEdges, supportedShare: Math.round(fit.supportedShare * 100) / 100,
       beforeM2: Math.round(fit.beforeM2 * 100) / 100, afterM2: Math.round(fit.afterM2 * 100) / 100, moves: fit.moves, ...(fit.reason ? { reason: fit.reason } : {}) };
     report.footprints.push({ detectionId: area.detectionId, ...wallConstraint });
+    if (fit.status === 'partial') {
+      // Name the open stretch: on these edges the area is only as good as the reading's position.
+      const unsupportedM = fit.unsupportedLengthMm / 1000;
+      note('footprint-partial', `${unsupportedM.toFixed(1)} m of the footprint outline on sheet ${response.page} has no measured wall or drawn outline beside it (usually the open side of a balcony, patio or alfresco); its position is the plan reading's own. Check those edges on the plan before approving the footprint.`);
+    }
     if (fit.status === 'constrained' || fit.status === 'partial') {
       const said = `Outline moved onto measured drawing geometry (outer face of external walls, drawn outdoor outlines) on ${fit.movedEdges} of ${fit.edges} edges (${wallConstraint.beforeM2} -> ${wallConstraint.afterM2} m2)${fit.status === 'partial' ? '; less than half its perimeter runs along measured walls, so the rest is the reading\'s own outline' : ''}.`;
       return { ...area, nodes: fit.nodes.map(fromMm), readingNodes: area.nodes, wallConstraint, evidence: `${area.evidence || ''} ${said}`.trim() };
