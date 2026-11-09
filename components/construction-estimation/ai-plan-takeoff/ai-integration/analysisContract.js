@@ -407,10 +407,12 @@ export function normalizePlanAnalysis({ context, responses = [], runId, modelVer
             frameThicknessMm = resolved.frameThicknessMm.value;
             fields.frameThicknessMm = fromSource(resolved.frameThicknessMm);
           } else {
-            frameThicknessMm = 70;
+            // Undocumented frame: 90 mm for an external wall (the usual external stud), 70 mm internal.
+            const defaultFrameMm = raw.category === 'exterior' ? 90 : 70;
+            frameThicknessMm = defaultFrameMm;
             frameAssumed = true;
-            fields.frameThicknessMm = { basis: 'ASSUMED', confidence: 0, evidence: '70 mm is the common manual tool frame default; frame thickness was not documented.' };
-            report(page, raw, 'Frame thickness uses the 70 mm default; verify on the drawing.', 'assumption');
+            fields.frameThicknessMm = { basis: 'ASSUMED', confidence: 0, evidence: `${defaultFrameMm} mm is the ${raw.category === 'exterior' ? 'external' : 'internal'} frame default; frame thickness was not documented.` };
+            report(page, raw, `Frame thickness uses the ${defaultFrameMm} mm default; verify on the drawing.`, 'assumption');
           }
         } else if (raw.frameThicknessMm !== undefined && raw.frameThicknessMm !== null) {
           throw new Error(`${constructionSystem} does not carry a timber frame; frameThicknessMm must be null.`);

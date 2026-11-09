@@ -556,6 +556,8 @@ export default function AIPlanTakeoffStandalone({
   const [selectedOpeningId, setSelectedOpeningId] = useState(null);
   // Opening whose quick-edit popup is open beside its marker on the plan.
   const [quickEditOpeningId, setQuickEditOpeningId] = useState(null);
+  // Which plan overlays are drawn (the key on the canvas names each colour and can hide it).
+  const [overlayVisibility, setOverlayVisibility] = useState({ floorAreas: true, rooms: true, eaves: true });
   const [selectedMeasurementId, setSelectedMeasurementId] = useState(null);
 
   // Area & Floorcoverings state
@@ -4796,7 +4798,7 @@ setSavedRevision(verifiedSave.revision);
                         const framed = nextSystem === 'brick_veneer' || nextSystem === 'lightweight_cladding';
                         updateWallRun(selectedWall.id, {
                           constructionSystem: nextSystem,
-                          frameThicknessMm: framed ? (selectedWallSystem.frameThicknessMm || 70) : null,
+                          frameThicknessMm: framed ? (selectedWallSystem.frameThicknessMm || 90) : null,
                           exteriorType: nextSystem === 'brick_veneer' ? (selectedWallSystem.exteriorFinish === 'rendered_brick' ? 'Rendered Brick Veneer' : 'Face Brick Veneer')
                             : nextSystem === 'lightweight_cladding' ? 'Lightweight Cladding'
                               : nextSystem === 'core_filled_blockwork' ? 'Rendered Masonry'
@@ -4809,7 +4811,7 @@ setSavedRevision(verifiedSave.revision);
                     </label>
                     {(selectedWallSystem.system === 'brick_veneer' || selectedWallSystem.system === 'lightweight_cladding') && (
                       <label style={{ fontSize: '12px' }}>Frame thickness
-                        <select value={selectedWallSystem.frameThicknessMm || 70} onChange={(e) => { updateWallRun(selectedWall.id, { frameThicknessMm: Number(e.target.value) }); markTakeoffItemCompleted('wall-frame-thickness-edit'); }} style={{ width: '100%', padding: '6px', marginTop: '4px' }}>
+                        <select value={selectedWallSystem.frameThicknessMm || 90} onChange={(e) => { updateWallRun(selectedWall.id, { frameThicknessMm: Number(e.target.value) }); markTakeoffItemCompleted('wall-frame-thickness-edit'); }} style={{ width: '100%', padding: '6px', marginTop: '4px' }}>
                           <option value={70}>70mm</option>
                           <option value={90}>90mm</option>
                         </select>
@@ -5884,7 +5886,10 @@ setSavedRevision(verifiedSave.revision);
 
             {/* Floorplans & Vertex Handles */}
             {activePageFloorplans.map((fp) => {
+              if (!overlayVisibility.floorAreas) return null;
               const isSelected = fp.id === selectedFloorplanId;
+              const fpCentre = fp.nodes.reduce((sum, n) => ({ x: sum.x + n.x / fp.nodes.length, y: sum.y + n.y / fp.nodes.length }), { x: 0, y: 0 });
+              const fpPending = fp.source === 'ai' && fp.confirmed !== true;
               return (
                 <React.Fragment key={fp.id}>
                   <Line
@@ -5901,15 +5906,17 @@ setSavedRevision(verifiedSave.revision);
                       selectOnly('floorplan', fp.id);
                     }}
                   />
-                  <Text
-                    x={fp.nodes[0].x}
-                    y={fp.nodes[0].y}
-                    text={`${fp.label}: ${calculatePolygonAreaM2(fp.nodes, pixelsPerMm).toFixed(2)} m²`}
-                    fontSize={13 / stageScale}
-                    fill={fp.stroke}
-                    fontStyle="bold"
-                    listening={false}
-                  />
+                  {/* Named in the middle of the outline, readable over the drawing; an unapproved AI outline says so. */}
+                  <Label x={fpCentre.x} y={fpCentre.y} rotation={-(Number(rotation) || 0)} listening={false}>
+                    <Tag fill="rgba(255,255,255,0.9)" stroke={fp.stroke} strokeWidth={1 / stageScale} cornerRadius={3 / stageScale} />
+                    <Text
+                      text={`${fpPending ? 'AI - review: ' : ''}${fp.label}: ${calculatePolygonAreaM2(fp.nodes, pixelsPerMm).toFixed(2)} m²`}
+                      fontSize={13 / stageScale}
+                      padding={3 / stageScale}
+                      fill={fp.stroke}
+                      fontStyle="bold"
+                    />
+                  </Label>
 
                   {isSelected && fp.nodes.map((node, idx) => {
                     const nextNode = fp.nodes[(idx + 1) % fp.nodes.length];
@@ -6179,7 +6186,7 @@ setSavedRevision(verifiedSave.revision);
               // A small centre marker (circle = window, triangle = door) coloured by review state,
               // with the size beside it - the drawing underneath stays visible.
               const marker = openingMarkerStyle(op);
-              const markerRadius = 7 / stageScale;
+              const markerRadius = 9 / stageScale;
               const sizeLabel = openingSizeLabel(op, dynamicTag.split(': ')[0]);
               return (
                 <Group
@@ -6205,9 +6212,9 @@ setSavedRevision(verifiedSave.revision);
                   {marker.shape === 'circle'
                     ? <Circle name="opening-marker" radius={markerRadius} fill={marker.fill} stroke={isSelected ? '#0f172a' : marker.stroke} strokeWidth={(isSelected ? 2.5 : 1.5) / stageScale} />
                     : <RegularPolygon name="opening-marker" sides={3} radius={markerRadius * 1.25} fill={marker.fill} stroke={isSelected ? '#0f172a' : marker.stroke} strokeWidth={(isSelected ? 2.5 : 1.5) / stageScale} />}
-                  <Label x={markerRadius * 1.8} y={-7 / stageScale} rotation={-(Number(rotation) || 0)} listening={false}>
+                  <Label x={markerRadius * 1.8} y={-9 / stageScale} rotation={-(Number(rotation) || 0)} listening={false}>
                     <Tag fill="rgba(255,255,255,0.88)" stroke={marker.stroke} strokeWidth={0.75 / stageScale} cornerRadius={3 / stageScale} />
-                    <Text text={sizeLabel} fontSize={11 / stageScale} padding={2 / stageScale} fill="#0f172a" fontStyle="bold" />
+                    <Text text={sizeLabel} fontSize={13 / stageScale} padding={3 / stageScale} fill="#0f172a" fontStyle="bold" />
                   </Label>
                 </Group>
               );
@@ -6341,6 +6348,7 @@ setSavedRevision(verifiedSave.revision);
 
             {/* Eaves runs with filled selected width */}
             {activePageEaves.map((eave) => {
+              if (!overlayVisibility.eaves) return null;
               const nodes = getEaveNodes(eave);
               const polyPoints = generateOffsetPolygon(nodes, eave.widthMm * (pixelsPerMm || 1), eave.alignment || 'outer');
               const isSelected = eave.id === selectedEaveId;
@@ -6574,7 +6582,7 @@ setSavedRevision(verifiedSave.revision);
             <RoomBoundaryLayer key={`${openedTakeoffJob?.takeoffId}-${currentPage}-${editingRoomId || ''}`} rooms={(aiTakeoffAnalysis.report?.rooms || []).filter(room => room.page === currentPage)}
               control={aiTakeoffAnalysis.rooms} enabled={activeTool === 'rooms' && !isRecoveryPreview} editing={editingRoomId}
               scale={stageScale} width={logicalImageWidth} height={logicalImageHeight} suppressClick={suppressNextStageClickRef}
-              hoveredId={hoveredRoomId} setHoveredId={setHoveredRoomId} walls={activePageWalls} pixelsPerMm={pixelsPerMm || 1} />
+              hoveredId={hoveredRoomId} setHoveredId={setHoveredRoomId} walls={activePageWalls} pixelsPerMm={pixelsPerMm || 1} visible={overlayVisibility.rooms} />
             {/* Pointer crosshair. This is the last child of the layer, so it paints on top of every
                 markup, and it is pinned to the cursor - which means its hit region sits under the
                 pointer on every single click. It must never listen, or it swallows the click that
@@ -6603,6 +6611,23 @@ setSavedRevision(verifiedSave.revision);
             )}
           </Layer>
         </Stage>
+        {image && (
+          <div data-testid="plan-overlay-key" style={{ position: 'absolute', left: 12, bottom: 12, zIndex: 6, background: 'rgba(255,255,255,0.95)', border: '1px solid #94a3b8', borderRadius: 8, padding: '8px 10px', fontSize: 14, display: 'grid', gap: 4, boxShadow: '0 2px 8px #0002' }}>
+            <strong style={{ fontSize: 14 }}>Plan overlays</strong>
+            {[
+              ['floorAreas', 'rgba(33,150,243,0.35)', '#1565c0', 'Floor areas (footprint, garage, alfresco...)'],
+              ['rooms', 'rgba(22,163,74,0.25)', '#d97706', 'Rooms (green approved, amber review)'],
+              ['eaves', 'rgba(0,188,212,0.35)', '#00838f', 'Eaves'],
+            ].map(([key, fill, stroke, text]) => (
+              <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                <input type="checkbox" checked={overlayVisibility[key]} onChange={() => setOverlayVisibility((current) => ({ ...current, [key]: !current[key] }))} />
+                <span style={{ width: 16, height: 12, background: fill, border: `2px solid ${stroke}`, borderRadius: 2, display: 'inline-block' }} />
+                {text}
+              </label>
+            ))}
+            <span style={{ fontSize: 13, color: '#475569' }}>Openings: <span style={{ color: OPENING_MARKER_COLOURS.window.fill }}>●</span> window <span style={{ color: OPENING_MARKER_COLOURS.door.fill }}>▲</span> door, amber = review, green = approved</span>
+          </div>
+        )}
         {(() => {
           // Quick edit beside the clicked opening marker: size and code, plus explicit approval.
           const opening = quickEditOpeningId && quickEditOpeningId === selectedOpeningId ? activePageOpenings.find((item) => item.id === quickEditOpeningId) : null;

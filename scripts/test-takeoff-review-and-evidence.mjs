@@ -179,7 +179,8 @@ answer('ceiling-height:Ground Floor', 2700);
 answer('internal-wall-type', '90');
 answer('door-height', 2040);
 answer('eave-width', 600);
-assert.deepEqual([takeoff.completedWallRuns[0].exteriorType, takeoff.completedWallRuns[0].frameThicknessMm, takeoff.completedWallRuns[0].wallHeightM], ['Rendered Brick Veneer', 70, 2.7]);
+// An undocumented external frame defaults to 90 mm (owner rule, 10 Nov 2026; internal stays 70 mm).
+assert.deepEqual([takeoff.completedWallRuns[0].exteriorType, takeoff.completedWallRuns[0].frameThicknessMm, takeoff.completedWallRuns[0].wallHeightM], ['Rendered Brick Veneer', 90, 2.7]);
 assert.deepEqual([takeoff.completedWallRuns[1].thicknessMm, takeoff.completedWallRuns[1].constructionSystem], [90, 'internal_timber_frame'], 'a 90 mm internal wall stays a 90 mm wall');
 payload = createJobSetupPayload(createTakeoffSchedule(takeoff), { sheetLevels: takeoff.sheetLevels });
 assert.deepEqual(payload.review.decisions.map((item) => item.id).filter((id) => !id.startsWith('wall-check:')), ['opening-size'], 'only canonical, hosted openings can receive further decisions');

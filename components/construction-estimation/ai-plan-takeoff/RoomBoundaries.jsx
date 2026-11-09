@@ -54,7 +54,7 @@ export function RoomBoundaryPanel({ rooms, control, enabled, setEnabled, editing
   </aside>;
 }
 
-export function RoomBoundaryLayer({ rooms, enabled, editing, control, scale, width, height, suppressClick, hoveredId = null, setHoveredId = () => {}, walls = [], pixelsPerMm = 1 }) {
+export function RoomBoundaryLayer({ rooms, enabled, editing, control, scale, width, height, suppressClick, hoveredId = null, setHoveredId = () => {}, walls = [], pixelsPerMm = 1, visible = true }) {
   const [hoveredLocal,setHoveredLocal]=useState(null);
   const [draft,setDraft]=useState([]);
   // Corner being dragged: the outline and its area follow the (snapped) pointer before it is saved.
@@ -64,6 +64,7 @@ export function RoomBoundaryLayer({ rooms, enabled, editing, control, scale, wid
   const stop=e=>{e.cancelBubble=true;};
   const local=e=>e.target.getParent().getRelativePointerPosition();
   const hovered=hoveredLocal||hoveredId;
+  if(!visible)return null;
   const snap=p=>snapRoomVertex(p,targets,SNAP_TOLERANCE_SCREEN_PX/scale);
   return <Group listening={enabled} name="room-boundaries">
     {rooms.filter(r=>!r.excluded&&r.polygon?.length>=3).map(room=>{

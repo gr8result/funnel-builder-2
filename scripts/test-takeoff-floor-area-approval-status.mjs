@@ -42,4 +42,29 @@ assert.ok(quoted(approved).has('floor_Living'), 'approved Living reaches the quo
 const manual = schedule([{ id: 'm', type: 'Footprint', page: 1, nodes: square(10000), source: 'manual' }]);
 assert.equal(row(manual, 'floor_Living').commercialStatus, 'Approved');
 
+// 5. Totals count each building level once (they used to add every sheet: 757 m² for a ~378 m² house).
+const fp = (id, page, sideMm, extra = {}) => ({ id, type: 'Footprint', page, nodes: square(sideMm), source: 'manual', ...extra });
+const levels = (floorplans, sheetLevels) => createTakeoffSchedule({ pixelsPerMm: 1, totalPages: 6, completedFloorplans: floorplans, sheetLevels });
+const total = (s) => row(s, 'floor_Footprint');
+// Ground + upper on their own sheets: both counted (a two-storey gross area).
+const twoStorey = levels([fp('g', 2, 10000), fp('u', 3, 8000)], { 2: 'Ground Floor', 3: 'Second Level' });
+assert.equal(total(twoStorey).quantity, 164, 'ground 100 + upper 64');
+// A footprint traced on an unassigned sheet (site plan) is listed but not counted once other sheets have levels.
+const withSitePlan = levels([fp('g', 2, 10000), fp('u', 3, 8000), fp('site', 1, 12000)], { 2: 'Ground Floor', 3: 'Second Level' });
+assert.equal(total(withSitePlan).quantity, 164, 'site-plan outline not added');
+assert.equal(row(withSitePlan, 'site').countedInTotals, false);
+assert.equal(row(withSitePlan, 'site').reviewRequired, true, 'an uncounted outline never reaches the quote');
+assert.ok(!quoted(withSitePlan).has('site'));
+assert.match(row(withSitePlan, 'site').notes, /no building level/);
+// Two sheets assigned the same level: one counted (approved/hand-drawn first), and the total flagged.
+const duplicateLevel = levels([fp('g', 2, 10000), fp('g-copy', 6, 10000, { source: 'ai', confirmed: false }), fp('u', 3, 8000)], { 2: 'Ground Floor', 3: 'Second Level', 6: 'Ground Floor' });
+assert.equal(total(duplicateLevel).quantity, 164, 'the same level is not counted twice');
+assert.equal(row(duplicateLevel, 'g').countedInTotals, true, 'the hand-drawn sheet is the one counted');
+assert.equal(row(duplicateLevel, 'g-copy').countedInTotals, false);
+assert.equal(total(duplicateLevel).reviewRequired, true, 'builder confirms which sheet is right');
+assert.match(total(duplicateLevel).notes, /sheets 2, 6 measure it; sheet 2 counted/);
+// No levels assigned anywhere (single-sheet job): every outline still counts, as before.
+const noLevels = levels([fp('a', 1, 10000), fp('b', 1, 5000)], {});
+assert.equal(total(noLevels).quantity, 125);
+
 console.log('PASS: derived floor-area rows inherit the review state of their source outlines and stay out of the quote until approved.');

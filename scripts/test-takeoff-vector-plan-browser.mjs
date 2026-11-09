@@ -180,7 +180,11 @@ if (!reuseBundle) await new Promise((resolve, reject) => {
     output: { path: out, filename: 'browser-bundle.js' },
     resolve: { extensions: ['.js', '.jsx', '.mjs', '.ts', '.tsx'], mainFields: ['browser', 'module', 'main'], fallback: { canvas: false, fs: false, path: false, url: false, stream: false, zlib: false } },
     module: { rules: [{ test: /\.css$/, use: cssLoader }, { test: /\.[jt]sx?$/, exclude: /node_modules/, resolve: { fullySpecified: false }, use: loader }] },
-    plugins: [new webpack.optimize.LimitChunkCountPlugin({ maxChunks: 1 }), new webpack.ProvidePlugin({ process: require.resolve('next/dist/build/polyfills/process') }), new webpack.IgnorePlugin({ resourceRegExp: /^node:/ }), new webpack.DefinePlugin({ 'process.env.NEXT_PUBLIC_SUPABASE_URL': JSON.stringify(supabaseUrl), 'process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY': JSON.stringify(supabaseAnon) })],
+    plugins: [
+      // GR8_LOCK_MODULE=<file> swaps lib/nonStealingLock.js inside this test bundle only (e.g. an isolated
+      // auth-lock repair under test). The app's own file is not touched.
+      ...(process.env.GR8_LOCK_MODULE ? [new webpack.NormalModuleReplacementPlugin(/[\\/]nonStealingLock\.js$/,path.resolve(process.env.GR8_LOCK_MODULE))] : []),
+      new webpack.optimize.LimitChunkCountPlugin({ maxChunks: 1 }), new webpack.ProvidePlugin({ process: require.resolve('next/dist/build/polyfills/process') }), new webpack.IgnorePlugin({ resourceRegExp: /^node:/ }), new webpack.DefinePlugin({ 'process.env.NEXT_PUBLIC_SUPABASE_URL': JSON.stringify(supabaseUrl), 'process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY': JSON.stringify(supabaseAnon) })],
     cache: { type: 'filesystem', cacheDirectory: path.join(root,'artifacts/test-results/takeoff-browser-webpack-cache') },
     optimization: { minimize: false }, performance: { hints: false },
   });

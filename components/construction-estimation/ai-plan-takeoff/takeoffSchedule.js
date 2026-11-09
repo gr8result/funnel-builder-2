@@ -105,31 +105,83 @@ function makeRow(section, itemId, category, quantity, unit, extra = {}) {
   return { section, itemId, category, quantity: round(quantity), unit, ...extra };
 }
 
-function createFloorAreaRows(floorplans = [], pixelsPerMm) {
-  const individual = floorplans.map((item, index) => makeRow(
-    'Floor Areas',
-    String(item.id || `floor-area-${index + 1}`),
-    item.label || FLOOR_AREA_LABELS[item.type] || item.type || 'Floor area',
-    polygonAreaM2(item.nodes, pixelsPerMm),
-    'm2',
-    {
-      planSheet: Number(item.page || 1),
-      level: item.level || '',
-      areaType: item.type || 'Other',
-      source: item.source || 'manual',
-      commercialStatus: item.source === 'ai' && item.confirmed !== true ? 'Review required' : 'Approved',
-      reviewRequired: item.source === 'ai' && item.confirmed !== true,
-      notes: item.source === 'ai' && item.confirmed !== true
-        ? 'AI-detected outline: inspect and approve before it can enter Job Setup or quotation.'
-        : 'Measured polygon area.',
-    },
-  ));
+// Which outlines count toward the totals. A building level is counted once: outlines on a sheet with
+// no building level (site, setout or roof sheets) are left out once any sheet has a level, and when two
+// sheets measure the same level's area of one type, only one sheet is counted (approved / hand-drawn
+// first, then the lower sheet number) and the total is flagged. Summing every sheet doubled totals.
+function floorAreaCounting(floorplans = [], sheetLevels = {}) {
+  const levelOf = (item) => floorForItem(item, sheetLevels);
+  const anyAssigned = floorplans.some((item) => !levelOf(item).key.startsWith('sheet'));
+  const excluded = new Map();
+  if (anyAssigned) {
+    for (const item of floorplans) {
+      const level = levelOf(item);
+      if (level.key.startsWith('sheet')) excluded.set(item, `Sheet ${item.page || 1} has no building level, so this outline is not counted in the totals. Assign the sheet to a level if it is a floor plan.`);
+    }
+  }
+  const groups = new Map();
+  for (const item of floorplans) {
+    if (excluded.has(item)) continue;
+    const key = `${levelOf(item).key}|${item.type || 'Other'}`;
+    groups.set(key, [...(groups.get(key) || []), item]);
+  }
+  const duplicateNotes = new Map();
+  for (const [key, items] of groups) {
+    const pages = [...new Set(items.map((item) => Number(item.page || 1)))];
+    if (pages.length < 2) continue;
+    const rank = (page) => {
+      const onPage = items.filter((item) => Number(item.page || 1) === page);
+      return onPage.some((item) => item.confirmed === true || item.source !== 'ai') ? 0 : 1;
+    };
+    const kept = [...pages].sort((a, b) => rank(a) - rank(b) || a - b)[0];
+    const level = levelOf(items[0]).label;
+    const type = key.split('|')[1];
+    for (const item of items) {
+      if (Number(item.page || 1) !== kept) excluded.set(item, `${level} ${FLOOR_AREA_LABELS[type] || type} is also measured on sheet ${kept}; only sheet ${kept} is counted. Check which sheet is right.`);
+    }
+    duplicateNotes.set(type, [...(duplicateNotes.get(type) || []), `${level}: sheets ${pages.join(', ')} measure it; sheet ${kept} counted`]);
+  }
+  return { excluded, duplicateNotes };
+}
+
+function createFloorAreaRows(floorplans = [], pixelsPerMm, sheetLevels = {}) {
+  const { excluded, duplicateNotes } = floorAreaCounting(floorplans, sheetLevels);
+  const individual = floorplans.map((item, index) => {
+    const pendingAi = item.source === 'ai' && item.confirmed !== true;
+    const left = excluded.get(item);
+    return makeRow(
+      'Floor Areas',
+      String(item.id || `floor-area-${index + 1}`),
+      item.label || FLOOR_AREA_LABELS[item.type] || item.type || 'Floor area',
+      polygonAreaM2(item.nodes, pixelsPerMm),
+      'm2',
+      {
+        planSheet: Number(item.page || 1),
+        level: item.level || floorForItem(item, sheetLevels).label || '',
+        areaType: item.type || 'Other',
+        source: item.source || 'manual',
+        countedInTotals: !left,
+        commercialStatus: left ? 'Not counted in totals' : pendingAi ? 'Review required' : 'Approved',
+        // An outline left out of the totals is not itself a quantity for Job Setup or the quote.
+        reviewRequired: Boolean(left) || pendingAi,
+        notes: left || (pendingAi
+          ? 'AI-detected outline: inspect and approve before it can enter Job Setup or quotation.'
+          : 'Measured polygon area.'),
+      },
+    );
+  });
   const rows = Object.keys(FLOOR_AREA_LABELS).map((type) => {
-    const matching = individual.filter((item) => item.areaType === type);
+    const matching = individual.filter((item) => item.areaType === type && item.countedInTotals);
+    const duplicates = duplicateNotes.get(type) || [];
+    const notCounted = individual.filter((item) => item.areaType === type && !item.countedInTotals).length;
     return makeRow('Floor Area Totals', `floor_${type}`, FLOOR_AREA_LABELS[type], matching.reduce((sum, item) => sum + item.quantity, 0), 'm2', {
-      commercialStatus: matching.some((item) => item.reviewRequired) ? 'Contains unapproved areas' : 'Approved',
-      reviewRequired: matching.some((item) => item.reviewRequired),
-      notes: matching.length ? `${matching.length} measured outline${matching.length === 1 ? '' : 's'}.` : 'No measured outline.',
+      commercialStatus: duplicates.length ? 'Review: measured on more than one sheet' : matching.some((item) => item.reviewRequired) ? 'Contains unapproved areas' : 'Approved',
+      reviewRequired: duplicates.length > 0 || matching.some((item) => item.reviewRequired),
+      notes: [
+        matching.length ? `${matching.length} measured outline${matching.length === 1 ? '' : 's'}.` : 'No measured outline.',
+        notCounted ? `${notCounted} outline${notCounted === 1 ? '' : 's'} not counted.` : '',
+        ...duplicates,
+      ].filter(Boolean).join(' '),
     });
   });
 
@@ -1159,7 +1211,7 @@ function buildForPages({ pages, completedFloorplans, completedWallRuns, placedOp
   }
   const measurements = completedMeasurements.filter(include);
 
-  const floorAreas = createFloorAreaRows(floorplans, pixelsPerMm);
+  const floorAreas = createFloorAreaRows(floorplans, pixelsPerMm, sheetLevels);
   const wallSchedules = createWallSchedules(walls, openings, pixelsPerMm, jobSetupRows, sheetLevels);
   const linkedMeasurements = associateTakeoffMeasurements(createMeasurementRecords({
     completedWallRuns: walls, placedOpenings: openings, pixelsPerMm,
