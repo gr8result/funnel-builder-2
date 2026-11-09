@@ -505,6 +505,8 @@ export default function AIPlanTakeoffStandalone({
   const [pdfDoc, setPdfDoc] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [editingRoomId, setEditingRoomId] = useState(null);
+  // Room under the pointer in the room list or on the plan: highlighted in both.
+  const [hoveredRoomId, setHoveredRoomId] = useState(null);
   const [totalPages, setTotalPages] = useState(1);
 
   const [vectorSegments, setVectorSegments] = useState([]);
@@ -5796,7 +5798,8 @@ setSavedRevision(verifiedSave.revision);
         )}
         {image && <RoomBoundaryPanel rooms={aiTakeoffAnalysis.report?.rooms || []} control={aiTakeoffAnalysis.rooms}
           enabled={activeTool === 'rooms'} setEnabled={enabled => setActiveTool(enabled ? 'rooms' : 'select')}
-          editing={editingRoomId} setEditing={id => { setEditingRoomId(id); const room = aiTakeoffAnalysis.report?.rooms?.find(room => room.id === id); if (room) setCurrentPage(room.page); }} readOnly={isRecoveryPreview} />}
+          editing={editingRoomId} setEditing={id => { setEditingRoomId(id); const room = aiTakeoffAnalysis.report?.rooms?.find(room => room.id === id); if (room) setCurrentPage(room.page); }} readOnly={isRecoveryPreview}
+          hoveredId={hoveredRoomId} setHoveredId={setHoveredRoomId} />}
         {image && ((aiTakeoffAnalysis.report?.wallReviewCandidates || []).some(candidate => candidate.page === currentPage)
           || (aiTakeoffAnalysis.report?.bridgeReviewCandidates || []).some(candidate => candidate.page === currentPage)
           || (aiTakeoffAnalysis.report?.openingReviewCandidates || []).some(candidate => candidate.page === currentPage)) && (() => {
@@ -6570,7 +6573,8 @@ setSavedRevision(verifiedSave.revision);
 
             <RoomBoundaryLayer key={`${openedTakeoffJob?.takeoffId}-${currentPage}-${editingRoomId || ''}`} rooms={(aiTakeoffAnalysis.report?.rooms || []).filter(room => room.page === currentPage)}
               control={aiTakeoffAnalysis.rooms} enabled={activeTool === 'rooms' && !isRecoveryPreview} editing={editingRoomId}
-              scale={stageScale} width={logicalImageWidth} height={logicalImageHeight} suppressClick={suppressNextStageClickRef} />
+              scale={stageScale} width={logicalImageWidth} height={logicalImageHeight} suppressClick={suppressNextStageClickRef}
+              hoveredId={hoveredRoomId} setHoveredId={setHoveredRoomId} walls={activePageWalls} pixelsPerMm={pixelsPerMm || 1} />
             {/* Pointer crosshair. This is the last child of the layer, so it paints on top of every
                 markup, and it is pinned to the cursor - which means its hit region sits under the
                 pointer on every single click. It must never listen, or it swallows the click that

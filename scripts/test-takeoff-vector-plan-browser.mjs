@@ -170,8 +170,11 @@ fs.writeFileSync(cssLoader, `module.exports=source=>'const style=document.create
 const webpackPackage = require('next/dist/compiled/webpack/webpack');
 webpackPackage.init();
 const webpack = webpackPackage.webpack;
-console.log('Building live Takeoff browser bundle.');
-await new Promise((resolve, reject) => {
+// GR8_BUNDLE_ONLY=1 builds the bundle and stops; GR8_REUSE_BUNDLE=1 runs against the bundle already built.
+// Building and running separately keeps webpack and Chrome from holding memory at the same time.
+const reuseBundle = process.env.GR8_REUSE_BUNDLE === '1' && fs.existsSync(path.join(out, 'browser-bundle.js'));
+console.log(reuseBundle ? `Reusing browser bundle built ${fs.statSync(path.join(out, 'browser-bundle.js')).mtime.toISOString()}.` : 'Building live Takeoff browser bundle.');
+if (!reuseBundle) await new Promise((resolve, reject) => {
   const compiler = webpack({
     mode: 'development', target: 'web', devtool: false, context: root, entry,
     output: { path: out, filename: 'browser-bundle.js' },
@@ -186,6 +189,8 @@ await new Promise((resolve, reject) => {
     compiler.close(() => error || stats?.hasErrors() ? reject(error || new Error(JSON.stringify(result.errors).slice(0, 4000))) : resolve());
   });
 });
+
+if (process.env.GR8_BUNDLE_ONLY === '1') { console.log('Bundle built; stopping (GR8_BUNDLE_ONLY).'); process.exit(0); }
 
 // ---- Plans under test: the original vector PDFs, scored against independent hand references ----
 const planSets = [
@@ -289,7 +294,7 @@ let browser, page, calibrationAnswer = '';
 try {
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   const origin = `http://127.0.0.1:${server.address().port}`;
-  browser = await puppeteer.launch({ executablePath: process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true, protocolTimeout: 3600000,
+  browser = await puppeteer.launch({ executablePath: process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true, protocolTimeout: Number(process.env.GR8_PROTOCOL_TIMEOUT_MS) || 3600000,
     userDataDir: path.join(out, 'profile-' + Date.now()), args: ['--no-first-run', '--disable-extensions', '--window-size=1600,1100'], defaultViewport: { width: 1600, height: 1100 } });
   page = await browser.newPage();
   page.setDefaultTimeout(180000);
@@ -468,18 +473,24 @@ try {
       assert.equal(after.completedWallRuns.length, before.completedWallRuns.length - 1, 'exactly one wall removed');
       result.wallCheck.deleted = { id: kitchen[0].wall.id, lengthMm: Math.round(kitchen[0].wall.lengthMm) };
     }
+    const step = (label) => console.log(new Date().toISOString(), `step: ${label}`);
+    step('wall checks: confirm each sheet');
     for (const id of await wallCheckIds()) {
+      step(`confirm ${id}`);
       const clicked = await page.evaluate((decisionId) => { const box = document.querySelector(`[data-review-decision="${decisionId}"]`); const element = box && [...box.querySelectorAll('button')].find((item) => item.textContent.trim() === 'I have checked this'); if (!element || element.disabled) return false; element.click(); return true; }, id);
       assert.ok(clicked, `the builder can confirm ${id}`);
       await settle();
     }
     assert.deepEqual(await wallCheckIds(), [], 'all wall checks confirmed');
+    step('save after wall checks');
     await save();
+    step('read saved wall checks');
     const savedChecks = await page.evaluate(() => Object.keys(harness.saveInputs().at(-1)?.scheduleState?.aiAnalysis?.resolvedDecisions || {}).filter((key) => key.startsWith('wall-check:')).sort());
     assert.deepEqual(savedChecks, requiredChecks, 'the saved takeoff carries the wall checks');
     result.wallCheck.saved = savedChecks;
     const beforeReopen = await snapshot();
     const counts = (value) => ({ walls: value.completedWallRuns.length, openings: value.placedOpenings.length, approved: (value.aiAnalysis?.rooms || []).filter((room) => room.confirmed).map((room) => [room.id, Math.round(room.areaM2 * 1000) / 1000]) });
+    step('reopen');
     await page.evaluate(() => harness.reopen());
     await page.waitForFunction(() => harness.snapshot().imageReady && harness.snapshot().completedWallRuns.length > 0, { timeout: 300000 });
     await settle();
@@ -487,6 +498,7 @@ try {
     assert.deepEqual(counts(afterReopen), counts(beforeReopen), 'save and reopen keeps walls, openings and the approved room');
     assert.deepEqual(await wallCheckIds(), [], 'confirmed wall checks stay confirmed after reopen');
     // Export the saved job as a .gr8job file and import it back through the app's own job-file path.
+    step('export and import .gr8job');
     const exportStarted = Date.now();
     if (process.env.TAKEOFF_SAVE_GR8JOB) await page.evaluate(() => { window.__keepExport = true; });
     const exported = await page.evaluate(() => harness.exportImport());
@@ -499,6 +511,7 @@ try {
     assert.ok(Math.abs(afterReopen.pixelsPerMm - calibrated) / calibrated < 1e-6, 'calibration survives reopen');
     result.reopen = counts(afterReopen);
     // Rerun after review: nothing is duplicated and the approval is not replaced by the new reading.
+    step('rerun after review');
     result.rerun = { message: await run() };
     const afterRerun = await snapshot();
     assert.deepEqual(counts(afterRerun).approved, counts(beforeReopen).approved, 'a rerun never replaces or drops an approved room');

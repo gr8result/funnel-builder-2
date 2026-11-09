@@ -1,3 +1,5 @@
+import { clientSelectionTradeParentNames } from "../../lib/construction-estimation/quoteTradeHierarchy.js";
+import { windowsSyncSummary } from "../../lib/construction-estimation/windowsPriceListSync.js";
 import { browserTenantKey, builderLocalStorage, builderSessionStorage } from '../../lib/builders/browserTenantStorage.js';
 import SelectionBaselineControl from './SelectionBaselineControl.jsx';
 import ClientSelectionsErrorBoundary from './ClientSelectionsErrorBoundary.jsx';
@@ -10,6 +12,7 @@ import ProductSelectionIntegrityPanel from './ProductSelectionIntegrityPanel.jsx
 import { reconcileProductSelections } from '../../lib/builders/productSelectionIntegrity.js';
 import { isQuotationRateUnresolved, quotationRateReviewRows } from '../../lib/builders/quotationRateReview.js';
 import { useQuotationSubgroups } from './useQuotationSubgroups.js';
+import { hasInternalCommercialAccess } from '../../lib/commercialAccess.js';
 import { buildQuotationSubgroups, visibleSubgroupRows } from '../../lib/construction-estimation/quotationSubgroups.js';
 import { cabinetryQuoteGroupStatus } from '../../lib/construction-estimation/cabinetryRequirements.js';
 import { cabinetryApplies, isCabinetrySection, finalCabinetryQuotation } from '../../lib/construction-estimation/finalCabinetryQuotation.js';
@@ -177,7 +180,20 @@ const CommercialProcurementSchedulePage = dynamic(() => import("../../pages/modu
   loading: () => <CommercialModuleLoading label="Procurement Schedule" />,
 });
 
-const loadCommercialClientSelectionsPage = () => import("../../pages/modules/builders/selections-book");
+let commercialClientSelectionsPagePromise;
+const loadCommercialClientSelectionsPage = (retry = false) => {
+  if (retry) commercialClientSelectionsPagePromise = null;
+  if (!commercialClientSelectionsPagePromise) {
+    const pending = import("../../pages/modules/builders/selections-book");
+    let tracked;
+    tracked = pending.catch((error) => {
+      if (commercialClientSelectionsPagePromise === tracked) commercialClientSelectionsPagePromise = null;
+      throw error;
+    });
+    commercialClientSelectionsPagePromise = tracked;
+  }
+  return commercialClientSelectionsPagePromise;
+};
 
 const PremierInclusionsCanvasEditor = dynamic(() => import("./standard-inclusions/PremierInclusionsCanvasEditor"), {
   ssr: false,
@@ -837,6 +853,11 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
     onSyncSnapshot: (...args) => commercialSnapshotSyncRef.current(...args),
     onClientSelectionsSave: sheet.updateClientSelectionsBook,
   }), [moduleWorkspaceId, sheet.workbook, sheet.preview, activeBuilderJobId, activeCommercialProjectId, commercialSyncStatus.snapshotId, openJobDetails, jobFilePayload, sheet.lastSavedAt, saveStatus.state, sheet.updateClientSelectionsBook]);
+  // Client Selections never reads the proposal document (page artwork, most of a large job's size).
+  const clientSelectionsModuleContext = useMemo(() => ({
+    ...commercialModuleContext,
+    workbook: clientSelectionsWorkbookProjection(sheet.workbook),
+  }), [commercialModuleContext, sheet.workbook]);
 
   useEffect(() => () => {
     if (saveStatusTimerRef.current) window.clearTimeout(saveStatusTimerRef.current);
@@ -966,6 +987,14 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
         dirty: !openJobDetails.noJobOpen && sheet.dirty,
         warning: localJobFileIdentityWarning(file.name, identity),
       };
+      // A file whose client selections are older than the ones already saved for this job is never
+      // opened silently over them: the user chooses, and both versions are kept.
+      const selectionConflict = await sheet.compareJobFileWithSavedSelections?.(parsed).catch(() => null);
+      if (selectionConflict?.conflict) {
+        setLocalJobFilePrompt({ ...prompt, mode: "older-than-saved", selectionConflict });
+        setOpenWorkbookMenu("");
+        return;
+      }
       if (!prompt.dirty) {
         const result = await jobFile.openParsedJob(parsed, file.name || "job.gr8job", null);
         if (result?.ok === false) {
@@ -987,6 +1016,24 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
       const message = `${file?.name || "Selected file"}: ${error?.message || "This job file could not be opened."}`;
       setJobFileError(message);
     }
+  }
+
+  // The user's answer to an older job file: keep the saved job, or open the file keeping the confirmed
+  // corrections, or open the file exactly as it is (a deliberate rollback). The saved job is backed up first.
+  async function resolveOlderJobFile(choice = "keep") {
+    const prompt = localJobFilePrompt;
+    if (!prompt?.parsed) return;
+    if (choice === "keep") {
+      setLocalJobFilePrompt(null);
+      setJobFileError("");
+      return;
+    }
+    sheet.setJobFileSelectionDecision?.(choice === "file" ? "file" : "carry");
+    if (prompt.dirty) { setLocalJobFilePrompt({ ...prompt, mode: "confirm-open" }); return; }
+    setLocalJobFilePrompt({ ...prompt, mode: "confirm-open" });
+    const result = await jobFile.openParsedJob(prompt.parsed, prompt.fileName || "job.gr8job", null);
+    if (result?.ok === false) { setJobFileError(`${prompt.fileName}: ${result.message || "This job file could not be opened."}`); return; }
+    setLocalJobFilePrompt({ mode: "opened", fileName: prompt.fileName, importedAt: new Date().toISOString() });
   }
 
   async function confirmLocalJobFileOpen(action = "open") {
@@ -1342,7 +1389,7 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
   if (!sheet.hydrated) return <div role="status">{sheet.persistenceStatus.state === "error" ? `${sheet.persistenceStatus.label} ${sheet.persistenceStatus.detail}` : "Loading complete job..."}</div>;
 
   return (
-    <div style={{ ...styles.shell, ...(activePageKey !== "quotation" ? { gridTemplateColumns: "280px minmax(0, 1fr)" } : {}), ...(previewMode ? styles.previewShell : {}) }} {...lockHandlers}>
+    <div className="project-workspace-shell" style={{ ...styles.shell, ...(activePageKey !== "quotation" ? { gridTemplateColumns: "280px minmax(0, 1fr)" } : {}), ...(previewMode ? styles.previewShell : {}) }} {...lockHandlers}>
       <style jsx global>{`
         .project-workspace-nav-button:hover {
           transform: translateY(-1px);
@@ -1362,6 +1409,14 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
           }
         }
         @media (max-width: 980px) {
+          .project-workspace-shell {
+            grid-template-columns: minmax(0, 1fr) !important;
+          }
+          .project-workspace-nav {
+            position: static !important;
+            top: auto !important;
+            max-height: 280px !important;
+          }
           .project-workspace-card-grid {
             grid-template-columns: repeat(2, minmax(180px, 1fr)) !important;
           }
@@ -1372,7 +1427,7 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
           }
         }
       `}</style>
-      <aside style={styles.nav}>
+      <aside className="project-workspace-nav" style={styles.nav}>
         <div style={styles.navBrand}>
           <span style={styles.navBrandIcon}><FolderKanban size={30} strokeWidth={2.4} /></span>
           <span>
@@ -1549,7 +1604,7 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
         {ESTIMATE_WORKBOOK_SHEET_TABS.some((tab) => tab.key === activePageKey) ? (
           <WorkbookSheetTabs activePageKey={activePageKey} onNavigate={navigateWorkspacePage} />
         ) : null}
-        { ["quotation", "projectEstimate"].includes(activePageKey) && !previewMode && !mode ? (
+        { ["quotation", "projectEstimate"].includes(activePageKey) && !previewMode && !mode && hasInternalCommercialAccess(workspaceRole) ? (
           <ProductSelectionIntegrityPanel sheet={sheet} />
         ) : null}
 
@@ -1597,7 +1652,8 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
                 canEditFormulas={canEditEstimateFormulas}
               />
           )}
-          {activePageKey === "quotation" && <><SelectionBaselineControl key={sheet.workbook.workspaceId || sheet.workbook.workspace_id} workbook={sheet.workbook} onApply={sheet.applySelectionBaseline} autoApplyDefault /><QuotationSheet sheet={sheet} onFormulaTarget={setFormulaTarget} canEditFormulas={canEditEstimateFormulas} /></>}
+          {activePageKey === "quotation" && hasInternalCommercialAccess(workspaceRole) && <SelectionBaselineControl key={sheet.workbook.workspaceId || sheet.workbook.workspace_id} workbook={sheet.workbook} onApply={sheet.applySelectionBaseline} autoApplyDefault />}
+          {activePageKey === "quotation" && <><QuotationSheet sheet={sheet} onFormulaTarget={setFormulaTarget} canEditFormulas={canEditEstimateFormulas} /></>}
           {activePageKey === "standardInclusions" && <StandardInclusionsSheet sheet={sheet} />}
           {activePageKey === "productLibrary" && <EmbeddedProductLibraryPage embeddedInEstimateBuilder {...commercialModuleContext} />}
           {activePageKey === "estimatingCatalogue" && <EstimatingCatalogueSheet sheet={sheet} />}
@@ -1612,9 +1668,9 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
           {activePageKey === "purchaseOrders" && <CommercialPurchaseOrdersPage {...commercialModuleContext} />}
           {activePageKey === "clientSelections" && (
             <>
-            {commercialModuleContext?.projectId && <SelectionBaselineControl key={sheet.workbook.workspaceId || sheet.workbook.workspace_id} workbook={sheet.workbook} onApply={sheet.applySelectionBaseline} />}
+            {/* The inclusion baseline / quote-mapping control is commercial: it lives on the Quotation page only. */}
             {sheet.workbook.standardInclusionsDefault?.status === "pending" && !sheet.workbook.jobInclusionSnapshot ? <div role="status"><p>Establish the approved Premier quotation baseline before starting Client Selections.</p><button type="button" onClick={() => navigateWorkspacePage("quotation")}>Open quotation</button></div> : <ClientSelectionsModuleHost
-              moduleContext={commercialModuleContext}
+              moduleContext={clientSelectionsModuleContext}
               restoringActiveJob={explicitJobRestoreState.state === "restoring"}
               onBackToDashboard={() => navigateWorkspacePage("projectDashboard")}
               onOpenPlatformJob={openJobPicker}
@@ -1647,7 +1703,26 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
         {jobFileError ? (
           <div style={styles.fileErrorBanner} role="alert">{jobFileError}</div>
         ) : null}
-        {localJobFilePrompt ? (
+        {localJobFilePrompt?.mode === "older-than-saved" ? (
+          <div style={styles.localJobFilePrompt} role="dialog" aria-modal="true" aria-label="Older job file" data-testid="older-job-file-dialog">
+            <div>
+              <strong>This file is older than the job saved here</strong>
+              <span>{localJobFilePrompt.fileName}: client selections saved {formatJobFileTime(localJobFilePrompt.selectionConflict.file.savedAt)} ({localJobFilePrompt.selectionConflict.file.selections} selections).</span>
+              <span>Saved job: client selections saved {formatJobFileTime(localJobFilePrompt.selectionConflict.saved.savedAt)} ({localJobFilePrompt.selectionConflict.saved.selections} selections).</span>
+              {localJobFilePrompt.selectionConflict.missingCorrections?.length ? (
+                <span style={styles.fileWarningText}>The file does not include these confirmed corrections: {localJobFilePrompt.selectionConflict.missingCorrections.join("; ")}.</span>
+              ) : null}
+              {localJobFilePrompt.selectionConflict.newerConfirmedRoomList ? <span style={styles.fileWarningText}>The saved job has a newer confirmed room list.</span> : null}
+              <span>Whatever you choose, the saved job is kept as a backup before anything is replaced.</span>
+            </div>
+            <div style={styles.localJobFilePromptActions}>
+              <button type="button" style={styles.primaryButton} data-testid="older-job-file-keep" onClick={() => resolveOlderJobFile("keep")}>Keep the saved job</button>
+              <button type="button" style={styles.secondaryButton} data-testid="older-job-file-carry" onClick={() => resolveOlderJobFile("carry")}>Open the file, keep confirmed corrections</button>
+              <button type="button" style={styles.secondaryButton} data-testid="older-job-file-as-is" onClick={() => resolveOlderJobFile("file")}>Open the file exactly as it is</button>
+            </div>
+          </div>
+        ) : null}
+        {localJobFilePrompt && localJobFilePrompt.mode !== "older-than-saved" ? (
           localJobFilePrompt.mode === "confirm-open" ? (
             <div style={styles.localJobFilePrompt} role="dialog" aria-modal="true" aria-label="Confirm local job file open">
               <div>
@@ -1786,6 +1861,16 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
   );
 }
 
+function formatJobFileTime(value = "") {
+  const at = Date.parse(value);
+  return Number.isFinite(at) ? new Date(at).toLocaleString([], { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" }) : "at an unknown time";
+}
+
+function clientSelectionsWorkbookProjection(workbook = {}) {
+  const { projectEstimateBuilder: _projectEstimateBuilder, ...selectionWorkbook } = workbook;
+  return selectionWorkbook;
+}
+
 function FloatingSaveJob({ saveStatus, onSaveJob }) {
   const isSaving = saveStatus?.state === "saving";
   return (
@@ -1801,8 +1886,6 @@ function ClientSelectionsModuleHost({ moduleContext, restoringActiveJob = false,
   const [LoadedClientSelectionsPage, setLoadedClientSelectionsPage] = useState(null);
   const [loadError, setLoadError] = useState(null);
   const [retryKey, setRetryKey] = useState(0);
-  const mountedRef = useRef(false);
-  const mountTimeoutRef = useRef(null);
   const showDeveloperDetails = useMemo(() => {
     if (process.env.NODE_ENV !== "development" || !showDeveloperControls) return false;
     if (typeof window === "undefined") return false;
@@ -1816,45 +1899,33 @@ function ClientSelectionsModuleHost({ moduleContext, restoringActiveJob = false,
   useEffect(() => {
     let cancelled = false;
     let timedOut = false;
-    mountedRef.current = false;
-    window.clearTimeout(mountTimeoutRef.current);
-    mountTimeoutRef.current = null;
-    if (moduleContext?.projectId && !restoringActiveJob) {
-      mountTimeoutRef.current = window.setTimeout(() => {
-        if (cancelled || mountedRef.current) return;
-        timedOut = true;
-        mountTimeoutRef.current = null;
-        const error = new Error("Client Selections module did not mount within 10 seconds.");
-        console.error("[Client Selections] module mount timeout", {
-          fileName: moduleContext?.fileState?.fileName,
-          projectId: moduleContext?.projectId,
-          workspaceId: moduleContext?.workspaceId,
-        });
-        setLoadError({ error, source: "module-mount-timeout" });
-      }, 10000);
-    }
-
     setLoadError(null);
+    const timeout = window.setTimeout(() => {
+      if (cancelled) return;
+      timedOut = true;
+      const error = new Error("Client Selections module did not mount within 10 seconds.");
+      console.error("[Client Selections] module mount timeout", error);
+      setLoadError({ error, source: "module-timeout" });
+    }, 10000);
 
-    loadCommercialClientSelectionsPage()
+    loadCommercialClientSelectionsPage(retryKey > 0)
       .then((module) => {
-        if (cancelled) return;
+        if (cancelled || timedOut) return;
+        window.clearTimeout(timeout);
         const Component = module?.default;
         if (!Component) throw new Error("Current selections-book module did not export a default component.");
         setLoadedClientSelectionsPage(() => Component);
       })
       .catch((error) => {
         if (cancelled || timedOut) return;
-        window.clearTimeout(mountTimeoutRef.current);
-        mountTimeoutRef.current = null;
+        window.clearTimeout(timeout);
         console.error("[Client Selections] import error", error);
         setLoadError({ error, source: "dynamic-import" });
       });
 
     return () => {
       cancelled = true;
-      window.clearTimeout(mountTimeoutRef.current);
-      mountTimeoutRef.current = null;
+      window.clearTimeout(timeout);
     };
   }, [retryKey]);
 
@@ -1919,11 +1990,6 @@ function ClientSelectionsModuleHost({ moduleContext, restoringActiveJob = false,
         {...moduleContext}
         embedded
         onEmbeddedBack={onBackToDashboard}
-        onEmbeddedMount={() => {
-          mountedRef.current = true;
-          window.clearTimeout(mountTimeoutRef.current);
-          mountTimeoutRef.current = null;
-        }}
       />
     </ClientSelectionsErrorBoundary>
   );
@@ -3392,6 +3458,10 @@ function QuotationSheet({ sheet, onFormulaTarget, canEditFormulas = false }) {
   function collapseAllQuoteSectionsLocal() {
     setCollapsedSectionOverrides(Object.fromEntries(sheet.quoteSections.map((name) => [name, true])));
   }
+  // Opens every category and sub-category (sub-categories only show inside an open parent).
+  function expandAllQuoteSectionsLocal() {
+    setCollapsedSectionOverrides(Object.fromEntries(sheet.quoteSections.map((name) => [name, false])));
+  }
   useEffect(() => {
     const revealRow = (event) => {
       const rowId = String(event?.detail?.rowId || "");
@@ -3545,7 +3615,7 @@ function QuotationSheet({ sheet, onFormulaTarget, canEditFormulas = false }) {
           />
           <button
             type="button"
-            style={styles.sectionHeaderButton}
+            style={options.nested ? styles.nestedSectionHeaderButton : styles.sectionHeaderButton}
             onClick={(event) => {
               event.preventDefault();
               event.stopPropagation();
@@ -3554,8 +3624,8 @@ function QuotationSheet({ sheet, onFormulaTarget, canEditFormulas = false }) {
           >
               <span>{quoteSectionDisplayLabel(savedSection.displayName || options.label || section)}</span>
             <span style={styles.sectionTotalStack}>
-              <strong>{money(sectionTotal)}</strong>
-              <small>{quotePercentOfTotal(sectionTotal, sheet.preview.summary.finalQuoteTotal)}</small>
+              <strong style={options.nested ? styles.nestedSectionTotalAmount : styles.sectionTotalAmount}>{money(sectionTotal)}</strong>
+              <small style={options.nested ? styles.nestedSectionTotalPercent : styles.sectionTotalPercent}>{quotePercentOfTotal(sectionTotal, sheet.preview.summary.finalQuoteTotal)}</small>
             </span>
           </button>
         </div>
@@ -3867,7 +3937,22 @@ function QuotationSheet({ sheet, onFormulaTarget, canEditFormulas = false }) {
         <div style={styles.tabBar}>
           <button style={styles.primaryButton} onClick={openOrderManager}>Manage Section Order</button>
           <button style={styles.secondaryButton} onClick={() => sheet.renumberQuoteDisplay?.()}>Renumber Display</button>
+          <button style={styles.secondaryButton} onClick={expandAllQuoteSectionsLocal}>Expand All</button>
           <button style={styles.secondaryButton} onClick={collapseAllQuoteSectionsLocal}>Collapse All</button>
+          {sheet.previewWindowsPriceListSync && (
+            <button
+              type="button"
+              data-testid="review-sync-windows"
+              style={styles.secondaryButton}
+              title="Shows what the current windows / flyscreens price list would change in this quotation, and applies it only if you confirm."
+              onClick={() => {
+                // Applied only on the builder's confirmation; opening a job never changes the WINDOWS section.
+                const preview = sheet.previewWindowsPriceListSync();
+                if (!preview.changed) { window.alert(windowsSyncSummary(preview)); return; }
+                if (window.confirm(windowsSyncSummary(preview))) sheet.syncWindowsPriceList();
+              }}
+            >Review / Sync Windows</button>
+          )}
           {sheet.renumberReport && (
             <span style={sheet.renumberReport.ok ? styles.okPill : styles.warningPill}>{sheet.renumberReport.message}</span>
           )}
@@ -3973,7 +4058,7 @@ function QuotationSheet({ sheet, onFormulaTarget, canEditFormulas = false }) {
             if (fixOutMaterialsParent && isFixOutMaterialsSubsection(section)) return null;
             if (cabinetMakerParent && isCabinetMakerSubsection(section)) return null;
             if (appliancePackageParent && isApplianceBrandSubsection(section)) return null;
-            const childSections = isConcreteSlabSection(section)
+            const builtInChildSections = isConcreteSlabSection(section)
               ? sheet.quoteSections.filter((item) => isConcreteSlabSubsection(item))
               : isWallFramesSection(section)
                 ? orderedFramingSubsections(sheet.quoteSections)
@@ -4014,6 +4099,7 @@ function QuotationSheet({ sheet, onFormulaTarget, canEditFormulas = false }) {
                                                   : isWindowsGroupSection(section)
                                                     ? sheet.quoteSections.filter((item) => isWindowsGroupSubsection(item))
                                                     : [];
+            const childSections = [...builtInChildSections, ...clientSelectionChildSections(section, sheet.quoteSections).filter((item) => !builtInChildSections.includes(item))];
             const sectionTotal = childSections.length
               ? childSections.reduce((sum, item) => sum + (sheet.preview.quotation[item]?.subtotal || 0), sheet.preview.quotation[section]?.subtotal || 0)
               : undefined;
@@ -19509,7 +19595,26 @@ function topLevelQuoteSections(sections = []) {
   return sections.filter((section) => !isGroupedQuoteSubsection(section, sections));
 }
 
+// Client Selections and room tiling sections show under the builder's existing trade (display only;
+// see lib/construction-estimation/quoteTradeHierarchy.js).
+function clientSelectionParentSection(section, sections = []) {
+  const name = quoteSectionBaseName(section);
+  for (const parentName of clientSelectionTradeParentNames(name)) {
+    const parent = sections.find((item) => item !== section && quoteSectionBaseName(item) === parentName && !isBuiltInGroupedQuoteSubsection(item, sections));
+    if (parent) return parent;
+  }
+  return null;
+}
+
+function clientSelectionChildSections(parent, sections = []) {
+  return sections.filter((item) => item !== parent && clientSelectionParentSection(item, sections) === parent);
+}
+
 function isGroupedQuoteSubsection(section, sections = []) {
+  return isBuiltInGroupedQuoteSubsection(section, sections) || Boolean(clientSelectionParentSection(section, sections));
+}
+
+function isBuiltInGroupedQuoteSubsection(section, sections = []) {
   if (isConcreteSlabSubsection(section)) return true;
   if (sections.some((item) => isWallFramesSection(item)) && isWallFramesSubsection(section)) return true;
   if (sections.some((item) => isWallFramesSection(item)) && isFramingMovedSubsection(section)) return true;
@@ -19550,6 +19655,11 @@ function expandManagedQuoteSectionOrder(topLevelOrder = [], allSections = []) {
 }
 
 function quoteChildSectionsForParent(section, sections = []) {
+  const builtIn = builtInQuoteChildSectionsForParent(section, sections);
+  return [...builtIn, ...clientSelectionChildSections(section, sections).filter((item) => !builtIn.includes(item))];
+}
+
+function builtInQuoteChildSectionsForParent(section, sections = []) {
   if (isConcreteSlabSection(section)) return sections.filter((item) => isConcreteSlabSubsection(item));
   if (isWallFramesSection(section)) return orderedFramingSubsections(sections);
   if (isRoofFramingSection(section)) return sections.filter((item) => isRoofFramingSubsection(item));
@@ -20699,10 +20809,15 @@ const styles = {
   section: { background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 10, overflow: "hidden" },
   sectionHeader: { width: "100%", display: "grid", gridTemplateColumns: "78px 44px minmax(0, 1fr)", alignItems: "stretch", background: "#ecfdf5", border: 0, borderBottom: "1px solid #99f6e4", color: "#0f172a" },
   nestedSectionHeader: { width: "100%", display: "grid", gridTemplateColumns: "78px 44px minmax(0, 1fr)", alignItems: "stretch", background: "#eff6ff", border: 0, borderBottom: "1px solid #bfdbfe", color: "#0f172a" },
-  sectionGroupInput: { width: 58, height: 42, alignSelf: "center", justifySelf: "center", border: "1px solid #020617", borderRadius: 4, padding: "6px 6px", fontSize: 16, fontWeight: 900, textAlign: "center", background: "#020617", color: "#ffffff", boxSizing: "border-box" },
-  sectionStageInput: { width: 34, height: 34, alignSelf: "center", justifySelf: "center", border: "2px solid #f59e0b", borderRadius: 3, padding: "5px 4px", fontSize: 15, fontWeight: 900, textAlign: "center", background: "#fef3c7", color: "#7c2d12", boxSizing: "border-box" },
-  sectionHeaderButton: { width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, background: "transparent", border: 0, color: "#0f172a", padding: "14px 16px 14px 0", fontSize: 34, lineHeight: 1.15, fontWeight: 600, textTransform: "uppercase", cursor: "pointer", textAlign: "left" },
-  sectionTotalStack: { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 3, whiteSpace: "nowrap", textAlign: "right" },
+  sectionGroupInput: { width: 52, height: 30, alignSelf: "center", justifySelf: "center", border: "1px solid #020617", borderRadius: 4, padding: "4px 6px", fontSize: 14, fontWeight: 900, textAlign: "center", background: "#020617", color: "#ffffff", boxSizing: "border-box" },
+  sectionStageInput: { width: 30, height: 28, alignSelf: "center", justifySelf: "center", border: "2px solid #f59e0b", borderRadius: 3, padding: "3px 4px", fontSize: 13, fontWeight: 900, textAlign: "center", background: "#fef3c7", color: "#7c2d12", boxSizing: "border-box" },
+  sectionHeaderButton: { width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, background: "transparent", border: 0, color: "#0f172a", padding: "8px 14px 8px 0", fontSize: 16, lineHeight: 1.25, fontWeight: 700, textTransform: "uppercase", cursor: "pointer", textAlign: "left" },
+  nestedSectionHeaderButton: { width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, background: "transparent", border: 0, color: "#1e293b", padding: "6px 14px 6px 0", fontSize: 14, lineHeight: 1.25, fontWeight: 600, textTransform: "uppercase", cursor: "pointer", textAlign: "left" },
+  sectionTotalStack: { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 1, whiteSpace: "nowrap", textAlign: "right" },
+  sectionTotalAmount: { fontSize: 16, fontWeight: 700 },
+  nestedSectionTotalAmount: { fontSize: 14, fontWeight: 700 },
+  sectionTotalPercent: { fontSize: 12, fontWeight: 500, color: "#475569", textTransform: "none" },
+  nestedSectionTotalPercent: { fontSize: 11, fontWeight: 500, color: "#475569", textTransform: "none" },
   staticSectionHeader: { background: "#ecfdf5", borderBottom: "1px solid #99f6e4", color: "#0f172a", padding: "14px 16px", fontSize: 34, lineHeight: 1.15, fontWeight: 600, textTransform: "uppercase", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 },
   headerButton: { background: "#ffffff", color: "#0f172a", border: "1px solid #99f6e4", borderRadius: 6, padding: "6px 9px", fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" },
   subSection: { borderTop: "1px solid #e2e8f0", background: "#ffffff" },

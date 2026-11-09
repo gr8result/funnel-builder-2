@@ -212,10 +212,18 @@ export function useAiTakeoffAnalysis(options) {
   };
   const removeRoom = (name) => setReport((current) => (current ? reportWithRooms(current, removeScheduleRoom(current.rooms, name)) : current));
 
-  const updateRooms = useCallback((ids, patch) => {
+  const updateRooms = useCallback((ids, incomingPatch) => {
     if (latest.current.readOnly) return;
-    setReport(current => refreshVectorReview(reportWithRooms(current, (current?.rooms || []).map(room => ids.includes(room.id)
-      ? (patch.confirmed === true ? approveRoom : measureRoom)({ ...room, ...patch, ...(typeof patch.level === 'string' ? { levelEdited: true } : {}), ...(typeof patch.name === 'string' ? { nameEdited: true, label: room.label || room.name } : {}), ...(patch.polygon ? { boundaryEdited: true, confirmed: false, boundaryClosed: false } : {}) }, calibrationsRef.current[room.page]?.pixelsPerMm || latest.current.pixelsPerMm) : room))));
+    // A locked boundary keeps its corners: outline changes (or rejecting it) are refused until the
+    // builder unlocks it. Locking needs a successful approval, so a room still in review stays unlocked.
+    const patchFor = (room) => {
+      if (!room.boundaryLocked || incomingPatch.boundaryLocked === false) return incomingPatch;
+      const { polygon, excluded, ...rest } = incomingPatch;
+      return rest;
+    };
+    const lockOnlyIfApproved = (room) => (room.boundaryLocked && !room.confirmed ? { ...room, boundaryLocked: false, lockedAt: null } : room);
+    setReport(current => refreshVectorReview(reportWithRooms(current, (current?.rooms || []).map(room => { if (!ids.includes(room.id)) return room; const patch = patchFor(room);
+      return lockOnlyIfApproved((patch.confirmed === true ? approveRoom : measureRoom)({ ...room, ...patch, ...(typeof patch.level === 'string' ? { levelEdited: true } : {}), ...(typeof patch.name === 'string' ? { nameEdited: true, label: room.label || room.name } : {}), ...(patch.polygon ? { boundaryEdited: true, confirmed: false, boundaryClosed: false } : {}) }, calibrationsRef.current[room.page]?.pixelsPerMm || latest.current.pixelsPerMm)); }))));
     latest.current.markCompleted?.('room-boundary-updated');
   }, []);
 
