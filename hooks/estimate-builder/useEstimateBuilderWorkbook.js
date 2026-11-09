@@ -2238,13 +2238,17 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
 
   // "Review / Sync Windows": what applying the windows price list would change, and applying it on the
   // builder's confirmation only. Opening a job never applies it (normalizeWorkbook keeps the saved quote).
+  // Under contract (lib/builders/contractLock.js) the contracted quotation is the baseline: the price list
+  // is not applied to it; a price change after contract goes through a variation.
   function previewWindowsPriceListSync() {
-    return windowsPriceListSyncPreview(workbookRef.current?.quotation || {});
+    const preview = windowsPriceListSyncPreview(workbookRef.current?.quotation || {});
+    const lock = jobContractLock(workbookRef.current);
+    return lock ? { ...preview, contractLocked: true, contractLockedAt: lock.lockedAt } : preview;
   }
 
   function syncWindowsPriceList() {
     const preview = previewWindowsPriceListSync();
-    if (!preview.changed) return preview;
+    if (preview.contractLocked || !preview.changed) return preview;
     updateWorkbookState((current) => ({ ...current, quotation: windowsPriceListSyncPreview(current.quotation || {}).quotation, windowsPriceListSyncedAt: new Date().toISOString() }));
     return preview;
   }

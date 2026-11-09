@@ -47,6 +47,17 @@ assert.ok(syntheticPreview.changed && syntheticPreview.added.length > 0, "the pr
 assert.match(windowsSyncSummary(syntheticPreview), /Rows added/);
 assert.match(windowsSyncSummary({ changed: false }), /already up to date/);
 
+// Under contract the sync is refused (hook: previewWindowsPriceListSync marks contractLocked from
+// jobContractLock; syncWindowsPriceList then returns without changing the quotation).
+const { jobContractLock, createContractLock, bookWithContractLock } = await import("../lib/builders/contractLock.js");
+const lockedWorkbook = { quotation: synthetic, clientSelectionsBook: bookWithContractLock({ metadata: {} }, createContractLock({ lockedAt: "2026-11-09T01:00:00.000Z" })) };
+assert.ok(jobContractLock(lockedWorkbook), "the hook's contract check sees the lock on the Selections Book");
+assert.equal(jobContractLock({ quotation: synthetic }), null, "no lock on a job not under contract");
+const lockedMessage = windowsSyncSummary({ ...syntheticPreview, contractLocked: true, contractLockedAt: "2026-11-09T01:00:00.000Z" });
+assert.match(lockedMessage, /under contract/);
+assert.match(lockedMessage, /variation/);
+assert.doesNotMatch(lockedMessage, /Apply the current/, "no apply prompt under contract");
+
 if (process.argv[2]) {
   const zip = await JSZip.loadAsync(fs.readFileSync(process.argv[2]));
   const quotation = JSON.parse(await zip.file("estimate.json").async("string")).workbook.quotation;

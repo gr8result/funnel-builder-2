@@ -3948,7 +3948,7 @@ function QuotationSheet({ sheet, onFormulaTarget, canEditFormulas = false }) {
               onClick={() => {
                 // Applied only on the builder's confirmation; opening a job never changes the WINDOWS section.
                 const preview = sheet.previewWindowsPriceListSync();
-                if (!preview.changed) { window.alert(windowsSyncSummary(preview)); return; }
+                if (preview.contractLocked || !preview.changed) { window.alert(windowsSyncSummary(preview)); return; }
                 if (window.confirm(windowsSyncSummary(preview))) sheet.syncWindowsPriceList();
               }}
             >Review / Sync Windows</button>
