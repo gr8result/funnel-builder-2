@@ -1,7 +1,8 @@
 // Inclusions & Selections Schedule: three sections, continuous pages, every selection accounted for.
 // Run: node --import ./scripts/register-extensionless-loader.mjs --import ./scripts/register-json-loader.mjs scripts/test-selections-schedule-document.mjs
 import assert from "node:assert/strict";
-import { buildSelectionsSchedule, extractScheduleRows, paginateSchedule, structureSchedule, formatLocations, formatQuantity, text, rowUnits, SCHEDULE_PAGE_UNITS, SCHEDULE_STATUS } from "../lib/builders/selectionsScheduleDocument.js";
+import { buildSelectionsSchedule, extractScheduleRows, paginateSchedule, structureSchedule, formatLocations, formatQuantity, text, rowUnits, scheduleRowNeedsProductImage, scheduleRowRequiresProductImage, SCHEDULE_PAGE_UNITS, SCHEDULE_STATUS } from "../lib/builders/selectionsScheduleDocument.js";
+import { outstandingScheduleDecisions } from "../lib/builders/selectionsScheduleHtml.js";
 
 const results = {};
 const check = (name, run) => { try { run(); results[name] = "PASS"; } catch (error) { results[name] = "FAIL"; console.error(`FAIL ${name}:`, String(error.message).slice(0, 900)); } };
@@ -49,7 +50,7 @@ const rows = [
   guided("interior-paint", { area: "interior", requirementLabel: "Internal Paint Colours", productName: "Internal paint colours", paintScheme: { defaults: {
     walls: { manufacturer: "Dulux", colourName: "Hog Bristle", colourCode: "S14D1", hex: "#dcd0bb", finish: "Low Sheen" }, trims: { manufacturer: "Dulux", colourName: "Hog Bristle", colourCode: "S14D1", hex: "#dcd0bb", finish: "Semi Gloss" },
     ceilings: { manufacturer: "Dulux", colourName: "Ceiling White", finish: "Flat", standard: true } }, overrides: [{ location: "Media", surface: "walls", choice: { manufacturer: "Dulux", colourName: "Domino", colourCode: "PG1A8", hex: "#353337", finish: "Low Sheen" } }],
-    featureWalls: [{ id: "f1", location: "Living", wall: "North wall", choice: { manufacturer: "Dulux", colourName: "Monument", colourCode: "C29", hex: "#404141", finish: "Low Sheen" } }] } }),
+    featureWalls: [{ id: "f1", location: "Living", wall: "North wall", choice: { manufacturer: "Dulux", colourName: "Monument", colourCode: "C29", hex: "#404141", finish: "Low Sheen" } }], confirmed: true, confirmedAt: "2026-10-01T00:00:00.000Z" } }),
   guided("hot-water-system", { area: "hot-water", requirementLabel: "Hot Water System", productName: "Infinity 32", ...allocation([line("Infinity 32 LPG Water Heater", [{ location: "outside", quantity: 1 }], { brand: "Rinnai", variation: 250 })]) }),
   guided("bricks", { ...exterior, requirementLabel: "Bricks", productName: "PGH Smooth Brick", brand: "PGH", familyKey: "bricks" }),
 ];
@@ -124,12 +125,61 @@ check("NO RAW OBJECTS, NO PRICING", () => {
   assert.equal(formatLocations([{ location: "Ensuite", quantity: 2 }, { location: "Ensuite", quantity: 1 }, "Kitchen", { x: 1 }]), "Ensuite ×3, Kitchen");
   assert.equal(formatQuantity(1, "EACH"), "1"); assert.equal(formatQuantity(14.5, "LM"), "14.5 lm"); assert.equal(formatQuantity("", "m2"), "");
 });
+check("AN UNCONFIRMED HOUSE PAINT SCHEME IS TBC, NOT SELECTED", () => {
+  const paint = book.rooms[0].rows.find((row) => row.guidedRequirementKey === "interior-paint" || row.guidedSelection?.requirementKey === "interior-paint");
+  const unconfirmed = { rooms: [{ rows: [{ ...paint, guidedSelection: { ...paint.guidedSelection, paintScheme: { ...paint.guidedSelection.paintScheme, confirmed: false, confirmedAt: "" } } }] }] };
+  const rows = buildSelectionsSchedule(unconfirmed).rows.filter((row) => row.group === "interior-house");
+  assert.deepEqual(rows.map((row) => row.status), ["TBC", "TBC", "TBC"], "walls, trims and ceilings wait for the client's confirmation");
+  assert(rows.every((row) => /not yet confirmed/.test(row.details)), "the row says why");
+  assert.equal(rows[0].product, "Dulux Hog Bristle", "the proposed colour is still shown");
+});
+check("AN ELECTRICAL ROOM NOT YET CONFIRMED IS TBC", () => {
+  const open = buildSelectionsSchedule({ rooms: [{ rows: [guided("electrical-schedule", { area: "electrical-technology", requirementLabel: "Electrical Schedule", productName: "Electrical schedule", electricalSchedule: { rooms: [{ roomKey: "kitchen", room: "Kitchen", points: { "double-gpo": 6 }, status: "confirmed" }, { roomKey: "powder-room", room: "Powder Room", points: { "double-gpo": 1 }, status: "in_progress" }] } })] }] });
+  const tbc = open.rows.filter((row) => row.status === "TBC");
+  assert.deepEqual(tbc.map((row) => row.item), ["Powder Room — Electrical points"], "only the unconfirmed room is open");
+});
 check("IMAGES WHERE THE PRODUCT HAS ONE, NO EMPTY IMAGE DATA", () => {
   for (const item of ["Oven", "Bathroom Basin", "Carpet", "External Light", "Entry Door & Glass", "Entry Door Hardware", "Driveway", "Cladding"]) assert(byItem(item)[0].imageUrl, `${item} shows its product image`);
   // A lookup supplies the image for a selection that only saved its product id.
   const tiles = buildSelectionsSchedule({ rooms: [{ rows: [guided("tiling-rooms", { area: "tiles-stone", requirementLabel: "Tiling", tilingProductTotals: [{ productId: "master-T1", productCode: "T1", productName: "White Gloss Tile", sku: "BELWP100", orderAreaM2: 6.8, rooms: [{ roomName: "Kitchen" }, { roomName: "LAUNDRY" }] }] })] }] },
     { productLookup: (productId) => (productId === "master-T1" ? { imageUrl: "/images/tiles/t1.webp", brand: "National Tiles" } : null) });
   assert.deepEqual([tiles.rows[0].imageUrl, tiles.rows[0].brandSupplier, tiles.rows[0].qtyLocation], ["/images/tiles/t1.webp", "National Tiles", "6.8m² - Kitchen, Laundry"]);
+});
+check("CABINETRY PRINTS COMPONENTS AND EXPLICIT REVIEW REQUIREMENTS", () => {
+  const cabinetry = buildSelectionsSchedule({ rooms: [{ rows: [guided("cabinetry", {
+    area: "cabinetry",
+    requirementLabel: "Cabinetry",
+    cabinetrySelection: {
+      locations: [{
+        location: "Kitchen",
+        included: true,
+        areaSelections: {
+          lowerDoorsDrawers: { supplier: "Polytec", productName: "Arcadia Oak Woodmatt", colourName: "Arcadia Oak", finish: "Woodmatt", thickness: "16mm" },
+          overheadDoors: { supplier: "Polytec", productName: "Arabica Smooth", colourName: "Arabica", finish: "Smooth", thickness: "16mm" },
+          kickPanels: { material: "Aluminium", finish: "Brushed aluminium" },
+          bulkheads: { material: "Raw MDF", finish: "Painted to match walls" },
+        },
+        benchtopAreas: [{ label: "Main benchtop", surface: { supplier: "Stone Ambassador", material: "stone", colour: "Eclipse", thickness: "20 mm" } }],
+        handles: { base: { productName: "Sharkfin" }, overhead: { productName: "Handleless" } },
+      }],
+      schedule: [
+        { componentId: "base-1", location: "Kitchen", unitType: "2 door base unit - 1200mm", quantity: 2 },
+        { componentId: "overhead-1", location: "Kitchen", unitType: "Overhead cabinet - 2 door", quantity: 2 },
+        { componentId: "bulkhead-1", location: "Kitchen", unitType: "MDF bulkhead - 300mm - LM", quantity: 1 },
+      ],
+    },
+  })] }] });
+  const item = label => cabinetry.rows.find(row => row.item === `Kitchen — ${label}`);
+  assert.equal(item("Base cabinets").qtyLocation, "Qty 2");
+  assert.match(item("Base cabinets").product, /Arcadia Oak/);
+  assert.equal(item("Overhead cupboards").qtyLocation, "Qty 2");
+  assert.match(item("Bulkheads").qtyLocation, /linear measurement to confirm/);
+  assert.equal(item("Cabinet carcasses").status, SCHEDULE_STATUS.tbc);
+  assert.match(item("Cabinet carcasses").product, /review required/i);
+  assert.match(item("Benchtops").product, /Stone Ambassador.*Eclipse.*20 mm/);
+  assert.match(item("Handles \/ handleless system").product, /Sharkfin.*Handleless/);
+  assert.equal(item("Hinges, drawer runners and hardware").status, SCHEDULE_STATUS.tbc);
+  assert.equal(item("Splashback").status, SCHEDULE_STATUS.tbc);
 });
 check("RECONCILIATION: EVERY SELECTION IS RENDERED OR CONSOLIDATED", () => {
   const rec = schedule.reconciliation;
@@ -156,7 +206,9 @@ const many = (count) => Array.from({ length: count }, (_, index) => guided(`towe
 const long = buildSelectionsSchedule({ rooms: [{ rows: [...rows, ...many(60)] }] });
 check("PAGES FILL BEFORE A NEW ONE STARTS", () => {
   assert(long.pages.length > 4);
-  long.pages.slice(0, -1).forEach((page) => assert(page.fill >= 0.8, `page ${page.number} is ${Math.round(page.fill * 100)}% full`));
+  // Pages fill until the next row does not fit; the paginator then rebalances so no page before the
+  // last falls below 72% (a sparse page borrows rows from the page before it). 72% is that floor.
+  long.pages.slice(0, -1).forEach((page) => assert(page.fill >= 0.72, `page ${page.number} is ${Math.round(page.fill * 100)}% full`));
   assert.equal(long.reconciliation.sparsePages.length, 0);
   // Several categories share a page: the first page holds the envelope, doors, windows and more.
   const firstGroups = long.pages[0].blocks.filter((block) => block.type === "group").map((block) => block.title);
@@ -194,6 +246,48 @@ check("A SHORT FINAL PAINTING PAGE BORROWS ROWS WITHOUT STRANDING THE PREVIOUS P
   assert.deepEqual([pages[1].blocks[0].type, pages[1].blocks[0].key], ["section", "painting"]);
   assert.deepEqual([pages[1].blocks[1].key, pages[1].blocks[1].continued], ["exterior-painting", true]);
   assert.equal(pages.flatMap((page) => page.blocks.filter((block) => block.type === "row")).length, 22);
+});
+check("PREFLIGHT REQUIRES IMAGES ONLY FOR COMPLETED IMAGE-BEARING PRODUCTS", () => {
+  assert.equal(scheduleRowRequiresProductImage({ group: "cabinetry", status: "Selected" }), false);
+  assert.equal(scheduleRowRequiresProductImage({ group: "electrical-technology", status: "Selected" }), false);
+  assert.equal(scheduleRowRequiresProductImage({ group: "appliances", status: "TBC" }), false);
+  assert.equal(scheduleRowRequiresProductImage({ group: "appliances", status: "Selected", swatch: "#112233" }), false);
+  assert.equal(scheduleRowRequiresProductImage({ group: "appliances", status: "Selected" }), true);
+  assert.equal(scheduleRowNeedsProductImage({ group: "appliances", status: "Selected" }), true);
+  assert.equal(scheduleRowNeedsProductImage({ group: "appliances", status: "Selected", imageUrl: "/verified/product.jpg" }), false);
+});
+check("SCHEDULE ROWS RETAIN PRODUCT IDENTITY FOR CATALOGUE IMAGE FALLBACK", () => {
+  const productId = "master-TEST-OVEN";
+  const productCode = "TEST-OVEN";
+  const extracted = extractScheduleRows({ rooms: [{ rows: [guided("oven", {
+    requirementLabel: "Oven",
+    productName: "Test Oven",
+    productId,
+    productCode,
+  })] }] }, {
+    productLookup: (idValue, codeValue) => idValue === productId && codeValue === productCode ? { imageUrl: "/catalogue/test-oven.jpg" } : null,
+  });
+  assert.equal(extracted.rows[0].productId, productId);
+  assert.equal(extracted.rows[0].productCode, productCode);
+  assert.equal(extracted.rows[0].imageUrl, "/catalogue/test-oven.jpg");
+});
+check("PDF OUTSTANDING DECISIONS INCLUDE NESTED WORKFLOW GAPS ONCE", () => {
+  const pages = [{
+    blocks: [
+      { type: "section", title: "Interior Selections" },
+      { type: "group", title: "Cabinetry & Benchtops" },
+      { type: "row", row: { sourceRowId: "cabinetry-row", item: "Kitchen — Splashback", status: "TBC" } },
+      { type: "row", row: { sourceRowId: "fan-row", item: "Ceiling Fans", status: "Upgrade" } },
+    ],
+  }];
+  const decisions = outstandingScheduleDecisions(pages, [
+    { sourceRowId: "cabinetry-row", title: "Cabinetry", detail: "1 of 7 rooms complete." },
+    { sourceRowId: "fan-row", title: "Ceiling Fans", detail: "2 of 8 allocated; 6 remain." },
+    { sourceRowId: "tiling-row", title: "Tiling (room by room)", detail: "Alfresco: Tiling specification not chosen." },
+  ]);
+  assert.equal(decisions.filter((entry) => entry.sourceRowIds.includes("cabinetry-row")).length, 1);
+  assert(decisions.some((entry) => entry.group === "Ceiling Fans" && entry.items.some((item) => item.includes("2 of 8"))));
+  assert(decisions.some((entry) => entry.group === "Tiling (room by room)" && entry.items.some((item) => item.includes("Alfresco"))));
 });
 
 for (const [name, result] of Object.entries(results)) console.log(`${name}: ${result}`);

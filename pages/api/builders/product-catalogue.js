@@ -8,7 +8,11 @@ export async function productCatalogueHandler(req, res) {
   try {
     const repository = createBuilderCatalogueRepository(supabaseAdmin, req.workspaceId);
     if (req.method === 'GET') {
-      const source = String(req.query?.source || 'effective');
+      // Default = the builder's own database rows only. The browser already holds the master
+      // catalogue in its bundle; merging all ~5,800 master products in here made every response
+      // 5 MB+ and could not be hydrated (master rows carry no workspace_id). Ask for
+      // ?source=effective or ?source=canonical explicitly when the server-built view is needed.
+      const source = String(req.query?.source || 'stored');
       if (source === 'stored') {
         const stored = await repository.load();
         return res.status(200).json({ workspace_id: req.workspaceId, ...stored, source });

@@ -1,4 +1,4 @@
-import { withWorkspace } from "../../../lib/withWorkspace";
+import { withWorkspace, INTERNAL_COMMERCIAL_ROLES } from "../../../lib/withWorkspace";
 import {
   assignCurrentStandardInclusionsToProject,
   getAssignedProjectInclusions,
@@ -50,4 +50,6 @@ async function handler(req, res) {
   }
 }
 
-export default withWorkspace(handler, { authTimeoutMs: 8000 });
+// The job's standard-inclusions baseline (allowances, builder prices) is internal commercial data:
+// builder roles only, never a client-role workspace member.
+export default withWorkspace(handler, { roles: INTERNAL_COMMERCIAL_ROLES, authTimeoutMs: 8000 });

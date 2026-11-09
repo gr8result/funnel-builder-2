@@ -24,6 +24,8 @@ const plumbing = products.find((product) => product.categoryKey === "Kitchen Tap
 // A Hume entry door priced from a matched public retail listing (GST inclusive).
 const humeRetail = products.find((product) => product.familyKey === "entry-doors" && /^Bunnings retail/.test(product.priceSourceNote || ""));
 assert.ok(hume && corinthian && appliance && plumbing && humeRetail, "all test products exist");
+assert.equal(hume.retailReferenceSupplyPrice, 2750, "Hume internal allowance remains available as an editable template estimate");
+assert.equal(resolveProductPrice(hume).price, null, "Hume template estimate must not become an approved Client Selection or quotation price");
 
 const requirement = (requirementKey) => ({ requirementKey, label: requirementKey, areaKey: "test", areaLabel: "Test", defaultAllowance: 0, defaultQuantity: 1, unit: "EACH" });
 const clientSelection = (product, requirementKey) => {

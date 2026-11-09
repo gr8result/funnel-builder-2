@@ -19,7 +19,8 @@ create table public.builder_requirement_quote_mappings (
   metadata jsonb not null default '{}',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  unique (workspace_id, template_id, requirement_key, location_id)
+  -- Named: PostgreSQL truncates generated names to 63 characters, which the follow-up migration cannot predict.
+  constraint builder_requirement_quote_mappings_location_unique unique (workspace_id, template_id, requirement_key, location_id)
 );
 
 create or replace function public.builder_requirement_mapping_version() returns trigger language plpgsql as $$

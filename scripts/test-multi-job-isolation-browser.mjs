@@ -19,7 +19,8 @@ import {createEstimateBuilderWorkbookDefaults} from '../lib/construction-estimat
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 dotenv.config({path:path.join(root, '.env.local'), quiet:true});
 dotenv.config({path:path.join(root, '.env'), quiet:true});
-const origin = process.env.CLIENT_SELECTIONS_BASE_URL || 'http://localhost:3000';
+const origin = process.env.CLIENT_SELECTIONS_BASE_URL || 'http://localhost:3017';
+if (new URL(origin).port === '3000') { console.error('Refusing to run against port 3000.'); process.exit(2); }
 const out = path.join(root, 'artifacts/test-artifacts/multi-job-isolation-browser');
 fs.mkdirSync(out, {recursive:true});
 const stamp = Date.now();
@@ -69,6 +70,8 @@ async function newTab(address = route) {
   page.on('pageerror', error => report.runtimeErrors.push(error.message));
   page.on('console', message => { if (/job save was not completed|JobConflict|saved somewhere else/i.test(message.text())) (report.saveWarnings ||= []).push(message.text().slice(0, 300)); });
   page.on('dialog', dialog => dialog.accept());
+  page.on('console', message => { if (message.text().includes('[Client Selections debug]') || message.text().includes('book sources not used')) (report.bookLoads ||= []).push(`${page.url().split('jobId=')[1]?.split('&')[0] || '-'} ${message.text().slice(0, 600)}`); });
+  await page.evaluateOnNewDocument(() => { window.__gr8DebugBookLoad = true; });
   await page.setRequestInterception(true);
   page.on('request', request => {
     if (/\/(rest|storage)\/v1\//.test(request.url()) && !['GET', 'HEAD', 'OPTIONS'].includes(request.method())) void request.abort();
@@ -124,7 +127,11 @@ async function stored(page, key) {
       const row = (record.workbook.clientSelectionsBook?.rooms || []).flatMap(room => room.rows || []).find(item => item.guidedSelection?.electricalSchedule);
       const points = Object.fromEntries((row?.guidedSelection.electricalSchedule.rooms || []).filter(room => room.points?.['double-gpo']).map(room => [room.room, room.points['double-gpo']]));
       return {revision:record.revision, jobName:record.workbook.registeredJob?.jobName || '', updatedBy:record.updatedBy?.tabId || '', updatedAt:record.updatedAt || '', points,
-        quoteRows:Object.values(record.workbook.quotation || {}).flatMap(section => section.rows || []).filter(item => item.source === 'client-selections-electrical-schedule').map(item => `${item.location}:${item.quantity}`)};
+        quoteRows:Object.values(record.workbook.quotation || {}).flatMap(section => section.rows || []).filter(item => item.source === 'client-selections-electrical-schedule').map(item => `${item.location}:${item.quantity}`),
+        pendingApproval:record.workbook.selectionReconciliationPending?.status || '',
+        scheduleRooms:(row?.guidedSelection.electricalSchedule.rooms || []).filter(room => Object.keys(room.points || {}).length).map(room => `${room.roomId}|${room.roomKey}|${room.room}`),
+        bookRooms:(record.workbook.clientSelectionsBook?.rooms || []).map(room => `${room.id}|${room.name}`),
+        modelRooms:(record.workbook.projectRoomModel?.rooms || record.workbook.clientSelectionsBook?.projectRoomModel?.rooms || []).map(room => `${room.id}|${room.name}`)};
     } finally { db.close(); }
   }, key);
 }
@@ -156,15 +163,19 @@ try {
   const beforeB = await stored(tabB, B.key);
   assert.equal(await setRoom(tabA, 'Kitchen', 6), 'saved');
   const afterA = await storedWhen(tabA, A.key, record => record.points.Kitchen === 6);
-  assert.deepEqual([afterA.jobName, afterA.points, afterA.quoteRows], ['Isolation Job A', {Kitchen:6}, ['Kitchen:6']]);
+  assert.deepEqual([afterA.jobName, afterA.points], ['Isolation Job A', {Kitchen:6}]);
+  // The quotation is updated, or a priced change is held for Reconcile Selections approval (never lost, never on the other job).
+  assert(afterA.quoteRows.join() === 'Kitchen:6' || (afterA.quoteRows.length === 0 && afterA.pendingApproval === 'FINANCIAL_APPROVAL_REQUIRED'), `Job A quotation: ${JSON.stringify(afterA)}`);
   await settled(tabA, A.key);
   const untouchedB = await stored(tabA, B.key);
-  assert.deepEqual([untouchedB.revision, untouchedB.points, untouchedB.quoteRows, untouchedB.jobName], [beforeB.revision, {}, [], 'Isolation Job B'], 'Job B was not written by Job A\’s save or autosave');
+  assert.deepEqual([untouchedB.revision, untouchedB.points, untouchedB.quoteRows, untouchedB.pendingApproval, untouchedB.jobName], [beforeB.revision, {}, [], beforeB.pendingApproval, 'Isolation Job B'], 'Job B was not written by Job A\’s save or autosave');
   // ... and the other way round, while the browser-wide "last job" pointer is Job A.
   const revisionA = (await stored(tabA, A.key)).revision;
   assert.equal(await setRoom(tabB, 'Study', 3), 'saved');
   const afterB = await storedWhen(tabB, B.key, record => record.points.Study === 3);
-  assert.deepEqual([afterB.jobName, afterB.points, afterB.quoteRows], ['Isolation Job B', {Study:3}, ['Study:3']]);
+  assert.deepEqual([afterB.jobName, afterB.points], ['Isolation Job B', {Study:3}]);
+  // The quotation is updated, or a priced change is held for Reconcile Selections approval (never lost, never on the other job).
+  assert(afterB.quoteRows.join() === 'Study:3' || (afterB.quoteRows.length === 0 && afterB.pendingApproval === 'FINANCIAL_APPROVAL_REQUIRED'), `Job B quotation: ${JSON.stringify(afterB)}`);
   await settled(tabB, B.key);
   const untouchedA = await stored(tabB, A.key);
   assert.deepEqual([untouchedA.revision, untouchedA.points], [revisionA, {Kitchen:6}], 'Job A was not written by Job B\’s save or autosave');
@@ -173,11 +184,25 @@ try {
 
   // 3 - reload: each tab reopens its own job (the shared pointer now says Job B)
   await tabA.bringToFront();
+  const afterReload = [];
+  const collect = message => afterReload.push(`${message.type()} ${message.text().slice(0, 300)}`);
+  tabA.on('console', collect);
   await tabA.reload({waitUntil:'domcontentloaded'});
   await tabA.waitForSelector(GUIDED, {timeout:120000});
   assert.deepEqual([jobInUrl(tabA), await shownJob(tabA)], [A.projectId, 'Isolation Job A'], 'reload restores Job A in Job A\’s tab');
   await openElectrical(tabA);
-  assert(/6 powerpoints/.test(await tabA.$eval(`${selector('electrical-room')}[data-room="Kitchen"]`, card => card.innerText)), 'and its saved selection');
+  const kitchenCard = await tabA.$eval(`${selector('electrical-room')}[data-room="Kitchen"]`, card => card.innerText);
+  const drafts = await tabA.evaluate(() => Object.keys(localStorage).filter(key => key.startsWith('gr8:embedded-selections-book')).map(key => {
+    let value = null; try { value = JSON.parse(localStorage.getItem(key)); } catch {}
+    const rows = (value?.book?.rooms || []).flatMap(room => room.rows || []);
+    const electrical = rows.find(row => row.guidedSelection?.electricalSchedule);
+    return {key: key.slice(-60), projectId: value?.projectId, savedAt: value?.savedAt, storageKey: value?.storageKey ? 'pointer' : '', bookUpdatedAt: value?.book?.updatedAt || '', rooms: (value?.book?.rooms || []).length,
+      electrical: electrical ? (electrical.guidedSelection.electricalSchedule.rooms || []).filter(room => Object.keys(room.points || {}).length).map(room => `${room.room}:${room.points['double-gpo']}`) : null};
+  }));
+  const storedA = await stored(tabA, A.key);
+  await tabA.screenshot({path:path.join(out, 'reload-tab-a.png')});
+  fs.writeFileSync(path.join(out, 'reload-tab-a-console.txt'), afterReload.join(String.fromCharCode(10)));
+  assert(/6 powerpoints/.test(kitchenCard), `and its saved selection (Kitchen card: ${JSON.stringify(kitchenCard)}; drafts: ${JSON.stringify(drafts)}; bookLoads: ${JSON.stringify(report.bookLoads || [])}; stored points ${JSON.stringify(storedA.points)} revision ${storedA.revision})`);
   assert.equal(await tabA.$(`${selector('electrical-room')}[data-room="Study"]`), null, 'no room of Job B appears in Job A');
   report.steps.reload = {tabA:await shownJob(tabA)};
 

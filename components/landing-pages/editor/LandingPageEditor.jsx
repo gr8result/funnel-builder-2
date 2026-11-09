@@ -20,6 +20,7 @@ import { SECTION_TYPES, applyOps, sectionTitle, defaultSectionProps } from '../.
 import { checkForPublish } from '../../../lib/landing-pages/publishCheck';
 import { builtInCopy } from '../../../lib/landing-pages/generator';
 import { inspectDesignQuality } from '../../../lib/landing-pages/imagery';
+import { useWorkspace } from '../../../hooks/useWorkspace';
 
 // Each preview renders at the device's real width (so the layout is the real one) and is scaled down to fit if needed.
 const DEVICES = { desktop: 1280, tablet: 834, mobile: 390 };
@@ -28,6 +29,7 @@ const AUTOSAVE_MS = 1800;
 export default function LandingPageEditor({ pageId }) {
   const router = useRouter();
   const { call, ready } = useLandingApi();
+  const { role } = useWorkspace();
   const [meta, setMeta] = useState(null);
   const [doc, setDoc] = useState(null);
   const [history, setHistory] = useState({ past: [], future: [] });
@@ -47,7 +49,10 @@ export default function LandingPageEditor({ pageId }) {
   const [viewing, setViewing] = useState(null);
   const [publishOpen, setPublishOpen] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [unpublishing, setUnpublishing] = useState(false);
   const [publishResult, setPublishResult] = useState(null);
+  const [savingMaster, setSavingMaster] = useState(false);
+  const [masterResult, setMasterResult] = useState(null);
   const [loadError, setLoadError] = useState('');
   const [loading, setLoading] = useState(true);
   const wrapRef = useRef(null);
@@ -262,6 +267,7 @@ export default function LandingPageEditor({ pageId }) {
   const check = useMemo(() => (doc ? checkForPublish(doc) : null), [doc]);
   const designIssues = useMemo(() => doc?.generation?.imageryRequested ? inspectDesignQuality(doc).issues.filter((issue) => issue.severity === 'error') : [], [doc]);
   async function publish() {
+    if (publishing || unpublishing) return;
     setPublishing(true); setPublishResult(null);
     if (dirtyRef.current && !(await save('save', 'Saved before publishing'))) { setPublishing(false); return; }
     try {
@@ -274,9 +280,32 @@ export default function LandingPageEditor({ pageId }) {
     setPublishing(false);
   }
   async function unpublish() {
+    if (publishing || unpublishing) return;
     if (!window.confirm('Take this page offline? The link will stop working and the form will stop accepting enquiries.')) return;
-    const j = await call(`/api/landing-pages/pages/${pageId}`, { method: 'POST', body: { action: 'unpublish' } });
-    setMeta((m) => ({ ...m, page: { ...m.page, ...j.page } }));
+    setUnpublishing(true); setPublishResult(null);
+    try {
+      const j = await call(`/api/landing-pages/pages/${pageId}`, { method: 'POST', body: { action: 'unpublish' } });
+      setMeta((m) => ({ ...m, page: { ...m.page, ...j.page } }));
+    } catch (e) {
+      setPublishResult({ ok: false, error: e.message });
+    } finally {
+      setUnpublishing(false);
+    }
+  }
+  async function saveMaster() {
+    if (savingMaster) return;
+    const description = window.prompt('Description for this shared GR8 Result master template (optional):', meta.campaign.brief?.offering || '');
+    if (description === null) return;
+    setSavingMaster(true); setMasterResult(null);
+    try {
+      if (dirtyRef.current && !(await save('save', 'Saved before creating master template'))) return;
+      const result = await call('/api/funnels/templates', { method: 'POST', body: { action: 'save_campaign', campaignId: meta.campaign.id, description } });
+      setMasterResult({ id: result.template.id });
+    } catch (error) {
+      setMasterResult({ error: error.message });
+    } finally {
+      setSavingMaster(false);
+    }
   }
 
   if (loadError) return <div className={s.shell} style={{ display: 'grid', placeItems: 'center' }}><div style={{ textAlign: 'center' }}><p role="alert">{loadError}</p><button type="button" className={s.btn} onClick={load} disabled={loading}>{loading ? 'Retrying…' : 'Retry'}</button>{' '}<Link className={s.btn} href="/modules/landing-pages">Back to campaigns</Link></div></div>;
@@ -310,6 +339,7 @@ export default function LandingPageEditor({ pageId }) {
 
       <div className={s.body}>
         <aside className={s.left} aria-label="Page structure">
+          {['owner', 'admin'].includes(role) ? <div className={s.section}><button type="button" className={s.btn} onClick={saveMaster} disabled={readOnly || savingMaster || publishing || unpublishing || conflict || saveState.status === 'saving' || !ready} data-testid="save-campaign-master">{savingMaster ? 'Saving master…' : 'Save as Master Template'}</button></div> : null}
           <div className={s.panelTabs} role="tablist">
             <button role="tab" aria-selected={leftTab === 'sections'} onClick={() => setLeftTab('sections')}>Sections</button>
             <button role="tab" aria-selected={leftTab === 'page'} onClick={() => setLeftTab('page')}>Page settings</button>
@@ -341,6 +371,7 @@ export default function LandingPageEditor({ pageId }) {
 
         <main ref={wrapRef} className={s.canvasWrap} onClick={(e) => { if (e.target === e.currentTarget) setSelectedId(null); }}>
           <div className={s.canvasCol}>
+            {masterResult ? <div role={masterResult.error ? 'alert' : 'status'} className={s.banner}><span>{masterResult.error || 'Master snapshot saved. The original campaign is unchanged.'}</span><Link className={s.btn} href="/modules/funnels/templates">Template catalogue</Link><button type="button" className={s.btn} onClick={() => setMasterResult(null)}>Dismiss</button></div> : null}
             {conflict ? <div className={`${s.banner} ${s.bannerWarn}`}><span>This page was changed in another tab or by someone else. Reload to get the latest version (your unsaved edits here will be lost).</span><button type="button" className={s.btn} onClick={load}>Reload</button></div> : null}
             {proposal ? <div className={s.banner}><span>Inspecting the AI working draft — your saved page is unchanged</span><span className={s.inline}>{!proposal.noChanges ? <button type="button" className={`${s.btn} ${s.primary}`} onClick={keepBatchChanges}>Keep Changes</button> : null}<button type="button" className={s.btn} onClick={() => setProposal(null)}>Undo All Changes</button></span></div> : null}
             {viewing ? <div className={s.banner}><span>Viewing version {viewing.version_no} ({viewing.label || viewing.kind}) — {new Date(viewing.created_at).toLocaleString()}</span><span className={s.inline}><button type="button" className={`${s.btn} ${s.primary}`} onClick={() => restore(viewing)}>Restore this version</button><button type="button" className={s.btn} onClick={() => setViewing(null)}>Close</button></span></div> : null}
@@ -385,7 +416,7 @@ export default function LandingPageEditor({ pageId }) {
       {picker ? <ImagePicker media={[...(meta.campaign.brief?.media || []).filter((m) => m.kind !== 'video'), ...libraryMedia]} onUpload={uploadImage} onGenerate={generateImage} onChoose={chooseImage} onClose={() => setPicker(null)} /> : null}
 
       {publishOpen ? (
-        <div className={s.modalBack} role="dialog" aria-modal="true" aria-label="Publish" onClick={() => !publishing && setPublishOpen(false)}>
+        <div className={s.modalBack} role="dialog" aria-modal="true" aria-label="Publish" onClick={() => !publishing && !unpublishing && setPublishOpen(false)}>
           <div className={s.modal} onClick={(e) => e.stopPropagation()}>
             {publishResult?.ok ? (
               <>
@@ -406,13 +437,13 @@ export default function LandingPageEditor({ pageId }) {
                   {(publishResult?.check || check).errors.map((x, i) => <div key={`e${i}`} className={s.issue} onClick={() => { if (x.sectionId) { setSelectedId(x.sectionId); setRightTab('edit'); setPublishOpen(false); document.querySelector(`[data-section-id="${x.sectionId}"]`)?.scrollIntoView({ behavior: 'smooth' }); } }}>{x.message}</div>)}
                   {(publishResult?.check || check).warnings.map((x, i) => <div key={`w${i}`} className={`${s.issue} ${s.warn}`}>{x.message}</div>)}
                   {!(publishResult?.check || check).errors.length ? <div className={`${s.issue} ${s.ok}`}>Ready to publish{(publishResult?.check || check).warnings.length ? ' — the notes above are optional improvements' : ''}.</div> : null}
-                  {publishResult && !publishResult.ok && !publishResult.check ? <div className={s.issue}>{publishResult.error}</div> : null}
+                  {publishResult && !publishResult.ok && !publishResult.check ? <div className={s.issue} role="alert">{publishResult.error}</div> : null}
                 </div>
                 <div className={s.inline} style={{ justifyContent: 'space-between', marginTop: 18 }}>
-                  {live ? <button type="button" className={s.btn} onClick={unpublish}>Take offline</button> : <span />}
+                  {live ? <button type="button" className={s.btn} onClick={unpublish} disabled={publishing || unpublishing}>{unpublishing ? 'Taking offline…' : 'Take offline'}</button> : <span />}
                   <span className={s.inline}>
-                    <button type="button" className={s.btn} onClick={() => setPublishOpen(false)}>Cancel</button>
-                    <button type="button" className={`${s.btn} ${s.primary}`} disabled={publishing || !!check.errors.length} onClick={publish} data-testid="publish-confirm">{publishing ? 'Publishing…' : live ? 'Republish' : 'Publish now'}</button>
+                    <button type="button" className={s.btn} onClick={() => setPublishOpen(false)} disabled={publishing || unpublishing}>Cancel</button>
+                    <button type="button" className={`${s.btn} ${s.primary}`} disabled={publishing || unpublishing || !!check.errors.length} onClick={publish} data-testid="publish-confirm">{publishing ? 'Publishing…' : live ? 'Republish' : 'Publish now'}</button>
                   </span>
                 </div>
               </>

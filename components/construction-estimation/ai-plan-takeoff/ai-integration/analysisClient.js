@@ -15,8 +15,22 @@ const wait = (milliseconds, signal) => new Promise((resolve, reject) => {
   signal?.addEventListener('abort', () => { clearTimeout(timer); reject(signal.reason); }, { once: true });
 });
 
+// The shared auth lock gives up after a few seconds of wall time. A long main-thread task (preparing
+// the plan images for analysis) can make a waiting session read time out although nothing is stuck, so
+// lock contention is retried; it is reported only if it persists. No analysis request is made meanwhile.
+async function readSession(signal, attempts = 4) {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return await supabase.auth.getSession();
+    } catch (failure) {
+      if (!(failure?.isAcquireTimeout || failure?.code === 'LOCK_CONTENTION') || attempt >= attempts) throw failure;
+      await wait(750 * attempt, signal);
+    }
+  }
+}
+
 export async function requestTakeoffAnalysis(payload, signal) {
-  const { data, error } = await supabase.auth.getSession();
+  const { data, error } = await readSession(signal);
   if (error || !data?.session?.access_token) throw Object.assign(new Error('Sign in before running AI Takeoff.'), { code: 'authentication_required', hard: true });
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const response = await fetch('/api/ai/takeoff-analyse', {

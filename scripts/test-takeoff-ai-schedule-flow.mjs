@@ -37,12 +37,20 @@ assert.equal(canonical.completedAreas[0].category, 'Roof Area');
 assert.equal(canonical.completedEaves[0].lengthMm, 8000);
 const schedule = createTakeoffSchedule({ ...canonical, pixelsPerMm: .1, scheduleState: { aiAnalysis: analysis } });
 assert.equal(schedule.measurementRecords.filter((item) => item.kind === 'opening').length, 20, 'Unclassified frames are withheld from measurement records.');
-assert.equal(schedule.projectTotals.rooms[0].category, 'Kitchen');
+assert.equal(schedule.projectTotals.rooms[0].category, 'Kitchen — Floor area');
+assert.equal(schedule.projectTotals.rooms[1].category, 'Kitchen — Ceiling area');
 assert.equal(schedule.projectTotals.customTakeoffs.find((row) => row.category === 'WC — Bathroom').quantity, 2);
 assert.ok(flattenScheduleRows(schedule).some((row) => row.category === 'Living area' && row.quantity === 65), 'Printed benchmark remains visible alongside geometry.');
 const payload = createJobSetupPayload(schedule, { jobId: context.jobId, takeoffId: context.takeoffId });
 assert.equal(payload.dataInputFields.internalDoorOpeningsQty, 20);
-assert.equal(payload.dataInputFields.lowerFloorAreaM2, 64, 'Printed benchmark never overwrites measured geometry.');
+assert.equal(payload.dataInputFields.lowerFloorAreaM2, undefined, 'Unapproved AI geometry and printed benchmarks never enter commercial quantities.');
+const approvedCanonical = {
+  ...canonical,
+  completedFloorplans: canonical.completedFloorplans.map((item) => ({ ...item, confirmed: true, reviewRequired: false })),
+};
+const approvedSchedule = createTakeoffSchedule({ ...approvedCanonical, pixelsPerMm: .1, scheduleState: { aiAnalysis: analysis } });
+const approvedPayload = createJobSetupPayload(approvedSchedule, { jobId: context.jobId, takeoffId: context.takeoffId });
+assert.equal(approvedPayload.dataInputFields.lowerFloorAreaM2, 64, 'Approved measured geometry remains authoritative over printed evidence.');
 assert.equal(payload.dataInputFields.roofPitchDegrees, 22.5);
 assert.equal(payload.dataInputFields.lowerRoofPlanAreaM2, 64);
 assert.equal(payload.dataInputFields.lowerEavesLm, 8);
@@ -50,12 +58,12 @@ assert.equal(payload.dataInputFields.architraveLengthsQty, undefined, 'No invent
 assert.ok(payload.unsupported.some((item) => /No matching Job Setup/.test(item.reason)), 'Fixtures without input fields stay visible, not silently dropped.');
 let workbook = createEstimateBuilderWorkbookDefaults();
 workbook.jobId = context.jobId;
-workbook.aiPlanTakeoffJob = { ...canonical, pixelsPerMm: .1, scheduleState: { aiAnalysis: analysis } };
-workbook = applyJobSetupImport(workbook, payload, Object.keys(payload.dataInputFields));
+workbook.aiPlanTakeoffJob = { ...approvedCanonical, pixelsPerMm: .1, scheduleState: { aiAnalysis: analysis } };
+workbook = applyJobSetupImport(workbook, approvedPayload, Object.keys(approvedPayload.dataInputFields));
 const reopened = JSON.parse(JSON.stringify(workbook));
 assert.equal(reopened.data.inputDataSheet.rows.internalDoorOpeningsQty.value, '20');
 const reopenedSchedule = createTakeoffSchedule(reopened.aiPlanTakeoffJob);
-assert.equal(reopenedSchedule.projectTotals.rooms[0].category, 'Kitchen');
+assert.equal(reopenedSchedule.projectTotals.rooms[0].category, 'Kitchen — Floor area');
 assert.equal(reopenedSchedule.measurementRecords.filter((item) => item.kind === 'opening').length, 20, 'Review-only frame remains excluded after save/reopen.');
 const calculated = calculateEstimateBuilderWorkbook(reopened);
 assert.equal(calculated.quantities.internalDoors, 20);

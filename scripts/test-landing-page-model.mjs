@@ -478,7 +478,9 @@ test('Sales Funnels offers AI landing pages without removing legacy creation or 
   assert(home.includes('CampaignManager'));
   assert(manager.includes('/modules/funnels/edit/${item.id}'));
   assert(manager.includes('/p/${item.slug}'));
-  assert(wizard.includes('/modules/funnels/edit/${funnelInsert.data.id}'));
+  assert(wizard.includes("apiFetch('/api/funnels/manage'"));
+  assert(wizard.includes("action: 'create'"));
+  assert(wizard.includes('/modules/funnels/edit/${result.id}'));
   for (const route of ['pages/funnels.js', 'pages/modules/landing-pages/index.js', 'pages/modules/landing-pages/[campaignId].js', 'pages/modules/landing-pages/editor/[pageId].js', 'pages/modules/landing-pages/preview/[pageId].js', 'pages/lp/[slug].js']) assert(fs.existsSync(route), `preserved route ${route}`);
 });
 

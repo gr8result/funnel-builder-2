@@ -3,7 +3,7 @@
 // Returns the current funnel count and plan limit for the authed user.
 
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
-import { withAuth } from "../../../lib/withWorkspace";
+import { withWorkspace } from "../../../lib/withWorkspace";
 import { getLimit, PLANS } from "../../../lib/featureGates";
 
 async function handler(req, res) {
@@ -19,9 +19,7 @@ async function handler(req, res) {
     const { data: wsRow } = await supabaseAdmin
       .from("workspaces")
       .select("plan")
-      .eq("owner_id", auth_user_id)
-      .order("created_at", { ascending: true })
-      .limit(1)
+      .eq("id", req.workspaceId)
       .maybeSingle();
 
     const plan = wsRow?.plan || "starter";
@@ -31,7 +29,9 @@ async function handler(req, res) {
     const { count, error: countErr } = await supabaseAdmin
       .from("funnels")
       .select("id", { count: "exact", head: true })
-      .eq("owner_user_id", auth_user_id);
+      .eq("owner_user_id", auth_user_id)
+      .eq("workspace_id", req.workspaceId)
+      .eq("is_master_template", false);
 
     if (countErr) {
       return res.status(500).json({ ok: false, error: countErr.message });
@@ -55,4 +55,4 @@ async function handler(req, res) {
   }
 }
 
-export default withAuth(handler);
+export default withWorkspace(handler);

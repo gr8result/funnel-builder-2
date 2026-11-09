@@ -12,7 +12,8 @@ import { parseWindowSizeCode } from './ai-integration/analysisContract.js';
 import { DOOR_SUBTYPE_LABELS } from '../../../lib/construction-estimation/takeoffMaterialQuantities.js';
 import { externalizeTakeoffRecoverySnapshot, materializeTakeoffPlanPages, materializeTakeoffRecoverySnapshot } from './planBlobStorage.js';
 import { getPlanDisplayIdentity, getTakeoffLifecycle, loadTakeoffPlanImage, createTakeoffObjectUrl, revokeTakeoffObjectUrl, logTakeoffPlanLoad, describePlanPageReferences } from './takeoffLifecycle.js';
-import { Stage, Layer, Image as KonvaImage, Line, Circle, Text, Rect, Group } from 'react-konva';
+import { Stage, Layer, Image as KonvaImage, Line, Circle, Text, Rect, Group, RegularPolygon, Label, Tag } from 'react-konva';
+import { openingMarkerStyle, openingSizeLabel, applyOpeningQuickEdit, approveOpening, OPENING_MARKER_COLOURS } from './openingMarkers.js';
 import { RotateCw, Ruler, ChevronLeft, ChevronRight, DoorOpen, Square, Layers, Trash2, Home, Compass, Download, Upload, MousePointer2, RectangleVertical } from 'lucide-react';
 import { calculatePolygonAreaM2, findFloorplanCornerSnapPoint, resolveFloorplanFreePoint } from './floorplanGeometry';
 import { compactPdfLinework, readPdfPageLinework } from './geometry/pdfLinework.js';
@@ -32,6 +33,7 @@ import {
   flattenScheduleRows,
   getScheduleSignature
 } from './takeoffSchedule';
+import { buildProfessionalTakeoffReportHtml } from './takeoffReport.js';
 
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 const PDFJS_WORKER_SRC = '/pdfjs/pdf.worker.min.mjs';
@@ -197,6 +199,8 @@ function normaliseRecoveredOpening(opening = {}, index = 0) {
 }
 
 function normaliseRecoveredFloorplan(floorplan = {}, index = 0) {
+  const source = floorplan.source || 'manual';
+  const confirmed = floorplan.confirmed === true || source !== 'ai';
   return {
     ...floorplan,
     id: floorplan.id || `recovered-floorplan-${index + 1}`,
@@ -205,7 +209,10 @@ function normaliseRecoveredFloorplan(floorplan = {}, index = 0) {
     label: floorplan.label || floorplan.roomName || floorplan.type || `Recovered area ${index + 1}`,
     type: floorplan.type || 'Room',
     color: floorplan.color || 'rgba(14, 165, 233, 0.12)',
-    stroke: floorplan.stroke || '#0284c7'
+    stroke: floorplan.stroke || '#0284c7',
+    source,
+    confirmed,
+    reviewRequired: source === 'ai' && !confirmed,
   };
 }
 
@@ -545,6 +552,8 @@ export default function AIPlanTakeoffStandalone({
   const [glassType, setGlassType] = useState('Clear');
   const [placedOpenings, setPlacedOpenings] = useState([]);
   const [selectedOpeningId, setSelectedOpeningId] = useState(null);
+  // Opening whose quick-edit popup is open beside its marker on the plan.
+  const [quickEditOpeningId, setQuickEditOpeningId] = useState(null);
   const [selectedMeasurementId, setSelectedMeasurementId] = useState(null);
 
   // Area & Floorcoverings state
@@ -3118,7 +3127,10 @@ setSavedRevision(verifiedSave.revision);
         label: conf.label,
         color: conf.color,
         stroke: conf.stroke,
-        nodes: [...activeAreaPolyline]
+        nodes: [...activeAreaPolyline],
+        source: 'manual',
+        confirmed: true,
+        reviewRequired: false,
       };
       setCompletedFloorplans((prev) => [...prev, newFloorplan]);
       setSelectedFloorplanId(newFloorplan.id);
@@ -3252,7 +3264,7 @@ setSavedRevision(verifiedSave.revision);
           if (fp.id === id) {
             const updatedNodes = [...fp.nodes];
             updatedNodes[vertexIndex] = { x: pos.x, y: pos.y };
-            return { ...fp, nodes: updatedNodes };
+            return { ...fp, nodes: updatedNodes, confirmed: false, reviewRequired: true, approvedAt: null };
           }
           return fp;
         }));
@@ -3368,7 +3380,7 @@ setSavedRevision(verifiedSave.revision);
           const p2 = nodes[(vertexIndex + 1) % nodes.length];
           const midPoint = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
           nodes.splice(vertexIndex + 1, 0, midPoint);
-          return { ...fp, nodes };
+          return { ...fp, nodes, confirmed: false, reviewRequired: true, approvedAt: null };
         }
         return fp;
       }));
@@ -3422,7 +3434,7 @@ setSavedRevision(verifiedSave.revision);
       setCompletedFloorplans((prev) => prev.map((fp) => {
         if (fp.id === id && fp.nodes.length > 3) {
           const nodes = fp.nodes.filter((_, idx) => idx !== vertexIndex);
-          return { ...fp, nodes };
+          return { ...fp, nodes, confirmed: false, reviewRequired: true, approvedAt: null };
         }
         return fp;
       }));
@@ -3466,10 +3478,23 @@ setSavedRevision(verifiedSave.revision);
           label: conf.label,
           color: conf.color,
           stroke: conf.stroke
+          , confirmed: false
+          , reviewRequired: true
+          , approvedAt: null
         };
       }
       return fp;
     }));
+  };
+
+  const approveSelectedFloorplan = () => {
+    if (!selectedFp || selectedFp.nodes?.length < 3 || !(calculatePolygonAreaM2(selectedFp.nodes, pixelsPerMm) > 0)) {
+      alert('A valid calibrated floor-area boundary is required before approval.');
+      return;
+    }
+    setCompletedFloorplans((prev) => prev.map((fp) => fp.id === selectedFp.id
+      ? { ...fp, confirmed: true, reviewRequired: false, approvedAt: new Date().toISOString() }
+      : fp));
   };
 
   const updateWallRun = (wallId, changes) => {
@@ -3780,27 +3805,17 @@ setSavedRevision(verifiedSave.revision);
   };
 
   const handleExportPdfSchedule = () => {
-    const rows = flattenScheduleRows(takeoffSchedule, 'projectTotals');
-    const html = `
-      <html>
-        <head><title>Takeoff Schedule</title></head>
-        <body style="font-family: Arial, sans-serif;">
-          <h1>Takeoff Schedule</h1>
-          <p><strong>Project:</strong> ${takeoffSchedule.project.projectName || ''}</p>
-          <p><strong>Client:</strong> ${takeoffSchedule.project.clientName || ''}</p>
-          <p><strong>Site:</strong> ${takeoffSchedule.project.siteAddress || ''}</p>
-          <table border="1" cellspacing="0" cellpadding="5">
-            <thead><tr><th>Section</th><th>Item ID</th><th>Category</th><th>Quantity</th><th>Unit</th></tr></thead>
-            <tbody>${rows.map((row) => `<tr><td>${row.section}</td><td>${row.itemId}</td><td>${row.category}</td><td>${row.quantity}</td><td>${row.unit}</td></tr>`).join('')}</tbody>
-          </table>
-        </body>
-      </html>`;
+    const html = buildProfessionalTakeoffReportHtml(takeoffSchedule);
     const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      printWindow.document.write(html);
-      printWindow.document.close();
-      printWindow.print();
+    if (!printWindow) {
+      setPlatformSaveMessage('The commercial report could not open because the browser blocked the print window.');
+      alert('Allow pop-ups for GR8 Result, then choose Print / Save Commercial PDF Report again.');
+      return;
     }
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
   };
 
   const handleSendToJobSetup = () => {
@@ -3822,6 +3837,17 @@ setSavedRevision(verifiedSave.revision);
       sheetLevels,
     });
     setJobSetupPayload(payload);
+    if (!payload.commercialReady) {
+      const message = [
+        'Takeoff is not ready for commercial transfer.',
+        '',
+        ...payload.commercialBlockers.slice(0, 12).map((item) => `• ${item.title}: ${item.detail}`),
+        ...(payload.commercialBlockers.length > 12 ? [`• ${payload.commercialBlockers.length - 12} more review items`] : []),
+      ].join('\n');
+      setPlatformSaveMessage(`Resolve ${payload.commercialBlockers.length} required review item(s) before exporting to Job Setup.`);
+      alert(message);
+      return;
+    }
     if (embedded && onJobSetupUpdate) {
       Promise.resolve(onJobSetupUpdate(payload)).then((result) => {
         if (result?.ok === false) throw new Error(result.message || 'Job Setup import could not be prepared.');
@@ -3860,6 +3886,19 @@ setSavedRevision(verifiedSave.revision);
   };
 
   const handlePrepareQuotePreview = () => {
+    const payload = createJobSetupPayload(takeoffSchedule, {
+      jobId: platformContext.jobId || openedTakeoffJob?.masterJobId || '',
+      takeoffId: openedTakeoffJob?.takeoffId || '',
+      revision: savedRevision,
+      projectId: openedTakeoffJob?.associatedProjectId || platformContext.projectId || '',
+      sheetLevels,
+    });
+    if (!payload.commercialReady) {
+      setJobSetupPayload(payload);
+      setPlatformSaveMessage(`Resolve ${payload.commercialBlockers.length} required review item(s) before sending quantities to quotation.`);
+      alert(`Takeoff is not ready for quotation. Resolve or reject the ${payload.commercialBlockers.length} required review item(s) shown in the Takeoff review.`);
+      return;
+    }
     setQuotePreviewRows(createQuotePreviewRows(takeoffSchedule, quoteSheetRows, scheduleMappings));
   };
 
@@ -4720,6 +4759,17 @@ setSavedRevision(verifiedSave.revision);
                 {GLASS_TYPE_OPTIONS.filter((option) => option !== 'Unspecified').map((option) => <option key={option} value={option}>{option}</option>)}
               </select>
             </div>
+            <div style={{ fontSize: '12px', color: selectedFp.confirmed ? '#166534' : '#9a3412', fontWeight: 'bold' }}>
+              {selectedFp.confirmed ? 'Approved for commercial quantities' : 'Review required — excluded from Job Setup and quotation'}
+            </div>
+            {!selectedFp.confirmed && (
+              <button
+                onClick={approveSelectedFloorplan}
+                style={{ padding: '7px', background: '#166534', color: '#fff', border: 0, borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+              >
+                Approve measured floor area
+              </button>
+            )}
           </div>
         )}
 
@@ -5422,7 +5472,12 @@ setSavedRevision(verifiedSave.revision);
                 onClick={() => selectOnly('floorplan', fp.id)}
                 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '14px', background: fp.id === selectedFloorplanId ? '#bbdefb' : '#e3f2fd', padding: '6px 8px', borderRadius: '4px', cursor: 'pointer', border: fp.id === selectedFloorplanId ? '1px solid #1976d2' : 'none' }}
               >
-                <span><strong>[Plan] {fp.label}:</strong> {calculatePolygonAreaM2(fp.nodes, pixelsPerMm).toFixed(2)} m²</span>
+                <span>
+                  <strong>[Plan] {fp.label}:</strong> {calculatePolygonAreaM2(fp.nodes, pixelsPerMm).toFixed(2)} m²
+                  <small style={{ display: 'block', color: fp.confirmed ? '#166534' : '#9a3412' }}>
+                    {fp.confirmed ? 'Approved' : 'Review required — not priced'}
+                  </small>
+                </span>
                 <Trash2 size={16} style={{ cursor: 'pointer', color: '#d32f2f' }} onClick={(e) => { e.stopPropagation(); deleteMarkupItem('floorplan', fp.id); }} />
               </div>
             ))}
@@ -5581,7 +5636,7 @@ setSavedRevision(verifiedSave.revision);
           <div style={{ padding: '10px 16px', display: 'flex', gap: '8px', alignItems: 'center', borderBottom: '1px solid #d1d5db', background: '#f3f4f6' }}>
             <button onClick={handleExportExcel} style={{ padding: '8px 10px', background: '#0f766e', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Export Excel</button>
             <button onClick={handleExportCsv} style={{ padding: '8px 10px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Export CSV</button>
-            <button onClick={handleExportPdfSchedule} style={{ padding: '8px 10px', background: '#7c2d12', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Export PDF Schedule</button>
+            <button onClick={handleExportPdfSchedule} style={{ padding: '8px 10px', background: '#7c2d12', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Print / Save Commercial PDF Report</button>
             <button disabled={isRecoveryPreview} onClick={handleSendToJobSetup} style={{ padding: '8px 10px', background: isRecoveryPreview ? '#94a3b8' : '#4b5563', color: '#fff', border: 'none', borderRadius: '4px', cursor: isRecoveryPreview ? 'not-allowed' : 'pointer', fontWeight: 'bold' }}>Export Takeoff to Job Setup</button>
             <button disabled={isRecoveryPreview} onClick={handlePrepareQuotePreview} style={{ padding: '8px 10px', background: isRecoveryPreview ? '#94a3b8' : (quoteSheetOutOfDate ? '#f57c00' : '#111827'), color: '#fff', border: 'none', borderRadius: '4px', cursor: isRecoveryPreview ? 'not-allowed' : 'pointer', fontWeight: 'bold' }}>
               {quoteSheetOutOfDate ? 'Update from Takeoff' : 'Send to Quote Sheet'}
@@ -5633,7 +5688,7 @@ setSavedRevision(verifiedSave.revision);
               {renderScheduleRows('Roof Areas', takeoffSchedule.projectTotals.roofAreas)}
               {renderScheduleRows('Roof and Eaves', takeoffSchedule.projectTotals.roofAndEaves)}
               {renderScheduleRows('Floor Finishes', takeoffSchedule.projectTotals.floorFinishes)}
-              {renderScheduleRows('Rooms and Measurements', takeoffSchedule.projectTotals.rooms)}
+              {renderScheduleRows('Room-by-room areas and approved finishes', takeoffSchedule.projectTotals.rooms)}
               {renderScheduleRows('Custom Takeoffs', takeoffSchedule.projectTotals.customTakeoffs)}
             </div>
 
@@ -6118,7 +6173,11 @@ setSavedRevision(verifiedSave.revision);
               const itemTag = String(op.itemTag || op.label || `${tagPrefix}${idx + 1}`);
               const dynamicTag = `${tagPrefix}${idx + 1}: ${itemTag.includes(': ') ? itemTag.split(': ')[1] : itemTag}`;
               const isSelected = op.id === selectedOpeningId;
-              const openingWidthPx = Math.max((Number(op.widthMm) || 0) * (pixelsPerMm || 1), 22 / stageScale);
+              // A small centre marker (circle = window, triangle = door) coloured by review state,
+              // with the size beside it - the drawing underneath stays visible.
+              const marker = openingMarkerStyle(op);
+              const markerRadius = 7 / stageScale;
+              const sizeLabel = openingSizeLabel(op, dynamicTag.split(': ')[0]);
               return (
                 <Group
                   key={op.id}
@@ -6129,31 +6188,24 @@ setSavedRevision(verifiedSave.revision);
                   onDragStart={() => {
                     if (!selectModeActive) return;
                     selectOnly('opening', op.id);
+                    setQuickEditOpeningId(null);
                     setDraggingItem({ type: 'opening', id: op.id });
                   }}
                   onClick={(e) => {
                     if (!selectModeActive) return;
                     e.cancelBubble = true;
                     selectOnly('opening', op.id);
+                    if (!isRecoveryPreview) setQuickEditOpeningId(op.id);
                   }}
                 >
-                  <Rect
-                    x={-(openingWidthPx / 2)}
-                    y={-10 / stageScale}
-                    width={openingWidthPx}
-                    height={20 / stageScale}
-                    fill={isSelected ? '#ffa726' : (op.type === 'window' ? '#ffe0b2' : '#ffcdd2')}
-                    stroke={isSelected ? '#e65100' : (op.type === 'window' ? '#e65100' : '#c62828')}
-                    strokeWidth={(isSelected ? 2.5 : 1.5) / stageScale}
-                  />
-                  <Text
-                    x={-(openingWidthPx / 2)}
-                    y={-24 / stageScale}
-                    text={dynamicTag}
-                    fontSize={11 / stageScale}
-                    fill="#111"
-                    fontStyle="bold"
-                  />
+                  {isSelected && <Circle radius={markerRadius * 1.9} stroke="#0f172a" strokeWidth={2 / stageScale} dash={[3 / stageScale, 2 / stageScale]} />}
+                  {marker.shape === 'circle'
+                    ? <Circle name="opening-marker" radius={markerRadius} fill={marker.fill} stroke={isSelected ? '#0f172a' : marker.stroke} strokeWidth={(isSelected ? 2.5 : 1.5) / stageScale} />
+                    : <RegularPolygon name="opening-marker" sides={3} radius={markerRadius * 1.25} fill={marker.fill} stroke={isSelected ? '#0f172a' : marker.stroke} strokeWidth={(isSelected ? 2.5 : 1.5) / stageScale} />}
+                  <Label x={markerRadius * 1.8} y={-7 / stageScale} rotation={-(Number(rotation) || 0)} listening={false}>
+                    <Tag fill="rgba(255,255,255,0.88)" stroke={marker.stroke} strokeWidth={0.75 / stageScale} cornerRadius={3 / stageScale} />
+                    <Text text={sizeLabel} fontSize={11 / stageScale} padding={2 / stageScale} fill="#0f172a" fontStyle="bold" />
+                  </Label>
                 </Group>
               );
             })}
@@ -6547,6 +6599,60 @@ setSavedRevision(verifiedSave.revision);
             )}
           </Layer>
         </Stage>
+        {(() => {
+          // Quick edit beside the clicked opening marker: size and code, plus explicit approval.
+          const opening = quickEditOpeningId && quickEditOpeningId === selectedOpeningId ? activePageOpenings.find((item) => item.id === quickEditOpeningId) : null;
+          if (!opening || isRecoveryPreview) return null;
+          const marker = openingMarkerStyle(opening);
+          // The plan layer may be rotated as well as zoomed and panned: place the popup through its own transform.
+          const onScreen = layerRef.current?.getAbsoluteTransform?.().point({ x: opening.x, y: opening.y })
+            || { x: opening.x * stageScale + stagePos.x, y: opening.y * stageScale + stagePos.y };
+          const left = Math.max(8, Math.min(canvasSize.width - 268, onScreen.x + 18));
+          const top = Math.max(8, Math.min(canvasSize.height - 210, onScreen.y - 20));
+          const save = (form, approve) => {
+            const data = new FormData(form);
+            setPlacedOpenings((previous) => previous.map((item) => {
+              if (item.id !== opening.id) return item;
+              const edited = applyOpeningQuickEdit(item, { heightMm: data.get('heightMm'), widthMm: data.get('widthMm'), itemTag: data.get('itemTag') });
+              return approve ? approveOpening(edited) : edited;
+            }));
+            markTakeoffItemCompleted(approve ? 'opening-approved' : 'opening-quick-edit');
+            setQuickEditOpeningId(null);
+          };
+          return (
+            <form
+              key={opening.id}
+              data-testid="opening-quick-edit"
+              onSubmit={(event) => { event.preventDefault(); save(event.currentTarget, false); }}
+              onKeyDown={(event) => { if (event.key === 'Escape') setQuickEditOpeningId(null); }}
+              style={{ position: 'absolute', left, top, width: 250, background: '#fff', border: `2px solid ${marker.stroke}`, borderRadius: 8, boxShadow: '0 6px 18px rgba(15,23,42,0.25)', padding: 10, display: 'grid', gap: 8, fontSize: 14, zIndex: 20 }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <strong>{opening.type === 'window' ? 'Window' : 'Door'} size</strong>
+                <span style={{ fontSize: 12, color: marker.stroke, fontWeight: 700 }}>{marker.status === 'standard' ? 'Placed by builder' : OPENING_MARKER_COLOURS[marker.status].label}</span>
+              </div>
+              <label style={{ display: 'grid', gap: 2 }}>Code / tag
+                <input name="itemTag" defaultValue={opening.itemTag || ''} style={{ padding: 6, fontSize: 14 }} />
+              </label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <label style={{ display: 'grid', gap: 2, flex: 1 }}>Height (mm)
+                  <input name="heightMm" type="number" min="1" step="1" defaultValue={opening.heightMm || ''} autoFocus style={{ padding: 6, fontSize: 14, width: '100%' }} />
+                </label>
+                <label style={{ display: 'grid', gap: 2, flex: 1 }}>Width (mm)
+                  <input name="widthMm" type="number" min="1" step="1" defaultValue={opening.widthMm || ''} style={{ padding: 6, fontSize: 14, width: '100%' }} />
+                </label>
+              </div>
+              {opening.needsClassification && <div style={{ color: '#92400e', fontSize: 13 }}>Confirm the opening type in the side panel before approving.</div>}
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                <button type="submit" data-testid="opening-quick-save" style={{ padding: '6px 10px' }}>Save</button>
+                <button type="button" data-testid="opening-quick-approve" disabled={opening.needsClassification}
+                  onClick={(event) => save(event.currentTarget.form, true)}
+                  style={{ padding: '6px 10px', background: OPENING_MARKER_COLOURS.approved.fill, color: '#fff', border: 'none', borderRadius: 4 }}>Save &amp; approve</button>
+                <button type="button" onClick={() => setQuickEditOpeningId(null)} style={{ padding: '6px 10px' }}>Close</button>
+              </div>
+            </form>
+          );
+        })()}
       </div>
     </div>
   );

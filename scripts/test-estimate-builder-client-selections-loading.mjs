@@ -6,7 +6,10 @@ const selectionsSource = readFileSync("pages/modules/builders/selections-book.js
 
 assert.ok(workbookSource.includes('title: "Client Selections"'), "Estimate Builder dashboard must keep the Client Selections card");
 assert.ok(workbookSource.includes('page: "clientSelections"'), "Client Selections card must still target the clientSelections workspace page");
-assert.ok(workbookSource.includes('const loadCommercialClientSelectionsPage = () => import("../../pages/modules/builders/selections-book")'), "Client Selections must load the current selections-book module");
+assert.ok(workbookSource.includes("const loadCommercialClientSelectionsPage = (retry = false) => {"), "Client Selections must load the current selections-book module");
+assert.ok(workbookSource.includes("if (retry) commercialClientSelectionsPagePromise = null;"), "Retry must invalidate a failed or stalled module import");
+assert.ok(workbookSource.includes("loadCommercialClientSelectionsPage(retryKey > 0)"), "The module host must request a fresh import after Retry");
+assert.ok(workbookSource.includes("if (commercialClientSelectionsPagePromise === tracked) commercialClientSelectionsPagePromise = null;"), "A rejected module import must not remain cached");
 assert.ok(!workbookSource.includes('import("../../pages/modules/builders/client-selections")'), "Client Selections must not use the retired budget-manager route");
 assert.ok(!workbookSource.includes("CommercialClientSelectionsPage = dynamic"), "Client Selections must not rely on the old unbounded dynamic fallback");
 

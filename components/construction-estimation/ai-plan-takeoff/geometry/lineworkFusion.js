@@ -14,6 +14,7 @@ import { connectWallJunctions } from './wallJunctions.js';
 import { detectVectorDoorSwings, swingEvidence } from './vectorDoorSwings.js';
 import { snapRoomToWallFaces } from './roomWallFaces.js';
 import { gapGlazingEvidence } from './vectorGapEvidence.js';
+import { constrainFootprintToWalls } from './footprintWallConstraint.js';
 
 const CONTRACT_THICKNESSES = [70, 90, 100, 110, 140, 150, 200, 230, 270, 300, 350];
 const nearest = (value, list) => list.reduce((best, item) => (Math.abs(item - value) < Math.abs(best - value) ? item : best));
@@ -551,6 +552,34 @@ export function fuseSheetLinework(response, raster, sheet, existing = {}, overri
   }
   if (report.rooms.withoutBoundary) note('room-without-boundary', `${report.rooms.withoutBoundary} room name${report.rooms.withoutBoundary === 1 ? '' : 's'} on sheet ${response.page} ${report.rooms.withoutBoundary === 1 ? 'is' : 'are'} not inside any space the wall linework encloses; draw ${report.rooms.withoutBoundary === 1 ? 'its' : 'their'} boundary.`);
 
-  return { response: { ...response, walls, openings: openings.map((entry) => entry.item), rooms,
+  // ---- Footprint: the reading's outline is moved onto the outer face of the measured external walls
+  const toMm = (point) => ({ x: point.x * logicalWidth / pixelsPerMm, y: point.y * logicalHeight / pixelsPerMm });
+  const fromMm = (point) => toNormal({ x: point.x * pixelsPerMm, y: point.y * pixelsPerMm });
+  const externalWalls = walls.filter((wall) => wall.category === 'exterior' && Array.isArray(wall.nodes) && wall.nodes.length >= 2)
+    .map((wall) => ({ id: wall.lineworkWallId || wall.detectionId, nodes: wall.nodes.map(toMm), thicknessMm: wall.measuredThicknessMm || wall.thicknessMm }));
+  // Open sides of a footprint follow the drawn outline of an alfresco, patio or balcony traced from the sheet.
+  const outdoorOutlines = rooms.filter((room) => room.outdoorArea && Array.isArray(room.polygon) && room.polygon.length >= 3)
+    .map((room, index) => ({ id: `outline:${room.name || index}`, nodes: room.polygon.map(toMm), closed: true, kind: 'outline', thicknessMm: 0 }));
+  report.footprints = [];
+  const buildingAreas = (response.buildingAreas || []).map((area) => {
+    if (area?.type !== 'Footprint' || !Array.isArray(area.nodes) || area.nodes.length < 3) return area;
+    const fit = constrainFootprintToWalls(area.nodes.map(toMm), [...externalWalls, ...outdoorOutlines], options.footprint || {});
+    const wallConstraint = { status: fit.status, edges: fit.edges, movedEdges: fit.movedEdges, supportedShare: Math.round(fit.supportedShare * 100) / 100,
+      beforeM2: Math.round(fit.beforeM2 * 100) / 100, afterM2: Math.round(fit.afterM2 * 100) / 100, moves: fit.moves, ...(fit.reason ? { reason: fit.reason } : {}) };
+    report.footprints.push({ detectionId: area.detectionId, ...wallConstraint });
+    if (fit.status === 'partial') {
+      // Name the open stretch: on these edges the area is only as good as the reading's position.
+      const unsupportedM = fit.unsupportedLengthMm / 1000;
+      note('footprint-partial', `${unsupportedM.toFixed(1)} m of the footprint outline on sheet ${response.page} has no measured wall or drawn outline beside it (usually the open side of a balcony, patio or alfresco); its position is the plan reading's own. Check those edges on the plan before approving the footprint.`);
+    }
+    if (fit.status === 'constrained' || fit.status === 'partial') {
+      const said = `Outline moved onto measured drawing geometry (outer face of external walls, drawn outdoor outlines) on ${fit.movedEdges} of ${fit.edges} edges (${wallConstraint.beforeM2} -> ${wallConstraint.afterM2} m2)${fit.status === 'partial' ? '; less than half its perimeter runs along measured walls, so the rest is the reading\'s own outline' : ''}.`;
+      return { ...area, nodes: fit.nodes.map(fromMm), readingNodes: area.nodes, wallConstraint, evidence: `${area.evidence || ''} ${said}`.trim() };
+    }
+    note('footprint-unverified', `The footprint outline on sheet ${response.page} could not be checked against measured external walls (${fit.reason}); it is the plan reading's own outline and needs checking.`);
+    return { ...area, wallConstraint };
+  });
+
+  return { response: { ...response, walls, openings: openings.map((entry) => entry.item), rooms, buildingAreas,
     openingSymbolReviewCandidates: geometry.embeddedOpeningReviewCandidates || [], review: [...(response.review || []), ...report.review] }, geometry, report };
 }

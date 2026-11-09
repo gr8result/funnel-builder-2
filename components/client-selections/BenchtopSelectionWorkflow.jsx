@@ -26,7 +26,7 @@ const lm = (value) => `${Number(value || 0).toFixed(2)} lm`;
 const unique = (values) => [...new Set(values.filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b)));
 const RANGE_SOURCE_NOTES = { "supplier-price-group": "from the supplier price group", "job-confirmation": "confirmed earlier on this job", material: "by material", override: "set for this benchtop" };
 
-export default function BenchtopSelectionWorkflow({ location, scheduleLines = [], project = {}, workbook = null, mapping = null, classifications = {}, stoneProducts = [], laminateOptions = [], onChange, onOpenRangeSettings }) {
+export default function BenchtopSelectionWorkflow({ location, scheduleLines = [], project = {}, workbook = null, mapping = null, classifications = {}, stoneProducts = [], laminateOptions = [], onChange, onOpenRangeSettings, clientView = false }) {
   const room = location.location || location.name || "";
   const profile = useMemo(() => benchtopProfile(location), [location]);
   const vanity = profile.variant === "vanity";
@@ -37,7 +37,9 @@ export default function BenchtopSelectionWorkflow({ location, scheduleLines = []
   const depths = useMemo(() => benchtopDepthsForRoom(room), [room]);
   const quantity = benchtopQuantitySummary(areas);
   const setupDone = benchtopSetupComplete(setup);
-  const [editingAreas, setEditingAreas] = useState(false);
+  const [editingAreaState, setEditingAreas] = useState(false);
+  // Client view: benchtop lengths are the builder's measurement, never asked of the client.
+  const editingAreas = editingAreaState && !clientView;
   const [targetId, setTargetId] = useState("");
   const [filters, setFilters] = useState({ material: "", brand: "", range: "", colour: "", search: "" });
   const [shown, setShown] = useState(PAGE_SIZE);
@@ -131,8 +133,8 @@ export default function BenchtopSelectionWorkflow({ location, scheduleLines = []
       </section>
 
       <section className="bts-block" data-testid="benchtop-areas">
-        <div className="bts-head"><div><span className="bts-step">Step 2</span><h3>{vanity ? "Vanity benchtops" : "Benchtop areas"}</h3><p>{vanity ? "The vanity benchtops this room has, from its cabinet schedule." : "The benchtops this room has, from the project. Each can have its own surface."}</p></div>
-          <button type="button" className="bts-secondary" onClick={() => { if (editingAreas) commit(setup, areas); setEditingAreas((value) => !value); }} data-testid="benchtop-edit-dimensions">{editingAreas ? "Done" : "Edit dimensions"}</button></div>
+        <div className="bts-head"><div><span className="bts-step">Step 2</span><h3>{vanity ? "Vanity benchtops" : "Benchtop areas"}</h3><p>{vanity ? "The vanity benchtops this room has, from its cabinet schedule." : "The benchtops this room has, from the project. Each can have its own surface."}{clientView ? " Your builder confirms every benchtop measurement." : ""}</p></div>
+          {clientView ? null : <button type="button" className="bts-secondary" onClick={() => { if (editingAreas) commit(setup, areas); setEditingAreas((value) => !value); }} data-testid="benchtop-edit-dimensions">{editingAreas ? "Done" : "Edit dimensions"}</button>}</div>
         <table className="bts-areas">
           <tbody>
             {areas.map((area) => (
@@ -147,7 +149,7 @@ export default function BenchtopSelectionWorkflow({ location, scheduleLines = []
                 ) : (
                   <>
                     <th scope="row">{area.label}</th>
-                    <td data-testid="benchtop-area-lm">{benchtopAreaLm(area) ? lm(benchtopAreaLm(area)) : <b className="bts-warn">Length needed</b>}</td>
+                    <td data-testid="benchtop-area-lm">{benchtopAreaLm(area) ? lm(benchtopAreaLm(area)) : clientView ? <span className="bts-muted">Measured by your builder</span> : <b className="bts-warn">Length needed</b>}</td>
                     <td>{area.depthMm} mm wide</td>
                     <td className="bts-muted" data-testid="benchtop-area-source">{area.source === "cabinetry" ? "From the cabinet schedule" : area.evidence ? `From the project - ${area.evidence}` : benchtopAreaLm(area) ? "Entered" : ""}</td>
                   </>
@@ -157,7 +159,7 @@ export default function BenchtopSelectionWorkflow({ location, scheduleLines = []
           </tbody>
           {!editingAreas ? <tfoot><tr><th scope="row">Total</th><td data-testid="benchtop-total-lm">{lm(quantity.totalLm)}</td><td /><td /></tr></tfoot> : null}
         </table>
-        {quantity.missing.length ? <p className="bts-note warn" data-testid="benchtop-length-needed">{!vanity && run.unknown.length ? `The cabinet schedule has no width recorded for: ${[...new Set(run.unknown)].join(", ")}, so the bench length cannot be worked out from it. ` : ""}Use Edit dimensions to enter the length of {quantity.missing.join(" and ")}. The quotation needs it.</p> : null}
+        {quantity.missing.length && !clientView ? <p className="bts-note warn" data-testid="benchtop-length-needed">{!vanity && run.unknown.length ? `The cabinet schedule has no width recorded for: ${[...new Set(run.unknown)].join(", ")}, so the bench length cannot be worked out from it. ` : ""}Use Edit dimensions to enter the length of {quantity.missing.join(" and ")}. The quotation needs it.</p> : null}
         {editingAreas && profile.canAddAreas ? (
           <div className="bts-actions start">
             <label className="bts-inline"><span>Add a benchtop the project does not show</span><select value="" onChange={(event) => { if (event.target.value) commit(setup, [...areas, newBenchtopArea(event.target.value === "Other" ? "Benchtop" : event.target.value === "Island" ? "Island benchtop" : event.target.value, { depthMm: depths.includes(900) && /island|breakfast/i.test(event.target.value) ? 900 : depths[0] })]); }} data-testid="benchtop-add-area"><option value="">Choose…</option>{BENCHTOP_AREA_PRESETS.filter((name) => name !== "Island" || !areas.some((area) => /\bisland\b/i.test(area.label))).map((name) => <option key={name}>{name}</option>)}</select></label>
@@ -247,21 +249,22 @@ export default function BenchtopSelectionWorkflow({ location, scheduleLines = []
                     <dl>
                       <div><dt>Range</dt><dd>{surface.collection || surface.range || "Not recorded"}</dd></div>
                       <div><dt>Colour</dt><dd>{surface.colourName || surface.colour || "Not recorded"}{surface.colourFamily ? ` (${surface.colourFamily})` : ""}</dd></div>
-                      <div><dt>Quotation classification</dt><dd data-testid="benchtop-classification">{range ? <>{range.label}{RANGE_SOURCE_NOTES[surface.rangeSource] ? <span className="bts-muted"> · {RANGE_SOURCE_NOTES[surface.rangeSource]}</span> : null}</> : <b className="bts-warn">Not set for {group || "this surface"}</b>}</dd></div>
+                      {clientView ? null : <div><dt>Quotation classification</dt><dd data-testid="benchtop-classification">{range ? <>{range.label}{RANGE_SOURCE_NOTES[surface.rangeSource] ? <span className="bts-muted"> · {RANGE_SOURCE_NOTES[surface.rangeSource]}</span> : null}</> : <b className="bts-warn">Not set for {group || "this surface"}</b>}</dd></div>}
                       <div><dt>Application</dt><dd>{room} - {area.label}</dd></div>
-                      <div><dt>Quantity</dt><dd>{benchtopAreaLm(area) ? `${lm(benchtopAreaLm(area))}, ${area.depthMm} mm wide` : "Length needed"}</dd></div>
+                      <div><dt>Quantity</dt><dd>{benchtopAreaLm(area) ? `${lm(benchtopAreaLm(area))}, ${area.depthMm} mm wide` : clientView ? "Measured by your builder" : "Length needed"}</dd></div>
                       <div><dt>Edge</dt><dd>{setup.edgeProfile}</dd></div>
                       {profile.waterfall ? <div><dt>Waterfall ends</dt><dd>{setup.waterfallEnds}</dd></div> : null}
                       <div><dt>Upstand</dt><dd>{setup.upstand === "Custom" ? `${setup.upstandCustomMm || "Custom"} mm` : setup.upstand}</dd></div>
                       <div><dt>Cut-outs</dt><dd>{setup.cutouts.map((name) => profile.cutoutLabels[name]).join(", ") || "None"}</dd></div>
                     </dl>
-                    {!range ? <p className="bts-note warn" data-testid="benchtop-range-missing">The builder has not yet set which quotation range {group || "this surface"} belongs to, so this benchtop is not priced in the quotation yet.{onOpenRangeSettings ? <> <button type="button" className="bts-link" onClick={onOpenRangeSettings}>Set supplier price groups</button></> : null}</p> : null}
+                    {!range && clientView ? <p className="bts-note warn" data-testid="benchtop-builder-review">Builder Review Required: your builder will confirm the measurements and price for this benchtop and send you the final variation amount for approval.</p> : null}
+                    {!range && !clientView ? <p className="bts-note warn" data-testid="benchtop-range-missing">The builder has not yet set which quotation range {group || "this surface"} belongs to, so this benchtop is not priced in the quotation yet.{onOpenRangeSettings ? <> <button type="button" className="bts-link" onClick={onOpenRangeSettings}>Set supplier price groups</button></> : null}</p> : null}
                     <div className="bts-actions start">
                       <button type="button" className="bts-secondary" onClick={() => changeSurface(area)} data-testid="benchtop-change-surface">Change surface</button>
                       {others.length ? <button type="button" className="bts-secondary" onClick={() => applyToAll(area)} data-testid="benchtop-apply-all">Apply this surface to all {room} benchtops</button> : null}
                       {overriding === area.id ? (
                         <label className="bts-inline"><span>Quotation range for this benchtop only</span><select value={surface.rangeOverrideKey || ""} onChange={(event) => overrideRange(area, event.target.value)} data-testid="benchtop-override-select"><option value="">Use the supplier price group</option>{BENCHTOP_RANGES.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}</select></label>
-                      ) : <button type="button" className="bts-link" onClick={() => setOverriding(area.id)} data-testid="benchtop-override-open">Builder: override quotation range</button>}
+                      ) : clientView ? null : <button type="button" className="bts-link" onClick={() => setOverriding(area.id)} data-testid="benchtop-override-open">Builder: override quotation range</button>}
                     </div>
                     {surface.materialChoice === "stone" ? <p className="bts-sample">{BENCHTOP_SAMPLE_NOTE}</p> : null}
                   </div>

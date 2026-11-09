@@ -47,6 +47,14 @@ vm.runInNewContext(compiled, {
   require(name) {
     if (name === "react") return react;
     if (name === "../lib/jobFile") return fileServices;
+    if (name === "../lib/builders/browserTenantStorage.js") return {
+      browserTenantKey: (key) => key,
+      builderLocalStorage: {
+        getItem: (key) => localStorage.get(key) || null,
+        setItem: (key, value) => localStorage.set(key, value),
+        removeItem: (key) => localStorage.delete(key),
+      },
+    };
     throw new Error(`Unexpected dependency ${name}`);
   },
   window: { localStorage: {

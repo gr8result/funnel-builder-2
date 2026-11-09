@@ -19,6 +19,9 @@ await db.exec(`
 `);
 await db.exec(migration);
 await db.exec(migration);
+const notesMigration = fs.readFileSync('supabase/migrations/20261101000200_crm_lead_notes_access.sql', 'utf8');
+await db.exec(notesMigration);
+await db.exec(notesMigration);
 console.log('PASS migration applies twice on a clean database');
 
 const A = 'aaaaaaaa-0000-4000-8000-000000000001', B = 'bbbbbbbb-0000-4000-8000-000000000002';

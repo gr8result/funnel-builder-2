@@ -16,6 +16,8 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 dotenv.config({path:path.join(root, '.env.local'), quiet:true});
 dotenv.config({path:path.join(root, '.env'), quiet:true});
 const origin = process.env.CLIENT_SELECTIONS_BASE_URL || 'http://127.0.0.1:3000';
+const readOnlyJobId = String(process.env.CLIENT_SELECTIONS_READ_ONLY_JOB_ID || '').trim();
+const screenOnly = process.env.CLIENT_SELECTIONS_SCREEN_ONLY === '1';
 const out = path.join(root, 'artifacts/test-artifacts/client-selections-memory');
 fs.mkdirSync(out, {recursive:true});
 const projectId = `local-memory-${Date.now()}`;
@@ -52,7 +54,10 @@ function artworkValues(value, found=[]) {
  return found;
 }
 const expectedArtworkHash=createHash('sha256').update(JSON.stringify(artworkValues(workbook.projectEstimateBuilder))).digest('hex');
-const assetModuleUrl='data:text/javascript;base64,'+fs.readFileSync(path.join(root,'components/construction-estimation/ai-plan-takeoff/planBlobStorage.js')).toString('base64');
+// A data: module cannot resolve relative imports, so its one dependency is inlined as a data: URL too.
+const dataModule=text=>'data:text/javascript;base64,'+Buffer.from(text).toString('base64');
+const knownAssetIdsUrl=dataModule(fs.readFileSync(path.join(root,'lib/construction-estimation/knownAssetIds.js'),'utf8'));
+const assetModuleUrl=dataModule(fs.readFileSync(path.join(root,'components/construction-estimation/ai-plan-takeoff/planBlobStorage.js'),'utf8').replace("'../../../lib/construction-estimation/knownAssetIds.js'",JSON.stringify(knownAssetIdsUrl)));
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
 const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
@@ -70,7 +75,7 @@ const browser = await puppeteer.launch({
   executablePath:process.env.PUPPETEER_EXECUTABLE_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe',
   headless:true, protocolTimeout:180000, defaultViewport:{width:1920, height:1080},
 });
-const report = {passed:false, route:`${origin}/modules/estimate-builder?page=clientSelections`, projectId, tests:{}, screenshots:[], runtimeErrors:[], blockedCloudWrites:[]};
+const report = {passed:false, route:`${origin}/modules/estimate-builder?${readOnlyJobId ? `jobId=${encodeURIComponent(readOnlyJobId)}&` : ''}page=clientSelections`, projectId:readOnlyJobId || projectId, tests:{}, screenshots:[], runtimeErrors:[], blockedCloudWrites:[]};
 let page;
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 const selector = testId => `[data-testid="${testId}"]`;
@@ -90,6 +95,22 @@ async function clickText(text, scope = 'body') {
 async function screenshot(name) {
   await page.screenshot({path:path.join(out, `${name}.png`)});
   report.screenshots.push(`${name}.png`);
+}
+
+async function verifyNormalClientSelections() {
+  const rendered = await page.evaluate(() => ({
+    bodyText: document.body.innerText,
+    reconcileControls: document.querySelectorAll('[data-testid="selection-baseline-control"], [data-testid="reconcile-selections"], [data-testid="product-selection-integrity"], [data-testid="commercial-selection-review"]').length,
+    screen: document.querySelector('[data-testid^="guided-"]')?.getAttribute('data-testid') || '',
+    categories: [...document.querySelectorAll('[data-category-key]')].map(element => element.getAttribute('data-category-key')).filter(Boolean),
+  }));
+  assert.equal(rendered.reconcileControls,0,'Normal Client Selections must not render commercial reconciliation controls');
+  assert.doesNotMatch(rendered.bodyText,/\bResolve Mapping\b/,'Normal Client Selections must not render Resolve Mapping controls');
+  assert.doesNotMatch(rendered.bodyText,/\bUNMAPPED\b/,'Normal Client Selections must not render the UNMAPPED commercial table');
+  assert.doesNotMatch(rendered.bodyText,/Inclusion baseline and quote mapping/i,'Normal Client Selections must not render quotation baseline controls');
+  assert(rendered.screen,'Normal Client Selections screen did not render');
+  assert(rendered.categories.length>0,'Normal Client Selections categories did not render');
+  return rendered;
 }
 
 async function loadLocalJob(file) {
@@ -215,10 +236,24 @@ try {
    if(ids.length){const {stdout}=await runFile('powershell.exe',['-NoProfile','-Command',`Get-Process -Id ${ids.join(',')} -ErrorAction SilentlyContinue | Measure-Object WorkingSet64 -Sum | Select-Object -ExpandProperty Sum`],{windowsHide:true});processSamples.push({time:Date.now(),rendererBytes:Number(stdout.trim())});}
   }catch{}finally{processSampling=false;}
  },2000);
+ acceptance: {
  console.log('Opening route');
  await page.goto(report.route,{waitUntil:'domcontentloaded',timeout:180000});
+ if (readOnlyJobId) {
+   await waitFor(GUIDED_SCREENS,{timeout:300000});
+   await delay(3000);
+   const rendered = await verifyNormalClientSelections();
+   report.tests.readOnlyRecoveredJob={jobId:readOnlyJobId,screen:rendered.screen,categories:rendered.categories,reconcileControls:rendered.reconcileControls};
+   await screenshot('recovered-client-selections');
+   break acceptance;
+ }
  await sample('app-shell');sampler=setInterval(()=>sample('interval').catch(e=>report.runtimeErrors.push(e.message)),5000);
- console.log('Loading isolated job');await loadLocalJob(fixture);await delay(30000);await cdp.send('HeapProfiler.collectGarbage');await delay(500);await cdp.send('HeapProfiler.collectGarbage');started=Date.now();await sample('initial');
+ console.log('Loading isolated job');await loadLocalJob(fixture);await delay(30000);
+ const rendered = await verifyNormalClientSelections();
+ report.tests.normalClientSelections={screen:rendered.screen,categories:rendered.categories,reconcileControls:rendered.reconcileControls};
+ await screenshot('normal-client-selections');
+ if (screenOnly) break acceptance;
+ await cdp.send('HeapProfiler.collectGarbage');await delay(500);await cdp.send('HeapProfiler.collectGarbage');started=Date.now();await sample('initial');
  for(let cycle=1;cycle<=3;cycle++) {
   for(const key of ['hvac','electrical-technology','cabinetry','flooring','paint-wall-finishes','lighting-fans']) {
    await goHome();await openSide('interior');
@@ -280,6 +315,7 @@ try {
   if(hash!==expectedArtworkHash)throw new Error('Saved quotation artwork differs from imported original');
   return {exactArtworkRoundTrip:true,images:values.length,storedBuilderBytes:JSON.stringify(record.workbook.projectEstimateBuilder||{}).length,selectionRevision:record.workbook.clientSelectionsBook?.metadata?.selectionRevision};
  },{projectId,assetModuleUrl,expectedArtworkHash});
+ }
  report.passed=true;
  await page.screenshot({path:path.join(out,'last.png')});
 } catch(e){console.error(e);report.runtimeErrors.push(e.stack);if(page&&!page.isClosed())await page.screenshot({path:path.join(out,'failure.png')}).catch(()=>{});process.exitCode=1;}

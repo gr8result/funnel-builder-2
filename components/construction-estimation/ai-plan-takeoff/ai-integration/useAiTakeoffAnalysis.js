@@ -492,7 +492,7 @@ export function useAiTakeoffAnalysis(options) {
             const measured = vectorProductionAnalysis(response, detected, {
               id: `page-${pageNumber}`, name: response.level, page: pageNumber, pixelsPerMm: sheetPixelsPerMm,
               logicalWidth: sheet.logicalWidth, logicalHeight: sheet.logicalHeight,
-            }, { labels: roomLabelsFromText(planPage) });
+            }, { labels: roomLabelsFromText({ ...planPage, ocrRoomLabels: printedLabels.roomLabels || [] }) });
             responses[index] = { ...measured.response, drawingType: response.drawingType };
             measuredRoomPages.add(pageNumber);
             vectorReadings.push({ page: pageNumber, vector: measured.vector, detected: measured.detected,
@@ -565,6 +565,7 @@ export function useAiTakeoffAnalysis(options) {
         completed.wallReviewCandidates = vectorReadings.flatMap(reading => reading.vector.reviewWallCandidates);
         completed.openingReviewCandidates = vectorReadings.flatMap(reading => reading.vector.reviewOpeningCandidates);
         completed.wallLineage = vectorReadings.flatMap(reading => reading.vector.wallLineage.map(item => ({ ...item, page: reading.page })));
+        completed.externalAreas = vectorReadings.flatMap(reading => (reading.vector.externalAreas || []).map(item => ({ ...item, page: reading.page, level: reading.semanticInput?.level })));
         const issues = vectorReadings.flatMap(reading => localVectorReadiness({ analysis: {}, vector: reading.vector, detected: reading.detected,
           rooms: completed.rooms.filter(room => room.page === reading.page), admission: {} }).issues.map(issue => ({ ...issue, page: reading.page })));
         completed.review = [...completed.review, ...issues];
@@ -660,7 +661,7 @@ export function useAiTakeoffAnalysis(options) {
           identity: { jobId: current.jobId, takeoffId: current.takeoffId, documentHash: identity.documentHash }, page: planPage.pageNumber, pixelsPerMm,
           detected, detectionKey: candidate.detectionKey, decision: wallDecision.value, segments: planPage.vectorSegments || [] }));
       }
-      const { vector, batch, analysis, rooms: readings, detected: admittedGeometry } = buildLocalVectorAnalysis({ planPage, detected, pixelsPerMm, level, context, runId, wallDecisions, semanticInput: saved?.vectorPlanEvidence?.[reviewIdentity] || null, admitReviewedWallKeys: wallDecision && wallDecision.value !== 'reject'
+      const { vector, batch, analysis, rooms: readings, detected: admittedGeometry } = buildLocalVectorAnalysis({ planPage: { ...planPage, ocrRoomLabels: printedLabels.roomLabels || [] }, detected, pixelsPerMm, level, context, runId, wallDecisions, semanticInput: saved?.vectorPlanEvidence?.[reviewIdentity] || null, admitReviewedWallKeys: wallDecision && wallDecision.value !== 'reject'
         ? [saved.wallReviewCandidates.find(item => item.id === wallDecision.id && item.page === planPage.pageNumber).detectionKey] : [] });
       const admission = batch.detections.length
         ? await current.bridge.appendDetections(batch, { signal: work.signal })
@@ -682,6 +683,8 @@ export function useAiTakeoffAnalysis(options) {
         documentHash: identity.documentHash, requests: [],
         inspections: [{ page: planPage.pageNumber, level, drawingType: 'floor_plan', localOnly: true }],
         linework: { ...(saved?.linework || {}), [planPage.pageNumber]: { ...vector.report, detector: detected.stats, openings: detected.openings.length, rooms: vector.rooms.length } },
+        // Outdoor recesses in the building outline: shown in the schedule, never floor area.
+        externalAreas: [...(saved?.externalAreas || []).filter((item) => item.page !== planPage.pageNumber), ...(vector.externalAreas || []).map((item) => ({ ...item, page: planPage.pageNumber, level }))],
         rooms, analysedAt: new Date().toISOString(), completedAt: readiness.needsReview ? null : new Date().toISOString(), added: admission.added,
         status: readiness.needsReview ? 'review' : admission.status,
       };

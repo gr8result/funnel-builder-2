@@ -215,7 +215,7 @@ try {
   await settle();
   await dragPlan({x:240,y:360},{x:280,y:360});
   rooms=await roomSnapshot();assert.equal(rooms[0].areaM2,2.56,'Vertex correction recalculates area');
-  await page.evaluate(()=>[...document.querySelectorAll('[data-room-id="test-room-0"] button')].find(b=>b.textContent==='Confirm boundary').click());
+  await page.evaluate(()=>[...document.querySelectorAll('[data-room-id="test-room-0"] button')].find(b=>b.textContent==='Approve room').click());
   await save();await reopen();
   rooms=await roomSnapshot();assert.equal(rooms[0].areaM2,2.56,'Boundary survives real saved-job reopen');assert(rooms[0].selected);
   await page.evaluate(()=>document.querySelector('[data-testid="room-boundary-panel"] input[type="checkbox"]').click());

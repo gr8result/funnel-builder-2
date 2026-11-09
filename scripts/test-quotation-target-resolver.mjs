@@ -64,10 +64,12 @@ console.log('PASS pure resolver, registry, engine and taxonomy load in any order
   const change = selectionReconciliationFinancialImpact(before, offsetting);
   assert.equal(change.delta, 0, 'equal and opposite line changes preserve the final total');
   assert.equal(change.rowChanges.length, 2, 'both changed lines remain visible for approval');
+  assert.equal(change.changedLineCount, 2, 'the client-facing deferral message reports the actual changed line count');
   assert.equal(change.requiresApproval, true, 'a zero net delta does not waive row-level approval');
   const unchanged = selectionReconciliationFinancialImpact(before, structuredClone(before));
   assert.equal(unchanged.requiresApproval, false);
   assert.equal(unchanged.rowChanges.length, 0);
+  assert.equal(unchanged.changedLineCount, 0);
   const editedSelections = { ...before, clientSelectionsBook: { rooms: [{ id: 'kitchen', name: 'Kitchen', rows: [] }] }, quotation: { KITCHEN: { rows: [{ id: 'line-a', item: 'Sink', qty: 2, unit: 'EACH', excelRate: 110 }, { id: 'line-b', item: 'Mixer', qty: 1, unit: 'EACH', excelRate: 90 }] } } };
   const pendingImpact = selectionReconciliationFinancialImpact(before, editedSelections);
   const deferred = deferUnapprovedQuotationChanges(before, editedSelections, pendingImpact);

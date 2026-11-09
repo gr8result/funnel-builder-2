@@ -10,8 +10,10 @@ const source = fs.readFileSync('pages/modules/builders/selections-book.js', 'utf
 const ratesStart = source.indexOf('function plumbingProductRates(');
 const cardStart = source.indexOf('function PlumbingFixtureProductCard(');
 const cardEnd = source.indexOf('function PlumbingAllocationModal(', cardStart);
-assert.ok(ratesStart > 0 && cardStart > ratesStart && cardEnd > cardStart);
-const compiled = ts.transpileModule(source.slice(ratesStart, cardEnd), {
+const referenceStart = source.indexOf('function templatePriceReference(');
+const referenceEnd = source.indexOf('function ensureKitchenRoom(', referenceStart);
+assert.ok(ratesStart > 0 && cardStart > ratesStart && cardEnd > cardStart && referenceStart > cardEnd && referenceEnd > referenceStart);
+const compiled = ts.transpileModule(`${source.slice(ratesStart, cardEnd)}\n${source.slice(referenceStart, referenceEnd)}`, {
   compilerOptions: { jsx: ts.JsxEmit.React, target: ts.ScriptTarget.ES2022 },
 }).outputText;
 const dependencies = {
@@ -37,8 +39,15 @@ const render = selectedProduct => renderToStaticMarkup(React.createElement(Card,
   requirement: { requirementKey: 'bathroom-basin', defaultAllowance: 80 }, product: selectedProduct,
 }));
 const priced = render(product);
-assert.match(priced, /Price each: \$110\.00/);
-assert.match(priced, /Upgrade: \+\$20\.00/, 'inclusive price is compared to the ex-GST allowance');
+assert.match(priced, /src="\/test-assets\/test-brick-001\.svg"/);
+assert.match(priced, /<strong>Test basin<\/strong>/);
+assert.match(priced, /Code: TEST-BASIN/);
+assert.match(priced, /Supplier: Supplier/);
+assert.match(priced, /Price each \(inc GST\): \$110\.00/);
+assert.match(priced, /Allowance each \(ex GST\): \$80\.00/);
+assert.match(priced, /Upgrade \(ex GST\): \+\$20\.00/, 'inclusive price is compared to the ex-GST allowance');
+assert.match(priced, />View Details</);
+assert.match(priced, />Select</);
 const unknownBasis = render({ ...product, gstIncluded: undefined });
 assert.match(unknownBasis, /GST basis required/);
 assert.doesNotMatch(unknownBasis, /Upgrade: \+\$/);

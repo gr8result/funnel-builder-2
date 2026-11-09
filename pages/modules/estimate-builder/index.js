@@ -3,8 +3,18 @@ import { useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import dynamic from "next/dynamic";
 import TakeoffRecoveryPanel from "../../../components/construction-estimation/ai-plan-takeoff/TakeoffRecoveryPanel";
-const EstimateBuilderWorkbook = dynamic(() => import("../../../components/estimate-builder/EstimateBuilderWorkbook"), { ssr: false });
-const ProductLibraryPage = dynamic(() => import("../builders/product-library"), {
+// Both screens are client-only (ssr: false), but the server build still compiled their
+// whole import graph (~75 MB of output, including every product catalogue), which made
+// this page's dev compile run out of memory. Next replaces `typeof window` with
+// "undefined" in the server build, so webpack drops the import() below from the server
+// bundle. The browser build is unchanged.
+const NotRenderedOnServer = () => null;
+const EstimateBuilderWorkbook = dynamic(() => (typeof window === "undefined"
+  ? Promise.resolve(NotRenderedOnServer)
+  : import("../../../components/estimate-builder/EstimateBuilderWorkbook")), { ssr: false });
+const ProductLibraryPage = dynamic(() => (typeof window === "undefined"
+  ? Promise.resolve(NotRenderedOnServer)
+  : import("../builders/product-library")), {
   ssr: false,
   loading: () => <p role="status">Loading Product Library...</p>,
 });

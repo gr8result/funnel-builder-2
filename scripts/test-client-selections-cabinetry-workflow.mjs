@@ -68,7 +68,8 @@ assert.deepEqual(CABINETRY_WORKFLOW_STAGES, [
   "Features",
   "Review & Confirm",
 ], "approved cabinetry stages must be present");
-assert.equal(draft.schemaVersion, 2, "cabinetry uses the room-based schema");
+// Schema 3 since the 2026-10-08 canonical cabinetry model (cabinetryWorkflow.js); still room-based.
+assert.equal(draft.schemaVersion, 3, "cabinetry uses the room-based schema");
 assert.equal(draft.locations.length, 0, "cabinetry does not auto-create rooms");
 assert.equal(draft.schedule.length, 0, "cabinetry does not auto-create schedule rows");
 requiredLocations.forEach((location) => assert.ok(CABINETRY_LOCATIONS.includes(location), `${location} source-of-truth location is available`));

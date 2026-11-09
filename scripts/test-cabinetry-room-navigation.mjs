@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { adjacentCabinetryRoom, cabinetryLocationMissingRequirements, cabinetryRoomProgress, cabinetryRoomSequence, normaliseCabinetrySelection } from '../lib/builders/cabinetryWorkflow.js';
+import { adjacentCabinetryRoom, approveCabinetryRoom, cabinetryLocationMissingRequirements, cabinetryRoomProgress, cabinetryRoomSequence } from '../lib/builders/cabinetryWorkflow.js';
 import { SIX_CABINETRY_ROOMS, readyCabinetryLocation, readyCabinetrySelection } from './cabinetry-room-fixture.mjs';
 
 // Cabinetry is one continuous multi-room workflow: the project's configured locations in one fixed
@@ -35,9 +35,9 @@ assert.equal(adjacentCabinetryRoom(six, 'Garage', 1), null);
 pass('Next and Previous follow the sequence in both directions and stop only at its ends');
 
 // Progress counts rooms; it does not depend on where the user is.
-assert.deepEqual(cabinetryRoomProgress(six), { complete: 0, total: 6, label: '0 of 6 locations complete', rooms: forward.map(location => ({ location, complete: false })) });
-assert.equal(cabinetryRoomProgress(someDone).label, '2 of 6 locations complete');
-assert.equal(cabinetryRoomProgress(six.map(item => ({ ...item, status: 'complete' }))).label, '6 of 6 locations complete');
+assert.deepEqual(cabinetryRoomProgress(six), { complete: 0, total: 6, label: '0 of 6 specifications complete', rooms: forward.map(location => ({ location, complete: false })) });
+assert.equal(cabinetryRoomProgress(someDone).label, '2 of 6 specifications complete');
+assert.equal(cabinetryRoomProgress(six.map(item => ({ ...item, status: 'complete' }))).label, '6 of 6 specifications complete');
 assert.equal(cabinetryRoomProgress([]).label, 'No cabinetry locations configured');
 pass('room progress reads the same list');
 
@@ -48,8 +48,10 @@ for (const location of selection.locations) assert.deepEqual(cabinetryLocationMi
 assert.equal(selection.summary.complete, false);
 const before = JSON.stringify(selection.locations.find(location => location.location === 'Kitchen').areaSelections);
 for (const [index, name] of forward.entries()) {
-  selection = normaliseCabinetrySelection({ ...selection, locations: selection.locations.map(location => (location.location === name ? { ...location, status: 'complete', confirmedAt: `2026-10-05T00:0${index}:00.000Z` } : location)) });
-  assert.equal(cabinetryRoomProgress(selection.locations).complete, index + 1, `${index + 1} of 6 after ${name}`);
+  const location = selection.locations.find(location => location.location === name);
+  selection = approveCabinetryRoom(selection, location.projectRoomId || location.id, 'navigation-test', `2026-10-05T00:0${index}:00.000Z`);
+  assert.equal(cabinetryRoomProgress(selection.locations).complete, 6, 'all ready specifications remain complete independently of approval');
+  assert.equal(selection.summary.approvedRoomCount, index + 1, `${index + 1} approved after ${name}`);
   assert.equal(selection.summary.complete, index === forward.length - 1, 'Cabinetry is complete only when every location is');
 }
 assert.equal(JSON.stringify(selection.locations.find(location => location.location === 'Kitchen').areaSelections), before, 'Kitchen data is untouched by confirming the other rooms');
@@ -61,6 +63,8 @@ const page = fs.readFileSync('pages/modules/builders/selections-book.js', 'utf8'
 assert(!page.includes('nextIncompleteCabinetryRoomAfter'), 'Next no longer looks for the next incomplete room');
 assert(/const \{ commitRequirement = true, stayOnScreen = true \} = options;/.test(page), 'a cabinetry save stays on screen unless told otherwise');
 assert(page.includes('onSelectProduct(requirement, next, { stayOnScreen: true });'));
-assert(page.includes('adjacentCabinetryRoom(next.locations, confirmedRoomName, 1)') && page.includes('goToCabinetryRoom(previousRoom.location, CABINETRY_WORKFLOW_STAGES.length - 1)'));
+assert(page.includes('Confirm & Approve ${activeLocation?.location || ""} Cabinetry'));
+assert(!page.includes('goToCabinetryRoom(nextRoom.location, 0)'), 'approval never automatically advances to another room');
+assert(page.includes('goToCabinetryRoom(previousRoom.location, CABINETRY_WORKFLOW_STAGES.length - 1)'));
 pass('the workflow navigates by the room sequence and saves never move the user');
 console.log('\nCabinetry room navigation: all checks passed');

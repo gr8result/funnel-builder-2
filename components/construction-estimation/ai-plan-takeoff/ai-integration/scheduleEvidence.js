@@ -9,11 +9,51 @@ export function createAiScheduleRows(analysis, pages) {
     planSheet: item.page, category, quantity, unit, source: 'ai',
     notes: `${item.basis}; ${Math.round(item.confidence * 100)}% confidence. ${item.evidence}`,
   });
+  const roomRows = (analysis?.rooms || []).filter((item) => pages.includes(item.page)).flatMap((item, index) => {
+    const approved = item.confirmed === true && item.reviewRequired !== true && Number(item.areaM2) > 0;
+    const base = {
+      ...item,
+      section: 'Room Areas',
+      planSheet: item.page,
+      floor: item.level,
+      quantity: Number(item.areaM2) > 0 ? item.areaM2 : null,
+      unit: 'm2',
+      source: item.source || 'ai',
+      commercialStatus: approved ? 'Approved' : item.excluded ? 'Rejected' : 'Review required',
+      reviewRequired: !approved,
+      notes: approved
+        ? 'Approved measured room boundary.'
+        : (item.reviewReasons || []).join(' ') || 'Boundary is not approved for commercial quantities.',
+    };
+    const id = item.id || `room-area-${item.page}-${index}`;
+    const name = item.name || `Room ${index + 1}`;
+    // Measurement bases from the plan model, shown with their basis and source.
+    const bases = item.measurementBases;
+    const basisNote = bases ? ` Basis: net usable floor area ${bases.netUsableFloorAreaM2} m² (${bases.basis.netUsableFloorAreaM2}) Gross room area ${bases.grossRoomAreaM2} m² (${bases.basis.grossRoomAreaM2}) Floor-finish area ${bases.floorFinishAreaM2} m² (${bases.basis.floorFinishAreaM2}) Source: ${bases.source}` : '';
+    if (bases) base.notes = `${base.notes}${basisNote}`;
+    return [
+      { ...base, itemId: `${id}:floor-area`, category: `${name} — Floor area`, ...(bases ? { measurementBasis: 'net usable floor area' } : {}) },
+      {
+        ...base,
+        itemId: `${id}:ceiling-area`,
+        category: `${name} — Ceiling area`,
+        notes: `${base.notes} Planar ceiling area equals the approved room boundary; adjust separately for raked or voided ceilings.`,
+      },
+    ];
+  });
   return {
-    rooms: [...(analysis?.rooms || []).filter(eligible).map((item, i) => row(item, i, 'Rooms', 1, 'No', item.name)), ...roomQuantityRows((analysis?.rooms || []).filter(item => pages.includes(item.page)))],
+    rooms: [...roomRows, ...roomQuantityRows((analysis?.rooms || []).filter(item => pages.includes(item.page)))],
     customTakeoffs: [
       ...(analysis?.fixtures || []).filter(eligible).map((item, i) => row(item, i, 'Custom Takeoffs', item.quantity, 'No', `${item.type}${item.room ? ` — ${item.room}` : ''}`)),
       ...(analysis?.documentedQuantities || []).filter(eligible).map((item, i) => row(item, i, 'Drawing evidence', item.value, item.unit, item.label)),
+      // Outdoor recesses in the building outline, measured from the plan: listed for external works
+      // (paving, soffits, screening). They are not rooms and never add to floor or ceiling area.
+      ...(analysis?.externalAreas || []).filter((item) => pages.includes(item.page) && Number(item.areaM2) > 0).map((item) => ({
+        section: 'External Areas', itemId: `external-area-${item.page}-${item.id}`, planSheet: item.page, floor: item.level, level: item.level,
+        category: 'External recess (outdoor area, not a room)', quantity: item.areaM2, unit: 'm2', source: 'plan',
+        commercialStatus: 'Measured — outdoor area, excluded from floor area', reviewRequired: false,
+        notes: `${item.basis || ''} ${item.evidence || ''}${item.mouthMm ? ` Open mouth ${Math.round(item.mouthMm)} mm.` : ''}`.trim(),
+      })),
     ],
   };
 }

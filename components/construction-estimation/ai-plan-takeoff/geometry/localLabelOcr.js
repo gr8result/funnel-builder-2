@@ -100,6 +100,49 @@ export async function recogniseOpeningLabels({ raster, logicalWidth, pixelsPerMm
   }
   return { labels, unreadable, stats: { lines: lines.length, nearWalls: near.length, read: todo.length, textLayer: fromText.length, labels: labels.length } };
 }
+// Room names printed as outlined glyphs (or on a scan) have no text layer. Every text line inside the
+// building that reads clearly as a short room name becomes a room label; lines already read by the
+// opening pass are reused, not read again. Anything else (notes, sizes, ceiling heights) is ignored.
+export const ROOM_NAME_WORDS = /^(?:(?:master|main|guest|kids?|upper|lower|side|front|rear|open|outdoor)\s+)?(?:bed(?:room)?(?:\s*\d)?|living|lounge|family|dining|meals|kitchen|ens(?:uite)?|bath(?:room)?|wc|toilet|powder|pdr|laundry|ldry|wir|wip|robe|pantry|study|office|media|theatre|garage|carport|porch|alfresco|entry|foyer|hall(?:way)?|linen|lin|store|storage|rumpus|games|activity|retreat|patio|deck|balcony|terrace|scullery|butler|mud\s*room|pooja|gym|cellar|nook|lobby|void)(?:\s*\d)?$/i;
+export async function recogniseRoomLabels({ raster, logicalWidth, pixelsPerMm, walls = [], textItems = [], reader, alreadyRead = [] }, overrides = {}) {
+  const o = { ...LABEL_DEFAULTS, minRoomOcrConfidence: 85, roomNameTextReachMm: 3000, ...overrides };
+  if (!walls.length) return { labels: [], stats: { read: 0, labels: 0 } };
+  const pts = walls.flatMap((w) => w.nodes || []);
+  const box = { x0: Math.min(...pts.map((p) => p.x)), x1: Math.max(...pts.map((p) => p.x)), y0: Math.min(...pts.map((p) => p.y)), y1: Math.max(...pts.map((p) => p.y)) };
+  const { lines } = proposeLabelLines(raster, { logicalWidth }, o);
+  const inside = lines.filter((l) => l.logical.x >= box.x0 && l.logical.x <= box.x1 && l.logical.y >= box.y0 && l.logical.y <= box.y1);
+  const covered = (line) => textItems.some((t) => Math.hypot((t.x ?? 0) - line.logical.x, (t.y ?? 0) - line.logical.y) <= Math.max(3, line.logical.length / 2));
+  const readBefore = (line) => alreadyRead.find((r) => Math.hypot(r.x - line.logical.x, r.y - line.logical.y) <= 0.5);
+  const near = (line) => walls.some((w) => w.nodes?.length >= 2 && segmentDistance(line.logical, w.nodes[0], w.nodes[w.nodes.length - 1]) <= o.nearWallMm * pixelsPerMm);
+  const labels = []; let read = 0;
+  for (const line of inside) {
+    if (covered(line)) continue;
+    const before = readBefore(line);
+    if (!before && near(line)) continue; // the opening pass read it and it was a size label
+    // The opening pass ranks readings for size codes; a line it did not read as a room name is read again.
+    let best = before && ROOM_NAME_WORDS.test(String(before.text || '').trim()) ? { text: before.text, ocrConfidence: before.ocrConfidence } : null;
+    if (!best) {
+      read += 1;
+      for (const rotation of line.orientation === 'h' ? [0] : [90, 270]) {
+        const r = await reader.read(labelCrop(raster, line, rotation));
+        const candidate = { text: String(r.text || '').trim(), ocrConfidence: r.confidence || 0 };
+        if (!best || candidate.ocrConfidence > best.ocrConfidence) best = candidate;
+      }
+    }
+    const text = String(best?.text || '').replace(/\s+/g, ' ').trim();
+    // Outlined (hollow) glyphs read correctly but with a low score; a whole line that is exactly a room
+    // name of five or more letters is not produced by chance, so it is accepted at any score.
+    const exactLongName = ROOM_NAME_WORDS.test(text) && text.replace(/[^A-Za-z]/g, '').length >= 5;
+    if (!text || !ROOM_NAME_WORDS.test(text) || (best.ocrConfidence < o.minRoomOcrConfidence && !exactLongName)) continue;
+    // The PDF already prints this name here: its own text is exact, so the reading adds nothing.
+    const sameName = (t) => String(t.text || '').trim().toLowerCase() === text.toLowerCase()
+      && Math.hypot((t.x ?? 0) - line.logical.x, (t.y ?? 0) - line.logical.y) <= o.roomNameTextReachMm * pixelsPerMm;
+    if (textItems.some(sameName)) continue;
+    labels.push({ text, x: line.logical.x, y: line.logical.y, ocrConfidence: Math.round(best.ocrConfidence), source: 'local-ocr' });
+  }
+  return { labels, stats: { lines: inside.length, read, labels: labels.length } };
+}
+
 // The number and its suffix are scored separately: a faint suffix (LV, DH) read with low confidence is
 // dropped and the code kept on its own; the number's own confidence is what the label is trusted by.
 export function scoredReading(read, minSuffixConfidence = 55) {

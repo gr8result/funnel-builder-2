@@ -72,7 +72,8 @@ const dependencies = {
   workbookJobName: () => "Existing job",
 };
 const api = new Function(...Object.keys(dependencies), `${body}; return {loadStoredJobUnlocked, listStoredJobs};`)(...Object.values(dependencies));
-const restored = await api.loadStoredJobUnlocked(jobKey);
+assert.equal(await api.loadStoredJobUnlocked(jobKey), null, "Normal hydration never substitutes a historical backup for a missing canonical job");
+const restored = await api.loadStoredJobUnlocked(jobKey, { allowBackupRecovery: true });
 assert.equal(restored.key, jobKey);
 assert.equal(restored.jobId, jobId);
 assert.equal(restored.workbook.jobId, jobId);
@@ -106,7 +107,8 @@ assert.equal(payloadReads, 10, "Listing must inspect every backup's actual job I
 assert.equal(maxPendingPayloadReads, 1, "Listing reads backup payloads sequentially");
 assert.equal(repeatedJobListing.some((row) => "workbook" in row), false, "Listing retains summaries, not full workbooks");
 payloadReads = 0;
-assert.equal((await api.loadStoredJobUnlocked(jobKey)).savedAt, "2026-09-10T00:00:00Z");
+assert.equal(await api.loadStoredJobUnlocked(jobKey), null, "Backup-only jobs remain opt-in during ordinary hydration");
+assert.equal((await api.loadStoredJobUnlocked(jobKey, { allowBackupRecovery: true })).savedAt, "2026-09-10T00:00:00Z");
 assert.equal(payloadReads, 1, "Opening the newest matching backup must not deserialize older payloads");
 const sameNameDifferentJob = backup("same-name", "2026-09-05T12:00:00Z", "different-job-with-same-name");
 records.set(sameNameDifferentJob.key, sameNameDifferentJob);
@@ -118,4 +120,4 @@ assert.equal(sameNameListing.find((row) => row.key === jobKey).savedAt, "2026-09
 assert.equal(sameNameListing.find((row) => row.key === "job:different-job-with-same-name").recoveredFromBackupKey, sameNameDifferentJob.key);
 assert.equal(payloadReads, 11, "Older same-name backups must be inspected for separate job IDs");
 assert.equal(maxPendingPayloadReads, 1, "Same-name discovery keeps only one payload read in flight");
-console.log("PASS missing canonical jobs recover the latest exact-ID backup read-only; existing records and original protected jobs remain authoritative.");
+console.log("PASS historical backups are opt-in, exact-ID and read-only; normal hydration and existing canonical records never load stale backup data.");

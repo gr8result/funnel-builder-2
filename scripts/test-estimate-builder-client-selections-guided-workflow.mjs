@@ -5,7 +5,9 @@ const workbookSource = await readFile(new URL("../components/estimate-builder/Es
 const selectionsBookSource = await readFile(new URL("../pages/modules/builders/selections-book.js", import.meta.url), "utf8");
 const clientSelectionsSource = await readFile(new URL("../pages/modules/builders/client-selections.js", import.meta.url), "utf8");
 
-assert.ok(workbookSource.includes('const loadCommercialClientSelectionsPage = () => import("../../pages/modules/builders/selections-book")'), "Estimate Builder Client Selections card must load the selections-book module");
+assert.ok(workbookSource.includes("const loadCommercialClientSelectionsPage = (retry = false) => {"), "Estimate Builder Client Selections card must load the selections-book module");
+assert.ok(workbookSource.includes("if (retry) commercialClientSelectionsPagePromise = null;"), "Retry must invalidate a stuck module import");
+assert.ok(workbookSource.includes("loadCommercialClientSelectionsPage(retryKey > 0)"), "The module host must perform a fresh import on retry");
 assert.ok(workbookSource.includes('page: "clientSelections"'), "Estimate Builder dashboard must keep the Client Selections entry point");
 assert.ok(workbookSource.includes('initialPage = ""'), "Estimate Builder must accept an explicit initial page deep link");
 assert.ok(workbookSource.includes("setEstimateBuilderPageQuery"), "Estimate Builder navigation must keep the active workbook page in the route query");

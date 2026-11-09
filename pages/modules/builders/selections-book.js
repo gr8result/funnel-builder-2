@@ -1,12 +1,15 @@
 import { useAuth } from '../../../context/AuthContext.js';
 import { requestApprovedCatalogue } from '../../../lib/builders/approvedCatalogueRequest.js';
-import { chooseSelectionBookSource, selectionBookFromWorkbook, roomForSavedRequirement } from '../../../lib/builders/selectionBookSource.js';
+import { selectionBookFromWorkbook, roomForSavedRequirement, reconcileSelectionBookSources, bookHasSelections, selectionBookRevision } from '../../../lib/builders/selectionBookSource.js';
+import { canonicaliseSelectionAllocations } from '../../../lib/builders/selectionAllocationRooms.js';
 import LazySchedulePage from '../../../components/client-selections/LazySchedulePage.jsx';
 import { createSelectionsCover, renderSelectionsCover, selectionsCoverCss } from "../../../lib/builders/selectionsCover.js";
-import { buildSelectionsSchedule } from "../../../lib/builders/selectionsScheduleDocument.js";
-import { MULTI_PRODUCT_REQUIREMENTS, selectionAttention } from "../../../lib/builders/selectionAttention.js";
+import { buildSelectionsSchedule, scheduleRowNeedsProductImage, scheduleRowRequiresProductImage } from "../../../lib/builders/selectionsScheduleDocument.js";
+import { MULTI_PRODUCT_REQUIREMENTS, selectionAttention, selectionDecisionSummary } from "../../../lib/builders/selectionAttention.js";
 import { roomConflicts, saveLineWithDecision } from "../../../lib/builders/selectionAssignments.js";
 import SelectionAttentionPanel from "../../../components/client-selections/SelectionAttentionPanel.jsx";
+import VariationSummaryPanel, { readEstimatorView, writeEstimatorView } from "../../../components/client-selections/VariationSummaryPanel.jsx";
+import { builderReviewTaskId, builderReviewTasks, bookWithPricingReviews, recordBuilderPricingReview, recordClientVariationDecision, selectionPricingReviews, selectionVariationItems, variationSummary } from "../../../lib/builders/selectionVariationPricing.js";
 import { browserTenantKey } from '../../../lib/builders/browserTenantStorage.js';
 import GarageDoorChoiceGrid from "../../../components/product-library/GarageDoorChoiceGrid";
 import GarageDoorReviewPreview from "../../../components/product-library/GarageDoorReviewPreview";
@@ -177,6 +180,12 @@ import {
   applyKitchenColoursToButlersPantry,
   applyRoomColoursToTargets,
   buildCabinetrySelectionPayload,
+  approveCabinetryRoom,
+  applyCabinetryBulkheadChoice,
+  cabinetryBulkheadOptions,
+  cabinetryProjectRoomOptions,
+  isCabinetryRoomApproved,
+  isCabinetryRoomComplete,
   cabinetryLocationMissingRequirements,
   cabinetryRoomProgress,
   cabinetryRoomSequence,
@@ -189,7 +198,7 @@ import {
   normaliseCabinetrySelection,
   overrideCabinetryArea,
 } from "../../../lib/builders/cabinetryWorkflow";
-import { applyConfirmedClientSelectionCorrections } from "../../../lib/builders/clientSelectionCorrections";
+import { applyConfirmedClientSelectionCorrections, carryForwardConfirmedDecisions } from "../../../lib/builders/clientSelectionCorrections";
 import { roundMoney } from "../../../lib/builders/selectionBudget";
 import {
   STONE_BENCHTOP_CATALOGUE,
@@ -282,6 +291,7 @@ const CABINETRY_COLOUR_PAGE_SIZE = 60;
 
 const STATUS_OPTIONS = ["pending", "selected", "approved", "ordered"];
 const EMBEDDED_SELECTIONS_BOOK_STORAGE_KEY = "gr8:embedded-selections-book";
+const EMPTY_SELECTION_LIST = Object.freeze([]);
 // Long enough to coalesce a run of clicks, short enough that a refresh loses nothing.
 const SELECTION_AUTOSAVE_DELAY_MS = 1200;
 
@@ -1678,6 +1688,21 @@ function BuilderSelectionsBookPageContent({
   const approvedCatalogueSessionRef = useRef(null);
   const [hydratedStandardBookKey, setHydratedStandardBookKey] = useState('');
   const loadedBookKeyRef = useRef("");
+  // Where the book on screen came from, and whether it held selections then. Guards saves: a template
+  // book (nothing loaded) is never saved over a job or project, and emptying a book that held
+  // selections is recorded as an explicit clearing.
+  const bookOriginRef = useRef({ source: "", hadSelections: false });
+  // True once loadBook() has put this job's book on screen. Before that the book is a placeholder:
+  // nothing written from it (draft or save) may count as the user's edit or cancel the load.
+  const bookHydratedRef = useRef(false);
+  // The job's saved selection revision the book on screen was loaded from (or last saved as). Drafts
+  // record it, and saves send it, so a book from an older revision never replaces a newer job.
+  const baseSelectionRevisionRef = useRef("");
+  // Which copy the book on screen was loaded from (job / browser-draft / cloud / template). The
+  // project's cloud selection rows are a projection of the cloud book, so the schedule trusts them only
+  // when the cloud book is the one on screen.
+  const [bookLoadSource, setBookLoadSource] = useState("");
+  const loadCancelledRef = useRef(false);
   const bookEditVersionRef = useRef(0);
   const autosaveTimerRef = useRef(null);
   const autosavePendingBookRef = useRef(null);
@@ -1822,8 +1847,9 @@ function BuilderSelectionsBookPageContent({
   const totals = useMemo(() => selectionTotals(book), [book]);
   const exteriorWallConstruction = useMemo(() => normaliseExteriorWallConstruction(book?.exteriorWallConstruction), [book?.exteriorWallConstruction]);
   const reviewablePersistedProjectSelections = useMemo(
-    () => persistedProjectSelections.filter((selection) => !selectionHiddenByExteriorWallConstruction(selection, exteriorWallConstruction)),
-    [persistedProjectSelections, exteriorWallConstruction]
+    () => (bookLoadSource === "cloud" || !embedded ? persistedProjectSelections : [])
+      .filter((selection) => !selectionHiddenByExteriorWallConstruction(selection, exteriorWallConstruction)),
+    [persistedProjectSelections, exteriorWallConstruction, bookLoadSource, embedded]
   );
   const scheduleReview = useMemo(
     () => reviewablePersistedProjectSelections.length ? reviewPersistedProjectSelections(reviewablePersistedProjectSelections) : reviewScheduleBook(book),
@@ -1840,20 +1866,41 @@ function BuilderSelectionsBookPageContent({
       if (!product) return null;
       const firstImage = Array.isArray(product.images) ? product.images[0] : "";
       return { productName: product.productName, brand: product.brand, supplier: product.supplier, colour: product.colour, finish: product.finish,
+        retailReferencePrice: product.retailReferencePrice, retailReferenceType: product.retailReferenceType,
+        retailReferenceUnit: product.retailReferenceUnit, retailReferenceGstBasis: product.retailReferenceGstBasis,
+        retailReferenceSupplier: product.retailReferenceSupplier, retailReferenceSourceUrl: product.retailReferenceSourceUrl,
+        retailReferenceVerifiedAt: product.retailReferenceVerifiedAt,
         imageUrl: product.primaryImageUrl || product.thumbnailUrl || product.imageUrl || product.exactImageUrl || product.imageReference || (Array.isArray(product.galleryImageUrls) ? product.galleryImageUrls[0] : "") || (typeof firstImage === "string" ? firstImage : firstImage?.url) || "" };
     };
   }, [workspaceId, databaseCatalogue.revision]);
   // The contract schedule body: Exterior Selections, Interior Selections, Painting Schedule - one
   // continuous document paginated by page capacity (lib/builders/selectionsScheduleDocument.js).
+  const scheduleExteriorWalls = embeddedWorkbook?.takeoffEngine?.lastJobSetupSync?.payload?.schedule?.projectTotals?.exteriorWalls || EMPTY_SELECTION_LIST;
   const selectionsSchedule = useMemo(() => buildSelectionsSchedule(scheduleSourceBook({ persistedSelections: reviewablePersistedProjectSelections, book }), {
     productLookup: scheduleProductLookup,
     firstPageNumber: 3,
-    exteriorWalls: embeddedWorkbook?.takeoffEngine?.lastJobSetupSync?.payload?.schedule?.projectTotals?.exteriorWalls || [],
+    exteriorWalls: scheduleExteriorWalls,
     isHidden: (row, guided) => exteriorWallConstruction?.brickApplicable === false
       && /\bbrick/i.test([row.guidedRequirementKey, guided.requirementKey, guided.familyKey, guided.productName].filter(Boolean).join(" ")) && !/\bexposed\b/i.test(String(guided.productName || "")),
-  }), [book, reviewablePersistedProjectSelections, scheduleProductLookup, exteriorWallConstruction, embeddedWorkbook]);
-  const effectiveScheduleItems = useMemo(() => selectionsSchedule.rows.map((row) => ({ id: row.id, sourceRowId: row.sourceRowId, selectionId: row.id, category: row.item, area: row.qtyLocation, title: row.product,
-    imageUrl: row.imageUrl, statusLabel: row.status, priceLabel: "", fields: [] })), [selectionsSchedule]);
+  }), [book, reviewablePersistedProjectSelections, scheduleProductLookup, exteriorWallConstruction, scheduleExteriorWalls]);
+  const effectiveScheduleItems = useMemo(() => selectionsSchedule.rows.map((row) => ({
+    id: row.id,
+    sourceRowId: row.sourceRowId,
+    selectionId: row.id,
+    requirementKey: row.requirementKey,
+    group: row.group,
+    category: row.item,
+    area: row.qtyLocation,
+    title: row.product,
+    productId: row.productId,
+    productCode: row.productCode,
+    imageUrl: row.imageUrl,
+    swatch: row.swatch,
+    status: row.status,
+    statusLabel: row.status,
+    priceLabel: "",
+    fields: [],
+  })), [selectionsSchedule]);
   const currentSelectionsRevisionLabel = useMemo(() => {
     const latest = reviewablePersistedProjectSelections.map((selection) => selection.updated_at || selection.selected_at || "").filter(Boolean).sort().at(-1);
     return latest ? formatScheduleRevisionDate(latest) : formatScheduleRevisionDate(book.updatedAt);
@@ -2036,6 +2083,9 @@ function BuilderSelectionsBookPageContent({
     const savedSchedule = guidedSelectionMap.get(ELECTRICAL_SCHEDULE_REQUIREMENT_KEY)?.selected_details?.electricalSchedule || null;
     const rooms = houseRooms(projectLocationList);
     const roomNames = rooms.map((room) => room.name);
+    if (typeof window !== "undefined" && window.__gr8DebugBookLoad) {
+      console.info("[Client Selections debug] electrical", JSON.stringify({ requirement: Boolean(requirement), saved: (savedSchedule?.rooms || []).filter((room) => Object.keys(room.points || {}).length).map((room) => `${room.roomId}|${room.room}`), projectRooms: rooms.map((room) => `${room.id}|${room.name}`).slice(0, 12) }));
+    }
     const current = normaliseElectricalSchedule(savedSchedule, rooms, {
       baseline: electricalInclusionBaseline(embeddedWorkbook?.standardInclusions || {}, roomNames),
       estimate: electricalEstimateCounts(embeddedWorkbook || {}, roomNames),
@@ -2251,7 +2301,11 @@ function BuilderSelectionsBookPageContent({
     return Array.from(byIdentity.values());
   }, [approvedCatalogueProducts, brickMasterSelectionProducts, entryDoorMasterSelectionProducts, masterSelectionProducts, roofingMasterSelectionProducts, windowMasterSelectionProducts, workspaceId, guidedRequirement, databaseCatalogue.revision]);
   const masterProductsForGuidedFamily = useMemo(() => masterCatalogueProducts.filter((product) => product.familyKey === guidedRequirement.familyKey && product.active !== false && !product.archived && !product.discontinued), [guidedRequirement.familyKey, masterCatalogueProducts]);
-  const builderEnabledForGuidedFamily = useMemo(() => builderEnablements.filter((item) => item.organisationId === workspaceId && item.enabled !== false && item.active !== false && masterCatalogueProducts.some((product) => product.productCode === item.masterProductCode && product.familyKey === guidedRequirement.familyKey)), [builderEnablements, guidedRequirement.familyKey, masterCatalogueProducts, workspaceId]);
+  // One pass over the catalogue (it was searched once per enablement: ~3 s on a real job's reload).
+  const builderEnabledForGuidedFamily = useMemo(() => {
+    const familyCodes = new Set(masterCatalogueProducts.filter((product) => product.familyKey === guidedRequirement.familyKey).map((product) => product.productCode));
+    return builderEnablements.filter((item) => item.organisationId === workspaceId && item.enabled !== false && item.active !== false && familyCodes.has(item.masterProductCode));
+  }, [builderEnablements, guidedRequirement.familyKey, masterCatalogueProducts, workspaceId]);
   const guidedProducts = useMemo(() => guidedProductsForRequirement(guidedRequirement, clientSelectionCatalogueProducts, {
     brickSupplier: guidedBrickSupplier,
     brickRange: guidedBrickRange,
@@ -2292,8 +2346,13 @@ function BuilderSelectionsBookPageContent({
     { organisationId: workspaceId || "" },
   ), [workspaceId, builderEnablements, masterCatalogueProducts]);
   // Materialise missing inclusions while preserving existing client decisions and baselines.
+  // One key for "this job's book is loaded": every effect that waits for the loaded book compares it.
+  // It includes whether the restored job already carries its book (a reopened job can reach this page
+  // before its book does; the book must then be loaded once when it arrives).
+  const embeddedBookPresent = Boolean(selectionBookFromEmbeddedWorkbook(embeddedWorkbook));
+  const bookLoadKey = [workspaceId, selectedProjectId, selectedSnapshotId, selectedTemplateId, templateItems.length, embeddedBookPresent ? "job-book" : "no-job-book"].join("|");
   useEffect(() => {
-    const loadKey = [workspaceId, selectedProjectId, selectedSnapshotId, selectedTemplateId, templateItems.length].join('|');
+    const loadKey = bookLoadKey;
     if (!embeddedWorkbook || !selectedProjectId || !workspaceId || loading || hydratedStandardBookKey !== loadKey) return;
     const catalogue = getEffectiveProductCatalogue({ organisationId: workspaceId }).products;
     const changes = STANDARD_RANGE_KEYS.flatMap(key => {
@@ -2315,7 +2374,7 @@ function BuilderSelectionsBookPageContent({
   useEffect(() => {
     const inclusionSnapshot = embeddedWorkbook?.jobInclusionSnapshot?.jobInclusionSnapshot || embeddedWorkbook?.jobInclusionSnapshot;
     const owner = inclusionSnapshot?.schedule?.workspace_id || inclusionSnapshot?.sourceWorkspaceId;
-    const loadKey = [workspaceId, selectedProjectId, selectedSnapshotId, selectedTemplateId, templateItems.length].join("|");
+    const loadKey = bookLoadKey;
     if (!embeddedWorkbook || !selectedProjectId || !workspaceId || loading || hydratedStandardBookKey !== loadKey || owner !== workspaceId) return;
     const patches = standardInclusionClientSelectionPatches(inclusionSnapshot, {
       resolveRequirement: slot => guidedRequirementsByKey.get(INCLUSION_SLOT_REQUIREMENT_KEYS[slot] || slot) || guidedRequirementByKey(INCLUSION_SLOT_REQUIREMENT_KEYS[slot] || slot),
@@ -2426,12 +2485,38 @@ function BuilderSelectionsBookPageContent({
     cover: displayCover,
     projectInfo: projectInfoDisplay,
     selectedProject,
+    book,
     items: effectiveScheduleItems,
     review: scheduleReview,
-  }), [displayCover, effectiveScheduleItems, projectInfoDisplay, scheduleReview, selectedProject]);
+  }), [book, displayCover, effectiveScheduleItems, projectInfoDisplay, scheduleReview, selectedProject]);
   // Everything that needs the builder, grouped, each with its own action (selectionAttention.js).
-  const scheduleAttention = useMemo(() => selectionAttention({ book, rooms: projectLocationList, model: projectRoomModel(book, embeddedWorkbook), schedule: selectionsSchedule, preflight: projectPreflight }),
-    [book, projectLocationList, embeddedWorkbook, selectionsSchedule, projectPreflight]);
+  const scheduleAttention = useMemo(() => selectionAttention({ book, rooms: projectLocationList, model: projectRoomModel(book, embeddedWorkbook), schedule: selectionsSchedule, review: scheduleReview, preflight: projectPreflight, productLookup: scheduleProductLookup }),
+    [book, projectLocationList, embeddedWorkbook, selectionsSchedule, scheduleReview, projectPreflight, scheduleProductLookup]);
+  // Variation pricing (selectionVariationPricing.js): every change from the standard inclusions in
+  // one of three states, the builder-review queue, and the end-of-selections variation summary.
+  const [estimatorView, setEstimatorView] = useState(false);
+  useEffect(() => { setEstimatorView(readEstimatorView()); }, []);
+  const selectionVariation = useMemo(() => {
+    const jobId = selectedProjectId || "";
+    const reviews = selectionPricingReviews(book);
+    // Unpriced selections take the saved supplier price or the Product Library reference price
+    // (selectionVariationPricing.js resolvers); nothing is invented.
+    const items = selectionVariationItems(book, { jobId, productLookup: scheduleProductLookup, requirementUnit: (key) => guidedRequirementByKey(key)?.unit || "" }).map((item) => {
+      const id = builderReviewTaskId(item);
+      return { ...item, __id: id, reviewUnitPrice: reviews[id]?.unitPrice, reviewIncludesGst: reviews[id]?.priceIncludesGst, reviewAllowance: reviews[id]?.allowance };
+    });
+    return { items, reviews, summary: variationSummary(items, reviews), tasks: builderReviewTasks(items, reviews) };
+  }, [book, selectedProjectId, scheduleProductLookup]);
+  function updateSelectionPricingReviews(change) {
+    setBook((current) => {
+      let reviews;
+      try { reviews = change(selectionPricingReviews(current)); } catch (reviewError) { setError(reviewError.message); return current; }
+      const next = bookWithPricingReviews(current, reviews);
+      saveEmbeddedBookDraft(next);
+      queueSelectionAutosave(next);
+      return next;
+    });
+  }
 
   useEffect(() => {
     onEmbeddedMount?.();
@@ -2462,16 +2547,22 @@ function BuilderSelectionsBookPageContent({
     loadSnapshots();
   }, [workspaceId, selectedProjectId]);
 
+  // A reopened job can reach this page before its saved book has been restored onto it. When the
+  // book then arrives, the page must load it once (it used to keep the placeholder, so every saved
+  // selection of a reopened job showed as not started). Presence only: our own saves don't reload.
   useEffect(() => {
     if (!selectedProjectId || !selectedTemplateId) return;
     // The book is initialised once for a job. Fast Refresh re-runs this effect with nothing
     // changed, and reloading then would rebuild the book under the client's hands.
-    const loadKey = [workspaceId, selectedProjectId, selectedSnapshotId, selectedTemplateId, templateItems.length].join("|");
+    const loadKey = bookLoadKey;
     if (loadedBookKeyRef.current === loadKey) { setHydratedStandardBookKey(loadKey); return; }
     let cancelled = false;
-    loadBook().then(() => { if (!cancelled) { loadedBookKeyRef.current = loadKey; setHydratedStandardBookKey(loadKey); } });
+    bookHydratedRef.current = false;
+    setBookLoadSource("");
+    if (typeof window !== "undefined" && window.__gr8DebugBookLoad) console.info("[Client Selections debug] book load", JSON.stringify({ loadKey }));
+    loadBook().then(() => { if (!cancelled && !loadCancelledRef.current) { loadedBookKeyRef.current = loadKey; setHydratedStandardBookKey(loadKey); } });
     return () => { cancelled = true; bookLoadRequestRef.current += 1; };
-  }, [workspaceId, selectedProjectId, selectedSnapshotId, selectedTemplateId, templateItems.length]);
+  }, [workspaceId, selectedProjectId, selectedSnapshotId, selectedTemplateId, templateItems.length, embeddedBookPresent]);
 
   useEffect(() => {
     if (!workspaceId || !selectedProjectId) {
@@ -2665,13 +2756,14 @@ function BuilderSelectionsBookPageContent({
     if (typeof window === "undefined" || !workspaceId) return null;
     try {
       const projectPayload = selectedProjectId ? JSON.parse(window.localStorage.getItem(embeddedBookStorageKey()) || "null") : null;
-      if (projectPayload?.book && (!selectedProjectId || projectPayload.projectId === selectedProjectId)) return { book: projectPayload.book, savedAt: projectPayload.savedAt || "" };
+      // draftOf: the saved revision the draft was made from (absent on drafts written before it existed).
+      if (projectPayload?.book && (!selectedProjectId || projectPayload.projectId === selectedProjectId)) return { book: projectPayload.book, savedAt: projectPayload.savedAt || "", draftOf: projectPayload.draftOf };
       const latestPayload = JSON.parse(window.localStorage.getItem(latestEmbeddedBookStorageKey()) || "null");
       // The "latest" slot holds whichever job saved last. It is only ever used for the SAME job.
-      if (latestPayload?.book && selectedProjectId && latestPayload.projectId === selectedProjectId) return { book: latestPayload.book, savedAt: latestPayload.savedAt || "" };
+      if (latestPayload?.book && selectedProjectId && latestPayload.projectId === selectedProjectId) return { book: latestPayload.book, savedAt: latestPayload.savedAt || "", draftOf: latestPayload.draftOf };
       if (latestPayload?.storageKey && selectedProjectId && latestPayload.projectId === selectedProjectId) {
         const pointedPayload = JSON.parse(window.localStorage.getItem(latestPayload.storageKey) || "null");
-        if (pointedPayload?.book && pointedPayload.projectId === selectedProjectId) return { book: pointedPayload.book, savedAt: pointedPayload.savedAt || latestPayload.savedAt || "" };
+        if (pointedPayload?.book && pointedPayload.projectId === selectedProjectId) return { book: pointedPayload.book, savedAt: pointedPayload.savedAt || latestPayload.savedAt || "", draftOf: pointedPayload.draftOf };
       }
       const prefix = `${EMBEDDED_SELECTIONS_BOOK_STORAGE_KEY}:${workspaceId}:`;
       const payloads = Object.keys(window.localStorage)
@@ -2679,7 +2771,7 @@ function BuilderSelectionsBookPageContent({
         .map((key) => { try { return JSON.parse(window.localStorage.getItem(key) || "null"); } catch { return null; } })
         .filter((payload) => payload?.book);
       const exact = payloads.find((payload) => payload.projectId === selectedProjectId);
-      if (exact) return { book: exact.book, savedAt: exact.savedAt || "" };
+      if (exact) return { book: exact.book, savedAt: exact.savedAt || "", draftOf: exact.draftOf };
       // Similar recovered ID prefixes are not proof of job identity.
       return null;
     } catch {
@@ -2688,13 +2780,19 @@ function BuilderSelectionsBookPageContent({
   }
 
   function saveEmbeddedBookDraft(nextBook) {
+    // A placeholder shown before this job's book has loaded is not the user's work: writing it as a
+    // draft made it look like an edit, which cancelled the load and left the placeholder on screen.
+    if (!bookHydratedRef.current) return;
     bookEditVersionRef.current += 1;
     if (typeof window === "undefined" || !workspaceId || !selectedProjectId || !nextBook) return;
     try {
       const payload = JSON.stringify({
         workspaceId,
         projectId: selectedProjectId || "",
+        // savedAt is when the draft was written, not how old its selections are: draftOf is what
+        // decides whether the draft still belongs to the job (reconcileSelectionBookSources).
         savedAt: new Date().toISOString(),
+        draftOf: baseSelectionRevisionRef.current || selectionBookRevision(nextBook),
         book: nextBook,
       });
       window.localStorage.setItem(embeddedBookStorageKey(), payload);
@@ -2735,7 +2833,7 @@ function BuilderSelectionsBookPageContent({
         supabase.from("builder_product_suppliers").select("*").eq("workspace_id", workspaceId).order("supplier_name"),
       ]);
 
-      if (projectResult.error) console.error("[Client Selections] missing project context", projectResult.error);
+      if (projectResult.error && !embeddedProject) console.error("[Client Selections] missing project context", projectResult.error);
       const projectRows = projectResult.data || [];
       const mergedProjectRows = embeddedProject && !projectRows.some((project) => project.id === embeddedProject.id)
         ? [embeddedProject, ...projectRows]
@@ -2783,12 +2881,17 @@ function BuilderSelectionsBookPageContent({
 
   async function loadSnapshots() {
     try {
-      const { data, error: loadError } = await supabase
-        .from("builder_estimate_snapshots")
-        .select("*")
-        .eq("workspace_id", workspaceId)
-        .eq("project_id", selectedProjectId)
-        .order("snapshot_number", { ascending: false });
+      // A job not yet linked to a cloud project carries its local job id here (e.g. "recovered-03-09-123").
+      // project_id is a uuid column, so querying with it only produces an HTTP 400; use the embedded snapshot.
+      const isCloudProjectId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(selectedProjectId || ""));
+      const { data, error: loadError } = isCloudProjectId
+        ? await supabase
+          .from("builder_estimate_snapshots")
+          .select("*")
+          .eq("workspace_id", workspaceId)
+          .eq("project_id", selectedProjectId)
+          .order("snapshot_number", { ascending: false })
+        : { data: [], error: null };
       if (loadError) {
         console.error("[Client Selections] missing snapshot", loadError);
       }
@@ -2842,10 +2945,27 @@ function BuilderSelectionsBookPageContent({
     if (!workspaceId || !selectedProjectId || !selectedTemplateId) return;
     const request = ++bookLoadRequestRef.current;
     const editVersion = bookEditVersionRef.current;
+    loadCancelledRef.current = false;
     const stale = () => {
-      if (request !== bookLoadRequestRef.current) return true;
-      if (editVersion !== bookEditVersionRef.current) { setLoading(false); return true; }
+      if (request !== bookLoadRequestRef.current) { loadCancelledRef.current = true; return true; }
+      // Only an edit to a book that was already loaded may stop this load; a placeholder is not work.
+      if (bookHydratedRef.current && editVersion !== bookEditVersionRef.current) { loadCancelledRef.current = true; setLoading(false); return true; }
       return false;
+    };
+    const setLoadedBook = (value) => {
+      // Allocation room aliases ("Bed 2 Ensuite") -> the verified project room ("B2 Ensuite").
+      // Every load ends here: confirmed corrections are applied last (after any history recovery), so
+      // nothing the builder removed can come back on screen or in the next save.
+      const corrected = applyConfirmedClientSelectionCorrections(value);
+      const { book: canonical, changes } = canonicaliseSelectionAllocations(corrected, projectRoomModel(corrected, roomSourceWorkbook));
+      if (changes.length) console.info("[Client Selections] allocations re-pointed to project rooms", changes.map((change) => `${change.from} -> ${change.to}`));
+      bookHydratedRef.current = true;
+      setBookLoadSource(bookOriginRef.current.source || "");
+      if (typeof window !== "undefined" && window.__gr8DebugBookLoad) {
+        const electricalRow = (canonical?.rooms || []).flatMap((room) => room.rows || []).find((row) => row.guidedSelection?.electricalSchedule);
+        console.info("[Client Selections debug] book set", JSON.stringify({ request, source: bookOriginRef.current.source, rooms: (canonical?.rooms || []).length, guided: (canonical?.rooms || []).flatMap((room) => room.rows || []).filter((row) => row.guidedSelection).length, electrical: (electricalRow?.guidedSelection.electricalSchedule.rooms || []).filter((room) => Object.keys(room.points || {}).length).map((room) => `${room.roomId}|${room.room}`) }));
+      }
+      setBook(canonical);
     };
     setLoading(true);
     setError("");
@@ -2878,24 +2998,23 @@ function BuilderSelectionsBookPageContent({
       }catch(error){console.warn('Saved entry-door history could not be read; the loaded selections were retained.',error.message);}
       return view;
     };
+    // One deterministic choice between the job's own book, this browser's draft and the cloud book
+    // (reconcileSelectionBookSources): instants compared, never timestamp strings; a book with no
+    // selections never replaces one that has them unless it is a confirmed clearing.
     const cachedDraft = loadEmbeddedBookDraft();
-    const embeddedDraft = chooseSelectionBookSource({ workbook: embeddedWorkbook, projectId: selectedProjectId, workspaceId,
-      draft: cachedDraft ? { ...cachedDraft, projectId: selectedProjectId, workspaceId } : null });
-    // Compare the exact job's browser draft with its persisted workbook before using
-    // either. Cloud-backed jobs compare that result with the database below.
-    if (embeddedDraft && !isRealCloudProject) {
-      const next = normaliseDocumentBook(embeddedDraft.book, { project: selectedProject, snapshot: selectedSnapshot, template: selectedTemplate, templateItems: items, products, manufacturerById, supplierById, categoryById });
-      setBookId(embeddedDraft.book.id || "");
-      const recoveredDoorView=await recoverDoorView(next);
-      if(stale())return;
-      setBook(recoveredDoorView);
-      setActiveRoomId((current) => next.rooms.find((room) => room.id === current)?.id || next.rooms[0]?.id || "");
-      setLoading(false);
-      return;
-    }
+    // The open job's own book, when the job is the one this page is showing (by any of its ids:
+    // a linked job is selected by its cloud project uuid, an unlinked one by its job id).
+    const embeddedJobIds = [embeddedWorkbook?.jobId, embeddedWorkbook?.projectId, embeddedWorkbook?.registeredJobId, embeddedWorkbook?.commercialProjectId, embeddedWorkbook?.jobFileMeta?.projectId].map((value) => String(value || "")).filter(Boolean);
+    const embeddedJobBook = selectionBookFromEmbeddedWorkbook(embeddedWorkbook);
+    const jobBook = embeddedJobBook && (!embeddedJobIds.length || embeddedJobIds.includes(String(selectedProjectId)) || (resolvedCloudProjectId && embeddedJobIds.includes(resolvedCloudProjectId)))
+      // Dated by the book's own times: after a job file is opened the workbook still carries the FILE's
+      // savedAt, which made an older browser draft look newer than the selections just opened.
+      ? { book: embeddedJobBook, savedAt: [embeddedJobBook.metadata?.savedAt, embeddedJobBook.updatedAt, embeddedWorkbook?.savedAt].filter((value) => Number.isFinite(Date.parse(value))).sort((a, b) => Date.parse(b) - Date.parse(a))[0] || "" }
+      : null;
+    let savedBooks = null;
     if (isRealCloudProject) {
       try {
-        let savedBookQuery = supabase
+        const { data, error: savedBookError } = await supabase
           .from("builder_selection_books")
           .select("id, book_name, status, book_data, inclusion_template_id, updated_at")
           .eq("workspace_id", workspaceId)
@@ -2903,55 +3022,68 @@ function BuilderSelectionsBookPageContent({
           .is("inclusion_template_id", null)
           .order("updated_at", { ascending: false })
           .limit(10);
-        const { data: savedBooks, error: savedBookError } = await savedBookQuery;
-        if (stale()) return;
-        const dbIsNewer = !embeddedDraft || !embeddedDraft.savedAt || (savedBooks?.[0]?.updated_at && savedBooks[0].updated_at > embeddedDraft.savedAt);
-        if (!savedBookError && savedBooks?.[0]?.book_data && dbIsNewer) {
-          const next = normaliseDocumentBook(savedBooks[0].book_data, { project: selectedProject, snapshot: selectedSnapshot, template: selectedTemplate, templateItems: items, products, manufacturerById, supplierById, categoryById });
-          const recovered = recoverMissingGuidedRowsFromBookHistory(next, savedBooks.slice(1).map((row) => ({
-            id: row.id,
-            updated_at: row.updated_at,
-            book: normaliseDocumentBook(row.book_data, { project: selectedProject, snapshot: selectedSnapshot, template: selectedTemplate, templateItems: items, products, manufacturerById, supplierById, categoryById }),
-          })));
-          setBookId(savedBooks[0].id);
-          setBook(recovered);
-          setActiveRoomId((current) => recovered.rooms.find((room) => room.id === current)?.id || recovered.rooms[0]?.id || "");
-          setLoading(false);
-          return;
-        }
-        if (embeddedDraft) {
-          const next = normaliseDocumentBook(embeddedDraft.book, { project: selectedProject, snapshot: selectedSnapshot, template: selectedTemplate, templateItems: items, products, manufacturerById, supplierById, categoryById });
-          setBookId(embeddedDraft.book.id || "");
-          const recoveredDoorView = await recoverDoorView(next);
-          if (stale()) return;
-          setBook(recoveredDoorView);
-          setActiveRoomId((current) => next.rooms.find((room) => room.id === current)?.id || next.rooms[0]?.id || "");
-          setLoading(false);
-          return;
-        }
+        if (savedBookError) throw savedBookError;
+        savedBooks = data || [];
       } catch (savedBookLoadError) {
-        if (stale()) return;
         console.warn("[Client Selections] saved project selection book load failed", savedBookLoadError?.message || savedBookLoadError);
-        if (embeddedDraft) {
-          const next = normaliseDocumentBook(embeddedDraft.book, { project: selectedProject, snapshot: selectedSnapshot, template: selectedTemplate, templateItems: items, products, manufacturerById, supplierById, categoryById });
-          setBookId(embeddedDraft.book.id || "");
-          const recoveredDoorView = await recoverDoorView(next);
-          if (stale()) return;
-          setBook(recoveredDoorView);
-          setActiveRoomId((current) => next.rooms.find((room) => room.id === current)?.id || next.rooms[0]?.id || "");
-          setLoading(false);
-          return;
-        }
+      }
+      if (stale()) return;
+    }
+    const cloudRow = savedBooks?.[0]?.book_data ? savedBooks[0] : null;
+    const { chosen: chosenSource, skipped: skippedSources } = reconcileSelectionBookSources([
+      jobBook ? { source: "job", book: jobBook.book, savedAt: jobBook.savedAt } : null,
+      cachedDraft ? { source: "browser-draft", book: cachedDraft.book, savedAt: cachedDraft.savedAt, draftOf: cachedDraft.draftOf } : null,
+      cloudRow ? { source: "cloud", book: cloudRow.book_data, savedAt: cloudRow.updated_at } : null,
+    ]);
+    if (skippedSources.length) console.warn("[Client Selections] book sources not used:", skippedSources);
+    // A stale draft is not used, but it is kept (one slot) until the next one replaces it: it may hold
+    // edits that never reached a save, and the next draft write would otherwise overwrite them.
+    if (cachedDraft && skippedSources.some((entry) => entry.stale) && typeof window !== "undefined") {
+      try {
+        window.localStorage.setItem(`${embeddedBookStorageKey()}:superseded`, JSON.stringify({ workspaceId, projectId: selectedProjectId, supersededAt: new Date().toISOString(), jobRevision: selectionBookRevision(jobBook?.book), draftOf: cachedDraft.draftOf ?? selectionBookRevision(cachedDraft.book), savedAt: cachedDraft.savedAt, book: cachedDraft.book }));
+      } catch (storageError) {
+        console.warn("[Client Selections] the superseded browser draft could not be kept.", storageError?.message || storageError);
       }
     }
-    const embeddedBook = selectionBookFromEmbeddedWorkbook(embeddedWorkbook);
-    if (embeddedBook) {
-      const next = normaliseDocumentBook(embeddedBook, { project: selectedProject, snapshot: selectedSnapshot, template: selectedTemplate, templateItems: items, products, manufacturerById, supplierById, categoryById });
-      setBookId(embeddedBook.id || "");
-      const recoveredDoorView=await recoverDoorView(next);
-      if(stale())return;
-      setBook(recoveredDoorView);
-      setActiveRoomId((current) => next.rooms.find((room) => room.id === current)?.id || next.rooms[0]?.id || "");
+    if (typeof window !== "undefined" && window.__gr8DebugBookLoad) {
+      console.info("[Client Selections debug] book source", JSON.stringify({ selectedProjectId, isRealCloudProject, jobId: embeddedWorkbook?.jobId || "", job: Boolean(jobBook), jobHasSelections: bookHasSelections(jobBook?.book), draft: Boolean(cachedDraft), draftHasSelections: bookHasSelections(cachedDraft?.book), cloud: Boolean(cloudRow), cloudHasSelections: bookHasSelections(cloudRow?.book_data), chosen: chosenSource?.source || "", skipped: skippedSources }));
+    }
+    if (chosenSource) {
+      // Confirmed builder decisions recorded on ANY copy (job, draft, cloud) apply to the copy chosen:
+      // an older copy must never bring back a product, room or allocation the builder removed.
+      const { book: decidedBook, carried: carriedDecisions } = carryForwardConfirmedDecisions(chosenSource.book, [jobBook?.book, cachedDraft?.book, cloudRow?.book_data, { projectRoomModel: embeddedWorkbook?.projectRoomModel }]);
+      if (carriedDecisions.ledger || carriedDecisions.roomModel) console.info("[Client Selections] confirmed decisions carried into the loaded book", carriedDecisions);
+      const next = normaliseDocumentBook(decidedBook, { project: selectedProject, snapshot: selectedSnapshot, template: selectedTemplate, templateItems: items, products, manufacturerById, supplierById, categoryById });
+      let view;
+      if (chosenSource.source === "cloud") {
+        view = recoverMissingGuidedRowsFromBookHistory(next, savedBooks.slice(1).map((row) => ({
+          id: row.id,
+          updated_at: row.updated_at,
+          book: normaliseDocumentBook(row.book_data, { project: selectedProject, snapshot: selectedSnapshot, template: selectedTemplate, templateItems: items, products, manufacturerById, supplierById, categoryById }),
+        })));
+      } else {
+        view = await recoverDoorView(next);
+        if (stale()) return;
+      }
+      // The row a cloud save updates is the project's cloud row, whichever copy the content came from.
+      setBookId(cloudRow?.id || chosenSource.book.id || "");
+      bookOriginRef.current = { source: chosenSource.source, hadSelections: bookHasSelections(view) };
+      // A draft is only ever chosen when it was made from the job's current revision, so the job's
+      // revision is the base either way.
+      baseSelectionRevisionRef.current = selectionBookRevision(jobBook?.book) || selectionBookRevision(chosenSource.book);
+      setLoadedBook(view);
+      setActiveRoomId((current) => view.rooms.find((room) => room.id === current)?.id || view.rooms[0]?.id || "");
+      setLoading(false);
+      return;
+    }
+    // No book anywhere and no cloud project to ask (a local job id is not a uuid, and querying with it
+    // only fails): this job starts from the template.
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(selectedProjectId || ""))) {
+      const next = createDocumentBook({ project: selectedProject, snapshot: selectedSnapshot, template: selectedTemplate, templateItems: items, products, manufacturerById, supplierById, categoryById });
+      bookOriginRef.current = { source: "template", hadSelections: false };
+      setBookId("");
+      setLoadedBook(next);
+      setActiveRoomId(next.rooms[0]?.id || "");
       setLoading(false);
       return;
     }
@@ -2978,20 +3110,23 @@ function BuilderSelectionsBookPageContent({
         }
         setBookId("");
         const next = createDocumentBook({ project: selectedProject, snapshot: selectedSnapshot, template: selectedTemplate, templateItems: items, products, manufacturerById, supplierById, categoryById });
-        setBook(next);
+        bookOriginRef.current = { source: "template", hadSelections: false };
+        setLoadedBook(next);
         setActiveRoomId(next.rooms[0]?.id || "");
         setLoading(false);
         return;
       }
       if (data?.[0]?.book_data) {
         const next = normaliseDocumentBook(data[0].book_data, { project: selectedProject, snapshot: selectedSnapshot, template: selectedTemplate, templateItems: items, products, manufacturerById, supplierById, categoryById });
+        bookOriginRef.current = { source: "cloud", hadSelections: bookHasSelections(next) };
         setBookId(data[0].id);
-        setBook(next);
+        setLoadedBook(next);
         setActiveRoomId((current) => next.rooms.find((room) => room.id === current)?.id || next.rooms[0]?.id || "");
       } else {
         const next = createDocumentBook({ project: selectedProject, snapshot: selectedSnapshot, template: selectedTemplate, templateItems: items, products, manufacturerById, supplierById, categoryById });
+        bookOriginRef.current = { source: "template", hadSelections: false };
         setBookId("");
-        setBook(next);
+        setLoadedBook(next);
         setActiveRoomId(next.rooms[0]?.id || "");
       }
     } catch (loadError) {
@@ -3003,8 +3138,9 @@ function BuilderSelectionsBookPageContent({
         return;
       }
       const next = createDocumentBook({ project: selectedProject, snapshot: selectedSnapshot, template: selectedTemplate, templateItems: items, products, manufacturerById, supplierById, categoryById });
+      bookOriginRef.current = { source: "template", hadSelections: false };
       setBookId("");
-      setBook(next);
+      setLoadedBook(next);
       setActiveRoomId(next.rooms[0]?.id || "");
     }
     setLoading(false);
@@ -3512,12 +3648,13 @@ function BuilderSelectionsBookPageContent({
     }
     const committedSelection = normaliseCabinetrySelection(selection);
     const committedBook = guidedBookWithRequirementPatch(book, cabinetryRequirement, cabinetryRequirementPatch(cabinetryRequirement, committedSelection));
-    setBook(committedBook);
-    saveEmbeddedBookDraft(committedBook);
     const savedId = await persistBookData(committedBook, "in_progress", {
       successMessage: options.successMessage || "Cabinetry specification saved to the active job.",
+      savedFrom: book,
+      deferDraftUntilSaved: true,
     });
     if (!savedId) return { ok: false, message: "Cabinetry save verification failed." };
+    saveEmbeddedBookDraft(committedBook);
     if (options.returnToDashboard === false) {
       return { ok: true, message: options.successMessage || "Cabinetry specification saved to the active job." };
     }
@@ -4091,6 +4228,13 @@ function BuilderSelectionsBookPageContent({
         variationPending: priceState !== PRICE_STATES.current,
         imageReference: option.imageUrl || requirementImage(requirement),
         officialProductURL: entity.officialProductURL || option.productUrl || "",
+        retailReferencePrice: entity.retailReferencePrice ?? null,
+        retailReferenceType: entity.retailReferenceType || "",
+        retailReferenceUnit: entity.retailReferenceUnit || "",
+        retailReferenceGstBasis: entity.retailReferenceGstBasis || "",
+        retailReferenceSupplier: entity.retailReferenceSupplier || "",
+        retailReferenceSourceUrl: entity.retailReferenceSourceUrl || "",
+        retailReferenceVerifiedAt: entity.retailReferenceVerifiedAt || "",
         priceState,
         selectedAt: now,
         updatedAt: now,
@@ -4878,7 +5022,23 @@ function BuilderSelectionsBookPageContent({
   }
 
   async function performPersistBookData(bookForSave, status = "in_progress", options = {}) {
-    saveEmbeddedBookDraft(bookForSave);
+    // Nothing is autosaved from the placeholder shown before this job's book has loaded.
+    if (options.autosave && !bookHydratedRef.current) return null;
+    if (!bookHasSelections(bookForSave) && !bookForSave?.metadata?.selectionsClearedAt) {
+      if (bookOriginRef.current.hadSelections) {
+        // The book held selections when it was opened and the user has removed them all: an
+        // explicit clearing, recorded so it wins over older copies like any other newer change.
+        bookForSave = { ...bookForSave, metadata: { ...(bookForSave.metadata || {}), selectionsClearedAt: new Date().toISOString() } };
+      } else if (bookHasSelections(selectionBookFromEmbeddedWorkbook(embeddedWorkbook))) {
+        // A book that never held a selection (a template, or one shown before the job finished
+        // loading) must never be written over the job's saved selections.
+        console.warn("[Client Selections] an empty Selections Book was not saved over the job's saved selections.");
+        if (!options.autosave) setError("Nothing is selected in the book on screen, so it was not saved over this job's saved selections. Reopen the job to see them.");
+        setSaving(false);
+        return null;
+      }
+    }
+    if (!options.deferDraftUntilSaved) saveEmbeddedBookDraft(bookForSave);
     // A save takes seconds and the client keeps working through it. When it finishes it may only
     // write back the book it was started from; anything edited since is newer and stays as it is.
     const savedFrom = options.savedFrom || bookForSave;
@@ -4895,17 +5055,21 @@ function BuilderSelectionsBookPageContent({
         embeddedSaveResult = await onClientSelectionsSave(bookForSave, {
           status,
           successMessage: options.successMessage,
+          // The job refuses the save when its selections have moved to another revision since.
+          baseSelectionRevision: baseSelectionRevisionRef.current,
         });
       } catch (saveError) {
         console.warn("[Client Selections] job save was not completed.", saveError?.message || saveError);
         embeddedSaveResult = { ok: false, message: saveError?.message || "Client Selections could not be saved to the job." };
       }
       if (embeddedSaveResult?.ok === false) {
-        applySavedBook(bookForSave);
+        if (!options.deferDraftUntilSaved) applySavedBook(bookForSave);
         setError(embeddedSaveResult.message || "Open or create a job before saving client selections.");
         setSaving(false);
         return null;
       }
+      if (embeddedSaveResult) bookOriginRef.current = { ...bookOriginRef.current, hadSelections: bookHasSelections(bookForSave) };
+      if (embeddedSaveResult?.selectionRevision) baseSelectionRevisionRef.current = embeddedSaveResult.selectionRevision;
     }
     if (!workspaceId || !selectedProjectId) {
       applySavedBook(bookForSave);
@@ -4980,6 +5144,7 @@ function BuilderSelectionsBookPageContent({
       return null;
     }
     setLastSaveState({ state: "saved", at: new Date().toISOString(), reason: "", message: "" });
+    bookOriginRef.current = { ...bookOriginRef.current, hadSelections: bookHasSelections(data.book_data || bookForSave) };
     setBookId(data.id);
     applySavedBook(data.book_data || bookForSave);
     // The book itself (the source of truth every guided workflow reads back from - including the
@@ -5271,29 +5436,36 @@ function BuilderSelectionsBookPageContent({
       setError(`${projectPreflight.projectName ? `${projectPreflight.projectName}: ` : ""}the schedule cannot be generated until these project details are added: ${projectPreflight.missing.join(", ")}.`);
       return;
     }
-    if (documentStatus === "contract" && !scheduleReview.canIssueFinal) {
-      setError("Resolve missing, unconfirmed, pricing and image review items before issuing the final contract schedule.");
+    if (documentStatus === "contract" && !scheduleAttention.readiness.ready) {
+      setError("Resolve the listed client decisions, conflicts, specifications and contract approvals before issuing the final contract schedule.");
       return;
     }
     setScheduleGenerating(documentStatus);
     setError("");
     setSuccess("");
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token || "";
+      const userId = sessionData?.session?.user?.id || null;
       const bookForGeneration = {
         ...book,
         cover: { ...book.cover, ...displayCover, ...brochureCover, suburbPostcode: brochureCover.locality },
         projectInfo: { ...(book.projectInfo || {}), ...projectInfoDisplay },
         updatedAt: new Date().toISOString(),
       };
+      // Generating a schedule never replaces selections with an empty book: with nothing selected
+      // there is nothing to schedule, and nothing is saved.
+      if (!bookHasSelections(bookForGeneration)) {
+        throw new Error("There are no saved selections in this Selections Book, so no schedule was generated and nothing was saved. Open the job's Client Selections to generate its schedule.");
+      }
       const savedBookId = await persistBookData(bookForGeneration, "in_progress", { savedFrom: book });
       if (!savedBookId || savedBookId === "embedded-local") {
         throw new Error("Save the Client Selections book to the active job before generating the schedule PDF.");
       }
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token || "";
-      const { data: authData } = await supabase.auth.getUser();
-      const syncResult = await syncBookToProjectSelections({ bookForSync: bookForGeneration, savedBookId, userId: authData?.user?.id || null });
+      const syncResult = await syncBookToProjectSelections({ bookForSync: bookForGeneration, savedBookId, userId });
       if (syncResult.error) throw new Error(syncResult.error);
+      const pdfProjectId = projectPersistenceTarget(selectedProjectId, embeddedWorkbook).uuid;
+      if (!pdfProjectId) throw new Error("Link this saved job to Project Commercials before generating the schedule PDF.");
       const response = await fetch("/api/builders/final-inclusions-schedule/generate", {
         method: "POST",
         headers: {
@@ -5303,7 +5475,7 @@ function BuilderSelectionsBookPageContent({
         credentials: "include",
         body: JSON.stringify({
           workspace_id: workspaceId,
-          projectId: selectedProjectId,
+          projectId: pdfProjectId,
           snapshotId: selectedSnapshotId,
           documentStatus,
           standaloneClientSelectionsSchedule: true,
@@ -5325,10 +5497,17 @@ function BuilderSelectionsBookPageContent({
             title: "INCLUSIONS AND SELECTIONS SCHEDULE",
             cover: brochureCover,
             pages: selectionsSchedule.pages,
+            outstandingDecisions: (scheduleAttention.groups.find((group) => group.key === "decisions")?.items || []).map((item) => ({
+              sourceRowId: item.action?.rowId || "",
+              title: item.title,
+              detail: item.detail,
+            })),
+            // Printed as the Variation summary pages; totals and final status are recomputed when rendered.
+            variationSummary: { rows: selectionVariation.summary.rows.map(({ id, ...row }) => row) },
             pageCount: totalPageCount,
             itemCount: effectiveScheduleItems.length,
-            imageCount: effectiveScheduleItems.filter((item) => item.imageUrl && !isPlaceholderSelectionImage(item.imageUrl)).length,
-            missingImages: effectiveScheduleItems.filter((item) => !item.imageUrl || isPlaceholderSelectionImage(item.imageUrl)).map((item) => ({
+            imageCount: effectiveScheduleItems.filter((item) => scheduleRowRequiresProductImage(item) && !scheduleRowNeedsProductImage(item)).length,
+            missingImages: effectiveScheduleItems.filter(scheduleRowNeedsProductImage).map((item) => ({
               id: item.selectionId || item.id,
               category: item.category,
               title: item.title,
@@ -5495,7 +5674,11 @@ function BuilderSelectionsBookPageContent({
         </>
       );
     }
-    if (page.type === "project") return <ProjectInfoPage book={{ ...book, cover: displayCover }} details={projectInfoDisplay} scheduleItems={effectiveScheduleItems} review={scheduleReview} />;
+    if (page.type === "project") return <ProjectInfoPage book={{ ...book, cover: displayCover }} details={projectInfoDisplay} decisionSummary={{
+      complete: projectPreflight.selectedCount,
+      total: projectPreflight.selectionCount,
+      outstanding: projectPreflight.outstandingCount,
+    }} />;
     if (page.type === "schedule-section" && page.schedulePage) return <SelectionsSchedulePage book={{ ...book, cover: displayCover }} page={page.schedulePage} onPreviewImage={setImagePreview} onSelectProduct={openScheduleItemSource} />;
     if (page.type === "acknowledgement") return <ScheduleAcknowledgementPage book={{ ...book, cover: displayCover }} review={scheduleReview} pageNumber={page.pageNumber} />;
     if (page.type === "room" && page.room) {
@@ -5522,6 +5705,16 @@ function BuilderSelectionsBookPageContent({
       );
     }
     return null;
+  }
+
+  // Until this job's own book is loaded the screens would show (and let the client edit) a blank
+  // placeholder; a reopened job's saved selections then looked lost.
+  if (embedded && !bookLoadSource) {
+    return (
+      <div role="status" className="guidedShell" data-testid="client-selections-loading-book">
+        {error ? <p role="alert">{error} Nothing has been changed. Reload to try again.</p> : <p>Opening this job&apos;s selections...</p>}
+      </div>
+    );
   }
 
   return (
@@ -5597,19 +5790,19 @@ function BuilderSelectionsBookPageContent({
             <>
           <EntryDoorFurnitureSchedule workbook={embeddedWorkbook} review title="Exterior Door Furniture - Review Schedule" />
           <section className="contractSchedulePanel" aria-label="Contract schedule output">
-            <div>
+            <header className="contractScheduleHeader">
               <span className="panelKicker">Final output</span>
               <h2>Inclusions and Selections Schedule</h2>
-              <p>{scheduleReview.canIssueFinal ? "All visible selections are ready to issue as a final contract schedule." : "Resolve the builder review items before issuing the final contract schedule."}</p>
+              <p>{scheduleAttention.readiness.ready ? "All visible selections are ready to issue as a final contract schedule." : "Draft schedules may use indicative template prices. Final contract issue requires only the outstanding items listed below."}</p>
               <div className="currentSavedSelectionsIndicator" role="status">Showing current saved selections - revised {currentSelectionsRevisionLabel}</div>
-            </div>
-            <div className="scheduleReviewStats">
-              <span><strong>{effectiveScheduleItems.length}</strong> Rows</span>
-              <span><strong>{scheduleReview.complete}</strong> Complete</span>
-              <span><strong>{scheduleReview.unconfirmed}</strong> Unconfirmed</span>
-              <span><strong>{scheduleReview.pricing}</strong> Pricing</span>
-              <span><strong>{scheduleReview.images}</strong> Images</span>
-            </div>
+            </header>
+            <dl className="scheduleReviewStats" aria-label="Schedule summary">
+              <div><dd>{effectiveScheduleItems.length}</dd><dt>Schedule rows</dt></div>
+              <div><dd>{selectionsSchedule.reconciliation.records.represented} / {selectionsSchedule.reconciliation.records.eligible}</dd><dt>Saved selections represented</dt></div>
+              <div><dd>{scheduleAttention.completion.outstandingDecisions}</dd><dt>Client decisions pending</dt></div>
+              <div><dd>{scheduleAttention.pricing.template}</dd><dt>Template estimates</dt></div>
+              <div><dd>{scheduleAttention.pricing.builder}</dd><dt>Builder price overrides</dt></div>
+            </dl>
             <div className="scheduleReconciliation" role="status" data-testid="schedule-reconciliation" data-schedule-ok={selectionsSchedule.reconciliation.ok ? "true" : "false"}>
               <strong data-schedule-saved-records={selectionsSchedule.reconciliation.records.saved} data-schedule-eligible-records={selectionsSchedule.reconciliation.records.eligible} data-schedule-represented-records={selectionsSchedule.reconciliation.records.represented} data-schedule-source-entries={selectionsSchedule.reconciliation.scheduleSourceEntries}>
                 {selectionsSchedule.reconciliation.records.represented} of {selectionsSchedule.reconciliation.records.eligible} saved selection records represented · {selectionsSchedule.reconciliation.scheduleSourceEntries} schedule entries · {selectionsSchedule.reconciliation.templatePlaceholders} template rows excluded
@@ -5619,14 +5812,14 @@ function BuilderSelectionsBookPageContent({
               ))}
               <span data-schedule-missing-records={selectionsSchedule.reconciliation.records.missing.length}>Missing records {selectionsSchedule.reconciliation.records.missing.length} · Missing entries {selectionsSchedule.reconciliation.missing.length} · Duplicated {selectionsSchedule.reconciliation.duplicated.length} · Unrendered {selectionsSchedule.reconciliation.unrendered.length}</span>
             </div>
-            <div className="scheduleIssueActions">
-              <button type="button" onClick={() => generateFinalSchedule("draft")} disabled={Boolean(scheduleGenerating)}>
+            <div className="scheduleIssueActions" role="group" aria-label="Schedule issue actions">
+              <button type="button" aria-label="Generate draft inclusions and selections PDF" onClick={() => generateFinalSchedule("draft")} disabled={Boolean(scheduleGenerating)}>
                 {scheduleGenerating === "draft" ? "Generating..." : "Generate Draft PDF"}
               </button>
-              <button type="button" onClick={() => generateFinalSchedule("for_approval")} disabled={Boolean(scheduleGenerating)}>
+              <button type="button" aria-label="Send inclusions and selections schedule for approval" onClick={() => generateFinalSchedule("for_approval")} disabled={Boolean(scheduleGenerating)}>
                 {scheduleGenerating === "for_approval" ? "Generating..." : "Send for Approval"}
               </button>
-              <button type="button" className="primary" onClick={() => generateFinalSchedule("contract")} disabled={Boolean(scheduleGenerating) || !scheduleReview.canIssueFinal}>
+              <button type="button" className="primary" aria-label="Issue final contract inclusions and selections schedule" onClick={() => generateFinalSchedule("contract")} disabled={Boolean(scheduleGenerating) || !scheduleAttention.readiness.ready}>
                 {scheduleGenerating === "contract" ? "Issuing..." : "Issue Final Contract Schedule"}
               </button>
             </div>
@@ -5637,10 +5830,21 @@ function BuilderSelectionsBookPageContent({
                 // A guided selection opens in its own selection screen, where it can be edited.
                 const source = (book.rooms || []).flatMap((room) => room.rows || []).find((row) => row.id === action.rowId);
                 const requirementKey = source?.guidedRequirementKey || source?.guidedSelection?.requirementKey || "";
+                // A cabinetry room action opens that room's Review & Confirm step directly (deep link).
+                if (action.roomName && typeof window !== "undefined") {
+                  const url = new URL(window.location.href);
+                  url.searchParams.set("cabinetryRoom", slug(action.roomName));
+                  url.searchParams.set("cabinetryStage", action.cabinetryStage || "review");
+                  window.history.replaceState(window.history.state, "", url.href);
+                }
                 if (requirementKey && guidedRequirementByKey(resolveCabinetryRequirementKey(requirementKey))) openGuidedRequirement(requirementKey);
                 else openScheduleItemSource(action.rowId);
               }
             }} />
+            <VariationSummaryPanel summary={selectionVariation.summary} tasks={selectionVariation.tasks} items={selectionVariation.items} estimatorView={estimatorView}
+              onToggleEstimatorView={() => { writeEstimatorView(!estimatorView); setEstimatorView(!estimatorView); }}
+              onReview={(item, values) => updateSelectionPricingReviews((reviews) => recordBuilderPricingReview(reviews, item, { ...values, by: "builder" }))}
+              onClientDecision={(item, decision) => updateSelectionPricingReviews((reviews) => recordClientVariationDecision(reviews, item, decision))} />
             {scheduleDocument ? (
               <a className="scheduleDocumentLink" href={scheduleDocument.publicUrl || scheduleDocument.public_url || "#"} target="_blank" rel="noreferrer">
                 Open latest generated PDF
@@ -5761,6 +5965,7 @@ function BuilderSelectionsBookPageContent({
             <GuidedSelectionsWorkflow
               electrical={electricalProps}
               projectRoomNames={plumbingProjectLocationNames}
+              robeRooms={houseRooms(projectLocationList)}
               saving={saving}
               organisationId={workspaceId || ""}
               screen={guidedScreen}
@@ -5822,7 +6027,7 @@ function BuilderSelectionsBookPageContent({
               onOpenRequirement={openGuidedRequirement}
               onFinishCabinetry={saveGuidedCabinetryAndReturnToInterior}
               onCabinetrySummary={() => returnToGuidedDashboard(guidedRequirementByKey("cabinetry"))}
-              cabinetryJobWorkbook={embeddedWorkbook}
+              cabinetryJobWorkbook={{ ...embeddedWorkbook, projectRoomModel: projectRoomModel(book, embeddedWorkbook) }}
               onBrickStepChange={setGuidedBrickStep}
               onBrickSupplierChange={setGuidedBrickSupplier}
               onBrickRangeChange={setGuidedBrickRange}
@@ -5975,6 +6180,8 @@ function GuidedSelectionsWorkflow({
   flooring = null,
   electrical = null,
   projectRoomNames = [],
+  // House rooms for the wardrobe picker (it read the parent page's room list, which is not in scope here: Wardrobes crashed).
+  robeRooms = [],
   projectRooms = [],
   stairFlights = [],
   saving = false,
@@ -6576,7 +6783,7 @@ function GuidedSelectionsWorkflow({
               <span>{requirement.areaLabel} / {requirement.label}</span>
               <strong>{products.length ? `${products.length} ${requirement.label} product option${products.length === 1 ? "" : "s"}` : `No products have been added for ${requirement.label}.`}</strong>
             </div>
-            {requirement.requirementKey === 'stairs' ? <StairSelectionWizard key={`stairs:${projectId}`} stairFlights={stairFlights} storageKey={`product-library:stairs:${projectId||book?.id||'local-job'}`} products={products} requirement={requirement} selection={selections.get(requirement.requirementKey)} onSelect={onSelectProduct} backLabel="← Stairs & Balustrades" onBack={()=>onOpenCategory('stairs-balustrades','interior')} onSave={onSaveProgress}/> : INTERNAL_SELECTION_KEYS.includes(requirement.requirementKey) ? <InternalCataloguePicker key={requirement.requirementKey} products={products} requirement={requirement} selection={selections.get(requirement.requirementKey)} rooms={requirement.requirementKey === 'robes' ? houseRooms(projectLocationList) : []} onSelect={onSelectProduct} onBack={()=>onOpenArea('interior')} onSave={onSaveProgress} relatedRequirement={INTERNAL_RELATED_REQUIREMENTS[requirement.requirementKey]} onOpenRelated={INTERNAL_RELATED_REQUIREMENTS[requirement.requirementKey] ? () => onOpenRequirementKey(INTERNAL_RELATED_REQUIREMENTS[requirement.requirementKey].key) : undefined}/> : products.length ? (
+            {requirement.requirementKey === 'stairs' ? <StairSelectionWizard key={`stairs:${projectId}`} stairFlights={stairFlights} storageKey={`product-library:stairs:${projectId||book?.id||'local-job'}`} products={products} requirement={requirement} selection={selections.get(requirement.requirementKey)} onSelect={onSelectProduct} backLabel="← Stairs & Balustrades" onBack={()=>onOpenCategory('stairs-balustrades','interior')} onSave={onSaveProgress}/> : INTERNAL_SELECTION_KEYS.includes(requirement.requirementKey) ? <InternalCataloguePicker key={requirement.requirementKey} products={products} requirement={requirement} selection={selections.get(requirement.requirementKey)} rooms={requirement.requirementKey === 'robes' ? robeRooms : []} onSelect={onSelectProduct} onBack={()=>onOpenArea('interior')} onSave={onSaveProgress} relatedRequirement={INTERNAL_RELATED_REQUIREMENTS[requirement.requirementKey]} onOpenRelated={INTERNAL_RELATED_REQUIREMENTS[requirement.requirementKey] ? () => onOpenRequirementKey(INTERNAL_RELATED_REQUIREMENTS[requirement.requirementKey].key) : undefined}/> : products.length ? (
               <div className="guidedProductGrid">
                 {products.map((product) => (
                   <GuidedProductCard key={product.id} requirement={requirement} product={product} onSelect={() => onSelectProduct(requirement, product)} onViewDetails={() => onViewDetails(product)} onSaveProgress={onSaveProgress} />
@@ -7034,11 +7241,14 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
   const [activeColourTargetKeys, setActiveColourTargetKeys] = useState(["lowerDoorsDrawers"]);
   const cabinetryCatalogueRef = useRef(null);
   const [cabinetrySelectionMessage, setCabinetrySelectionMessage] = useState("");
+  const [cabinetryApprovalSaving, setCabinetryApprovalSaving] = useState(false);
+  const cabinetryApprovalPendingRef = useRef(false);
   const [cabinetryBackStack, setCabinetryBackStack] = useState([]);
   const [showCabinetryBackToTop, setShowCabinetryBackToTop] = useState(false);
   const cabinetryPanelRef = useRef(null);
   const cabinetryTopRef = useRef(null);
-  const normalisedDraft = normaliseCabinetrySelection(draft);
+  const cabinetryRoomModel = projectRoomModel(null, jobWorkbook);
+  const normalisedDraft = normaliseCabinetrySelection({ ...draft, projectId }, cabinetryRoomModel);
   const summary = normalisedDraft.summary;
   const activeLocation = normalisedDraft.locations.find((location) => location.location === editingLocationName);
   const safeActiveLocation = createSafeCabinetryActiveLocation(activeLocation, editingLocationName);
@@ -7091,6 +7301,11 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
   const benchtopProjectFacts = useMemo(() => ({ hasSink: Boolean(selections?.get?.("sink")), hasCooktop: Boolean(selections?.get?.("cooktop") || selections?.get?.("freestanding-cooker")), hasBasin: Boolean(selections?.get?.("bathroom-basin")) }), [selections]);
   const [benchtopRangeMapping, setBenchtopRangeMapping] = useState(() => getBuilderBenchtopRangeMapping(organisationId));
   const [benchtopRangeSettingsOpen, setBenchtopRangeSettingsOpen] = useState(false);
+  // Client view (default) hides every estimator measurement: cabinet quantities, bulkhead runs,
+  // benchtop lengths, panel and kick sizes. They stay on the job and in the quotation; the builder
+  // switches to estimator view to edit them.
+  const [cabinetryEstimatorView, setCabinetryEstimatorView] = useState(false);
+  useEffect(() => { setCabinetryEstimatorView(readEstimatorView()); }, []);
   useEffect(() => { setBenchtopRangeMapping(getBuilderBenchtopRangeMapping(organisationId)); }, [organisationId]);
   useEffect(() => {
     setCabinetryColourSearch("");
@@ -7191,7 +7406,7 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
     }, true);
   }
 
-  function addLocation(locationName) {
+  function addLocation(locationName, projectRoomId = "") {
     const cleanName = String(locationName || "").trim();
     if (!cleanName) return;
     const existing = normalisedDraft.locations.find((location) => location.location === cleanName);
@@ -7201,6 +7416,7 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
     }
     const nextLocation = {
       id: `cabinetry-${slug(cleanName)}`,
+      projectRoomId,
       name: cleanName,
       location: cleanName,
       locationType: cleanName,
@@ -7621,6 +7837,25 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
   // Selections save, so typing a quantity waits for a pause rather than saving on every key.
   const latestDraftRef = useRef(draft);
   latestDraftRef.current = draft;
+  // Deep link (?cabinetryRoom=kitchen&cabinetryStage=review, set by the Review Schedule actions or
+  // shared as a URL): open that room's step once its location is loaded, then clear the parameters
+  // so returning to Cabinetry later does not jump again.
+  const cabinetryDeepLinkDoneRef = useRef(false);
+  useEffect(() => {
+    if (cabinetryDeepLinkDoneRef.current || typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    const roomSlug = url.searchParams.get("cabinetryRoom");
+    if (!roomSlug) { cabinetryDeepLinkDoneRef.current = true; return; }
+    const target = normalisedDraft.locations.find((location) => slug(location.location) === roomSlug);
+    if (!target) return;
+    cabinetryDeepLinkDoneRef.current = true;
+    openCabinetryLocation(target.location);
+    const stageName = url.searchParams.get("cabinetryStage") === "review" ? "Review & Confirm" : "";
+    if (stageName) setStageIndex(CABINETRY_WORKFLOW_STAGES.indexOf(stageName));
+    url.searchParams.delete("cabinetryRoom");
+    url.searchParams.delete("cabinetryStage");
+    window.history.replaceState(window.history.state, "", url.href);
+  }, [normalisedDraft.locations]); // eslint-disable-line react-hooks/exhaustive-deps
   const scheduleSyncPendingRef = useRef(false);
   const scheduleSyncTimerRef = useRef(null);
   const flushScheduleSyncRef = useRef(() => {});
@@ -7734,6 +7969,58 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
         detail: units.length ? <OpenShelvingUnitsEditor units={units} onAdd={addUnit} onChange={updateScheduleLine} onRemove={removeScheduleLine} /> : null };
     }
     return row;
+  }
+
+  // "Would you like bulkheads above your overhead kitchen cabinetry?" - keep standard / add / remove,
+  // never a length (applyCabinetryBulkheadChoice). The estimator measures and prices it.
+  function chooseBulkheads(choice) {
+    const current = latestDraftRef.current || normalisedDraft;
+    let next;
+    try { next = normaliseCabinetrySelection(applyCabinetryBulkheadChoice(normaliseCabinetrySelection({ ...current, projectId }, cabinetryRoomModel), activeLocation.location, choice)); }
+    catch (choiceError) { setCabinetrySelectionMessage(choiceError.message); return; }
+    setCabinetrySelectionMessage("");
+    updateDraft({ schedule: next.schedule, locations: next.locations.map((location) => location.location === activeLocation.location ? { ...location, status: "in_progress" } : location) }, true);
+    queueCabinetryQuoteSync();
+  }
+
+  function renderBulkheadQuestion() {
+    if (activeIsBathroomCabinetry) return null;
+    const bulkheads = cabinetryBulkheadOptions(activeLocation, normalisedDraft.schedule);
+    const roomLabel = String(activeLocation.location || "kitchen").toLowerCase();
+    return (
+      <section className="cabinetryScheduleGroup cabinetryBulkheadQuestion" data-testid="cabinetry-bulkhead-question" data-choice={bulkheads.choice} data-standard={bulkheads.standardIncluded ? "included" : "not-included"}>
+        <h3>Would you like bulkheads above your overhead {roomLabel} cabinetry?</h3>
+        <div className="cabinetryBulkheadBody">
+          <figure className="cabinetryBulkheadReference">
+            <img src="/images/client-selections/kitchen-bulkhead-reference.jpeg" alt="Kitchen with bulkheads: a finished enclosure from the top of the overhead cabinets to the ceiling" loading="lazy" />
+            <figcaption>A bulkhead closes the gap between the top of the overhead cabinets and the ceiling. It is not an island bench, dropped ceiling or lighting feature.</figcaption>
+          </figure>
+          <div className="cabinetryBulkheadOptions" role="radiogroup" aria-label="Bulkheads">
+            {bulkheads.options.map((option) => (
+              <button key={option.key} type="button" role="radio" aria-checked={bulkheads.choice === option.key} disabled={!option.available} className={bulkheads.choice === option.key ? "selected" : ""} onClick={() => chooseBulkheads(option.key)} data-testid={`cabinetry-bulkhead-${option.key}`}>
+                <strong>{option.label}</strong><span>{option.detail}</span>
+              </button>
+            ))}
+            {bulkheads.choice !== "standard" ? <p className="cabinetryBulkheadNote" data-testid="cabinetry-bulkhead-review">Builder Review Required: your builder will confirm the bulkhead measurements and price and send you the final variation amount for approval. You do not need to measure anything.</p> : null}
+            {cabinetryEstimatorView && bulkheads.standardIncluded ? <label className="cabinetryBulkheadPermit"><input type="checkbox" checked={bulkheads.removalPermitted} onChange={(event) => updateLocation(activeLocation.location, { bulkheadRemovalPermitted: event.target.checked }, true)} data-testid="cabinetry-bulkhead-permit-remove" /> Builder: allow the client to remove bulkheads in this room</label> : null}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // Client view of the Cabinet Schedule: what the builder has allowed for, with no quantity, width
+  // or length to enter.
+  function renderClientCabinetLayout() {
+    const lines = normalisedDraft.schedule.filter((line) => line.location === activeLocation.location && !/^bulkhead_/.test(line.cabinetTypeId || "") && Number(line.quantity) > 0);
+    const names = [...new Set(lines.map((line) => line.variantLabel || line.unitType || line.type).filter(Boolean))];
+    return (
+      <section className="cabinetryScheduleGroup" data-testid="cabinetry-client-layout">
+        <h3>Your {activeLocation.location} cabinetry layout</h3>
+        <p className="cabinetryClientLayoutNote">Your builder has set the cabinet layout, sizes and quantities from your plans. You only choose finishes, colours, handles and benchtops.</p>
+        {names.length ? <ul className="cabinetryClientLayoutList">{names.map((name) => <li key={name}>{name}</li>)}</ul> : <p className="cabinetryClientLayoutNote">The layout for this room will be confirmed by your builder.</p>}
+      </section>
+    );
   }
 
   // The Cabinet Schedule lists only the current cabinet items priced in the quotation.
@@ -7877,10 +8164,10 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
     navigateCabinetryStage(stageIndex);
   }
 
-  async function saveCabinetryDraft(confirmRoom = false, { skipColourPrompt = false, workingDraft: workingDraftOverride } = {}) {
-    const latestDraft = latestDraftRef.current || normalisedDraft;
+  async function saveCabinetryDraft(confirmRoom = false, { workingDraft: workingDraftOverride } = {}) {
+    const latestDraft = normaliseCabinetrySelection({ ...(latestDraftRef.current || normalisedDraft), projectId }, cabinetryRoomModel);
     if (!activeLocation) return persistCabinetry(latestDraft);
-    const startingDraft = workingDraftOverride || latestDraft;
+    const startingDraft = normaliseCabinetrySelection(workingDraftOverride || latestDraft, cabinetryRoomModel);
     if (confirmRoom) {
       const preConfirmLocations = startingDraft.locations.map((location) => location.location === activeLocation.location
         ? { ...location, status: location.status || "in_progress", confirmedAt: "" }
@@ -7893,45 +8180,37 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
       }
       setCabinetryMissingRequirements([]);
     }
-    // Completing a room is the one moment the "apply these colours elsewhere" decision has to
-    // be made before moving on - asking afterwards (once the target room is already open) would
-    // force the user to redo the exact copy they could have done here, defeating the point. The
-    // modal pauses this function (via onContinue) rather than blocking with window.confirm, since
-    // it now offers every applicable room, not just one fixed target.
-    if (confirmRoom && !skipColourPrompt && locationHasColourSelections(activeLocation.location) && offerableColourTargetRooms(activeLocation.location).length) {
-      const existingTargets = offerableColourTargetRooms(activeLocation.location);
-      const anyUnlinkedOrIncomplete = existingTargets.some((target) => !target.alreadyLinked);
-      if (anyUnlinkedOrIncomplete) {
-        openApplyColoursModal(activeLocation.location, {
-          onContinue: (appliedDraft) => saveCabinetryDraft(true, { skipColourPrompt: true, workingDraft: appliedDraft || startingDraft }),
-        });
-        return null;
-      }
+    if (!confirmRoom) return persistCabinetry(startingDraft);
+    if (cabinetryApprovalPendingRef.current) return null;
+    if (typeof onFinishCabinetry !== "function") {
+      setCabinetrySelectionMessage("Cabinetry approval cannot be saved. Reopen the job and try again.");
+      return { ok: false };
     }
-    const workingDraft = startingDraft;
-    const modifiedAt = new Date().toISOString();
-    const nextLocations = workingDraft.locations.map((location) => location.location === activeLocation.location
-      ? { ...location, status: confirmRoom ? "complete" : location.status || "in_progress", confirmedAt: confirmRoom ? modifiedAt : location.confirmedAt, lastModifiedAt: modifiedAt, updatedAt: modifiedAt }
-      : location);
-    const next = persistCabinetry({ ...workingDraft, locations: nextLocations, activeLocation: activeLocation.location, confirmed: false, scheduleApproved: confirmRoom ? true : workingDraft.scheduleApproved, lastModifiedAt: modifiedAt, updatedAt: modifiedAt }, { commitRequirement: !confirmRoom });
-    if (!confirmRoom) return next;
-    if (typeof onFinishCabinetry !== "function") return next;
     const confirmedRoomName = activeLocation.location;
-    const nextRoom = adjacentCabinetryRoom(next.locations, confirmedRoomName, 1);
-    if (nextRoom) {
-      const result = await onFinishCabinetry(next, { successMessage: `${confirmedRoomName} cabinetry saved.`, returnToDashboard: false });
-      if (result?.ok === false) {
-        setCabinetrySelectionMessage(result.message || "Cabinetry save verification failed.");
+    cabinetryApprovalPendingRef.current = true;
+    setCabinetryApprovalSaving(true);
+    clearTimeout(scheduleSyncTimerRef.current);
+    scheduleSyncPendingRef.current = false;
+    try {
+      const next = approveCabinetryRoom(startingDraft, activeLocation.projectRoomId || activeLocation.id, projectId);
+      const message = `${confirmedRoomName} cabinetry approved and saved.`;
+      const result = await onFinishCabinetry(next, { successMessage: message, returnToDashboard: false });
+      if (result?.ok !== true) {
+        setCabinetrySelectionMessage(result?.message || "Cabinetry save verification failed.");
         return result;
       }
-      goToCabinetryRoom(nextRoom.location, 0);
-      setCabinetrySelectionMessage(`${confirmedRoomName} cabinetry saved. Continuing to ${nextRoom.location}.`);
+      latestDraftRef.current = next;
+      persistCabinetry(next, { commitRequirement: false });
+      setCabinetrySelectionMessage(message);
       return result;
+    } catch (error) {
+      console.error("[Client Selections] cabinetry approval failed", error);
+      setCabinetrySelectionMessage(error.message || "Cabinetry approval could not be saved.");
+      return { ok: false, message: error.message };
+    } finally {
+      cabinetryApprovalPendingRef.current = false;
+      setCabinetryApprovalSaving(false);
     }
-    const result = await onFinishCabinetry(next, { successMessage: "Cabinetry specification saved to the active job." });
-    if (result?.ok === false) setCabinetrySelectionMessage(result.message || "Cabinetry save verification failed.");
-    else setCabinetrySelectionMessage(result?.message || "");
-    return result;
   }
 
   function cabinetryNavigationActions(position = "bottom") {
@@ -7942,7 +8221,8 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
         position={position}
         stageIndex={stageIndex}
         finalStageIndex={CABINETRY_WORKFLOW_STAGES.length - 1}
-        finalStageLabel={nextRoom ? `Next: ${nextRoom.location} →` : "Finish Cabinetry"}
+        finalStageLabel={`Confirm & Approve ${activeLocation?.location || ""} Cabinetry`}
+        saving={cabinetryApprovalSaving}
         firstStageLabel={previousRoom ? `← Previous: ${previousRoom.location}` : "← Cabinetry Summary"}
         nextRoomName={nextRoom?.location || ""}
         previousRoomName={previousRoom?.location || ""}
@@ -8272,7 +8552,7 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
 
   if (!activeLocation) {
     const includedByName = new Map(normalisedDraft.locations.map((location) => [location.location, location]));
-    const roomNames = [...CABINETRY_VISIBLE_LOCATION_OPTIONS, ...cabinetryRoomSequence(normalisedDraft.locations).map((location) => location.location)].filter((value, index, array) => value && array.indexOf(value) === index);
+    const roomOptions = cabinetryProjectRoomOptions(normalisedDraft, cabinetryRoomModel);
     const roomProgress = cabinetryRoomProgress(normalisedDraft.locations);
     return (
       <section className="guidedShell cabinetryWorkflow" data-testid="guided-cabinetry-workflow" data-workflow-type={CABINETRY_WORKFLOW_TYPE}>
@@ -8284,18 +8564,20 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
             <p>Create a separate cabinetry specification for every applicable room.</p>
           </div>
           <div className="guidedTotals">
-            <GuidedMiniTotal label="Locations complete" value={`${roomProgress.complete} / ${roomProgress.total}`} />
+            <GuidedMiniTotal label="Specifications complete" value={`${roomProgress.complete} / ${roomProgress.total}`} />
+            <GuidedMiniTotal label="Rooms approved" value={`${normalisedDraft.summary.approvedRoomCount} / ${roomProgress.total}`} />
             <GuidedMiniTotal label="Allowance" value={money(summary.allowance)} />
           </div>
         </div>
         <div className="cabinetryRoomGrid" data-testid="cabinetry-room-landing">
-          {roomNames.map((roomName) => {
+          {roomOptions.map(({ name: roomName, id: projectRoomId }) => {
             const room = includedByName.get(roomName);
-            const status = room ? room.status === "complete" || room.confirmedAt ? "complete" : "in_progress" : "not_started";
+            const approved = room && isCabinetryRoomApproved(room, normalisedDraft.schedule, projectId);
+            const status = room ? isCabinetryRoomComplete(room) ? "complete" : "in_progress" : "not_started";
             return (
-            <button key={roomName} type="button" className={`cabinetryRoomCard ${status}`} data-testid={`cabinetry-room-${slug(roomName)}`} onClick={() => room ? openCabinetryLocation(room.location) : addLocation(roomName)}>
+            <button key={projectRoomId || roomName} type="button" className={`cabinetryRoomCard ${status}`} data-testid={`cabinetry-room-${slug(roomName)}`} data-room-id={projectRoomId || room?.id || ""} data-approved={Boolean(approved)} onClick={() => room ? openCabinetryLocation(room.location) : addLocation(roomName, projectRoomId)}>
                 <strong>{roomName}</strong>
-                <span>{status === "complete" ? "Complete" : status === "in_progress" ? "In progress" : "Not added"}</span>
+                <span>{approved ? "Approved" : status === "complete" ? "Specification complete - approval required" : status === "in_progress" ? "Specification in progress" : "Not added"}</span>
                 <em>{status === "complete" ? "Review" : status === "in_progress" ? "Continue" : "Add Cabinetry"}</em>
               </button>
             );
@@ -8315,6 +8597,7 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
   return (
     <section className="guidedShell cabinetryWorkflow" data-testid="guided-cabinetry-workflow" data-workflow-type={CABINETRY_WORKFLOW_TYPE}>
       <GuidedBudgetDock totals={runningTotals} />
+      <fieldset disabled={cabinetryApprovalSaving} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
       <div className="guidedSectionHeader cabinetryBanner" ref={cabinetryTopRef}>
         <div>
           <span>CABINETRY / {activeLocation.location.toUpperCase()}</span>
@@ -8335,11 +8618,21 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
           ))}
         </aside>
         <main className="guidedProductPanel cabinetryPanel" ref={cabinetryPanelRef}>
+          <div className="cabinetryViewToggle" data-testid="cabinetry-view-toggle" data-view={cabinetryEstimatorView ? "estimator" : "client"}>
+            <span>{cabinetryEstimatorView ? "Builder / estimator view: cabinet quantities and measurements can be edited." : "Choose your finishes, colours, handles and benchtops. Your builder looks after all measurements and quantities."}</span>
+            <button type="button" onClick={() => { writeEstimatorView(!cabinetryEstimatorView); setCabinetryEstimatorView(!cabinetryEstimatorView); }} data-testid="cabinetry-view-toggle-button">{cabinetryEstimatorView ? "Switch to client view" : "Builder: edit quantities"}</button>
+          </div>
           {stageIndex === 0 ? (
             <div className="cabinetryStage" data-testid="cabinetry-builder-schedule">
-              <div className="clientNotice">This schedule defines {activeLocation.location} cabinetry only. Appliance cabinets are openings or panels, not appliance product selections.</div>
-              {renderRoomCabinetSchedule()}
-              <div className="cabinetryInlineEditor"><button type="button" onClick={() => removeLocation(activeLocation.location)}>Remove this room from Cabinetry</button></div>
+              {cabinetryEstimatorView ? <>
+                <div className="clientNotice">This schedule defines {activeLocation.location} cabinetry only. Appliance cabinets are openings or panels, not appliance product selections.</div>
+                {renderRoomCabinetSchedule()}
+                {renderBulkheadQuestion()}
+                <div className="cabinetryInlineEditor"><button type="button" onClick={() => removeLocation(activeLocation.location)}>Remove this room from Cabinetry</button></div>
+              </> : <>
+                {renderClientCabinetLayout()}
+                {renderBulkheadQuestion()}
+              </>}
             </div>
           ) : null}
           {stageIndex === 1 ? (
@@ -8355,7 +8648,8 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
               {cabinetrySelectionMessage ? <p className="cabinetrySelectionMessage" role="alert">{cabinetrySelectionMessage}</p> : null}
               {(() => {
                 const panels = cabinetryScheduleCatalogue(activeLocation.location).find((group) => group.key === "panels");
-                if (!panels) return null;
+                // Visible end-panel quantities are an estimator measurement.
+                if (!panels || !cabinetryEstimatorView) return null;
                 const takeoff = roomTakeoffCabinetQuantities();
                 return (
                   <section className="cabinetryScheduleGroup" data-testid="cabinet-schedule-panels">
@@ -8469,7 +8763,7 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
                       <div className="cabinetryCustomFields" data-testid="cabinetry-kick-panel-metal-fields">
                         <label><span>Price status</span><select value={activeLocation.areaSelections.kickPanels.priceStatus || "included"} onChange={(event) => updateKickPanelField("priceStatus", event.target.value)}><option value="included">Included</option><option value="upgrade">Upgrade</option><option value="supplier_quote_required">Supplier quote required</option></select></label>
                         <label><span>Supplier</span><input value={activeLocation.areaSelections.kickPanels.supplier || ""} onChange={(event) => updateKickPanelField("supplier", event.target.value)} placeholder="Not specified" /></label>
-                        <label><span>Height mm</span><input type="number" min="0" value={activeLocation.areaSelections.kickPanels.heightMm || ""} onChange={(event) => updateKickPanelField("heightMm", event.target.value)} /></label>
+                        {cabinetryEstimatorView ? <label><span>Height mm</span><input type="number" min="0" value={activeLocation.areaSelections.kickPanels.heightMm || ""} onChange={(event) => updateKickPanelField("heightMm", event.target.value)} /></label> : null}
                         <label><span>Notes</span><input value={activeLocation.areaSelections.kickPanels.notes || ""} onChange={(event) => updateKickPanelField("notes", event.target.value)} /></label>
                       </div>
                     ) : null}
@@ -8560,7 +8854,8 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
                 stoneProducts={activeStoneProducts}
                 laminateOptions={CABINETRY_BENCHTOPS.filter((bench) => bench.category === "Laminated")}
                 onChange={(patch, persist) => updateLocation(activeLocation.location, patch, persist)}
-                onOpenRangeSettings={organisationId ? () => setBenchtopRangeSettingsOpen(true) : null}
+                clientView={!cabinetryEstimatorView}
+                onOpenRangeSettings={organisationId && cabinetryEstimatorView ? () => setBenchtopRangeSettingsOpen(true) : null}
               />
               {benchtopRangeSettingsOpen ? <BenchtopPriceGroupSettings groups={supplierPriceGroups(activeStoneProducts)} mapping={benchtopRangeMapping} onSave={saveBenchtopRangeMapping} onClose={() => setBenchtopRangeSettingsOpen(false)} /> : null}
             </div>
@@ -8662,7 +8957,7 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
                     <h4>Features</h4>
                     <dl><div><dt>Selected</dt><dd>{(activeLocation.featureOptions || []).map(featureOptionName).join(", ") || "Not required"}</dd></div></dl>
                   </section>
-                  <dl><div><dt>Status</dt><dd>{activeLocation.status === "complete" || activeLocation.confirmedAt ? "Complete" : "In progress"}</dd></div></dl>
+                  <dl><div><dt>Specification</dt><dd>{isCabinetryRoomComplete(activeLocation) ? "Complete" : "In progress"}</dd></div><div><dt>Review approval</dt><dd>{isCabinetryRoomApproved(activeLocation, normalisedDraft.schedule, projectId) ? "Approved - current specification" : "Explicit approval required"}</dd></div></dl>
                 </section>
               )}
               {cabinetrySelectionMessage ? <p className="cabinetrySelectionMessage" role="status">{cabinetrySelectionMessage}</p> : null}
@@ -8674,6 +8969,7 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
       {showCabinetryBackToTop ? <button type="button" className="cabinetryBackToTop" aria-label="Back to top of cabinetry workflow" onClick={scrollCabinetryToTop}><ArrowUp size={16} aria-hidden="true" />Back to top</button> : null}
       {kitchenPantryCopyOpen ? renderKitchenPantryColourModal() : null}
         {renderApplyColoursModal()}
+      </fieldset>
     </section>
   );
 }
@@ -8729,14 +9025,14 @@ function CabinetrySelectionList({ items = [] }) {
   );
 }
 
-function CabinetryWorkflowActions({ position = "bottom", stageIndex, finalStageIndex, finalStageLabel = "Finish Cabinetry", firstStageLabel = "← Cabinetry Summary", nextRoomName = "", previousRoomName = "", onPrevious, onSave, onNext }) {
+function CabinetryWorkflowActions({ position = "bottom", stageIndex, finalStageIndex, finalStageLabel = "Finish Cabinetry", firstStageLabel = "← Cabinetry Summary", nextRoomName = "", previousRoomName = "", saving = false, onPrevious, onSave, onNext }) {
   const isFinal = stageIndex === finalStageIndex;
   const isFirst = stageIndex <= 0;
   return (
     <div className={`guidedCompletionActions cabinetryWorkflowActions ${position}`} data-testid={`cabinetry-${position}-workflow-actions`}>
       <button type="button" className="secondary" onClick={onPrevious} data-testid={`cabinetry-${position}-previous`} data-destination={isFirst ? previousRoomName || "summary" : "step"}>{isFirst ? firstStageLabel : "← Previous"}</button>
       <button type="button" className="secondary" onClick={onSave}>Save Draft</button>
-      <button type="button" className="primary progressAction" onClick={onNext} data-testid={`cabinetry-${position}-next`} data-destination={isFinal ? nextRoomName || "summary" : "step"}>{isFinal ? finalStageLabel : "Next →"}</button>
+      <button type="button" disabled={saving} className="primary progressAction" onClick={onNext} data-testid={`cabinetry-${position}-next`} data-destination={isFinal ? "approval" : "step"}>{saving ? "Saving approval..." : isFinal ? finalStageLabel : "Next →"}</button>
     </div>
   );
 }
@@ -13236,6 +13532,7 @@ function PlumbingFixtureProductCard({ requirement, product, line = null, configu
   const code = plumbingFixtureSupplierCode(product);
   const keySpec = displayCatalogueValue(product.attributes?.keySpec || product.metadata?.productEntity?.attributes?.keySpec)
     || [product.dimensions, product.colour].map(displayCatalogueValue).filter(Boolean).join(" · ");
+  const reference = templatePriceReference(product);
   return (
     <article className={`guidedProductCard plumbingProductCard ${selected ? "selected" : ""}`} data-testid={`plumbing-product-${slug(code || product.productName)}`} data-product-code={product.productCode || product.metadata?.productEntity?.productCode || ""} data-selected={selected ? "true" : "false"} data-selected-quantity={selected ? line.quantity : 0}>
       {selected ? <span className="plumbingSelectedFlag">✓ SELECTED — QTY {line.quantity}</span> : null}
@@ -13250,9 +13547,10 @@ function PlumbingFixtureProductCard({ requirement, product, line = null, configu
         {selected ? <small className="plumbingCardLocations" data-testid="plumbing-card-locations">{formatPlumbingAllocations(line.allocations)}</small> : null}
       </div>
       <div className="guidedProductMoney">
-        <GuidedMiniTotal label={selected ? `Price ×${quantity}` : priceFrom ? "Price from" : "Price each"} value={hasPrice ? money(priceValue) : priceState === PRICE_STATES.current ? "GST basis required" : configured ? QUOTE_REQUIRED_LABEL : "Price not published"} tone={hasPrice ? "" : "warn"} />
-        <GuidedMiniTotal label={selected ? `Allowance ×${quantity}` : "Allowance each"} value={money(allowanceValue)} />
-        <GuidedMiniTotal label={variation < 0 ? "Credit" : "Upgrade"} value={hasPrice ? signedMoney(variation) : "—"} tone={variation > 0 ? "bad" : variation < 0 ? "good" : ""} />
+        <GuidedMiniTotal label={`${selected ? `Price ×${quantity}` : priceFrom ? "Price from" : "Price each"}${hasPrice && priceIncludesGst === true ? " (inc GST)" : hasPrice && priceIncludesGst === false ? " (ex GST)" : ""}`} value={hasPrice ? money(priceValue) : priceState === PRICE_STATES.current ? "GST basis required" : configured ? QUOTE_REQUIRED_LABEL : "Price not published"} tone={hasPrice ? "" : "warn"} />
+        {!hasPrice && reference ? <GuidedMiniTotal label={reference.label} value={reference.value} tone="warn" /> : null}
+        <GuidedMiniTotal label={`${selected ? `Allowance ×${quantity}` : "Allowance each"} (ex GST)`} value={money(allowanceValue)} />
+        <GuidedMiniTotal label={`${variation < 0 ? "Credit" : "Upgrade"} (ex GST)`} value={hasPrice ? signedMoney(variation) : "—"} tone={variation > 0 ? "bad" : variation < 0 ? "good" : ""} />
       </div>
       <div className="guidedProductActions">
         <button type="button" onClick={onViewDetails}>View Details</button>
@@ -13270,7 +13568,7 @@ function PlumbingAllocationModal({ requirement, product, lines = [], projectLoca
   const [replaceLineId, setReplaceLineId] = useState('');
   // Rooms this product is going into that already have a different one - waiting for the builder's answer.
   const [occupiedRooms, setOccupiedRooms] = useState(null);
-  const { priceState, hasPrice, unitPrice, unitAllowance } = plumbingProductRates(requirement, product);
+  const { priceState, hasPrice, priceIncludesGst, unitPrice, unitAllowance } = plumbingProductRates(requirement, product);
   const serviceRows = serviceQuoteRequirements(workbook, requirement.requirementKey);
   const isService = RESIDENTIAL_SERVICE_KEYS.includes(requirement.requirementKey);
   const [quoteTarget, setQuoteTarget] = useState(() => existingLine?.quotationRowId ? `${existingLine.quotationSection}::${existingLine.quotationRowId}` : serviceRows.length === 1 ? `${serviceRows[0].section}::${serviceRows[0].rowId}` : '');
@@ -13402,11 +13700,11 @@ function PlumbingAllocationModal({ requirement, product, lines = [], projectLoca
         </div>
         <dl className="plumbingAllocationTotals" data-testid="plumbing-allocation-totals">
           <div><dt>Total quantity</dt><dd data-testid="plumbing-allocation-total-quantity">{draftLine.quantity}</dd></div>
-          <div><dt>Price each</dt><dd>{hasPrice ? money(unitPrice) : "Price pending"}</dd></div>
-          <div><dt>Product total</dt><dd data-testid="plumbing-allocation-product-total">{draftLine.selectedTotal === null ? "Price pending" : money(draftLine.selectedTotal)}</dd></div>
-          <div><dt>Unit allowance</dt><dd>{money(unitAllowance)}</dd></div>
-          <div><dt>Allowance total</dt><dd data-testid="plumbing-allocation-allowance-total">{money(draftLine.allowanceTotal)}</dd></div>
-          <div className={draftLine.variation > 0 ? "bad" : draftLine.variation < 0 ? "good" : ""}><dt>{draftLine.variation < 0 ? "Credit" : "Variation"}</dt><dd data-testid="plumbing-allocation-variation">{draftLine.variation === null ? "—" : signedMoney(draftLine.variation)}</dd></div>
+          <div><dt>Price each{hasPrice && priceIncludesGst === true ? " (inc GST)" : hasPrice && priceIncludesGst === false ? " (ex GST)" : ""}</dt><dd>{hasPrice ? money(unitPrice) : "Price pending"}</dd></div>
+          <div><dt>Product total{hasPrice && priceIncludesGst === true ? " (inc GST)" : hasPrice && priceIncludesGst === false ? " (ex GST)" : ""}</dt><dd data-testid="plumbing-allocation-product-total">{draftLine.selectedTotal === null ? "Price pending" : money(draftLine.selectedTotal)}</dd></div>
+          <div><dt>Unit allowance (ex GST)</dt><dd>{money(unitAllowance)}</dd></div>
+          <div><dt>Allowance total (ex GST)</dt><dd data-testid="plumbing-allocation-allowance-total">{money(draftLine.allowanceTotal)}</dd></div>
+          <div className={draftLine.variation > 0 ? "bad" : draftLine.variation < 0 ? "good" : ""}><dt>{draftLine.variation < 0 ? "Credit" : "Variation"} (ex GST)</dt><dd data-testid="plumbing-allocation-variation">{draftLine.variation === null ? "—" : signedMoney(draftLine.variation)}</dd></div>
         </dl>
         {occupiedRooms ? (
           <div className="plumbingOccupiedRooms" role="alert" data-testid="room-occupied-prompt">
@@ -13696,6 +13994,7 @@ function GuidedProductCard({ requirement, product, onSelect, onViewDetails, onSa
   const isGarageDoor = requirement.requirementKey === "garage-door";
   const finishLabel = displayCatalogueValue(product.finish) || "Finish to be confirmed";
   const brickFinishLabel = [product.colour, product.texture, product.finish].map(displayCatalogueValue).filter(Boolean).join(" / ") || "Brick colour and texture to be confirmed";
+  const reference = templatePriceReference(product);
   return (
     <article className={`guidedProductCard ${isBrick ? "brickCard" : ""}`} data-testid={`guided-product-${slug(product.productName)}`} data-family-key={requirement.familyKey}>
       {isDoorProduct(product, requirement) ? <DoorProductImage src={product.imageUrl || requirementImage(requirement)} name={product.imageAltText || product.productName} size="card" /> : <img src={product.imageUrl || requirementImage(requirement)} alt={product.imageAltText || product.productName} />}
@@ -13709,6 +14008,7 @@ function GuidedProductCard({ requirement, product, onSelect, onViewDetails, onSa
       </div>
       <div className="guidedProductMoney">
         <GuidedMiniTotal label="Price" value={priceState === PRICE_STATES.current ? money(selectedPrice) : priceState} tone={priceState === PRICE_STATES.current ? "" : "warn"} />
+        {priceState !== PRICE_STATES.current && reference ? <GuidedMiniTotal label={reference.label} value={reference.value} tone="warn" /> : null}
         <GuidedMiniTotal label="Allowance" value={money(allowance)} />
         {priceState === PRICE_STATES.current || priceState === PRICE_STATES.allowanceOnly ? <GuidedMiniTotal label={variation < 0 ? "Credit" : "Upgrade"} value={signedMoney(variation)} tone={variation > 0 ? "bad" : variation < 0 ? "good" : ""} /> : <GuidedMiniTotal label="Upgrade" value="PRICE REQUIRED" tone="warn" />}
       </div>
@@ -13731,6 +14031,7 @@ function GuidedProductDetailsModal({ requirement, product, onClose, onSelect }) 
   const dimensionsLabel = displayCatalogueValue(product.dimensions || product.size) || "To be confirmed";
   const textureLabel = displayCatalogueValue(product.texture) || "To be confirmed";
   const finishLabel = displayCatalogueValue(product.finish) || "To be confirmed";
+  const reference = templatePriceReference(product);
   return (
     <div className="modalBackdrop" onClick={onClose}>
       <div className="guidedDetailsModal" onClick={(event) => event.stopPropagation()} data-testid="guided-product-details">
@@ -13767,6 +14068,7 @@ function GuidedProductDetailsModal({ requirement, product, onClose, onSelect }) 
           {isEntryDoor ? <div><dt>Warranty</dt><dd>{displayCatalogueValue(attrs.warrantyInformation) || "Not specified by supplier"}</dd></div> : null}
           {isEntryDoor ? <div><dt>Door Furniture & Locking</dt><dd>{entryDoorAttributeOptions(product, "hardwareOptions", attrs.compatibleEntryHardware).join(", ") || "Selected after door design"}</dd></div> : null}
           <div><dt>Price</dt><dd>{priceState === PRICE_STATES.current ? money(product.selectedCost) : priceState}</dd></div>
+          {priceState !== PRICE_STATES.current && reference ? <div><dt>{reference.label}</dt><dd>{reference.value}</dd></div> : null}
           <div><dt>Allowance</dt><dd>{money(product.allowance)}</dd></div>
         </dl>
         <div className="guidedProductActions">
@@ -14135,10 +14437,11 @@ function CoverSettingsPanel({ cover, dirty, onChange, onReset, onResetFromProjec
   );
 }
 
-function ProjectInfoPage({ book, details, scheduleItems = [], review = null }) {
+function ProjectInfoPage({ book, details, decisionSummary = {} }) {
   const info = details || book.projectInfo;
-  const selectedCount = scheduleItems.length;
-  const outstandingCount = review?.items?.length || 0;
+  const completedCount = Number(decisionSummary.complete) || 0;
+  const totalCount = Number(decisionSummary.total) || 0;
+  const outstandingCount = Number(decisionSummary.outstanding) || 0;
   const summaryRows = [
     ["Client", info.clientName],
     ["Full site address", info.fullSiteAddress || info.siteAddress],
@@ -14147,8 +14450,8 @@ function ProjectInfoPage({ book, details, scheduleItems = [], review = null }) {
     ["Schedule version", info.scheduleVersion || book.cover?.version],
     ["Schedule status", book.cover?.status || "Draft"],
     ["Date prepared", info.issueDate || book.cover?.issueDate],
-    ["Selected items", selectedCount ? String(selectedCount) : ""],
-    ["Outstanding decisions", String(outstandingCount)],
+    ["Completed client decisions", totalCount ? `${completedCount} of ${totalCount}` : ""],
+    ["Outstanding client decisions", String(outstandingCount)],
   ].filter(([, value]) => coverValue(value));
   return (
     <section className="page infoPage">
@@ -14180,7 +14483,7 @@ function ScheduleAcknowledgementPage({ book, review, pageNumber }) {
       <HeaderLogo book={book} title="Sign-Off" page={pageNumber} />
       <div className="acknowledgementCopy">
         <h2>Client Review</h2>
-        <p>This schedule records the current project selections for review. Draft schedules may include selections awaiting confirmation, supplier quote items and catalogue image corrections.</p>
+        <p>This schedule records the current project selections for review. Draft schedules may include unfinished client decisions and indicative pricing, each clearly identified for review.</p>
         <p>Approved and contract schedules are versioned attachments. Later changes should be issued as a new revision or variation.</p>
       </div>
       <div className="acknowledgementGrid">
@@ -14822,14 +15125,16 @@ function Metric({ label, value, tone = "" }) {
   );
 }
 
-function scheduleProjectPreflight({ cover = {}, projectInfo = {}, selectedProject = null, items = [], review = null } = {}) {
+function scheduleProjectPreflight({ cover = {}, projectInfo = {}, selectedProject = null, book = {}, items = [] } = {}) {
   const projectName = coverValue(cover.projectName || selectedProject?.project_name);
   const clientName = coverValue(projectInfo.clientName || cover.clientName || selectedProject?.client_name);
   const siteAddress = coverValue(projectInfo.fullSiteAddress || projectInfo.siteAddress || cover.siteAddress || selectedProject?.site_address);
   const jobNumber = coverValue(projectInfo.jobNumber || cover.jobNumber || cover.quoteNumber || selectedProject?.job_number);
   const builderName = coverValue(projectInfo.builderName || cover.builderName || selectedProject?.builder_name);
   const builderLogo = coverValue(builderLogoFor({ builderName, logoUrl: cover.logoUrl || selectedProject?.builder_logo_url }));
-  const missingImages = items.filter((item) => !item.imageUrl || isPlaceholderSelectionImage(item.imageUrl));
+  const decisionSummary = selectionDecisionSummary(book);
+  const productImageRows = items.filter(scheduleRowRequiresProductImage);
+  const missingImages = productImageRows.filter(scheduleRowNeedsProductImage);
   const checks = [
     { label: "Client loaded", ok: Boolean(clientName) },
     { label: "Address loaded", ok: Boolean(siteAddress) },
@@ -14845,8 +15150,12 @@ function scheduleProjectPreflight({ cover = {}, projectInfo = {}, selectedProjec
     builderName,
     builderLogo,
     checks,
-    selectedCount: items.length,
-    outstandingCount: review?.items?.length || 0,
+    scheduleRowCount: items.length,
+    selectedCount: decisionSummary.complete,
+    selectionCount: decisionSummary.total,
+    outstandingCount: decisionSummary.outstanding,
+    productImageCount: productImageRows.length,
+    readyImageCount: productImageRows.length - missingImages.length,
     missingImageCount: missingImages.length,
     canGenerateDraft: Boolean(projectName && clientName && siteAddress && jobNumber && builderName && builderLogo),
     // What is missing, in words, for the job that is actually linked - never another job's name.
@@ -14871,10 +15180,10 @@ function BuilderSchedulePreflight({ preflight, onFixProjectData, onFixImages, on
         </div>
         <div>
           <h3>Selection data</h3>
-          <span className="ok">Completed client selections: {preflight.selectedCount}</span>
+          <span className="ok">Completed client decisions: {preflight.selectedCount} of {preflight.selectionCount}</span>
           <span className={preflight.outstandingCount ? "bad" : "ok"}>Outstanding client selections: {preflight.outstandingCount}</span>
-          <span className="ok">Images available: {Math.max(0, preflight.selectedCount - preflight.missingImageCount)}</span>
-          <span className={preflight.missingImageCount ? "bad" : "ok"}>Images requiring correction: {preflight.missingImageCount}</span>
+          <span className="ok">Product images ready: {preflight.readyImageCount} of {preflight.productImageCount}</span>
+          <span className={preflight.missingImageCount ? "bad" : "ok"}>Product images requiring correction: {preflight.missingImageCount}</span>
         </div>
       </div>
       <div className="builderPreflightActions">
@@ -15338,7 +15647,9 @@ function fallbackStandardItems(quality = "mid_range") {
 
 function reviewScheduleBook(book) {
   const decisions = new Map(guidedSelectionsFromBook(book).map(selection => [selection.id, selection]));
-  const rows = book.rooms.flatMap((room) => (room.rows || []).filter(isSelectionsScheduleBookRow).map((row) => ({ room, row })));
+  // The generated schedule intentionally excludes legacy template rows without a guided selection.
+  // Readiness must audit the same records or superseded placeholders reappear as false image/price errors.
+  const rows = book.rooms.flatMap((room) => (room.rows || []).filter((row) => isSelectionsScheduleBookRow(row) && decisions.has(row.id)).map((row) => ({ room, row })));
   const items = [];
   rows.forEach(({ room, row }) => {
     const label = row.selectedProduct || row.item || room.name || "Selection";
@@ -17290,6 +17601,19 @@ function priceStateForGuidedOption(option) {
   return priceStateForProduct({ priceStatus: PRICE_STATES.pending });
 }
 
+function templatePriceReference(product = {}) {
+  const entity = product?.metadata?.productEntity || product;
+  const price = Number(entity.retailReferencePrice);
+  if (!(price > 0)) return null;
+  const estimate = entity.retailReferenceType === "estimate";
+  const unit = displayCatalogueValue(entity.retailReferenceUnit || entity.priceUnit);
+  const gst = /incl|inclusive/i.test(String(entity.retailReferenceGstBasis || "")) ? "inc GST" : /excl|exclusive/i.test(String(entity.retailReferenceGstBasis || "")) ? "ex GST" : "GST basis in source";
+  return {
+    label: estimate ? "Indicative template estimate" : "Verified supplier reference",
+    value: `${money(price)}${unit ? ` per ${unit}` : ""} (${gst})`,
+  };
+}
+
 function ensureKitchenRoom(book) {
   return book?.rooms?.find((room) => slug(room.name) === "kitchen") || { id: "missing-kitchen", name: "Kitchen", rows: [] };
 }
@@ -18500,7 +18824,26 @@ const styles = `
   .drivewayWorkflow { display: block; width: 100%; max-width: none; min-width: 0; }
   .drivewayWorkflow .guidedProductPanel { width: 100%; max-width: none; min-width: 0; gap: 18px; box-sizing: border-box; }
   .cabinetryWorkflow .guidedProductPanel { gap: 16px; }
-  .cabinetryBanner { grid-template-columns: minmax(0, 1fr) auto; align-items: start; }
+  /* Wraps instead of squeezing the title behind the totals on narrower screens. */
+  .cabinetryBanner { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 16px; }
+  .cabinetryBanner > div:first-child { flex: 1 1 280px; }
+  .cabinetryBanner > .guidedTotals { flex: 1 1 520px; min-width: 0; max-width: 900px; }
+  .cabinetryBanner > button { flex: 0 0 auto; }
+        .cabinetryViewToggle { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; padding: 12px 14px; border-radius: 12px; background: #f1f5f9; font-size: 16px; }
+        .cabinetryViewToggle button { font-size: 16px; padding: 8px 14px; border-radius: 10px; border: 1px solid #94a3b8; background: #fff; cursor: pointer; }
+        .cabinetryBulkheadBody { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; }
+        .cabinetryBulkheadReference { flex: 1 1 260px; max-width: 360px; margin: 0; }
+        .cabinetryBulkheadReference img { width: 100%; border-radius: 12px; display: block; }
+        .cabinetryBulkheadReference figcaption { font-size: 16px; color: #475569; margin-top: 8px; }
+        .cabinetryBulkheadOptions { flex: 1 1 300px; display: flex; flex-direction: column; gap: 10px; }
+        .cabinetryBulkheadOptions button { text-align: left; display: flex; flex-direction: column; gap: 4px; font-size: 16px; padding: 14px 16px; border-radius: 12px; border: 2px solid #cbd5e1; background: #fff; cursor: pointer; }
+        .cabinetryBulkheadOptions button strong { font-size: 18px; }
+        .cabinetryBulkheadOptions button.selected { border-color: #0f766e; background: #f0fdfa; }
+        .cabinetryBulkheadOptions button:disabled { opacity: .55; cursor: not-allowed; }
+        .cabinetryBulkheadNote { font-size: 16px; color: #92400e; background: #fffbeb; border: 1px solid #f59e0b; border-radius: 10px; padding: 10px 12px; margin: 0; }
+        .cabinetryBulkheadPermit { font-size: 16px; display: flex; gap: 8px; align-items: center; }
+        .cabinetryClientLayoutNote { font-size: 16px; color: #334155; }
+        .cabinetryClientLayoutList { font-size: 16px; columns: 2 260px; margin: 8px 0 0; }
   .cabinetryBanner > div { display: grid; gap: 6px; min-width: 0; }
   .cabinetryBanner p { margin: 0; color: #64748b; font-weight: 700; }
   .cabinetryRoomGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; min-width: 0; }
@@ -19059,15 +19402,18 @@ const styles = `
   .alert.success { background: #dcfce7; color: #166534; }
   .alert.warning { background: #fef3c7; color: #92400e; }
   .documentWrap { display: grid; justify-content: stretch; justify-items: stretch; gap: 16px; width: 100%; }
-  .contractSchedulePanel { display: grid; grid-template-columns: minmax(220px, 1.2fr) minmax(280px, 1fr) auto; gap: 14px; align-items: center; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 16px; }
+  .contractSchedulePanel { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 16px; overflow: hidden; }
+  .contractScheduleHeader { display: grid; min-width: 0; gap: 4px; }
   .contractSchedulePanel h2 { margin: 2px 0 4px; font-size: 20px; color: #102033; }
   .contractSchedulePanel p { margin: 0; color: #64748b; font-size: 16px; line-height: 1.45; }
   .panelKicker { color: #0f766e; font-size: 16px; font-weight: 950; text-transform: uppercase; }
-  .scheduleReviewStats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
-  .currentSavedSelectionsIndicator { display: inline-flex; width: fit-content; margin-top: 8px; border: 1px solid #99f6e4; border-radius: 999px; background: #f0fdfa; color: #0f766e; padding: 6px 10px; font-size: 16px; font-weight: 950; }
-  .scheduleReviewStats span { border: 1px solid #d7deea; border-radius: 8px; background: #f8fafc; padding: 8px; color: #64748b; font-size: 16px; font-weight: 800; text-align: center; }
-  .scheduleReviewStats strong { display: block; color: #102033; font-size: 18px; }
-  .scheduleIssueActions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+  .scheduleReviewStats { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr)); gap: 10px; margin: 0; min-width: 0; }
+  .currentSavedSelectionsIndicator { display: inline-flex; max-width: 100%; width: fit-content; margin-top: 8px; border: 1px solid #99f6e4; border-radius: 999px; background: #f0fdfa; color: #0f766e; padding: 6px 10px; font-size: 16px; font-weight: 950; line-height: 1.35; white-space: normal; overflow-wrap: anywhere; }
+  .scheduleReviewStats div { min-width: 0; border: 1px solid #d7deea; border-radius: 8px; background: #f8fafc; padding: 10px; text-align: center; }
+  .scheduleReviewStats dt { margin-top: 3px; color: #64748b; font-size: 16px; line-height: 1.3; font-weight: 800; overflow-wrap: anywhere; }
+  .scheduleReviewStats dd { margin: 0; color: #102033; font-size: 18px; line-height: 1.2; font-weight: 950; }
+  .scheduleIssueActions { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 8px; min-width: 0; }
+  .scheduleIssueActions button { min-height: 42px; white-space: normal; line-height: 1.25; }
   .scheduleReviewList { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; }
   .scheduleReviewList span { border: 1px solid #fde68a; border-radius: 8px; background: #fffbeb; color: #92400e; padding: 7px 9px; font-size: 16px; font-weight: 800; }
   .scheduleDocumentLink { grid-column: 1 / -1; color: #0f766e; font-weight: 900; text-decoration: none; }
@@ -19118,8 +19464,9 @@ const styles = `
   .scheduleTableHeader span { color: #f8d58a; font-size: 16px; font-weight: 950; text-transform: uppercase; letter-spacing: .08em; }
   .scheduleTableHeader h2 { margin: 2px 0 0; color: #ffffff; font-size: 25px; line-height: 1.02; text-transform: uppercase; }
   .scheduleTableHeader p { margin: 5px 0 0; color: #dbe5f0; font-size: 16px; line-height: 1.35; font-weight: 760; }
-  .scheduleReconciliation { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: baseline; font-size: 16px; color: #334155; }
-  .scheduleReconciliation strong { color: #071827; }
+  .scheduleReconciliation { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 8px 18px; align-items: start; min-width: 0; font-size: 16px; line-height: 1.4; color: #334155; }
+  .scheduleReconciliation strong { grid-column: 1 / -1; color: #071827; overflow-wrap: anywhere; }
+  .scheduleReconciliation span { min-width: 0; overflow-wrap: anywhere; }
   .selectionsSchedulePage { container-type: inline-size; display: grid; grid-template-rows: 5.2cqw minmax(0, 1fr) 2.6cqw; background: #fff; color: #102033; }
   .ssHeader { display: flex; align-items: center; justify-content: space-between; gap: 2cqw; background: #071827; color: #fff; border-left: .7cqw solid #c99735; padding: 0 1.6cqw; }
   .ssHeader span { display: block; color: #f8d58a; font-size: .95cqw; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; }

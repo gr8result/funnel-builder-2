@@ -61,3 +61,39 @@ export function pairIsPierRim(candidate, piers, pixelsPerMm) {
       && (candidate.c1<=edge+tolerance || candidate.c0>=edge-tolerance));
   });
 }
+
+// Every cross-hatched region on the sheet (two families of diagonal strokes in one paint that cross each
+// other), whatever its size or proportion: [{ x0, y0, x1, y1 }] in logical px. What the hatch means is
+// not decided here; areas enclosed by it are reported separately from walkable floor.
+export function crossHatchedRegions(straight, pixelsPerMm, { minSideMm = 100 } = {}) {
+  const groups = new Map();
+  for (const s of straight) {
+    const dx = s.x2 - s.x1, dy = s.y2 - s.y1, length = Math.hypot(dx, dy) / pixelsPerMm;
+    if (s.path === undefined || s.paint !== 'stroke' || s.dashed || length < 25 || length > 2000
+      || Math.abs(dx) < .35 * Math.hypot(dx, dy) || Math.abs(dy) < .35 * Math.hypot(dx, dy)) continue;
+    if (!groups.has(s.path)) groups.set(s.path, []); groups.get(s.path).push(s);
+  }
+  const cross = (a, b, c) => (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+  const point = (s, i) => ({ x: s['x' + i], y: s['y' + i] });
+  const regions = [];
+  for (const strokes of groups.values()) {
+    if (strokes.length < 8) continue;
+    const parent = strokes.map((_, i) => i), find = (i) => (parent[i] === i ? i : (parent[i] = find(parent[i])));
+    for (let i = 0; i < strokes.length; i++) for (let j = i + 1; j < strokes.length; j++) {
+      const a = strokes[i], b = strokes[j];
+      if ((a.x2 - a.x1) * (a.y2 - a.y1) * (b.x2 - b.x1) * (b.y2 - b.y1) >= 0) continue;
+      const p = point(a, 1), q = point(a, 2), r = point(b, 1), t = point(b, 2);
+      if (cross(p, q, r) * cross(p, q, t) <= 0 && cross(r, t, p) * cross(r, t, q) <= 0) parent[find(i)] = find(j);
+    }
+    const clusters = new Map(); strokes.forEach((s, i) => { const key = find(i); if (!clusters.has(key)) clusters.set(key, []); clusters.get(key).push(s); });
+    for (const cluster of clusters.values()) {
+      const positive = cluster.filter((s) => (s.x2 - s.x1) * (s.y2 - s.y1) > 0).length;
+      if (positive < 4 || cluster.length - positive < 4) continue;
+      const points = cluster.flatMap((s) => [point(s, 1), point(s, 2)]);
+      const x0 = Math.min(...points.map((p) => p.x)), x1 = Math.max(...points.map((p) => p.x)), y0 = Math.min(...points.map((p) => p.y)), y1 = Math.max(...points.map((p) => p.y));
+      if (Math.min(x1 - x0, y1 - y0) / pixelsPerMm < minSideMm) continue;
+      regions.push({ x0, y0, x1, y1 });
+    }
+  }
+  return regions;
+}

@@ -396,7 +396,11 @@ export const LANDING_CSS = `
   .lp-cinematic-copy .lp-sub{font-size:16px;line-height:1.5;margin-top:16px}
   .lp-cinematic-copy .lp-eyebrow{font-size:10px;letter-spacing:.12em;margin-bottom:12px}
   .lp-cinematic-copy .lp-hl{gap:8px;margin-top:18px}
-  .lp-cinematic-copy .lp-hl li{font-size:11px}
+  .lp-cinematic-copy .lp-hl li{font-size:14px}
+  .lp-hero-form .lp-field label,.lp-hero-form .lp-consent,.lp-hero-form .lp-form-note{font-size:14px;line-height:1.5}
+  .lp-compare-panel li,.lp-compare-panel li strong,.lp-compare-panel li p{font-size:14px}
+  .lp-layout-connected .lp-step p{font-size:14px}
+  .lp-image-disclosure{font-size:14px!important}
   .lp-cinematic-copy .lp-hero-ctas{margin-top:20px}
   .lp-cinematic-copy .lp-btn{min-height:48px;font-size:14px}
   .lp-hero-backdrop img{object-position:65% top}
@@ -413,7 +417,7 @@ export const LANDING_CSS = `
   .lp-layout-showcase .lp-card{padding:14px}
   .lp-layout-showcase .lp-card-img{margin:-14px -14px 12px;aspect-ratio:4/3}
   .lp-layout-showcase .lp-card h3{font-size:15px}
-  .lp-layout-showcase .lp-card p{font-size:12px}
+  .lp-layout-showcase .lp-card p{font-size:14px}
   .lp-layout-connected .lp-steps{grid-template-columns:1fr;gap:20px}
   .lp-layout-connected .lp-step{padding-left:70px;min-height:52px}
   .lp-workflow-icon{position:absolute;left:0;top:0}

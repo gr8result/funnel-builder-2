@@ -4,9 +4,15 @@
 
 import { supabaseAdmin } from '../../../lib/supabaseAdmin';
 import { FUNNEL_TYPES, assemblePage } from '../../../modules/funnels/index.js';
-import { withAuth } from "../../../lib/withWorkspace";
+import { withWorkspace } from "../../../lib/withWorkspace";
 import { getLimit } from "../../../lib/featureGates";
 import { addBusinessBrandingHeader } from '../../../lib/businessBranding.js';
+
+let databaseOverride = null;
+export function setCreateFunnelDb(client) {
+  databaseOverride = client;
+}
+const database = () => databaseOverride || supabaseAdmin;
 
 function slugify(str) {
   return str
@@ -362,44 +368,33 @@ async function rewriteHtmlWithAI(html, { brand = {}, funnelTypeLabel = '', pageT
 async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
 
-  const { funnelTypeId, brand = {}, userId: bodyUserId, useAI = true } = req.body || {};
+  const { funnelTypeId, brand = {}, useAI = true } = req.body || {};
 
   if (!funnelTypeId) return res.status(400).json({ error: 'Missing funnelTypeId' });
 
   // Prefer explicit userId from client, but also support Bearer token.
-  let userId = bodyUserId || null;
-  if (!userId) {
-    const authHeader = req.headers.authorization || '';
-    if (authHeader.startsWith('Bearer ')) {
-      const token = authHeader.slice(7);
-      const { data, error } = await supabaseAdmin.auth.getUser(token);
-      if (!error) userId = data?.user?.id || null;
-    }
-  }
-  if (!userId) return res.status(401).json({ error: 'Unauthorized' });
-
   // ── QUOTA CHECK ────────────────────────────────────────────────────────────
-  // Use the authenticated user's id (req.user.id) for the plan lookup to prevent
-  // body-supplied userId from bypassing the quota.
-  const auth_user_id = req.user?.id || userId;
-  const { data: wsRow } = await supabaseAdmin
+  const auth_user_id = req.user.id;
+  const { data: wsRow, error: workspaceError } = await database()
     .from("workspaces")
     .select("plan")
-    .eq("owner_id", auth_user_id)
-    .order("created_at", { ascending: true })
-    .limit(1)
+    .eq("id", req.workspaceId)
     .maybeSingle();
+  if (workspaceError) return res.status(500).json({ ok: false, error: "Could not verify workspace plan." });
 
   const plan = wsRow?.plan || "starter";
   const funnelLimit = getLimit(plan, "funnels");
 
   if (funnelLimit !== null) {
-    const { count: funnelCount, error: countErr } = await supabaseAdmin
+    const { count: funnelCount, error: countErr } = await database()
       .from("funnels")
       .select("id", { count: "exact", head: true })
-      .eq("owner_user_id", auth_user_id);
+      .eq("owner_user_id", auth_user_id)
+      .eq("workspace_id", req.workspaceId)
+      .eq("is_master_template", false);
 
-    if (!countErr && funnelCount >= funnelLimit) {
+    if (countErr) return res.status(500).json({ ok: false, error: "Could not verify funnel usage." });
+    if (funnelCount >= funnelLimit) {
       return res.status(429).json({
         ok: false,
         code: "FUNNEL_LIMIT_EXCEEDED",
@@ -417,18 +412,20 @@ async function handler(req, res) {
   const name = (brand.name || funnelType.label).trim();
   const slug = slugify(name);
 
-  const { data: funnel, error: fErr } = await supabaseAdmin
+  const { data: funnel, error: fErr } = await database()
     .from('funnels')
     .insert({
-      owner_user_id: userId,
+      owner_user_id: req.user.id,
+      workspace_id: req.workspaceId,
       name,
       slug,
       status: 'draft',
+      is_master_template: false,
     })
     .select('id')
     .single();
 
-  if (fErr) return res.status(500).json({ error: fErr.message });
+  if (fErr) return res.status(500).json({ ok: false, error: fErr.message });
 
   // Build steps
   const aiEnabled = Boolean(useAI && process.env.OPENAI_API_KEY && (brand?.name || brand?.headline || brand?.offerDescription));
@@ -459,17 +456,23 @@ async function handler(req, res) {
     });
   }
 
-  const { error: sErr } = await supabaseAdmin
+  const { error: sErr } = await database()
     .from('funnel_steps')
     .insert(stepInserts);
 
   if (sErr) {
     // Clean up orphan funnel if step insert fails
-    await supabaseAdmin.from('funnels').delete().eq('id', funnel.id);
+    const { error: cleanupError } = await database().from('funnels').delete()
+      .eq('id', funnel.id).eq('owner_user_id', req.user.id).eq('workspace_id', req.workspaceId);
+    if (cleanupError) {
+      console.error("[funnels/create-with-pages] failed to roll back incomplete funnel", cleanupError.message || cleanupError);
+      return res.status(500).json({ ok: false, error: "The funnel was incomplete and could not be rolled back. Contact support before retrying." });
+    }
     return res.status(500).json({ error: sErr.message });
   }
 
   return res.status(200).json({ ok: true, funnelId: funnel.id });
 }
 
-export default withAuth(handler);
+export { handler };
+export default withWorkspace(handler);

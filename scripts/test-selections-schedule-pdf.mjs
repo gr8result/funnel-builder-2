@@ -60,10 +60,13 @@ await check("NO PAGE IS MOSTLY EMPTY EXCEPT THE LAST", () => {
 
 const chrome = process.env.PUPPETEER_EXECUTABLE_PATH || "C:/Program Files/Google/Chrome/Application/chrome.exe";
 if (fs.existsSync(chrome)) {
-  await check("THE PDF HAS THE COVER PLUS ONE PAGE PER SCHEDULE PAGE", async () => {
+  await check("THE PDF HAS THE COVER, ONE PAGE PER SCHEDULE PAGE, THEN OUTSTANDING DECISIONS AND ACCEPTANCE", async () => {
     const pdf = await renderDynamicFinalInclusionsPdf(snapshot, { puppeteerLaunchOptions: { executablePath: chrome } });
     const document = await PDFDocument.load(pdf.bytes);
-    assert.equal(document.getPageCount(), 1 + schedule.pages.length);
+    assert.equal(document.getPageCount(), 1 + schedule.pages.length + 1);
+    const total = document.getPageCount();
+    assert(pdf.html.includes(`Page 2 of ${total}`) && pdf.html.includes(`Page ${total} of ${total}`), "pages are numbered X of Y");
+    assert(/Outstanding decisions|Client acceptance/.test(pdf.html) && pdf.html.includes("Client acceptance"), "the last page lists open decisions and the client acceptance");
     for (const page of document.getPages()) assert.deepEqual([Math.round(page.getWidth()), Math.round(page.getHeight())], [842, 595], "landscape A4");
     fs.mkdirSync("artifacts/test-artifacts/selections-schedule-pdf", { recursive: true });
     fs.writeFileSync("artifacts/test-artifacts/selections-schedule-pdf/schedule.pdf", pdf.bytes);

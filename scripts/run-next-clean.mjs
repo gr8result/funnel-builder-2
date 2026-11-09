@@ -20,7 +20,7 @@ if (!["dev", "build", "start"].includes(mode)) {
 }
 
 const workspaceRoot = process.cwd();
-const distDir = mode === "dev" ? ".next-dev" : (isVercelBuild ? ".next" : ".next-build");
+const distDir = process.env.NEXT_DIST_DIR || (mode === "dev" ? ".next-dev" : (isVercelBuild ? ".next" : ".next-build"));
 const nextDir = path.join(workspaceRoot, distDir);
 const lockFile = path.join(workspaceRoot, `${distDir}.lock.json`);
 

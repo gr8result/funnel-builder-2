@@ -164,7 +164,12 @@ async function setQuantity(key, label, quantity) {
 }
 
 async function modalTotals() {
-  return page.$eval(selector('plumbing-allocation-totals'), element => Object.fromEntries([...element.querySelectorAll('div')].map(row => [row.querySelector('dt').innerText.trim().toLowerCase(), row.querySelector('dd').innerText.trim()])));
+  // Labels carry their GST basis ("Price each (inc GST)", "Unit allowance (ex GST)"); keys drop it.
+  return page.$eval(selector('plumbing-allocation-totals'), element => {
+    const rows = [...element.querySelectorAll('div')].map(row => [row.querySelector('dt').innerText.trim().toLowerCase(), row.querySelector('dd').innerText.trim()]);
+    const priceLabel = rows.find(([label]) => label.startsWith('price each'))?.[0] || '';
+    return {priceIncludesGst: !/\(ex gst\)/.test(priceLabel), ...Object.fromEntries(rows.map(([label, value]) => [label.replace(/\s*\((inc|ex) gst\)$/, ''), value]))};
+  });
 }
 
 async function saveModal() {
@@ -199,7 +204,9 @@ function assertLineMaths(totals, quantity, label) {
   if (Number.isFinite(each) && each > 0) {
     assert.equal(money(totals['product total']), Math.round(each * quantity * 100) / 100, `${label}: product total = price x qty`);
     const variation = money(totals.credit ?? totals.variation);
-    assert.equal(variation, Math.round((each - allowanceEach) * quantity * 100) / 100, `${label}: variation = (price - allowance) x qty`);
+    // Allowances and the quotation are ex GST: a GST-inclusive price is compared at its ex-GST value.
+    const exGstEach = totals.priceIncludesGst === false ? each : each / 1.1;
+    assert(Math.abs(variation - Math.round((exGstEach - allowanceEach) * quantity * 100) / 100) <= 0.5, `${label}: variation = (price ex GST - allowance) x qty (${variation})`);
   }
   assert.equal(money(totals['allowance total']), Math.round(allowanceEach * quantity * 100) / 100, `${label}: allowance total = unit allowance x qty`);
 }

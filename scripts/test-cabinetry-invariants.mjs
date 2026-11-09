@@ -148,8 +148,9 @@ check('10 BENCHTOP LM: MEASURED, ELSE CABINET WIDTHS, ELSE ASKED FOR', () => {
   const vanityTops = find(next, 'BATHROOM BENCHTOPS', 'BASE RANGE STONE - 20MM', /600mm wide/);
   assert.equal(vanityTops.quantity, 2.1); assert.deepEqual(vanityTops[CABINETRY_LINK_FIELD].roomQuantities, { Ensuite: 1.2, Bathroom: 0.9 });
   const pantry = attention(next);
-  assert.deepEqual(pantry.map(entry => [entry.room, entry.reason, entry.action.kind]), [["Butler's Pantry", 'Measurement required', 'open-selections']]);
-  assert.match(pantry[0].action.label, /Enter the benchtop length in Client Selections > Cabinetry > Butler's Pantry > Benchtops/);
+  assert.deepEqual(pantry.map(entry => [entry.room, entry.reason, entry.action.kind]), [["Butler's Pantry", 'Measurement required', 'enter-benchtop-length']]);
+  // The length is entered in place (LM), not by sending the builder to another screen.
+  assert.equal(pantry[0].action.label, 'Enter benchtop length'); assert.equal(pantry[0].action.unit, 'LM');
   // A measured takeoff benchtop is the length; the selection only supplies the range.
   const measured = apply(setCabinetryRequirements(next, [{ id: 'm', room: 'Laundry', type: 'benchtop', widthMm: 600, lengthLm: 3.4, source: 'AI_TAKEOFF' }]), owner);
   assert.equal(find(measured, 'LAUNDRY BENCHTOPS', 'STANDARD LAMINATE', /600mm wide/).quantity, 3.4);

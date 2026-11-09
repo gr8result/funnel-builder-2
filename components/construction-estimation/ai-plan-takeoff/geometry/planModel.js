@@ -32,6 +32,7 @@ export const PLAN_MODEL_DEFAULTS = {
   minRoomM2: 0.3,           // smaller enclosed faces are wall junction slivers, not rooms
   roomNameShare: 0.5,       // a room keeps its name while it shares this much of its walls with the named one
   healAngle: 0.01,          // a node inside one wall's chain, this straight, is removed when nothing else uses it
+  jambReachMm: 400,         // the span across an opening that stops this short of its jamb is carried to it (frames and returns are narrower)
 };
 
 const EPS = 1e-9;
@@ -431,6 +432,22 @@ function joinFreeEnds(level, options) {
         mergeNodeInto(level, partner.other, id);
         changed = true; break;
       }
+      // The same, where the wall on the line ahead already ends at a junction (a corner or T): this end
+      // joins that junction. The junction stays where it is; the gap is still too narrow for an opening.
+      const ownerIds = new Set(Object.values(level.walls).filter((wall) => wall.nodeIds.includes(id)).map((wall) => wall.id));
+      const junction = Object.values(level.walls).filter((wall) => !ownerIds.has(wall.id)).flatMap((wall) => [0, wall.nodeIds.length - 1].map((index) => {
+        const endId = wall.nodeIds[index];
+        if (endId === id || nodeDegree(level, endId) < 2) return null;
+        const there = level.nodes[endId], before = level.nodes[wall.nodeIds[index === 0 ? 1 : index - 1]];
+        const back = unit(sub(there, before));
+        if (dot(back, outward) > -Math.cos(options.collinearAngle * 3)) return null;
+        const gap = dot(sub(there, node), outward), offset = Math.abs(cross(outward, sub(there, node)));
+        return gap >= -options.snapMm && gap <= options.collinearJoinMm && offset <= options.snapMm ? { endId, gap } : null;
+      })).filter(Boolean).sort((p, q) => p.gap - q.gap)[0];
+      if (junction) {
+        mergeNodeInto(level, id, junction.endId);
+        changed = true; break;
+      }
       // A corner both walls stop short of: they meet where their centrelines cross.
       const corner = free.filter((other) => other !== id && level.nodes[other]).map((other) => {
         const there = level.nodes[other], back = outwardAt(level, other);
@@ -464,6 +481,86 @@ function joinFreeEnds(level, options) {
         insertIntoChain(level, best.segment.owner, best.segment.u, best.segment.v, id);
         changed = true; break;
       }
+    }
+    if (!changed) return;
+  }
+}
+
+// The span across an opening ends at the opening's jambs, and a jamb is always wall. A span is sized
+// from what was measured in the gap (a leaf, a frame), so where the jamb has a frame, a short return
+// or a nib too short to read as wall, the span stops short and the room leaks through. Each free span
+// end is carried to its jamb by the shortest of: a wall node just ahead (within the wall's thickness
+// either side of the span's line), a wall it runs into, or the line of a wall ending nearby (the
+// missing return is added). Nothing is carried further than jambReachMm or across another wall.
+function closeOpeningJambs(level, options) {
+  const reach = options.jambReachMm;
+  if (!(reach > 0)) return;
+  const crossesNetwork = (p, q, except) => networkSegments(level).some((segment) => !except.has(segment.u) && !except.has(segment.v)
+    && segmentCrossing(p, q, segment.a, segment.b));
+  for (let pass = 0; pass < 100; pass += 1) {
+    let changed = false;
+    for (const span of Object.values(level.walls)) {
+      if (!span.attributes?.spansOpening) continue;
+      for (const id of [span.nodeIds[0], span.nodeIds[span.nodeIds.length - 1]]) {
+        if (nodeDegree(level, id) !== 1) continue;
+        const node = level.nodes[id], outward = outwardAt(level, id);
+        if (!node || !outward) continue;
+        const half = (span.thicknessMm || 0) / 2;
+        let best = null;
+        // A wall node just ahead.
+        for (const other of Object.values(level.nodes)) {
+          if (other.id === id || span.nodeIds.includes(other.id) || nodeDegree(level, other.id) < 1) continue;
+          const along = dot(sub(other, node), outward), lateral = Math.abs(cross(outward, sub(other, node)));
+          const otherHalf = Math.max(0, ...Object.values(level.walls).filter((wall) => wall.nodeIds.includes(other.id)).map((wall) => (wall.thicknessMm || 0) / 2));
+          if (along < -options.snapMm || along > reach || lateral > Math.max(half, otherHalf) + options.snapMm) continue;
+          const cost = dist(node, other);
+          if (crossesNetwork(node, other, new Set([id, other.id]))) continue;
+          if (!best || cost < best.cost) best = { cost, apply: () => mergeNodeInto(level, id, other.id) };
+        }
+        // A wall it runs into.
+        for (const segment of networkSegments(level)) {
+          if (segment.owner === span.id || angleBetween(outward, sub(segment.b, segment.a)) < options.joinAngle) continue;
+          const denom = cross(outward, sub(segment.b, segment.a));
+          if (Math.abs(denom) < EPS) continue;
+          const t = cross(sub(segment.a, node), sub(segment.b, segment.a)) / denom;
+          const s = cross(sub(segment.a, node), outward) / denom;
+          if (t < 0 || t > reach || s <= EPS || s >= 1 - EPS) continue;
+          const point = add(node, mul(outward, t));
+          if (crossesNetwork(node, point, new Set([id, segment.u, segment.v]))) continue;
+          if (!best || t < best.cost) best = { cost: t, apply: () => {
+            level.nodes[id] = { id, x: point.x, y: point.y };
+            insertIntoChain(level, segment.owner, segment.u, segment.v, id);
+          } };
+        }
+        // The line of a wall ending nearby: the return between them is missing.
+        for (const wall of Object.values(level.walls)) {
+          if (wall.id === span.id || wall.attributes?.spansOpening) continue;
+          for (const endId of [wall.nodeIds[0], wall.nodeIds[wall.nodeIds.length - 1]]) {
+            const end = level.nodes[endId];
+            const neighbour = level.nodes[wall.nodeIds[endId === wall.nodeIds[0] ? 1 : wall.nodeIds.length - 2]];
+            if (!end || !neighbour || endId === id) continue;
+            const along = unit(sub(end, neighbour));
+            if (angleBetween(outward, along) < options.joinAngle) continue;
+            const denom = cross(outward, along);
+            if (Math.abs(denom) < EPS) continue;
+            const t = cross(sub(end, node), along) / denom, u = cross(sub(end, node), outward) / denom;
+            if (t < 0 || t > reach || u <= options.snapMm || u > reach) continue;
+            const point = add(node, mul(outward, t));
+            if (crossesNetwork(node, point, new Set([id, endId])) || crossesNetwork(end, point, new Set([id, endId]))) continue;
+            const cost = t + u;
+            if (!best || cost < best.cost) best = { cost, apply: () => {
+              level.nodes[id] = { id, x: point.x, y: point.y };
+              const stubId = nextId(level, 'w');
+              level.walls[stubId] = { id: stubId, nodeIds: [endId, id], thicknessMm: wall.thicknessMm, category: wall.category || null,
+                categorySource: wall.category ? wall.categorySource : null, source: 'detected',
+                detectionKey: wall.detectionKey ? `${wall.detectionKey}:jamb-return` : null, locked: false, edited: false,
+                attributes: { jambReturn: true, ...(span.detectionKey ? { jambOf: span.detectionKey } : {}) } };
+            } };
+          }
+        }
+        if (best) { best.apply(); changed = true; }
+      }
+      if (changed) break;
     }
     if (!changed) return;
   }
@@ -746,13 +843,24 @@ export function mergeDetections(level, detections = {}, overrides = {}) {
   }
   joinFreeEnds(next, options);
   planarize(next, options);
+  closeOpeningJambs(next, options);
+  planarize(next, options);
   if (detections.rooms?.length) {
     const rooms = computeRooms(next, options);
+    // Every printed name inside one room names it: an open-plan floor carries all of them ("kitchen /
+    // dining / living room"). An estimator's name is never replaced.
+    const byRoom = new Map();
     for (const label of detections.rooms) {
       const room = rooms.find((item) => pointInPolygon(label, item.boundary));
       if (!room || room.nameSource === 'manual') continue;
-      if (room.name) continue;
-      next.roomNames.push({ id: nextId(next, 'r'), wallIds: room.wallIds, name: label.name, source: 'detected' });
+      if (!byRoom.has(room)) byRoom.set(room, []);
+      if (!byRoom.get(room).includes(label.name)) byRoom.get(room).push(label.name);
+    }
+    for (const [room, names] of byRoom) {
+      const name = names.join(' / ');
+      const existing = room.labelId ? next.roomNames.find((item) => item.id === room.labelId) : null;
+      if (existing) { if (existing.source !== 'manual' && existing.name !== name) existing.name = name; continue; }
+      next.roomNames.push({ id: nextId(next, 'r'), wallIds: room.wallIds, name, source: 'detected' });
       report.roomsNamed += 1;
     }
   }
@@ -852,7 +960,45 @@ function floorPolygon(level, nodeIds, edges) {
       out.push(add(points[i], mul(previous.inward, flip * previous.half)), add(points[i], mul(current.inward, flip * current.half)));
     } else out.push(corner);
   }
-  return out;
+  return cleanFloorPolygon(out, shoelace(points));
+}
+
+// An inset outline can fold where a short edge is shorter than the inset or the wall thickness changes
+// at a corner: spikes that double back and small loops turned inside out. Remove repeated, straight-
+// through and doubling-back points, then split at any crossing and keep the main loop that turns the
+// same way as the room outline. The result is a simple polygon.
+function cleanFloorPolygon(polygon, outlineSignedArea) {
+  const sign = Math.sign(outlineSignedArea) || 1;
+  const tidyPoints = (points) => {
+    let list = points.slice();
+    for (let changed = true, guard = 0; changed && list.length > 3 && guard < 1000; guard += 1) {
+      changed = false;
+      for (let i = 0; i < list.length && list.length > 3; i += 1) {
+        const prev = list[(i - 1 + list.length) % list.length], here = list[i], next = list[(i + 1) % list.length];
+        const a = sub(here, prev), b = sub(next, here);
+        const tiny = Math.hypot(a.x, a.y) < 0.5;
+        const straight = Math.abs(cross(unit(a), unit(b))) < 1e-6;
+        if (tiny || straight) { list.splice(i, 1); changed = true; break; }
+      }
+    }
+    return list;
+  };
+  const split = (points, depth = 0) => {
+    if (depth > 40 || points.length < 4) return [points];
+    const n = points.length;
+    for (let i = 0; i < n; i += 1) for (let j = i + 2; j < n; j += 1) {
+      if (i === 0 && j === n - 1) continue;
+      const hit = segmentCrossing(points[i], points[(i + 1) % n], points[j], points[(j + 1) % n]);
+      if (!hit) continue;
+      const first = [...points.slice(0, i + 1), hit.point, ...points.slice(j + 1)];
+      const second = [hit.point, ...points.slice(i + 1, j + 1)];
+      return [...split(tidyPoints(first), depth + 1), ...split(tidyPoints(second), depth + 1)];
+    }
+    return [points];
+  };
+  const loops = split(tidyPoints(polygon)).filter((loop) => loop.length >= 3 && Math.sign(shoelace(loop)) === sign);
+  if (!loops.length) return polygon;
+  return loops.sort((p, q) => Math.abs(shoelace(q)) - Math.abs(shoelace(p)))[0];
 }
 
 const signatureOf = (wallIds) => [...wallIds].sort().join(',');
@@ -897,6 +1043,126 @@ export function computeRooms(level, overrides = {}) {
   return rooms.map((room) => ({ id: room.labelId ? `room:${room.labelId}` : `face:${signatureOf([...room.wallIds, ...room.separatorIds])}`, name: room.name || null, nameSource: room.nameSource || null, ...room }));
 }
 
+// Room types that are closed off from the spaces around them (a pantry, robe, laundry, bathroom or
+// bedroom), as opposed to living, dining, kitchen, entry and hall spaces that are often open plan.
+export const ENCLOSED_ROOM_LABEL = /^(pan|pantry|wil|w\.i\.l\.?|wir|w\.i\.r\.?|robe|linen|store|l'?dry|laundry|powder|pwd|wc|toilet|bath|bathroom|ens|ensuite|e-suite|bed|bedroom|master|media)\b/i;
+
+/**
+ * Virtual room dividers (separators) where the drawing shows a room ends without a wall: the line of a
+ * drawn wall that stops is carried across the open threshold to the drawn wall it faces, when that is
+ * what separates an enclosed room's printed label from the other labels sharing its floor. A divider
+ * bounds rooms only; it is never a wall and never a wall quantity. Nothing is added where the drawing
+ * gives no wall end, no facing wall or no labels to separate.
+ * @param labels [{ x, y, name }] in mm
+ * @returns {{ level, dividers: [{ separatorId, fromWall, toWall, lengthMm, separates }] }}
+ */
+export function inferThresholdDividers(level, labels = [], overrides = {}) {
+  const options = { thresholdMaxMm: 3000, dividerMinRoomM2: 1, enclosedRoomLabel: ENCLOSED_ROOM_LABEL, ...PLAN_MODEL_DEFAULTS, ...overrides };
+  let next = clone(level);
+  const dividers = [];
+  const named = labels.filter((label) => Number.isFinite(label.x) && Number.isFinite(label.y) && label.name);
+  const labelsIn = (room) => named.filter((label) => pointInPolygon(label, room.boundary));
+  const unresolved = new Set();
+  for (let pass = 0; pass < named.length; pass += 1) {
+    const rooms = computeRooms(next, options);
+    const room = rooms.find((item) => { const inside = labelsIn(item); return inside.length >= 2 && inside.some((label) => options.enclosedRoomLabel.test(label.name.trim()) && !unresolved.has(label)); });
+    if (!room) break;
+    const inside = labelsIn(room);
+    const target = inside.find((label) => options.enclosedRoomLabel.test(label.name.trim()) && !unresolved.has(label));
+    const onBoundaryOrInside = (point) => pointInPolygon(point, room.boundary)
+      || room.boundary.some((c, j) => project(point, c, room.boundary[(j + 1) % room.boundary.length]).distance < 1);
+    const candidates = [];
+    for (const wall of Object.values(next.walls)) {
+      for (const index of [0, wall.nodeIds.length - 1]) {
+        const v = next.nodes[wall.nodeIds[index]], neighbour = next.nodes[wall.nodeIds[index === 0 ? 1 : index - 1]];
+        if (!v || !neighbour || !onBoundaryOrInside(v)) continue;
+        const d = unit(sub(v, neighbour));
+        let hit = null;
+        for (const segment of networkSegments(next)) {
+          if (segment.u === v.id || segment.v === v.id) continue;
+          const e = sub(segment.b, segment.a), denom = cross(d, e);
+          if (Math.abs(denom) < EPS) continue;
+          const t = cross(sub(segment.a, v), e) / denom, s = cross(sub(segment.a, v), d) / denom;
+          if (t <= options.minWallMm || t > options.thresholdMaxMm || s < -EPS || s > 1 + EPS) continue;
+          if (!hit || t < hit.t) hit = { t, point: add(v, mul(d, t)), owner: segment.owner };
+        }
+        if (!hit || !pointInPolygon(add(v, mul(d, hit.t / 2)), room.boundary)) continue;
+        candidates.push({ v, wall, ...hit });
+      }
+    }
+    candidates.sort((p, q) => p.t - q.t);
+    let accepted = null;
+    for (const candidate of candidates) {
+      const trial = addSeparator(next, { a: candidate.v, b: candidate.point }, options);
+      if (!trial.separatorId) continue;
+      const after = computeRooms(trial.level, options);
+      const own = after.find((item) => pointInPolygon(target, item.boundary));
+      if (!own || own.areaM2 < options.dividerMinRoomM2 || labelsIn(own).length !== 1) continue;
+      const rest = after.find((item) => item !== own && labelsIn(item).some((label) => inside.includes(label)));
+      if (!rest || rest.areaM2 < options.dividerMinRoomM2) continue;
+      accepted = { candidate, trial };
+      break;
+    }
+    if (!accepted) { unresolved.add(target); continue; }
+    next = accepted.trial.level;
+    const { candidate } = accepted;
+    const toWall = next.walls[candidate.owner];
+    const separator = next.separators[accepted.trial.separatorId];
+    Object.assign(separator, { source: 'detected', basis: 'open-threshold', detectionKey: `threshold:${candidate.wall.detectionKey || candidate.wall.id}`,
+      evidence: `Open threshold: the line of drawn wall ${candidate.wall.detectionKey || candidate.wall.id} carried ${Math.round(candidate.t)} mm across open floor to drawn wall ${toWall?.detectionKey || candidate.owner}, separating "${target.name}" from ${inside.filter((label) => label !== target).map((label) => `"${label.name}"`).join(', ')}.` });
+    dividers.push({ separatorId: separator.id, fromWall: candidate.wall.detectionKey || candidate.wall.id, toWall: toWall?.detectionKey || candidate.owner,
+      lengthMm: Math.round(candidate.t), separates: [target.name, ...inside.filter((label) => label !== target).map((label) => label.name)] });
+  }
+  return { level: next, dividers };
+}
+
+/**
+ * External recesses: notches in the outside of the building where the wall outline steps in and back
+ * out to the same line (a lightwell, niche or porch beside the walls). The notch is closed only across
+ * its open mouth, between the two outline corners on that line; nothing is drawn there, so it is an
+ * external area, never a room. Measured to the outer wall faces and the mouth line.
+ * @returns [{ id, nodeIds, mouth: [{x,y},{x,y}], mouthMm, polygon, areaM2, evidence }]
+ */
+export function externalRecesses(level, overrides = {}) {
+  const options = { mouthMinMm: 300, mouthMaxMm: 3000, minAreaM2: 0.5, lineToleranceMm: 60, maxChain: 12, ...PLAN_MODEL_DEFAULTS, ...overrides };
+  const { faces, edges } = networkFaces(level);
+  const outer = faces.filter((face) => Math.sign(face.signedArea) !== BOUNDED_SIGN).sort((a, b) => Math.abs(b.signedArea) - Math.abs(a.signedArea))[0];
+  if (!outer || outer.nodeIds.length < 4) return [];
+  const ids = outer.nodeIds, n = ids.length, P = ids.map((id) => level.nodes[id]);
+  const segments = networkSegments(level);
+  const found = [];
+  const used = new Set();
+  for (let i = 0; i < n; i += 1) {
+    let best = null;
+    for (let k = 2; k <= Math.min(options.maxChain, n - 2); k += 1) {
+      const j = (i + k) % n, a = P[i], b = P[j];
+      const horizontal = Math.abs(a.y - b.y) <= options.lineToleranceMm, vertical = Math.abs(a.x - b.x) <= options.lineToleranceMm;
+      if (!horizontal && !vertical) continue;
+      const mouthMm = dist(a, b);
+      if (mouthMm < options.mouthMinMm || mouthMm > options.mouthMaxMm) continue;
+      const chain = Array.from({ length: k + 1 }, (_, m) => (i + m) % n);
+      // Every corner between lies to one side of the mouth line, set back from it.
+      const offsets = chain.slice(1, -1).map((m) => horizontal ? P[m].y - (a.y + b.y) / 2 : P[m].x - (a.x + b.x) / 2);
+      const along = chain.slice(1, -1).map((m) => horizontal ? P[m].x : P[m].y);
+      const [lo, hi] = horizontal ? [Math.min(a.x, b.x), Math.max(a.x, b.x)] : [Math.min(a.y, b.y), Math.max(a.y, b.y)];
+      if (!offsets.length || !(offsets.every((v) => v > 100) || offsets.every((v) => v < -100))) continue;
+      if (along.some((v) => v < lo - options.lineToleranceMm || v > hi + options.lineToleranceMm)) continue;
+      // The mouth crosses no wall: it is open.
+      if (segments.some((s) => s.u !== ids[i] && s.v !== ids[i] && s.u !== ids[j] && s.v !== ids[j] && segmentCrossing(a, b, s.a, s.b))) continue;
+      const nodeIds = chain.map((m) => ids[m]);
+      const polygon = floorPolygon(level, nodeIds, edges);
+      const areaM2 = Math.abs(shoelace(polygon)) / 1e6;
+      if (areaM2 < options.minAreaM2) continue;
+      if (!best || mouthMm < best.mouthMm) best = { nodeIds, mouth: [a, b], mouthMm, polygon, areaM2 };
+    }
+    if (!best || best.nodeIds.some((id, m) => m > 0 && m < best.nodeIds.length - 1 && used.has(id))) continue;
+    best.nodeIds.slice(1, -1).forEach((id) => used.add(id));
+    found.push({ id: `recess:${best.nodeIds.join('-')}`, ...best, mouthMm: Math.round(best.mouthMm), areaM2: Math.round(best.areaM2 * 100) / 100,
+      evidence: `The wall outline steps in and returns to the same line; the ${Math.round(best.mouthMm)} mm mouth between the two corners has nothing drawn across it, so this is external area, not a room.` });
+  }
+  return found;
+}
+
 /** Name the room containing a point (mm). An estimator's name is never replaced by analysis. */
 export function nameRoomAt(level, point, name, { source = 'manual' } = {}, overrides = {}) {
   const next = clone(level);
@@ -921,12 +1187,15 @@ export function wallCategories(level) {
     const owners = face.nodeIds.map((id, i) => edgeOf(edges, id, face.nodeIds[(i + 1) % face.nodeIds.length])).filter((edge) => edge?.kind === 'wall').map((edge) => edge.owner);
     for (const id of owners) (Math.sign(face.signedArea) === BOUNDED_SIGN ? enclosed : outside).add(id);
   }
-  const bounded = faces.filter(face => Math.sign(face.signedArea) === BOUNDED_SIGN
-    && Math.abs(face.signedArea) >= PLAN_MODEL_DEFAULTS.minRoomM2 * 1e6)
-    .map(face => face.nodeIds.map(id => level.nodes[id]));
+  const bounded = boundedFacePolygons(level, faces);
+  // A wall on the outer face of one piece of the network can still have a room of another piece on its
+  // far side (a house drawn as blocks whose outlines do not join). External means outside lies beyond
+  // one face: rooms on both sides along (nearly) all of the wall = internal. A wall with a run outside is
+  // external here; splitWallsByExposure cuts such a wall into its external and internal runs first.
+  const roomsBothSides = (wall) => roomsBothSidesShare(wallPoints(level, wall), wall.thicknessMm, bounded) >= 0.9;
   return Object.fromEntries(Object.values(level.walls).map((wall) => {
     if (wall.categorySource === 'manual' || wall.categorySource === 'plan-evidence') return [wall.id, wall.category];
-    if (outside.has(wall.id)) return [wall.id, 'exterior'];
+    if (outside.has(wall.id)) return [wall.id, roomsBothSides(wall) ? 'interior' : 'exterior'];
     if (enclosed.has(wall.id)) return [wall.id, 'interior'];
     if (wall.category) return [wall.id, wall.category];
     // A partition need not itself close a room. A measured wall wholly inside
@@ -955,6 +1224,81 @@ export function wallCategories(level) {
     });
     return [wall.id, inside ? 'interior' : null];
   }));
+}
+
+// Share of a wall run (sampled every 200 mm, just beyond each face) with a room on both sides.
+function roomsBothSidesShare(points, thicknessMm, bounded) {
+  const half = (thicknessMm || 0) / 2 + 150;
+  let samples = 0, both = 0;
+  for (let i = 1; i < points.length; i += 1) {
+    const a = points[i - 1], b = points[i], length = dist(a, b);
+    if (length < EPS) continue;
+    const n = { x: -(b.y - a.y) / length, y: (b.x - a.x) / length };
+    const steps = Math.max(1, Math.floor(length / 200));
+    for (let k = 0; k < steps; k += 1) {
+      const at = add(a, mul(sub(b, a), (k + 0.5) / steps));
+      samples += 1;
+      if ([1, -1].every((side) => bounded.some((polygon) => pointInPolygon(add(at, mul(n, side * half)), polygon)))) both += 1;
+    }
+  }
+  return samples ? both / samples : 0;
+}
+
+function boundedFacePolygons(level, faces) {
+  return faces.filter(face => Math.sign(face.signedArea) === BOUNDED_SIGN && Math.abs(face.signedArea) >= PLAN_MODEL_DEFAULTS.minRoomM2 * 1e6)
+    .map(face => face.nodeIds.map(id => level.nodes[id]));
+}
+
+/**
+ * Split detected walls where their exposure changes: a run of wall with outside beyond one face and a
+ * run of the same wall with rooms on both sides are separate walls (one external, one internal), cut at
+ * the junction node between them. Openings move to the piece they stand in. Estimator-edited, locked
+ * and plan-evidence walls are left as they are.
+ */
+export function splitWallsByExposure(level) {
+  const next = clone(level);
+  const { faces, edges } = networkFaces(next);
+  const outsideEdges = new Set(), faceEdges = new Set();
+  for (const face of faces) {
+    face.nodeIds.forEach((id, i) => {
+      const v = face.nodeIds[(i + 1) % face.nodeIds.length], key = id < v ? `${id}|${v}` : `${v}|${id}`;
+      faceEdges.add(key);
+      if (Math.sign(face.signedArea) !== BOUNDED_SIGN) outsideEdges.add(key);
+    });
+  }
+  const bounded = boundedFacePolygons(next, faces);
+  for (const wall of Object.values(next.walls)) {
+    if (wall.nodeIds.length < 3 || wall.locked || wall.edited || wall.categorySource === 'manual' || wall.categorySource === 'plan-evidence') continue;
+    const exposure = wall.nodeIds.slice(1).map((v, i) => {
+      const u = wall.nodeIds[i], key = u < v ? `${u}|${v}` : `${v}|${u}`;
+      if (!faceEdges.has(key)) return null; // a dangling tail bounds nothing: it stays with its neighbours
+      if (!outsideEdges.has(key)) return 'enclosed';
+      return roomsBothSidesShare([next.nodes[u], next.nodes[v]], wall.thicknessMm, bounded) > 0.5 ? 'enclosed' : 'outside';
+    });
+    for (let i = 1; i < exposure.length; i += 1) if (exposure[i] === null) exposure[i] = exposure[i - 1];
+    for (let i = exposure.length - 2; i >= 0; i -= 1) if (exposure[i] === null) exposure[i] = exposure[i + 1];
+    if (exposure.includes(null)) continue;
+    if (new Set(exposure).size < 2) continue;
+    const runs = [];
+    exposure.forEach((value, i) => { if (!runs.length || runs[runs.length - 1].value !== value) runs.push({ value, from: i, to: i + 1 }); else runs[runs.length - 1].to = i + 1; });
+    const chain = [...wall.nodeIds], original = clone(wall);
+    const lengths = [0];
+    for (let i = 1; i < chain.length; i += 1) lengths.push(lengths[i - 1] + dist(next.nodes[chain[i - 1]], next.nodes[chain[i]]));
+    const pieces = runs.map((run, index) => {
+      const id = index === 0 ? wall.id : nextId(next, 'w');
+      if (index > 0) next.walls[id] = { ...clone(original), id };
+      next.walls[id].nodeIds = chain.slice(run.from, run.to + 1);
+      next.walls[id].attributes = { ...(wall.attributes || {}), exposureSplitFrom: wall.id };
+      return { id, start: lengths[run.from], end: lengths[run.to] };
+    });
+    for (const opening of Object.values(next.openings)) {
+      if (opening.wallId !== wall.id) continue;
+      const piece = pieces.find((item) => opening.offsetMm <= item.end + EPS) || pieces[pieces.length - 1];
+      opening.wallId = piece.id; opening.offsetMm = Math.max(0, opening.offsetMm - piece.start);
+    }
+    for (const name of next.roomNames) if (name.wallIds.includes(wall.id)) name.wallIds = [...new Set([...name.wallIds, ...pieces.map((item) => item.id)])];
+  }
+  return next;
 }
 
 /** Set a wall's thickness or category by hand; the wall becomes locked. */

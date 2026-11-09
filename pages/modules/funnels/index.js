@@ -9,7 +9,7 @@ import AuthGate from "../../../components/AuthGate";
 import CampaignManager from "../../../components/funnels/CampaignManager";
 import { supabase } from "../../../lib/supabaseClient";
 import { useBusinessBranding } from "../../../hooks/useBusinessBranding";
-import { useWorkspace } from "../../../hooks/useWorkspace";
+import { useApiFetch, useWorkspace } from "../../../hooks/useWorkspace";
 
 export default function FunnelsHome() {
   return (
@@ -22,6 +22,7 @@ export default function FunnelsHome() {
 function FunnelsInner() {
   const router = useRouter();
   const { workspaceId } = useWorkspace();
+  const apiFetch = useApiFetch();
   const { branding, error: brandingError } = useBusinessBranding();
   const [session, setSession] = useState(null);
   const [newName, setNewName] = useState("");
@@ -54,11 +55,11 @@ function FunnelsInner() {
   }, []);
 
   useEffect(() => {
-    if (!session?.user?.id) return;
+    if (!session?.user?.id || !workspaceId) return;
     refreshAssets(session.user.id);
-    fetchFunnelUsage(session.access_token);
+    fetchFunnelUsage();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session?.user?.id]);
+  }, [session?.user?.id, workspaceId, apiFetch]);
 
   useEffect(() => {
     const onError = (err, url) => {
@@ -212,15 +213,17 @@ function FunnelsInner() {
     }
   }
 
-  async function fetchFunnelUsage(token) {
-    if (!token) return;
+  async function fetchFunnelUsage() {
+    if (!workspaceId) return;
     try {
-      const res = await fetch("/api/funnels/usage", {
+      const res = await apiFetch("/api/funnels/usage", {
         headers: { Authorization: `Bearer ${token}` },
       });
       const j = await res.json().catch(() => null);
       if (j?.ok) setFunnelUsage(j);
-    } catch {}
+    } catch (error) {
+      console.warn("[funnels] usage could not be loaded", error?.message || error);
+    }
   }
 
   async function createFunnel() {
@@ -241,41 +244,19 @@ function FunnelsInner() {
 
     setCreating(true);
     const funnelName = newName.trim();
-    const { data, error } = await supabase
-      .from("funnels")
-      .insert({
-        owner_user_id: session.user.id,
-        ...(workspaceId ? { workspace_id: workspaceId } : {}),
-        name: funnelName,
-        description: "",
-        slug: null,
-        status: "draft",
-      })
-      .select("id")
-      .single();
-
-    if (error || !data?.id) {
+    try {
+      const response = await apiFetch("/api/funnels/manage", {
+        method: "POST",
+        body: JSON.stringify({ action: "create", name: funnelName, content: buildStarterPageHtml(funnelName) }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result?.id) throw new Error(result?.error || "No funnel was returned");
+      await openCreator(`/modules/funnels/edit/${result.id}`);
       setCreating(false);
-      setCreateError(`We couldn't create the funnel: ${error?.message || "no funnel was returned"}. Please try again.`);
-      return;
-    }
-
-    const { error: stepError } = await supabase.from("funnel_steps").insert({
-      funnel_id: data.id,
-      title: "Page 1",
-      order_index: 0,
-      content: buildStarterPageHtml(funnelName),
-    });
-
-    if (stepError) {
-      await supabase.from("funnels").delete().eq("id", data.id);
+    } catch (error) {
       setCreating(false);
-      setCreateError(`We couldn't add the first page, so the funnel wasn't created: ${stepError.message}. Please try again.`);
-      return;
+      setCreateError(`We couldn't create the funnel: ${error?.message || "Please try again."}`);
     }
-
-    await openCreator(`/modules/funnels/edit/${data.id}`);
-    setCreating(false);
   }
 
   return (
@@ -330,6 +311,9 @@ function FunnelsInner() {
           <div style={{ display: "flex", flexWrap: "wrap", gap: 12, minWidth: 0 }}>
             <button type="button" onClick={() => openCreator("/modules/landing-pages?from=sales-funnels")} disabled={!!navigatingTo} data-testid="create-ai-landing-page" style={{ padding: "14px 20px", borderRadius: 8, border: "none", background: "#b5224a", color: "#fff", fontSize: 16, fontWeight: 600, cursor: "pointer", textAlign: "center" }}>
               {navigatingTo.startsWith("/modules/landing-pages") ? "Opening…" : "Create standalone landing page"}
+            </button>
+            <button type="button" onClick={() => openCreator("/modules/funnels/templates")} disabled={!!navigatingTo} style={{ padding: "14px 20px", borderRadius: 8, border: "1px solid #93c5fd", background: "transparent", color: "#e6eef5", fontSize: 16, fontWeight: 600, cursor: "pointer", textAlign: "center" }}>
+              {navigatingTo === "/modules/funnels/templates" ? "Opening…" : "Browse master templates"}
             </button>
             <button type="button" onClick={() => openCreator("/modules/funnels/new")} disabled={!!navigatingTo} data-testid="create-multi-step-funnel" style={{ padding: "14px 20px", borderRadius: 8, border: "1px solid #93c5fd", background: "transparent", color: "#e6eef5", fontSize: 16, fontWeight: 600, cursor: "pointer", textAlign: "center" }}>
               {navigatingTo === "/modules/funnels/new" ? "Opening…" : "Create multi-step sales funnel"}

@@ -322,7 +322,15 @@ export function convertAiTakeoffDetections(batch, context) {
       result.completedEaves.push({ ...base, nodes, lengthMm, widthMm, widthOption: widthMm && [450, 600, 900, 1200].includes(widthMm) ? String(widthMm) : 'Special', alignment: 'outer' });
     } else if (detection.kind === 'floorplan') {
       const type = option(detection.type, Object.keys(FLOORPLANS), `${label} floorplan type`);
-      result.completedFloorplans.push({ ...base, type, ...FLOORPLANS[type], label: optionalText(detection.label, `${label} label`, FLOORPLANS[type].label), nodes: nodesFor(detection.nodes, true) });
+      result.completedFloorplans.push({
+        ...base,
+        type,
+        ...FLOORPLANS[type],
+        label: optionalText(detection.label, `${label} label`, FLOORPLANS[type].label),
+        nodes: nodesFor(detection.nodes, true),
+        confirmed: false,
+        reviewRequired: true,
+      });
     } else if (detection.kind === 'pillar') {
       // A pillar/post/column is a discrete vertical object, never a wall - its own kind, own
       // canonical fields, never folded into completedWallRuns or completedAreas.

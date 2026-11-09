@@ -2,11 +2,28 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import ts from "typescript";
 import "./register-json-loader.mjs";
-import { restoreCompleteWorkbook, PROTECTED_RECOVERY_JOB_KEY, jobContentSignature } from "../lib/construction-estimation/jobPersistence.js";
+import { restoreCompleteWorkbook, PROTECTED_RECOVERY_JOB_KEY, jobContentSignature, normalizeJobForCurrentSchema } from "../lib/construction-estimation/jobPersistence.js";
 
 const { createEstimateBuilderWorkbookDefaults } = await import("../lib/construction-estimation/estimateBuilderWorkbookDefaults.js");
 const { normalizeTakeoffInputSection } = await import("../lib/construction-estimation/takeoffInputRows.js");
 const { V4_DATA_SECTIONS } = await import("../lib/construction-estimation/estimateWorksheetV4Schema.js");
+const { reconcileProductSelections } = await import("../lib/builders/productSelectionIntegrity.js");
+const { calculateEstimateBuilderWorkbook } = await import("../lib/construction-estimation/estimateBuilderWorkbookCalculations.js");
+const { stampQuotationOrder } = await import("../lib/construction-estimation/quotationOrder.js");
+const { quotationNamesForSectionIds } = await import("../lib/construction-estimation/quotationOrder.js");
+const { applyPersistedQuotationOrder } = await import("../lib/construction-estimation/quotationOrder.js");
+const { reconcileCabinetryQuotation } = await import("../lib/construction-estimation/finalCabinetryQuotation.js");
+const { applyCabinetryRequirementsToQuotation } = await import("../lib/construction-estimation/cabinetryRequirements.js");
+const { withWindowsPriceListQuotation } = await import("../lib/construction-estimation/windowsQuotePriceList.js");
+const { withWallLiningMappings } = await import("../lib/construction-estimation/quotationWallLinings.js");
+const { withEntryDoorLibraryQuotation } = await import("../lib/construction-estimation/entryDoorLibraryQuotation.js");
+const { quotationSectionOrderAfterNormalize } = await import("../lib/construction-estimation/quotationStructure.js");
+const { normalizeQuotationStructure } = await import("../lib/construction-estimation/quotationStructure.js");
+const { quotationSectionOrderIds } = await import("../lib/construction-estimation/quotationOrder.js");
+const { persistedSectionOrder } = await import("../lib/construction-estimation/quotationOrder.js");
+const { withStableQuoteTargets } = await import("../lib/builders/selectionRegistry.js");
+const { ensureQuotationSectionIds } = await import("../lib/construction-estimation/quotationOrder.js");
+const { migrateWorkbookCabinetSchedules } = await import("../lib/construction-estimation/cabinetryRequirements.js");
 const source = fs.readFileSync("hooks/estimate-builder/useEstimateBuilderWorkbook.js", "utf8");
 const tree = ts.createSourceFile("hook.js", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
 const functions = new Map();
@@ -21,7 +38,7 @@ const functionNames = [
   "recoveredWorkingCopyProjectId", "slug", "isCorruptEstimateJobFileName", "isCorruptEstimateJobWorkbook", "isCorruptEstimateJobText",
   "collectSavedJobPackageSections", "hasOwnJobPackageValue", "restoreSavedJobPackageSections",
   "migrateWorkbookToMasterTemplate", "applyTemplateDefaultsToJob", "normalizeWorkbook", "workbookHasExplicitJobIdentity",
-  "workbookJobKey", "prepareWorkbookForJobSave", "compactWorkbookForStorage", "takeoffPersistenceCounts",
+  "workbookJobKey", "prepareWorkbookForJobSave", "productByIdForWorkbook", "calculationWorkbookCopy", "orderedQuoteSections", "normalizeQuoteSectionOrder", "withPersistedQuotationOrder", "quoteSectionBaseName", "withLinea180PlankQuoteRow", "normalizePainterPatioCeilingFormula", "compactWorkbookForStorage", "takeoffPersistenceCounts",
 ];
 const definitions = sectionKeys + functionNames.map((name) => {
   assert.ok(functions.has(name), `Missing actual loader helper ${name}`);
@@ -35,7 +52,7 @@ const { validateJobWorkbook: validate } = await import("../lib/construction-esti
 function harness() {
   const state = {};
   const dependencies = {
-    createEstimateBuilderWorkbookDefaults, normalizeTakeoffInputSection, V4_DATA_SECTIONS, restoreCompleteWorkbook, PROTECTED_RECOVERY_JOB_KEY,
+    createEstimateBuilderWorkbookDefaults, normalizeTakeoffInputSection, V4_DATA_SECTIONS, restoreCompleteWorkbook, PROTECTED_RECOVERY_JOB_KEY, completedJobLoadVersionRef: { current: [] }, builderRequirementMappingsRef: { current: [] }, reconcileProductSelections, calculateEstimateBuilderWorkbook, stampQuotationOrder, quotationNamesForSectionIds, applyPersistedQuotationOrder, reconcileCabinetryQuotation, applyCabinetryRequirementsToQuotation, withWindowsPriceListQuotation, withWallLiningMappings, withEntryDoorLibraryQuotation, quotationSectionOrderAfterNormalize, normalizeQuotationStructure, quotationSectionOrderIds, persistedSectionOrder, withStableQuoteTargets, ensureQuotationSectionIds, migrateWorkbookCabinetSchedules, normalizeJobForCurrentSchema,
     workbookRef: { current: {} }, workbookLoadOperationRef: { current: 0 }, autosavePausedRef: { current: false },
     MASTER_TEMPLATE_KEY: "template:master-estimate-template", MASTER_TEMPLATE_NAME: "Master Estimate Template",
     CORRUPT_ESTIMATE_JOB_FILE_NAME: "estimate-job.json", estimateBuilderLog: () => {},
@@ -46,6 +63,12 @@ function harness() {
     setActiveWorkbookPage: () => {}, resolveLastActiveWorkbookPage: (workbook) => workbook.page, setLastSavedAt: () => {},
     rememberRecentJob: () => {}, rememberRecentEstimateFile: () => {}, setRecentJobs: () => {}, setRecentEstimateFiles: () => {},
     loadRecentEstimateJobs: () => [], loadRecentEstimateFiles: () => [],
+    // Used by the job-file open path since the workspace-scoping and older-file protections.
+    browserWorkspaceId: () => "", loadStoredJob: async () => null,
+    carryForwardConfirmedDecisions: (book) => ({ book, carried: { ledger: false, roomModel: false } }),
+    applyConfirmedClientSelectionCorrections: (book) => book,
+    describeJobFileSelectionConflict: () => ({ conflict: false }),
+    jobFileSelectionDecisionRef: { current: "carry" },
   };
   const helpers = new Function(...Object.keys(dependencies), `${definitions}; return { loadJobFileData, collectSavedJobPackageSections, restoreSavedJobPackageSections };`)(...Object.values(dependencies));
   return { ...helpers, state };
@@ -99,10 +122,10 @@ if (fixtureIndex >= 0) {
   const start = performance.now();
   const bytes = fs.readFileSync(fixturePath);
   const parsed = await readJob(new File([bytes], "Existing.gr8job"));
-  const beforeBytes = jobContentSignature(parsed.workbook).length;
+  const beforeBytes = JSON.stringify(parsed.workbook).length;
   const test = harness();
   assert.equal((await test.loadJobFileData(parsed, "Existing.gr8job")).ok, true);
-  const afterBytes = jobContentSignature(test.state.saved).length;
+  const afterBytes = JSON.stringify(test.state.saved).length;
   assert.equal(Object.hasOwn(test.state.saved.clientPage, "proposalBuilder"), Object.hasOwn(parsed.workbook.clientPage, "proposalBuilder"));
   assert.deepEqual(test.state.saved.projectEstimateBuilder, parsed.workbook.projectEstimateBuilder);
   assert.ok(afterBytes < beforeBytes + 100000, "Opening the original fixture must not add another copy of its document");

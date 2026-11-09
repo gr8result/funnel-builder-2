@@ -31,7 +31,7 @@ import { refreshSelectionProcurementRequirements } from "../../lib/builders/sele
 import { commercialPriceProposalById, proposalRateExGst } from "../../lib/builders/commercialPriceProposals.js";
 import { createCommercialIssueRfq, excludeCommercialIssue, selectCommercialIssueProduct, updateCommercialQuoteRow } from "../../lib/builders/commercialIssueResolution.js";
 import { reconcileSelectionTargets } from "../../lib/builders/quotationTargetResolver.js";
-import { normalizeQuotationStructure, quotationSectionOrderAfterNormalize } from "../../lib/construction-estimation/quotationStructure.js";
+import { preserveQuotationStructure, quotationSectionOrderAfterNormalize } from "../../lib/construction-estimation/quotationStructure.js";
 import { SYSTEM_TRADE_TEMPLATES, addApprovedVariation, approveClaim, assignSupplier, attachSubcontractPurchaseOrders, linkContractToJobBoard, recordPayment, rejectClaim, sectionCoveredBySubcontract, setAgreedAmount, setMilestoneCompletion, setMilestoneField, setMilestoneLink, submitClaim } from "../../lib/construction-estimation/tradePaymentSchedule.js";
 import { applyJobBoardToContracts, describeTradeContractSync, ganttTaskOptions, linkContractsToGantt, syncTradeContracts } from "../../lib/construction-estimation/tradeContractWorkbook.js";
 import { loadBuilderTemplates, loadBuilderTemplatesShared, saveBuilderTemplateShared, templateFromContract } from "../../lib/construction-estimation/tradePaymentTemplateStore.js";
@@ -40,8 +40,12 @@ import { loadGanttByJobId } from "../../components/estimate-builder/gantt/ganttU
 import { withWallLiningMappings } from '../../lib/construction-estimation/quotationWallLinings.js';
 import { acknowledgeQuotationNotification } from '../../lib/construction-estimation/quotationNotifications.js';
 import { persistCompleteJob, jobDirtySignature, restoreCompleteWorkbook, normalizeJobForCurrentSchema, isProtectedRecoveryRecord, PROTECTED_RECOVERY_JOB_KEY } from "../../lib/construction-estimation/jobPersistence.js";
+import { applyConfirmedClientSelectionCorrections, carryForwardConfirmedDecisions } from "../../lib/builders/clientSelectionCorrections.js";
+import { staleClientSelectionsSave } from "../../lib/builders/selectionBookSource.js";
+import { markSelectionPricePending, pendingPriceRowIds } from "../../lib/builders/selectionPricePending.js";
+import { describeJobFileSelectionConflict } from "../../lib/builders/jobFileSelectionConflict.js";
 import { externalizeTakeoffPlanPages, materializeTakeoffPlanPages } from "../../components/construction-estimation/ai-plan-takeoff/planBlobStorage.js";
-import { jobJsonByteLength } from "../../lib/construction-estimation/jobSerialization.js";
+import { jobJsonByteLength, snapshotJob } from "../../lib/construction-estimation/jobSerialization.js";
 import { getEffectiveProductCatalogue } from "../../lib/product-library/catalogueService.js";
 import { currentTabId, jobKeyFromLocation, knownJobRevision, rememberJobRevision, writeJobToLocation } from "../../lib/construction-estimation/jobContext.js";
 import { commitJobToSharedStorage } from "../../lib/job-storage/sharedSync.js";
@@ -387,7 +391,11 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
   workbookRef.current = workbook;
   const clientSelectionsSavePendingRef = useRef(null);
   const clientSelectionsSaveRunningRef = useRef(false);
+  // Selection revisions this tab has written. A queued save made from the revision before one of
+  // these is still current; one made from any other revision is stale (see saveClientSelectionsBookNow).
+  const ownSelectionRevisionsRef = useRef(new Set());
   const saveClientSelectionsBookRef = useRef(null);
+  const jobFileSelectionDecisionRef = useRef("carry");
   function updateWorkbookState(updater) {
     setWorkbook((current) => {
       const next = typeof updater === "function" ? updater(current) : updater;
@@ -798,6 +806,7 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     const nextWorkbook = {
       ...currentWorkbook,
       commercialProjectId: projectId,
+      commercialSnapshotId: project.snapshotId || currentWorkbook.commercialSnapshotId || "",
       projectId,
       registeredJobId: projectId,
       registeredJob,
@@ -1480,7 +1489,7 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
       productById,
       productByCode: productById.byCode,
       mappings: builderRequirementMappingsRef.current,
-      quotationEvidence: calculateEstimateBuilderWorkbook(structuredClone(current)).quotation,
+      quotationEvidence: calculateEstimateBuilderWorkbook(calculationWorkbookCopy(current)).quotation,
       approvedBaselines,
     });
     let plan = buildPlan();
@@ -2405,7 +2414,7 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
   }
 
   function prepareWorkbookForJobSave(sourceWorkbook = workbookRef.current, savedAt = new Date().toISOString()) {
-    const auditCalculation = calculateEstimateBuilderWorkbook(structuredClone(sourceWorkbook));
+    const auditCalculation = calculateEstimateBuilderWorkbook(calculationWorkbookCopy(sourceWorkbook));
     const auditWorkbook = { ...sourceWorkbook, quotation: auditCalculation.quotation };
     const productSelectionAudit = reconcileProductSelections({ workbook: auditWorkbook, mappings: builderRequirementMappingsRef.current, productById: productByIdForWorkbook(sourceWorkbook) });
     return compactWorkbookForStorage({
@@ -2811,7 +2820,8 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     if (platformJob?.projectId) {
       return openWorkspaceProjectJob(platformJob);
     }
-    const record = await loadStoredJob(jobKey);
+    const localSummary = savedJobSummaries.find((job) => job.key === jobKey && job.source === "local-master-job");
+    const record = await loadStoredJob(jobKey, { allowBackupRecovery: Boolean(localSummary?.recoveredFromBackupKey) });
     if (!record?.workbook) return { ok: false, message: "Saved job could not be found." };
     if (isCorruptEstimateJobRecord(record) || isBlockedEstimateBuilderJobKey(record.key)) {
       return { ok: false, message: "This saved job is blocked and cannot be opened." };
@@ -3014,6 +3024,43 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     if (workbookLoadOperationRef.current !== loadOperationId) {
       return { ok: false, message: "A newer job file open operation replaced this one." };
     }
+    // An older job file must not bring back client selections the builder has since removed: the
+    // confirmed corrections and the confirmed room list already saved for this job are carried into it
+    // and applied before anything is stored (like the stale-takeoff guard below).
+    // The user's choice when the file is older than the saved job (see compareJobFileWithSavedSelections):
+    // "carry" (default) keeps the confirmed corrections; "file" opens the file exactly as it is (a rollback).
+    const selectionDecisionMode = jobFileSelectionDecisionRef.current;
+    jobFileSelectionDecisionRef.current = "carry";
+    const storedForDecisions = await loadStoredJob(workbookJobKey(nextWorkbook), { hydrateTakeoff: false }).catch(() => null);
+    const incomingSelectionBook = nextWorkbook.clientSelectionsBook || nextWorkbook.selectionsBook || null;
+    const storedSelectionBook = storedForDecisions?.workbook?.clientSelectionsBook || storedForDecisions?.workbook?.selectionsBook || null;
+    // Both versions are kept: when the file is older than the saved job, the saved job is written to a
+    // named backup before anything replaces it (the file itself is backed up below as before).
+    if (storedForDecisions?.workbook && describeJobFileSelectionConflict(nextWorkbook, storedForDecisions.workbook).conflict) {
+      await saveJobBackup(storedForDecisions.workbook, new Date(Date.parse(savedAt) - 1).toISOString()).catch(() => {});
+    }
+    // A deliberate rollback is recorded on the book, with the confirmed decisions it discards, so no later
+    // load (browser draft, cloud copy) carries them back in. It is a new version of the selections.
+    if (incomingSelectionBook && storedSelectionBook && selectionDecisionMode === "file") {
+      const rolledBack = { ...incomingSelectionBook, updatedAt: savedAt,
+        metadata: { ...(incomingSelectionBook.metadata || {}), selectionRevision: `client-selections:${savedAt}`, savedAt, rolledBackFrom: storedSelectionBook.metadata?.selectionRevision || "" },
+        clientSelectionRollback: { at: savedAt, fileName, replacedRevision: storedSelectionBook.metadata?.selectionRevision || "",
+          discardedCorrectionsConfirmedAt: storedSelectionBook.clientSelectionCorrections?.confirmedAt || "",
+          discardedRoomListConfirmedAt: storedForDecisions.workbook.projectRoomModel?.confirmedAt || storedSelectionBook.projectRoomModel?.confirmedAt || "" } };
+      nextWorkbook = { ...nextWorkbook, clientSelectionsBook: rolledBack, selectionsBook: rolledBack, selectionSchedule: rolledBack, selectionSchedules: rolledBack };
+      estimateBuilderLog("older job file opened as it is (rollback recorded)", { fileName });
+    }
+    if (incomingSelectionBook && storedSelectionBook && selectionDecisionMode !== "file") {
+      const { book: carriedBook, carried } = carryForwardConfirmedDecisions(incomingSelectionBook, [storedSelectionBook, { projectRoomModel: storedForDecisions.workbook.projectRoomModel }]);
+      if (carried.ledger || carried.roomModel) {
+        // The corrected book is a new version: it is not the file's (older) revision any more.
+        const correctedBook = { ...applyConfirmedClientSelectionCorrections(carriedBook), updatedAt: savedAt,
+          metadata: { ...(carriedBook.metadata || {}), selectionRevision: `client-selections:${savedAt}`, savedAt, correctionsCarriedFrom: storedSelectionBook.metadata?.selectionRevision || "" } };
+        nextWorkbook = { ...nextWorkbook, clientSelectionsBook: correctedBook, selectionsBook: correctedBook, selectionSchedule: correctedBook, selectionSchedules: correctedBook,
+          ...(correctedBook.projectRoomModel ? { projectRoomModel: correctedBook.projectRoomModel } : {}) };
+        estimateBuilderLog("confirmed client selection decisions carried into the opened job file", { fileName, ...carried });
+      }
+    }
     const draft = prepareWorkbookForJobSave(nextWorkbook, savedAt);
     await saveJobBackup(workbookFromFile, savedAt).catch(() => {});
     saveLocalDraftMetadata(draft, savedAt);
@@ -3106,7 +3153,23 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     }
   }
 
+  // Every Client Selections save announces its start and its outcome, so a save that never ends is
+  // visible (the release memory test fails on one) instead of being inferred from network traffic.
   async function saveClientSelectionsBook(bookForSave = {}, options = {}) {
+    const saveId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    announceClientSelectionsSave({ saveId, phase: "start" });
+    let outcome = { ok: false, message: "Client Selections save failed." };
+    try {
+      outcome = await saveClientSelectionsBookNow(bookForSave, options);
+      return outcome;
+    } catch (error) {
+      outcome = { ok: false, message: error?.message || String(error) };
+      throw error;
+    } finally {
+      announceClientSelectionsSave({ saveId, phase: "end", ok: outcome?.ok === true, message: outcome?.ok ? "" : outcome?.message || "", warning: outcome?.quoteMappingUnavailable || "" });
+    }
+  }
+  async function saveClientSelectionsBookNow(bookForSave = {}, options = {}) {
     const identity = describeWorkbookIdentity(workbookRef.current);
     if (!identity.projectId) {
       return { ok: false, message: "Open or create a job before saving client selections." };
@@ -3121,12 +3184,18 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     // included - ever reached the job or the Quotation Builder. Now the selections are saved and
     // the cabinetry quote sync runs; only the configured-target mapping waits for the next save.
     let foundation = null;
+    let foundationUnavailable = "";
     try {
       const response = await fetch('/api/builders/selection-foundation', { headers: { Authorization: `Bearer ${auth?.session?.access_token || ''}`, 'x-workspace-id': owner } });
-      if (!response.ok) throw new Error(`status ${response.status}`);
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body?.error || `status ${response.status}`);
+      }
       foundation = await response.json();
     } catch (error) {
-      console.warn('[Client Selections] builder selection configuration unavailable; selections saved without configured quote-target mapping.', error?.message || error);
+      // Reported with the save's result, never only to the console.
+      foundationUnavailable = error?.message || String(error);
+      console.warn('[Client Selections] builder selection configuration unavailable; selections saved without configured quote-target mapping.', foundationUnavailable);
     }
     if ((foundation && foundation.workspace_id !== owner) || browserWorkspaceId() !== owner) throw new Error('Builder workspace changed during save.');
     if (describeWorkbookIdentity(workbookRef.current).projectId !== identity.projectId) {
@@ -3191,19 +3260,44 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
       const reconciliationProducts = productByIdForWorkbook(reconciled.workbook);
       const refreshedDrafts = refreshSelectionProcurementRequirements(
         reconciled.workbook,
-        calculateEstimateBuilderWorkbook(structuredClone(reconciled.workbook)),
+        calculateEstimateBuilderWorkbook(calculationWorkbookCopy(reconciled.workbook)),
         reconciled.workbook.procurement?.items || [],
         { productById: reconciliationProducts, productByCode: reconciliationProducts.byCode },
       );
-      const quotation = normalizeQuotationStructure(refreshedDrafts.quotation);
+      // A Client Selections save changes selection lines only. Quotation Builder migrations of builder-owned rows
+      // (e.g. Underslab & Drainage becoming a progress allocation of the plumbing contract) are not run here:
+      // they changed construction costs inside a selections approval (-$3,800 on the recovered job).
+      // Unpriced / price-pending selection lines are marked provisional even when they change no total
+      // (a $0 oven line would otherwise enter the quotation looking final).
+      const quotation = markSelectionPricePending(preserveQuotationStructure(refreshedDrafts.quotation), pendingPriceRowIds(reconciled), savedAt);
       const reconciledWorkbook = { ...refreshedDrafts, quotation, quotationSectionOrder: quotationSectionOrderAfterNormalize(refreshedDrafts.quotationSectionOrder, quotation) };
       const financialImpact = selectionReconciliationFinancialImpact(source, reconciledWorkbook);
       if (financialImpact.requiresApproval) financialReconciliationDeferral = financialImpact;
+      // Test diagnostics only (a test sets the flag): the proposed quotation and why each line changes.
+      if (typeof window !== "undefined" && window.__gr8DebugBookLoad) {
+        try {
+          window.__gr8ProposedReconciliation = JSON.stringify({
+            impact: financialImpact,
+            proposedQuotation: reconciledWorkbook.quotation,
+            plan: { changes: reconciled.changes, replacements: reconciled.replacements, proposals: reconciled.proposals, held: reconciled.held, duplicates: reconciled.duplicates, totals: reconciled.totals, mutationSummary: reconciled.mutationSummary },
+            mappings: builderRequirementMappingsRef.current,
+          });
+        } catch (error) { window.__gr8ProposedReconciliation = JSON.stringify({ error: error?.message || String(error) }); }
+      }
       const safeWorkbook = deferUnapprovedQuotationChanges(source, reconciledWorkbook, financialImpact);
       return prepareWorkbookForJobSave(safeWorkbook, savedAt);
     };
     // Taken after the network wait, immediately before the write: the job as it is now.
     const savedFrom = workbookRef.current;
+    // A book loaded from one revision of the job's selections may not be written over a different one
+    // (a job file opened since, another tab's save, a rollback): that is how a stale browser copy put
+    // September selections back over a corrected job. This tab's own later saves do not count.
+    const staleSelections = staleClientSelectionsSave(options.baseSelectionRevision, savedFrom, ownSelectionRevisionsRef.current);
+    if (staleSelections) {
+      estimateBuilderLog("stale client selections save refused", staleSelections);
+      return { ok: false, code: "STALE_CLIENT_SELECTIONS", ...staleSelections,
+        message: "These selections were changed elsewhere after this screen loaded them (a job file was opened, or another tab saved). Nothing was saved over them. Reload Client Selections to continue from the current job." };
+    }
     const draft = withSelections(savedFrom);
     const jobKey = workbookJobKey(draft);
     const verification = await saveStoredJob(draft, savedAt);
@@ -3213,6 +3307,7 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     if (verifiedProjectId !== identity.projectId || verifiedRevision !== revision) {
       return { ok: false, message: "Client Selections save verification failed." };
     }
+    ownSelectionRevisionsRef.current.add(revision);
     // Saving is not opening a job. The stored copy is never put back over the job on screen:
     // only this save's own change is applied, onto whatever the live job is by now. If another
     // job has been opened in the meantime the stored job is correct and the screen is left alone.
@@ -3242,15 +3337,28 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     setRecentJobs(loadRecentEstimateJobs());
     return {
       ok: true,
-      message: options.successMessage || (financialReconciliationDeferral
+      message: `${options.successMessage || (financialReconciliationDeferral
         ? `Client Selections saved. ${financialReconciliationDeferral.changedLineCount} quotation line changes with a ${financialReconciliationDeferral.delta > 0 ? "+" : ""}$${financialReconciliationDeferral.delta.toFixed(2)} total change were deferred for Reconcile Selections approval.`
-        : `Client Selections saved to ${identity.jobNumber || identity.projectName}.`),
+        : `Client Selections saved to ${identity.jobNumber || identity.projectName}.`)}${foundationUnavailable ? ` Configured quote mappings were NOT applied: ${foundationUnavailable}` : ""}`,
+      quoteMappingUnavailable: foundationUnavailable,
       book: nextBook,
       selectionRevision: revision,
       projectId: identity.projectId,
     };
   }
   saveClientSelectionsBookRef.current = saveClientSelectionsBook;
+  // A job file older than the saved copy of the same job: describe the conflict so the user can choose.
+  async function compareJobFileWithSavedSelections(parsed = {}) {
+    jobFileSelectionDecisionRef.current = "carry";
+    const fileWorkbook = parsed?.workbook || parsed?.estimate?.workbook || parsed || {};
+    const jobId = String(fileWorkbook.jobId || parsed?.jobId || "").trim();
+    if (!jobId) return { conflict: false, reason: "the file names no job" };
+    const stored = await loadStoredJob(`job:${jobId}`, { hydrateTakeoff: false }).catch(() => null);
+    return describeJobFileSelectionConflict(fileWorkbook, stored?.workbook || null);
+  }
+  function setJobFileSelectionDecision(mode = "carry") {
+    jobFileSelectionDecisionRef.current = mode === "file" ? "file" : "carry";
+  }
   const formulaRows = Array.isArray(workbook.formulaRows)
     ? workbook.formulaRows
     : createEstimateBuilderWorkbookDefaults().formulaRows || [];
@@ -3261,6 +3369,8 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     quoteSections,
     windowTypes: V4_WINDOW_TYPES,
     workbook: displayWorkbook,
+    compareJobFileWithSavedSelections,
+    setJobFileSelectionDecision,
     hydrated,
     previewMode,
     preview,
@@ -3369,7 +3479,7 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     selectionRequirementMappings: builderRequirementMappingsRef.current,
     productSelectionIntegrity: () => {
       const current = workbookRef.current;
-      const auditCalculation = calculateEstimateBuilderWorkbook(structuredClone(current));
+      const auditCalculation = calculateEstimateBuilderWorkbook(calculationWorkbookCopy(current));
       const productById = productByIdForWorkbook(current);
       const plan = planSelectionReconciliation({
         workbook: current,
@@ -3452,10 +3562,12 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
           procurementStatus: result.procurementStatus,
         })),
       };
+      // Lines kept pending stay provisional in the quotation (never presented as confirmed prices).
+      const planWorkbook = { ...plan.workbook, quotation: markSelectionPricePending(plan.workbook.quotation, pendingPriceRowIds(plan), recordedAt) };
       const refreshed = refreshSelectionProcurementRequirements(
-        plan.workbook,
-        calculateEstimateBuilderWorkbook(structuredClone(plan.workbook)),
-        plan.workbook.procurement?.items || [],
+        planWorkbook,
+        calculateEstimateBuilderWorkbook(calculationWorkbookCopy(planWorkbook)),
+        planWorkbook.procurement?.items || [],
         { productById, productByCode: productById.byCode },
       );
       updateWorkbookState({
@@ -3752,7 +3864,8 @@ function normalizeWorkbook(workbook = {}, { onQuotationStage, allowQuotationHydr
     return observe("saved-quotation-preserved", withPersistedQuotationOrder(applyCabinetryRequirementsToQuotation(restored, owner)));
   }
   const savedQuotation = restored.quotation;
-  restored.quotation = normalizeQuotationStructure(savedQuotation);
+  // Opening a job keeps the builder's categories, names, row ids and amounts exactly as saved (9 Nov 2026).
+  restored.quotation = preserveQuotationStructure(savedQuotation);
   observe("quotation-structure", restored);
   if (restored.quotation !== savedQuotation) {
     restored.quotationSectionOrder = quotationSectionOrderAfterNormalize(restored.quotationSectionOrder, restored.quotation);
@@ -3773,7 +3886,7 @@ function normalizeWorkbook(workbook = {}, { onQuotationStage, allowQuotationHydr
     }
     const withElectrical = observe("electrical-selections", connectElectricalScheduleToQuotation(restored, savedSelections));
     const withTiling = observe("tiling-selections", connectTilingSelectionsToQuotation(withElectrical, savedSelections, { productById }));
-    const restructuredQuotation = normalizeQuotationStructure(withTiling.quotation);
+    const restructuredQuotation = preserveQuotationStructure(withTiling.quotation);
     const synchronized = {
       ...withTiling,
       quotation: restructuredQuotation,
@@ -3788,7 +3901,7 @@ function normalizeWorkbook(workbook = {}, { onQuotationStage, allowQuotationHydr
     const allocated = observe("allocated-selections", connectAllocatedSelectionsToQuotation(withEntryDoorFurniture, savedSelections));
     const lighting = observe("external-lighting-selections", connectExternalLightingToQuotation(allocated, savedSelections));
     const withAllocated = observe("exterior-paint-selections", linkExteriorPaintToQuotation(lighting, savedSelections));
-    const canonicalQuotation = normalizeQuotationStructure(withAllocated.quotation);
+    const canonicalQuotation = preserveQuotationStructure(withAllocated.quotation);
     const quotationSectionOrder = quotationSectionOrderAfterNormalize(withAllocated.quotationSectionOrder, canonicalQuotation);
     Object.assign(restored, { ...withAllocated, quotation: canonicalQuotation, quotationSectionOrder, quotationSectionOrderIds: quotationSectionOrderIds(canonicalQuotation, quotationSectionOrder) });
     observe("selection-trade-structure", restored);
@@ -8303,6 +8416,18 @@ function workbookHasExplicitJobIdentity(workbook = {}) {
   );
 }
 
+function announceClientSelectionsSave(detail) {
+  if (typeof window === "undefined" || typeof window.dispatchEvent !== "function") return;
+  try { window.dispatchEvent(new CustomEvent("gr8:client-selections-save", { detail })); } catch { /* reporting only */ }
+}
+
+// The quote calculation may change what it is given, so it gets its own copy - without the proposal
+// document (page artwork, often most of a job's size), which no calculation reads.
+function calculationWorkbookCopy(workbook = {}) {
+  const { projectEstimateBuilder: _projectEstimateBuilder, ...calculated } = workbook;
+  return snapshotJob(calculated);
+}
+
 async function saveStoredJob(workbook, savedAt = new Date().toISOString(), options = {}) {
   workbook = scopeBrowserWorkbook(workbook);
   const storageWorkspaceId = browserWorkspaceId();
@@ -8518,7 +8643,7 @@ async function loadStoredJob(key = "", options = {}) {
   return loadStoredJobUnlocked(key, options);
 }
 
-async function loadStoredJobUnlocked(key = "", { hydrateTakeoff = true } = {}) {
+async function loadStoredJobUnlocked(key = "", { hydrateTakeoff = true, allowBackupRecovery = false } = {}) {
   if (!key) return null;
   const db = await openTemplateDb();
   return new Promise((resolve, reject) => {
@@ -8527,7 +8652,9 @@ async function loadStoredJobUnlocked(key = "", { hydrateTakeoff = true } = {}) {
     request.onsuccess = async () => {
       try {
         // Reading a saved record must never initialize or overwrite a working job.
-        let record = request.result || await loadLatestStoredJobBackup(key);
+        // A historical backup must never silently replace a missing canonical job. Backup-only
+        // records are opened only after the user explicitly chooses their recovered listing.
+        let record = request.result || (allowBackupRecovery ? await loadLatestStoredJobBackup(key) : null);
         // What this tab has now seen of the job: the base its next save is checked against.
         if (request.result?.type === "job") rememberJobRevision(key, request.result.revision);
         // Adopt an existing legacy record's explicit storage identity once;

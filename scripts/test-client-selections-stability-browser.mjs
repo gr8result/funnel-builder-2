@@ -21,6 +21,7 @@ const hostSource = fs.readFileSync(path.join(root, 'components/estimate-builder/
 assert.deepEqual(hostSource.match(/^export (?!default function |function [A-Z]).*/gm) || [], [],'EstimateBuilderWorkbook.js may only export components, or it is not a Fast Refresh boundary');
 assert(!/class \w+ extends (React\.)?(Pure)?Component/.test(hostSource), 'class components are remounted by Fast Refresh and belong in their own module');
 assert(!hostSource.includes('setLoadedClientSelectionsPage(null)'), 'the loaded Client Selections page must never be cleared');
+assert(!hostSource.includes('module-mount-timeout'), 'a slow cold import must remain loading instead of showing a false module-mount failure');
 
 const origin = process.env.CLIENT_SELECTIONS_BASE_URL || 'http://localhost:3000';
 const idleMs = Number(process.env.CLIENT_SELECTIONS_IDLE_MS || 20000);

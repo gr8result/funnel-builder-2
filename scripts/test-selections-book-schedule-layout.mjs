@@ -19,7 +19,7 @@ assert.ok(source.includes('{ value: "cover", label: "Cover", type: "cover", page
 assert.ok(source.includes('{ value: "project", label: "Project Summary", type: "project", pageNumber: 2 }'), "page model must keep the project summary page");
 assert.ok(!source.includes('{ value: "exterior-divider", label: "Exterior", type: "divider", pageNumber: 3 }'), "page model must not create a blank Exterior divider page");
 assert.ok(source.includes("selectionsSchedule.pages.map((schedulePage) =>"), "page model must be the continuous three-section schedule, one entry per printed page");
-assert.ok(source.includes('import { buildSelectionsSchedule } from "../../../lib/builders/selectionsScheduleDocument.js";'), "the schedule body comes from the one schedule document model");
+assert.match(source, /import\s*\{\s*buildSelectionsSchedule\b[^}]*\}\s*from\s*["']\.\.\/\.\.\/\.\.\/lib\/builders\/selectionsScheduleDocument\.js["'];/, "the schedule body comes from the one schedule document model");
 assert.ok(!source.includes("paginateScheduleSections") && !source.includes("SCHEDULE_ROWS_PER_PAGE"), "category-per-page pagination must not return");
 assert.ok(!/<span>Exterior selections<\/span>/.test(source), "a page heading must come from its section, never a fixed Exterior label");
 assert.ok(source.includes('type: "schedule-section"'), "page model must render client-decision schedule section pages");

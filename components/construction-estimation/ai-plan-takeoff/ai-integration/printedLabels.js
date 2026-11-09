@@ -2,7 +2,7 @@
 // tesseract.js worker whose files are served from this app (public/takeoff-ocr), applies the ones that
 // agree with the measured openings, and reports the rest. Never blocks a takeoff: when the local OCR
 // files are missing or reading fails, the takeoff continues without labels and says so.
-import { recogniseOpeningLabels, createTesseractLabelReader } from '../geometry/localLabelOcr.js';
+import { recogniseOpeningLabels, recogniseRoomLabels, createTesseractLabelReader } from '../geometry/localLabelOcr.js';
 import { applyPrintedLabels } from '../geometry/openingLabels.js';
 
 export const PRINTED_LABEL_ASSETS = '/takeoff-ocr';
@@ -37,7 +37,14 @@ export async function readPrintedOpeningLabels({ detected, raster, logicalWidth,
       split: applied.split, conflicts: applied.conflicts, weak: applied.weak, ambiguous: applied.ambiguous, unassigned: applied.unassigned,
     };
     detected.stats = { ...(detected.stats || {}), printedLabels: { read: read.stats.labels, applied: applied.applied, settled: applied.resolved.length, split: applied.split.length, conflicts: applied.conflicts.length } };
-    return { report, warning: null };
+    // Room names with no text layer (outlined glyphs, scans), read with the same local worker.
+    let roomLabels = [];
+    try {
+      const rooms = await recogniseRoomLabels({ raster, logicalWidth, pixelsPerMm, walls: detected.walls, textItems, reader, alreadyRead: read.unreadable || [] });
+      roomLabels = rooms.labels;
+      report.roomLabels = { ...rooms.stats, names: rooms.labels.map((l) => l.text) };
+    } catch { /* room names are optional; openings above are unaffected */ }
+    return { report, warning: null, roomLabels };
   } catch (error) {
     return { report: null, warning: `Printed opening labels were not read on this sheet (${error.message}). Openings are measured from the linework only.` };
   }

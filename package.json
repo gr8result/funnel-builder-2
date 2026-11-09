@@ -8,6 +8,7 @@
   },
   "scripts": {
     "test:client-selections-memory": "node --import ./scripts/register-extensionless-loader.mjs --import ./scripts/register-json-loader.mjs scripts/test-client-selections-memory.mjs",
+    "test:client-selections": "node --import ./scripts/register-extensionless-loader.mjs --import ./scripts/register-json-loader.mjs scripts/audit-client-selections-suites.mjs",
     "test:job-streaming-checksum": "node scripts/test-job-streaming-checksum.mjs",
     "test:builder-standard-hvac": "node --import ./scripts/register-extensionless-loader.mjs --import ./scripts/register-json-loader.mjs scripts/test-builder-standard-hvac.mjs",
     "test:builder-tenancy": "node scripts/test-builder-tenant-foundation.mjs && node --import ./scripts/register-extensionless-loader.mjs --import ./scripts/register-json-loader.mjs scripts/test-builder-tenant-browser-storage.mjs",

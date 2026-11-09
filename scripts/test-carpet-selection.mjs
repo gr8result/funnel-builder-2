@@ -15,7 +15,7 @@ assert.equal(products.length, 65);
 assert.equal(products.flatMap((p) => p.variants).length, 684);
 assert.equal(new Set(products.flatMap((p) => p.variants.map((v) => v.variantId))).size, 684);
 assert.ok(products.some((p) => /Hycraft/i.test(p.brand)));
-let images = 0;
+const imagePaths = [];
 for (const p of products) {
   assert.equal(p.supplier, "");
   assert.equal(p.priceStatus, "quote_required");
@@ -28,10 +28,15 @@ for (const p of products) {
     assert.equal(official.name, v.colour); assert.equal(official.colourId, v.colourCode);
     assert.equal(v.regularPricePerM2, null); assert.equal(v.packCoverageM2, null);
     assert.ok(v.officialImageUrl.includes(`/variants/${v.sku}/`));
-    if (v.imageUrl) { const info = await sharp(`public${v.imageUrl}`).metadata(); assert.ok(info.width > 0 && info.height > 0); images++; }
+    if (v.imageUrl) imagePaths.push(`public${v.imageUrl}`);
     else assert.equal(v.sku, "0241360780", "Only the documented manufacturer 404 may lack an image");
   }
 }
+for (let index = 0; index < imagePaths.length; index += 8) {
+  const metadata = await Promise.all(imagePaths.slice(index, index + 8).map((imagePath) => sharp(imagePath).metadata()));
+  metadata.forEach((info) => assert.ok(info.width > 0 && info.height > 0));
+}
+const images = imagePaths.length;
 assert.equal(images, 683);
 const p = products.find((p) => p.range === "Inspirational");
 const cloudy = p.variants.find((v) => v.colour === "Cloudy Day"), other = p.variants.find((v) => v.colour !== "Cloudy Day");

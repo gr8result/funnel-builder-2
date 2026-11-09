@@ -16,6 +16,7 @@ import AIWriterAssist from "../../../../components/ui/AIWriterAssist";
 import { openSharedMediaPicker } from "../../../../lib/openSharedMediaPicker";
 import { supabase } from "../../../../lib/supabaseClient";
 import { SECTION_BLOCKS, assemblePage } from "../../../../modules/funnels/index.js";
+import { useApiFetch, useWorkspace } from "../../../../hooks/useWorkspace";
 
 const STANDARD_TEXT_COLORS = [
   "#111827", "#1f2937", "#374151", "#6b7280", "#9ca3af", "#f3f4f6",
@@ -327,6 +328,8 @@ export default function Page() {
 function Editor() {
   const router = useRouter();
   const { id } = router.query;
+  const apiFetch = useApiFetch();
+  const { role: workspaceRole, workspaceId, loading: workspaceLoading } = useWorkspace();
 
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -339,7 +342,9 @@ function Editor() {
   const [notifyEmail, setNotifyEmail] = useState("");
 
   const [savingBasics, setSavingBasics] = useState(false);
+  const [savingMasterTemplate, setSavingMasterTemplate] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [previewingPage, setPreviewingPage] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
   const [editorError, setEditorError] = useState("");
   const [editorInitKey, setEditorInitKey] = useState(0);
@@ -1858,42 +1863,34 @@ function Editor() {
 
   // Load basics
   useEffect(() => {
-    if (!session || !id) return;
+    if (!session || !id || workspaceLoading || !workspaceId) return;
+    let active = true;
     (async () => {
       setLoading(true);
       try {
-        const { data: f, error: funnelErr } = await supabase.from("funnels").select("*").eq("id", id).maybeSingle();
-        if (funnelErr) throw funnelErr;
+        const response = await apiFetch(`/api/funnels/manage?id=${encodeURIComponent(id)}`);
+        const result = await response.json();
+        if (!active) return;
+        if (!response.ok) throw new Error(result.error || "Failed to load funnel data.");
+        const { funnel: f, steps: s, lists } = result;
         setFunnel(f || null);
         setNotifyEmail(f?.notify_email || "");
         setDefaultListId(f?.default_list_id || null);
-
-        const { data: s, error: stepsErr } = await supabase
-          .from("funnel_steps")
-          .select("*")
-          .eq("funnel_id", id)
-          .order("order_index", { ascending: true });
-        if (stepsErr) throw stepsErr;
         setSteps(s || []);
         setActiveStepId((s && s[0]?.id) || null);
-
-        const listsRes = await supabase
-          .from("email_lists")
-          .select("id,name")
-          .eq("user_id", session.user.id)
-          .order("created_at", { ascending: true });
-        if (listsRes.error) throw listsRes.error;
-        setLists(listsRes.data || []);
+        setLists(lists || []);
       } catch (err) {
+        if (!active) return;
         setFunnel(null);
         setSteps([]);
         setActiveStepId(null);
         setEditorError(err?.message || "Failed to load funnel data.");
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     })();
-  }, [session?.user?.id, id]);
+    return () => { active = false; };
+  }, [apiFetch, session?.user?.id, id, workspaceId, workspaceLoading]);
 
   // Load GrapesJS
   useEffect(() => {
@@ -2303,10 +2300,9 @@ function Editor() {
 
         // Asset Manager → Supabase /assets/<userId>/*
         e.on("asset:upload:start", () => {}); // not used
-        await loadSupabaseAssetsIntoGrapes(e, session?.user?.id);
-
         editorRef.current = e;
         setEditorReady(true);
+        void loadSupabaseAssetsIntoGrapes(e, session?.user?.id);
 
         // Ensure panels/canvas layout is measured after mount.
         if (typeof e.refresh === "function") {
@@ -2347,7 +2343,7 @@ function Editor() {
     return (s || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
   }
 
-  function getActiveStepPublicUrl(options = {}) {
+  function getActiveStepPublicUrl(options = {}, previewToken = "") {
     const { device = "desktop", canvasWidthOverride = null } = options;
     const slug = `${funnel?.slug || "preview"}`.trim() || "preview";
     const idx = Math.max(0, steps.findIndex((s) => s.id === activeStepId));
@@ -2355,6 +2351,7 @@ function Editor() {
     if (funnel?.id) {
       params.set("preview", "1");
       params.set("funnelId", funnel.id);
+      if (previewToken) params.set("previewToken", previewToken);
       const measuredCanvasWidth = Math.round(
         editorRef.current?.Canvas?.getFrameEl?.()?.parentElement?.clientWidth
         || editorRef.current?.Canvas?.getFrameEl?.()?.clientWidth
@@ -2404,20 +2401,54 @@ function Editor() {
     setSavingBasics(true);
     const normalizedSlug = slugify((funnel.slug || "").trim());
     const payload = {
+      action: "saveBasics",
+      id: funnel.id,
       name: funnel.name || "",
       description: funnel.description || "",
       slug: normalizedSlug || null,
       notify_email: notifyEmail || null,
       default_list_id: defaultListId || null,
     };
-    const { error } = await supabase.from("funnels").update(payload).eq("id", funnel.id);
-    setSavingBasics(false);
-    if (error) {
-      if (/duplicate key|slug/i.test(error.message)) return alert("Slug already in use. Pick another.");
-      return alert(error.message);
+    try {
+      const response = await apiFetch("/api/funnels/manage", { method: "POST", body: JSON.stringify(payload) });
+      const result = await response.json();
+      if (!response.ok) {
+        if (/duplicate key|slug/i.test(result.error || "")) return alert("Slug already in use. Pick another.");
+        throw new Error(result.error || "Could not save funnel details.");
+      }
+      setFunnel(result.funnel);
+      setNotifyEmail(result.funnel.notify_email || "");
+      setDefaultListId(result.funnel.default_list_id || null);
+      alert("Saved.");
+    } catch (error) {
+      alert(error.message || "Could not save funnel details.");
+    } finally {
+      setSavingBasics(false);
     }
-    setFunnel((prev) => ({ ...prev, slug: payload.slug || "" }));
-    alert("Saved.");
+  }
+
+  async function saveAsMasterTemplate() {
+    if (!funnel || savingMasterTemplate) return;
+    const description = window.prompt("Add a short description for subscribers.", funnel.template_description || "");
+    if (description === null) return;
+    setSavingMasterTemplate(true);
+    setEditorError("");
+    try {
+      const saved = await saveActiveStep({ silent: true });
+      if (!saved) throw new Error("Save the current page before saving this funnel as a master template.");
+      const response = await apiFetch("/api/funnels/templates", {
+        method: "POST",
+        body: JSON.stringify({ action: "save", id: funnel.id, description }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result?.template?.id) throw new Error(result?.error || "Could not save master template");
+      setFunnel((current) => ({ ...current, is_master_template: true, template_description: result.template.template_description }));
+      alert("Saved to the GR8 Result master template catalogue.");
+    } catch (error) {
+      setEditorError(error.message || "Could not save master template");
+    } finally {
+      setSavingMasterTemplate(false);
+    }
   }
 
   async function publish() {
@@ -2425,26 +2456,52 @@ function Editor() {
     const slug = slugify((funnel.slug || "").trim() || funnel.name || "");
     if (!slug) return alert("Add a funnel name or slug first, then publish.");
     setPublishing(true);
-    const { error } = await supabase.from("funnels").update({ status: "published", slug }).eq("id", funnel.id);
-    setPublishing(false);
-    if (error) return alert(error.message);
-    setFunnel({ ...funnel, status: "published", slug });
-    const publicUrl = typeof window === "undefined" ? `/p/${slug}` : `${window.location.origin}/p/${slug}`;
-    alert(`Published.\n${publicUrl}`);
+    try {
+      const response = await apiFetch("/api/funnels/manage", {
+        method: "POST",
+        body: JSON.stringify({ action: "publish", id: funnel.id, slug }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Could not publish funnel.");
+      setFunnel((current) => ({ ...current, status: "published", slug: result.slug }));
+      const publicUrl = typeof window === "undefined" ? result.url : `${window.location.origin}${result.url}`;
+      alert(`Published.\n${publicUrl}`);
+    } catch (error) {
+      alert(error.message || "Could not publish funnel.");
+    } finally {
+      setPublishing(false);
+    }
   }
 
   async function unpublish() {
     if (!confirm("Unpublish this funnel?")) return;
-    const { error } = await supabase.from("funnels").update({ status: "draft" }).eq("id", funnel.id);
-    if (error) return alert(error.message);
-    setFunnel({ ...funnel, status: "draft" });
+    try {
+      const response = await apiFetch("/api/funnels/manage", {
+        method: "POST",
+        body: JSON.stringify({ action: "unpublish", id: funnel.id }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Could not unpublish funnel.");
+      setFunnel((current) => ({ ...current, status: "draft" }));
+    } catch (error) {
+      alert(error.message || "Could not unpublish funnel.");
+    }
   }
 
   async function removeFunnel() {
-    if (!confirm("Delete this funnel?")) return;
-    const { error } = await supabase.from("funnels").delete().eq("id", funnel.id);
-    if (error) return alert(error.message);
-    window.location.href = "/modules/funnels";
+    const confirmName = window.prompt(`Type "${funnel?.name}" to permanently delete this funnel.`);
+    if (confirmName === null) return;
+    try {
+      const response = await apiFetch("/api/funnels/manage", {
+        method: "POST",
+        body: JSON.stringify({ action: "delete", id: funnel.id, confirmName }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Could not delete funnel.");
+      window.location.href = "/modules/funnels";
+    } catch (error) {
+      alert(error.message || "Could not delete funnel.");
+    }
   }
 
   function addLocalStep(title = "Step") {
@@ -2463,19 +2520,43 @@ function Editor() {
       return existing;
     }
 
-    const firstPage = {
-      funnel_id: id,
-      title: "Page 1",
-      content: blankHTML(),
-      order_index: 0,
-    };
+    const response = await apiFetch("/api/funnels/manage", {
+      method: "POST",
+      body: JSON.stringify({
+        action: "saveStep",
+        funnelId: funnel.id,
+        title: "Page 1",
+        content: blankHTML(),
+        order_index: 0,
+      }),
+    });
+    const result = await response.json();
+    if (!response.ok || !result.step?.id) {
+      throw new Error(result.error || "Could not create the first page.");
+    }
 
-    const ins = await supabase.from("funnel_steps").insert(firstPage).select("*").single();
-    if (ins.error) throw ins.error;
+    setSteps([result.step]);
+    setActiveStepId(result.step.id);
+    return result.step;
+  }
 
-    setSteps([ins.data]);
-    setActiveStepId(ins.data.id);
-    return ins.data;
+  async function saveStepToApi({ stepId, title, content, orderIndex }) {
+    const response = await apiFetch("/api/funnels/manage", {
+      method: "POST",
+      body: JSON.stringify({
+        action: "saveStep",
+        funnelId: funnel.id,
+        stepId: stepId || undefined,
+        title,
+        content,
+        order_index: orderIndex,
+      }),
+    });
+    const result = await response.json();
+    if (!response.ok || !result.step?.id) {
+      throw new Error(result.error || "Could not save this page.");
+    }
+    return result.step;
   }
 
   async function deleteStep(stepId) {
@@ -2490,12 +2571,19 @@ function Editor() {
       return;
     }
 
-    const { error } = await supabase.from("funnel_steps").delete().eq("id", stepId);
-    if (error) return alert(error.message);
-    const next = steps.filter((s) => s.id !== stepId).map((s, i) => ({ ...s, order_index: i }));
-    setSteps(next);
-    setActiveStepId(next[0]?.id || null);
-    await Promise.all(next.map((s, i) => supabase.from("funnel_steps").update({ order_index: i }).eq("id", s.id)));
+    try {
+      const response = await apiFetch("/api/funnels/manage", {
+        method: "POST",
+        body: JSON.stringify({ action: "deleteStep", funnelId: funnel.id, stepId }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.deleted) throw new Error(result.error || "Could not delete this page.");
+      const next = steps.filter((s) => s.id !== stepId).map((s, i) => ({ ...s, order_index: i }));
+      setSteps(next);
+      setActiveStepId(next[0]?.id || null);
+    } catch (error) {
+      alert(error.message || "Could not delete this page.");
+    }
   }
 
   async function saveActiveStep(options = {}) {
@@ -2531,29 +2619,30 @@ function Editor() {
       });
 
       if (step._tmp) {
-        const ins = await supabase
-          .from("funnel_steps")
-          .insert({
-            funnel_id: id,
-            title: step.title || "Page",
-            content: combined,
-            order_index: step.order_index,
-          })
-          .select("*")
-          .single();
-        if (ins.error) throw ins.error;
+        const inserted = await saveStepToApi({
+          title: step.title || "Page",
+          content: combined,
+          orderIndex: step.order_index,
+        });
+        const finalHtml = combined.replace(/name="step_id" value=""/g, `name="step_id" value="${inserted.id}"`);
+        const saved = await saveStepToApi({
+          stepId: inserted.id,
+          title: inserted.title,
+          content: finalHtml,
+          orderIndex: inserted.order_index,
+        });
 
-        const finalHtml = combined.replace(/name="step_id" value=""/g, `name="step_id" value="${ins.data.id}"`);
-        const stepUpdate = await supabase.from("funnel_steps").update({ content: finalHtml }).eq("id", ins.data.id);
-        if (stepUpdate.error) throw stepUpdate.error;
-
-        setSteps((prev) => prev.map((s) => (s.id === step.id ? { ...ins.data, content: finalHtml } : s)));
-        setActiveStepId(ins.data.id);
+        setSteps((prev) => prev.map((s) => (s.id === step.id ? saved : s)));
+        setActiveStepId(saved.id);
       } else {
         const finalHtml = combined.replace(new RegExp(`name="step_id" value="${step.id}"`, "g"), `name="step_id" value="${step.id}"`);
-        const upd = await supabase.from("funnel_steps").update({ content: finalHtml }).eq("id", step.id);
-        if (upd.error) throw upd.error;
-        setSteps((prev) => prev.map((s) => (s.id === step.id ? { ...s, content: finalHtml } : s)));
+        const saved = await saveStepToApi({
+          stepId: step.id,
+          title: step.title || "Page",
+          content: finalHtml,
+          orderIndex: step.order_index,
+        });
+        setSteps((prev) => prev.map((s) => (s.id === step.id ? saved : s)));
       }
 
       if (!silent) alert("Page saved.");
@@ -2565,12 +2654,30 @@ function Editor() {
   }
 
   async function handleViewPage(options = {}) {
-    const saved = await saveActiveStep({ silent: true });
-    if (!saved) {
-      alert("Please save the page first.");
+    if (previewingPage) return;
+    const previewWindow = window.open("about:blank", "_blank");
+    if (!previewWindow) {
+      alert("Allow pop-ups to open the private page preview.");
       return;
     }
-    window.open(getActiveStepPublicUrl(options), "_blank", "noopener,noreferrer");
+    previewWindow.opener = null;
+    setPreviewingPage(true);
+    try {
+      const saved = await saveActiveStep({ silent: true });
+      if (!saved) throw new Error("Please save the page first.");
+      const response = await apiFetch("/api/funnels/preview-token", {
+        method: "POST",
+        body: JSON.stringify({ funnelId: funnel.id }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result?.token) throw new Error(result?.error || "Could not authorize the private preview");
+      previewWindow.location.replace(getActiveStepPublicUrl(options, result.token));
+    } catch (error) {
+      previewWindow.close();
+      alert(error.message || "Could not open private preview.");
+    } finally {
+      setPreviewingPage(false);
+    }
   }
 
   async function uploadImageFile(file, mode = "insert") {
@@ -3138,7 +3245,8 @@ function Editor() {
                 style={slugInput}
                 placeholder="public-url-slug"
                 value={funnel.slug || ""}
-                onChange={(e) => setFunnel({ ...funnel, slug: slugify(e.target.value) })}
+                onChange={(e) => setFunnel({ ...funnel, slug: e.target.value })}
+                onBlur={(e) => setFunnel((current) => ({ ...current, slug: slugify(e.target.value) }))}
               />
               <button style={miniBtn} onClick={() => setFunnel((x) => ({ ...x, slug: slugify(x.name) }))}>
                 Auto
@@ -3199,6 +3307,11 @@ function Editor() {
             <button onClick={saveBasics} disabled={savingBasics} style={btn}>
               {savingBasics ? "Saving…" : "💾 Save"}
             </button>
+            {["owner", "admin"].includes(workspaceRole) ? (
+              <button onClick={saveAsMasterTemplate} disabled={savingMasterTemplate || !editorReady} style={btn}>
+                {savingMasterTemplate ? "Saving master…" : "Save as Master Template"}
+              </button>
+            ) : null}
             {funnel.status === "published" ? (
               <button onClick={unpublish} style={btnWarn}>⏸ Unpublish</button>
             ) : (
@@ -3308,6 +3421,7 @@ function Editor() {
                     <>
                       <button
                         type="button"
+                        disabled={previewingPage}
                         onClick={() => handleViewPage({ device: "desktop", canvasWidthOverride: 1500 })}
                         style={{
                           ...btn,
@@ -3320,10 +3434,11 @@ function Editor() {
                         }}
                         title="Save and open a desktop-width preview of the current page"
                       >
-                        🖥 Desktop Preview
+                        {previewingPage ? "Opening preview…" : "🖥 Desktop Preview"}
                       </button>
                       <button
                         type="button"
+                        disabled={previewingPage}
                         onClick={() => handleViewPage({ device: "mobile", canvasWidthOverride: 390 })}
                         style={{
                           ...btn,
@@ -3336,7 +3451,7 @@ function Editor() {
                         }}
                         title="Save and open a mobile-width preview of the current page"
                       >
-                        📱 Mobile Preview
+                        {previewingPage ? "Opening preview…" : "📱 Mobile Preview"}
                       </button>
                     </>
                   ) : null}

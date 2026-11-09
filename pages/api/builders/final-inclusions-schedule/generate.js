@@ -129,6 +129,8 @@ async function handler(req, res) {
       previousDocuments,
       cover: req.body?.previewSchedule?.cover || {},
       schedulePages: schedulePages,
+      scheduleOutstandingDecisions: Array.isArray(req.body?.previewSchedule?.outstandingDecisions) ? req.body.previewSchedule.outstandingDecisions : [],
+      scheduleVariationSummary: req.body?.previewSchedule?.variationSummary || null,
       builderProfile: req.body?.builderProfile || req.body?.builder || {},
       preparedBy: req.body?.preparedBy || req.user?.email || req.user?.id || "",
       reviewedBy: req.body?.reviewedBy || "",

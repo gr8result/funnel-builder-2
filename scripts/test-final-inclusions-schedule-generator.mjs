@@ -474,7 +474,8 @@ assert.equal(mergedDirect.validation.pages.every((page) => page.orientation === 
 
 const textContent = await extractPdfText(mergedDirect.bytes);
 assert.match(textContent, /Inclusions\s*&\s*Selections/, "final PDF can be reopened and its schedule title text read");
-assert.doesNotMatch(textContent, /\+\$\s?\d|Allowance|Variation/i, "client-facing schedule PDF does not expose quotation pricing");
+const pricingLeak = textContent.match(/\+\$\s?\d|\bAllowance(?:\s+Amount|\s+Total|:)|\bVariation(?:\s+Amount|\s+Total|:)/i);
+assert.equal(pricingLeak, null, `client-facing schedule PDF does not expose quotation pricing: ${pricingLeak ? textContent.slice(Math.max(0, pricingLeak.index - 80), pricingLeak.index + pricingLeak[0].length + 80) : ""}`);
 assert.match(textContent, /Custom Orb/, "final PDF contains the selected exterior roofing product");
 assert.match(textContent, /Bosch Series 4 Oven/, "final PDF contains the selected interior oven product");
 assert.match(textContent, /Main rendered walls/ , "final PDF contains the exterior colour selection in Painting Schedule");

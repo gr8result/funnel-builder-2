@@ -102,3 +102,41 @@ export function dimensionAnnotationStrokes(segments, textItems, pixelsPerMm) {
   }
   return excluded;
 }
+
+// Wall thicknesses the drawing itself dimensions: consecutive ticks on one dimension chain whose spacing
+// is printed as a wall thickness (e.g. "70" between two ticks). Returns intervals across the chain's
+// direction in logical px: [{ axis: 'x'|'y', lo, hi, valueMm }]. A wall whose two faces sit on such an
+// interval is one the draftsperson measured as a wall.
+export function dimensionedThicknesses(segments, textItems, pixelsPerMm, { maxThicknessMm = 400, toleranceMm = 15 } = {}) {
+  if (!(pixelsPerMm > 0)) return [];
+  const ticks = [];
+  for (const s of segments || []) {
+    if (s.curve) continue;
+    const dx = s.x2 - s.x1, dy = s.y2 - s.y1, length = Math.hypot(dx, dy);
+    if (length < 2 || length > 16 || Math.abs(Math.abs(dx) - Math.abs(dy)) > 0.15 * length) continue; // ~45 degree tick
+    ticks.push({ x: (s.x1 + s.x2) / 2, y: (s.y1 + s.y2) / 2 });
+  }
+  const labels = (textItems || []).filter((t) => /^\s*\d{2,3}\s*$/.test(String(t.text || '')) && Number(t.text) <= maxThicknessMm && Number.isFinite(t.x) && Number.isFinite(t.y));
+  const intervals = [];
+  for (const axis of ['x', 'y']) {
+    // A chain measuring along y has its ticks on one x (and the reverse).
+    const across = axis === 'y' ? 'x' : 'y';
+    const lines = new Map();
+    for (const tick of ticks) {
+      const key = Math.round(tick[across]);
+      const line = [...lines.keys()].find((k) => Math.abs(k - tick[across]) <= 1);
+      lines.set(line ?? key, [...(lines.get(line ?? key) || []), tick]);
+    }
+    for (const [at, members] of lines) {
+      const positions = [...new Set(members.map((tick) => Math.round(tick[axis] * 100) / 100))].sort((p, q) => p - q);
+      for (let i = 1; i < positions.length; i += 1) {
+        const lo = positions[i - 1], hi = positions[i], valueMm = (hi - lo) / pixelsPerMm;
+        if (valueMm > maxThicknessMm || valueMm < 20) continue;
+        const label = labels.find((t) => Math.abs(Number(t.text) - valueMm) <= toleranceMm
+          && Math.abs(t[across] - at) <= 800 * pixelsPerMm && Math.abs(t[axis] - (lo + hi) / 2) <= 600 * pixelsPerMm);
+        if (label) intervals.push({ axis, lo, hi, valueMm: Number(label.text) });
+      }
+    }
+  }
+  return intervals;
+}

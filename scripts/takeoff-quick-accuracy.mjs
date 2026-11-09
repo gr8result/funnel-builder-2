@@ -76,6 +76,15 @@ async function pdfPageInput(pdf, pageSpec) {
 }
 
 const pct = (value) => (value === null || value === undefined ? '-' : `${(value * 100).toFixed(1)}%`);
+const polygonAreaM2 = (polygon = []) => Math.abs(polygon.reduce((sum, point, index) => {
+  const next = polygon[(index + 1) % polygon.length] || point;
+  return sum + point.x * next.y - next.x * point.y;
+}, 0)) / 2 / 1e6;
+const wallLengthM = (wall) => {
+  const points = wall.points || [wall.a, wall.b].filter(Boolean);
+  return points.slice(1).reduce((sum, point, index) => sum + Math.hypot(point.x - points[index].x, point.y - points[index].y), 0) / 1000;
+};
+const totalWallM = (walls, category) => walls.filter((wall) => !category || wall.category === category).reduce((sum, wall) => sum + wallLengthM(wall), 0);
 const rows = [], detail = [];
 for (const plan of plans) {
   const pages = plan.frozen ? [{ page: 'frozen', level: 'Ground Floor' }] : plan.reference.pages;
@@ -124,6 +133,8 @@ for (const plan of plans) {
     const openings = compareOpenings(ref.openings, accepted.openings);
     const roomCandidates = compareRooms(ref.rooms, candidates.rooms);
     const roomsAccepted = compareRooms(ref.rooms, accepted.rooms);
+    const referenceRoomM2 = ref.rooms.reduce((sum, room) => sum + polygonAreaM2(room.polygon), 0);
+    const candidateRoomM2 = candidates.rooms.reduce((sum, room) => sum + polygonAreaM2(room.polygon), 0);
     const typeReview = canonical.placedOpenings.filter((item) => item.needsClassification).length;
     if (args.overlay && args.overlay !== true) {
       // Accepted reading over the plan: reference green, external blue / internal magenta, missed red,
@@ -153,12 +164,46 @@ for (const plan of plans) {
       missingWalls: walls.missingWalls.length, falseLm: (walls.detectedLm - walls.supportedLm).toFixed(1),
       openings: `${openings.matched}/${openings.reference} (${openings.detected} read)`, openKind: pct(openings.kindAgreement), typeReview,
       roomsCandidate: `${roomCandidates.matched}/${roomCandidates.reference}`, roomsAccepted: `${roomsAccepted.matched}/${roomsAccepted.reference} (${accepted.rooms.length})`,
+      extLm: `${totalWallM(accepted.walls, 'exterior').toFixed(1)}/${totalWallM(ref.walls, 'exterior').toFixed(1)}`,
+      intLm: `${totalWallM(accepted.walls, 'interior').toFixed(1)}/${totalWallM(ref.walls, 'interior').toFixed(1)}`,
+      roomM2: `${candidateRoomM2.toFixed(1)}/${referenceRoomM2.toFixed(1)}`,
       reviewWalls: prepared.vector?.wallReviewCandidates?.length ?? prepared.vector?.reviewWallCandidates?.length ?? '-',
       counted: Object.entries(canonical.placedOpenings.filter((item) => !item.needsClassification).reduce((acc, item) => ({ ...acc, [item.openingClass]: (acc[item.openingClass] || 0) + 1 }), {})).map(([k, v]) => `${k.replace(/ Door$/, '').replace('Large Glazed/Stacker/Sliding', 'Sliding')} ${v}`).join(', '),
       ...(labelReport ? { labels: `${labelReport.applied} applied, ${labelReport.resolved.length} settled, ${labelReport.split.length} split` } : {}), ms });
-    detail.push({ plan: plan.name, page: pageSpec.page, walls: { missing: walls.missingWalls, false: walls.falseWalls },
+    detail.push({ plan: plan.name, page: pageSpec.page, walls: {
+      missing: walls.missingWalls,
+      false: walls.falseWalls,
+      categoryMismatches: walls.categoryMismatches.map((item) => ({
+        wallId: item.wallId,
+        expected: item.expected,
+        checkedMm: item.checkedMm,
+        mismatchMm: item.mismatchMm,
+        detectedCategories: item.detectedCategories,
+        detectedThicknesses: item.detectedThicknesses,
+      })),
+    },
       openings: { missed: openings.missed.map((item) => ({ id: item.id, kind: item.kind, widthMm: item.widthMm })), extra: openings.extra.map((item) => ({ id: item.id, kind: item.kind, widthMm: item.widthMm, x: Math.round(item.x), y: Math.round(item.y) })) },
-      rooms: roomCandidates.rows.map((row) => ({ name: row.name, iou: Math.round(row.iou * 100) / 100, areaError: row.areaError === null ? null : Math.round(row.areaError * 1000) / 10 })),
+      rooms: roomCandidates.rows.map((row) => ({
+        name: row.name,
+        referenceM2: Math.round(row.referenceM2 * 100) / 100,
+        detectedM2: row.detectedM2 === null ? null : Math.round(row.detectedM2 * 100) / 100,
+        detectedId: row.detectedId,
+        iou: Math.round(row.iou * 100) / 100,
+        areaError: row.areaError === null ? null : Math.round(row.areaError * 1000) / 10,
+      })),
+      commercialTotals: {
+        walls: {
+          referenceExteriorLm: Math.round(totalWallM(ref.walls, 'exterior') * 1000) / 1000,
+          detectedExteriorLm: Math.round(totalWallM(accepted.walls, 'exterior') * 1000) / 1000,
+          referenceInteriorLm: Math.round(totalWallM(ref.walls, 'interior') * 1000) / 1000,
+          detectedInteriorLm: Math.round(totalWallM(accepted.walls, 'interior') * 1000) / 1000,
+        },
+        rooms: {
+          referenceM2: Math.round(referenceRoomM2 * 1000) / 1000,
+          candidateM2: Math.round(candidateRoomM2 * 1000) / 1000,
+          approvedM2: Math.round(accepted.rooms.reduce((sum, room) => sum + polygonAreaM2(room.polygon), 0) * 1000) / 1000,
+        },
+      },
       raw: { detectorWalls: detected.walls.length, detectorOpenings: detected.openings.length,
         wallRecall: pct(rawWalls.recall), wallPrecision: pct(rawWalls.precision),
         confirmedOpenings: rawOpenings.detected, openingsMatched: rawOpenings.matched,
@@ -172,6 +217,13 @@ for (const plan of plans) {
         normalizedOpenings: prepared.batch.detections.filter(item => item.kind === 'opening').length,
         openingsWithheldAtClassification: prepared.vector.reviewOpeningCandidates.length,
         admittedWalls: accepted.walls.length, admittedOpenings: accepted.openings.length },
+      wallClassification: prepared.vector.response.walls.map((wall) => ({
+        id: wall.detectionId,
+        category: wall.category,
+        thicknessMm: wall.thicknessMm,
+        measuredThicknessMm: wall.measuredThicknessMm,
+        categoryBasis: wall.categoryBasis,
+      })),
       labels: labelReport ? { ...labelReport, assignments: labelReport.assignments.map((a) => ({ text: a.label.text, opening: a.opening.id, kind: a.opening.kind, widthMm: a.opening.widthMm, agrees: a.fit.agrees })) } : null,
       classified: (detected.classification || []).filter((r) => r.element !== 'wall').map((r) => ({ id: r.id, element: r.element, confidence: r.confidence, evidence: r.evidence.map((e) => `${e.rule}(${e.weight}): ${e.detail}`) })),
       structures: (detected.structures || []).map((x) => ({ element: x.element, thicknessMm: x.thicknessMm, label: x.label })),

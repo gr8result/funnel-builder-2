@@ -25,8 +25,10 @@ const saved = { "WINDOWS (46)": { rows: [
 ] } };
 const merged = withWindowsPriceListQuotation(saved);
 const section = merged["WINDOWS (46)"].rows;
-assert.deepEqual(section.slice(0, 2).map((row) => row.id), ["quote-748", "manual-1"]);
-assert.equal(section.some((row) => /WINDOWS QUOTE|FLYSCREEN QUOTE/.test(row.item)), false);
+// Recovery 8 Nov 2026: uncharged placeholder rows hold the builder's rate and formula and are kept.
+assert.deepEqual(section.slice(0, 4).map((row) => row.id), ["quote-748", "quote-750", "quote-753", "manual-1"]);
+const chargedPlaceholder = withWindowsPriceListQuotation({ "WINDOWS (46)": { rows: [{ id: "quote-750", excelRow: 750, item: "WINDOWS QUOTE", quantity: "1" }] } });
+assert.equal(chargedPlaceholder["WINDOWS (46)"].rows.some((row) => row.id === "quote-750"), false, "a charged placeholder is replaced by the price list");
 const kept = section.find((row) => row.id === row1218.id);
 assert.equal(kept.quantity, "9");
 assert.equal(kept.notes, "kept");
