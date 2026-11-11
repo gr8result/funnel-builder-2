@@ -77,6 +77,10 @@ for (const pageNumber of pages) {
   const outdoor = (fused.response.rooms || []).filter((room) => room.outdoorArea);
   console.log(`  outdoor areas: ${outdoor.map((room) => `${room.name} ${room.lineworkAreaM2 ?? (Array.isArray(room.polygon) && room.polygon.length >= 3 ? 'outlined' : 'no outline')}`).join(', ') || 'none'}`);
   console.log(`  hand trace: ${handTrace.map((h) => `${h.type} ${h.m2}`).join(', ')}`);
+  for (const fp of fused.report.footprints || []) if (fp.externalWallClip) console.log(`  external-wall clip ${fp.detectionId}: ${JSON.stringify(fp.externalWallClip)}`);
+  if (process.env.SHOW_LINES) for (const line of fused.report.externalWallLines || []) console.log(`    line ${JSON.stringify(line)}`);
+  console.log(`  rooms clipped to external walls: ${fused.report.rooms?.clippedToExternalWalls || 0}, withheld: ${fused.report.rooms?.boundaryWithheldOutsideWalls || 0}, outdoor closed at roofline: ${fused.report.rooms?.outdoorClosedAtRoofline || 0}`);
+  for (const room of (fused.response.rooms || []).filter((r) => r.externalWallClip)) console.log(`    ${room.name}: ${JSON.stringify(room.externalWallClip)}`);
 }
 console.log('\nPrinted schedule (FLOOR AREAS table, sheet 2): Ground total 225.31 = living 148.02 + garage 40.23 + alfresco 19.00 + patio 18.06; 1st floor living 136.49 + balcony 16.37 = 152.86.');
 if (args.json) fs.writeFileSync(args.json, JSON.stringify(out, null, 2));

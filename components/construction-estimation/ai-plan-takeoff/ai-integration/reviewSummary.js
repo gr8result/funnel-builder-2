@@ -222,7 +222,8 @@ export function applyReviewDecision(decision, value, collections = {}) {
     return patch('completedWallRuns', (wall) => ({
       constructionSystem: system, exteriorType: legacy,
       exteriorFinish: finish || (system === 'lightweight_cladding' ? 'Unspecified' : system === 'core_filled_blockwork' ? 'rendered' : undefined),
-      frameThicknessMm: framed ? (wall.frameThicknessMm === 90 ? 90 : 70) : null,
+      // External frame defaults to 90 mm; a 70 mm frame the builder or drawing gave is kept.
+      frameThicknessMm: framed ? (wall.frameThicknessMm === 70 && !wall.frameAssumed ? 70 : 90) : null,
     }));
   }
   if (field === 'internalFrame' && [70, 90].includes(number)) return patch('completedWallRuns', () => ({ constructionSystem: 'internal_timber_frame', thicknessMm: number, frameThicknessMm: number, frameAssumed: false }));

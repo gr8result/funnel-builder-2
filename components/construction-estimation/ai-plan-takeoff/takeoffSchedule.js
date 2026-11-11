@@ -1,4 +1,5 @@
 import { measureRoom, validateRoomSet } from './ai-integration/roomGeometry.js';
+import { allocatePointsToRooms, ELECTRICAL_KIND_BY_KEY } from './geometry/electricalSymbols.js';
 import { associateTakeoffMeasurements, takeoffMaterialFields, takeoffThickness, openingQuantity, openingDimensions, openingHostId, uniqueTakeoffItems, brickSillLength, windowCodeForOpening, isCavitySlider, isRobeSlider, internalDoorPurchaseType, materialRound, EXTERIOR_WALL_SYSTEM_FIELD_KEYS, windowStyleLabel, isFixedWindowOpening, doorStyleLabel, brickOrderQuantities, internalDoorJambTrace, internalDoorReconciliationTrace, TAKEOFF_LEVELS } from '../../../lib/construction-estimation/takeoffMaterialQuantities.js';
 import { absentTakeoffMaterialFields } from '../../../lib/construction-estimation/takeoffAbsentMaterialFields.js';
 import { toCommonScale, sheetPixelsPerMm } from './sheetScale.js';
@@ -105,39 +106,122 @@ function makeRow(section, itemId, category, quantity, unit, extra = {}) {
   return { section, itemId, category, quantity: round(quantity), unit, ...extra };
 }
 
-function createFloorAreaRows(floorplans = [], pixelsPerMm) {
-  const individual = floorplans.map((item, index) => makeRow(
-    'Floor Areas',
-    String(item.id || `floor-area-${index + 1}`),
-    item.label || FLOOR_AREA_LABELS[item.type] || item.type || 'Floor area',
-    polygonAreaM2(item.nodes, pixelsPerMm),
-    'm2',
-    {
-      planSheet: Number(item.page || 1),
-      level: item.level || '',
-      areaType: item.type || 'Other',
-      source: item.source || 'manual',
-      commercialStatus: item.source === 'ai' && item.confirmed !== true ? 'Review required' : 'Approved',
-      reviewRequired: item.source === 'ai' && item.confirmed !== true,
-      notes: item.source === 'ai' && item.confirmed !== true
-        ? 'AI-detected outline: inspect and approve before it can enter Job Setup or quotation.'
-        : 'Measured polygon area.',
-    },
-  ));
+// Which outlines count toward the totals. A building level is counted once: outlines on a sheet with
+// no building level (site, setout or roof sheets) are left out once any sheet has a level, and when two
+// sheets measure the same level's area of one type, only one sheet is counted (approved / hand-drawn
+// first, then the lower sheet number) and the total is flagged. Summing every sheet doubled totals.
+function floorAreaCounting(floorplans = [], sheetLevels = {}) {
+  const levelOf = (item) => floorForItem(item, sheetLevels);
+  const anyAssigned = floorplans.some((item) => !levelOf(item).key.startsWith('sheet'));
+  const excluded = new Map();
+  if (anyAssigned) {
+    for (const item of floorplans) {
+      const level = levelOf(item);
+      if (level.key.startsWith('sheet')) excluded.set(item, `Sheet ${item.page || 1} has no building level, so this outline is not counted in the totals. Assign the sheet to a level if it is a floor plan.`);
+    }
+  }
+  const groups = new Map();
+  for (const item of floorplans) {
+    if (excluded.has(item)) continue;
+    const key = `${levelOf(item).key}|${item.type || 'Other'}`;
+    groups.set(key, [...(groups.get(key) || []), item]);
+  }
+  const duplicateNotes = new Map();
+  for (const [key, items] of groups) {
+    const pages = [...new Set(items.map((item) => Number(item.page || 1)))];
+    if (pages.length < 2) continue;
+    const rank = (page) => {
+      const onPage = items.filter((item) => Number(item.page || 1) === page);
+      return onPage.some((item) => item.confirmed === true || item.source !== 'ai') ? 0 : 1;
+    };
+    const kept = [...pages].sort((a, b) => rank(a) - rank(b) || a - b)[0];
+    const level = levelOf(items[0]).label;
+    const type = key.split('|')[1];
+    for (const item of items) {
+      if (Number(item.page || 1) !== kept) excluded.set(item, `${level} ${FLOOR_AREA_LABELS[type] || type} is also measured on sheet ${kept}; only sheet ${kept} is counted. Check which sheet is right.`);
+    }
+    duplicateNotes.set(type, [...(duplicateNotes.get(type) || []), `${level}: sheets ${pages.join(', ')} measure it; sheet ${kept} counted`]);
+  }
+  return { excluded, duplicateNotes };
+}
+
+// Under-roof outdoor areas: an alfresco or porch is under the main roof. Drawn outside the footprint, it
+// adds to the under-roof area; drawn inside it, it is already in the footprint. Positions compare on one sheet.
+const UNDER_ROOF_OUTDOOR_TYPES = ['Alfresco', 'Porch'];
+function outlineCentre(nodes = []) {
+  let twice = 0, cx = 0, cy = 0;
+  nodes.forEach((a, i) => { const b = nodes[(i + 1) % nodes.length]; const k = a.x * b.y - b.x * a.y; twice += k; cx += (a.x + b.x) * k; cy += (a.y + b.y) * k; });
+  return twice ? { x: cx / (3 * twice), y: cy / (3 * twice) } : null;
+}
+function outlineContains(nodes = [], point) {
+  let inside = false;
+  for (let i = 0, j = nodes.length - 1; i < nodes.length; j = i++) {
+    const a = nodes[i], b = nodes[j];
+    if ((a.y > point.y) !== (b.y > point.y) && point.x < (b.x - a.x) * (point.y - a.y) / (b.y - a.y) + a.x) inside = !inside;
+  }
+  return inside;
+}
+// 'inside' | 'outside' the counted footprint on the same sheet, or 'unknown' (no footprint on that sheet).
+function footprintPosition(item, footprints) {
+  const onSheet = footprints.filter((fp) => Number(fp.page || 1) === Number(item.page || 1) && fp.nodes?.length >= 3);
+  const centre = item.nodes?.length >= 3 ? outlineCentre(item.nodes) : null;
+  if (!onSheet.length || !centre) return 'unknown';
+  return onSheet.some((fp) => outlineContains(fp.nodes, centre)) ? 'inside' : 'outside';
+}
+
+function createFloorAreaRows(floorplans = [], pixelsPerMm, sheetLevels = {}) {
+  const { excluded, duplicateNotes } = floorAreaCounting(floorplans, sheetLevels);
+  const countedFootprints = floorplans.filter((item) => item.type === 'Footprint' && !excluded.get(item));
+  const individual = floorplans.map((item, index) => {
+    const pendingAi = item.source === 'ai' && item.confirmed !== true;
+    const left = excluded.get(item);
+    return makeRow(
+      'Floor Areas',
+      String(item.id || `floor-area-${index + 1}`),
+      item.label || FLOOR_AREA_LABELS[item.type] || item.type || 'Floor area',
+      polygonAreaM2(item.nodes, pixelsPerMm),
+      'm2',
+      {
+        planSheet: Number(item.page || 1),
+        level: item.level || floorForItem(item, sheetLevels).label || '',
+        areaType: item.type || 'Other',
+        source: item.source || 'manual',
+        countedInTotals: !left,
+        ...(!['Footprint', 'Living'].includes(item.type) ? { footprintPosition: footprintPosition(item, countedFootprints) } : {}),
+        commercialStatus: left ? 'Not counted in totals' : pendingAi ? 'Review required' : 'Approved',
+        // An outline left out of the totals is not itself a quantity for Job Setup or the quote.
+        reviewRequired: Boolean(left) || pendingAi,
+        notes: left || (pendingAi
+          ? 'AI-detected outline: inspect and approve before it can enter Job Setup or quotation.'
+          : 'Measured polygon area.'),
+      },
+    );
+  });
   const rows = Object.keys(FLOOR_AREA_LABELS).map((type) => {
-    const matching = individual.filter((item) => item.areaType === type);
+    const matching = individual.filter((item) => item.areaType === type && item.countedInTotals);
+    const duplicates = duplicateNotes.get(type) || [];
+    const notCounted = individual.filter((item) => item.areaType === type && !item.countedInTotals).length;
     return makeRow('Floor Area Totals', `floor_${type}`, FLOOR_AREA_LABELS[type], matching.reduce((sum, item) => sum + item.quantity, 0), 'm2', {
-      commercialStatus: matching.some((item) => item.reviewRequired) ? 'Contains unapproved areas' : 'Approved',
-      reviewRequired: matching.some((item) => item.reviewRequired),
-      notes: matching.length ? `${matching.length} measured outline${matching.length === 1 ? '' : 's'}.` : 'No measured outline.',
+      commercialStatus: duplicates.length ? 'Review: measured on more than one sheet' : matching.some((item) => item.reviewRequired) ? 'Contains unapproved areas' : 'Approved',
+      reviewRequired: duplicates.length > 0 || matching.some((item) => item.reviewRequired),
+      notes: [
+        matching.length ? `${matching.length} measured outline${matching.length === 1 ? '' : 's'}.` : 'No measured outline.',
+        notCounted ? `${notCounted} outline${notCounted === 1 ? '' : 's'} not counted.` : '',
+        ...duplicates,
+      ].filter(Boolean).join(' '),
     });
   });
 
   const footprint = rows.find((row) => row.itemId === 'floor_Footprint')?.quantity || 0;
   const garage = rows.find((row) => row.itemId === 'floor_Garage')?.quantity || 0;
+  // Living = footprint less the named areas inside it. A named area drawn outside the footprint (an alfresco
+  // beyond the external walls) is not part of the footprint, so it is not taken off the living area.
+  const outsideFootprint = individual.filter((item) => item.countedInTotals && item.footprintPosition === 'outside');
   const separatelyNamed = rows
     .filter((row) => !['floor_Footprint', 'floor_Living'].includes(row.itemId))
-    .reduce((sum, row) => sum + row.quantity, 0);
+    .reduce((sum, row) => sum + row.quantity, 0)
+    - outsideFootprint.reduce((sum, item) => sum + item.quantity, 0);
+  const underRoofOutside = outsideFootprint.filter((item) => UNDER_ROOF_OUTDOOR_TYPES.includes(item.areaType));
   const livingRow = rows.find((row) => row.itemId === 'floor_Living');
   const livingMeasured = livingRow?.quantity || 0;
   const totalLiving = livingMeasured || Math.max(0, footprint - separatelyNamed);
@@ -160,7 +244,11 @@ function createFloorAreaRows(floorplans = [], pixelsPerMm) {
 
   rows.push(makeRow('Floor Areas', 'floor_total_living', 'Total living area', totalLiving, 'm2',
     derivedStatus(livingMeasured ? [livingRow] : derivedLivingSources)));
-  rows.push(makeRow('Floor Areas', 'floor_total_under_roof', 'Total under-roof area', footprint, 'm2', derivedStatus([footprintRow])));
+  const underRoofExtra = underRoofOutside.reduce((sum, item) => sum + item.quantity, 0);
+  rows.push(makeRow('Floor Areas', 'floor_total_under_roof', 'Total under-roof area', footprint + underRoofExtra, 'm2', {
+    ...derivedStatus([footprintRow, ...underRoofOutside]),
+    ...(underRoofExtra > 0 ? { notes: `Gross footprint plus ${underRoofOutside.map((item) => `${item.category} ${round(item.quantity)} m²`).join(', ')} drawn outside it, under the roof.` } : {}),
+  }));
   rows.push(makeRow('Floor Areas', 'floor_garage_check', 'Garage', garage, 'm2', derivedStatus([garageRow])));
   return [...individual, ...rows];
 }
@@ -1159,7 +1247,7 @@ function buildForPages({ pages, completedFloorplans, completedWallRuns, placedOp
   }
   const measurements = completedMeasurements.filter(include);
 
-  const floorAreas = createFloorAreaRows(floorplans, pixelsPerMm);
+  const floorAreas = createFloorAreaRows(floorplans, pixelsPerMm, sheetLevels);
   const wallSchedules = createWallSchedules(walls, openings, pixelsPerMm, jobSetupRows, sheetLevels);
   const linkedMeasurements = associateTakeoffMeasurements(createMeasurementRecords({
     completedWallRuns: walls, placedOpenings: openings, pixelsPerMm,
@@ -1285,6 +1373,40 @@ function createMeasurementRecords({ completedFloorplans, completedWallRuns, plac
   ];
 }
 
+// Electrical points read from the drawing (aiAnalysis.electricalPoints[page].points, plan pixels), each
+// counted in the room it sits in on the current room outlines, so a room the builder redraws takes its
+// points with it. One row per level, room and kind; the room's measured area travels on the row.
+export function createElectricalPointRows(aiAnalysis, pages = [], sheetLevels = {}) {
+  const byPage = aiAnalysis?.electricalPoints || {};
+  const rows = new Map();
+  for (const page of pages) {
+    const points = byPage[page]?.points || byPage[String(page)]?.points || [];
+    if (!points.length) continue;
+    const rooms = (aiAnalysis?.rooms || []).filter((room) => Number(room.page) === Number(page));
+    const level = floorFromPage(page, sheetLevels).label;
+    for (const point of allocatePointsToRooms(points, rooms)) {
+      const kind = ELECTRICAL_KIND_BY_KEY[point.kind];
+      if (!kind) continue;
+      const roomName = point.room || 'No room';
+      const key = `${page}|${point.roomId || roomName}|${kind.key}`;
+      const room = rooms.find((item) => item.id === point.roomId);
+      if (!rows.has(key)) rows.set(key, {
+        section: 'Electrical Points', itemId: `electrical-${kind.key}-${page}-${point.roomId || 'none'}`, category: kind.label, kind: kind.key,
+        quantity: 0, unit: 'No.', level, floor: level, planSheet: page, roomId: point.roomId || null, room: roomName,
+        roomAreaM2: Number.isFinite(Number(room?.areaM2)) && Number(room?.areaM2) > 0 ? round(Number(room.areaM2), 2) : null,
+        source: 'drawing', evidence: [],
+      });
+      const row = rows.get(key);
+      row.quantity += 1;
+      row.evidence.push(point.evidence || point.source || 'drawing');
+    }
+  }
+  return [...rows.values()].map((row) => {
+    const evidence = [...new Set(row.evidence)].join('; ');
+    return { ...row, evidence, notes: `${row.room}${row.roomAreaM2 ? ` (${row.roomAreaM2} m2)` : ''}. ${evidence}` };
+  });
+}
+
 export function createTakeoffSchedule({
   projectInfo = {},
   planFilename = '',
@@ -1345,9 +1467,11 @@ export function createTakeoffSchedule({
         pixelsPerMm,
         jobSetupRows,
         sheetLevels
-      })
+      }),
+      electricalPoints: createElectricalPointRows(aiAnalysis, [currentPage], sheetLevels)
     },
-    projectTotals: buildForPages({
+    projectTotals: {
+      ...buildForPages({
       pages: projectPages, aiAnalysis,
       completedFloorplans,
       completedWallRuns,
@@ -1359,7 +1483,9 @@ export function createTakeoffSchedule({
       pixelsPerMm,
       jobSetupRows,
       sheetLevels
-    })
+      }),
+      electricalPoints: createElectricalPointRows(aiAnalysis, projectPages, sheetLevels)
+    }
   };
 }
 
@@ -1378,7 +1504,8 @@ export function flattenScheduleRows(schedule, scope = 'projectTotals') {
     ...(sectionData.floorFinishes || []),
     ...(sectionData.rooms || []),
     ...(sectionData.pillars || []),
-    ...(sectionData.customTakeoffs || [])
+    ...(sectionData.customTakeoffs || []),
+    ...(sectionData.electricalPoints || [])
   ];
 }
 
@@ -1534,6 +1661,21 @@ export function createJobSetupPayload(schedule, options = {}) {
   for (const item of schedule.projectTotals?.customTakeoffs || []) {
     if (item.section === 'Custom Takeoffs') unsupported.push({ ...item, reason: 'Saved in the Takeoff Schedule and basic project measurements. No matching Job Setup Data Input field exists; use the existing quotation schedule mapping.' });
   }
+  // Electrical points: Job Setup has no electrical inputs, so the counts travel as their own structured
+  // hand-off (payload.electricalPoints) and are listed here rather than silently dropped.
+  const electricalRows = (schedule.projectTotals?.electricalPoints || []).map((row) => ({ ...row, level: resolveTakeoffLevel({ page: row.planSheet, level: row.level }, sheetLevels) }));
+  const electricalByRoom = new Map();
+  for (const row of electricalRows) {
+    const key = `${row.level}|${row.roomId || row.room}`;
+    if (!electricalByRoom.has(key)) electricalByRoom.set(key, { level: row.level, roomId: row.roomId, room: row.room, roomAreaM2: row.roomAreaM2, points: {} });
+    const entry = electricalByRoom.get(key);
+    entry.points[row.kind] = (entry.points[row.kind] || 0) + row.quantity;
+  }
+  const electricalTotals = {};
+  for (const row of electricalRows) electricalTotals[row.kind] = (electricalTotals[row.kind] || 0) + row.quantity;
+  if (electricalRows.length) unsupported.push(...electricalRows.map((row) => ({ itemId: row.itemId, page: row.planSheet, level: row.level, category: `${row.category} (${row.room})`, quantity: row.quantity, unit: row.unit,
+    reason: 'Electrical point read from the drawing. Job Setup has no electrical inputs; the count is carried in the electrical points hand-off and the Takeoff Schedule.' })));
+
   // Only AI findings a person has to settle belong with the import warnings. The rest of what the
   // analysis recorded travels separately as diagnostics and is never a "needs attention" item.
   const aiReview = schedule.aiAnalysis?.review || [];
@@ -1855,6 +1997,7 @@ report(floorplans.filter((item) => !['Footprint', 'Living'].includes(item.catego
     planFilename: schedule.project?.planFilename || '',
     roomPolygons: schedule.aiAnalysis?.rooms || [],
     floorAreas: schedule.projectTotals?.floorAreas || [], roomList: schedule.projectTotals?.rooms || [],
+    electricalPoints: { totals: electricalTotals, rooms: [...electricalByRoom.values()], rows: electricalRows },
     basicProjectMeasurements: flattenScheduleRows(schedule, 'projectTotals'),
     schedule, sheetLevels, dataInputFields: fields, cavitySliderSchedule, pillarSchedule,
     ...(Array.isArray(schedule.measurementRecords) ? { absentMaterialFields: absentTakeoffMaterialFields(measurements).filter((key) => editableRows.has(key) && !Object.hasOwn(fields, key)) } : {}),

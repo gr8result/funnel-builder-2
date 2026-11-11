@@ -78,6 +78,8 @@ assert.equal(legacyFace.exteriorFinish, 'face_brick');
 assert.equal(legacyFace.frameThicknessMm, 70, '230mm legacy overall thickness maps to a 70mm frame');
 const legacyFace90 = resolveConstructionSystem(wall({ exteriorType: 'Face Brick Veneer', thicknessMm: 250 }));
 assert.equal(legacyFace90.frameThicknessMm, 90, '250mm legacy overall thickness maps to a 90mm frame');
+assert.equal(resolveConstructionSystem(wall({ exteriorType: 'Face Brick Veneer' })).frameThicknessMm, 90, 'an unassigned external frame (no thickness) defaults to 90mm');
+assert.equal(resolveConstructionSystem(wall({ exteriorType: 'Lightweight Cladding', thicknessMm: 160 })).frameThicknessMm, 90, 'an unrecognised external thickness defaults to a 90mm frame');
 const legacyRendered = resolveConstructionSystem(wall({ exteriorType: 'Rendered Brick Veneer', thicknessMm: 230 }));
 assert.equal(legacyRendered.system, 'brick_veneer');
 assert.equal(legacyRendered.exteriorFinish, 'rendered_brick');

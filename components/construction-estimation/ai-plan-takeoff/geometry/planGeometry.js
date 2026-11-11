@@ -672,14 +672,17 @@ const perimeterOf = (polygon) => polygon.reduce((sum, p, i) => { const q = polyg
  * of the sheet or grows beyond `maxAreaM2`), so an open-sided area is never given a made-up edge.
  * @returns {{ polygon, areaM2, perimeterM } | null} in logical plan pixels
  */
-export function traceOutlinedArea(raster, context, point, { inkThreshold = DEFAULT_GEOMETRY_OPTIONS.inkThreshold, maxAreaM2 = 150, minAreaM2 = 2, startReachMm = 400, simplifyPx = DEFAULT_GEOMETRY_OPTIONS.simplifyPx } = {}) {
+export function traceOutlinedArea(raster, context, point, { inkThreshold = DEFAULT_GEOMETRY_OPTIONS.inkThreshold, maxAreaM2 = 150, minAreaM2 = 2, startReachMm = 400, simplifyPx = DEFAULT_GEOMETRY_OPTIONS.simplifyPx, within = null } = {}) {
   const { width, height, data } = raster;
   const { pixelsPerMm, logicalWidth, logicalHeight } = context;
   if (!(pixelsPerMm > 0) || !(width > 0 && height > 0) || !point) return null;
   const sx = width / logicalWidth, sy = height / logicalHeight, k = pixelsPerMm * sx;
   const inkAt = (p) => data[p * 4 + 3] > 127 && data[p * 4] + data[p * 4 + 1] + data[p * 4 + 2] < inkThreshold;
   // A line stops the fill with a pixel to spare each side, so a one-pixel break in it does not leak.
-  const blocked = (x, y) => { const p = y * width + x; return inkAt(p) || (x > 0 && inkAt(p - 1)) || (x < width - 1 && inkAt(p + 1)) || (y > 0 && inkAt(p - width)) || (y < height - 1 && inkAt(p + width)); };
+  // within (logical px polygon): an outline left open on a side is closed along this edge instead of leaking.
+  const limitTo = Array.isArray(within) && within.length >= 3 ? within.map((p) => ({ x: p.x * sx, y: p.y * sy })) : null;
+  const outside = (x, y) => { if (!limitTo) return false; let inside = false; for (let i = 0, j = limitTo.length - 1; i < limitTo.length; j = i++) { const a = limitTo[i], b = limitTo[j]; if ((a.y > y) !== (b.y > y) && x < (b.x - a.x) * (y - a.y) / (b.y - a.y) + a.x) inside = !inside; } return !inside; };
+  const blocked = (x, y) => { const p = y * width + x; return inkAt(p) || (x > 0 && inkAt(p - 1)) || (x < width - 1 && inkAt(p + 1)) || (y > 0 && inkAt(p - width)) || (y < height - 1 && inkAt(p + width)) || outside(x, y); };
   let startX = Math.round(point.x * sx), startY = Math.round(point.y * sy);
   if (startX < 1 || startY < 1 || startX >= width - 1 || startY >= height - 1) return null;
   // The name may be read on top of its own lettering: begin on the nearest clear paper.

@@ -15,6 +15,7 @@ import { detectVectorDoorSwings, swingEvidence } from './vectorDoorSwings.js';
 import { snapRoomToWallFaces } from './roomWallFaces.js';
 import { gapGlazingEvidence } from './vectorGapEvidence.js';
 import { constrainFootprintToWalls } from './footprintWallConstraint.js';
+import { exteriorWallLines, containOutline } from './exteriorContainment.js';
 
 const CONTRACT_THICKNESSES = [70, 90, 100, 110, 140, 150, 200, 230, 270, 300, 350];
 const nearest = (value, list) => list.reduce((best, item) => (Math.abs(item - value) < Math.abs(best - value) ? item : best));
@@ -426,6 +427,9 @@ export function fuseSheetLinework(response, raster, sheet, existing = {}, overri
   report.rooms.verified = verified.length;
   report.rooms.proposed = geometry.rooms.length - verified.length;
   const labelled = (response.rooms || []).map((room, index) => ({ room, index, at: Number.isFinite(room?.x) && Number.isFinite(room?.y) ? toPixels(room) : null }));
+  // The plan reading's under-roof outlines (footprints), in logical px: they close the open side of an alfresco.
+  const underRoofReadings = (response.buildingAreas || []).filter((area) => area?.type === 'Footprint' && Array.isArray(area.nodes) && area.nodes.length >= 3)
+    .map((area) => area.nodes.map(toPixels));
   const spaceOf = new Map();
   const distanceTo = (at, space) => (pointInPolygon(at, space.polygon) ? 0
     : space.polygon.reduce((least, a, i) => Math.min(least, project(at, a, space.polygon[(i + 1) % space.polygon.length]).distance), Infinity));
@@ -481,14 +485,24 @@ export function fuseSheetLinework(response, raster, sheet, existing = {}, overri
     if (!found && entry.at && roomSizeClass(entry.room.name) === 'outdoor') {
       // Outdoor areas have no enclosing walls. One drawn as a closed outline is measured to that outline;
       // one left open on a side is given no boundary rather than an invented one.
-      const outlined = traceOutlinedArea(raster, { pixelsPerMm, logicalWidth, logicalHeight }, entry.at);
+      let outlined = traceOutlinedArea(raster, { pixelsPerMm, logicalWidth, logicalHeight }, entry.at);
+      // Left open on a side (an alfresco or portico under the main roof usually is): close the open side
+      // along the plan reading's under-roof outline, so the area is measured rather than skipped.
+      let closedAtReading = false;
+      if (!outlined) {
+        const underRoof = underRoofReadings.find((polygon) => pointInPolygon(entry.at, polygon));
+        if (underRoof) { outlined = traceOutlinedArea(raster, { pixelsPerMm, logicalWidth, logicalHeight }, entry.at, { within: underRoof }); closedAtReading = Boolean(outlined); }
+      }
       const insideARoom = outlined && geometry.rooms.some((space) => pointInPolygon(entry.at, space.polygon));
       if (outlined && !insideARoom) {
         report.rooms.outdoorOutlined += 1;
+        if (closedAtReading) report.rooms.outdoorClosedAtRoofline = (report.rooms.outdoorClosedAtRoofline || 0) + 1;
         rooms.push({ ...entry.room, polygon: reduceBoundary(outlined.polygon, options.maxRoomCorners, mm(25)).map(toNormal), boundaryClosed: false, lineworkRoomId: `outline-${Math.round(entry.at.x)}-${Math.round(entry.at.y)}`,
-          lineworkVerified: false, lineworkAreaM2: +outlined.areaM2.toFixed(2), outdoorArea: true, confidence: Math.min(Number(entry.room.confidence) || 0.6, 0.7),
-          lineworkReview: 'An outdoor area measured to its drawn outline, not to walls; check the outline is the edge of the paving or slab.',
-          evidence: `${entry.room.evidence || ''} Measured to the outline drawn round it (${outlined.areaM2.toFixed(2)} m²); it is not enclosed by walls.`.trim() });
+          lineworkVerified: false, lineworkAreaM2: +outlined.areaM2.toFixed(2), outdoorArea: true, ...(closedAtReading ? { openSideClosedAt: 'under-roof-reading' } : {}), confidence: Math.min(Number(entry.room.confidence) || 0.6, closedAtReading ? 0.6 : 0.7),
+          lineworkReview: closedAtReading
+            ? 'An outdoor area with an open side: measured to its drawn edges and closed along the plan reading\'s under-roof outline on the open side. Check that side is the edge of the roof or slab.'
+            : 'An outdoor area measured to its drawn outline, not to walls; check the outline is the edge of the paving or slab.',
+          evidence: `${entry.room.evidence || ''} Measured to the outline drawn round it${closedAtReading ? ', closed along the under-roof outline on its open side' : ''} (${outlined.areaM2.toFixed(2)} m²); it is not enclosed by walls.`.trim() });
         continue;
       }
       rooms.push(unmeasured(entry.room, { outdoorArea: true }));
@@ -550,18 +564,59 @@ export function fuseSheetLinework(response, raster, sheet, existing = {}, overri
     room.robeOf = nearest.bedroom.name;
     report.rooms.builtInRobes += 1;
   }
-  if (report.rooms.withoutBoundary) note('room-without-boundary', `${report.rooms.withoutBoundary} room name${report.rooms.withoutBoundary === 1 ? '' : 's'} on sheet ${response.page} ${report.rooms.withoutBoundary === 1 ? 'is' : 'are'} not inside any space the wall linework encloses; draw ${report.rooms.withoutBoundary === 1 ? 'its' : 'their'} boundary.`);
-
-  // ---- Footprint: the reading's outline is moved onto the outer face of the measured external walls
+  // ---- External walls are a hard edge: no AI room runs past the inside face of an external wall.
   const toMm = (point) => ({ x: point.x * logicalWidth / pixelsPerMm, y: point.y * logicalHeight / pixelsPerMm });
   const fromMm = (point) => toNormal({ x: point.x * pixelsPerMm, y: point.y * pixelsPerMm });
   const externalWalls = walls.filter((wall) => wall.category === 'exterior' && Array.isArray(wall.nodes) && wall.nodes.length >= 2)
     .map((wall) => ({ id: wall.lineworkWallId || wall.detectionId, nodes: wall.nodes.map(toMm), thicknessMm: wall.measuredThicknessMm || wall.thicknessMm }));
+  // Doors and windows found on the sheet (mm): a gap in an external wall closes only where one is.
+  const openingPointsMm = openings.filter((entry) => entry.at).map((entry) => ({ x: entry.at.x / pixelsPerMm, y: entry.at.y / pixelsPerMm }));
+  const externalLines = exteriorWallLines(externalWalls, { ...(options.containment || {}), openings: openingPointsMm });
+  report.externalWallLines = externalLines.map((line) => ({ axis: Math.abs(line.ux) > 0.99 ? 'h' : Math.abs(line.uy) > 0.99 ? 'v' : 'diag', atMm: Math.round(Math.abs(line.ux) > 0.99 ? line.c * line.ny : line.c * line.nx), fromMm: Math.round(line.s0), toMm: Math.round(line.s1), thicknessMm: Math.round(line.half * 2) }));
+  report.rooms.clippedToExternalWalls = 0; report.rooms.boundaryWithheldOutsideWalls = 0;
+  for (const [index, room] of rooms.entries()) {
+    if (room.outdoorArea || !Array.isArray(room.polygon) || room.polygon.length < 3 || !externalLines.length) continue;
+    const outline = room.polygon.map(toMm);
+    const named = Number.isFinite(room.x) && Number.isFinite(room.y) ? toMm(room) : null;
+    const anchor = named && pointInPolygon(named, outline) ? named : null;
+    if (!anchor) continue;
+    const fit = containOutline(outline, externalLines, { ...(options.containment || {}), face: 'inner', anchor });
+    if (fit.status === 'contained') {
+      report.rooms.clippedToExternalWalls += 1;
+      const said = `Boundary ran past the inside face of an external wall; ${fit.moves.length} corner${fit.moves.length === 1 ? '' : 's'} moved back onto the wall face (${fit.beforeM2.toFixed(2)} -> ${fit.afterM2.toFixed(2)} m²).`;
+      rooms[index] = { ...room, polygon: fit.polygon.map(fromMm), lineworkAreaM2: +(Number(room.lineworkAreaM2 || fit.beforeM2) - (fit.beforeM2 - fit.afterM2)).toFixed(2),
+        externalWallClip: { beforeM2: +fit.beforeM2.toFixed(2), afterM2: +fit.afterM2.toFixed(2), corners: fit.moves.length, moves: fit.moves },
+        lineworkReview: [room.lineworkReview, said].filter(Boolean).join(' '), evidence: `${room.evidence || ''} ${said}`.trim() };
+    } else if (fit.status === 'rejected') {
+      report.rooms.boundaryWithheldOutsideWalls += 1;
+      const { polygon, ...rest } = room;
+      rooms[index] = { ...rest, boundaryWithheld: true, boundaryClosed: false, lineworkReview: [room.lineworkReview, `Boundary not used: ${fit.reason}. Draw this room's boundary.`].filter(Boolean).join(' ') };
+    }
+  }
+  if (report.rooms.boundaryWithheldOutsideWalls) note('room-outside-external-walls', `${report.rooms.boundaryWithheldOutsideWalls} room boundar${report.rooms.boundaryWithheldOutsideWalls === 1 ? 'y' : 'ies'} on sheet ${response.page} ran outside the external walls and could not be pulled back cleanly; draw ${report.rooms.boundaryWithheldOutsideWalls === 1 ? 'it' : 'them'}.`);
+  if (report.rooms.withoutBoundary) note('room-without-boundary', `${report.rooms.withoutBoundary} room name${report.rooms.withoutBoundary === 1 ? '' : 's'} on sheet ${response.page} ${report.rooms.withoutBoundary === 1 ? 'is' : 'are'} not inside any space the wall linework encloses; draw ${report.rooms.withoutBoundary === 1 ? 'its' : 'their'} boundary.`);
+
+  // ---- Footprint: the reading's outline is moved onto the outer face of the measured external walls
   // Open sides of a footprint follow the drawn outline of an alfresco, patio or balcony traced from the sheet.
   const outdoorOutlines = rooms.filter((room) => room.outdoorArea && Array.isArray(room.polygon) && room.polygon.length >= 3)
     .map((room, index) => ({ id: `outline:${room.name || index}`, nodes: room.polygon.map(toMm), closed: true, kind: 'outline', thicknessMm: 0 }));
   report.footprints = [];
-  const buildingAreas = (response.buildingAreas || []).map((area) => {
+  // Hard edge: past the outer face of an external wall the footprint only continues into a drawn outdoor area.
+  const outdoorAreasMm = outdoorOutlines.map((outline) => outline.nodes);
+  const keepInsideWalls = (area) => {
+    if (!externalLines.length) return area;
+    const fit = containOutline(area.nodes.map(toMm), externalLines, { ...(options.containment || {}), face: 'outer', allowed: outdoorAreasMm });
+    const entry = report.footprints.find((item) => item.detectionId === area.detectionId);
+    if (entry) entry.externalWallClip = { status: fit.status, corners: fit.moves.length, moves: fit.moves, beforeM2: +fit.beforeM2.toFixed(2), afterM2: +fit.afterM2.toFixed(2), ...(fit.reason ? { reason: fit.reason } : {}) };
+    if (fit.status === 'contained') {
+      const said = `${fit.moves.length} corner${fit.moves.length === 1 ? '' : 's'} ran past the outer face of the external walls into open ground and ${fit.moves.length === 1 ? 'was' : 'were'} moved back onto the wall face (${fit.beforeM2.toFixed(2)} -> ${fit.afterM2.toFixed(2)} m²).`;
+      return { ...area, nodes: fit.polygon.map(fromMm), readingNodes: area.readingNodes || area.nodes, externalWallClip: entry?.externalWallClip, evidence: `${area.evidence || ''} ${said}`.trim() };
+    }
+    if (fit.status === 'rejected') note('footprint-outside-walls', `The footprint outline on sheet ${response.page} runs outside the external walls and could not be pulled back cleanly (${fit.reason}); check it before approving.`);
+    return area;
+  };
+  const buildingAreas = (response.buildingAreas || []).map((area) => (area?.type === 'Footprint' && Array.isArray(area.nodes) && area.nodes.length >= 3 ? keepInsideWalls(fitFootprint(area)) : area));
+  function fitFootprint(area) {
     if (area?.type !== 'Footprint' || !Array.isArray(area.nodes) || area.nodes.length < 3) return area;
     const fit = constrainFootprintToWalls(area.nodes.map(toMm), [...externalWalls, ...outdoorOutlines], options.footprint || {});
     const wallConstraint = { status: fit.status, edges: fit.edges, movedEdges: fit.movedEdges, supportedShare: Math.round(fit.supportedShare * 100) / 100,
@@ -578,7 +633,7 @@ export function fuseSheetLinework(response, raster, sheet, existing = {}, overri
     }
     note('footprint-unverified', `The footprint outline on sheet ${response.page} could not be checked against measured external walls (${fit.reason}); it is the plan reading's own outline and needs checking.`);
     return { ...area, wallConstraint };
-  });
+  }
 
   return { response: { ...response, walls, openings: openings.map((entry) => entry.item), rooms, buildingAreas,
     openingSymbolReviewCandidates: geometry.embeddedOpeningReviewCandidates || [], review: [...(response.review || []), ...report.review] }, geometry, report };

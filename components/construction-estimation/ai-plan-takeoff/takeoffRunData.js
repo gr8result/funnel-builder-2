@@ -203,13 +203,12 @@ function normaliseFrameThicknessMm(value) {
 // field on an exterior wall: its overall/nominal system thickness, defaulted to 230mm regardless of
 // system. A value that already reads as a valid frame thickness is trusted as-is - a wall this thin
 // cannot be a full brick veneer or blockwork skin, so it is already describing its frame. A
-// recognised brick veneer nominal maps to its documented frame (230->70, 250->90); anything else
-// (the common 230mm default, or an unrecognised value) defaults to the common 70mm frame, exactly
-// like a brand new wall of this category gets today.
+// recognised brick veneer nominal maps to its documented frame (230->70, 250->90). A missing or
+// unrecognised value is an unassigned external frame and takes the standard 90mm external default.
 function legacyFrameThicknessMm(wall) {
   const direct = normaliseFrameThicknessMm(wall.thicknessMm);
   if (direct) return direct;
-  return Number(wall.thicknessMm) === 250 ? 90 : 70;
+  return Number(wall.thicknessMm) === 230 ? 70 : 90;
 }
 
 /**

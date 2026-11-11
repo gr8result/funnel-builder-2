@@ -28,12 +28,16 @@ export function openingMarkerStyle(opening = {}) {
   return { status, shape, ...colours };
 }
 
-// "W3 1809 · 1800H x 902W"; a missing dimension shows as "?" so it is never read as a size.
+// "W3 1809 · 1800H x 902W". Internal detection IDs never show as a tag (the sheet tag W1/D3 is used
+// instead), and a missing dimension says so in words rather than showing a number that is not a size.
+const internalTag = (tag) => /:|^[WD]\s*AI\s|linework|geometry|detection/i.test(tag) || (/^\S+$/.test(tag) && tag.length > 16);
 export function openingSizeLabel(opening = {}, fallbackTag = '') {
-  const tag = String(opening.itemTag || opening.label || fallbackTag || '').replace(/^[WD]\s*AI\s+\S+$/i, fallbackTag).trim();
-  const h = positive(opening.heightMm) ? Math.round(Number(opening.heightMm)) : '?';
-  const w = positive(opening.widthMm) ? Math.round(Number(opening.widthMm)) : '?';
-  return [tag, `${h}H x ${w}W`].filter(Boolean).join(' · ');
+  const raw = String(opening.itemTag || opening.label || '').trim();
+  const tag = raw && !internalTag(raw) ? raw : String(fallbackTag || '').trim();
+  const h = positive(opening.heightMm) ? Math.round(Number(opening.heightMm)) : null;
+  const w = positive(opening.widthMm) ? Math.round(Number(opening.widthMm)) : null;
+  const size = h && w ? `${h}H x ${w}W` : w ? `${w}W · height to confirm` : h ? `${h}H · width to confirm` : 'size to confirm';
+  return [tag, size].filter(Boolean).join(' · ');
 }
 
 // Builder correction from the quick-edit popup: geometry position is untouched; an approval made

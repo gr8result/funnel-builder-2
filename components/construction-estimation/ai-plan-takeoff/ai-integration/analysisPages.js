@@ -7,7 +7,10 @@ export async function readPdfAnalysisEvidence(page, viewport) {
       pdfUnits: true,
       textItems: content.items.filter((item) => typeof item.str === 'string' && item.str.trim()).map((item) => {
         const [x, y] = viewport.convertToViewportPoint(item.transform[4], item.transform[5]);
-        return { text: item.str, x, y, width: item.width, height: item.height };
+        // Reading direction on the sheet (degrees, plan pixels): CAD sheets often run text up the page.
+        const [a, b, c, d] = viewport.transform || [1, 0, 0, 1];
+        const angle = Math.round(Math.atan2(b * item.transform[0] + d * item.transform[1], a * item.transform[0] + c * item.transform[1]) * 180 / Math.PI);
+        return { text: item.str, x, y, width: item.width, height: item.height, angle };
       }),
     };
   } catch {

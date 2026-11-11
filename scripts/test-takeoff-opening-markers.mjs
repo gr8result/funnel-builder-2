@@ -22,7 +22,11 @@ assert.equal(openingMarkerStyle({ ...window, source: 'ai', builderConfirmedAt: '
 
 // Size label beside the marker; a missing dimension is "?" and the AI placeholder tag is replaced.
 assert.equal(openingSizeLabel(window, 'W1'), 'W3 1809 · 1800H x 902W');
-assert.equal(openingSizeLabel({ type: 'window', itemTag: 'W AI geometry:o-12', widthMm: 900 }, 'W4'), 'W4 · ?H x 900W');
+assert.equal(openingSizeLabel({ type: 'window', itemTag: 'W AI geometry:o-12', widthMm: 900 }, 'W4'), 'W4 · 900W · height to confirm');
+// Found in the Jesmond browser run: a vector detection ID was shown as the tag.
+assert.equal(openingSizeLabel({ type: 'window', itemTag: 'vector-opening-linework-opening:vo-1', widthMm: 722 }, 'W1'), 'W1 · 722W · height to confirm');
+assert.equal(openingSizeLabel({ type: 'door', label: 'vectorlineworkopening12345', heightMm: 2040 }, 'D2'), 'D2 · 2040H · width to confirm');
+assert.equal(openingSizeLabel({ type: 'door' }, 'D3'), 'D3 · size to confirm');
 
 // Quick edit: changes size, keeps position, withdraws an earlier approval; no change = same object.
 const approved = approveOpening({ ...window, source: 'ai', x: 10, y: 20 }, '2026-11-09T00:00:00Z');

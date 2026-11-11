@@ -21,6 +21,7 @@ import { localVectorReadiness } from './localVectorReadiness.js';
 import { vectorProductionAnalysis } from './vectorProductionAnalysis.js';
 import { refreshAnalysisReadiness as refreshVectorReview } from './analysisReadiness.js';
 import { readPrintedOpeningLabels } from './printedLabels.js';
+import { readElectricalPoints } from '../geometry/electricalSymbols.js';
 import { addTrainingExample, buildTrainingExample } from './trainingCapture.js';
 
 const RUN_ID = 'ai-takeoff-v3-linework';
@@ -73,6 +74,25 @@ function sanitizeInspections(saved) {
 
 // Orchestration and review metadata only. Geometry admission belongs exclusively
 // to the Phase 1 bridge, and saving belongs to the existing canvas save action.
+
+// Electrical points read from each sheet's own text and linework (no plan reading involved). Sheets not
+// read this time keep what an earlier run found.
+function electricalForPages(planPages = [], pages = [], scaleOf, saved = {}) {
+  const next = { ...(saved || {}) };
+  for (const pageNumber of pages) {
+    const planPage = planPages.find((page) => page.pageNumber === pageNumber);
+    if (!planPage) continue;
+    try {
+      const read = readElectricalPoints({ textItems: planPage.textItems || [], segments: planPage.vectorSegments || [], pixelsPerMm: scaleOf(pageNumber) });
+      if (read.points.length || read.legend.length) next[pageNumber] = { points: read.points, counts: read.counts, legend: read.legend, electricalSheet: read.electricalSheet, report: read.report, readAt: new Date().toISOString() };
+      else delete next[pageNumber];
+    } catch (error) {
+      next[pageNumber] = { points: [], counts: {}, legend: [], error: `Electrical points could not be read on sheet ${pageNumber}: ${error.message}` };
+    }
+  }
+  return next;
+}
+
 export function useAiTakeoffAnalysis(options) {
   const latest = useRef(options);
   latest.current = options;
@@ -212,10 +232,18 @@ export function useAiTakeoffAnalysis(options) {
   };
   const removeRoom = (name) => setReport((current) => (current ? reportWithRooms(current, removeScheduleRoom(current.rooms, name)) : current));
 
-  const updateRooms = useCallback((ids, patch) => {
+  const updateRooms = useCallback((ids, incomingPatch) => {
     if (latest.current.readOnly) return;
-    setReport(current => refreshVectorReview(reportWithRooms(current, (current?.rooms || []).map(room => ids.includes(room.id)
-      ? (patch.confirmed === true ? approveRoom : measureRoom)({ ...room, ...patch, ...(typeof patch.level === 'string' ? { levelEdited: true } : {}), ...(typeof patch.name === 'string' ? { nameEdited: true, label: room.label || room.name } : {}), ...(patch.polygon ? { boundaryEdited: true, confirmed: false, boundaryClosed: false } : {}) }, calibrationsRef.current[room.page]?.pixelsPerMm || latest.current.pixelsPerMm) : room))));
+    // A locked boundary keeps its corners: outline changes (or rejecting it) are refused until the
+    // builder unlocks it. Locking needs a successful approval, so a room still in review stays unlocked.
+    const patchFor = (room) => {
+      if (!room.boundaryLocked || incomingPatch.boundaryLocked === false) return incomingPatch;
+      const { polygon, excluded, ...rest } = incomingPatch;
+      return rest;
+    };
+    const lockOnlyIfApproved = (room) => (room.boundaryLocked && !room.confirmed ? { ...room, boundaryLocked: false, lockedAt: null } : room);
+    setReport(current => refreshVectorReview(reportWithRooms(current, (current?.rooms || []).map(room => { if (!ids.includes(room.id)) return room; const patch = patchFor(room);
+      return lockOnlyIfApproved((patch.confirmed === true ? approveRoom : measureRoom)({ ...room, ...patch, ...(typeof patch.level === 'string' ? { levelEdited: true } : {}), ...(typeof patch.name === 'string' ? { nameEdited: true, label: room.label || room.name } : {}), ...(patch.polygon ? { boundaryEdited: true, confirmed: false, boundaryClosed: false } : {}) }, calibrationsRef.current[room.page]?.pixelsPerMm || latest.current.pixelsPerMm)); }))));
     latest.current.markCompleted?.('room-boundary-updated');
   }, []);
 
@@ -573,6 +601,7 @@ export function useAiTakeoffAnalysis(options) {
       }
       completed.counts = { ...completed.counts, review: completed.review.length, rooms: completed.rooms.length, roomBoundaries: completed.rooms.filter(room => room.polygon?.length >= 3).length, roomsForReview: completed.rooms.filter(room => room.reviewRequired).length };
       completed = refreshVectorReview(completed);
+      completed.electricalPoints = electricalForPages(work.planPages, responses.map((response) => response.page || response.pageNumber), sheetScale, reportRef.current?.electricalPoints);
       latest.current.onDetectedLevels?.(analysis.pages);
       setReport(completed);
       latest.current.markCompleted('ai-takeoff-analysis');
@@ -690,6 +719,7 @@ export function useAiTakeoffAnalysis(options) {
       };
       completed.counts = { ...analysis.counts, rooms: rooms.length, roomBoundaries: rooms.filter((room) => room.polygon?.length >= 3).length,
         roomsForReview: rooms.filter((room) => room.reviewRequired).length, review: completed.review.length };
+      completed.electricalPoints = electricalForPages(work.planPages, [planPage.pageNumber], () => pixelsPerMm, saved?.electricalPoints);
       latest.current.onDetectedLevels?.([{ page: planPage.pageNumber, level }]);
       setReport(completed);
       latest.current.markCompleted('ai-takeoff-local-vector');

@@ -170,14 +170,21 @@ fs.writeFileSync(cssLoader, `module.exports=source=>'const style=document.create
 const webpackPackage = require('next/dist/compiled/webpack/webpack');
 webpackPackage.init();
 const webpack = webpackPackage.webpack;
-console.log('Building live Takeoff browser bundle.');
-await new Promise((resolve, reject) => {
+// GR8_BUNDLE_ONLY=1 builds the bundle and stops; GR8_REUSE_BUNDLE=1 runs against the bundle already built.
+// Building and running separately keeps webpack and Chrome from holding memory at the same time.
+const reuseBundle = process.env.GR8_REUSE_BUNDLE === '1' && fs.existsSync(path.join(out, 'browser-bundle.js'));
+console.log(reuseBundle ? `Reusing browser bundle built ${fs.statSync(path.join(out, 'browser-bundle.js')).mtime.toISOString()}.` : 'Building live Takeoff browser bundle.');
+if (!reuseBundle) await new Promise((resolve, reject) => {
   const compiler = webpack({
     mode: 'development', target: 'web', devtool: false, context: root, entry,
     output: { path: out, filename: 'browser-bundle.js' },
     resolve: { extensions: ['.js', '.jsx', '.mjs', '.ts', '.tsx'], mainFields: ['browser', 'module', 'main'], fallback: { canvas: false, fs: false, path: false, url: false, stream: false, zlib: false } },
     module: { rules: [{ test: /\.css$/, use: cssLoader }, { test: /\.[jt]sx?$/, exclude: /node_modules/, resolve: { fullySpecified: false }, use: loader }] },
-    plugins: [new webpack.optimize.LimitChunkCountPlugin({ maxChunks: 1 }), new webpack.ProvidePlugin({ process: require.resolve('next/dist/build/polyfills/process') }), new webpack.IgnorePlugin({ resourceRegExp: /^node:/ }), new webpack.DefinePlugin({ 'process.env.NEXT_PUBLIC_SUPABASE_URL': JSON.stringify(supabaseUrl), 'process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY': JSON.stringify(supabaseAnon) })],
+    plugins: [
+      // GR8_LOCK_MODULE=<file> swaps lib/nonStealingLock.js inside this test bundle only (e.g. an isolated
+      // auth-lock repair under test). The app's own file is not touched.
+      ...(process.env.GR8_LOCK_MODULE ? [new webpack.NormalModuleReplacementPlugin(/[\\/]nonStealingLock\.js$/,path.resolve(process.env.GR8_LOCK_MODULE))] : []),
+      new webpack.optimize.LimitChunkCountPlugin({ maxChunks: 1 }), new webpack.ProvidePlugin({ process: require.resolve('next/dist/build/polyfills/process') }), new webpack.IgnorePlugin({ resourceRegExp: /^node:/ }), new webpack.DefinePlugin({ 'process.env.NEXT_PUBLIC_SUPABASE_URL': JSON.stringify(supabaseUrl), 'process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY': JSON.stringify(supabaseAnon) })],
     cache: { type: 'filesystem', cacheDirectory: path.join(root,'artifacts/test-results/takeoff-browser-webpack-cache') },
     optimization: { minimize: false }, performance: { hints: false },
   });
@@ -186,6 +193,8 @@ await new Promise((resolve, reject) => {
     compiler.close(() => error || stats?.hasErrors() ? reject(error || new Error(JSON.stringify(result.errors).slice(0, 4000))) : resolve());
   });
 });
+
+if (process.env.GR8_BUNDLE_ONLY === '1') { console.log('Bundle built; stopping (GR8_BUNDLE_ONLY).'); process.exit(0); }
 
 // ---- Plans under test: the original vector PDFs, scored against independent hand references ----
 const planSets = [
@@ -289,8 +298,8 @@ let browser, page, calibrationAnswer = '';
 try {
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   const origin = `http://127.0.0.1:${server.address().port}`;
-  browser = await puppeteer.launch({ executablePath: process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true, protocolTimeout: 3600000,
-    userDataDir: path.join(out, 'profile-' + Date.now()), args: ['--no-first-run', '--disable-extensions', '--window-size=1600,1100'], defaultViewport: { width: 1600, height: 1100 } });
+  browser = await puppeteer.launch({ executablePath: process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true, protocolTimeout: Number(process.env.GR8_PROTOCOL_TIMEOUT_MS) || 3600000,
+    userDataDir: path.join(out, 'profile-' + Date.now()), args: ['--no-first-run', '--disable-extensions', '--window-size=1600,1100', ...(process.env.GR8_CHROME_EXTRA_ARGS ? process.env.GR8_CHROME_EXTRA_ARGS.split(' ').filter(Boolean) : [])], defaultViewport: { width: 1600, height: 1100 } });
   page = await browser.newPage();
   page.setDefaultTimeout(180000);
   page.on('pageerror', (error) => { report.errors.push(error.message); console.error('Browser error:', error.message); });
@@ -394,6 +403,25 @@ try {
       assert.equal(result.sheets[sheet.page].roomsApproved, 0, 'no room is approved automatically');
       await goToPage(sheet.page);
       await page.screenshot({ path: path.join(out, `${set.name.replace(/\W+/g, '-')}-sheet-${sheet.page}-after-run.png`) });
+      // Floor areas: the footprint on a measured sheet comes from the measured rooms and walls, and is
+      // checked against the area printed on the drawing (the plan reading's rectangle used to run past walls).
+      const printed = reference.printedAreas || {};
+      const printedLiving = /upper/i.test(sheet.level) ? printed.upperLivingM2 : /lower/i.test(sheet.level) ? printed.lowerLivingM2 : null;
+      const sheetPpm = state.sheetCalibrations?.[sheet.page]?.pixelsPerMm || state.pixelsPerMm;
+      const floorAreas = (state.completedFloorplans || []).filter((item) => Number(item.page) === sheet.page).map((item) => ({
+        type: item.type, source: item.source || 'manual', measuredFrom: item.measuredFrom || null,
+        areaM2: Math.round(Math.abs(item.nodes.reduce((sum, p, i) => { const q = item.nodes[(i + 1) % item.nodes.length]; return sum + p.x * q.y - q.x * p.y; }, 0)) / 2 / (sheetPpm * sheetPpm) / 1e4) / 100 }));
+      result.sheets[sheet.page].floorAreas = { printedLivingM2: printedLiving, areas: floorAreas };
+      const footprint = floorAreas.find((item) => item.type === 'Footprint');
+      assert.ok(footprint, `${set.name} ${sheet.level}: a footprint is measured (${JSON.stringify(floorAreas)})`);
+      if (printedLiving) assert.ok(Math.abs(footprint.areaM2 - printedLiving) / printedLiving <= 0.04, `${set.name} ${sheet.level}: footprint ${footprint.areaM2} m² within 4% of the printed ${printedLiving} m²`);
+      await page.evaluate(() => { const boxes = [...document.querySelectorAll('[data-testid="plan-overlay-key"] input[type="checkbox"]')]; if (boxes[1]?.checked) boxes[1].click(); });
+      await settle();
+      await page.screenshot({ path: path.join(out, `${set.name.replace(/\W+/g, '-')}-sheet-${sheet.page}-floor-areas.png`) });
+      await page.evaluate(() => { const boxes = [...document.querySelectorAll('[data-testid="plan-overlay-key"] input[type="checkbox"]')]; if (boxes[1] && !boxes[1].checked) boxes[1].click(); });
+      await settle();
+      step(`canvas markers and overlay key: sheet ${sheet.page}`);
+      result.sheets[sheet.page].canvas = await checkCanvas(`${set.name.replace(/\W+/g, '-')}-sheet-${sheet.page}`);
     }
 
     // 4. Review: select the best-matching measured room, approve it explicitly, then save/reopen/rerun.
@@ -468,18 +496,23 @@ try {
       assert.equal(after.completedWallRuns.length, before.completedWallRuns.length - 1, 'exactly one wall removed');
       result.wallCheck.deleted = { id: kitchen[0].wall.id, lengthMm: Math.round(kitchen[0].wall.lengthMm) };
     }
+    step('wall checks: confirm each sheet');
     for (const id of await wallCheckIds()) {
+      step(`confirm ${id}`);
       const clicked = await page.evaluate((decisionId) => { const box = document.querySelector(`[data-review-decision="${decisionId}"]`); const element = box && [...box.querySelectorAll('button')].find((item) => item.textContent.trim() === 'I have checked this'); if (!element || element.disabled) return false; element.click(); return true; }, id);
       assert.ok(clicked, `the builder can confirm ${id}`);
       await settle();
     }
     assert.deepEqual(await wallCheckIds(), [], 'all wall checks confirmed');
+    step('save after wall checks');
     await save();
+    step('read saved wall checks');
     const savedChecks = await page.evaluate(() => Object.keys(harness.saveInputs().at(-1)?.scheduleState?.aiAnalysis?.resolvedDecisions || {}).filter((key) => key.startsWith('wall-check:')).sort());
     assert.deepEqual(savedChecks, requiredChecks, 'the saved takeoff carries the wall checks');
     result.wallCheck.saved = savedChecks;
     const beforeReopen = await snapshot();
     const counts = (value) => ({ walls: value.completedWallRuns.length, openings: value.placedOpenings.length, approved: (value.aiAnalysis?.rooms || []).filter((room) => room.confirmed).map((room) => [room.id, Math.round(room.areaM2 * 1000) / 1000]) });
+    step('reopen');
     await page.evaluate(() => harness.reopen());
     await page.waitForFunction(() => harness.snapshot().imageReady && harness.snapshot().completedWallRuns.length > 0, { timeout: 300000 });
     await settle();
@@ -487,18 +520,28 @@ try {
     assert.deepEqual(counts(afterReopen), counts(beforeReopen), 'save and reopen keeps walls, openings and the approved room');
     assert.deepEqual(await wallCheckIds(), [], 'confirmed wall checks stay confirmed after reopen');
     // Export the saved job as a .gr8job file and import it back through the app's own job-file path.
+    // GR8_SKIP_GR8JOB_EXPORT=1 leaves out the .gr8job export/import (it holds the whole job in the page at
+    // once - about 300 MB for Jesmond) so the later steps can be checked on a busy machine; run it separately.
+    if (process.env.GR8_SKIP_GR8JOB_EXPORT === '1') {
+      step('export and import .gr8job: skipped (GR8_SKIP_GR8JOB_EXPORT)');
+      result.gr8job = { skipped: true };
+      assert.ok(Math.abs(afterReopen.pixelsPerMm - calibrated) / calibrated < 1e-6, 'calibration survives reopen');
+    } else {
+    step('export and import .gr8job');
     const exportStarted = Date.now();
-    if (process.env.TAKEOFF_SAVE_GR8JOB) await page.evaluate(() => { window.__keepExport = true; });
-    const exported = await page.evaluate(() => harness.exportImport());
-    if (exported.base64) { fs.writeFileSync(process.env.TAKEOFF_SAVE_GR8JOB, Buffer.from(exported.base64, 'base64')); delete exported.base64; }
-    await page.waitForFunction(() => harness.snapshot().imageReady && harness.snapshot().completedWallRuns.length > 0, { timeout: 300000 });
-    await settle();
-    const afterImport = await snapshot();
-    result.gr8job = { bytes: exported.bytes, seconds: Math.round((Date.now() - exportStarted) / 1000), message: exported.exportMessage, counts: counts(afterImport) };
-    assert.deepEqual(counts(afterImport), counts(beforeReopen), '.gr8job export and import keep walls, openings and the approved room');
-    assert.ok(Math.abs(afterReopen.pixelsPerMm - calibrated) / calibrated < 1e-6, 'calibration survives reopen');
+      if (process.env.TAKEOFF_SAVE_GR8JOB) await page.evaluate(() => { window.__keepExport = true; });
+      const exported = await page.evaluate(() => harness.exportImport());
+      if (exported.base64) { fs.writeFileSync(process.env.TAKEOFF_SAVE_GR8JOB, Buffer.from(exported.base64, 'base64')); delete exported.base64; }
+      await page.waitForFunction(() => harness.snapshot().imageReady && harness.snapshot().completedWallRuns.length > 0, { timeout: 300000 });
+      await settle();
+      const afterImport = await snapshot();
+      result.gr8job = { bytes: exported.bytes, seconds: Math.round((Date.now() - exportStarted) / 1000), message: exported.exportMessage, counts: counts(afterImport) };
+      assert.deepEqual(counts(afterImport), counts(beforeReopen), '.gr8job export and import keep walls, openings and the approved room');
+      assert.ok(Math.abs(afterReopen.pixelsPerMm - calibrated) / calibrated < 1e-6, 'calibration survives reopen');
+    }
     result.reopen = counts(afterReopen);
     // Rerun after review: nothing is duplicated and the approval is not replaced by the new reading.
+    step('rerun after review');
     result.rerun = { message: await run() };
     const afterRerun = await snapshot();
     assert.deepEqual(counts(afterRerun).approved, counts(beforeReopen).approved, 'a rerun never replaces or drops an approved room');
@@ -572,6 +615,60 @@ try {
   fs.writeFileSync(path.join(out, 'report.json'), JSON.stringify(report, null, 2));
   await browser?.close();
   await new Promise((resolve) => server.listening ? server.close(resolve) : resolve());
+}
+
+// Canvas check at the current zoom: window dots / door triangles with size labels drawn at 16 px on
+// screen, and each Plan overlays toggle hides only its own layer without moving or rescaling the plan.
+function step(label) { console.log(new Date().toISOString(), `step: ${label}`); }
+async function checkCanvas(name) {
+  const read = () => page.evaluate(() => {
+    const stage = window.Konva?.stages?.find((item) => item.find('.opening-marker').length) || window.Konva?.stages?.[0];
+    if (!stage) return null;
+    const visibleShapes = stage.find('Shape').filter((shape) => shape.isVisible()).length;
+    const layer = stage.getLayers()[0];
+    const t = layer.getAbsoluteTransform().getMatrix().map((v) => Math.round(v * 1000) / 1000);
+    const markers = stage.find('.opening-marker').map((marker) => {
+      const text = marker.getParent().findOne('Text');
+      const box = marker.getClientRect();
+      return { shape: marker.getClassName(), label: text?.text() || '', screenFontPx: text ? Math.round(text.fontSize() * text.getAbsoluteScale().x * 10) / 10 : null, x: box.x + box.width / 2, y: box.y + box.height / 2 };
+    });
+    const canvas = stage.container().getBoundingClientRect();
+    return { visibleShapes, transform: t, markers, canvas: { x: canvas.x, y: canvas.y, width: canvas.width, height: canvas.height } };
+  });
+  const before = await read();
+  assert.ok(before, 'plan canvas is mounted');
+  const windows = before.markers.filter((m) => m.shape === 'Circle');
+  const doors = before.markers.filter((m) => m.shape === 'RegularPolygon');
+  assert.ok(windows.length > 0 && doors.length > 0, `${name}: window dots (${windows.length}) and door triangles (${doors.length}) are drawn`);
+  for (const m of before.markers) {
+    assert.match(m.label, /\d+H x \d+W|\d+W · height to confirm|\d+H · width to confirm|size to confirm/, `${name}: marker label shows the size (${m.label})`);
+    assert.doesNotMatch(m.label, /:|linework|geometry|detection/i, `${name}: no internal ID in the label (${m.label})`);
+    assert.equal(m.screenFontPx, 16, `${name}: marker label is 16 px on screen (${m.screenFontPx})`);
+  }
+  // Close-up of the densest marker group for visual review.
+  const focus = before.markers[Math.floor(before.markers.length / 2)];
+  const clip = { x: Math.max(before.canvas.x, before.canvas.x + focus.x - 260), y: Math.max(before.canvas.y, before.canvas.y + focus.y - 160), width: 520, height: 320 };
+  await page.screenshot({ path: path.join(out, `${name}-markers-closeup.png`), clip });
+  const keys = await page.$$eval('[data-testid="plan-overlay-key"] input[type="checkbox"]', (boxes) => boxes.length);
+  assert.equal(keys, 3, 'Plan overlays key offers floor areas, rooms and eaves');
+  const toggles = {};
+  for (const [index, key] of ['floorAreas', 'rooms', 'eaves'].entries()) {
+    await page.$$eval('[data-testid="plan-overlay-key"] input[type="checkbox"]', (boxes, i) => boxes[i].click(), index); await settle();
+    const off = await read();
+    assert.deepEqual(off.transform, before.transform, `${name}: hiding ${key} does not move or rescale the plan`);
+    assert.equal(off.markers.length, before.markers.length, `${name}: hiding ${key} keeps the opening markers`);
+    await page.$$eval('[data-testid="plan-overlay-key"] input[type="checkbox"]', (boxes, i) => boxes[i].click(), index); await settle();
+    const on = await read();
+    assert.equal(on.visibleShapes, before.visibleShapes, `${name}: showing ${key} again restores the same shapes`);
+    toggles[key] = { shapesHidden: before.visibleShapes - off.visibleShapes };
+  }
+  assert.ok(toggles.floorAreas.shapesHidden > 0 || toggles.rooms.shapesHidden > 0, `${name}: the overlay toggles hide shapes (${JSON.stringify(toggles)})`);
+  await page.$$eval('[data-testid="plan-overlay-key"] input[type="checkbox"]', (boxes) => boxes.forEach((box) => box.click())); await settle();
+  await page.screenshot({ path: path.join(out, `${name}-overlays-off.png`) });
+  const allOff = await read();
+  assert.deepEqual(allOff.transform, before.transform, `${name}: all overlays off leaves the plan in place`);
+  await page.$$eval('[data-testid="plan-overlay-key"] input[type="checkbox"]', (boxes) => boxes.forEach((box) => box.click())); await settle();
+  return { windows: windows.length, doors: doors.length, labelFontPx: [...new Set(before.markers.map((m) => m.screenFontPx))], sampleLabels: before.markers.slice(0, 4).map((m) => m.label), toggles, allOffShapes: allOff.visibleShapes, allOnShapes: before.visibleShapes };
 }
 
 async function snapshot() { return page.evaluate(() => harness.snapshot()); }
