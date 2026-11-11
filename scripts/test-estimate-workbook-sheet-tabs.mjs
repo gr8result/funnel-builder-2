@@ -31,7 +31,7 @@ assert(source.includes("activePageKey === tab.key"), "Workbook sheet active stat
 assert(source.includes("onClick={() => onNavigate(tab.key)}"), "Workbook sheet tabs do not navigate through the existing workspace router.");
 assert(source.includes('{activePageKey === "dataInput" && (') && source.includes("<DataInputSheet"), "Existing Data Input sheet render path is missing.");
 assert(source.includes('{activePageKey === "formulaSheet" && (') && source.includes("<FormulaSheet"), "Existing FormulaSheet render path is missing.");
-assert(source.includes('{activePageKey === "quotation" && <QuotationSheet'), "Existing Quote Sheet/Quotation render path is missing.");
+assert(/{activePageKey === "quotation" && (<>)?<QuotationSheet/.test(source), "Existing Quote Sheet/Quotation render path is missing.");
 assert(!source.includes("function NewQuoteCalculationSheet"), "A duplicate simplified quote calculation sheet was introduced.");
 
 console.log("Estimate workbook sheet-tab checks passed.");

@@ -5,6 +5,7 @@ import { assertCommercialProjectAssociation } from "../../../lib/builders/commer
 import { commercialSnapshotSignature } from "../../../lib/builders/commercialSnapshotSignature.js";
 import { quotationBoqStatus } from "../../../lib/builders/quotationRateReview.js";
 import { quotationSectionsForFinalBoq, quoteLineTotal, quoteQuantity, quoteRate, shouldIncludeQuoteRowInFinalBoq } from "../../../lib/construction-estimation/finalQuotationBoq.js";
+import { quotationIssueCheck } from "../../../lib/construction-estimation/quotationIssueGate.js";
 
 export const config = {
   api: {
@@ -53,6 +54,12 @@ async function handler(req, res) {
     const quotation = plainObject(calculated.quotation);
     if (!Object.keys(calculated).length || !Object.keys(quotation).length) {
       return res.status(400).json({ ok: false, error: "calculated workbook result with quotation is required" });
+    }
+    // Checked before anything is written: a quotation with unpriced or duplicated charged rows must not
+    // supersede the current snapshot (Quotation V1 issue gate, ported from a3c7c17).
+    const issue = quotationIssueCheck(quotation);
+    if (!issue.ok) {
+      return res.status(409).json({ ok: false, code: "QUOTATION_MISSING_PRICES", error: issue.message, blockers: issue.blockers });
     }
 
     const project = await createOrUpdateCommercialProject({
@@ -361,19 +368,35 @@ async function createEstimateSnapshot({ workspaceId, userId, projectId, projectI
     created_by: userId,
   };
 
-  await supabaseAdmin
+  // Two people can issue the same job at once. Both may read the same next number, so a
+  // unique-number conflict (23505) is retried with a fresh number. Superseding happens after the
+  // insert and only for lower numbers, so a failed insert never leaves the job without a current
+  // snapshot and the newest snapshot always ends up current (ported from Quotation V1 a3c7c17).
+  const customLabel = firstText(projectInput.snapshot_label, projectInput.snapshotLabel);
+  let data = null;
+  for (let attempt = 0; attempt < 5 && !data; attempt += 1) {
+    if (attempt > 0) {
+      payload.snapshot_number = await nextSnapshotNumber(workspaceId, projectId);
+      payload.snapshot_label = customLabel || `Snapshot ${payload.snapshot_number}`;
+    }
+    const result = await supabaseAdmin
+      .from(TABLES.snapshots)
+      .insert(payload)
+      .select("id,created_at,workbook_metadata,snapshot_number")
+      .single();
+    if (!result.error) data = result.data;
+    else if (result.error.code !== "23505") throw new Error(`Could not create estimate snapshot: ${result.error.message}`);
+  }
+  if (!data) throw new Error("Could not create estimate snapshot: another save kept taking the same snapshot number. Please try again.");
+
+  const { error: supersedeError } = await supabaseAdmin
     .from(TABLES.snapshots)
     .update({ status: "superseded" })
     .eq("workspace_id", workspaceId)
     .eq("project_id", projectId)
-    .eq("status", "current");
-
-  const { data, error } = await supabaseAdmin
-    .from(TABLES.snapshots)
-    .insert(payload)
-    .select("id,created_at,workbook_metadata")
-    .single();
-  if (error) throw new Error(`Could not create estimate snapshot: ${error.message}`);
+    .eq("status", "current")
+    .lt("snapshot_number", data.snapshot_number);
+  if (supersedeError) throw new Error(`Could not supersede older snapshots: ${supersedeError.message}`);
   return { snapshot: data, reused: false };
 }
 

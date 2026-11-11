@@ -61,7 +61,8 @@ import {
 import { applyPersistedQuotationOrder, stampQuotationOrder } from "../../lib/construction-estimation/quotationOrder";
 import { windowDoorSizeCodeForRow } from "../../lib/construction-estimation/estimateBuilderWorkbookDefaults";
 import { SUBCONTRACTOR_QUOTE_DEDUCTIONS, V4_DATA_SECTIONS } from "../../lib/construction-estimation/estimateWorksheetV4Schema";
-import { quoteLineTotal, quoteQuantity, quoteRate } from "../../lib/construction-estimation/finalQuotationBoq";
+import { quotationSectionsForFinalBoq, quoteLineTotal, quoteQuantity, quoteRate } from "../../lib/construction-estimation/finalQuotationBoq";
+import { quotationIssueCheck } from "../../lib/construction-estimation/quotationIssueGate";
 import { syncCommercialSnapshot } from "../../lib/builders/syncCommercialSnapshot";
 import { BUILDER_INCLUSION_SECTION_TITLES, normaliseEstimateInclusions, selectedEstimateInclusionsPackage } from "../../lib/builders/estimateInclusions";
 import { normaliseStandardInclusions, selectedStandardInclusionsPackage } from "../../lib/builders/standardInclusions";
@@ -118,6 +119,8 @@ import { TextEditingToolbar as WebsiteBuilderTextEditingToolbar } from "../websi
 import ClientPortalRouteBridge from "../../client-portal/RouteBridge";
 import TradePaymentSchedulePanel from "./TradePaymentSchedulePanel";
 import SubcontractCashflowSection from "./SubcontractCashflowSection";
+// One shared formatter: Number#toLocaleString with options builds a new formatter on every call (~40x slower, same text).
+const AUD_2DP = new Intl.NumberFormat("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 // Not exported: one non-component export stops this module being a Fast Refresh boundary, and an
 // edit to anything it imports then remounts the whole workbook and re-reads the job from storage.
@@ -562,7 +565,9 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
   const [openingLocalJobFile, setOpeningLocalJobFile] = useState(false);
   const [localJobFilePrompt, setLocalJobFilePrompt] = useState(null);
   const [saveStatus, setSaveStatus] = useState({ state: "idle", label: "", detail: "" });
-  const [commercialSyncStatus, setCommercialSyncStatus] = useState({ state: "idle", message: "", projectId: "", snapshotId: "", syncedAt: "" });
+  const [commercialSyncStatus, setCommercialSyncStatus] = useState({ state: "idle", message: "", projectId: "", snapshotId: "", syncedAt: "", blockers: [] });
+  const [issueConfirm, setIssueConfirm] = useState(null);
+  const issueInFlightRef = useRef(false);
   const commercialSnapshotSyncRef = useRef(() => {});
   const [explicitJobRestoreState, setExplicitJobRestoreState] = useState({ state: "idle", key: "", message: "" });
   const explicitJobRestoreAttemptRef = useRef("");
@@ -1075,8 +1080,23 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
     setNewJobForm({ jobName: "", clientName: "", jobNumber: "", address: "", notes: "" });
   }
 
+  // Quotation V1 issue workflow (ported from 7207be6): check locally, confirm, then issue once.
+  const issueStatus = (state, message, extra = {}) => setCommercialSyncStatus({ state, message, projectId: "", snapshotId: "", syncedAt: "", blockers: [], ...extra });
+  function requestQuotationIssue() {
+    if (previewMode || isCommercialSyncing || issueInFlightRef.current) return;
+    if (openJobDetails.noJobOpen) return issueStatus("error", "Open a job before issuing a quotation.");
+    if (!workspaceId) return issueStatus("error", workspaceLoading ? "Workspace is still loading. Please try again in a moment." : "Choose an active workspace before issuing the quotation.");
+    const calculated = calculateEstimateBuilderWorkbook(sheet.getCurrentWorkbook());
+    const chargedRows = quotationSectionsForFinalBoq(calculated.quotation || {}).reduce((count, section) => count + section.rows.length, 0);
+    if (!chargedRows) return issueStatus("error", "There is nothing to issue yet: the quotation has no charged rows.");
+    const check = quotationIssueCheck(calculated.quotation || {});
+    if (!check.ok) return issueStatus("error", check.message, { blockers: check.blockers });
+    setIssueConfirm({ chargedRows, total: calculated.summary?.finalQuoteTotal || 0, gst: calculated.summary?.gst || 0 });
+  }
+
   async function handleCommercialSnapshotSync() {
-    if (previewMode || isCommercialSyncing) return;
+    if (previewMode || isCommercialSyncing || issueInFlightRef.current) return;
+    setIssueConfirm(null);
     if (!workspaceId) {
       setCommercialSyncStatus({
         state: "error",
@@ -1088,7 +1108,9 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
       return;
     }
 
-    setCommercialSyncStatus({ state: "syncing", message: "Syncing commercial snapshot...", projectId: "", snapshotId: "", syncedAt: "" });
+    // Guards against a double click before the "syncing" state has rendered.
+    issueInFlightRef.current = true;
+    setCommercialSyncStatus({ state: "syncing", message: "Issuing quotation to Project Commercials...", projectId: "", snapshotId: "", syncedAt: "", blockers: [] });
     try {
       const liveWorkbook = sheet.getCurrentWorkbook();
       const sourceWorkbook = {
@@ -1114,6 +1136,13 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
         sourceWorkbook.summaryAdjustments,
       ]);
       const calculated = calculateEstimateBuilderWorkbook(sourceWorkbook);
+      // Same gate as the server: nothing is sent while a charged row has no confirmed price or is a duplicate.
+      const check = quotationIssueCheck(calculated.quotation || {});
+      if (!check.ok) {
+        const error = new Error(check.message);
+        error.blockers = check.blockers;
+        throw error;
+      }
       const result = await syncCommercialSnapshot({
         workspace_id: workspaceId,
         commercial_project_id: sourceWorkbook.commercialProjectId || null,
@@ -1147,24 +1176,29 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
       const associationSave = await sheet.persistCommercialAssociation({ workspaceId, jobId: sourceJobId, projectId, snapshotId });
       if (!associationSave?.ok) throw new Error(`The commercial snapshot synced, but its job association could not be saved: ${associationSave?.message || "Save failed."}`);
       const syncedAt = result?.data?.snapshot?.created_at || new Date().toISOString();
+      const issuedTotal = `${money(calculated.summary?.finalQuoteTotal || 0)} including GST`;
       const snapshotMessage = result?.workbook_snapshot_complete === false
-        ? `Quotation snapshot synced and linked. Full plan/document data remains in the saved local job${result.workbook_snapshot_omitted_sections?.length ? ` (not copied: ${result.workbook_snapshot_omitted_sections.join(", ")})` : ""}.`
-        : `Commercial snapshot synced and linked to this saved job${snapshotId ? `: ${snapshotId}` : ""}`;
+        ? `Quotation issued to Project Commercials: ${issuedTotal}. Full plan/document data remains in the saved local job${result.workbook_snapshot_omitted_sections?.length ? ` (not copied: ${result.workbook_snapshot_omitted_sections.join(", ")})` : ""}.`
+        : `Quotation issued to Project Commercials and linked to this saved job: ${issuedTotal}.`;
       setCommercialSyncStatus({
         state: "success",
         message: snapshotMessage,
         projectId,
         snapshotId,
         syncedAt,
+        blockers: [],
       });
     } catch (error) {
       setCommercialSyncStatus({
         state: "error",
-        message: error?.message || "Commercial snapshot sync failed.",
+        message: error?.message || "The quotation could not be issued.",
         projectId: "",
         snapshotId: "",
         syncedAt: "",
+        blockers: Array.isArray(error?.blockers) ? error.blockers : [],
       });
+    } finally {
+      issueInFlightRef.current = false;
     }
   }
   commercialSnapshotSyncRef.current = handleCommercialSnapshotSync;
@@ -1464,7 +1498,7 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
           data-testid="open-local-job-file-input"
         />
 
-        {showDeveloperControls && commercialSyncStatus.state !== "idle" && (
+        {commercialSyncStatus.state !== "idle" && (
           <div
             data-testid="commercial-sync-status"
             data-state={commercialSyncStatus.state}
@@ -1475,11 +1509,37 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
             }}
             role={commercialSyncStatus.state === "error" ? "alert" : "status"}
           >
-            <strong>{commercialSyncStatus.state === "success" ? "Synced" : commercialSyncStatus.state === "error" ? "Sync failed" : "Syncing"}</strong>
+            <strong>{commercialSyncStatus.state === "success" ? "Quotation issued" : commercialSyncStatus.state === "error" ? (commercialSyncStatus.blockers?.length ? "Quotation not issued" : "Issue failed") : "Issuing"}</strong>
             <span>{commercialSyncStatus.message}</span>
             {commercialSyncStatus.syncedAt ? <small>{new Date(commercialSyncStatus.syncedAt).toLocaleString()}</small> : null}
+            {commercialSyncStatus.blockers?.length ? (
+              <ul data-testid="issue-quotation-blockers">
+                {commercialSyncStatus.blockers.slice(0, 12).map((blocker) => (
+                  <li key={`${blocker.sectionKey}-${blocker.rowId}-${blocker.item}`}>{blocker.section}: {blocker.item}{blocker.location ? ` (${blocker.location})` : ""} - {blocker.reason}</li>
+                ))}
+                {commercialSyncStatus.blockers.length > 12 ? <li>and {commercialSyncStatus.blockers.length - 12} more</li> : null}
+              </ul>
+            ) : null}
+            {commercialSyncStatus.state !== "syncing" ? (
+              <button type="button" style={styles.secondaryButton} onClick={() => issueStatus("idle", "")}>Dismiss</button>
+            ) : null}
           </div>
         )}
+
+        {issueConfirm ? (
+          <div style={styles.modalBackdrop}>
+            <div style={styles.newJobModal} role="dialog" aria-modal="true" aria-label="Issue quotation">
+              <div style={styles.eyebrow}>Issue Quotation</div>
+              <h2 style={styles.jobPickerTitle}>Issue this quotation to Project Commercials?</h2>
+              <p>This records the quotation as the current commercial snapshot for this job and replaces any earlier issued snapshot. All {issueConfirm.chargedRows} charged rows have confirmed prices.</p>
+              <p><strong>Final quote total: {money(issueConfirm.total)}</strong> (includes GST of {money(issueConfirm.gst)})</p>
+              <div style={styles.jobPickerActions}>
+                <button type="button" style={styles.secondaryButton} onClick={() => setIssueConfirm(null)}>Cancel</button>
+                <button type="button" data-testid="confirm-issue-quotation" style={styles.primaryButton} disabled={isCommercialSyncing} onClick={handleCommercialSnapshotSync}>Issue Quotation</button>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         <ProjectCompactBanner
           moduleTitle={activeVisual.title}
@@ -1548,14 +1608,15 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
                     <StorageStatusLink jobKey={sheet.workbook?.jobId || sheet.workbook?.registeredJobId || sheet.workbook?.projectId ? `job:${sheet.workbook.jobId || sheet.workbook.registeredJobId || sheet.workbook.projectId}` : ""} />
                     <button type="button" style={styles.bannerBackButton} onClick={() => navigateWorkspacePage("projectDashboard")}>Back to Project Workspace</button>
                   </div>
-                  {showDeveloperControls ? (
+                  {!openJobDetails.noJobOpen && !previewMode && hasInternalCommercialAccess(workspaceRole) ? (
                     <button
                       type="button"
+                      data-testid="issue-quotation-button"
                       style={{ ...styles.commercialSyncButton, ...(isCommercialSyncing ? styles.commercialSyncButtonDisabled : {}) }}
-                      disabled={isCommercialSyncing || workspaceLoading}
-                      onClick={handleCommercialSnapshotSync}
+                      disabled={isCommercialSyncing || workspaceLoading || Boolean(issueConfirm)}
+                      onClick={requestQuotationIssue}
                     >
-                      {isCommercialSyncing ? "Syncing..." : "Sync to Project Commercials"}
+                      {isCommercialSyncing ? "Issuing..." : "Issue Quotation to Project Commercials"}
                     </button>
                   ) : null}
                   <div data-testid="job-persistence-status" role="status">
@@ -2160,7 +2221,7 @@ const DASHBOARD_PROJECT_RESOURCE_CARDS = [
   },
   {
     title: "Standard Inclusions",
-    subtitle: "Classic, Premier, Premium and custom inclusion templates.",
+    subtitle: "Premier inclusions schedule (default). Classic and Premium are not available yet.",
     page: "standardInclusions",
     visualKey: "standardInclusions",
     badge: "Templates",
@@ -3938,6 +3999,9 @@ function QuotationSheet({ sheet, onFormulaTarget, canEditFormulas = false }) {
           <button style={styles.secondaryButton} onClick={() => sheet.renumberQuoteDisplay?.()}>Renumber Display</button>
           <button style={styles.secondaryButton} onClick={expandAllQuoteSectionsLocal}>Expand All</button>
           <button style={styles.secondaryButton} onClick={collapseAllQuoteSectionsLocal}>Collapse All</button>
+          <span style={styles.okPill} data-testid="quote-structure-count" title="Every saved category is shown, either as a trade heading or nested under its trade.">
+            {quoteStructureCountLabel(sheet.quoteSections, sheet.workbook.quotation)}
+          </span>
           {sheet.renumberReport && (
             <span style={sheet.renumberReport.ok ? styles.okPill : styles.warningPill}>{sheet.renumberReport.message}</span>
           )}
@@ -4056,7 +4120,7 @@ function QuotationSheet({ sheet, onFormulaTarget, canEditFormulas = false }) {
                       : isExternalCladdingSection(section)
                         ? sheet.quoteSections.filter((item) => isExternalCladdingSubsection(item))
                         : isEntryDoorsSection(section)
-                          ? sheet.quoteSections.filter((item) => isEntryDoorsSubsection(item))
+                          ? orderedEntryDoorsSubsections(sheet.quoteSections.filter((item) => isEntryDoorsSubsection(item)))
                           : isTilingSection(section)
                             ? orderedTilingSubsections(sheet.quoteSections.filter((item) => isTilingSubsection(item)))
                             : isPlumbingFittingsSection(section)
@@ -4077,6 +4141,8 @@ function QuotationSheet({ sheet, onFormulaTarget, canEditFormulas = false }) {
                                             ? sheet.quoteSections.filter((item) => isPlasterSupplyInstallSubsection(item))
                                             : isFixOutMaterialsSection(section)
                                               ? orderedFixOutSubsections(sheet.quoteSections)
+                                              : isCabinetryMainSection(section)
+                                                ? cabinetryChildSections(sheet.quoteSections)
                                               : isCabinetMakerSection(section)
                                                 ? orderedCabinetMakerSubsections(sheet.quoteSections.filter((item) => isCabinetMakerSubsection(item)))
                                                 : isAppliancePackageSection(section)
@@ -15618,7 +15684,7 @@ function summaryNumber(value) {
 
 function formatArea(value) {
   const amount = summaryNumber(value);
-  return amount.toLocaleString("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return AUD_2DP.format(amount);
 }
 
 function subcontractorDeductionsForRow(contractorKey) {
@@ -18088,7 +18154,7 @@ function currencyInputValue(v) {
   if (!cleaned) return "";
   const amount = Number(cleaned);
   if (!Number.isFinite(amount)) return text;
-  return `$${amount.toLocaleString("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `$${AUD_2DP.format(amount)}`;
 }
 
 // The generic cladding-plank row shows the one formula evaluated for each product this job's
@@ -18681,7 +18747,7 @@ function levelDisplayValue(level) {
 }
 
 function money(v) {
-  return v ? `$${Number(v).toLocaleString("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "$0.00";
+  return v ? `$${AUD_2DP.format(Number(v))}` : "$0.00";
 }
 
 function numberValue(value) {
@@ -19257,6 +19323,13 @@ function isApplianceBrandSubsection(section) {
   return name.startsWith("appliance package - ") || name.startsWith("appliances & white goods - ");
 }
 
+// "49 trade headings · 176 categories · 3,605 rows": shows the builder that nesting hides nothing.
+function quoteStructureCountLabel(sections = [], quotation = {}) {
+  const trades = topLevelQuoteSections(sections).length;
+  const rows = sections.reduce((sum, section) => sum + (quotation?.[section]?.rows?.length || 0), 0);
+  return `${trades} trade headings · ${sections.length} categories · ${rows.toLocaleString("en-AU")} rows`;
+}
+
 function quoteSectionDisplayLabel(section) {
   const label = isApplianceBrandSubsection(section)
     ? section.replace(/^(appliance package|appliances & white goods)\s*-\s*/i, "")
@@ -19268,6 +19341,8 @@ function quoteMainSectionDisplayLabel(section) {
   const name = quoteSectionBaseName(section);
   if (name === "fix out materials" || name === "skirting & architraves") return "FIX OUT";
   if (name === "appliance package") return "APPLIANCES & WHITE GOODS";
+  // One cabinetry trade heading (display only; the saved section stays "CABINETRY").
+  if (name === "cabinetry") return "CABINETRY & JOINERY";
   return section;
 }
 
@@ -19583,6 +19658,9 @@ function topLevelQuoteSections(sections = []) {
 // Client Selections and room tiling sections show under the builder's existing trade (display only;
 // see lib/construction-estimation/quoteTradeHierarchy.js).
 function clientSelectionParentSection(section, sections = []) {
+  return memoisedForSections(sections, "clientSelectionParent", section, () => clientSelectionParentSectionNow(section, sections));
+}
+function clientSelectionParentSectionNow(section, sections) {
   const name = quoteSectionBaseName(section);
   for (const parentName of clientSelectionTradeParentNames(name)) {
     const parent = sections.find((item) => item !== section && quoteSectionBaseName(item) === parentName && !isBuiltInGroupedQuoteSubsection(item, sections));
@@ -19600,6 +19678,9 @@ function isGroupedQuoteSubsection(section, sections = []) {
 }
 
 function isBuiltInGroupedQuoteSubsection(section, sections = []) {
+  return memoisedForSections(sections, "builtInGrouped", section, () => isBuiltInGroupedQuoteSubsectionNow(section, sections));
+}
+function isBuiltInGroupedQuoteSubsectionNow(section, sections) {
   if (isConcreteSlabSubsection(section)) return true;
   if (sections.some((item) => isWallFramesSection(item)) && isWallFramesSubsection(section)) return true;
   if (sections.some((item) => isWallFramesSection(item)) && isFramingMovedSubsection(section)) return true;
@@ -19619,6 +19700,7 @@ function isBuiltInGroupedQuoteSubsection(section, sections = []) {
   if (sections.some((item) => isPlasterSupplyInstallSection(item)) && isPlasterSupplyInstallSubsection(section)) return true;
   if (sections.some((item) => isFixOutMaterialsSection(item)) && isFixOutMaterialsSubsection(section)) return true;
   if (!sections.some(item => quoteSectionBaseName(item) === "cabinetry - kitchen") && sections.some((item) => isCabinetMakerSection(item)) && isCabinetMakerSubsection(section)) return true;
+  if (sections.some((item) => isCabinetryMainSection(item)) && isCabinetMakerSection(section)) return true;
   if (sections.some((item) => isAppliancePackageSection(item)) && isApplianceBrandSubsection(section)) return true;
   return false;
 }
@@ -19651,7 +19733,7 @@ function builtInQuoteChildSectionsForParent(section, sections = []) {
   if (isHardwareSection(section)) return sections.filter((item) => isHardwareSubsection(item));
   if (isRoofingMaterialsSection(section)) return sections.filter((item) => isRoofingMaterialsSubsection(item));
   if (isExternalCladdingSection(section)) return sections.filter((item) => isExternalCladdingSubsection(item));
-  if (isEntryDoorsSection(section)) return sections.filter((item) => isEntryDoorsSubsection(item));
+  if (isEntryDoorsSection(section)) return orderedEntryDoorsSubsections(sections.filter((item) => isEntryDoorsSubsection(item)));
   if (isTilingSection(section)) return orderedTilingSubsections(sections.filter((item) => isTilingSubsection(item)));
   if (isPlumbingFittingsSection(section)) return orderedPlumbingFittingsSubsections(sections.filter((item) => isPlumbingFittingsSubsection(item)));
   if (isElectricalSection(section)) return orderedElectricalSubsections(sections.filter((item) => isElectricalSubsection(item)));
@@ -19662,7 +19744,8 @@ function builtInQuoteChildSectionsForParent(section, sections = []) {
   if (isRenderingSection(section)) return sections.filter((item) => isRenderingSubsection(item));
   if (isPlasterSupplyInstallSection(section)) return sections.filter((item) => isPlasterSupplyInstallSubsection(item));
   if (isFixOutMaterialsSection(section)) return sections.filter((item) => isFixOutMaterialsSubsection(item));
-  if (isCabinetMakerSection(section)) return sections.some(item => quoteSectionBaseName(item) === "cabinetry - kitchen") ? [] : orderedCabinetMakerSubsections(sections.filter((item) => isCabinetMakerSubsection(item)));
+  if (isCabinetryMainSection(section)) return cabinetryChildSections(sections);
+  if (isCabinetMakerSection(section)) return sections.some(item => quoteSectionBaseName(item) === "cabinetry - kitchen") || sections.some((item) => isCabinetryMainSection(item)) ? [] : orderedCabinetMakerSubsections(sections.filter((item) => isCabinetMakerSubsection(item)));
   if (isAppliancePackageSection(section)) return orderedApplianceBrandSubsections(sections);
   return [];
 }
@@ -19705,6 +19788,29 @@ function isCabinetMakerSection(section) {
 
 function isCabinetMakerSubsection(section) {
   return CABINET_MAKER_SUBSECTIONS.has(quoteSectionBaseName(section));
+}
+
+// 10 Nov 2026: one cabinetry heading. CABINETRY is the current cabinetry section; CABINET MAKER is the
+// old template (kept with its rows and rooms) and shows inside it, followed by its room sections.
+// Display only: every section keeps its own rows and subtotal.
+function isCabinetryMainSection(section) {
+  return quoteSectionBaseName(section) === "cabinetry";
+}
+
+function cabinetryChildSections(sections = []) {
+  const cabinetMaker = sections.find((item) => isCabinetMakerSection(item));
+  if (!cabinetMaker || sections.some((item) => quoteSectionBaseName(item) === "cabinetry - kitchen")) return cabinetMaker ? [cabinetMaker] : [];
+  return [cabinetMaker, ...orderedCabinetMakerSubsections(sections.filter((item) => isCabinetMakerSubsection(item)))];
+}
+
+// DOOR JAMB MATERIALS (takeoff jamb stock lengths) sits straight after DOOR JAMBS in the DOORS group.
+function orderedEntryDoorsSubsections(sections = []) {
+  const jambMaterials = sections.filter((item) => quoteSectionBaseName(item) === "door jamb materials");
+  if (!jambMaterials.length) return sections;
+  const rest = sections.filter((item) => !jambMaterials.includes(item));
+  const after = rest.findIndex((item) => quoteSectionBaseName(item) === "door jambs");
+  if (after < 0) return [...rest, ...jambMaterials];
+  return [...rest.slice(0, after + 1), ...jambMaterials, ...rest.slice(after + 1)];
 }
 
 function wallFramesDisplayLabel(section) {
@@ -19769,8 +19875,40 @@ function isFramingMovedSubsection(section) {
     || isHardwareSubsection(section);
 }
 
+// Section names are compared many times per render (section nesting is worked out across all
+// ~176 sections), so the normalised name is cached.
+const quoteSectionBaseNames = new Map();
 function quoteSectionBaseName(section) {
-  return String(section || "").toLowerCase().replace(/['â€™]/g, "").replace(/\s*\(\d+\)\s*$/, "").replace(/\s+/g, " ").trim();
+  const key = String(section || "");
+  let name = quoteSectionBaseNames.get(key);
+  if (name === undefined) {
+    if (quoteSectionBaseNames.size > 5000) quoteSectionBaseNames.clear();
+    name = key.toLowerCase().replace(/['â€™]/g, "").replace(/\s*\(\d+\)\s*$/, "").replace(/\s+/g, " ").trim();
+    quoteSectionBaseNames.set(key, name);
+  }
+  return name;
+}
+
+// Section nesting depends only on the section list, which is the same array from render to render
+// until the quotation changes. Results are cached per list (and dropped with it): before this,
+// working out the nesting compared every section with every other ~20 times on every render
+// (~2.8 s of each render on a 176-section job).
+const quoteSectionListMemos = new WeakMap();
+function quoteSectionListMemo(sections, kind) {
+  if (!sections || typeof sections !== "object") return null;
+  let kinds = quoteSectionListMemos.get(sections);
+  if (!kinds) { kinds = new Map(); quoteSectionListMemos.set(sections, kinds); }
+  let memo = kinds.get(kind);
+  if (!memo) { memo = new Map(); kinds.set(kind, memo); }
+  return memo;
+}
+function memoisedForSections(sections, kind, section, compute) {
+  const memo = quoteSectionListMemo(sections, kind);
+  if (!memo) return compute();
+  if (memo.has(section)) return memo.get(section);
+  const value = compute();
+  memo.set(section, value);
+  return value;
 }
 
 const CONCRETE_SLAB_SUBSECTIONS = new Set([
@@ -19850,6 +19988,7 @@ const ENTRY_DOORS_SUBSECTIONS = new Set([
   "garage door jambs",
   "garage doors - sectional panel lift",
   "garage doors - manual roll-a-door",
+  "door jamb materials",
 ]);
 
 const TILING_SUBSECTIONS = new Set([

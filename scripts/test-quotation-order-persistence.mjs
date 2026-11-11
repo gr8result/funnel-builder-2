@@ -219,7 +219,9 @@ if (fs.existsSync(recovered)) {
     assert(movedIds.size >= 5);
     for (const entry of movedIds) { const [name, id] = entry.split("|"); if (!workbook.quotation[name]) continue; const before = relative(reopened, name).indexOf(id); if (before < 0) continue; assert.equal(relative(again, name).indexOf(id), before, entry); }
     const migrated = utils.normalizeWorkbook(roundTrip(workbook), { allowQuotationHydration: true });
-    for (const name of Object.keys(workbook.quotation)) assert(migrated.quotation[canonicalQuotationSectionName(name)], `${name}: explicit migration retains its trade`);
+    // Opening a job keeps the builder's category names as saved (9 Nov 2026 rule), so a trade is kept
+    // under its saved name or its canonical name - never lost.
+    for (const name of Object.keys(workbook.quotation)) assert(migrated.quotation[name] || migrated.quotation[canonicalQuotationSectionName(name)], `${name}: explicit migration retains its trade`);
   });
 }
 check("main display numbers are consecutive without renumbering nested headings or saved data", () => {

@@ -60,7 +60,10 @@ assert.equal(ensureQuotationSectionIds(workbook.quotation), workbook.quotation, 
 assert.deepEqual(Object.keys(normalizeQuotationStructure(JSON.parse(JSON.stringify(workbook.quotation)))).sort(), Object.keys(workbook.quotation).sort(), 'normalising again changes no section');
 assert.deepEqual([...workbook.quotationSectionOrder].sort(), Object.keys(workbook.quotation).sort());
 const calc = calculateEstimateBuilderWorkbook(workbook), calcProtected = calculateEstimateBuilderWorkbook(protectedEstimate);
-const sum = (c) => rowsOf(c.quotation).filter(({ row }) => !isHeading(row) && !row.feeType).reduce((total, { row }) => total + (Number(row.cost) || 0), 0);
+// Tiling labour is priced by the selected tile's size (owner rates, 11 Nov 2026); the consolidated
+// test file has 600 x 600 floor tiles where the protected job has 450 x 450, so those rows are left
+// out of this structural comparison.
+const sum = (c) => rowsOf(c.quotation).filter(({ row }) => !isHeading(row) && !row.feeType && !/^Owner tiling rate/.test(String(row.sourceOfRate || ""))).reduce((total, { row }) => total + (Number(row.cost) || 0), 0);
 const underslab = calc.quotation['UNDERSLAB AND DRAINAGE'].rows[0];
 assert.equal(underslab.cost, 0, 'the underslab allocation is not a quotation cost'); assert.equal(underslab.progressAllocationResult.allocatedAmount, 14567.5);
 assert(Math.abs((sum(calc) - sum(calcProtected)) + 3800) < 0.01, 'the only cost change against the protected job is the removal of the superseded 3,800 underslab charge');

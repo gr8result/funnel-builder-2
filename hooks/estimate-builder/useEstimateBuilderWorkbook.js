@@ -121,6 +121,8 @@ import { updateQuoteQuantityField } from "../../lib/construction-estimation/quot
 import { supabase } from "../../utils/supabase-client";
 import { withWindowsPriceListQuotation, WINDOW_SCHEDULE_UNPRICED_ROW_PREFIX } from "../../lib/construction-estimation/windowsQuotePriceList.js";
 import { withEntryDoorLibraryQuotation } from "../../lib/construction-estimation/entryDoorLibraryQuotation.js";
+// One shared formatter: Number#toLocaleString with options builds a new formatter on every call (~40x slower, same text).
+const AUD_2DP = new Intl.NumberFormat("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const ESTIMATE_BUILDER_PAGES = [
   { key: "dataInput", label: "Job Details" },
@@ -2414,7 +2416,9 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
   }
 
   function prepareWorkbookForJobSave(sourceWorkbook = workbookRef.current, savedAt = new Date().toISOString()) {
-    const auditCalculation = calculateEstimateBuilderWorkbook(calculationWorkbookCopy(sourceWorkbook));
+    // Reuses the cached calculation of this exact workbook (every autosave used to deep-copy the job
+    // and recalculate it on the main thread). The calculation does not change the workbook.
+    const auditCalculation = calculateWorkbookPreview(sourceWorkbook);
     const auditWorkbook = { ...sourceWorkbook, quotation: auditCalculation.quotation };
     const productSelectionAudit = reconcileProductSelections({ workbook: auditWorkbook, mappings: builderRequirementMappingsRef.current, productById: productByIdForWorkbook(sourceWorkbook) });
     return compactWorkbookForStorage({
@@ -3479,7 +3483,10 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     selectionRequirementMappings: builderRequirementMappingsRef.current,
     productSelectionIntegrity: () => {
       const current = workbookRef.current;
-      const auditCalculation = calculateEstimateBuilderWorkbook(calculationWorkbookCopy(current));
+      // The same calculation the quotation is drawn from (cached per workbook). Deep-copying the job and
+      // recalculating here cost ~3 s on every audit; the calculation never reads the estimate documents
+      // the copy left out, and does not change the workbook it is given.
+      const auditCalculation = calculateWorkbookPreview(current);
       const productById = productByIdForWorkbook(current);
       const plan = planSelectionReconciliation({
         workbook: current,
@@ -7082,7 +7089,7 @@ function currencyInputValue(value) {
   if (!cleaned) return "";
   const amount = Number(cleaned);
   if (!Number.isFinite(amount)) return text;
-  return `$${amount.toLocaleString("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `$${AUD_2DP.format(amount)}`;
 }
 
 const WALL_THICKNESS_70MM_RESULT_KEYS = new Set([

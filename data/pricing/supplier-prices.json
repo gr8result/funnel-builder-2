@@ -1,0 +1,1041 @@
+{
+ "note": "Supplier retail prices (GST included) read from each supplier's own store or product page on 10 Nov 2026. The Quotation Builder divides by 1.1 (rates are ex GST). Doors: catalogue standard size (2040 x 820, or 2040 x 1200 for 1200 models), clear glass where glazed, base (lowest-priced) face finish; Bretts regular price, Complete Doors Online current price. See lib/construction-estimation/ownerQuotePrices.js.",
+ "retrievedAt": "2026-11-11",
+ "entryDoors": {
+  "master-ENTRY-CORINTHIAN-BAL-29-RURAL-PRU-21": {
+   "supplier": "Complete Doors Online",
+   "product": "BAL 29 Rural PRU 21 - External Primed Skins",
+   "variant": "Clear / EXP External Primed Skins / 2040 x 820 x 40",
+   "priceIncGst": 723,
+   "sku": "BAL29PRU212040820040Clear",
+   "url": "https://completedoorsonline.com.au/products/bal-29-rural-pru-21"
+  },
+  "master-ENTRY-CORINTHIAN-BLONDE-OAK-AWO-2": {
+   "supplier": "Complete Doors Online",
+   "product": "Corinthian Blonde Oak AWO 2 Entrance Door",
+   "variant": "2040 x 820 x 40 / Unglazed",
+   "priceIncGst": 583,
+   "sku": "AWO22040x820x40UG",
+   "url": "https://completedoorsonline.com.au/products/blonde-oak-awo-2"
+  },
+  "master-ENTRY-CORINTHIAN-BLONDE-OAK-AWO-21": {
+   "supplier": "Complete Doors Online",
+   "product": "Corinthian Blonde Oak AWO 21 Entrance Door | Solid Timber",
+   "variant": "Clear / 2040 x 820 x 40",
+   "priceIncGst": 575,
+   "sku": "AWO212040x820x40Clear",
+   "url": "https://completedoorsonline.com.au/products/blonde-oak-awo-21"
+  },
+  "master-ENTRY-CORINTHIAN-BLONDE-OAK-AWO-2G": {
+   "supplier": "Complete Doors Online",
+   "product": "Corinthian Blonde Oak AWO 2G Entrance Door | Solid Timber",
+   "variant": "Clear / 2040 x 820 x 40",
+   "priceIncGst": 745,
+   "sku": "AWO2G2040x820x40CLR",
+   "url": "https://completedoorsonline.com.au/products/blonde-oak-awo-2g"
+  },
+  "master-ENTRY-CORINTHIAN-BLONDE-OAK-AWO-5": {
+   "supplier": "Complete Doors Online",
+   "product": "Corinthian Blonde Oak AWO 5 Solid Timber Entrance Door",
+   "variant": "2040 x 820 x 40 / Unglazed",
+   "priceIncGst": 664,
+   "sku": "AWO52040x820x40UG",
+   "url": "https://completedoorsonline.com.au/products/blonde-oak-awo-5"
+  },
+  "master-ENTRY-CORINTHIAN-DECO-WHITE-OAK-ENTRANCE-EXADECO-1S": {
+   "supplier": "Complete Doors Online",
+   "product": "Deco White Oak Entrance EXADECO 1S",
+   "variant": "2040 x 820 x 40",
+   "priceIncGst": 723,
+   "sku": "EXADECO1S204082040",
+   "url": "https://completedoorsonline.com.au/products/deco-white-oak-entrance-exadeco-1s"
+  },
+  "master-ENTRY-CORINTHIAN-SLIMLITE-PSLM-201": {
+   "supplier": "Complete Doors Online",
+   "product": "Corinthian Slimlite PSLM 201 Entrance Door",
+   "variant": "Clear / 2040 x 820 x 40",
+   "priceIncGst": 656,
+   "sku": "PSLM201204082040Clear",
+   "url": "https://completedoorsonline.com.au/products/slimlite-pslm-201"
+  },
+  "master-ENTRY-CORINTHIAN-SOLIDCARVE-PSC-4": {
+   "supplier": "Complete Doors Online",
+   "product": "Solidcarve PSC 4",
+   "variant": "2040 x 820 x 40",
+   "priceIncGst": 409,
+   "sku": "PSC4204082040",
+   "url": "https://completedoorsonline.com.au/products/solidcarve-psc-4"
+  },
+  "master-ENTRY-HUME-BUSH-FIRE-RESISTANT-BAL19-BAL29-DOORS-BFR12": {
+   "supplier": "Complete Doors Online",
+   "product": "Hume BFR12 DuraXP Solid Engineered Timber Entrance Door | BAL19 & BAL29",
+   "variant": "Clear / 2040 x 820 x 40",
+   "priceIncGst": 1027,
+   "sku": "BFR12DuraXP204082040CL",
+   "url": "https://completedoorsonline.com.au/products/bfr12-duraxp"
+  },
+  "master-ENTRY-HUME-BUSH-FIRE-RESISTANT-BAL19-BAL29-DOORS-BFR13": {
+   "supplier": "Complete Doors Online",
+   "product": "BFR13 - DuraX",
+   "variant": "2040 x 820 x 40",
+   "priceIncGst": 515,
+   "sku": "",
+   "url": "https://completedoorsonline.com.au/products/bfr13-durax"
+  },
+  "master-ENTRY-HUME-BUSH-FIRE-RESISTANT-BAL19-BAL29-DOORS-BFR3": {
+   "supplier": "Complete Doors Online",
+   "product": "BAL19 & BAL29 BFR3 DuraXP Hume Solid Engineered Timber Entrance Door",
+   "variant": "Clear / 2040 x 820 x 40",
+   "priceIncGst": 738,
+   "sku": "BFR3DuraXP204082040CL",
+   "url": "https://completedoorsonline.com.au/products/bfr3-duraxp"
+  },
+  "master-ENTRY-HUME-BUSH-FIRE-RESISTANT-BAL19-BAL29-DOORS-BFR30": {
+   "supplier": "Complete Doors Online",
+   "product": "BFR30 DuraX Solid Engineered Timber Entrance Door | BAL Compliant",
+   "variant": "2040 x 820 x 40",
+   "priceIncGst": 472,
+   "sku": "",
+   "url": "https://completedoorsonline.com.au/products/bfr30-durax"
+  },
+  "master-ENTRY-HUME-BUSHFIRE-RESISTANT-BAL40-DOORS-BFR4013": {
+   "supplier": "Complete Doors Online",
+   "product": "BFR4013 - DuraX",
+   "variant": "Clear / 2040 x 820 x 45",
+   "priceIncGst": 1181,
+   "sku": "",
+   "url": "https://completedoorsonline.com.au/products/bfr4013-durax"
+  },
+  "master-ENTRY-HUME-BUSHFIRE-RESISTANT-BAL40-DOORS-BFR4017": {
+   "supplier": "Complete Doors Online",
+   "product": "BFR4017 - DuraX",
+   "variant": "Clear / 2040 x 820 x 45",
+   "priceIncGst": 1029,
+   "sku": "",
+   "url": "https://completedoorsonline.com.au/products/bfr4017-durax"
+  },
+  "master-ENTRY-HUME-BUSHFIRE-RESISTANT-BAL40-DOORS-BFR4018": {
+   "supplier": "Complete Doors Online",
+   "product": "BFR4018 - DuraX",
+   "variant": "2040 x 820 x 45",
+   "priceIncGst": 646,
+   "sku": "",
+   "url": "https://completedoorsonline.com.au/products/bfr4018-durax"
+  },
+  "master-ENTRY-HUME-BUSHFIRE-RESISTANT-BAL40-DOORS-BFR4019": {
+   "supplier": "Complete Doors Online",
+   "product": "BFR4019 - DuraX",
+   "variant": "2040 x 820 x 45",
+   "priceIncGst": 646,
+   "sku": "",
+   "url": "https://completedoorsonline.com.au/products/bfr4019-durax"
+  },
+  "master-ENTRY-HUME-BUSHFIRE-RESISTANT-BAL40-DOORS-BFR4020": {
+   "supplier": "Complete Doors Online",
+   "product": "Hume BFR4020 Duracote Solid Engineered Timber Entrance Door BAL40",
+   "variant": "2040 x 820 x 45",
+   "priceIncGst": 646,
+   "sku": "BFR4020Duracote204082045",
+   "url": "https://completedoorsonline.com.au/products/bfr4020-duracote"
+  },
+  "master-ENTRY-HUME-CARRINGBUSH-XCB1": {
+   "supplier": "Complete Doors Online",
+   "product": "Hume Carringbush XCB1 Entrance Door",
+   "variant": "Clear / Duracote / 2040 x 820 x 40",
+   "priceIncGst": 919,
+   "sku": "HumeCarringbushXCB1ClearDuracote2040x820x40",
+   "url": "https://completedoorsonline.com.au/products/xcb1-sliced-pacific-maple"
+  },
+  "master-ENTRY-HUME-CARRINGBUSH-XCB7": {
+   "supplier": "Complete Doors Online",
+   "product": "Carringbush XCB7",
+   "variant": "Clear / Duracote / 2040 x 820 x 40",
+   "priceIncGst": 1087,
+   "sku": "HumeCarringbushXCB7ClearDuraXP204082040",
+   "url": "https://completedoorsonline.com.au/products/carringbush-xcb7"
+  },
+  "master-ENTRY-HUME-ELITE-ALUMINIUM-WITH-VJ-PANEL-XE10": {
+   "supplier": "Complete Doors Online",
+   "product": "Elite Aluminium XE10",
+   "variant": "Clear / Black Matt / 2040 x 820 x 40",
+   "priceIncGst": 1481,
+   "sku": "XE10Black2040x820x40Clear",
+   "url": "https://completedoorsonline.com.au/products/elite-aluminium-xe10"
+  },
+  "master-ENTRY-HUME-ELITE-ALUMINIUM-WITH-VJ-PANEL-XE11": {
+   "supplier": "Complete Doors Online",
+   "product": "Hume Doors Elite Aluminium XE11 Entrance Door",
+   "variant": "Clear / Black Matt / 2040 x 820 x 40",
+   "priceIncGst": 1481,
+   "sku": "XE11Black2040x820x40Clear",
+   "url": "https://completedoorsonline.com.au/products/elite-aluminium-xe11"
+  },
+  "master-ENTRY-HUME-ELITE-ALUMINIUM-WITH-VJ-PANEL-XE12": {
+   "supplier": "Complete Doors Online",
+   "product": "Elite Aluminium XE12 Entrance Door by Hume Doors",
+   "variant": "Clear / Black Matt / 2040 x 820 x 40",
+   "priceIncGst": 1481,
+   "sku": "XE12Black2040x820x40Clear",
+   "url": "https://completedoorsonline.com.au/products/elite-aluminium-xe12"
+  },
+  "master-ENTRY-HUME-ELITE-ALUMINIUM-WITH-VJ-PANEL-XE13": {
+   "supplier": "Complete Doors Online",
+   "product": "Elite Aluminium XE13",
+   "variant": "Clear / Black Matt / 2040 x 820 x 40",
+   "priceIncGst": 1481,
+   "sku": "XE13Black2040x820x40Clear",
+   "url": "https://completedoorsonline.com.au/products/elite-aluminium-xe13"
+  },
+  "master-ENTRY-HUME-ELITE-ALUMINIUM-WITH-VJ-PANEL-XE21": {
+   "supplier": "Complete Doors Online",
+   "product": "Elite Aluminium XE21 Entrance Door by Hume Doors",
+   "variant": "Black Matt / 2040 x 820 x 40",
+   "priceIncGst": 1310,
+   "sku": "XE21BlackMatt2040x820x40",
+   "url": "https://completedoorsonline.com.au/products/elite-aluminium-xe21"
+  },
+  "master-ENTRY-HUME-ELITE-ALUMINIUM-WITH-VJ-PANEL-XE22": {
+   "supplier": "Complete Doors Online",
+   "product": "Elite Aluminium XE22",
+   "variant": "Black Matt / 2040 x 820 x 40",
+   "priceIncGst": 1481,
+   "sku": "XE22BlackMatt2040x820x40",
+   "url": "https://completedoorsonline.com.au/products/elite-aluminium-xe22"
+  },
+  "master-ENTRY-HUME-ELITE-ALUMINIUM-WITH-VJ-PANEL-XE23": {
+   "supplier": "Complete Doors Online",
+   "product": "Elite Aluminium XE23",
+   "variant": "Black Matt / 2040 x 820 x 40",
+   "priceIncGst": 1647,
+   "sku": "XE23BlackMatt2040x820x40",
+   "url": "https://completedoorsonline.com.au/products/elite-aluminium-xe23"
+  },
+  "master-ENTRY-HUME-ELITE-ALUMINIUM-WITH-VJ-PANEL-XE24": {
+   "supplier": "Complete Doors Online",
+   "product": "Elite Aluminium XE24",
+   "variant": "Black Matt / 2040 x 820 x 40",
+   "priceIncGst": 1812,
+   "sku": "XE24BlackMatt2040x820x40",
+   "url": "https://completedoorsonline.com.au/products/elite-aluminium-xe24"
+  },
+  "master-ENTRY-HUME-ELITE-ALUMINIUM-WITH-VJ-PANEL-XE9": {
+   "supplier": "Complete Doors Online",
+   "product": "Hume Elite Aluminium XE9 Entrance Door",
+   "variant": "Clear / Black Matt / 2040 x 820 x 40",
+   "priceIncGst": 1481,
+   "sku": "XE9Black2040x820x40Clear",
+   "url": "https://completedoorsonline.com.au/products/elite-aluminium-xe9"
+  },
+  "master-ENTRY-HUME-ELITE-ALUMINIUM-XE1": {
+   "supplier": "Complete Doors Online",
+   "product": "Hume Doors Elite Aluminium XE1 Entrance Door",
+   "variant": "Clear / Black Matt / 2040 x 820 x 40",
+   "priceIncGst": 1015,
+   "sku": "EliteAluminiumXE1204082040BlackMattCl",
+   "url": "https://completedoorsonline.com.au/products/elite-aluminium-xe1-1"
+  },
+  "master-ENTRY-HUME-ELITE-ALUMINIUM-XE2": {
+   "supplier": "Complete Doors Online",
+   "product": "Elite Aluminium XE2",
+   "variant": "Clear / Black Matt / 2040 x 820 x 40",
+   "priceIncGst": 1168,
+   "sku": "EliteAluminiumXE2204082040BlackMattCl",
+   "url": "https://completedoorsonline.com.au/products/elite-aluminium-xe2-1"
+  },
+  "master-ENTRY-HUME-ELITE-ALUMINIUM-XE3": {
+   "supplier": "Complete Doors Online",
+   "product": "Hume Elite Aluminium XE3 Entrance Door",
+   "variant": "Clear / Black Matt / 2040 x 820 x 40",
+   "priceIncGst": 1323,
+   "sku": "XE3Black2040x820x40Clear",
+   "url": "https://completedoorsonline.com.au/products/elite-aluminium-xe3"
+  },
+  "master-ENTRY-HUME-ELITE-ALUMINIUM-XE4": {
+   "supplier": "Complete Doors Online",
+   "product": "Hume Elite Aluminium XE4 Entrance Door",
+   "variant": "Clear / Black Matt / 2040 x 820 x 40",
+   "priceIncGst": 1477,
+   "sku": "XE4Black2040x820x40Clear",
+   "url": "https://completedoorsonline.com.au/products/elite-aluminium-xe4"
+  },
+  "master-ENTRY-HUME-ELITE-ALUMINIUM-XE6": {
+   "supplier": "Complete Doors Online",
+   "product": "Elite Aluminium XE6 Entrance Door by Hume Doors",
+   "variant": "Clear / Black Matt / 2040 x 820 x 40",
+   "priceIncGst": 1783,
+   "sku": "XE6Black2040x820x40Clear",
+   "url": "https://completedoorsonline.com.au/products/elite-aluminium-xe6"
+  },
+  "master-ENTRY-HUME-GLASS-OPENING-XF8": {
+   "supplier": "Complete Doors Online",
+   "product": "Hume Doors Glass Opening XF8 - Sliced Pacific Maple",
+   "variant": "Toughened Clear / Sliced Pacific Maple / 2040 x 820 x 40",
+   "priceIncGst": 627,
+   "sku": "XF8S82040CLT",
+   "url": "https://completedoorsonline.com.au/products/xf8-sliced-pacific-maple"
+  },
+  "master-ENTRY-HUME-HAVEN-HAV100": {
+   "supplier": "Complete Doors Online",
+   "product": "Hume Doors HAV100 Hamptons Entrance Door (Duracote Finish)",
+   "variant": "Toughened Clear / Duracote / 2040 x 820 x 40",
+   "priceIncGst": 611,
+   "sku": "HAV100D820CLT",
+   "url": "https://completedoorsonline.com.au/products/hav100-duracote"
+  },
+  "master-ENTRY-HUME-HAVEN-HAV22": {
+   "supplier": "Complete Doors Online",
+   "product": "Hume Doors Haven HAV22 Hamptons Entrance Door",
+   "variant": "2040 x 820 x 40 / Duracote",
+   "priceIncGst": 622,
+   "sku": "HAV22D820",
+   "url": "https://completedoorsonline.com.au/products/hav22"
+  },
+  "master-ENTRY-HUME-HAVEN-HAV44": {
+   "supplier": "Complete Doors Online",
+   "product": "Hume Doors HAV44 Haven Solid Engineered Timber Entrance Door",
+   "variant": "Toughened Clear / Duracote / 2040 x 820 x 40",
+   "priceIncGst": 862,
+   "sku": "HAV44D820CLT",
+   "url": "https://completedoorsonline.com.au/products/hav44"
+  },
+  "master-ENTRY-HUME-HAVEN-HAV50": {
+   "supplier": "Complete Doors Online",
+   "product": "Hume Doors HAV50 Haven Solid Engineered Timber Entrance Door",
+   "variant": "Toughened Clear / Duracote / 2040 x 820 x 40",
+   "priceIncGst": 966,
+   "sku": "HAV50D820CLT",
+   "url": "https://completedoorsonline.com.au/products/hume-doors-hav50-haven-solid-engineered-timber-entrance-door"
+  },
+  "master-ENTRY-HUME-HAVEN-HAV66": {
+   "supplier": "Complete Doors Online",
+   "product": "Hume Doors HAV66 Haven Entrance Door",
+   "variant": "Toughened Clear / Duracote / 2040 x 820 x 40",
+   "priceIncGst": 915,
+   "sku": "HAV66D820CLT",
+   "url": "https://completedoorsonline.com.au/products/hav66"
+  },
+  "master-ENTRY-HUME-HAVEN-HAV88": {
+   "supplier": "Complete Doors Online",
+   "product": "Haven HAV88 - Duracote | Hamptons Solid Timber Entrance Door",
+   "variant": "Toughened Clear / Duracote / 2040 x 820 x 40",
+   "priceIncGst": 878,
+   "sku": "HAV88D820CLT",
+   "url": "https://completedoorsonline.com.au/products/hav88-duracote"
+  },
+  "master-ENTRY-HUME-HAVEN-HAV99": {
+   "supplier": "Complete Doors Online",
+   "product": "Hume Doors Haven HAV99 - Duracote Hamptons Entrance Door",
+   "variant": "Toughened Clear / Duracote / 2040 x 820 x 40",
+   "priceIncGst": 1074,
+   "sku": "HAV99D820CLT",
+   "url": "https://completedoorsonline.com.au/products/hav99-duracote"
+  },
+  "master-ENTRY-HUME-ILLUSION-XIL1": {
+   "supplier": "Complete Doors Online",
+   "product": "Illusion XIL1",
+   "variant": "Toughened Clear / Sliced Pacific Maple / 2040 x 820 x 40",
+   "priceIncGst": 1351,
+   "sku": "XIL1820CLT6",
+   "url": "https://completedoorsonline.com.au/products/xil1"
+  },
+  "master-ENTRY-HUME-ILLUSION-XIL6": {
+   "supplier": "Complete Doors Online",
+   "product": "Illusion XIL6",
+   "variant": "Toughened Clear / Sliced Pacific Maple / 2040 x 820 x 40",
+   "priceIncGst": 1351,
+   "sku": "XIL6820CLT6",
+   "url": "https://completedoorsonline.com.au/products/xil6"
+  },
+  "master-ENTRY-HUME-JOINERY-ENTRANCE-JST1": {
+   "supplier": "Bretts Timber & Hardware",
+   "product": "Hume Jst1 Joinery Entrance Door Spm",
+   "variant": "2040 x 820 x 40mm / Translucent",
+   "priceIncGst": 1070.82,
+   "sku": "43475",
+   "url": "https://bolt.bretts.com.au/products/hume-jst1-joinery-entrance-door-spm"
+  },
+  "master-ENTRY-HUME-JOINERY-ENTRANCE-JST10": {
+   "supplier": "Bretts Timber & Hardware",
+   "product": "Hume Jst10 Joinery Entrance Door Spm",
+   "variant": "2040 x 820 x 40mm / Clear",
+   "priceIncGst": 995.21,
+   "sku": "43739",
+   "url": "https://bolt.bretts.com.au/products/hume-jst10-joinery-entrance-door-spm"
+  },
+  "master-ENTRY-HUME-JOINERY-ENTRANCE-JST2": {
+   "supplier": "Complete Doors Online",
+   "product": "Joinery Entrance JST2 - Sliced Pacific Maple",
+   "variant": "Toughened Clear / Sliced Pacific Maple / 2040 x 820 x 40",
+   "priceIncGst": 988,
+   "sku": "JST2820CLT",
+   "url": "https://completedoorsonline.com.au/products/jst2"
+  },
+  "master-ENTRY-HUME-JOINERY-ENTRANCE-JST6": {
+   "supplier": "Complete Doors Online",
+   "product": "Hume JST6 Door | Joinery Entrance Sliced Pacific Maple",
+   "variant": "Toughened Clear / Sliced Pacific Maple / 2040 x 820 x 40",
+   "priceIncGst": 998,
+   "sku": "JST6820CLT",
+   "url": "https://completedoorsonline.com.au/products/jst6"
+  },
+  "master-ENTRY-HUME-LINEAR-ENTRANCE-XLR120": {
+   "supplier": "Complete Doors Online",
+   "product": "Linear Entrance XLR120 | Hume Solid Timber Door 2040x820x40mm",
+   "variant": "Clear / Duracote / 2040 x 820 x 40",
+   "priceIncGst": 712,
+   "sku": "XLR120D820CL",
+   "url": "https://completedoorsonline.com.au/products/xlr120"
+  },
+  "master-ENTRY-HUME-LINEAR-ENTRANCE-XLR130": {
+   "supplier": "Complete Doors Online",
+   "product": "Linear Entrance XLR130 Solid Engineered Timber Door",
+   "variant": "2040 x 820 x 40 / Duracote",
+   "priceIncGst": 391,
+   "sku": "XLR130D820",
+   "url": "https://completedoorsonline.com.au/products/xlr130"
+  },
+  "master-ENTRY-HUME-LINEAR-ENTRANCE-XLR140": {
+   "supplier": "Complete Doors Online",
+   "product": "Linear Entrance XLR140",
+   "variant": "2040 x 820 x 40 / Duracote",
+   "priceIncGst": 391,
+   "sku": "XLR140D820",
+   "url": "https://completedoorsonline.com.au/products/xlr140"
+  },
+  "master-ENTRY-HUME-LINEAR-ENTRANCE-XLR150": {
+   "supplier": "Complete Doors Online",
+   "product": "Hume Linear Entrance XLR150 Solid Engineered Timber Door",
+   "variant": "2040 x 820 x 40 / Sliced Pacific Maple",
+   "priceIncGst": 760,
+   "sku": "XLR150S820",
+   "url": "https://completedoorsonline.com.au/products/xlr150"
+  },
+  "master-ENTRY-HUME-LINEAR-ENTRANCE-XLR160": {
+   "supplier": "Complete Doors Online",
+   "product": "Linear Entrance XLR160 Solid Engineered Timber Door Hume",
+   "variant": "Clear / Sliced Pacific Maple / 2040 x 820 x 40",
+   "priceIncGst": 973,
+   "sku": "XLR160S820CL",
+   "url": "https://completedoorsonline.com.au/products/xlr160"
+  },
+  "master-ENTRY-HUME-LINEAR-ENTRANCE-XLR170": {
+   "supplier": "Complete Doors Online",
+   "product": "Hume Linear Entrance XLR170 Solid Engineered Timber Door",
+   "variant": "Duracote / 2040 x 820 x 40",
+   "priceIncGst": 391,
+   "sku": "XLR170D820",
+   "url": "https://completedoorsonline.com.au/products/xlr170"
+  },
+  "master-ENTRY-HUME-LINEAR-ENTRANCE-XLR500": {
+   "supplier": "Complete Doors Online",
+   "product": "Hume XLR500 Linear Solid Engineered Timber Entrance Door",
+   "variant": "2040 x 820 x 40 / Sliced Pacific Maple",
+   "priceIncGst": 894,
+   "sku": "XLR500S820",
+   "url": "https://completedoorsonline.com.au/products/xlr500"
+  },
+  "master-ENTRY-HUME-LINEAR-ENTRANCE-XLR510": {
+   "supplier": "Complete Doors Online",
+   "product": "Hume Linear Entrance XLR510 Solid Engineered Timber Door",
+   "variant": "2040 x 820 x 40 / Solid HMR MDF core / DuraXP",
+   "priceIncGst": 391,
+   "sku": "XLRDC510820",
+   "url": "https://completedoorsonline.com.au/products/linear-entrance-xlr510"
+  },
+  "master-ENTRY-HUME-LINEAR-ENTRANCE-XLR600": {
+   "supplier": "Complete Doors Online",
+   "product": "Hume Linear XLR600 Solid Engineered Timber Entrance Door",
+   "variant": "2040 x 820 x 40 / Sliced Pacific Maple",
+   "priceIncGst": 906,
+   "sku": "XLR600S820",
+   "url": "https://completedoorsonline.com.au/products/xlr600"
+  },
+  "master-ENTRY-HUME-LINEAR-ENTRANCE-XLR700": {
+   "supplier": "Complete Doors Online",
+   "product": "Linear Entrance XLR700 Solid Engineered Timber Door",
+   "variant": "Clear / Duracote / 2040 x 820 x 40",
+   "priceIncGst": 605,
+   "sku": "XLR700D820CL",
+   "url": "https://completedoorsonline.com.au/products/xlr700"
+  },
+  "master-ENTRY-HUME-NEWINGTON-XN1": {
+   "supplier": "Bretts Timber & Hardware",
+   "product": "Hume Newington Xn1 Solid Core Entrance Door",
+   "variant": "2040 x 820 x 40 / Clear",
+   "priceIncGst": 501.38,
+   "sku": "44196",
+   "url": "https://bolt.bretts.com.au/products/hume-xn1-newington-solid-core-entrance-door-duraxp"
+  },
+  "master-ENTRY-HUME-NEWINGTON-XN16": {
+   "supplier": "Bretts Timber & Hardware",
+   "product": "Hume Newington Xn16 Solid Core Entrance Door",
+   "variant": "2040 x 820 x 40 / Clear",
+   "priceIncGst": 615.68,
+   "sku": "6624661",
+   "url": "https://bolt.bretts.com.au/products/hume-newington-xn16-solid-core-entrance-door"
+  },
+  "master-ENTRY-HUME-NEWINGTON-XN5": {
+   "supplier": "Bretts Timber & Hardware",
+   "product": "Hume Newington Xn5 Solid Core Entrance Door",
+   "variant": "2040 x 820 x 40 / Clear",
+   "priceIncGst": 501.38,
+   "sku": "42021",
+   "url": "https://bolt.bretts.com.au/products/hume-newington-xn5-solid-core-entrance-door"
+  },
+  "master-ENTRY-HUME-NEWINGTON-XN6": {
+   "supplier": "Bretts Timber & Hardware",
+   "product": "Hume Newington Xn6 Solid Core Entrance Door",
+   "variant": "2040 x 820 x 40 / Clear",
+   "priceIncGst": 672.46,
+   "sku": "42023",
+   "url": "https://bolt.bretts.com.au/products/hu-xn6-ent-sc-dth-2040-820-40-glclr"
+  },
+  "master-ENTRY-HUME-NEWINGTON-XN7": {
+   "supplier": "Bretts Timber & Hardware",
+   "product": "Hume Newington Xn7 Solid Core Entrance Door",
+   "variant": "2040 x 820 x 40 / Clear",
+   "priceIncGst": 501.38,
+   "sku": "44197",
+   "url": "https://bolt.bretts.com.au/products/hu-xn7-ent-sc-dth-2040-820-40-gltran"
+  },
+  "master-ENTRY-HUME-NEXUS-NEX100": {
+   "supplier": "Complete Doors Online",
+   "product": "Hume NEX100 Solid Engineered Timber Entrance Door | Duracote",
+   "variant": "Laminated Clear / Duracote / 2040 x 820 x 40",
+   "priceIncGst": 881,
+   "sku": "NEX100D820CLL",
+   "url": "https://completedoorsonline.com.au/products/nex100-duracote"
+  },
+  "master-ENTRY-HUME-NEXUS-NEX30": {
+   "supplier": "Complete Doors Online",
+   "product": "Nexus NEX30 - Sliced Pacific Maple",
+   "variant": "Clear / Sliced Pacific Maple / 2040 x 820 x 40",
+   "priceIncGst": 975,
+   "sku": "NEX30S204082040CL",
+   "url": "https://completedoorsonline.com.au/products/nex30-sliced-pacific-maple"
+  },
+  "master-ENTRY-HUME-NEXUS-NEX35": {
+   "supplier": "Complete Doors Online",
+   "product": "Hume Doors Nexus NEX35 Duracote Solid Engineered Timber Entrance Door",
+   "variant": "Toughened Clear / Duracote / 2040 x 820 x 40",
+   "priceIncGst": 674,
+   "sku": "NEX35D820CLT",
+   "url": "https://completedoorsonline.com.au/products/nex35-duracote"
+  },
+  "master-ENTRY-HUME-NEXUS-NEX36": {
+   "supplier": "Complete Doors Online",
+   "product": "Hume Doors Nexus NEX36 Duracote Solid Engineered Timber Entrance Door",
+   "variant": "Laminated Clear / Duracote / 2040 x 820 x 40",
+   "priceIncGst": 692,
+   "sku": "NEX36D820CLL",
+   "url": "https://completedoorsonline.com.au/products/nex36-duracote"
+  },
+  "master-ENTRY-HUME-NEXUS-NEX38": {
+   "supplier": "Complete Doors Online",
+   "product": "Nexus NEX38 - Duracote",
+   "variant": "Laminated Clear / Duracote / 2040 x 820 x 40",
+   "priceIncGst": 699,
+   "sku": "NEX38D820CLL",
+   "url": "https://completedoorsonline.com.au/products/nex38-duracote"
+  },
+  "master-ENTRY-HUME-REGENCY-XR4": {
+   "supplier": "Complete Doors Online",
+   "product": "Hume Regency XR4 Entrance Door Duracote",
+   "variant": "Duracote / 2040 x 820 x 40",
+   "priceIncGst": 713,
+   "sku": "XR4D820",
+   "url": "https://completedoorsonline.com.au/products/xr4"
+  },
+  "master-ENTRY-HUME-REGENCY-XR5": {
+   "supplier": "Complete Doors Online",
+   "product": "Hume Doors Regency XR5 Entrance Door | Duracote Finish",
+   "variant": "Toughened Clear / Duracote / 2040 x 820 x 40",
+   "priceIncGst": 1132,
+   "sku": "XR5D820CLT",
+   "url": "https://completedoorsonline.com.au/products/xr5-duracote"
+  },
+  "master-ENTRY-HUME-SAVOY-1200-XS24-1200": {
+   "supplier": "Bretts Timber & Hardware",
+   "product": "Hume Savoy Xs24 Entrance Door Spm",
+   "variant": "2040 x 1200 x 40mm / Clear",
+   "priceIncGst": 1449.16,
+   "sku": "43829",
+   "url": "https://bolt.bretts.com.au/products/hume-savoy-xs24-entrance-door-spm"
+  },
+  "master-ENTRY-HUME-SAVOY-1200-XS26-1200": {
+   "supplier": "Bretts Timber & Hardware",
+   "product": "Hume Savoy Xs26 Entrance Door Spm",
+   "variant": "2040 x 1200 x 40mm / Clear",
+   "priceIncGst": 1449.16,
+   "sku": "48412",
+   "url": "https://bolt.bretts.com.au/products/hume-savoy-xs26-entrance-door-spm"
+  },
+  "master-ENTRY-HUME-SAVOY-1200-XS28-1200": {
+   "supplier": "Bretts Timber & Hardware",
+   "product": "Hume Savoy Xs28 Entrance Door Spm",
+   "variant": "2040 x 1200 x 40mm / Clear",
+   "priceIncGst": 1534.86,
+   "sku": "44205",
+   "url": "https://bolt.bretts.com.au/products/hume-savoy-xs28-entrance-door-spm"
+  },
+  "master-ENTRY-HUME-SAVOY-1200-XS45-1200": {
+   "supplier": "Bretts Timber & Hardware",
+   "product": "Hume Savoy Xs45 Entrance Door Spm",
+   "variant": "2040 x 1200 x 40mm / Translucent",
+   "priceIncGst": 1659.67,
+   "sku": "48415",
+   "url": "https://bolt.bretts.com.au/products/hume-savoy-xs45-entrance-door-spm"
+  },
+  "master-ENTRY-HUME-SAVOY-820-XS11": {
+   "supplier": "Bretts Timber & Hardware",
+   "product": "Hume Savoy Xs11 Entrance Door Spm",
+   "variant": "2040 x 820 x 40mm / Clear",
+   "priceIncGst": 556.94,
+   "sku": "44368",
+   "url": "https://bolt.bretts.com.au/products/hume-savoy-xs11-entrance-door-spm"
+  },
+  "master-ENTRY-HUME-SAVOY-820-XS24-820": {
+   "supplier": "Bretts Timber & Hardware",
+   "product": "Hume Savoy Xs24 Entrance Door Spm",
+   "variant": "2040 x 820 x 40mm / Clear",
+   "priceIncGst": 586.94,
+   "sku": "48409",
+   "url": "https://bolt.bretts.com.au/products/hume-savoy-xs24-entrance-door-spm"
+  },
+  "master-ENTRY-HUME-SAVOY-820-XS26-820": {
+   "supplier": "Bretts Timber & Hardware",
+   "product": "Hume Savoy Xs26 Entrance Door Spm",
+   "variant": "2040 x 820 x 40mm / Clear",
+   "priceIncGst": 586.94,
+   "sku": "48410",
+   "url": "https://bolt.bretts.com.au/products/hume-savoy-xs26-entrance-door-spm"
+  },
+  "master-ENTRY-HUME-VAUCLUSE-PREMIER-XVP11": {
+   "supplier": "Complete Doors Online",
+   "product": "Hume Vaucluse Premier XVP11 Solid Engineered Timber Entrance Door",
+   "variant": "Duracote / 2040 x 820 x 40",
+   "priceIncGst": 546,
+   "sku": "XVP11D820",
+   "url": "https://completedoorsonline.com.au/products/vaucluse-premier-xvp11"
+  },
+  "master-ENTRY-HUME-VAUCLUSE-PREMIER-XVP12": {
+   "supplier": "Complete Doors Online",
+   "product": "Hume XVP12 Vaucluse Premier Solid Engineered Timber Entrance Door",
+   "variant": "Clear / Duracote / 2040 x 820 x 40",
+   "priceIncGst": 846,
+   "sku": "XVP12D820CL",
+   "url": "https://completedoorsonline.com.au/products/vaucluse-premier-xvp12-duracote"
+  },
+  "master-ENTRY-HUME-VAUCLUSE-PREMIER-XVP20": {
+   "supplier": "Complete Doors Online",
+   "product": "Vaucluse Premier XVP20 Solid Engineered Timber Entrance Door",
+   "variant": "Duracote / 2040 x 820 x 40",
+   "priceIncGst": 557,
+   "sku": "XVP20D820",
+   "url": "https://completedoorsonline.com.au/products/vaucluse-premier-xvp20"
+  },
+  "master-ENTRY-HUME-VAUCLUSE-PREMIER-XVP22": {
+   "supplier": "Complete Doors Online",
+   "product": "Hume Doors Vaucluse Premier XVP22 Solid Timber Entrance Door",
+   "variant": "Clear / Duracote / 2040 x 820 x 40",
+   "priceIncGst": 978,
+   "sku": "XVP22D820CL",
+   "url": "https://completedoorsonline.com.au/products/vaucluse-premier-xvp22-duracote"
+  },
+  "master-ENTRY-HUME-VAUCLUSE-XV1": {
+   "supplier": "Bretts Timber & Hardware",
+   "product": "Hume Vauclause Xv1 Solid Core Entrance Door",
+   "variant": "2040 x 820 x 40",
+   "priceIncGst": 320.2,
+   "sku": "43253",
+   "url": "https://bolt.bretts.com.au/products/hu-xv1-ent-sc-dth-2040-820-40"
+  },
+  "master-ENTRY-HUME-VAUCLUSE-XV10": {
+   "supplier": "Bretts Timber & Hardware",
+   "product": "Hume Vauclause Xv10 Solid Core Entrance Door",
+   "variant": "2040 x 820 x 40",
+   "priceIncGst": 320.2,
+   "sku": "43258",
+   "url": "https://bolt.bretts.com.au/products/hu-xv10-ent-sc-dth-2040-820-40"
+  },
+  "master-ENTRY-HUME-VAUCLUSE-XV14": {
+   "supplier": "Bretts Timber & Hardware",
+   "product": "Hume Vauclause Xv14 Solid Core Entrance Door - Design One Side Only",
+   "variant": "2040 x 820 x 40",
+   "priceIncGst": 320.2,
+   "sku": "43259",
+   "url": "https://bolt.bretts.com.au/products/hu-xv14-ent-sc-dth-2040-820-40"
+  },
+  "master-ENTRY-HUME-VAUCLUSE-XV18": {
+   "supplier": "Bretts Timber & Hardware",
+   "product": "Hume Vauclause Xv18 Solid Core Entrance Door",
+   "variant": "2040 x 820 x 40",
+   "priceIncGst": 320.2,
+   "sku": "6624631",
+   "url": "https://bolt.bretts.com.au/products/hu-xv18-ent-sc-dth-2040-820-40"
+  },
+  "master-ENTRY-HUME-VAUCLUSE-XV20": {
+   "supplier": "Bretts Timber & Hardware",
+   "product": "Hume Vauclause Xv20 Solid Core Entrance Door",
+   "variant": "2040 x 820 x 40",
+   "priceIncGst": 320.2,
+   "sku": "43260",
+   "url": "https://bolt.bretts.com.au/products/hu-xv20-ent-sc-dth-2040-820-40"
+  },
+  "master-ENTRY-HUME-VAUCLUSE-XV31": {
+   "supplier": "Complete Doors Online",
+   "product": "Hume Vaucluse XV31 Solid Engineered Timber Entrance Door",
+   "variant": "Duracote / 2040 x 820 x 40 / Both Sides",
+   "priceIncGst": 533,
+   "sku": "VaucluseVC31D820",
+   "url": "https://completedoorsonline.com.au/products/vaucluse-xv31"
+  },
+  "master-ENTRY-HUME-VAUCLUSE-XV32": {
+   "supplier": "Complete Doors Online",
+   "product": "Vaucluse XV32",
+   "variant": "Duracote / 2040 x 820 x 40 / Both Sides",
+   "priceIncGst": 533,
+   "sku": "VaucluseVC32D820",
+   "url": "https://completedoorsonline.com.au/products/vaucluse-xv31-copy"
+  },
+  "master-ENTRY-HUME-VAUCLUSE-XV4": {
+   "supplier": "Bretts Timber & Hardware",
+   "product": "Hume Vauclause Xv4 Solid Core Entrance Door Design One Side Only",
+   "variant": "2040 x 820 x 40",
+   "priceIncGst": 320.2,
+   "sku": "43254",
+   "url": "https://bolt.bretts.com.au/products/hu-xv4-ent-sc-dth-2040-820-40"
+  },
+  "master-ENTRY-HUME-VAUCLUSE-XV7": {
+   "supplier": "Complete Doors Online",
+   "product": "Vaucluse XV7",
+   "variant": "Duracote / 2040 x 820 x 40 / Both Sides",
+   "priceIncGst": 533,
+   "sku": "VaucluseXV7820D",
+   "url": "https://completedoorsonline.com.au/products/vaucluse-xv7"
+  },
+  "master-ENTRY-HUME-VAUCLUSE-XV9": {
+   "supplier": "Bretts Timber & Hardware",
+   "product": "Hume Vauclause Xv9 Solid Core Entrance Door",
+   "variant": "2040 x 820 x 40",
+   "priceIncGst": 320.2,
+   "sku": "43257",
+   "url": "https://bolt.bretts.com.au/products/hu-xv9-ent-sc-dth-2040-820-40"
+  },
+  "master-ENTRY-CORINTHIAN-URBAN-PURB-1": {
+   "supplier": "Bunnings Warehouse",
+   "product": "Corinthian Entrance Door Primed Urban PURB1",
+   "variant": "2040 x 820 x 40mm",
+   "priceIncGst": 290,
+   "url": "https://www.bunnings.com.au/search/products?q=corinthian%20entrance%20door"
+  },
+  "master-ENTRY-CORINTHIAN-URBAN-PURB-4": {
+   "supplier": "Bunnings Warehouse",
+   "product": "Corinthian Entrance Door Primed Urban PURB4",
+   "variant": "2040 x 820 x 40mm",
+   "priceIncGst": 290,
+   "url": "https://www.bunnings.com.au/search/products?q=corinthian%20entrance%20door"
+  },
+  "master-ENTRY-HUME-BUSH-FIRE-RESISTANT-BAL19-BAL29-DOORS-BFR4": {
+   "supplier": "Bunnings Warehouse",
+   "product": "Hume Entrance Door Duracote Bushfire G1 Glass BFR4",
+   "variant": "2040 x 820 x 40mm",
+   "priceIncGst": 835,
+   "url": "https://www.bunnings.com.au/hume-2040-x-820-x-40mm-entrance-door-duracote-bushfire-g1-glass-bfr4_p2036019"
+  },
+  "master-ENTRY-HUME-SAVOY-820-XS28-820": {
+   "supplier": "Bunnings Warehouse",
+   "product": "Hume Entrance Door Savoy Translucent Glass XS28",
+   "variant": "2040 x 820 x 40mm",
+   "priceIncGst": 690,
+   "url": "https://www.bunnings.com.au/hume-2040-x-820-x-40mm-entrance-door-savoy-translucent-glass-xs28_p1976216"
+  },
+  "master-ENTRY-HUME-SAVOY-820-XS45-820": {
+   "supplier": "Bunnings Warehouse",
+   "product": "Hume Entrance Door SPM Savoy Translucent Glass XS45",
+   "variant": "2040 x 820 x 40mm",
+   "priceIncGst": 1120,
+   "url": "https://www.bunnings.com.au/search/products?q=hume%20savoy%20xs45"
+  },
+  "master-ENTRY-HUME-ILLUSION-XIL21": {
+   "supplier": "Bunnings Warehouse",
+   "product": "Hume Illusion SPM External Door XIL21 - Grey",
+   "variant": "2040 x 1200 x 40mm",
+   "priceIncGst": 1530,
+   "url": "https://www.bunnings.com.au/search/products?q=hume%20illusion%20entrance%20door"
+  },
+  "master-ENTRY-HUME-GLASS-OPENING-XF1": {
+   "supplier": "Bunnings Warehouse",
+   "product": "Hume Entrance Door Duracote Glass Opening Clear XF1",
+   "variant": "820 x 2040 x 40mm",
+   "priceIncGst": 320,
+   "url": "https://www.bunnings.com.au/search/products?q=hume%20xf1"
+  },
+  "master-ENTRY-CORINTHIAN-DECO-WHITE-OAK-ENTRANCE-EXADECO-WS-4S": {
+   "supplier": "Complete Doors Online",
+   "product": "Deco White Oak Entrance EXADECO WS 4S",
+   "variant": "2040 x 1020 x 40",
+   "priceIncGst": 903,
+   "sku": "EXADECOWS4S2040102040",
+   "url": "https://completedoorsonline.com.au/products/deco-white-oak-entrance-exadeco-ws-4s"
+  },
+  "master-ENTRY-CORINTHIAN-PENINSULA-PPEN-WS-4": {
+   "supplier": "Complete Doors Online",
+   "product": "Peninsula PPENWS 4",
+   "variant": "2040 x 1020 x 40",
+   "priceIncGst": 1052,
+   "sku": "PPENWS42040102040",
+   "url": "https://completedoorsonline.com.au/products/ppenws-4"
+  },
+  "master-ENTRY-HUME-BUSH-FIRE-RESISTANT-BAL19-BAL29-DOORS-BFR14": {
+   "supplier": "Complete Doors Online",
+   "product": "BFR14 - DuraXP",
+   "variant": "Clear / 2040 x 820 x 40",
+   "priceIncGst": 814,
+   "sku": "BFR14DuraXP204082040CL",
+   "url": "https://completedoorsonline.com.au/products/bfr14-duraxp"
+  },
+  "master-ENTRY-HUME-BUSH-FIRE-RESISTANT-BAL19-BAL29-DOORS-BFR15": {
+   "supplier": "Complete Doors Online",
+   "product": "BFR15 - DuraXP",
+   "variant": "Clear / 2040 x 820 x 40",
+   "priceIncGst": 764,
+   "sku": "BFR15DuraXP204082040CL",
+   "url": "https://completedoorsonline.com.au/products/bfr15-duraxp"
+  },
+  "master-ENTRY-HUME-HAVEN-HAV45": {
+   "supplier": "Complete Doors Online",
+   "product": "Haven HAV45 SL",
+   "variant": "Toughened Clear / Duracote / 2040 x 400 x 40",
+   "priceIncGst": 604,
+   "sku": "HAV45SD400CLT",
+   "url": "https://completedoorsonline.com.au/products/hav45sl"
+  },
+  "master-ENTRY-HUME-HAVEN-HAV67": {
+   "supplier": "Complete Doors Online",
+   "product": "Hume Doors Haven HAV67 Solid Engineered Timber Entrance Door, Duracote Finish",
+   "variant": "Toughened Clear / Duracote / 2040 x 400 x 40",
+   "priceIncGst": 545,
+   "sku": "HAV67D400CLT",
+   "url": "https://completedoorsonline.com.au/products/hav67-duracote"
+  },
+  "master-ENTRY-HUME-HAVEN-HAV89": {
+   "supplier": "Complete Doors Online",
+   "product": "Haven HAV89 - Duracote",
+   "variant": "Toughened Clear / Duracote / 2040 x 400 x 40",
+   "priceIncGst": 575,
+   "sku": "HAV89D400CLT",
+   "url": "https://completedoorsonline.com.au/products/hav89-duracote"
+  },
+  "master-ENTRY-HUME-ILLUSION-XIL26": {
+   "supplier": "Complete Doors Online",
+   "product": "Illusion XIL26",
+   "variant": "Toughened Clear / Sliced Pacific Maple / 2040 x 1200 x 40",
+   "priceIncGst": 1641,
+   "sku": "XIL261200CLT6",
+   "url": "https://completedoorsonline.com.au/products/xil26"
+  },
+  "master-ENTRY-HUME-LINEAR-ENTRANCE-XLR500-1200": {
+   "supplier": "Complete Doors Online",
+   "product": "Hume XLR500 Linear Solid Engineered Timber Entrance Door",
+   "variant": "2040 x 1200 x 40 / Sliced Pacific Maple",
+   "priceIncGst": 1388,
+   "sku": "XLR500S1200",
+   "url": "https://completedoorsonline.com.au/products/xlr500"
+  },
+  "master-ENTRY-HUME-LINEAR-ENTRANCE-XLR610": {
+   "supplier": "Complete Doors Online",
+   "product": "Linear Entrance XLR610",
+   "variant": "2040 x 1200 x 40 / Solid HMR MDF core / White",
+   "priceIncGst": 897,
+   "sku": "XLR610WHT1200",
+   "url": "https://completedoorsonline.com.au/products/linear-entrance-xlr600-copy"
+  },
+  "master-ENTRY-HUME-NEWINGTON-XN11": {
+   "supplier": "Complete Doors Online",
+   "product": "Newington XN11 - Duracote",
+   "variant": "Clear / Duracote / 2040 x 400 x 40",
+   "priceIncGst": 443,
+   "sku": "XN11D400CL",
+   "url": "https://completedoorsonline.com.au/products/xn11-duracote"
+  },
+  "master-ENTRY-HUME-NEWINGTON-XN12": {
+   "supplier": "Complete Doors Online",
+   "product": "Newington XN12 - Duracote",
+   "variant": "Clear / Duracote / 2040 x 400 x 40",
+   "priceIncGst": 536,
+   "sku": "XN12D400CL",
+   "url": "https://completedoorsonline.com.au/products/xn12-duracote"
+  },
+  "master-ENTRY-HUME-NEWINGTON-XN9": {
+   "supplier": "Complete Doors Online",
+   "product": "Hume Newington XN9 Duracote Solid Engineered Timber Entrance Door",
+   "variant": "Toughened Clear / Duracote / 2040 x 400 x 40",
+   "priceIncGst": 482,
+   "sku": "XN9D400CLT",
+   "url": "https://completedoorsonline.com.au/products/xn9-duracote"
+  },
+  "master-ENTRY-HUME-NEXUS-NEX40": {
+   "supplier": "Complete Doors Online",
+   "product": "Nexus NEX40 - Duracote",
+   "variant": "Clear / Duracote / 2040 x 1200 x 40",
+   "priceIncGst": 1238,
+   "sku": "NEX40D1200CL",
+   "url": "https://completedoorsonline.com.au/products/nex40-duracote"
+  },
+  "master-ENTRY-HUME-REGENCY-XR4-1200": {
+   "supplier": "Complete Doors Online",
+   "product": "Hume Regency XR4 Entrance Door Duracote",
+   "variant": "Duracote / 2040 x 1200 x 40",
+   "priceIncGst": 1217,
+   "sku": "XR4D1200",
+   "url": "https://completedoorsonline.com.au/products/xr4"
+  }
+ },
+ "items": [
+  {
+   "key": "jamb-90x19-5.4m",
+   "match": {
+    "quantityKey": [
+     "jamb90x19StockLengthsEach"
+    ]
+   },
+   "supplier": "Bretts Timber & Hardware",
+   "product": "Primed Finger Jointed Pine Dressed All Round (internal jamb board)",
+   "variant": "92 x 18mm / 5.4m",
+   "price": 22.69,
+   "sku": "200849-5.4",
+   "url": "https://bolt.bretts.com.au/products/pine-moulding-fj-dar-untreated-primed-1",
+   "note": "Regular price; 92 x 18 is the stocked equivalent of 90 x 19."
+  },
+  {
+   "key": "jamb-110x19-5.4m",
+   "match": {
+    "quantityKey": [
+     "jamb110x19StockLengthsEach"
+    ]
+   },
+   "supplier": "Bretts Timber & Hardware",
+   "product": "Primed Finger Jointed Pine Dressed All Round (internal jamb board)",
+   "variant": "112 x 18mm / 5.4m",
+   "price": 29.17,
+   "sku": "200850-5.4",
+   "url": "https://bolt.bretts.com.au/products/pine-moulding-fj-dar-untreated-primed-1",
+   "note": "Regular price; 112 x 18 is the stocked equivalent of 110 x 19."
+  },
+  {
+   "key": "trilock-contour-dbl-cyl-sc",
+   "match": {
+    "productCode": [
+     "EDF-GAINSBOROUGH-8951CONSC"
+    ]
+   },
+   "supplier": "Bunnings Warehouse",
+   "product": "Gainsborough Satin Chrome Contemporary Contour Double Cylinder Entrance Trilock",
+   "variant": "I/N 0800379",
+   "price": 299.25,
+   "url": "https://www.bunnings.com.au/gainsborough-satin-chrome-trilock-contemporary-contour-double-cylinder-entrance-lever-set_p0800379"
+  },
+  {
+   "key": "choice-bailey-passage-sc",
+   "match": {
+    "idIncludes": [
+     "master-INT-GAINSBOROUGH-105BAISC"
+    ]
+   },
+   "supplier": "Canterbury Timbers",
+   "product": "Gainsborough Choice Bailey Passage Lever Set in Satin Chrome",
+   "variant": "SKU 74110391",
+   "price": 60.65,
+   "url": "https://www.canterburytimbers.com.au/products/choice-bailey-passage-lever-set-in-satin-chrome"
+  },
+  {
+   "key": "cavity-820-internal-stud",
+   "match": {
+    "idIncludes": [
+     "cavity-cage:820x2040"
+    ]
+   },
+   "supplier": "Bretts Timber & Hardware",
+   "product": "Hume Evolution Cavity Unit",
+   "variant": "2040 x 820 x 90mm",
+   "price": 240.41,
+   "sku": "40007",
+   "url": "https://bolt.bretts.com.au/products/hume-evoluton-cavity-unit",
+   "note": "Regular price. Cavity sliders sit in internal stud walls; 90 mm stud, as for this house's other cavity slider."
+  },
+  {
+   "key": "phoenix-vivid-shower-bath-mixer",
+   "match": {
+    "productCode": [
+     "PLB-HNC-V780-00-1"
+    ]
+   },
+   "supplier": "SP Plus",
+   "product": "Phoenix Vivid Shower/Bath Mixer Chrome",
+   "variant": "V780 CHR",
+   "price": 270.6,
+   "url": "https://spplus.com.au/vivid-shower-bath-mixer-chrome.html",
+   "note": "Phoenix code V780 CHR; Harvey Norman Commercial lists the same mixer as V780-00-1 (price POA). Same price at Burdens Bathrooms."
+  },
+  {
+   "key": "entry-frame-assembled-2107x865",
+   "match": {
+    "ids": [
+     "quote-921"
+    ]
+   },
+   "supplier": "Bunnings Warehouse",
+   "product": "Hume 2107 x 865 x 40mm Timber Entry Assembled Door Frame",
+   "variant": "I/N 2036272 (primed pine, paint grade)",
+   "price": 300,
+   "url": "https://www.bunnings.com.au/hume-doors-timber-2107-x-865-x-40mm-assembled-door-frame-entry_p2036272",
+   "note": "Pre-assembled timber entry frame for an 820 door."
+  },
+  {
+   "key": "data-point",
+   "match": {
+    "idPattern": "^electrical-schedule:.+:data$"
+   },
+   "supplier": "Owner allowance",
+   "product": "Data point",
+   "price": 120,
+   "gstIncluded": false,
+   "note": "Owner rate 11 Nov 2026, ex GST."
+  },
+  {
+   "key": "cavity-1020",
+   "match": {
+    "idIncludes": [
+     "cavity-cage:1020x2040"
+    ]
+   },
+   "supplier": "Owner allowance",
+   "product": "1020 cavity sliding door unit",
+   "price": 150,
+   "gstIncluded": false,
+   "note": "Owner allowance 11 Nov 2026, ex GST (bought for this house; not a current stock line online)."
+  },
+  {
+   "key": "double-entry-door-frame",
+   "match": {
+    "ids": [
+     "quote-908"
+    ]
+   },
+   "supplier": "Owner allowance",
+   "product": "Double entry door frame (custom made by Hume)",
+   "price": 320,
+   "gstIncluded": false,
+   "note": "Owner allowance 11 Nov 2026, ex GST."
+  }
+ ],
+ "tilingLabour": {
+  "standardM2": 80,
+  "largeFormatM2": 110,
+  "largeFormatMinMm": 600,
+  "skirtingLm": 0,
+  "gstIncluded": false,
+  "note": "Owner tiling labour rates 11 Nov 2026, ex GST: $80/m2 standard tiles, $110/m2 for 600 x 600 and larger, $0 per LM skirting."
+ }
+}

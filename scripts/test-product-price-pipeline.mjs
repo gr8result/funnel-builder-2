@@ -4,6 +4,7 @@
 //
 // Usage: node --import ./scripts/register-extensionless-loader.mjs --import ./scripts/register-json-loader.mjs scripts/test-product-price-pipeline.mjs
 import assert from "node:assert/strict";
+import supplierPrices from "../data/pricing/supplier-prices.json";
 import { getMasterProducts, isProductVisible, toCanonicalProductContract } from "../lib/product-library/catalogueService.js";
 import { masterProductToClientSelectionProduct, resolveProductPrice } from "../lib/product-library/catalogueModel.js";
 import { productPriceLabel } from "../lib/product-library/productPresentation.js";
@@ -62,9 +63,13 @@ for (const [label, product, requirementKey] of [["Hume door", hume, "entry-door"
   // The Quotation Builder holds ex-GST base rates (it adds GST itself): a GST-inclusive Product
   // Library price arrives as price / 1.1 - the same price, stated ex GST.
   const incGst = row.source === "client-selections-allocated-product" ? /inc(l|.)?s*gst/i.test(product.attributes?.priceBasis || "") : row.entryDoorLibraryRow ? toCanonicalProductContract(product).priceIncludesGst : false;
-  const expectedQuoteRate = library.price === null ? null : incGst ? Math.round((library.price / 1.1) * 10000) / 10000 : library.price;
+  const libraryQuoteRate = library.price === null ? null : incGst ? Math.round((library.price / 1.1) * 10000) / 10000 : library.price;
+  // A door the Product Library cannot price takes its supplier store price, ex GST (owner decision 11 Nov 2026,
+  // data/pricing/supplier-prices.json via lib/construction-estimation/ownerQuotePrices.js).
+  const supplierDoor = row.entryDoorLibraryRow && library.price === null ? supplierPrices.entryDoors?.[product.productId] : null;
+  const expectedQuoteRate = supplierDoor ? Math.round((supplierDoor.priceIncGst / 1.1) * 100) / 100 : libraryQuoteRate;
   assert.equal(quoteRate, expectedQuoteRate, `${label}: Quotation Builder price`);
-  if (library.price === null) {
+  if (expectedQuoteRate === null) {
     assert.equal(row.cost, 0);
     assert.notEqual(productPriceLabel(product), "$0.00");
   } else {

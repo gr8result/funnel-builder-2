@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { quotationBoqStatus } from "../lib/builders/quotationRateReview.js";
 import { readFileSync } from 'node:fs';
 import { createTakeoffSchedule, createJobSetupPayload, createJobSetupWindowSchedule } from '../components/construction-estimation/ai-plan-takeoff/takeoffSchedule.js';
 import { V4_DATA_SECTIONS } from '../lib/construction-estimation/estimateWorksheetV4Schema.js';
@@ -96,7 +97,7 @@ assert.equal(buildProcurement(imported, calculated, procurement).length, procure
 // Also exercise the BOQ and procurement records built for the commercial module.
 const api = readFileSync('pages/api/builders/sync-commercial-snapshot.js', 'utf8').replace(/\r\n/g, '\n');
 const snapshotSource = api.slice(api.indexOf('function buildBoqItemRows('), api.indexOf('\nasync function insertRows(', api.indexOf('function buildBoqItemRows(')));
-const snapshot = new Function('quotationSectionsForFinalBoq', 'shouldIncludeQuoteRowInFinalBoq', 'takeoffProcurementDetails', 'refreshTakeoffProcurementItems', 'quoteQuantity', 'quoteRate', 'quoteLineTotal', `
+const snapshot = new Function('quotationSectionsForFinalBoq', 'shouldIncludeQuoteRowInFinalBoq', 'takeoffProcurementDetails', 'refreshTakeoffProcurementItems', 'quoteQuantity', 'quoteRate', 'quoteLineTotal', 'quotationBoqStatus', `
   const firstText = (...values) => values.find((value) => value !== undefined && value !== null && String(value).trim()) || '';
   const textOrNull = (value) => value || null;
   const decimalNumber = (value) => Number(value) || 0;
@@ -106,7 +107,7 @@ const snapshot = new Function('quotationSectionsForFinalBoq', 'shouldIncludeQuot
   const normaliseStatus = (value, fallback) => value || fallback;
   const dateOrNull = textOrNull;
   ${snapshotSource}; return { buildBoqItemRows, buildProcurementRows };
-`)(quotationSectionsForFinalBoq, shouldIncludeQuoteRowInFinalBoq, takeoffProcurementDetails, refreshTakeoffProcurementItems, quoteQuantity, quoteRate, quoteLineTotal);
+`)(quotationSectionsForFinalBoq, shouldIncludeQuoteRowInFinalBoq, takeoffProcurementDetails, refreshTakeoffProcurementItems, quoteQuantity, quoteRate, quoteLineTotal, quotationBoqStatus);
 const snapshotBoq = snapshot.buildBoqItemRows({ calculated, sectionMap: new Map() });
 const snapshotProcurement = snapshot.buildProcurementRows({ workbook: imported, calculated, boqItemMap: new Map() });
 for (const rows of [snapshotBoq, snapshotProcurement]) {

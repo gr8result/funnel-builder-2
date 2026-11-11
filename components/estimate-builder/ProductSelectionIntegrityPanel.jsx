@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { PRODUCT_SELECTION_OUTCOME, reconcileProductSelections } from "../../lib/builders/productSelectionIntegrity.js";
 import { quotationRateReviewRows } from "../../lib/builders/quotationRateReview.js";
@@ -86,7 +86,7 @@ function rowDomId(...parts) {
 export default function ProductSelectionIntegrityPanel({ sheet, title = "Selected product financial integrity" }) {
   const workbook = sheet.workbook;
   const workspaceId = workbook.workspaceId;
-  const [, setMappingVersion] = useState(0);
+  const [mappingVersion, setMappingVersion] = useState(0);
   const router = useRouter();
   const [reviewOpen, setReviewOpen] = useState(false);
   const [actionMessage, setActionMessage] = useState("");
@@ -99,8 +99,15 @@ export default function ProductSelectionIntegrityPanel({ sheet, title = "Selecte
     // The hook returns fresh action closures per render; workspace identity is the reload boundary.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspaceId]);
-  const audit = useMemo(() => sheet.productSelectionIntegrity?.()
-    || reconcileProductSelections({ workbook, mappings: sheet.selectionRequirementMappings || [] }), [workbook, sheet.selectionRequirementMappings, sheet.productSelectionIntegrity]);
+  // The audit reconciles every selected product against the whole quotation. It depends on the job,
+  // the requirement mappings and their reload, not on the hook's action function, which is a new
+  // closure on every render (as a dependency it re-ran the audit on every render, ~7 s each on a large
+  // job). It follows the job through a deferred value so an edit paints before the audit runs.
+  const auditWorkbook = useDeferredValue(workbook);
+  const productSelectionIntegrityRef = useRef(sheet.productSelectionIntegrity);
+  productSelectionIntegrityRef.current = sheet.productSelectionIntegrity;
+  const audit = useMemo(() => productSelectionIntegrityRef.current?.()
+    || reconcileProductSelections({ workbook: auditWorkbook, mappings: sheet.selectionRequirementMappings || [] }), [auditWorkbook, sheet.selectionRequirementMappings, mappingVersion]);
   const rateReviewRows = useMemo(() => quotationRateReviewRows(sheet.preview?.quotation || {}), [sheet.preview?.quotation]);
   const review = useMemo(() => commercialIssueReview({ audit, rateReviewRows, workbook }), [audit, rateReviewRows, workbook]);
   const gateClear = review.total === 0 && (audit.procurementDuplicates || []).length === 0;

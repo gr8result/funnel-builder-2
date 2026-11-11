@@ -202,8 +202,14 @@ check('14 AN OLD SAVED JOB BECOMES CANONICAL DATA', () => {
 });
 check('15 NO OLD ROOM SECTIONS REAPPEAR', () => {
   const old = { ...base, cabinetryDatasetRevision: 'older', quotation: { ...base.quotation, BENCHTOPS: { rows: [{ id: 'x', item: 'Old benchtop', quantity: 3 }] }, WARDROBES: { rows: [] }, LAUNDRY: { rows: [] }, 'CABINETRY - KITCHEN': { rows: [] }, 'BUTLERS PANTRY': { rows: [] } } };
-  const sections = Object.keys(reconcileCabinetryQuotation(old, owner).quotation).filter(isCabinetrySection);
-  assert.deepEqual(sections, ['CABINETRY']);
+  // Owner rule (9 Nov 2026): the cabinetry rebuild only rebuilds CABINETRY. A saved job's other cabinetry
+  // sections are builder data: they are kept with their rows, never deleted or merged.
+  const reconciled = reconcileCabinetryQuotation(old, owner).quotation;
+  const sections = Object.keys(reconciled).filter(isCabinetrySection);
+  assert.deepEqual([...sections].sort(), ['BENCHTOPS', 'BUTLERS PANTRY', 'CABINETRY', 'CABINETRY - KITCHEN', 'LAUNDRY', 'WARDROBES']);
+  assert.deepEqual(reconciled.BENCHTOPS.rows, old.quotation.BENCHTOPS.rows, 'old section rows kept as saved');
+  assert(reconciled.CABINETRY.rows.length > 0, 'CABINETRY is rebuilt');
+  // A new job never gets the old room sections.
   assert.deepEqual(Object.keys(apply(first, owner).quotation).filter(isCabinetrySection), ['CABINETRY']);
 });
 check('16 COLLAPSE / EXPAND IS DISPLAY ONLY', () => {

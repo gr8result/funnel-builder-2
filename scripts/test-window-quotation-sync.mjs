@@ -166,7 +166,8 @@ const calculated = calculateEstimateBuilderWorkbook(section53Sync.workbook);
 console.log = quietLog;
 const calculatedRows = calculated.quotation["WINDOWS (46)"].rows;
 assert.equal(calculatedRows.some((row) => /FLYSCREENS - ALLOWANCE/.test(row.item)), false, "the obsolete 10% flyscreen allowance row is removed once catalogue rows are synced");
-assert.equal(calculatedRows.some((row) => row.item === "WINDOWS QUOTE"), false, "the obsolete WINDOWS QUOTE placeholder is removed once catalogue rows are synced");
+// Builder rows are never deleted (owner rule, 8 Nov 2026): the old WINDOWS QUOTE placeholder stays but is not charged.
+assert.equal(calculatedRows.filter((row) => row.item === "WINDOWS QUOTE").reduce((total, row) => total + (Number(row.cost) || 0), 0), 0, "the obsolete WINDOWS QUOTE placeholder is not charged once catalogue rows are synced");
 assert.ok(calculatedRows.some((row) => row.item === "ITEM"), "unrelated existing Section 53 rows stay");
 const calculatedQx1218 = calculatedRows.find((row) => row.productCode === "QX1218");
 assert.equal(calculatedQx1218.qty, 6);
