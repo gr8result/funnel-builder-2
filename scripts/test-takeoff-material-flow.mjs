@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { quotationBoqStatus } from '../lib/builders/quotationRateReview.js';
 import { createTakeoffSchedule, createJobSetupPayload, createJobSetupWindowSchedule, createInternalDoorSizeSchedule, createRobeSlidingDoorSchedule, createInternalDoorJambTrace, createInternalDoorReconciliationTrace, createCavitySliderCageSchedule } from '../components/construction-estimation/ai-plan-takeoff/takeoffSchedule.js';
 import { createJobData, resolveAiPlanTakeoffJobData } from '../components/construction-estimation/ai-plan-takeoff/jobPersistence.js';
 import { INPUT_DATA_SHEET_TEMPLATE } from '../lib/construction-estimation/inputDataSheetTemplate.js';
@@ -357,8 +358,10 @@ async function checkManualSave({ editDuringSave = false, verified = true } = {})
 await checkManualSave();
 await checkManualSave({ editDuringSave: true });
 await checkManualSave({ verified: false });
-const normalizeSource = hookSource.slice(hookSource.indexOf('function normalizeWorkbook('), hookSource.indexOf('\nfunction normalizeProductLibrary('));
-const normalizeWorkbook = new Function('restoreCompleteWorkbook', 'createEstimateBuilderWorkbookDefaults', 'normalizeTakeoffInputSection', 'V4_DATA_SECTIONS', 'workbookHasExplicitJobIdentity', `${normalizeSource}; return normalizeWorkbook;`)(restoreCompleteWorkbook, () => workbook(), normalizeTakeoffInputSection, V4_DATA_SECTIONS, () => false);
+// The takeoff part of the live restore (useEstimateBuilderWorkbook normalizeWorkbook): restoreCompleteWorkbook,
+// then normalizeTakeoffInputSection on the Input Data Sheet. normalizeWorkbook itself now also wires quotation
+// and selection modules, so it is no longer lifted out of the hook source here; the two steps are called as it calls them.
+const normalizeWorkbook = (saved) => { const restored = restoreCompleteWorkbook(workbook(), saved); return restored.data?.inputDataSheet ? { ...restored, data: { ...restored.data, inputDataSheet: normalizeTakeoffInputSection(restored.data.inputDataSheet, V4_DATA_SECTIONS.find((section) => section.key === 'inputDataSheet').rows) } } : restored; };
 const actualRestore = normalizeWorkbook({ data: { inputDataSheet: savedCopies } });
 assert.equal(actualRestore.data.inputDataSheet.customRows.length, 1, 'Live complete-workbook hydration removes duplicate canonical copies before row generation');
 assert.deepEqual(normalizeWorkbook(JSON.parse(JSON.stringify(actualRestore))), actualRestore, 'Live workbook restoration is idempotent');
@@ -376,7 +379,7 @@ assert.equal(cornice.qty, quoted.quantities.corniceLm, 'Cornice retains its own 
 assert.equal(buildProcurement(quotedWorkbook, quoted, procurement).length, procurement.length, 'Procurement regeneration is idempotent');
 const apiSource = readFileSync('pages/api/builders/sync-commercial-snapshot.js', 'utf8');
 const snapshotFunctions = apiSource.slice(apiSource.indexOf('function buildBoqItemRows('), apiSource.indexOf('\nasync function insertRows(', apiSource.indexOf('function buildBoqItemRows(')));
-const snapshotBuilders = new Function('quotationSectionsForFinalBoq', 'shouldIncludeQuoteRowInFinalBoq', 'takeoffProcurementDetails', 'refreshTakeoffProcurementItems', 'quoteQuantity', 'quoteRate', 'quoteLineTotal', `
+const snapshotBuilders = new Function('quotationSectionsForFinalBoq', 'shouldIncludeQuoteRowInFinalBoq', 'takeoffProcurementDetails', 'refreshTakeoffProcurementItems', 'quoteQuantity', 'quoteRate', 'quoteLineTotal', 'quotationBoqStatus', `
   const firstText = (...values) => values.find((value) => value !== undefined && value !== null && String(value).trim()) || '';
   const textOrNull = (value) => value || null;
   const decimalNumber = (value) => Number(value) || 0;
@@ -386,7 +389,7 @@ const snapshotBuilders = new Function('quotationSectionsForFinalBoq', 'shouldInc
   const normaliseStatus = (value, fallback) => value || fallback;
   const dateOrNull = textOrNull;
   ${snapshotFunctions}; return { buildBoqItemRows, buildProcurementRows };
-`)(quotationSectionsForFinalBoq, shouldIncludeQuoteRowInFinalBoq, takeoffProcurementDetails, refreshTakeoffProcurementItems, quoteQuantity, quoteRate, quoteLineTotal);
+`)(quotationSectionsForFinalBoq, shouldIncludeQuoteRowInFinalBoq, takeoffProcurementDetails, refreshTakeoffProcurementItems, quoteQuantity, quoteRate, quoteLineTotal, quotationBoqStatus);
 const snapshotBoq = snapshotBuilders.buildBoqItemRows({ calculated: quoted, sectionMap: new Map() }).map((row, index) => ({ ...row, id: `boq-${index}` }));
 assert.equal(snapshotBoq.find((row) => row.source_quote_row_id === 'face-material').quantity, 2403, 'Live commercial BOQ stores face bricks as EACH');
 assert.equal(snapshotBoq.find((row) => row.source_quote_row_id === 'face-material').unit_rate, 1, 'Per-thousand quote rate converts with the quantity');

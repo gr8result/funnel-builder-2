@@ -4763,17 +4763,6 @@ setSavedRevision(verifiedSave.revision);
                 {GLASS_TYPE_OPTIONS.filter((option) => option !== 'Unspecified').map((option) => <option key={option} value={option}>{option}</option>)}
               </select>
             </div>
-            <div style={{ fontSize: '12px', color: selectedFp.confirmed ? '#166534' : '#9a3412', fontWeight: 'bold' }}>
-              {selectedFp.confirmed ? 'Approved for commercial quantities' : 'Review required — excluded from Job Setup and quotation'}
-            </div>
-            {!selectedFp.confirmed && (
-              <button
-                onClick={approveSelectedFloorplan}
-                style={{ padding: '7px', background: '#166534', color: '#fff', border: 0, borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
-              >
-                Approve measured floor area
-              </button>
-            )}
           </div>
         )}
 
@@ -4919,8 +4908,8 @@ setSavedRevision(verifiedSave.revision);
                           {OPENING_CLASS_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
                         </select>
                       </label>
-                      {opening.needsClassification && <div data-testid="opening-needs-confirmation" style={{ color: '#92400e', fontSize: 12 }}>
-                        This measured frame has no confirmed opening type. Check the drawing and choose the class above before including it in quantities.
+                      {(opening.needsClassification || ((opening.openingClass || classifyOpeningValue(opening)) === 'Other Opening' && !opening.typeConfirmedAt)) && <div data-testid="opening-needs-confirmation" style={{ color: '#92400e', fontSize: 12 }}>
+                        {opening.needsClassification ? 'This measured frame has no confirmed opening type. Check the drawing and choose the class above before including it in quantities.' : 'Is this an opening with no door or window (a cased opening or void)? Choose a window or door class above, or confirm it.'}
                         <button type="button" data-testid="confirm-opening-type" onClick={() => {
                           setPlacedOpenings(previous => previous.map(item => item.id === opening.id ? confirmOpeningClass(item, opening.openingClass || classifyOpeningValue(opening)) : item));
                           markTakeoffItemCompleted('opening-type-confirmed');
@@ -5312,6 +5301,17 @@ setSavedRevision(verifiedSave.revision);
                     {FLOORPLAN_TYPES.map((ft) => <option key={ft.id} value={ft.id}>{ft.label}</option>)}
                   </select>
                 </div>
+                <div style={{ fontSize: '12px', color: selectedFp.confirmed ? '#166534' : '#9a3412', fontWeight: 'bold' }}>
+                  {selectedFp.confirmed ? 'Approved for commercial quantities' : 'Review required — excluded from Job Setup and quotation'}
+                </div>
+                {!selectedFp.confirmed && (
+                  <button
+                    onClick={approveSelectedFloorplan}
+                    style={{ padding: '7px', background: '#166534', color: '#fff', border: 0, borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+                  >
+                    Approve measured floor area
+                  </button>
+                )}
               </div>
             )}
 
@@ -5695,6 +5695,7 @@ setSavedRevision(verifiedSave.revision);
               {renderScheduleRows('Room-by-room areas and approved finishes', takeoffSchedule.projectTotals.rooms)}
               {renderScheduleRows('Custom Takeoffs', takeoffSchedule.projectTotals.customTakeoffs)}
               {renderScheduleRows('Electrical points read from the drawing', takeoffSchedule.projectTotals.electricalPoints || [], 'Count')}
+              {renderScheduleRows('Construction quantities (insulation, waterproofing, skirting, cornice, stairs, roof)', takeoffSchedule.projectTotals.constructionQuantities || [])}
             </div>
 
             {jobSetupPayload && (

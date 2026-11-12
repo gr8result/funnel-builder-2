@@ -95,6 +95,7 @@ const {materializeTakeoffPlanPages}=require(${JSON.stringify(path.join(takeoffDi
 const {QuotationSheet}=require(${JSON.stringify(path.join(root, 'components/estimate-builder/EstimateBuilderWorkbook.js'))});
 const JobSetupTakeoffImport=require(${JSON.stringify(path.join(root, 'components/estimate-builder/JobSetupTakeoffImport.jsx'))}).default;
 const {calculateEstimateBuilderWorkbook}=require(${JSON.stringify(path.join(root, 'lib/construction-estimation/estimateBuilderWorkbookCalculations.js'))});
+const {createJobSetupPayload}=require(${JSON.stringify(path.join(takeoffDir, 'takeoffSchedule.js'))});
 const {downloadBackupCopy,readJob}=require(${JSON.stringify(path.join(root, 'lib/jobFile.ts'))});
 const indexes=${JSON.stringify(indexes)};
 const jobId=${JSON.stringify(jobId)};
@@ -154,6 +155,12 @@ async function exportImport(){
 window.harness={snapshot,exportImport,saveResults:()=>saveResults,saveInputs:()=>saveInputs,ready:()=>Boolean(currentSheet?.hydrated),
  async newJob(){const workbook={...createEstimateBuilderWorkbookDefaults(),jobId,projectId:jobId,commercialProjectId:jobId,projectName:'Real plan replay',registeredJob:{jobId,jobName:'Real plan replay'},jobFileMeta:{projectId:jobId,jobName:'Real plan replay'}};workbook.quotation={'Takeoff browser check':{collapsed:false,rows:[{id:'takeoff-browser-priced-check',item:'Disposable door labour check',quantityKey:'internalDoors',manualRate:'100',unit:'EACH',active:true,formulas:{}},{id:'takeoff-browser-room-check',item:'Disposable approved room floor tiling',quantity:'0',manualRate:'100',unit:'M2',active:true,formulas:{}}]}};delete workbook.aiPlanTakeoffJob;if(workbook.takeoffEngine)delete workbook.takeoffEngine.aiPlanTakeoffJob;const result=await currentSheet.loadJobFileData({workbook,jobName:'Real plan replay'},'stubbed-ai-takeoff.gr8job');if(!result.ok)throw Error(result.message);return result;},
  reopen:()=>control.reopen(),
+ blockers(){const schedule=value('takeoffSchedule')?.[0];if(!schedule)return null;const payload=createJobSetupPayload(schedule,{sheetLevels:value('sheetLevels')});return payload.commercialBlockers.map(({id,title,detail})=>({id,title,detail}));},
+ setTool(tool){dispatch('activeTool',tool);},
+ reviewTargets(id){const schedule=value('takeoffSchedule')?.[0];if(!schedule)return [];const decision=createJobSetupPayload(schedule,{sheetLevels:value('sheetLevels')}).review.decisions.find((item)=>item.id===id);return decision?.action?.targets||[];},
+ selectOpening(id){dispatch('selectedOpeningId',id);},
+ jobSetupPreview(){const schedule=value('takeoffSchedule')?.[0];if(!schedule)return [];const payload=createJobSetupPayload(schedule,{sheetLevels:value('sheetLevels')});return {fields:payload.mappingPreview.map(({destinationKey,value,source,unit,label})=>({destinationKey,value,source,unit,label})),construction:payload.constructionQuantities.map(({itemId,category,quantity,unit,level,notes})=>({itemId,category,quantity,unit,level,notes})),electrical:payload.electricalPoints?.totals||{}};},
+ selectFloorplan(id){dispatch('selectedFloorplanId',id);},
  workbook:()=>JSON.parse(JSON.stringify(currentSheet.getCurrentWorkbook())),liveWorkbook:()=>currentSheet.getCurrentWorkbook(),
  quotation:()=>calculateEstimateBuilderWorkbook(currentSheet.getCurrentWorkbook()),
  showPricedQuotation(){control.showQuotation();},
@@ -566,6 +573,97 @@ try {
     assert.equal(finished.confirmed, true, 'assigning the floor finish keeps the approval');
     console.log(new Date().toISOString(), 'downstream: save after Floor Tiling');
     await save();
+    // 5a. Settle every required review item the way a builder would, and record each answer. Review
+    // questions are answered from the panel; rooms are approved only when they match the independent
+    // reference room (IoU >= 0.85), others are rejected and listed; AI floor areas are approved from the
+    // floor-area panel. Anything left is reported, never forced through.
+    step('settle review items');
+    const settledReview = { before: await page.evaluate(() => harness.blockers()), answers: [], rooms: { approved: [], rejected: [] }, floorAreas: [], left: [] };
+    console.log(new Date().toISOString(), `review items before settling: ${settledReview.before.length}`);
+    for (const item of settledReview.before) console.log('  blocker', item.id, '|', item.title, '|', String(item.detail).slice(0, 160));
+    // The Opening tool with no floor area selected must not break the page.
+    await page.evaluate(() => harness.setTool('opening')); await settle();
+    assert.ok(await page.evaluate(() => Boolean(document.querySelector('[data-review-decision], #run-ai-takeoff'))), 'the Opening tool opens without a page error');
+    await page.evaluate(() => harness.setTool('select')); await settle();
+    // Answer every review question the panel shows; run again after approvals (some questions need approved rooms).
+    const answerQuestions = async () => {
+      for (let round = 0; round < 40; round += 1) {
+        const open = await page.evaluate(() => [...document.querySelectorAll('[data-review-decision]')].map((el) => ({ id: el.getAttribute('data-review-decision'), title: el.querySelector('strong')?.textContent || '',
+          buttons: [...el.querySelectorAll('button')].map((b) => b.textContent.trim()).filter((t) => !/^Show sheet/.test(t)), number: Boolean(el.querySelector('input[type="number"]')) })));
+        const next = open.find((d) => d.number || d.buttons.length);
+        if (!next) break;
+        const choice = next.number ? 'Apply'
+          : next.buttons.find((t) => /^Use /.test(t)) || next.buttons.find((t) => /^Confirm /.test(t)) || next.buttons.find((t) => t === 'I have checked this') || next.buttons[0];
+        const typed = next.number ? await page.evaluate((id) => document.querySelector(`[data-review-decision="${id}"] input[type="number"]`).value, next.id) : null;
+        await page.evaluate(({ id, choice }) => { const button = [...document.querySelector(`[data-review-decision="${id}"]`).querySelectorAll('button')].find((b) => b.textContent.trim() === choice); button.click(); }, { id: next.id, choice });
+        settledReview.answers.push({ id: next.id, title: next.title, answer: next.number ? `${typed} (suggested value)` : choice });
+        await settle();
+      }
+    };
+    await answerQuestions();
+    for (const sheet of set.sheets) {
+      await goToPage(sheet.page);
+      const refPageRooms = reference.pages.find((item) => Number(item.page) === sheet.page) || reference.pages[0];
+      const ppm = (await snapshot()).sheetCalibrations?.[sheet.page]?.pixelsPerMm || calibrated;
+      const refs = reference.rooms.filter((room) => room.page === undefined || Number(room.page) === sheet.page).map((r) => ({ ...r, polygon: r.polygon.map((p) => ({ x: p.x / refPageRooms.pixelsPerMm, y: p.y / refPageRooms.pixelsPerMm })) }));
+      const pending = (await snapshot()).aiAnalysis.rooms.filter((room) => Number(room.page) === sheet.page && !room.excluded && room.confirmed !== true);
+      for (const room of pending) {
+        const best = room.polygon?.length >= 3 ? compareRooms(refs, [{ ...room, polygon: room.polygon.map((p) => ({ x: p.x / ppm, y: p.y / ppm })) }]).rows.sort((a, b) => b.iou - a.iou)[0] : null;
+        const iou = best?.iou || 0;
+        await page.evaluate((id) => { const box = document.querySelector(`[data-room-id="${id}"] input[type="checkbox"]`); if (box && !box.checked) box.click(); }, room.id);
+        await settle();
+        const label = iou >= 0.85 ? 'Approve room' : 'Reject boundary';
+        const clicked = await page.evaluate(({ id, label }) => { const row = document.querySelector(`[data-room-id="${id}"]`); const b = row && [...row.querySelectorAll('button')].find((x) => x.textContent.trim() === label); if (!b || b.disabled) return b ? 'disabled' : 'missing'; b.click(); return 'clicked'; }, { id: room.id, label });
+        (iou >= 0.85 && clicked === 'clicked' ? settledReview.rooms.approved : settledReview.rooms.rejected).push({ sheet: sheet.page, name: room.name, areaM2: room.areaM2 && +room.areaM2.toFixed(2), reference: best?.name || null, iou: +iou.toFixed(2), action: `${label}: ${clicked}`, reasons: room.reviewReasons || [] });
+        await settle();
+      }
+      const areas = (await snapshot()).completedFloorplans.filter((fp) => Number(fp.page) === sheet.page && fp.source === 'ai' && fp.confirmed !== true);
+      for (const fp of areas) {
+        await page.evaluate((id) => { harness.setTool('floorplan'); harness.selectFloorplan(id); }, fp.id); await settle();
+        const clicked = await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find((x) => x.textContent.trim() === 'Approve measured floor area'); if (!b) return 'missing'; b.click(); return 'clicked'; });
+        settledReview.floorAreas.push({ sheet: sheet.page, type: fp.type, label: fp.label, action: clicked });
+        await settle();
+      }
+      await page.evaluate(() => harness.setTool('select')); await settle();
+    }
+    // Openings the reading could not class: set each from the nearest reference opening, as a builder reading
+    // the drawing would (window, internal/external door), or confirm it is an opening with neither.
+    settledReview.openings = [];
+    for (const id of await page.evaluate(() => harness.reviewTargets('opening-class'))) {
+      const state = await snapshot();
+      const opening = state.placedOpenings.find((item) => String(item.id) === String(id));
+      if (!opening) { settledReview.openings.push({ id, action: 'not found' }); continue; }
+      await goToPage(Number(opening.page));
+      const refPage = reference.pages.find((item) => Number(item.page) === Number(opening.page)) || reference.pages[0];
+      const ppmNow = state.sheetCalibrations?.[opening.page]?.pixelsPerMm || calibrated;
+      const at = { x: opening.x / ppmNow, y: opening.y / ppmNow };
+      const nearest = reference.openings.filter((item) => item.page === undefined || Number(item.page) === Number(opening.page))
+        .map((item) => ({ item, d: Math.hypot(item.x / refPage.pixelsPerMm - at.x, item.y / refPage.pixelsPerMm - at.y) })).sort((a, b) => a.d - b.d)[0];
+      const host = state.completedWallRuns.find((wall) => String(wall.id) === String(opening.linkedWallId ?? opening.hostWallId));
+      const wanted = !nearest || nearest.d > 800 || nearest.item.kind === 'opening' ? 'Other Opening' : nearest.item.kind === 'window' ? 'Window' : host?.category === 'exterior' ? 'External Door' : 'Internal Door';
+      await page.evaluate(() => harness.setTool('select'));
+      await page.evaluate((value) => harness.selectOpening(value), opening.id); await settle();
+      let action;
+      if (wanted === 'Other Opening') {
+        action = await page.evaluate(() => { const b = document.querySelector('[data-testid="confirm-opening-type"]'); if (!b) return 'no confirm button'; b.click(); return 'confirmed as an opening'; });
+      } else {
+        action = await page.evaluate((wanted) => { const panel = [...document.querySelectorAll('strong')].find((el) => el.textContent === 'Selected opening')?.parentElement; const select = panel && [...panel.querySelectorAll('select')][0];
+          if (!select) return 'no class select'; const setter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set; setter.call(select, wanted); select.dispatchEvent(new Event('change', { bubbles: true })); return `set to ${wanted}`; }, wanted);
+      }
+      settledReview.openings.push({ id, sheet: Number(opening.page), widthMm: opening.widthMm, reference: nearest ? `${nearest.item.id} (${nearest.item.kind}, ${Math.round(nearest.d)} mm away)` : null, action });
+      await settle();
+    }
+    console.log(new Date().toISOString(), `openings settled: ${JSON.stringify(settledReview.openings)}`);
+    await answerQuestions();
+    await save();
+    settledReview.left = await page.evaluate(() => harness.blockers());
+    result.settledReview = settledReview;
+    console.log(new Date().toISOString(), `review answers: ${JSON.stringify(settledReview.answers)}`);
+    console.log(new Date().toISOString(), `rooms approved ${settledReview.rooms.approved.length}, rejected ${JSON.stringify(settledReview.rooms.rejected)}`);
+    console.log(new Date().toISOString(), `floor areas: ${JSON.stringify(settledReview.floorAreas)}`);
+    for (const item of settledReview.left) console.log('  still open', item.id, '|', item.title, '|', String(item.detail).slice(0, 200));
+    fs.writeFileSync(path.join(out, `${set.name.replace(/\W+/g, '-')}-settled-review.json`), JSON.stringify(settledReview, null, 2));
+    assert.deepEqual(settledReview.left.map((item) => item.id), [], `every required review item is settled (${settledReview.left.length} left)`);
     console.log(new Date().toISOString(), 'downstream: Takeoff Schedule');
     await button('Takeoff Schedule', true);
     await button('Send to Quote Sheet');
@@ -584,6 +682,18 @@ try {
     assert.equal(await page.$('[data-testid="takeoff-wall-check-blocked"]'), null, 'checked walls are not blocked in Job Setup');
     await button('Import selected quantities');
     await page.waitForFunction(() => Boolean(harness.liveWorkbook().takeoffEngine?.lastJobSetupSync));
+    // Reconciliation: every Job Setup field the takeoff fills, against the takeoff figure it came from.
+    const reconciliation = await page.evaluate(() => { const preview = harness.jobSetupPreview(); const rows = harness.liveWorkbook().data?.inputDataSheet?.rows || {};
+      return { fields: preview.fields.map((item) => ({ key: item.destinationKey, label: item.label, unit: item.unit, takeoff: item.value, jobSetup: rows[item.destinationKey]?.value ?? null, source: item.source })), construction: preview.construction, electrical: preview.electrical }; });
+    const differs = (a, b) => (typeof a === 'number' ? !(Math.abs(Number(b) - a) <= Math.max(0.011, Math.abs(a) * 1e-4)) : String(a) !== String(b));
+    reconciliation.mismatched = reconciliation.fields.filter((row) => row.jobSetup !== null && row.jobSetup !== '' && differs(row.takeoff, row.jobSetup));
+    reconciliation.notImported = reconciliation.fields.filter((row) => row.jobSetup === null || row.jobSetup === '');
+    fs.writeFileSync(path.join(out, `${set.name.replace(/\W+/g, '-')}-reconciliation.json`), JSON.stringify(reconciliation, null, 2));
+    console.log(new Date().toISOString(), `reconciliation: ${reconciliation.fields.length} Job Setup fields from the takeoff, ${reconciliation.mismatched.length} mismatched, ${reconciliation.notImported.length} not imported`);
+    for (const row of reconciliation.fields) console.log(`  ${row.key} | takeoff ${row.takeoff} ${row.unit || ''} | Job Setup ${row.jobSetup} | ${String(row.source).slice(0, 90)}`);
+    for (const row of reconciliation.construction) console.log(`  construction | ${row.level} | ${row.category} | ${row.quantity ?? '—'} ${row.unit} | ${String(row.notes || '').slice(0, 90)}`);
+    result.reconciliation = { fields: reconciliation.fields.length, mismatched: reconciliation.mismatched, notImported: reconciliation.notImported.map((row) => row.key), construction: reconciliation.construction.length };
+    assert.deepEqual(reconciliation.mismatched, [], 'every imported Job Setup field equals the takeoff figure it came from');
     // Read only the fields checked: returning the whole workbook copies every sheet's vectors over CDP.
     const workbook = await page.evaluate(() => { const book = harness.liveWorkbook(); return { tiles: book.data?.inputDataSheet?.rows?.floorFinishTilesM2?.value, synced: Boolean(book.takeoffEngine?.lastJobSetupSync) }; });
     const tiles = Number(workbook.tiles);

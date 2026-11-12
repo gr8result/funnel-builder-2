@@ -46,7 +46,13 @@ assert.notEqual(confirmed.response.openings[0].needsClassification, true);
 assert.equal(confirmed.reviewBridgeCandidates.length, 0);
 
 // The option can switch the behaviour off (gap dropped, rooms merge) for callers that need the old reading.
+// Without the review span, two named spaces are still separated by a room divider across the opening
+// (planModel inferThresholdDividers, 7 Nov 2026); one named space stays one face.
 const off = vectorAnalysisFromLinework(geometry(false), spec, { labels, bridgeUnconfirmedMaxMm: 0 });
-assert.equal(off.rooms.length, 1, 'without the review span the two spaces are one face');
+assert.deepEqual(off.rooms.map((room) => room.name).sort(), ['Bed 1', 'Robe'], 'two named spaces are divided across the opening');
+assert.ok(off.report.dividers?.length >= 1, 'by a room divider, not a wall');
 assert.equal(off.reviewOpeningCandidates.length, 0);
+assert.equal(off.reviewBridgeCandidates.length, 0, 'and no review span is offered');
+const oneName = vectorAnalysisFromLinework(geometry(false), spec, { labels: [labels[0]], bridgeUnconfirmedMaxMm: 0 });
+assert.equal(oneName.rooms.length, 1, 'without the review span one named space is one face');
 console.log('Unconfirmed gaps: rooms close, gap and span listed for review, excluded from quantities; confirmed doors unchanged.');

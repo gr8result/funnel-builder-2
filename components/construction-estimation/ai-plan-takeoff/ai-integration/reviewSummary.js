@@ -2,6 +2,8 @@
 // (so fixing a wall on the canvas clears its item) plus the few analysis findings only a person can
 // settle. Everything else the AI reported is kept, unedited, as advanced diagnostics.
 
+import { constructionDecisions } from '../constructionQuantities.js';
+
 const LEVELS = ['Ground Floor', 'Second Level', 'Third Level'];
 const LEVEL_PREFIX = { 'Ground Floor': 'lower', 'Second Level': 'upper', 'Third Level': 'third' };
 // Analysis findings that need a person. Anything not listed is a diagnostic.
@@ -133,13 +135,27 @@ export function buildTakeoffReview({ records = [], analysis = null, jobSetupRows
   });
   for (const [category, items, field] of [['internal', interior, 'internalFrame'], ['external', exterior, 'externalFrame']]) {
     const assumedFrame = items.filter((item) => item.frameAssumed === true);
+    // Undocumented frames default to 90 mm external, 70 mm internal (owner rule, 10 Nov 2026).
+    const assumedMm = category === 'external' ? 90 : 70, otherMm = assumedMm === 90 ? 70 : 90;
     if (assumedFrame.length) add({
       id: `${category}-frame-size`, topic: `${category}-frame-size`, pages: [...new Set(assumedFrame.map((item) => item.page))],
       title: `Confirm the ${category} wall frame size`,
-      detail: `${plural(assumedFrame.length, `${category} wall`)} (${metres(assumedFrame)} lm) — no frame size is shown on the plans or in Job Setup, so 70 mm was used. Confirm 70 mm, or change them to 90 mm.`,
-      action: { type: 'choose', field, targets: ids(assumedFrame), options: [{ value: '70', label: 'Confirm 70 mm' }, { value: '90', label: 'They are 90 mm' }] },
+      detail: `${plural(assumedFrame.length, `${category} wall`)} (${metres(assumedFrame)} lm) — no frame size is shown on the plans or in Job Setup, so ${assumedMm} mm was used. Confirm ${assumedMm} mm, or change them to ${otherMm} mm.`,
+      action: { type: 'choose', field, targets: ids(assumedFrame), options: [{ value: String(assumedMm), label: `Confirm ${assumedMm} mm` }, { value: String(otherMm), label: `They are ${otherMm} mm` }] },
     });
   }
+  // Printed plan areas (the drawing's own area table) are used only once the builder confirms each one.
+  (analysis?.documentedAreas || []).forEach((item, index) => {
+    if (item.confirmed === true || item.excluded === true) return;
+    add({
+      id: `documented-area:${index}:${item.page}:${item.type}`, topic: 'documented-area', pages: [item.page], areaIndex: index,
+      title: `${item.label || item.type || 'Printed area'} printed on sheet ${item.page}: ${item.valueM2} m²`,
+      detail: `${item.level || 'Unassigned level'}. The plan's area table states this figure. Confirm it is the area to quote from, or leave it out.`,
+      action: { type: 'choose', field: 'documentedArea', options: [{ value: 'use', label: `Use ${item.valueM2} m²` }, { value: 'ignore', label: 'Do not use this figure' }] },
+    });
+  });
+  // Construction inputs only the builder can give (stair flights, ceilings under the roof).
+  for (const decision of constructionDecisions(analysis)) add(decision);
   const doorsNoHeight = openings.filter((item) => /Door/.test(item.openingClass) && Number(item.widthMm) > 0 && !(Number(item.heightMm) > 0));
   if (doorsNoHeight.length) add({
     id: 'door-height', topic: 'opening-size', pages: [...new Set(doorsNoHeight.map((item) => item.page))],
@@ -161,10 +177,11 @@ export function buildTakeoffReview({ records = [], analysis = null, jobSetupRows
     detail: 'Counted, but the wall each one sits in could not be matched, so its wall deductions are not included. Attach them on the plan.',
     action: { type: 'open-takeoff', targets: ids(unlinked) },
   });
-  const otherOpenings = ofClass('Other Opening');
+  // An opening the builder has confirmed as an opening with no door or window (a cased opening, a void) is settled.
+  const otherOpenings = ofClass('Other Opening').filter((item) => !item.typeConfirmedAt);
   if (otherOpenings.length) add({
     id: 'opening-class', topic: 'opening-class', pages: [...new Set(otherOpenings.map((item) => item.page))],
-    title: `${plural(otherOpenings.length, 'opening')} could be a window or a door`, detail: 'Set each one as a window or a door on the plan.', action: { type: 'open-takeoff', targets: ids(otherOpenings) },
+    title: `${plural(otherOpenings.length, 'opening')} could be a window or a door`, detail: 'Select each one on the plan and set it as a window or a door, or confirm it is an opening with neither.', action: { type: 'open-takeoff', targets: ids(otherOpenings) },
   });
   const eaves = usable.filter((item) => item.kind === 'eave');
   const eaveDefault = Number(cellValue(jobSetupRows?.eavesWidthM)) > 0;

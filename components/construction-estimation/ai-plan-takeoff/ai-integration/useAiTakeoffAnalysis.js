@@ -22,6 +22,7 @@ import { vectorProductionAnalysis } from './vectorProductionAnalysis.js';
 import { refreshAnalysisReadiness as refreshVectorReview } from './analysisReadiness.js';
 import { readPrintedOpeningLabels } from './printedLabels.js';
 import { readElectricalPoints } from '../geometry/electricalSymbols.js';
+import { applyConstructionInput } from '../constructionQuantities.js';
 import { addTrainingExample, buildTrainingExample } from './trainingCapture.js';
 
 const RUN_ID = 'ai-takeoff-v3-linework';
@@ -847,6 +848,17 @@ export function useAiTakeoffAnalysis(options) {
   // The builder's answer to one review item: change the objects it names, or note it as seen.
   const resolveDecision = (decision, value) => {
     if (latest.current.readOnly || !decision) return;
+    if (decision.topic === 'construction-input') { setReport((current) => applyConstructionInput(current, decision, value)); return; }
+    if (decision.topic === 'documented-area') {
+      // The printed figure itself carries the builder's answer: confirmed for use, or left out.
+      setReport((current) => {
+        if (!current?.documentedAreas?.[decision.areaIndex]) return current;
+        const documentedAreas = current.documentedAreas.map((item, index) => index !== decision.areaIndex ? item
+          : value === 'use' ? { ...item, confirmed: true, excluded: false, confirmedAt: new Date().toISOString() } : { ...item, confirmed: false, excluded: true, excludedAt: new Date().toISOString() });
+        return { ...current, documentedAreas };
+      });
+      return;
+    }
     latest.current.bridge.updateObjects((collections) => applyReviewDecision(decision, value, collections));
     if (['acknowledge', 'rerun'].includes(decision.action?.type)) {
       // A wall check also records exactly which walls it covered (see reviewSummary.js).

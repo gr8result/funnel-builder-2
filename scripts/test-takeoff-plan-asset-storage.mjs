@@ -7,8 +7,10 @@ try {
   const page = await browser.newPage();
   await page.setRequestInterception(true);
   page.on('request', request => request.respond({ status: 200, contentType: 'text/html', body: '<title>Isolated synthetic storage test</title>' }));
-  await page.goto('http://localhost:3000/recovery-storage-fixture');
-  const source = fs.readFileSync('components/construction-estimation/ai-plan-takeoff/planBlobStorage.js', 'utf8');
+  await page.goto('http://127.0.0.1:39123/recovery-storage-fixture');
+  // A data: module cannot resolve relative imports, so planBlobStorage's one dependency is inlined ahead of it.
+  const source = fs.readFileSync('lib/construction-estimation/knownAssetIds.js', 'utf8') + '\n'
+    + fs.readFileSync('components/construction-estimation/ai-plan-takeoff/planBlobStorage.js', 'utf8').replace(/^import \{[^}]*\} from '[^']*knownAssetIds\.js';$/m, '');
   const result = await page.evaluate(async source => {
     const { externalizeTakeoffPlanPages: encode, materializeTakeoffPlanPages: decode, externalizeTakeoffRecoverySnapshot } = await import('data:text/javascript;base64,' + btoa(source));
     const pages = Array.from({ length: 5 }, (_, i) => ({ pageNumber: i + 1, width: 10, height: 10, dataUrl: `data:image/png;base64,c3ludGhldGlj${i}` }));
@@ -23,8 +25,14 @@ try {
     const db = await new Promise(resolve => { const req = indexedDB.open('gr8-takeoff-plan-assets-v1'); req.onsuccess = () => resolve(req.result); });
     const assetCount = await new Promise(resolve => { const req = db.transaction('blobs').objectStore('blobs').count(); req.onsuccess = () => resolve(req.result); });
     db.close();
+    // A job whose plan image is not in this browser's asset store still opens (V1, 6 Nov 2026): the page keeps
+    // its asset id unchanged (so a later save keeps the reference) and only the image is absent.
     let missingFails = false;
-    try { await decode({ aiPlanTakeoffJob: { plan: { pages: [{ dataUrlAssetId: 'missing-test-asset' }] } } }); } catch { missingFails = true; }
+    try {
+      const opened = await decode({ aiPlanTakeoffJob: { plan: { pages: [{ pageNumber: 1, dataUrlAssetId: 'missing-test-asset' }] } } });
+      const kept = opened.aiPlanTakeoffJob.plan.pages[0];
+      missingFails = kept.dataUrlAssetId === 'missing-test-asset' && !kept.dataUrl;
+    } catch { missingFails = false; }
     return {
       assetCount, missingFails,
       artworkRoundTrip: JSON.stringify(restored.projectEstimateBuilder) === JSON.stringify(projectEstimateBuilder),

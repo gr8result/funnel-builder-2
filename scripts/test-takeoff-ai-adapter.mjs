@@ -68,7 +68,12 @@ assert.equal(convert([{ ...wall, source: 'manual', ai: { runId: 'fake' }, arbitr
 const schedule = createTakeoffSchedule({ ...converted, totalPages: 2, pixelsPerMm: context.pixelsPerMm, sheetLevels: { 1: 'Ground Floor' }, jobSetupRows: { lowerCeilingHeight: { value: '2400' } } });
 const payload = createJobSetupPayload(schedule);
 assert.equal(payload.dataInputFields.lowerBrickVeneer70mmWallsLm, 4, 'existing schedule/import consumes adapted walls');
-assert.equal(payload.dataInputFields.lowerFloorAreaM2, 8, 'existing area calculation consumes adapted polygons');
+// An AI floor-area outline is held back until the builder approves it, then imported as measured.
+assert.equal(payload.dataInputFields.lowerFloorAreaM2, undefined, 'an unapproved AI floor area is not imported');
+assert.ok(payload.commercialBlockers.some((item) => /^floor-area:/.test(item.id)), 'the unapproved floor area is a review item');
+const approvedFloors = { ...converted, completedFloorplans: converted.completedFloorplans.map((fp) => ({ ...fp, confirmed: true, reviewRequired: false })) };
+const approvedPayload = createJobSetupPayload(createTakeoffSchedule({ ...approvedFloors, totalPages: 2, pixelsPerMm: context.pixelsPerMm, sheetLevels: { 1: 'Ground Floor' }, jobSetupRows: { lowerCeilingHeight: { value: '2400' } } }));
+assert.equal(approvedPayload.dataInputFields.lowerFloorAreaM2, 8, 'existing area calculation consumes adapted polygons once approved');
 assert.equal(payload.dataInputFields.windowOpeningsQty, 1);
 assert.equal(payload.dataInputFields.lowerExternalOpeningAreaM2, 2.16, 'hosted adapted opening deducts canonical wall area');
 assert.equal(payload.dataInputFields.floorFinishTilesM2, 7.75, 'existing exclusion calculation consumes adapted areas');

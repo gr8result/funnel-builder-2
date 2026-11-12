@@ -86,7 +86,12 @@ pass('Rooms schedule: by level, duplicates kept apart, corrected by hand');
 const report = reportWithRooms(null, rooms, { readAt: '2026-10-05T09:00:00.000Z', model: 'test-model', sheets: [2, 3] });
 assert.equal(report.status, 'rooms'); assert.deepEqual([report.fixtures, report.review], [[], []]);
 assert.equal(reportWithRooms({ status: 'complete', runId: 'ai-takeoff-v1', rooms: [], counts: { walls: 4 } }, rooms).counts.walls, 4, 'a full analysis record keeps everything else it holds');
-assert.equal(createAiScheduleRows(report, [1, 2, 3, 4, 5]).rooms.length, 25, 'every room is a row of the Takeoff Schedule Rooms section');
+{ // Each room is two rows of the Takeoff Schedule Rooms section: its floor area and its ceiling area.
+  const roomRows = createAiScheduleRows(report, [1, 2, 3, 4, 5]).rooms;
+  assert.equal(roomRows.filter((row) => /:floor-area$/.test(row.itemId)).length, 25, 'every room is a floor-area row of the Takeoff Schedule Rooms section');
+  assert.equal(roomRows.filter((row) => /:ceiling-area$/.test(row.itemId)).length, 25, 'every room also has its ceiling-area row');
+  assert.equal(roomRows.length, 50, 'no other rows for unapproved rooms (no room is counted twice for one quantity)');
+}
 // A job traced by hand: no placed opening carries a room at all.
 const workbook = { aiPlanTakeoffJob: { placedOpenings: [], completedFloorplans: [], scheduleState: { aiAnalysis: JSON.parse(JSON.stringify(report)) } } };
 const names = projectLocations({ book: { rooms: [] }, workbook }).map(location => location.name);

@@ -72,7 +72,7 @@ function ReviewDecision({ decision, disabled, onResolve, onGoToPage }) {
           <input type="number" aria-label={`${decision.title} (${action.unit})`} value={value} disabled={disabled} onChange={(event) => setValue(event.target.value)}
             style={{ width: 90, padding: '6px 8px', border: '1px solid #94a3b8', borderRadius: 5 }} />
           <span>{action.unit}</span>
-          <button type="button" disabled={disabled || !(Number(value) > 0)} onClick={() => onResolve(decision, Number(value))} style={{ ...reviewButton, background: '#0f766e', color: '#fff' }}>Apply</button>
+          <button type="button" disabled={disabled || !(action.allowZero ? value !== '' && Number(value) >= 0 : Number(value) > 0)} onClick={() => onResolve(decision, Number(value))} style={{ ...reviewButton, background: '#0f766e', color: '#fff' }}>Apply</button>
         </>}
         {['acknowledge', 'rerun'].includes(action.type) && <button type="button" disabled={disabled} onClick={() => onResolve(decision, true)} style={reviewButton}>I have checked this</button>}
         {page && onGoToPage && <button type="button" onClick={() => onGoToPage(page)} style={reviewButton}>Show sheet {page}</button>}

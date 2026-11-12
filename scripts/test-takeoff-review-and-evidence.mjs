@@ -204,11 +204,21 @@ assert.equal(rows.floor_Living, 45, 'Living area is the footprint less the named
 assert.equal(rows.floor_total_under_roof, 49, 'gross footprint is reported separately and is not the living area');
 assert.equal(createJobSetupPayload(schedule, {}).dataInputFields.lowerFloorAreaM2, 45);
 const printed = { completedFloorplans: [area('g', 'Garage', square(100, 100, 300, 300))], pixelsPerMm: 0.1, totalPages: 1, sheetLevels: { 1: 'Ground Floor' },
-  scheduleState: { aiAnalysis: { review: [], documentedAreas: [{ level: 'Ground Floor', type: 'Living', valueM2: 148.02, label: 'GND FL LIVING AREA', page: 2 }, { level: 'Ground Floor', type: 'Garage', valueM2: 40.23, label: 'GARAGE AREA', page: 2 }, { level: 'Second Level', type: 'Balcony', valueM2: 16.37, label: 'BALCONY AREA', page: 2 }] } } };
+  scheduleState: { aiAnalysis: { review: [], documentedAreas: [{ level: 'Ground Floor', type: 'Living', valueM2: 148.02, label: 'GND FL LIVING AREA', page: 2, confirmed: true }, { level: 'Ground Floor', type: 'Garage', valueM2: 40.23, label: 'GARAGE AREA', page: 2, confirmed: true }, { level: 'Second Level', type: 'Balcony', valueM2: 16.37, label: 'BALCONY AREA', page: 2, confirmed: true }] } } };
 const printedFields = createJobSetupPayload(createTakeoffSchedule(printed), {}).dataInputFields;
 assert.equal(printedFields.lowerFloorAreaM2, 148.02, 'with no outline traced, the living area printed in the plan area table is used');
 assert.equal(printedFields.lowerGarageAreaM2, 4, 'measured geometry always wins over a printed figure');
 assert.equal(printedFields.balconyAreaM2, 16.37);
+// A printed figure counts only once the builder confirms it in the review (owner rule: never quote an unchecked figure).
+const unconfirmedPrinted = { ...printed, scheduleState: { aiAnalysis: { review: [], documentedAreas: printed.scheduleState.aiAnalysis.documentedAreas.map(({ confirmed, ...item }) => item) } } };
+const unconfirmedPayload = createJobSetupPayload(createTakeoffSchedule(unconfirmedPrinted), {});
+assert.equal(unconfirmedPayload.dataInputFields.lowerFloorAreaM2, undefined, 'an unconfirmed printed area is not imported');
+const printedDecision = unconfirmedPayload.review.decisions.find((item) => item.topic === 'documented-area' && /148\.02/.test(item.title));
+assert.deepEqual(printedDecision?.action.options.map((option) => option.value), ['use', 'ignore'], 'the builder can confirm or leave out each printed area');
+assert.ok(!unconfirmedPayload.commercialBlockers.some((item, index, all) => all.findIndex((other) => other.id === item.id) !== index), 'each printed area is listed once');
+const leftOut = { ...printed, scheduleState: { aiAnalysis: { review: [], documentedAreas: printed.scheduleState.aiAnalysis.documentedAreas.map(({ confirmed, ...item }) => ({ ...item, excluded: true })) } } };
+const leftOutPayload = createJobSetupPayload(createTakeoffSchedule(leftOut), {});
+assert.ok(!leftOutPayload.review.decisions.some((item) => item.topic === 'documented-area') && leftOutPayload.dataInputFields.lowerFloorAreaM2 === undefined, 'a figure left out is neither used nor asked about again');
 const table = [['GND FL LIVING AREA', 45], ['GARAGE AREA', 4], ['TOTAL GROUND FLOOR', 49], ['TOTAL AREA', 49]].map(([label, value]) => ({ label, value, unit: 'sqm', ...observed, confidence: 0.99 }));
 output = normalizePlanAnalysis({ context: { ...context, completedFloorplans: floors.completedFloorplans, sheetLevels: { 1: 'Ground Floor' } }, runId: 'run', modelVersion: 'model',
   responses: [{ ...response, walls: [], openings: [], eaves: [], rooms: [], documentedQuantities: [...table, ...table] }] });

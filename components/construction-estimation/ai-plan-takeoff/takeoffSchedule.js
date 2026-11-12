@@ -1,5 +1,6 @@
 import { measureRoom, validateRoomSet } from './ai-integration/roomGeometry.js';
 import { allocatePointsToRooms, ELECTRICAL_KIND_BY_KEY } from './geometry/electricalSymbols.js';
+import { createConstructionQuantityRows } from './constructionQuantities.js';
 import { associateTakeoffMeasurements, takeoffMaterialFields, takeoffThickness, openingQuantity, openingDimensions, openingHostId, uniqueTakeoffItems, brickSillLength, windowCodeForOpening, isCavitySlider, isRobeSlider, internalDoorPurchaseType, materialRound, EXTERIOR_WALL_SYSTEM_FIELD_KEYS, windowStyleLabel, isFixedWindowOpening, doorStyleLabel, brickOrderQuantities, internalDoorJambTrace, internalDoorReconciliationTrace, TAKEOFF_LEVELS } from '../../../lib/construction-estimation/takeoffMaterialQuantities.js';
 import { absentTakeoffMaterialFields } from '../../../lib/construction-estimation/takeoffAbsentMaterialFields.js';
 import { toCommonScale, sheetPixelsPerMm } from './sheetScale.js';
@@ -1428,6 +1429,12 @@ export function createTakeoffSchedule({
 }) {
   if (aiAnalysis?.rooms) aiAnalysis = { ...aiAnalysis, rooms: validateRoomSet(aiAnalysis.rooms.map(room =>
     measureRoom(room, sheetPixelsPerMm(room.page, pixelsPerMm, sheetCalibrations)))) };
+  // Construction quantities read each sheet at its own scale, so they use the geometry as drawn.
+  const constructionQuantities = createConstructionQuantityRows({
+    rooms: aiAnalysis?.rooms || [], completedWallRuns, placedOpenings, completedFloorplans, completedEaves, pixelsPerMm,
+    sheetPixelsPerMm: (page) => sheetPixelsPerMm(page, pixelsPerMm, sheetCalibrations), levelOf: (page) => floorFromPage(page, sheetLevels).label,
+    jobSetupRows, inputs: aiAnalysis?.constructionInputs || {},
+  });
   [completedWallRuns, placedOpenings, completedAreas, completedFloorplans, completedMeasurements, completedEaves, completedPillars] =
     [completedWallRuns, placedOpenings, completedAreas, completedFloorplans, completedMeasurements, completedEaves, completedPillars]
       .map(items => toCommonScale(items, pixelsPerMm, sheetCalibrations));
@@ -1484,7 +1491,8 @@ export function createTakeoffSchedule({
       jobSetupRows,
       sheetLevels
       }),
-      electricalPoints: createElectricalPointRows(aiAnalysis, projectPages, sheetLevels)
+      electricalPoints: createElectricalPointRows(aiAnalysis, projectPages, sheetLevels),
+      constructionQuantities
     }
   };
 }
@@ -1505,7 +1513,8 @@ export function flattenScheduleRows(schedule, scope = 'projectTotals') {
     ...(sectionData.rooms || []),
     ...(sectionData.pillars || []),
     ...(sectionData.customTakeoffs || []),
-    ...(sectionData.electricalPoints || [])
+    ...(sectionData.electricalPoints || []),
+    ...(sectionData.constructionQuantities || [])
   ];
 }
 
@@ -1636,7 +1645,7 @@ export function createJobSetupPayload(schedule, options = {}) {
   const unapprovedFloorAreas = measurements.filter((item) => item.kind === 'floorArea' && item.source === 'ai' && item.confirmed !== true);
   report(unapprovedFloorAreas, 'Approve this AI-detected floor-area outline before importing it.');
   if (unapprovedFloorAreas.length) warnings.push(`${unapprovedFloorAreas.length} AI-detected floor-area outline(s) require approval before Job Setup or quotation.`);
-  const unapprovedDocumentedAreas = (schedule.aiAnalysis?.documentedAreas || []).filter((item) => item.confirmed !== true);
+  const unapprovedDocumentedAreas = (schedule.aiAnalysis?.documentedAreas || []).filter((item) => item.confirmed !== true && item.excluded !== true);
   report(unapprovedDocumentedAreas, 'Confirm this printed plan area before importing it as a commercial quantity.');
   if (unapprovedDocumentedAreas.length) warnings.push(`${unapprovedDocumentedAreas.length} printed plan area(s) require confirmation before Job Setup or quotation.`);
   const usable = measurements.filter((item) => item.quantity !== null
@@ -1675,6 +1684,12 @@ export function createJobSetupPayload(schedule, options = {}) {
   for (const row of electricalRows) electricalTotals[row.kind] = (electricalTotals[row.kind] || 0) + row.quantity;
   if (electricalRows.length) unsupported.push(...electricalRows.map((row) => ({ itemId: row.itemId, page: row.planSheet, level: row.level, category: `${row.category} (${row.room})`, quantity: row.quantity, unit: row.unit,
     reason: 'Electrical point read from the drawing. Job Setup has no electrical inputs; the count is carried in the electrical points hand-off and the Takeoff Schedule.' })));
+
+  // Construction quantities (insulation, waterproofing, skirting, cornice, stairs, roof plan): no Job Setup inputs
+  // exist for them, so they travel as their own hand-off and are listed here rather than dropped.
+  const constructionRows = schedule.projectTotals?.constructionQuantities || [];
+  unsupported.push(...constructionRows.filter((row) => row.quantity !== null).map((row) => ({ itemId: row.itemId, level: row.level, category: row.category, quantity: row.quantity, unit: row.unit,
+    reason: 'Construction quantity measured in the takeoff. Job Setup has no matching input; it is carried in the construction quantities hand-off and the Takeoff Schedule.' })));
 
   // Only AI findings a person has to settle belong with the import warnings. The rest of what the
   // analysis recorded travels separately as diagnostics and is never a "needs attention" item.
@@ -1977,11 +1992,7 @@ report(floorplans.filter((item) => !['Footprint', 'Living'].includes(item.catego
       title: `${item.label || item.category || 'Floor area'} requires approval`,
       detail: `Sheet ${item.page}: inspect the measured ${item.quantity ?? 'unknown'} ${item.unit || 'm2'} outline and approve or reject it.`,
     })),
-    ...unapprovedDocumentedAreas.map((item, index) => ({
-      id: `documented-area:${item.id || index}`,
-      title: `${item.label || 'Printed plan area'} requires confirmation`,
-      detail: `Sheet ${item.page}: confirm the printed ${item.valueM2} m2 figure before commercial use.`,
-    })),
+    // Unconfirmed printed areas are already review decisions (confirm or leave out); listed once.
     ...roomBlockers.map((room) => ({
       id: `room:${room.id}`,
       title: `${room.name || 'Room'} is not commercially approved`,
@@ -1998,6 +2009,7 @@ report(floorplans.filter((item) => !['Footprint', 'Living'].includes(item.catego
     roomPolygons: schedule.aiAnalysis?.rooms || [],
     floorAreas: schedule.projectTotals?.floorAreas || [], roomList: schedule.projectTotals?.rooms || [],
     electricalPoints: { totals: electricalTotals, rooms: [...electricalByRoom.values()], rows: electricalRows },
+    constructionQuantities: constructionRows,
     basicProjectMeasurements: flattenScheduleRows(schedule, 'projectTotals'),
     schedule, sheetLevels, dataInputFields: fields, cavitySliderSchedule, pillarSchedule,
     ...(Array.isArray(schedule.measurementRecords) ? { absentMaterialFields: absentTakeoffMaterialFields(measurements).filter((key) => editableRows.has(key) && !Object.hasOwn(fields, key)) } : {}),
