@@ -6,6 +6,13 @@ import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { recordSafeModeMemory } from './measure-takeoff-safe-mode.mjs';
 
+// This script drives the app on localhost:3000 (the protected live dev server) and copies that origin's
+// IndexedDB out of the user's real Chrome profile. It must never run against port 3000; it stays off until it
+// is ported to an isolated server and an isolated profile.
+if (process.env.GR8_EMERGENCY_RECOVERY_ISOLATED !== 'yes') {
+  console.log('SKIPPED test-takeoff-emergency-recovery: it targets the protected localhost:3000 app and the real Chrome profile.');
+  process.exit(0);
+}
 const out = process.env.RECOVERY_DIR ? path.resolve(process.env.RECOVERY_DIR) : path.resolve('recovery', `emergency-${new Date().toISOString().replace(/[:.]/g, '-')}`);
 fs.mkdirSync(out, { recursive: true });
 const userDataDir = path.join(out, 'isolated-chrome');

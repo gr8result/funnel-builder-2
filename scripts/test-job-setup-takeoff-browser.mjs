@@ -11,7 +11,12 @@ import puppeteer from 'puppeteer';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 dotenv.config({ path: path.join(root, '.env.local'), quiet: true });
 dotenv.config({ path: path.join(root, '.env'), quiet: true });
-const baseUrl = process.env.JOB_SETUP_TAKEOFF_BASE_URL || 'http://localhost:3000';
+// Port 3000 is the protected live dev server: an isolated server's URL must be given explicitly.
+const baseUrl = process.env.JOB_SETUP_TAKEOFF_BASE_URL;
+if (!baseUrl || /:3000(\/|$)/.test(baseUrl)) {
+  console.log('SKIPPED test-job-setup-takeoff-browser: set JOB_SETUP_TAKEOFF_BASE_URL to an isolated server (never port 3000).');
+  process.exit(0);
+}
 const outDir = path.resolve(root, process.env.JOB_SETUP_TAKEOFF_ARTIFACT_DIR || 'artifacts/test-results/job-setup-takeoff-browser');
 fs.mkdirSync(outDir, { recursive: true });
 const jobId = 'synthetic-job-setup-takeoff-browser';

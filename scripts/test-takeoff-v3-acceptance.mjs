@@ -7,7 +7,14 @@ import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 
 dotenv.config({ path: path.resolve(".env.local") });
 
-const baseUrl = process.argv[2] || "http://localhost:3000";
+// RETIRED: /modules/takeoff-v3 was removed; the mounted takeoff is AIPlanTakeoffStandalone (see
+// test-takeoff-vector-plan-browser.mjs). This script also defaulted to the protected localhost:3000 app.
+if (process.env.GR8_RUN_RETIRED_TAKEOFF_V3 !== "yes") {
+  console.log("SKIPPED test-takeoff-v3-acceptance: retired (the takeoff-v3 page no longer exists).");
+  process.exit(0);
+}
+const baseUrl = process.argv[2];
+if (!baseUrl || /:3000(\/|$)/.test(baseUrl)) { console.error("Give an isolated base URL (never port 3000)."); process.exit(1); }
 const outDir = path.join("artifacts/test-results", "takeoff-v3-acceptance");
 fs.mkdirSync(outDir, { recursive: true });
 
