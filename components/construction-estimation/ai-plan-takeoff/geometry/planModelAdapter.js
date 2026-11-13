@@ -232,7 +232,7 @@ export function vectorAnalysisFromLinework(geometry, spec, { labels = [], wallDe
       nodes: item.nodes.map((point) => ({ x: point.x, y: point.y })),
       normalizedNodes: item.nodes.map((point) => ({ x: point.x / spec.logicalWidth, y: point.y / spec.logicalHeight })),
       thicknessMm: Math.round(item.thicknessMm), category: null, status: 'review-required', element: item.element || 'retaining', confidence: item.confidence,
-      reason: `${item.element === 'retaining' ? 'Retaining or external structure' : 'External structure'}${item.label ? ` (labelled "${item.label}")` : ''}: not part of the house walls or rooms. Confirm it as External to measure it, or mark it Not a wall.`,
+      reason: `${item.element === 'retaining' ? 'Retaining or external structure' : 'External structure'}${item.label ? ` (labelled "${item.label}")` : ''}: not part of the house walls or rooms. ${item.element === 'retaining' ? 'Mark it Retaining wall to measure it as a retaining wall (its own quantity, never a house wall), External if it is a house wall, or Not a wall.' : 'Confirm it as External to measure it, or mark it Not a wall.'}`,
     });
   }
   const reviewBridgeCandidates = Object.values(level.walls).flatMap((wall) => {
@@ -417,6 +417,13 @@ export function vectorAnalysisFromLinework(geometry, spec, { labels = [], wallDe
     wallLineage,
     reviewWallCandidates,
     reviewBridgeCandidates,
+    // Structures the builder confirmed as retaining walls: their own quantity (length along the wall,
+    // thickness as drawn), never house wall length, lining, insulation or room boundary.
+    retainingWalls: structures.filter((item) => wallDecisions[`linework:${item.id}`] === 'retaining' && item.nodes?.length >= 2).map((item) => ({
+      id: item.id, detectionKey: `linework:${item.id}`, page: spec.page, label: item.label || null, thicknessMm: Math.round(item.thicknessMm),
+      nodes: item.nodes.map((point) => ({ x: point.x, y: point.y })),
+      lengthMm: Math.round(item.nodes.slice(1).reduce((sum, point, index) => sum + Math.hypot(point.x - item.nodes[index].x, point.y - item.nodes[index].y), 0) / spec.pixelsPerMm),
+      basis: 'Measured along the drawn retaining-wall faces on the vector linework; confirmed as a retaining wall by the builder.' })),
     reviewOpeningCandidates,
     // Notches in the outside of the building (outline steps in and back): external area, never rooms.
     externalAreas: externalRecesses(level).map((recess) => ({ id: recess.id, kind: 'external-recess', areaM2: recess.areaM2, mouthMm: recess.mouthMm,

@@ -45,6 +45,12 @@ for (const table of ['builder_commercial_projects', 'builder_estimate_snapshots'
   await db.exec(`alter table public.${table} enable row level security; grant select, insert, update, delete on public.${table} to authenticated, anon;`);
   for (const [index, body] of policyTemplates.entries()) await db.exec(`create policy ${table}_workspace_${index} on public.${table} ${body.replace(/public\.builder_commercial_is_workspace_member\(workspace_id\)/g, 'public.builder_commercial_is_workspace_member(workspace_id)')};`);
 }
+// The internal-member migration also sets a policy on builder_requirement_quote_mappings (created earlier, by
+// 20261010000100), so that table is created first from its own migration, verbatim.
+const mappingsSql = fs.readFileSync(`${dir}/20261010000100_builder_requirement_quote_mappings.sql`, 'utf8');
+const mappingsStart = mappingsSql.indexOf('create table public.builder_requirement_quote_mappings (');
+assert(mappingsStart >= 0, 'builder_requirement_quote_mappings is created in its migration');
+await db.exec(mappingsSql.slice(mappingsStart, mappingsSql.indexOf('\n);', mappingsStart) + 3) + ';');
 await db.exec(internalRls);
 
 const W = { a: '11111111-1111-4111-8111-111111111111', b: '22222222-2222-4222-8222-222222222222' };

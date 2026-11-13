@@ -521,7 +521,7 @@ export function useAiTakeoffAnalysis(options) {
             const measured = vectorProductionAnalysis(response, detected, {
               id: `page-${pageNumber}`, name: response.level, page: pageNumber, pixelsPerMm: sheetPixelsPerMm,
               logicalWidth: sheet.logicalWidth, logicalHeight: sheet.logicalHeight,
-            }, { labels: roomLabelsFromText({ ...planPage, ocrRoomLabels: printedLabels.roomLabels || [] }) });
+            }, { labels: roomLabelsFromText({ ...planPage, ocrRoomLabels: printedLabels.roomLabels || [] }), outdoor: { segments: planPage.vectorSegments || [], textItems: planPage.textItems || [] } });
             responses[index] = { ...measured.response, drawingType: response.drawingType };
             measuredRoomPages.add(pageNumber);
             vectorReadings.push({ page: pageNumber, vector: measured.vector, detected: measured.detected,
@@ -595,6 +595,7 @@ export function useAiTakeoffAnalysis(options) {
         completed.openingReviewCandidates = vectorReadings.flatMap(reading => reading.vector.reviewOpeningCandidates);
         completed.wallLineage = vectorReadings.flatMap(reading => reading.vector.wallLineage.map(item => ({ ...item, page: reading.page })));
         completed.externalAreas = vectorReadings.flatMap(reading => (reading.vector.externalAreas || []).map(item => ({ ...item, page: reading.page, level: reading.semanticInput?.level })));
+        completed.retainingWalls = vectorReadings.flatMap(reading => (reading.vector.retainingWalls || []).map(item => ({ ...item, page: reading.page, level: reading.semanticInput?.level })));
         const issues = vectorReadings.flatMap(reading => localVectorReadiness({ analysis: {}, vector: reading.vector, detected: reading.detected,
           rooms: completed.rooms.filter(room => room.page === reading.page), admission: {} }).issues.map(issue => ({ ...issue, page: reading.page })));
         completed.review = [...completed.review, ...issues];
@@ -677,7 +678,7 @@ export function useAiTakeoffAnalysis(options) {
       const wallDecisions = { ...(wallReviewDecisions[reviewIdentity] || {}) };
       if (wallDecision) {
         const candidate = (saved?.wallReviewCandidates || []).find(item => item.id === wallDecision.id && item.page === planPage.pageNumber);
-        if (!candidate?.detectionKey || !['interior', 'exterior', 'reject'].includes(wallDecision.value)) throw new Error('Select a current measured wall and choose Internal, External, or Not a wall.');
+        if (!candidate?.detectionKey || !['interior', 'exterior', 'reject', ...(candidate.element === 'retaining' ? ['retaining'] : [])].includes(wallDecision.value)) throw new Error('Select a current measured wall and choose Internal, External, or Not a wall.');
         // A report from another PDF must never authorize this PDF's geometry.
         if (saved.documentHash !== identity.documentHash) throw new Error('The plan changed. Run takeoff again before reviewing this wall.');
         wallDecisions[candidate.detectionKey] = wallDecision.value;
@@ -715,6 +716,7 @@ export function useAiTakeoffAnalysis(options) {
         linework: { ...(saved?.linework || {}), [planPage.pageNumber]: { ...vector.report, detector: detected.stats, openings: detected.openings.length, rooms: vector.rooms.length } },
         // Outdoor recesses in the building outline: shown in the schedule, never floor area.
         externalAreas: [...(saved?.externalAreas || []).filter((item) => item.page !== planPage.pageNumber), ...(vector.externalAreas || []).map((item) => ({ ...item, page: planPage.pageNumber, level }))],
+        retainingWalls: [...(saved?.retainingWalls || []).filter((item) => item.page !== planPage.pageNumber), ...(vector.retainingWalls || []).map((item) => ({ ...item, level }))],
         rooms, analysedAt: new Date().toISOString(), completedAt: readiness.needsReview ? null : new Date().toISOString(), added: admission.added,
         status: readiness.needsReview ? 'review' : admission.status,
       };

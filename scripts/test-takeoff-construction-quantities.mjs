@@ -92,8 +92,20 @@ const byKey = (rows) => Object.fromEntries(rows.map((row) => [row.itemId, row]))
 { // Levels named the way drawings name them (Jesmond: Lower Floor below Upper Floor) keep their storey order.
   const named = rooms.map((r) => ({ ...r, level: r.level === 'Ground Floor' ? 'Lower Floor' : 'Upper Floor' }));
   const questions = constructionDecisions({ rooms: named });
-  assert.deepEqual(questions.map((q) => q.id).sort(), ['construction:ceiling-under-roof:Lower Floor', 'construction:stair-flights'], 'the lower floor is asked about, never the upper');
+  // Drawing names land on the app's level names (the names sheet assignments, Job Setup and the other review
+  // questions use), so the answer is stored under the same level the schedule rows use.
+  assert.deepEqual(questions.map((q) => q.id).sort(), ['construction:ceiling-under-roof:Ground Floor', 'construction:stair-flights'], 'the lower floor is asked about, never the upper');
   const rows = byKey(createConstructionQuantityRows({ ...base, rooms: named, levelOf: (page) => ({ 1: 'Lower Floor', 2: 'Upper Floor' }[page]) }));
-  assert.equal(rows['construction-ceiling-insulation-upper-floor'].quantity, 20, 'the upper floor is the top level');
+  assert.equal(rows['construction-ceiling-insulation-second-level'].quantity, 20, 'the upper floor is the top level');
+}
+{ // Mixed: upper rooms carry the drawing's "Upper Floor", lower rooms carry no level and take their sheet's
+  // assignment ("Ground Floor"). 12 Nov browser run on Jesmond: this made three levels and asked whether the
+  // UPPER floor had roof above it. One storey must stay one level.
+  const mixed = rooms.map((r) => (r.level === 'Ground Floor' ? { ...r, level: undefined } : { ...r, level: 'Upper Floor' }));
+  const levelOf = (page) => ({ 1: 'Ground Floor', 2: 'Second Level' }[page]);
+  const questions = constructionDecisions({ rooms: mixed }, levelOf);
+  assert.deepEqual(questions.map((q) => q.id).sort(), ['construction:ceiling-under-roof:Ground Floor', 'construction:stair-flights'], 'two levels, the lower one asked about');
+  const rows = createConstructionQuantityRows({ ...base, rooms: mixed, levelOf });
+  assert.deepEqual([...new Set(rows.map((row) => row.level))].sort(), ['Ground Floor', 'Second Level'], 'rows on two levels only');
 }
 console.log('Construction quantities: insulation, waterproofing, skirting, cornice, stairs and roof plan from approved geometry and builder answers; nothing assumed.');

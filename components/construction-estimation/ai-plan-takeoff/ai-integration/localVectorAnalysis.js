@@ -24,7 +24,7 @@ export function buildLocalVectorAnalysis({ planPage, detected, pixelsPerMm, leve
     id: `page-${planPage.pageNumber}`, name: level, page: planPage.pageNumber, pixelsPerMm,
     logicalWidth: planPage.logicalWidth, logicalHeight: planPage.logicalHeight,
   };
-  const production = semanticInput ? vectorProductionAnalysis(semanticInput, detected, spec, { labels, wallDecisions }) : null;
+  const production = semanticInput ? vectorProductionAnalysis(semanticInput, detected, spec, { labels, wallDecisions, outdoor: { segments: planPage.vectorSegments || [], textItems: planPage.textItems || [] } }) : null;
   const vector = production?.vector || vectorAnalysisFromLinework(detected, spec, { labels, wallDecisions });
   // Admission overrides apply only to the wall being explicitly accepted now.
   // A later rerun must retain manually moved/deleted canonical objects.

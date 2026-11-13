@@ -14,11 +14,14 @@ export default function WallCandidatePanel({ candidates, selectedId, onSelect, o
         <select aria-label="Measured wall to review" value={selected?.id || ''} onChange={event => onSelect(event.target.value)} disabled={busy}
           style={{ width: '100%', margin: '6px 0', padding: 6 }}>
           <option value="">Select a wall…</option>
-          {candidates.map((item, index) => <option key={item.id} value={item.id}>Wall {index + 1} — {Math.round(item.thicknessMm)} mm</option>)}
+          {candidates.map((item, index) => <option key={item.id} value={item.id}>{item.element === 'retaining' ? 'Retaining structure' : 'Wall'} {index + 1} — {Math.round(item.thicknessMm)} mm</option>)}
         </select>
       </label>
+      {selected?.reason && <p data-testid="wall-candidate-reason" style={{ margin: '0 0 6px' }}>{selected.reason}</p>}
       {selected && <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-        {[['interior', 'Internal'], ['exterior', 'External'], ['reject', 'Not a wall']].map(([value, label]) => (
+        {(selected.element === 'retaining'
+          ? [['retaining', 'Retaining wall'], ['exterior', 'External (house wall)'], ['reject', 'Not a wall']]
+          : [['interior', 'Internal'], ['exterior', 'External'], ['reject', 'Not a wall']]).map(([value, label]) => (
           <button key={value} type="button" disabled={busy || readOnly} onClick={() => onResolve(selected.id, value)} style={{ padding: '7px 10px' }}>{label}</button>
         ))}
       </div>}

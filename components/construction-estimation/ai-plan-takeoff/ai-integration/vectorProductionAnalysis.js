@@ -1,6 +1,7 @@
 import {vectorAnalysisFromLinework} from '../geometry/planModelAdapter.js';
 import {wallPoints} from '../geometry/planModel.js';
 import {buildingOutlines} from '../geometry/buildingOutline.js';
+import {OUTDOOR_LABEL,againstBuilding,pointInPolygon,traceOutdoorArea} from '../geometry/outdoorAreas.js';
 
 const validPoint=p=>Number.isFinite(p?.x)&&Number.isFinite(p?.y);
 function distance(p,a,b){const dx=b.x-a.x,dy=b.y-a.y,l2=dx*dx+dy*dy,t=l2?Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.y-a.y)*dy)/l2)):0;return Math.hypot(p.x-a.x-t*dx,p.y-a.y-t*dy);}
@@ -9,7 +10,7 @@ const observed=item=>item?.basis==='OBSERVED'&&item.confidence>=.85&&typeof item
 
 // The provider supplies semantics. Its approximate coordinates are used only to
 // associate those semantics with measured objects, never as replacement geometry.
-export function vectorProductionAnalysis(response,detected,spec,{wallDecisions={},labels:extraLabels=[]}={}){
+export function vectorProductionAnalysis(response,detected,spec,{wallDecisions={},labels:extraLabels=[],outdoor=null}={}){
   // Room names printed in the PDF's own text layer sit exactly where the drawing puts them; provider label
   // positions are typically 1-2 m out. When the sheet carries text labels they name the rooms, and provider
   // labels are used only for sheets without them (scans, outlined text), so one room never gets two names.
@@ -67,13 +68,13 @@ export function vectorProductionAnalysis(response,detected,spec,{wallDecisions={
   vector.report.openingsNeedingClassification = openings.filter(opening=>opening.needsClassification).length;
   vector.report.documentedGapConfirmations = confirmations.size;
   vector.response = {...vector.response,openings};
-  const buildingAreas=measuredBuildingAreas(response.buildingAreas||[],vector,spec);
+  const buildingAreas=measuredBuildingAreas(response.buildingAreas||[],vector,spec,outdoor);
   vector.report.footprint=buildingAreas.report;
   return {vector,detected:measuredGeometry,response:{...response,...vector.response,openings,rooms:vector.rooms,buildingAreas:buildingAreas.areas,
     review:[...(response.review||[]),...(unmatched.length?[`${unmatched.length} AI opening annotations lack an unambiguous measured opening; they were withheld from quantities.`]:[])]}};
 }
 
-const OUTDOOR=/(alfresco|patio|balcony|porch|verandah|veranda|deck|terrace|courtyard|portico)/i;
+const OUTDOOR=/\b(alfresco|patio|balcony|porch|verandah|veranda|deck|terrace|courtyard|portico)\b/i;
 const OUTDOOR_TYPES=['Alfresco','Patio','Porch','Balcony','Deck'];
 const ringArea=r=>Math.abs(r.reduce((s,p,i)=>{const q=r[(i+1)%r.length];return s+p.x*q.y-q.x*p.y;},0))/2;
 
@@ -82,7 +83,7 @@ const ringArea=r=>Math.abs(r.reduce((s,p,i)=>{const q=r[(i+1)%r.length];return s
 // rectangle is kept only as readingNodes for review. Outdoor areas (balcony, terrace, alfresco) keep the
 // reading's outline, but the side along the house is put on the building's outer face, so an outdoor area
 // never overlaps the house or leaves a gap against it.
-function measuredBuildingAreas(readings,vector,spec){
+function measuredBuildingAreas(readings,vector,spec,outdoor=null){
   const toMm=p=>({x:p.x*spec.logicalWidth/spec.pixelsPerMm,y:p.y*spec.logicalHeight/spec.pixelsPerMm});
   const fromMm=p=>({x:p.x*spec.pixelsPerMm/spec.logicalWidth,y:p.y*spec.pixelsPerMm/spec.logicalHeight});
   const indoor=(vector.rooms||[]).filter(room=>room.polygon?.length>=3&&!OUTDOOR.test(room.name||''));
@@ -112,28 +113,24 @@ function measuredBuildingAreas(readings,vector,spec){
     report.created=true;
     areas.unshift({detectionId:`vector-footprint-${spec.page}`,type:'Footprint',nodes:outline.polygon.map(fromMm),measuredFrom:'rooms-and-walls',basis:'OBSERVED',confidence:0.8,evidence});
   }
-  return {areas,report};
-}
-
-// The edge of an outdoor area that runs along the house (parallel, within 1.5 m, overlapping) is moved
-// onto the building outline's edge.
-function againstBuilding(polygon,building){
-  const n=polygon.length;let changed=false;const out=polygon.map(p=>({...p}));
-  for(let i=0;i<n;i++){
-    const a=polygon[i],b=polygon[(i+1)%n];const horizontal=Math.abs(a.y-b.y)<Math.abs(a.x-b.x);
-    const e0=Math.min(horizontal?a.x:a.y,horizontal?b.x:b.y),e1=Math.max(horizontal?a.x:a.y,horizontal?b.x:b.y);const c=horizontal?(a.y+b.y)/2:(a.x+b.x)/2;
-    let best=null;
-    for(let j=0;j<building.length;j++){
-      const p=building[j],q=building[(j+1)%building.length];
-      if(horizontal?Math.abs(p.y-q.y)>1:Math.abs(p.x-q.x)>1)continue;
-      const f0=Math.min(horizontal?p.x:p.y,horizontal?q.x:q.y),f1=Math.max(horizontal?p.x:p.y,horizontal?q.x:q.y);
-      const overlap=Math.min(e1,f1)-Math.max(e0,f0);if(overlap<(e1-e0)*0.5)continue;
-      const fc=horizontal?p.y:p.x;const d=Math.abs(fc-c);if(d>1500||d<1)continue;
-      if(!best||d<best.d)best={d,fc};
+  // Outdoor areas named on the sheet, measured from their drawn outline (geometry/outdoorAreas.js). A plan
+  // reading of the same area keeps only its label and position; the outline is the drawing's.
+  if(outdoor?.segments?.length&&outdoor?.textItems?.length){
+    const segments=outdoor.segments.map(s=>({x1:s.x1/spec.pixelsPerMm,y1:s.y1/spec.pixelsPerMm,x2:s.x2/spec.pixelsPerMm,y2:s.y2/spec.pixelsPerMm}));
+    const labels=outdoor.textItems.filter(t=>OUTDOOR_LABEL.test(String(t.text||t.str||''))&&Number.isFinite(t.x)&&Number.isFinite(t.y))
+      .map(t=>({text:String(t.text||t.str).trim(),x:(t.x+(Number(t.width)||0)/2)/spec.pixelsPerMm,y:t.y/spec.pixelsPerMm}));
+    report.outdoor=[];const traced=[];
+    for(const label of labels){
+      const found=traceOutdoorArea({segments,label,building:outline.polygon});
+      if(found.failed){report.outdoor.push({label:label.text,failed:found.failed});continue;}
+      const centre={x:found.polygon.reduce((s,p)=>s+p.x,0)/found.polygon.length,y:found.polygon.reduce((s,p)=>s+p.y,0)/found.polygon.length};
+      if(traced.some(t=>pointInPolygon(centre,t.polygon)))continue; // a second label in the same area
+      traced.push(found);report.outdoor.push({label:label.text,type:found.type,areaM2:+found.areaM2.toFixed(2),widthMm:found.widthMm,depthMm:found.depthMm});
+      const reading=areas.findIndex(a=>OUTDOOR_TYPES.includes(a?.type)&&a.measuredFrom!=='drawn-outline'&&Array.isArray(a.nodes)&&a.nodes.length>=3&&pointInPolygon(a.nodes.map(toMm).reduce((s,p,_,all)=>({x:s.x+p.x/all.length,y:s.y+p.y/all.length}),{x:0,y:0}),found.polygon));
+      const area={type:found.type,label:found.label,nodes:found.polygon.map(fromMm),measuredFrom:'drawn-outline',basis:'OBSERVED',confidence:0.8,evidence:found.evidence};
+      if(reading>=0)areas[reading]={...areas[reading],...area,readingNodes:areas[reading].nodes};
+      else areas.push({detectionId:`vector-outdoor-${spec.page}-${traced.length}`,...area});
     }
-    if(!best)continue;
-    if(horizontal){out[i].y=best.fc;out[(i+1)%n].y=best.fc;}else{out[i].x=best.fc;out[(i+1)%n].x=best.fc;}
-    changed=true;
   }
-  return {polygon:out,changed};
+  return {areas,report};
 }

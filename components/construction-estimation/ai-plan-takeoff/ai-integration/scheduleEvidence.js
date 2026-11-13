@@ -54,6 +54,14 @@ export function createAiScheduleRows(analysis, pages) {
         commercialStatus: 'Measured — outdoor area, excluded from floor area', reviewRequired: false,
         notes: `${item.basis || ''} ${item.evidence || ''}${item.mouthMm ? ` Open mouth ${Math.round(item.mouthMm)} mm.` : ''}`.trim(),
       })),
+      // Retaining walls the builder confirmed: length along the wall from the drawing. The height is
+      // rarely drawn on a floor plan (often "determined on site"), so face area is left to the builder.
+      ...(analysis?.retainingWalls || []).filter((item) => pages.includes(item.page) && Number(item.lengthMm) > 0).map((item) => ({
+        section: 'Retaining Walls', itemId: `retaining-wall-${item.page}-${item.id}`, planSheet: item.page, floor: item.level, level: item.level,
+        category: `Retaining wall${item.label ? ` — ${item.label}` : ''} (${item.thicknessMm} mm)`, quantity: Math.round(item.lengthMm) / 1000, unit: 'lm', source: 'plan',
+        thicknessMm: item.thicknessMm, commercialStatus: 'Measured — retaining wall, not a house wall', reviewRequired: false,
+        notes: `${item.basis || ''} Height is not taken from the floor plan: enter the retained height in the quotation for block or face area.`.trim(),
+      })),
     ],
   };
 }

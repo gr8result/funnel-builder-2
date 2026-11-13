@@ -7,12 +7,22 @@
 //
 // Builder answers live on the analysis as constructionInputs:
 //   { stairFlights: number, ceilingUnderRoofM2: { [level]: number } }
+import { normaliseLevel } from './takeoffRunData.js';
 
 const WET = /\b(bath(room)?|ensuite|ens|wc|toilet|powder|pwd|laundry|l'?dry|shower)\b/i;
 const OUTDOOR = /alfresco|patio|balcony|porch|portico|deck|terrace|verandah|veranda|outdoor|courtyard/i;
 const GARAGE = /garage|carport|workshop/i;
 const STAIR = /\bstair/i;
 const LEVEL_ORDER = ['Ground Floor', 'Second Level', 'Third Level'];
+// A room's storey in the app's own level names. A room may carry the drawing's name ("Upper Floor",
+// "Lower Floor") or none (then its sheet's assignment); both must land on one name, or one storey is
+// counted as two levels and stacked in the wrong order.
+const roomLevelOf = (levelOf) => (room) => {
+  const own = normaliseLevel(room?.level);
+  if (own !== 'Unassigned') return own;
+  const sheet = levelOf(room?.page);
+  return normaliseLevel(sheet) !== 'Unassigned' ? normaliseLevel(sheet) : (sheet || 'Unassigned');
+};
 
 const round = (value, places = 2) => (Number.isFinite(value) ? Math.round(value * 10 ** places) / 10 ** places : null);
 // Storey order from the level's name: the app's own names, and the names drawings use (Lower/Upper, First...).
@@ -21,7 +31,7 @@ const levelRank = (level) => {
   if (i >= 0) return i;
   const name = String(level || '').toLowerCase();
   if (/basement|undercroft|sub-?floor/.test(name)) return -1;
-  if (/ground|lower|level 0|g/.test(name)) return 0;
+  if (/ground|lower|level 0|\bg\b/.test(name)) return 0;
   if (/third|level 3|3rd|attic|loft/.test(name)) return 2;
   if (/first|second|upper|level [12]|1st|2nd/.test(name)) return 1;
   return 0;
@@ -67,13 +77,14 @@ export function createConstructionQuantityRows({
     ...(quantity === null ? { reviewRequired: true, commercialStatus: 'Review required' } : {}), ...extra,
   });
   const indoor = rooms.filter((room) => usableRoom(room) && !isOutdoor(room));
-  const levels = [...new Set(indoor.map((room) => room.level || levelOf(room.page)))].filter((level) => level && level !== 'Unassigned')
+  const levelOfRoom = roomLevelOf(levelOf);
+  const levels = [...new Set(indoor.map(levelOfRoom))].filter((level) => level && level !== 'Unassigned')
     .sort((a, b) => levelRank(a) - levelRank(b));
   const topLevel = levels.at(-1);
   const cell = (key) => { const raw = jobSetupRows?.[key]; const value = raw && typeof raw === 'object' ? raw.value : raw; const n = Number(String(value ?? '').replace(/[^0-9.]/g, '')); return n > 0 ? n : null; };
 
   for (const level of levels) {
-    const onLevel = indoor.filter((room) => (room.level || levelOf(room.page)) === level);
+    const onLevel = indoor.filter((room) => levelOfRoom(room) === level);
     const approved = onLevel.filter(approvedRoom);
     const pendingRooms = onLevel.length - approved.length;
     const pendingNote = pendingRooms ? ` ${pendingRooms} room(s) on this level are not approved yet and are not included.` : '';
@@ -184,11 +195,12 @@ export function constructionDecisions(analysis = {}, levelOf = () => 'Unassigned
       action: { type: 'number', unit: 'flights', suggested: 1 } });
   }
   const indoor = rooms.filter((room) => !isOutdoor(room));
-  const levels = [...new Set(indoor.map((room) => room.level || levelOf(room.page)))].filter((l) => l && l !== 'Unassigned').sort((a, b) => levelRank(a) - levelRank(b));
+  const levelOfRoom = roomLevelOf(levelOf);
+  const levels = [...new Set(indoor.map(levelOfRoom))].filter((l) => l && l !== 'Unassigned').sort((a, b) => levelRank(a) - levelRank(b));
   for (const level of levels.slice(0, -1)) {
     if (inputs.ceilingUnderRoofM2?.[level] !== undefined) continue;
-    const below = indoor.filter((r) => (r.level || levelOf(r.page)) === level && approvedRoom(r)).reduce((s, r) => s + Number(r.areaM2), 0);
-    const above = indoor.filter((r) => (r.level || levelOf(r.page)) === levels[levels.indexOf(level) + 1] && approvedRoom(r)).reduce((s, r) => s + Number(r.areaM2), 0);
+    const below = indoor.filter((r) => levelOfRoom(r) === level && approvedRoom(r)).reduce((s, r) => s + Number(r.areaM2), 0);
+    const above = indoor.filter((r) => levelOfRoom(r) === levels[levels.indexOf(level) + 1] && approvedRoom(r)).reduce((s, r) => s + Number(r.areaM2), 0);
     if (!(below > 0)) continue;
     decisions.push({ id: `construction:ceiling-under-roof:${level}`, topic: 'construction-input', field: 'ceilingUnderRoofM2', level, pages: [],
       title: `${level}: how much ceiling has roof directly above it?`,

@@ -656,6 +656,10 @@ try {
     console.log(new Date().toISOString(), `openings settled: ${JSON.stringify(settledReview.openings)}`);
     await answerQuestions();
     await save();
+    // Questions that depend on approved rooms (ceilings under the roof) appear once the approvals are in the
+    // saved schedule; answer those too, as a builder would on seeing them.
+    await answerQuestions();
+    await save();
     settledReview.left = await page.evaluate(() => harness.blockers());
     result.settledReview = settledReview;
     console.log(new Date().toISOString(), `review answers: ${JSON.stringify(settledReview.answers)}`);
