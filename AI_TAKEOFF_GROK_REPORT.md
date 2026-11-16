@@ -2,7 +2,7 @@
 
 ## Claude final acceptance — 17 November 2026 (uncommitted)
 
-Port 3000 untouched; nothing committed; no other session's processes or containers stopped.
+Port 3000 and port 3102 untouched. Local commit 6d47a4c (owner-approved; not pushed). Unused auto-restarted Docker test containers stopped with owner authorisation (volumes kept); no other session's processes stopped.
 
 ### Acceptance table (17 November 2026)
 
@@ -21,12 +21,18 @@ Port 3000 untouched; nothing committed; no other session's processes or containe
 | Non-browser regression | PASS | 100/100 (`test-takeoff-*`, `test-vector-*`, `test-local-vector-*`, `test-plan-model`, `test-job-file-package-size`) after the OCR repair |
 | Production build | PASS | Isolated build of today's code `.next-ai-takeoff-iso-20261117` (isolated Supabase env baked in, live secrets blanked): exit 0, 1617 s; log `artifacts/test-results/takeoff-build-iso-20261117/build.log` |
 | Two-builder security, database/RLS | PASS (today's schema) | Isolated stack `gr8-takeoff-acceptance` (127.0.0.1:55621), today's migrations incl. 20261113/20261116 applied: **31/31** (`artifacts/test-results/takeoff-two-tenant-20261117/api-rls.json`) — job isolation, saved measurements/calibrations/approvals unchanged after attack, B cannot withdraw A's approvals, transferred BOQ sections/items/procurement unreadable/unchangeable/undeletable/not injectable across tenants, promotion RPC not callable by builders, anonymous sees nothing |
-| Two-builder security, app API + two-browser | **BLOCKED (memory)** | Not run on today's code. With Docker up, free commit fell to 755 MB (Docker auto-restarts four other stacks; stopping them was refused by the permission classifier; an unclaimed `next dev -p 3102` holds 4.6 GB). Docker was stopped per instruction. Extended app checks (transfer API refuses foreign workspace / no token / tampered token / foreign workbook) are written into the test and will run with `TAKEOFF_ISOLATED_APP` |
+| Two-builder security, application API | **PASS** | Isolated app `next start -p 3127` from `.next-ai-takeoff-iso-20261117` (isolated Supabase, live secrets blanked): **39/39** (`artifacts/test-results/takeoff-two-tenant-20261117/api-rls-with-app.json`). Takeoff API: no session 401, tampered token 401. Quotation transfer API: no session 401, B into A's workspace **403**, tampered token 401, A's workbook posted into B's workspace **409**; A's quotation rows unchanged |
+| Two-builder security, two real browsers | **PASS** | `test-takeoff-two-tenant-browser.mjs` (`.../takeoff-two-tenant-20261117/browser/report.json`, 0 page errors, only Google Fonts blocked by the test's network fence): both builders signed in through isolated auth, opened the same job file, edited and saved concurrently (8–9 s each), each reopened exactly their own edit (71 / 70 walls); B at A's job address sees 0 walls and no A job name; from B's signed-in browser session A's saved takeoff (measurements + approvals), BOQ items, procurement rows and project all return **0 rows** while A sees its own (positive control: 1 snapshot, 1 BOQ row); B's transfer into A's workspace from the browser **403**; nothing of A's job or workspace in B's browser storage (B's exports cannot contain it); stale second tab refused ("revision 6; this tab has revision 4. Nothing was overwritten"), reload recovers the newest save; interrupted save reopens as a complete save |
 
-Remaining before production:
-1. Two-builder app-API and two-browser run (needs ~8 GB free: owner to stop the port-3102 dev server or allow the other Docker stacks to be stopped; then `next start -p 3127` from `.next-ai-takeoff-iso-20261117` via `E:/dev/takeoff-acceptance-stack/isolated-run.sh`, then `test-takeoff-two-tenant-isolated.mjs` with `TAKEOFF_ISOLATED_APP` and `test-takeoff-two-tenant-browser.mjs`).
-2. Builder confirmation of the Jesmond kitchen 3.7 m wall and pantry threshold (product decision on that job, not a code defect).
-3. Commit approval.
+How memory was found for the gate: Docker's auto-restarted stacks (quotation, product library, ONLYOFFICE, Mautic DB, builder-db) were confirmed unused (Docker had been stopped; both dev servers use hosted Supabase; no local DB connections; both peer sessions disclaimed them) and stopped with the owner's authorisation — **no volumes deleted** (27 volumes before and after). The port-3102 server was traced to the Codex agent (VS Code ChatGPT extension, Client Selections repair build `.next-cs-repair-20261116`), whose host process is still running, so it was **not** stopped. Afterwards the 3127 server and Docker were stopped again (Docker was stopped when the session began).
+
+### Production-readiness status (17 November 2026)
+
+**All AI Takeoff acceptance gates pass on today's code.** The module is ready for production release from an engineering standpoint, subject to:
+1. Owner release approval (push/merge/deploy were not done and are not authorised here). Local commits on `recovery/live-snapshot-20261031`.
+2. Database migrations 20261113000100 and 20261116000100 (quotation snapshot promotion, forward fixes) must be applied to production before the quotation-transfer path is released; they were applied only to the isolated stack.
+3. Job-specific builder decisions on Jesmond (kitchen 3.7 m wall, pantry threshold 2470 mm) remain flagged in the review list by design; they are not code defects.
+4. Known product behaviour, not a defect: browser saves show "browser copy only (not protected): also Save Job to Computer" — the builder must also save the `.gr8job` (or configure builder-owned storage) for a protected copy.
 
 ### Browser OCR gap: cause and repair
 

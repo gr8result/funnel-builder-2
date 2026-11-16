@@ -20,7 +20,7 @@ const jobFile = process.env.TAKEOFF_JOB_FILE;
 assert(/^http:\/\/127\.0\.0\.1:556\d\d$/.test(supabaseUrl), `Refusing Supabase ${supabaseUrl}`);
 assert(/^http:\/\/127\.0\.0\.1:(?!3000\b)\d+$/.test(app || ''), `Refusing app ${app}`);
 assert(fs.existsSync(jobFile), 'TAKEOFF_JOB_FILE must be a .gr8job takeoff job');
-const out = path.resolve('artifacts/test-results/takeoff-two-tenant-20261105/browser');
+const out = path.resolve(process.env.TAKEOFF_TWO_TENANT_OUT || 'artifacts/test-results/takeoff-two-tenant-20261105/browser');
 fs.mkdirSync(out, { recursive: true });
 const report = { steps: {}, errors: [], blocked: [] };
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -157,13 +157,40 @@ try {
   // 3. User B tries user A's server-registered job by its address.
   log('cross-tenant address attempt');
   const intrusion = await newTab(B);
-  const foreignJob = (await A.db.from('builder_commercial_projects').select('id').eq('workspace_id', A.workspaceId).limit(1).single()).data.id;
+  // A job of A's that holds a saved takeoff snapshot and transferred quotation rows (seeded by
+  // test-takeoff-two-tenant-isolated.mjs), so "B sees nothing" is checked against real data A can see.
+  const withQuote = (await A.db.from('builder_boq_items').select('project_id').eq('workspace_id', A.workspaceId).limit(1)).data || [];
+  const foreignJob = withQuote[0]?.project_id || (await A.db.from('builder_commercial_projects').select('id').eq('workspace_id', A.workspaceId).limit(1).single()).data.id;
+  const ownerSees = { snapshots: (await A.db.from('builder_estimate_snapshots').select('id').eq('project_id', foreignJob)).data?.length || 0, boq: (await A.db.from('builder_boq_items').select('id').eq('project_id', foreignJob)).data?.length || 0 };
+  report.steps.ownerControl = ownerSees;
+  assert.ok(ownerSees.snapshots > 0 && ownerSees.boq > 0, `user A can see its own snapshot and quotation rows for the probed job (${JSON.stringify(ownerSees)})`);
   await intrusion.goto(`${app}/jobs/${foreignJob}/takeoff`, { waitUntil: 'domcontentloaded', timeout: 600000 });
   await delay(20000);
   const seen = await intrusion.evaluate(() => document.body.innerText);
   report.steps.crossTenant = { foreignJob, wallRows: await wallRows(intrusion), excerpt: seen.replace(/\s+/g, ' ').slice(0, 300) };
   assert.equal(report.steps.crossTenant.wallRows, 0, 'user B sees no takeoff for user A\'s job');
   assert.ok(!seen.includes(`Takeoff job A`), 'user A\'s job name is not shown to user B');
+  // 3b. From inside B's signed-in browser session (B's own token, the app's origin): A's saved takeoff
+  // (measurements and approvals), A's transferred quotation rows and the quotation transfer endpoint
+  // for A's workspace give B nothing; and nothing of A's job reached B's browser storage, which is
+  // what B's own .gr8job export is built from.
+  const probe = await intrusion.evaluate(async ({ supabaseUrl, anonKey, authStorageKey, app, foreignJob, workspaceA }) => {
+    const token = JSON.parse(localStorage.getItem(authStorageKey) || '{}').access_token;
+    const rest = async (query) => { const r = await fetch(`${supabaseUrl}/rest/v1/${query}`, { headers: { apikey: anonKey, Authorization: `Bearer ${token}` } }); return { status: r.status, rows: r.ok ? (await r.json()).length : null }; };
+    const snapshots = await rest(`builder_estimate_snapshots?project_id=eq.${foreignJob}&select=id,workbook_snapshot`);
+    const boq = await rest(`builder_boq_items?project_id=eq.${foreignJob}&select=id,quantity`);
+    const procurement = await rest(`builder_procurement_items?project_id=eq.${foreignJob}&select=id`);
+    const project = await rest(`builder_commercial_projects?id=eq.${foreignJob}&select=id`);
+    const sync = await fetch(`${app}/api/builders/sync-commercial-snapshot`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, 'x-workspace-id': workspaceA }, body: JSON.stringify({ workspace_id: workspaceA, workbook: { jobId: 'probe' } }) });
+    const dbNames = indexedDB.databases ? (await indexedDB.databases()).map((d) => d.name) : [];
+    const local = Object.keys(localStorage).map((k) => `${k}=${localStorage.getItem(k)}`).join('\n');
+    return { hasToken: Boolean(token), snapshots, boq, procurement, project, syncStatus: sync.status, storageMentionsForeignJob: local.includes(foreignJob) || dbNames.some((n) => String(n).includes(foreignJob)), storageMentionsWorkspaceA: local.includes(workspaceA) };
+  }, { supabaseUrl, anonKey: env.NEXT_PUBLIC_SUPABASE_ANON_KEY, authStorageKey, app, foreignJob, workspaceA: A.workspaceId });
+  report.steps.crossTenantData = probe;
+  assert.ok(probe.hasToken, 'the probe runs as signed-in user B');
+  for (const key of ['snapshots', 'boq', 'procurement', 'project']) assert.ok(probe[key].status === 200 && probe[key].rows === 0, `user B's browser session gets none of user A's ${key} (${JSON.stringify(probe[key])})`);
+  assert.equal(probe.syncStatus, 403, 'user B cannot transfer a quotation into user A\'s workspace from the browser');
+  assert.ok(!probe.storageMentionsForeignJob && !probe.storageMentionsWorkspaceA, 'nothing of user A\'s job or workspace is in user B\'s browser storage (B\'s exports cannot contain it)');
   await intrusion.close();
 
   // 4. Stale tab: user A has the job open in two tabs; the first saves, then the stale second tries to.
