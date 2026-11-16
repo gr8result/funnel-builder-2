@@ -19,7 +19,7 @@ async function sheet(page) {
   const img = await loadImage(fs.readFileSync(path.join(dir, 'application-raster.png')));
   const canvas = createCanvas(img.width, img.height); canvas.getContext('2d').drawImage(img, 0, 0);
   const raster = canvas.getContext('2d').getImageData(0, 0, img.width, img.height); raster.storedPixelsPerMm = input.storedPixelsPerMm;
-  return { input, found: detectVectorWalls(input.vectorSegments, { ...input, raster, textItems: input.textItems || [] }, {}) };
+  return { input, raster, found: detectVectorWalls(input.vectorSegments, { ...input, raster, textItems: input.textItems || [] }, {}) };
 }
 const at = (id) => ref.openings.find((o) => o.id === id);
 const within = (input, o, point, mm) => Math.hypot(o.x - point.x, o.y - point.y) <= mm * input.pixelsPerMm;
@@ -44,6 +44,28 @@ if (!lower) { console.log('SKIPPED: lower sheet not cached.'); process.exit(0); 
   const retaining = (found.structures || []).filter((s) => s.element === 'retaining');
   assert.ok(retaining.length >= 1 && retaining.every((s) => /retaining/i.test(s.label)), 'the labelled retaining wall is reported as a structure for review');
   assert.ok(!found.walls.some((w) => w.classification?.element === 'joinery'), 'no wall removed as cabinetry (evidence-only by default)');
+}
+{
+  // Drawing evidence: the 0315 FG OBS frame is x=422.41..464.85, projecting south
+  // from y=936.41. Its 144 mm host break contains the ensuite partition junction.
+  const { input, raster, found } = lower;
+  const atFrame = o => Math.abs(o.x - 443.63) < 2 && Math.abs(o.y - 937.97) < 2;
+  const frames = found.openings.filter(atFrame);
+  assert.equal(frames.length, 1, '0315 frame is read once');
+  assert.equal(frames[0].frameUnit, true);
+  assert.equal(frames[0].kind, 'window');
+  assert.ok(Math.abs(frames[0].widthMm - 1500) < 20, 'frame width comes from the drawn caps');
+  assert.equal(frames[0].needsClassification, true, 'without its printed label, the frame still needs builder classification');
+  assert.ok(!found.walls.some(w => w.nodes.every(p => p.x >= 422 && p.x <= 465 && p.y >= 936 && p.y <= 945)), 'frame/glass lines are not a wall');
+  assert.ok(!found.openings.some(o => Math.abs(o.x - 489.01) < 2 && Math.abs(o.y - 938.51) < 2), 'adjacent hatched wall is not a false 1705 window');
+  const rerunWithout = predicate => detectVectorWalls(input.vectorSegments.filter(s => !predicate(s)), { ...input, raster }, {});
+  const vertical = s => Math.abs(s.x1 - s.x2) < .02;
+  const missingCaps = rerunWithout(s => vertical(s) && [422.41, 464.85].some(x => Math.abs(s.x1 - x) < .02)
+    && Math.min(s.y1, s.y2) >= 936 && Math.max(s.y1, s.y2) <= 945);
+  assert.ok(!missingCaps.openings.some(o => atFrame(o) && o.frameUnit), 'no projected frame inferred without its drawn end caps');
+  const missingJunction = rerunWithout(s => vertical(s) && ((s.x1 >= 418 && s.x1 <= 422) || (s.x1 >= 465 && s.x1 <= 469))
+    && Math.max(s.y1, s.y2) <= 936.5 && Math.max(s.y1, s.y2) >= 936);
+  assert.ok(!missingJunction.openings.some(o => atFrame(o) && o.frameUnit), 'nearby wall alone is insufficient without the partition junction');
 }
 const upper = await sheet(4);
 if (upper) {

@@ -7,12 +7,25 @@ import { roomSnapTargets, snapRoomVertex, polygonAreaPerimeter, keepRoomCornerIn
 
 const SNAP_TOLERANCE_SCREEN_PX = 12;
 
-export function RoomBoundaryPanel({ rooms, control, enabled, setEnabled, editing, setEditing, readOnly, hoveredId = null, setHoveredId = () => {} }) {
+// The panel floats over the top-right of the drawing. While a tool that is used
+// by clicking points on the plan is active (measure, eaves, openings, areas...)
+// it folds to its header so it never sits on top of geometry being clicked; the
+// builder can open or fold it at any time, and that choice holds for the tool.
+export function RoomBoundaryPanel({ rooms, control, enabled, setEnabled, editing, setEditing, readOnly, hoveredId = null, setHoveredId = () => {}, toolKey = null, collapseForTool = false }) {
   const selected=rooms.filter(r=>r.selected&&!r.excluded);
   const [height, setHeight]=useState('');
+  const [manual, setManual]=useState({ tool: null, collapsed: null });
+  const collapsed=manual.tool===toolKey&&manual.collapsed!==null?manual.collapsed:collapseForTool;
+  const toggle=()=>setManual({ tool: toolKey, collapsed: !collapsed });
   const apply=action=>selected.forEach(room=>control.update([room.id],{actions:[...new Set([...(room.actions||[]),action])],...(action==='Mark as Wet Area'?{wetArea:true}:{})}));
-  return <aside data-testid="room-boundary-panel" style={{position:'absolute',right:12,top:12,zIndex:4,width:280,maxHeight:'70%',overflowY:'auto',padding:12,background:'#fff',border:'1px solid #94a3b8',borderRadius:8,boxShadow:'0 2px 12px #0002'}}>
-    <strong>Interactive rooms</strong>
+  const frame={position:'absolute',right:12,top:12,zIndex:4,padding:collapsed?'6px 10px':12,background:'#fff',border:'1px solid #94a3b8',borderRadius:8,boxShadow:'0 2px 12px #0002'};
+  const header=<div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8}}>
+    <strong>Interactive rooms{collapsed?` (${rooms.length})`:''}</strong>
+    <button type="button" data-testid="room-boundary-panel-toggle" aria-expanded={!collapsed} onClick={toggle}>{collapsed?'Show':'Hide'}</button>
+  </div>;
+  if(collapsed)return <aside data-testid="room-boundary-panel-collapsed" style={frame}>{header}</aside>;
+  return <aside data-testid="room-boundary-panel" style={{...frame,width:280,maxHeight:'70%',overflowY:'auto'}}>
+    {header}
     <label style={{display:'block',margin:'8px 0'}}><input type="checkbox" checked={enabled} disabled={readOnly} onChange={e=>{setEnabled(e.target.checked);setEditing(null);}} /> Select rooms on plan</label>
     <button disabled={control.busy||readOnly} onClick={()=>{setEnabled(true);control.read();}}>{control.busy?'Detecting…':'Detect room boundaries'}</button>
     <button data-testid="remeasure-rooms" disabled={control.busy||readOnly} onClick={()=>{setEnabled(true);control.remeasure();}}>Re-measure from walls</button>

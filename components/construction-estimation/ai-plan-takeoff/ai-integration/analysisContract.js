@@ -205,6 +205,16 @@ function distanceToSegment(point, a, b) {
 // "the same opening" are judged with that much slack, never by exact coordinates.
 const READ_TOLERANCE_MM = 600;
 
+const polygonCentre = (polygon) => ({ x: polygon.reduce((sum, point) => sum + point.x, 0) / polygon.length, y: polygon.reduce((sum, point) => sum + point.y, 0) / polygon.length });
+function insidePolygon(point, polygon) {
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i, i += 1) {
+    const a = polygon[i], b = polygon[j];
+    if ((a.y > point.y) !== (b.y > point.y) && point.x < ((b.x - a.x) * (point.y - a.y)) / (b.y - a.y) + a.x) inside = !inside;
+  }
+  return inside;
+}
+
 /** Share of a traced line (page pixels) that runs along any of the given segments. */
 function shareAlongSegments(nodes, segments, toleranceMm, scale) {
   return coveredByExistingWalls(nodes, [{ nodes: [], segments, thicknessMm: 0 }], scale, toleranceMm);
@@ -320,7 +330,7 @@ export function normalizePlanAnalysis({ context, responses = [], runId, modelVer
     ...acceptedAreas.map((item) => ({ page: item.page, type: item.type, nodes: item.nodes })),
     ...all.filter((item) => item.kind === 'floorplan' && item.raw?.basis !== 'ASSUMED' && item.raw?.confidence >= 0.5 && Array.isArray(item.raw.nodes) && item.raw.nodes.length >= 3 && item.raw.nodes.every(normalizedPoint))
       .map((item) => ({ page: item.page, type: item.raw.type, nodes: item.raw.nodes })),
-  ].map((item) => ({ ...item, segments: polygonSegments(item.nodes.map((point) => toPixels(point, pageFor(item.page)))) }));
+  ].map((item) => { const polygon = item.nodes.map((point) => toPixels(point, pageFor(item.page))); return { ...item, polygon, segments: polygonSegments(polygon) }; });
   const areaCandidates = all.filter((item) => item.kind === 'floorplan').sort((a, b) => (b.raw?.confidence || 0) - (a.raw?.confidence || 0));
   const ordered = [...all.filter((item) => item.kind === 'wall'), ...all.filter((item) => item.kind === 'opening'), ...all.filter((item) => item.kind === 'pillar' || item.kind === 'eave'), ...areaCandidates.filter((item) => item.raw?.type === 'Footprint'), ...areaCandidates.filter((item) => item.raw?.type !== 'Footprint')];
   const skip = (raw, page, kind, message) => { analysis.alreadyMeasured.push({ ...metadataOnly(raw), page, kind }); report(page, raw, message, 'already-measured'); };
@@ -349,8 +359,13 @@ export function normalizePlanAnalysis({ context, responses = [], runId, modelVer
         // the outside of the building is not added as wall; it is put to the builder once.
         if (!estimatorConfirmed && raw.category === 'exterior' && Array.isArray(raw.nodes) && raw.nodes.every(normalizedPoint)) {
           const line = raw.nodes.map((point) => toPixels(point, targetPage));
-          const footprint = outlines.filter((item) => item.page === page && item.type === 'Footprint').flatMap((item) => item.segments);
+          const footprints = outlines.filter((item) => item.page === page && item.type === 'Footprint');
+          const footprint = footprints.flatMap((item) => item.segments);
+          // Only an outdoor area inside the footprint (an alfresco under the main roof) has its open
+          // side on the building outline. An area outside it (a patio or terrace against the house)
+          // shares only the house's own wall with the outline, and that wall is a wall.
           const open = outlines.find((item) => item.page === page && OPEN_AREA_TYPES.includes(item.type)
+            && footprints.some((outline) => insidePolygon(polygonCentre(item.polygon), outline.polygon))
             && shareAlongSegments(line, item.segments, 800, scale) >= 0.6 && footprint.length && shareAlongSegments(line, footprint, 800, scale) >= 0.6);
           if (open) {
             const lengthM = line.slice(1).reduce((sum, point, index) => sum + Math.hypot(point.x - line[index].x, point.y - line[index].y), 0) / scale / 1000;

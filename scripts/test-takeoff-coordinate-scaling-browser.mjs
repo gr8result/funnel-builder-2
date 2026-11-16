@@ -136,6 +136,9 @@ try{
     const visiblePoints=await page.evaluate(()=>window.__coordinateHarness.visiblePoints());
     const row={zoom,rotation,cssScale,deviceScaleFactor,renderScale,initial,visiblePoints};report.cases.push(row);
     await button('Measure');
+    // A floating panel over the plan swallowed the first Measure click at 150% / 90 degrees
+    // (the line end sat under "Interactive rooms"); while a plan-click tool is active it folds.
+    assert.equal(await page.evaluate(()=>Boolean(document.querySelector('[data-testid="room-boundary-panel"]'))),false,'Room panel folds while Measure is active');
     for(const point of visiblePoints)await click(point.client);
     await page.waitForFunction(()=>window.__coordinateHarness.snapshot().completedMeasurements.length===1);
     row.afterMeasure=await snapshot();
@@ -216,4 +219,8 @@ function close(actual,expected,label){assert.ok(Math.abs(actual-expected)<0.0000
 async function snapshot(){return page.evaluate(()=>window.__coordinateHarness.snapshot());}
 async function settle(){await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));}
 async function button(text){const found=await page.evaluate(label=>{const button=[...document.querySelectorAll('button')].find(el=>el.textContent.trim()===label||(label==='Finish Eaves Run'&&el.textContent.trim().startsWith(label)));if(!button)return false;button.click();return true;},text);assert.ok(found,'Find '+text+' button');await settle();}
-async function click(point){await page.mouse.move(point.x,point.y);await settle();await page.mouse.down();await new Promise(resolve=>setTimeout(resolve,80));await page.mouse.up();await new Promise(resolve=>setTimeout(resolve,650));await settle();}
+async function click(point){
+  // Fail at once, naming what is in the way, when the plan point is not on the drawing canvas.
+  const hit=await page.evaluate(({x,y})=>{const el=document.elementFromPoint(x,y);const stage=window.__coordinateHarness&&document.querySelector('.konvajs-content');return {onCanvas:Boolean(el&&stage&&stage.contains(el)),tag:el?.tagName,testid:el?.closest('[data-testid]')?.getAttribute('data-testid')||null,text:(el?.textContent||'').trim().slice(0,60)};},point);
+  assert.ok(hit.onCanvas,`Plan point ${point.x.toFixed(1)},${point.y.toFixed(1)} is covered by ${hit.tag} ${hit.testid||''} "${hit.text}"`);
+  await page.mouse.move(point.x,point.y);await settle();await page.mouse.down();await new Promise(resolve=>setTimeout(resolve,80));await page.mouse.up();await new Promise(resolve=>setTimeout(resolve,650));await settle();}

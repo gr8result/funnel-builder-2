@@ -37,6 +37,26 @@ const FONT = GlobalFonts.families.some((f) => f.family === 'Arial') ? 'Arial' : 
   assert.equal(read.text, '1809'); assert.equal(read.ocrConfidence, 95); assert.equal(read.parsed.kind, 'window');
   const good = scoredReading({ text: '2118 GSD', confidence: 90, symbols: [...sym('2118', 96), ...sym('GSD', 92)] });
   assert.equal(good.parsed.kind, 'sliding-door'); assert.equal(good.ocrConfidence, 92);
+  // A drawn symbol beside the label read as a short trailing token (Jesmond Upper east wall in Chrome:
+  // the downpipe cross read as "x") is dropped when the rest is a complete code with its type word.
+  const stray = scoredReading({ text: '1809LV x', confidence: 50, symbols: [...sym('1809', 97), ...sym('LV', 92), ...sym('x', 20)] });
+  assert.equal(stray.text, '1809LV'); assert.equal(stray.parsed.knownSuffix, true); assert.equal(stray.parsed.suffix, 'LV'); assert.equal(stray.ocrConfidence, 92);
+  const strayPair = scoredReading({ text: '1809 FG pd', confidence: 47, symbols: [...sym('1809', 98), ...sym('FG', 93), ...sym('pd', 92)] });
+  assert.equal(strayPair.text, '1809 FG'); assert.equal(strayPair.parsed.knownSuffix, true);
+  // A faint stray mark after a complete label (Jesmond Upper "2136 STACKER DOOR" crossed by a wall line):
+  // its low score does not discard the clearly read type word.
+  const stacker = scoredReading({ text: '2136 STACKER f', confidence: 0, symbols: [...sym('2136', 99), ...sym('STACKER', 99), ...sym('f', 47)] });
+  assert.equal(stacker.text, '2136 STACKER'); assert.equal(stacker.parsed.kind, 'sliding-door'); assert.equal(stacker.ocrConfidence, 99);
+  // A type word read with look-alike digits (Jesmond Lower "0315 FG OBS" read "0315 FG O85" in Chrome).
+  assert.equal(parseOpeningLabel('0315 FG O85').suffix, 'FG OBS'); assert.equal(parseOpeningLabel('0315 FG O85').knownSuffix, true);
+  assert.equal(parseOpeningLabel('1809 A5X').knownSuffix, false, 'only exact type words are letter-mapped');
+  // Never turns a note or a bare number into a label: nothing known remains, so the reading is kept as read.
+  const note = scoredReading({ text: '2400 CEILING x', confidence: 90, symbols: [...sym('2400', 95), ...sym('CEILINGx', 90)] });
+  assert.equal(note.parsed?.knownSuffix ?? false, false, 'a note stays unknown');
+  const bare = scoredReading({ text: '1809 xx', confidence: 90, symbols: [...sym('1809', 95), ...sym('xx', 90)] });
+  assert.equal(bare.text, '1809 xx', 'a bare code with stray marks is not trimmed into a label');
+  const longTail = scoredReading({ text: '1809 LV TO SUIT', confidence: 90, symbols: [...sym('1809', 95), ...sym('LVTOSUIT', 90)] });
+  assert.equal(longTail.text, '1809 LV TO SUIT', 'words longer than two characters are never dropped');
 }
 
 // 3. Label lines found in a raster: horizontal and vertical text, never the long lines beside them.

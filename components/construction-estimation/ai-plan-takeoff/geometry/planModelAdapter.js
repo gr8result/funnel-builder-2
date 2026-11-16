@@ -291,6 +291,20 @@ export function vectorAnalysisFromLinework(geometry, spec, { labels = [], wallDe
       });
       return [];
     }
+    // A frame drawn along an internal wall is as often joinery or a stair as a window (the raster
+    // path holds the same rule): it is listed for the builder, never counted as a window by itself.
+    if (hostCategory === 'interior' && opening.kind === 'window' && opening.attributes?.evidence === 'window frame drawn along the wall') {
+      reviewOpeningCandidates.push({
+        id: `review-opening-${wall.id}-${opening.detectionKey || opening.id}`,
+        page: spec.page,
+        nodes: [{ x: position.x * spec.pixelsPerMm, y: position.y * spec.pixelsPerMm }],
+        normalizedPoint: { x: position.x * spec.pixelsPerMm / spec.logicalWidth, y: position.y * spec.pixelsPerMm / spec.logicalHeight },
+        widthMm: opening.widthMm, openingKind: 'window', modelKind: 'window-frame-internal', evidence: opening.attributes.evidence,
+        hostModelWallId: wall.id, hostDetectionKey: wall.detectionKey || null, hostCategory, status: 'review-required',
+        reason: 'A frame drawn along an internal wall can be joinery or a stair as easily as a window. It is excluded from quantities; place a window with the opening tool if it is one.',
+      });
+      return [];
+    }
     const hostDetectionId = detectionIds.get(wall.id);
     const modelKind = opening.attributes?.type || opening.kind;
     const type = opening.kind === 'window' ? 'window' : 'door';
@@ -319,6 +333,26 @@ export function vectorAnalysisFromLinework(geometry, spec, { labels = [], wallDe
       evidence: `${opening.attributes?.evidence || `Opening evidence measured on sheet ${spec.page}.`}${opening.attributes?.printedLabel && !String(opening.attributes?.evidence || '').includes('printed label') ? `; printed label "${opening.attributes.printedLabel}"` : ''}`,
     }];
   });
+  // An open threshold (a drawn wall that stops, carried across open floor to the wall it faces, to
+  // separate an enclosed room such as a pantry) is a doorway with no jamb on one side. It is listed
+  // as an opening for the builder to confirm, measured from the wall end to the facing wall; it is
+  // never counted until confirmed, because the finished width depends on what is built there.
+  for (const separator of Object.values(level.separators)) {
+    if (separator.source !== 'detected' || separator.basis !== 'open-threshold' || separator.nodeIds?.length !== 2) continue;
+    const [a, b] = separator.nodeIds.map((id) => level.nodes[id]);
+    if (!a || !b) continue;
+    const lengthMm = Math.round(Math.hypot(b.x - a.x, b.y - a.y));
+    const middle = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    reviewOpeningCandidates.push({
+      id: `review-opening-threshold-${separator.detectionKey || separator.id}`,
+      page: spec.page,
+      nodes: [{ x: middle.x * spec.pixelsPerMm, y: middle.y * spec.pixelsPerMm }],
+      normalizedPoint: { x: middle.x * spec.pixelsPerMm / spec.logicalWidth, y: middle.y * spec.pixelsPerMm / spec.logicalHeight },
+      widthMm: lengthMm, openingKind: 'opening', modelKind: 'open-threshold', evidence: separator.evidence || null,
+      separatorId: separator.id, status: 'review-required',
+      reason: `Open threshold: the wall stops with no jamb and the room is separated across ${lengthMm} mm of open floor to the facing wall. Confirm whether it is an opening (and its finished width) before it is used.`,
+    });
+  }
   const unconfirmedSpanWallIds = new Set(reviewBridgeCandidates.filter((item) => /unconfirmed gap/.test(item.reason)).map((item) => item.modelWallId));
   // A face enclosed only by the rims of a cross-hatched pier is the solid pier, not floor.
   const pierRimKeys = new Set((geometry.walls || []).filter((wall) => wall.pierRim).map((wall) => `linework:${wall.id}`));
@@ -437,7 +471,8 @@ export function vectorAnalysisFromLinework(geometry, spec, { labels = [], wallDe
     report: { ...report,
       unclassifiedWalls: reviewWallCandidates.length,
       unclassifiedBridges: Object.values(level.walls).filter((wall) => wall.detectionKey?.startsWith('linework-bridge:') && !['exterior', 'interior'].includes(categories[wall.id])).length,
-      openingsOnUnclassifiedWalls: reviewOpeningCandidates.length,
+      openingsOnUnclassifiedWalls: reviewOpeningCandidates.filter((item) => !['window-frame-internal', 'open-threshold'].includes(item.modelKind)).length,
+      openingsForBuilderReview: reviewOpeningCandidates.filter((item) => ['window-frame-internal', 'open-threshold'].includes(item.modelKind)).length,
       openingsNeedingClassification: openings.filter(opening => opening.needsClassification).length,
     },
   };

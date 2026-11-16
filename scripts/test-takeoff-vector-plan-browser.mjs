@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
+import { execFile } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
@@ -107,7 +108,10 @@ function hooks(){const values=[];let hook=findFiber(reactRoot._internalRoot.curr
 function value(name){return hooks()[indexes[name]]?.memoizedState;}
 function dispatch(name,next){const hook=hooks()[indexes[name]];if(!hook?.queue?.dispatch)throw Error('Missing state hook '+name);hook.queue.dispatch(next);}
 function snapshot(){
- const result={};for(const name of ['currentPage','totalPages','pixelsPerMm','completedWallRuns','placedOpenings','completedAreas','completedFloorplans','savedRevision','hasUnsavedChanges','platformSaveMessage','planLoadError','planFilename','openedTakeoffJob'])result[name]=value(name);
+ const result={};for(const name of ['currentPage','totalPages','pixelsPerMm','completedWallRuns','placedOpenings','completedAreas','completedFloorplans','savedRevision','hasUnsavedChanges','platformSaveMessage','planLoadError','planFilename'])result[name]=value(name);
+ // Polling needs identity only. Serializing the whole opened job here repeatedly copies every
+ // plan raster into a JSON string, even for imageReady/totalPages checks during upload.
+ const opened=value('openedTakeoffJob');result.openedTakeoffJob=opened?{takeoffId:opened.takeoffId}:null;
  result.imageReady=Boolean(value('image'));
  let analysisHook=findFiber(reactRoot._internalRoot.current)?.memoizedState;while(analysisHook){if(analysisHook.memoizedState?.schemaVersion==='ai-takeoff-analysis.v1')result.aiAnalysis=analysisHook.memoizedState;analysisHook=analysisHook.next;}
  result.roomNodes=(value('stageRef')?.current?.find('Line')||[]).filter(n=>n.name().startsWith('room-boundary:')).map(n=>({name:n.name(),fill:n.fill()}));
@@ -144,11 +148,13 @@ async function exportImport(){
  const wb=currentSheet.getCurrentWorkbook();let captured=null;
  const createUrl=URL.createObjectURL,click=HTMLAnchorElement.prototype.click,picker=window.showSaveFilePicker;
  URL.createObjectURL=blob=>{captured=blob;return createUrl.call(URL,blob);};HTMLAnchorElement.prototype.click=function(){};window.showSaveFilePicker=undefined;
+ const phase=label=>console.log('[gr8job] '+label+' '+Math.round(performance.now())+'ms heap '+Math.round((performance.memory?.usedJSHeapSize||0)/1048576)+'MB');phase('export start');
  let exported;try{exported=await downloadBackupCopy({jobId:wb.jobId,jobName:'Real plan replay',workbook:wb});}finally{URL.createObjectURL=createUrl;HTMLAnchorElement.prototype.click=click;window.showSaveFilePicker=picker;}
  if(!exported?.ok||!captured)throw Error('Export failed: '+(exported?.message||'no file produced'));
- const read=await readJob(new File([captured],'replay.gr8job',{type:'application/zip'}));
+ phase('exported '+Math.round(captured.size/1048576)+'MB');
+ const read=await readJob(new File([captured],'replay.gr8job',{type:'application/zip'}));phase('read back');
  const loaded=await currentSheet.loadJobFileData(read,'replay.gr8job');
- if(loaded?.ok===false)throw Error('Import failed: '+loaded.message);
+ if(loaded?.ok===false)throw Error('Import failed: '+loaded.message);phase('imported');
  const keep=window.__keepExport?await new Promise(resolve=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result).split(',')[1]);reader.readAsDataURL(captured);}):null;
  return {bytes:captured.size,exportMessage:exported.message,imported:true,base64:keep};
 }
@@ -301,15 +307,42 @@ function scoreSheet(state, reference, sheet) {
 }
 
 const report = { errors: [], dialogs: [], plans: {} };
-let browser, page, calibrationAnswer = '';
+let browser, page, memoryWatch, memoryCheckPending = false, calibrationAnswer = '';
 try {
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   const origin = `http://127.0.0.1:${server.address().port}`;
   browser = await puppeteer.launch({ executablePath: process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true, protocolTimeout: Number(process.env.GR8_PROTOCOL_TIMEOUT_MS) || 3600000,
     userDataDir: path.join(out, 'profile-' + Date.now()), args: ['--no-first-run', '--disable-extensions', '--window-size=1600,1100', ...(process.env.GR8_CHROME_EXTRA_ARGS ? process.env.GR8_CHROME_EXTRA_ARGS.split(' ').filter(Boolean) : [])], defaultViewport: { width: 1600, height: 1100 } });
+  // Opt-in Windows guard closes only this harness's own isolated browser, never another server.
+  const minCommitMb = Number(process.env.GR8_MIN_FREE_COMMIT_MB);
+  if (process.platform === 'win32' && minCommitMb > 0) memoryWatch = setInterval(() => {
+    if (memoryCheckPending) return;
+    memoryCheckPending = true;
+    execFile('powershell.exe', ['-NoProfile', '-Command', '$m=Get-CimInstance Win32_PerfFormattedData_PerfOS_Memory; $o=Get-CimInstance Win32_OperatingSystem; @{commitUsedMB=$m.CommittedBytes/1MB;commitFreeMB=($m.CommitLimit-$m.CommittedBytes)/1MB;physicalFreeMB=$o.FreePhysicalMemory/1024} | ConvertTo-Json -Compress'], { windowsHide: true, timeout: 10000 }, (error, stdout) => {
+      memoryCheckPending = false;
+      if (error) return;
+      let sample;
+      try { sample = JSON.parse(stdout); } catch { return; }
+      const memory = report.memory ||= { samples: [], peakSystemCommitMB: 0, minPhysicalFreeMB: null, minCommitFreeMB: null };
+      memory.samples.push({ at: new Date().toISOString(), ...sample });
+      memory.peakSystemCommitMB = Math.max(memory.peakSystemCommitMB, sample.commitUsedMB);
+      memory.minPhysicalFreeMB = Math.min(memory.minPhysicalFreeMB ?? Infinity, sample.physicalFreeMB);
+      memory.minCommitFreeMB = Math.min(memory.minCommitFreeMB ?? Infinity, sample.commitFreeMB);
+      fs.writeFileSync(path.join(out, 'memory.json'), JSON.stringify(memory, null, 2));
+      const minPhysicalMb = Number(process.env.GR8_MIN_FREE_PHYSICAL_MB) || 1024;
+      if (sample.commitFreeMB < minCommitMb || sample.physicalFreeMB < minPhysicalMb) {
+        const reason = `Memory guard: free commit ${Math.round(sample.commitFreeMB)} MB (floor ${minCommitMb}), free physical ${Math.round(sample.physicalFreeMB)} MB (floor ${minPhysicalMb}); closing this test browser.`;
+        report.errors.push(reason); console.error(reason); clearInterval(memoryWatch);
+        void browser.close().catch(() => {});
+      }
+    });
+  }, 5000);
   page = await browser.newPage();
   page.setDefaultTimeout(180000);
   page.on('pageerror', (error) => { report.errors.push(error.message); console.error('Browser error:', error.message); });
+  // A renderer crash (e.g. out of memory) otherwise leaves the pending call waiting out protocolTimeout.
+  page.on('error', (error) => { report.errors.push(`renderer crashed: ${error.message}`); console.error(new Date().toISOString(), 'Renderer crashed:', error.message); void browser.close().catch(() => {}); });
+  page.on('console', (message) => { const text = message.text(); if (text.startsWith('[gr8job]')) console.log(new Date().toISOString(), text); });
   page.on('dialog', async (dialog) => { report.dialogs.push(dialog.message()); await dialog.accept(); });
   await page.setRequestInterception(true);
   page.on('request', (request) => request.url().startsWith(origin) || /^(data|blob):/.test(request.url()) ? request.continue() : request.abort());
@@ -330,6 +363,26 @@ try {
     await page.waitForFunction(() => Boolean(harness.snapshot().openedTakeoffJob?.takeoffId));
     await page.waitForSelector('input[type="file"][accept="image/*,.pdf"]:not([disabled])');
     let uploadPdf = set.pdf;
+    if (process.env.GR8_FLOOR_SHEETS_ONLY === '1' && !live) {
+      if (process.env.GR8_FLOOR_PAGE) {
+        set.sheets = set.sheets.filter(sheet => sheet.page === Number(process.env.GR8_FLOOR_PAGE));
+        assert.ok(set.sheets.length, 'GR8_FLOOR_PAGE must identify a measured reference sheet');
+      }
+      // Resource-constrained workflow check: preserve the original measured sheets and page
+      // numbers, replacing unrelated sheets with tiny blank placeholders. Report separately
+      // from full-document acceptance; no calibration or reference geometry is changed.
+      const source = await PDFDocument.load(fs.readFileSync(set.pdf), { ignoreEncryption: true });
+      const subset = await PDFDocument.create();
+      for (let index = 0; index < source.getPageCount(); index += 1) {
+        if (set.sheets.some(sheet => sheet.page === index + 1)) {
+          const [copied] = await subset.copyPages(source, [index]); subset.addPage(copied);
+        } else subset.addPage([1, 1]);
+      }
+      uploadPdf = path.join(out, set.name.replace(/\W+/g, '-') + '-floor-sheets.pdf');
+      fs.writeFileSync(uploadPdf, await subset.save());
+      result.inputVariant = 'Original floor sheets; unrelated pages replaced with 1-point blanks. Not full-document acceptance.';
+      console.log(result.inputVariant);
+    }
     if (live) {
       // A live run uploads only the first measured sheet, so it makes exactly one sheet's requests.
       const source = await PDFDocument.load(fs.readFileSync(set.pdf), { ignoreEncryption: true });
@@ -360,14 +413,22 @@ try {
     await goToPage(first.page);
     await centre({ x: 400, y: 400 });
     calibrationAnswer = String(Math.round(400 / refPage.pixelsPerMm * 10) / 10);
+    // The other floor sheets are drawn at the same printed scale: the estimator applies this calibration
+    // to them explicitly in the dialog (nothing is ticked by default).
+    const sameScaleSheets = set.sheets.slice(1).map((sheet) => sheet.page);
     await button('Calibrate');
     await clickPlan({ x: 200, y: 400 });
     await clickPlan({ x: 600, y: 400 });
-    await answerCalibration();
+    await answerCalibration(sameScaleSheets);
     await page.waitForFunction(() => harness.snapshot().pixelsPerMm > 0);
     const calibrated = (await snapshot()).pixelsPerMm;
-    result.calibration = { pixelsPerMm: calibrated, expected: refPage.pixelsPerMm };
+    const appliedCalibrations = (await snapshot()).sheetCalibrations || {};
+    result.calibration = { pixelsPerMm: calibrated, expected: refPage.pixelsPerMm, appliedTo: sameScaleSheets.map((sheet) => ({ sheet, ...(appliedCalibrations[sheet] || {}) })) };
     assert.ok(Math.abs(calibrated - refPage.pixelsPerMm) / refPage.pixelsPerMm < 0.005, `calibration ${calibrated}`);
+    for (const sheet of sameScaleSheets) {
+      assert.equal(appliedCalibrations[sheet]?.appliedFromSheet, first.page, `sheet ${sheet} received sheet ${first.page}'s calibration explicitly`);
+      assert.ok(Math.abs(appliedCalibrations[sheet].pixelsPerMm - calibrated) / calibrated < 1e-9, `sheet ${sheet} has the same scale`);
+    }
 
     // 3. RUN AI TAKEOFF. The vector engine measures; the stub provider supplies sheet type only.
     const run = async () => {
@@ -396,9 +457,14 @@ try {
     let state = await snapshot();
     for (const sheet of set.sheets) {
       result.sheets[sheet.page] = scoreSheet(state, reference, sheet);
+      // Printed now, so a later step that hangs still leaves the first-run accuracy on record.
+      { const s = result.sheets[sheet.page]; step(`first-run score sheet ${sheet.page} ${s.level}: walls ${s.walls} recall ${s.wallRecall} precision ${s.wallPrecision} extInt ${s.extInt} openings ${s.openingsMatched}/${s.openingsReference} rooms ${s.roomsMatched}/${s.roomsReference}`); }
+      fs.writeFileSync(path.join(out, 'accuracy-checkpoint.json'), JSON.stringify(report.plans, null, 2));
       // Printed size labels read locally in the browser (public/takeoff-ocr), when those files are installed.
       const labels = state.aiAnalysis?.linework?.[sheet.page]?.printedLabels || null;
       const labelWarning = (state.aiAnalysis?.review || []).find((item) => item.code === 'printed-labels' && Number(item.page) === sheet.page);
+      // Full label report per sheet (conflicts, weak and unassigned text) for diagnosing browser OCR.
+      if (labels) fs.writeFileSync(path.join(out, `${set.name.replace(/\W+/g, '-')}-sheet-${sheet.page}-labels.json`), JSON.stringify(labels, null, 2));
       result.sheets[sheet.page].printedLabels = labels ? { read: labels.stats?.labels, applied: labels.applied?.length, settled: labels.resolved?.map((x) => `${x.id}:${x.kind} "${x.text}"`), split: labels.split?.length, conflicts: labels.conflicts?.length } : { warning: labelWarning?.message || 'no label report' };
       if (fs.existsSync(path.join(root, 'public/takeoff-ocr/tessdata/eng.traineddata'))) {
         assert.ok(labels && labels.stats?.labels > 0, `${set.name} ${sheet.level}: printed labels read locally (${JSON.stringify(result.sheets[sheet.page].printedLabels)})`);
@@ -544,8 +610,10 @@ try {
       const afterImport = await snapshot();
       result.gr8job = { bytes: exported.bytes, seconds: Math.round((Date.now() - exportStarted) / 1000), message: exported.exportMessage, counts: counts(afterImport) };
       assert.deepEqual(counts(afterImport), counts(beforeReopen), '.gr8job export and import keep walls, openings and the approved room');
+      for (const { sheet } of result.calibration.appliedTo || []) assert.equal(afterImport.sheetCalibrations?.[sheet]?.appliedFromSheet, first.page, `sheet ${sheet}'s applied calibration survives .gr8job export/import`);
       assert.ok(Math.abs(afterReopen.pixelsPerMm - calibrated) / calibrated < 1e-6, 'calibration survives reopen');
     }
+    for (const { sheet } of result.calibration.appliedTo || []) assert.equal(afterReopen.sheetCalibrations?.[sheet]?.appliedFromSheet, first.page, `sheet ${sheet}'s applied calibration survives reopen`);
     result.reopen = counts(afterReopen);
     // Rerun after review: nothing is duplicated and the approval is not replaced by the new reading.
     step('rerun after review');
@@ -679,6 +747,8 @@ try {
     await button('Apply Mapped Quantities'); await settle();
     const mappedRoom = await page.evaluate(() => { const row = harness.liveWorkbook().quotation['Takeoff browser check'].rows.find((item) => item.id === 'takeoff-browser-room-check'); return row && { quantity: row.quantity }; });
     assert.ok(Math.abs(Number(mappedRoom.quantity) - approvedArea) < 0.02, `approved room maps to the quote once (${mappedRoom.quantity} vs ${approvedArea})`);
+    // Capture the takeoff's intended Job Setup values while the Takeoff component (and its hooks) are still mounted.
+    const expectedPreview = await page.evaluate(() => { const p = harness.jobSetupPreview(); return p && p.fields ? p : { fields: [], construction: [], electrical: {} }; });
     console.log(new Date().toISOString(), 'downstream: Job Setup');
     await button('Export Takeoff to Job Setup');
     await page.waitForSelector('[data-testid="job-setup-takeoff-import"]');
@@ -687,8 +757,9 @@ try {
     await button('Import selected quantities');
     await page.waitForFunction(() => Boolean(harness.liveWorkbook().takeoffEngine?.lastJobSetupSync));
     // Reconciliation: every Job Setup field the takeoff fills, against the takeoff figure it came from.
-    const reconciliation = await page.evaluate(() => { const preview = harness.jobSetupPreview(); const rows = harness.liveWorkbook().data?.inputDataSheet?.rows || {};
-      return { fields: preview.fields.map((item) => ({ key: item.destinationKey, label: item.label, unit: item.unit, takeoff: item.value, jobSetup: rows[item.destinationKey]?.value ?? null, source: item.source })), construction: preview.construction, electrical: preview.electrical }; });
+    // Use pre-captured preview because after export the Takeoff component is unmounted and harness.jobSetupPreview() can no longer read its hooks.
+    const reconciliation = await page.evaluate((expected) => { const rows = harness.liveWorkbook().data?.inputDataSheet?.rows || {};
+      return { fields: (expected.fields || []).map((item) => ({ key: item.destinationKey, label: item.label, unit: item.unit, takeoff: item.value, jobSetup: rows[item.destinationKey]?.value ?? null, source: item.source })), construction: expected.construction || [], electrical: expected.electrical || {} }; }, expectedPreview);
     const differs = (a, b) => (typeof a === 'number' ? !(Math.abs(Number(b) - a) <= Math.max(0.011, Math.abs(a) * 1e-4)) : String(a) !== String(b));
     reconciliation.mismatched = reconciliation.fields.filter((row) => row.jobSetup !== null && row.jobSetup !== '' && differs(row.takeoff, row.jobSetup));
     reconciliation.notImported = reconciliation.fields.filter((row) => row.jobSetup === null || row.jobSetup === '');
@@ -724,6 +795,7 @@ try {
   if (page) { report.status = await page.$eval('#ai-takeoff-status', (element) => element.textContent).catch(() => null); await page.screenshot({ path: path.join(out, 'failure.png') }).catch(() => {}); }
   throw error;
 } finally {
+  clearInterval(memoryWatch);
   report.apiRequests = apiRequests;
   report.providerNote = 'Stub provider: sheet type and level only; no walls, openings or rooms. No paid calls.';
   fs.writeFileSync(path.join(out, 'report.json'), JSON.stringify(report, null, 2));
@@ -792,10 +864,16 @@ async function centre(point) { await page.evaluate((point) => { const size = har
 async function fit() { await page.evaluate(() => { const size = harness.viewSize(); const zoom = 2.3; harness.setView({ zoom, pan: { x: size.width / 2 - 362 * zoom, y: size.height / 2 - 436 * zoom } }); }); await settle(); await new Promise((resolve) => setTimeout(resolve, 300)); }
 async function button(label, prefix = false) { const found = await page.evaluate(({ label, prefix }) => { const element = [...document.querySelectorAll('button')].find((item) => prefix ? item.textContent.trim().startsWith(label) : item.textContent.trim() === label); if (!element) return false; element.click(); return true; }, { label, prefix }); assert.ok(found, `Find button ${label}`); await settle(); }
 // The screen asks for the known dimension in its own confirmation dialog (it used to be a browser prompt).
-async function answerCalibration() {
+async function answerCalibration(applyTo = []) {
   await page.waitForSelector('[data-testid="calibration-confirmation"]');
   await page.click('[data-testid="calibration-dimension-mm"]', { clickCount: 3 });
   await page.type('[data-testid="calibration-dimension-mm"]', calibrationAnswer);
+  for (const sheet of applyTo) {
+    const box = await page.$(`[data-testid="calibration-apply-sheet-${sheet}"]`);
+    assert.ok(box, `calibration dialog offers sheet ${sheet}`);
+    assert.equal(await box.evaluate((input) => input.checked), false, `sheet ${sheet} is not ticked by default`);
+    await box.click();
+  }
   await page.click('[data-testid="confirm-calibration"]');
   await settle();
 }

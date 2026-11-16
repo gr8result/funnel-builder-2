@@ -240,5 +240,23 @@ output = edges(0.1);
 assert.deepEqual([output.batch.detections.filter((item) => item.kind === 'wall').length, output.analysis.review.find((item) => /open side/.test(item.message)).audience], [0, 'diagnostic']);
 output = edges(0.35);
 assert.equal(output.analysis.review.find((item) => /open side/.test(item.message)).audience, 'decision', 'a real length of open edge is still put to the builder once');
+// A patio or terrace outside the footprint, against the house: the edge it shares with the building
+// outline is the house's own external wall, never an open side (Jesmond Upper south wall, 15 Nov).
+output = normalizePlanAnalysis({ context, runId: 'run', modelVersion: 'model', responses: [{ ...response, openings: [], eaves: [], rooms: [],
+  walls: [wall('house', 'exterior', [{ x: 0.1, y: 0.8 }, { x: 0.45, y: 0.8 }])],
+  buildingAreas: [outdoor('fp', 'Footprint', square(0.1, 0.1, 0.8, 0.8)), outdoor('pat', 'Patio', square(0.1, 0.8, 0.5, 0.95))] }] });
+assert.equal(output.batch.detections.filter((item) => item.kind === 'wall').length, 1, 'the house wall beside an outside patio is kept');
+assert.ok(!output.analysis.review.some((item) => /open side/.test(item.message)), 'and is not reported as an open side');
+for (const type of ['Patio', 'Balcony', 'Alfresco']) {
+  const normalizeEdge = (nodes, edge) => normalizePlanAnalysis({ context, runId: 'run', modelVersion: 'model', responses: [{ ...response,
+    openings: [], eaves: [], rooms: [], walls: [wall('edge', 'exterior', edge)],
+    buildingAreas: [outdoor('fp', 'Footprint', square(0.1, 0.1, 0.8, 0.8)), outdoor('outdoor', type, nodes)] }] });
+  const inside = normalizeEdge(square(0.1, 0.1, 0.5, 0.3), [{ x: 0.1, y: 0.1 }, { x: 0.45, y: 0.1 }]);
+  assert.equal(inside.batch.detections.filter(d => d.kind === 'wall').length, 0, `${type}: genuine open edge remains excluded`);
+  assert.equal(inside.analysis.openEdges.length, 1, `${type}: excluded edge remains traceable in review`);
+  const outside = normalizeEdge(square(0.1, 0.8, 0.5, 0.95), [{ x: 0.1, y: 0.8 }, { x: 0.45, y: 0.8 }]);
+  assert.equal(outside.batch.detections.filter(d => d.kind === 'wall').length, 1, `${type}: shared house wall retained`);
+  assert.equal(outside.analysis.openEdges.length, 0);
+}
 
 console.log('AI Takeoff review and evidence: cross-sheet evidence, Job Setup defaults, authoritative calibration, automatic resolution, de-duplication, builder review and floor areas passed.');

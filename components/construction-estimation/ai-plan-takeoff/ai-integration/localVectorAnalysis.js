@@ -26,16 +26,17 @@ export function buildLocalVectorAnalysis({ planPage, detected, pixelsPerMm, leve
   };
   const production = semanticInput ? vectorProductionAnalysis(semanticInput, detected, spec, { labels, wallDecisions, outdoor: { segments: planPage.vectorSegments || [], textItems: planPage.textItems || [] } }) : null;
   const vector = production?.vector || vectorAnalysisFromLinework(detected, spec, { labels, wallDecisions });
+  const normResponse = production ? production.response : vector.response;
   // Admission overrides apply only to the wall being explicitly accepted now.
   // A later rerun must retain manually moved/deleted canonical objects.
   const newlyReviewedKeys = new Set(admitReviewedWallKeys);
   const reviewedWalls = new Set(vector.wallLineage.filter(item => item.reviewed && newlyReviewedKeys.has(item.detectionKey)).map(item => item.detectionId));
-  const reviewedDetectionIds = [...reviewedWalls, ...vector.response.openings.filter(item => reviewedWalls.has(item.hostDetectionId)).map(item => item.detectionId)]
+  const reviewedDetectionIds = [...reviewedWalls, ...normResponse.openings.filter(item => reviewedWalls.has(item.hostDetectionId)).map(item => item.detectionId)]
     .map(id => `page-${planPage.pageNumber}:${id}`);
-  const normalized = normalizePlanAnalysis({ context, responses: [vector.response], runId, modelVersion: detected.engine, reviewedDetectionIds });
+  const normalized = normalizePlanAnalysis({ context, responses: [normResponse], runId, modelVersion: detected.engine, reviewedDetectionIds });
   const rooms = vector.rooms.map((room, index) => detectRoomBoundary(room, {
     page: planPage.pageNumber, level, width: planPage.logicalWidth, height: planPage.logicalHeight,
     pixelsPerMm, walls: context.completedWallRuns || [], openings: context.placedOpenings || [], measuredBoundary: true,
   }, index));
-  return { ...normalized, vector, rooms, detected: production?.detected || detected };
+  return { ...normalized, vector, rooms, detected: production?.detected || detected, buildingAreas: production?.response?.buildingAreas || null };
 }

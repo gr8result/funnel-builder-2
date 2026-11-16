@@ -10,7 +10,7 @@ import { ROOMS_RUN_ID, addManualRoom, floorPlanSheets, mergeRoomReadings, remove
 import { compactPlanEvidence, evidenceRotation, mergePlanEvidence, projectDefaultsFromJobSetup } from './planEvidence.js';
 import { applyReviewDecision, reviewAudience } from './reviewSummary.js';
 import { fuseSheetLinework } from '../geometry/lineworkFusion.js';
-import { JOB_SCALE_KEY, jobPixelsPerMm, sheetPixelsPerMm as scaleOfSheet, rescaleRunLengths } from '../sheetScale.js';
+import { JOB_SCALE_KEY, calibrationsWithSheets, jobPixelsPerMm, sheetPixelsPerMm as scaleOfSheet, rescaleRunLengths, sheetsWithChangedScale, withdrawApprovalsForScaleChange } from '../sheetScale.js';
 import { cropPlanRegion, readPlanRaster } from '../geometry/planRaster.js';
 import { detectPlanGeometry } from '../geometry/planGeometry.js';
 import { collectRegionOpenings, planRegions } from '../geometry/planRegions.js';
@@ -41,7 +41,8 @@ function sanitizeCalibrations(saved) {
   if (!saved || typeof saved !== 'object' || Array.isArray(saved)) return {};
   return Object.fromEntries(Object.entries(saved).filter(([page, entry]) => Number.isInteger(Number(page)) && Number(page) >= JOB_SCALE_KEY
     && Number.isFinite(Number(entry?.pixelsPerMm ?? entry)) && Number(entry?.pixelsPerMm ?? entry) > 0)
-    .map(([page, entry]) => [page, { pixelsPerMm: Number(entry?.pixelsPerMm ?? entry), calibratedAt: String(entry?.calibratedAt || '') }]));
+    .map(([page, entry]) => [page, { pixelsPerMm: Number(entry?.pixelsPerMm ?? entry), calibratedAt: String(entry?.calibratedAt || ''),
+      ...(Number(entry?.appliedFromSheet) > 0 ? { appliedFromSheet: Number(entry.appliedFromSheet) } : {}) }]));
 }
 
 // Supporting-page text as reading-order lines (cells joined by " | ") rather than
@@ -115,18 +116,26 @@ export function useAiTakeoffAnalysis(options) {
   // the others use the takeoff's calibration. Saved with the takeoff.
   const calibrationsRef = useRef({});
   const [sheetCalibrations, setSheetCalibrations] = useState({});
-  const recordSheetCalibration = useCallback((page, pixelsPerMm) => {
+  // `applyTo`: other sheets the estimator chose to give the same scale (same printed scale). Every
+  // sheet whose scale changes has its stored lengths restated and its approved areas withdrawn.
+  const recordSheetCalibration = useCallback((page, pixelsPerMm, { applyTo = [] } = {}) => {
     if (!(Number(page) > 0) || !(Number(pixelsPerMm) > 0)) return;
     const previous = calibrationsRef.current;
     const base = jobPixelsPerMm(latest.current.pixelsPerMm, previous) || Number(pixelsPerMm);
-    const calibratedAt = new Date().toISOString();
-    const next = { ...previous, [JOB_SCALE_KEY]: previous[JOB_SCALE_KEY] || { pixelsPerMm: base, calibratedAt },
-      [Number(page)]: { pixelsPerMm: Number(pixelsPerMm), calibratedAt } };
-    latest.current.bridge.updateObjects(collections => ({ ...collections,
-      completedWallRuns: rescaleRunLengths(collections.completedWallRuns, p => scaleOfSheet(p, base, previous), p => scaleOfSheet(p, base, next)),
-      completedEaves: rescaleRunLengths(collections.completedEaves, p => scaleOfSheet(p, base, previous), p => scaleOfSheet(p, base, next)),
-      completedMeasurements: rescaleRunLengths(collections.completedMeasurements, p => scaleOfSheet(p, base, previous), p => scaleOfSheet(p, base, next)),
-    }));
+    const next = calibrationsWithSheets(previous, page, pixelsPerMm, { applyTo, base });
+    const before = p => scaleOfSheet(p, base, previous), after = p => scaleOfSheet(p, base, next);
+    latest.current.bridge.updateObjects(collections => {
+      const pages = [...new Set([...(latest.current.planPages || []).map(item => Number(item.pageNumber)),
+        ...['completedFloorplans', 'completedAreas'].flatMap(key => (collections[key] || []).map(item => Number(item?.page || 1)))])];
+      const changed = sheetsWithChangedScale(pages, before, after);
+      return { ...collections,
+        completedWallRuns: rescaleRunLengths(collections.completedWallRuns, before, after),
+        completedEaves: rescaleRunLengths(collections.completedEaves, before, after),
+        completedMeasurements: rescaleRunLengths(collections.completedMeasurements, before, after),
+        completedFloorplans: withdrawApprovalsForScaleChange(collections.completedFloorplans, changed),
+        completedAreas: withdrawApprovalsForScaleChange(collections.completedAreas, changed),
+      };
+    });
     calibrationsRef.current = next;
     setSheetCalibrations(calibrationsRef.current);
   }, []);

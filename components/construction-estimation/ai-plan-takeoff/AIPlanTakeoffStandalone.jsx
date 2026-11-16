@@ -40,6 +40,8 @@ const PDFJS_WORKER_SRC = '/pdfjs/pdf.worker.min.mjs';
 const PDFJS_INIT_ERROR_MESSAGE = 'The local PDF engine could not start. Your takeoff has not been changed.';
 const SAVE_VERIFICATION_FAILED_MESSAGE = 'SAVE FAILED – DO NOT CLOSE THIS TAKEOFF';
 const AUTOMATIC_TAKEOFF_SAVE_ENABLED = false;
+// Tools used by clicking points on the plan; floating panels fold out of the way while one is active.
+const PLAN_CLICK_TOOLS = new Set(['measure', 'eaves', 'opening', 'pillar', 'floorplan', 'floorcoverings', 'roofarea']);
 pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_SRC;
 
 const MEASURE_LABEL_FONT_SIZE = 24;
@@ -558,6 +560,7 @@ export default function AIPlanTakeoffStandalone({
   const [quickEditOpeningId, setQuickEditOpeningId] = useState(null);
   // Which plan overlays are drawn (the key on the canvas names each colour and can hide it).
   const [overlayVisibility, setOverlayVisibility] = useState({ floorAreas: true, rooms: true, eaves: true });
+  const [overlayKeyOpen, setOverlayKeyOpen] = useState(true);
   const [selectedMeasurementId, setSelectedMeasurementId] = useState(null);
 
   // Area & Floorcoverings state
@@ -1879,10 +1882,11 @@ setSavedRevision(verifiedSave.revision);
     const dimensionMm = Number(calibrationRequest?.dimensionMm);
     if (!calibrationRequest || !(calibrationRequest.distancePx > 0) || !(dimensionMm > 0) || !Number.isFinite(dimensionMm)) return;
     const ratio = calibrationRequest.distancePx / dimensionMm;
+    const applyTo = (calibrationRequest.applyTo || []).map(Number).filter((page) => page > 0 && page !== calibrationRequest.page);
     setPixelsPerMm(ratio);
-    aiTakeoffAnalysis.recordSheetCalibration(calibrationRequest.page, ratio);
+    aiTakeoffAnalysis.recordSheetCalibration(calibrationRequest.page, ratio, { applyTo });
     markTakeoffItemCompleted('calibration');
-    setPlatformSaveMessage(`Sheet ${calibrationRequest.page} calibrated: ${ratio.toFixed(4)} px/mm.`);
+    setPlatformSaveMessage(`Sheet ${calibrationRequest.page} calibrated: ${ratio.toFixed(4)} px/mm.${applyTo.length ? ` Same scale applied to sheet${applyTo.length === 1 ? '' : 's'} ${applyTo.join(', ')}.` : ''}`);
     setCalibrationRequest(null);
     setCalibrationMode(false);
     setCalibPoints([]);
@@ -2505,6 +2509,7 @@ setSavedRevision(verifiedSave.revision);
 
   const renderPdfPageForJob = async (pdf, pageNumber) => {
     const page = await pdf.getPage(pageNumber);
+    try {
     const baseScale = 6.0;
     const devicePixelRatio = window.devicePixelRatio || 1;
     const totalScale = baseScale * devicePixelRatio;
@@ -2532,6 +2537,13 @@ setSavedRevision(verifiedSave.revision);
       vectorSegments: vectorSegmentsForPage,
       ...await readPdfAnalysisEvidence(page, unscaledViewport)
     };
+    } finally {
+      // The portable page now owns its raster, vectors and text. PDF.js need not retain
+      // this sheet's operator list/images while the remaining sheets are imported.
+      page.cleanup();
+      rawCanvasRef.current.width = 0;
+      rawCanvasRef.current.height = 0;
+    }
   };
 
   useEffect(() => {
@@ -2575,10 +2587,12 @@ setSavedRevision(verifiedSave.revision);
     setPdfEngineError('');
 
     if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+      let loadingTask;
       try {
         pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_SRC;
         const arrayBuffer = await file.arrayBuffer();
-        const loadedPdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+        const loadedPdf = await loadingTask.promise;
         const embeddedPages = [];
         for (let pageNumber = 1; pageNumber <= loadedPdf.numPages; pageNumber++) {
           embeddedPages.push(await renderPdfPageForJob(loadedPdf, pageNumber));
@@ -2620,6 +2634,9 @@ setSavedRevision(verifiedSave.revision);
         console.error('AI Plan Takeoff PDF engine failed:', error);
         setPdfEngineError(PDFJS_INIT_ERROR_MESSAGE);
       } finally {
+        // All subsequent display/analysis uses embeddedPages, never this PDF worker.
+        // Release it on both success and failure, including a failed document load.
+        await loadingTask?.destroy().catch((error) => console.warn('PDF worker cleanup failed:', error));
         e.target.value = '';
       }
       return;
@@ -4185,13 +4202,32 @@ setSavedRevision(verifiedSave.revision);
           <form onSubmit={(event) => { event.preventDefault(); confirmSheetCalibration(); }}
             style={{ width: 'min(420px, 100%)', padding: 20, background: '#fff', border: '1px solid #cbd5e1', borderRadius: 8, boxShadow: '0 16px 40px rgba(15, 23, 42, 0.2)' }}>
             <h2 id="calibration-dialog-title" style={{ margin: '0 0 8px', fontSize: 18 }}>Calibrate sheet {calibrationRequest.page}</h2>
-            <p style={{ margin: '0 0 14px', color: '#475569', fontSize: 13 }}>Enter the printed distance between the two selected points. Calibration is stored for this sheet.</p>
+            <p style={{ margin: '0 0 14px', color: '#475569', fontSize: 13 }}>Enter the printed distance between the two selected points. Calibration is stored for this sheet; approved areas on any sheet whose scale changes must be approved again.</p>
             <label htmlFor="calibration-dimension-mm" style={{ display: 'grid', gap: 6, fontSize: 13, fontWeight: 700 }}>
               Known dimension (mm)
               <input id="calibration-dimension-mm" data-testid="calibration-dimension-mm" type="number" min="1" step="any" required autoFocus
                 value={calibrationRequest.dimensionMm} onChange={(event) => setCalibrationRequest((current) => current ? { ...current, dimensionMm: event.target.value } : current)}
                 style={{ padding: '9px 10px', border: '1px solid #94a3b8', borderRadius: 4 }} />
             </label>
+            {planPages.length > 1 && (
+              <fieldset data-testid="calibration-apply-to" style={{ margin: '14px 0 0', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 4 }}>
+                <legend style={{ fontSize: 13, fontWeight: 700, padding: '0 4px' }}>Also use this scale on</legend>
+                <p style={{ margin: '0 0 8px', color: '#475569', fontSize: 12 }}>Tick only sheets drawn at the same printed scale (for example, all 1:100 plans). Sheets left unticked keep their own calibration.</p>
+                {planPages.filter((item) => item.pageNumber !== calibrationRequest.page).map((item) => {
+                  const own = aiTakeoffAnalysis.sheetCalibrations?.[item.pageNumber];
+                  const status = own?.appliedFromSheet ? `uses sheet ${own.appliedFromSheet}'s scale` : own ? 'calibrated on its own' : 'not calibrated on its own';
+                  const checked = (calibrationRequest.applyTo || []).includes(item.pageNumber);
+                  return (
+                    <label key={item.pageNumber} style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, padding: '3px 0' }}>
+                      <input type="checkbox" data-testid={`calibration-apply-sheet-${item.pageNumber}`} checked={checked}
+                        onChange={(event) => setCalibrationRequest((current) => current ? { ...current, applyTo: event.target.checked
+                          ? [...new Set([...(current.applyTo || []), item.pageNumber])] : (current.applyTo || []).filter((page) => page !== item.pageNumber) } : current)} />
+                      Sheet {item.pageNumber}{sheetLevels?.[item.pageNumber] ? ` (${sheetLevels[item.pageNumber]})` : ''} - {status}
+                    </label>
+                  );
+                })}
+              </fieldset>
+            )}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
               <button type="button" onClick={() => { setCalibrationRequest(null); setCalibrationMode(false); setCalibPoints([]); }}
                 style={{ padding: '8px 12px', background: '#fff', border: '1px solid #94a3b8', borderRadius: 4 }}>Cancel</button>
@@ -5656,7 +5692,12 @@ setSavedRevision(verifiedSave.revision);
                 <div>Site: {takeoffSchedule.project.siteAddress || 'Not set'}</div>
                 <div>Plan filename: {takeoffSchedule.project.planFilename || 'Not set'}</div>
                 <div>Plan sheets: {takeoffSchedule.project.numberOfPlanSheets}</div>
-                <div>Current sheet scale: {pixelsPerMm ? `${pixelsPerMm.toFixed(3)} px/mm` : 'Not calibrated'}</div>
+                <div data-testid="current-sheet-scale">Current sheet scale: {pixelsPerMm ? `${pixelsPerMm.toFixed(3)} px/mm` : 'Not calibrated'}{pixelsPerMm ? (() => {
+                  const own = aiTakeoffAnalysis.sheetCalibrations?.[currentPage];
+                  if (own?.appliedFromSheet) return ` (applied from sheet ${own.appliedFromSheet})`;
+                  if (own) return ' (calibrated on this sheet)';
+                  return Object.keys(aiTakeoffAnalysis.sheetCalibrations || {}).length ? ' (job scale: this sheet was not calibrated; calibrate it if its printed scale differs)' : '';
+                })() : ''}</div>
               </div>
               <h4 style={{ margin: 0 }}>Current Sheet {currentPage}</h4>
               {renderScheduleRows('Floor Areas', takeoffSchedule.currentSheet.floorAreas)}
@@ -5803,7 +5844,8 @@ setSavedRevision(verifiedSave.revision);
         {image && <RoomBoundaryPanel rooms={aiTakeoffAnalysis.report?.rooms || []} control={aiTakeoffAnalysis.rooms}
           enabled={activeTool === 'rooms'} setEnabled={enabled => setActiveTool(enabled ? 'rooms' : 'select')}
           editing={editingRoomId} setEditing={id => { setEditingRoomId(id); const room = aiTakeoffAnalysis.report?.rooms?.find(room => room.id === id); if (room) setCurrentPage(room.page); }} readOnly={isRecoveryPreview}
-          hoveredId={hoveredRoomId} setHoveredId={setHoveredRoomId} />}
+          hoveredId={hoveredRoomId} setHoveredId={setHoveredRoomId}
+          toolKey={activeTool} collapseForTool={PLAN_CLICK_TOOLS.has(activeTool)} />}
         {image && ((aiTakeoffAnalysis.report?.wallReviewCandidates || []).some(candidate => candidate.page === currentPage)
           || (aiTakeoffAnalysis.report?.bridgeReviewCandidates || []).some(candidate => candidate.page === currentPage)
           || (aiTakeoffAnalysis.report?.openingReviewCandidates || []).some(candidate => candidate.page === currentPage)) && (() => {
@@ -5814,7 +5856,17 @@ setSavedRevision(verifiedSave.revision);
             <div data-testid="takeoff-wall-review-candidates" data-count={wallCandidates.length} data-bridge-count={bridgeCandidates.length} data-opening-count={openingCandidates.length} role="status" aria-live="polite" style={{ position: 'absolute', top: 12, left: 12, zIndex: 3, maxWidth: 'min(360px, calc(100% - 24px))', padding: '8px 10px', background: 'rgba(255, 251, 235, 0.96)', border: '1px solid #d97706', borderLeft: '4px solid #d97706', color: '#713f12', fontSize: 12, lineHeight: 1.4, pointerEvents: 'none' }}>
               {wallCandidates.length > 0 && <><strong>{wallCandidates.length} measured wall segments need classification</strong><div>Dashed amber lines are review-only and excluded from quantities. Click one to classify it.</div></>}
               {bridgeCandidates.length > 0 && <><strong>{bridgeCandidates.length} confirmed-opening spans need wall classification</strong><div>Teal dotted spans support topology only and are not wall quantities.</div></>}
-              {openingCandidates.length > 0 && <><strong>{openingCandidates.length} openings have review-only hosts</strong><div>Amber circles mark openings excluded from quantities until their host wall is classified.</div></>}
+              {(() => {
+                const special = openingCandidates.filter(candidate => ['window-frame-internal', 'open-threshold'].includes(candidate.modelKind));
+                const hosted = openingCandidates.length - special.length;
+                return <>
+                  {hosted > 0 && <><strong>{hosted} openings have review-only hosts</strong><div>Amber circles mark openings excluded from quantities until their host wall is classified.</div></>}
+                  {special.length > 0 && <><strong>{special.length} possible opening{special.length === 1 ? '' : 's'} for you to confirm</strong>
+                    <ul data-testid="opening-review-reasons" style={{ margin: '2px 0 0', paddingLeft: 16 }}>
+                      {special.map(candidate => <li key={candidate.id}>{candidate.modelKind === 'open-threshold' ? `Open threshold, ${candidate.widthMm} mm` : `Frame on an internal wall, ${candidate.widthMm} mm`}: not counted. Place it with the opening tool if it is real.</li>)}
+                    </ul></>}
+                </>;
+              })()}
             </div>
           );
         })()}
@@ -6615,8 +6667,11 @@ setSavedRevision(verifiedSave.revision);
         </Stage>
         {image && (
           <div data-testid="plan-overlay-key" style={{ position: 'absolute', left: 12, bottom: 12, zIndex: 6, background: 'rgba(255,255,255,0.95)', border: '1px solid #94a3b8', borderRadius: 8, padding: '8px 10px', fontSize: 14, display: 'grid', gap: 4, boxShadow: '0 2px 8px #0002' }}>
-            <strong style={{ fontSize: 14 }}>Plan overlays</strong>
-            {[
+            <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+              <strong style={{ fontSize: 14 }}>Plan overlays</strong>
+              <button type="button" data-testid="plan-overlay-key-toggle" aria-expanded={overlayKeyOpen} onClick={() => setOverlayKeyOpen((open) => !open)}>{overlayKeyOpen ? 'Hide' : 'Show'}</button>
+            </span>
+            {overlayKeyOpen && [
               ['floorAreas', 'rgba(33,150,243,0.35)', '#1565c0', 'Floor areas (footprint, garage, alfresco...)'],
               ['rooms', 'rgba(22,163,74,0.25)', '#d97706', 'Rooms (green approved, amber review)'],
               ['eaves', 'rgba(0,188,212,0.35)', '#00838f', 'Eaves'],
@@ -6627,7 +6682,7 @@ setSavedRevision(verifiedSave.revision);
                 {text}
               </label>
             ))}
-            <span style={{ fontSize: 13, color: '#475569' }}>Openings: <span style={{ color: OPENING_MARKER_COLOURS.window.fill }}>●</span> window <span style={{ color: OPENING_MARKER_COLOURS.door.fill }}>▲</span> door, amber = review, green = approved</span>
+            {overlayKeyOpen && <span style={{ fontSize: 13, color: '#475569' }}>Openings: <span style={{ color: OPENING_MARKER_COLOURS.window.fill }}>●</span> window <span style={{ color: OPENING_MARKER_COLOURS.door.fill }}>▲</span> door, amber = review, green = approved</span>}
           </div>
         )}
         {(() => {

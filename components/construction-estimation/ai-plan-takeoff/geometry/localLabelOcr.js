@@ -150,8 +150,25 @@ export function scoredReading(read, minSuffixConfidence = 55) {
   // A stray mark read in front of the label ("3  1806"): one or two leading characters that are not a
   // word are dropped once. Longer leading words are kept, so a note never turns into a label.
   const trimmed = raw.replace(/^\s*[^\s]{1,2}\s+(?=\d)/, '').trim();
-  const text = !parseOpeningLabel(raw) && trimmed !== raw && parseOpeningLabel(trimmed) ? trimmed : raw;
-  const symbols = read.symbols || [];
+  let text = !parseOpeningLabel(raw) && trimmed !== raw && parseOpeningLabel(trimmed) ? trimmed : raw;
+  // A drawn mark beside the label read as one or two short trailing tokens ("1809LV x": the cross of a
+  // downpipe symbol; "2136 STACKER f": a wall line through the next word). Dropped once, and only when
+  // what remains is a complete code with a recognised type word ("1809 LV", "2136 STACKER"); a bare
+  // number or a note never becomes a label this way. The dropped marks do not count against the
+  // confidence of the label they sit beside.
+  let tail = 0;
+  const whole = parseOpeningLabel(text);
+  if (whole) {
+    const words = text.split(/\s+/);
+    for (let k = 1; k <= 2 && k < words.length; k += 1) {
+      const dropped = words.slice(-k);
+      if (!dropped.every((w) => /^[A-Za-z0-9]{1,2}$/.test(w))) break;
+      const keptText = words.slice(0, -k).join(' '), kept = parseOpeningLabel(keptText);
+      if (kept?.knownSuffix && kept.suffix && (!whole.knownSuffix || kept.text === whole.text)) { text = keptText; tail = dropped.join('').length; break; }
+    }
+  }
+  const allSymbols = read.symbols || [];
+  const symbols = tail ? allSymbols.slice(0, Math.max(0, allSymbols.length - tail)) : allSymbols;
   if (!symbols.length) return { text, rawText: raw, ocrConfidence: read.confidence, parsed: parseOpeningLabel(text) };
   const digits = symbols.filter((sym) => /\d/.test(sym.text));
   const letters = symbols.filter((sym) => /[A-Za-z]/.test(sym.text) && !/^x$/i.test(sym.text));

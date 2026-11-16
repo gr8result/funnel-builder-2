@@ -23,6 +23,8 @@ const anon = () => createClient(url, env.NEXT_PUBLIC_SUPABASE_ANON_KEY, { auth: 
 const run = `T${Date.now().toString(36)}`;
 const evidence = { run, url, checks: [] };
 const check = (name, ok, detail) => { evidence.checks.push({ name, pass: Boolean(ok), detail }); assert.ok(ok, `${name}: ${JSON.stringify(detail)}`); };
+// jsonb stores object keys in its own order: compare content, not key order.
+const canonical = (value) => JSON.stringify(value, (key, v) => (v && typeof v === 'object' && !Array.isArray(v) ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, v[k]])) : v));
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const isTransient = (error) => Number(error?.status) >= 500 || /timed? out|timeout|upstream|schema cache|retrying/i.test(error?.message || '');
 
@@ -88,7 +90,13 @@ if (import.meta.url === `file:///${process.argv[1].replace(/\\/g, '/')}` || proc
   const { A, B } = tenants;
   // A takeoff job as the app registers it: the commercial project plus an estimate snapshot carrying the
   // takeoff summary (walls, openings, approved room) for that job.
-  const takeoffSummary = (key) => ({ aiPlanTakeoffJob: { jobName: `Takeoff ${key} ${run}`, walls: 72, openings: 30, approvedRooms: [{ name: 'Bed 3', areaM2: 12.671 }], sheetCalibrations: { 1: 0.02834645669291339 } } });
+  // Saved measurements and approvals as the takeoff stores them (wall runs, placed openings, approved
+  // floor areas with their approval stamps, per-sheet calibration incl. one applied from another sheet).
+  const takeoffSummary = (key) => ({ aiPlanTakeoffJob: { jobName: `Takeoff ${key} ${run}`, walls: 72, openings: 30, approvedRooms: [{ name: 'Bed 3', areaM2: 12.671 }],
+    sheetCalibrations: { 0: { pixelsPerMm: 0.02834645669291339 }, 4: { pixelsPerMm: 0.02834645669291339, appliedFromSheet: 5 }, 5: { pixelsPerMm: 0.02834645669291339 } },
+    completedWallRuns: [{ id: `w-${key}-1`, page: 5, category: 'exterior', lengthMm: 8420, confirmed: true, approvedAt: '2026-11-17T01:00:00.000Z' }],
+    placedOpenings: [{ id: `o-${key}-1`, page: 5, type: 'window', widthMm: 1800, heightMm: 900, confirmed: true }],
+    completedFloorplans: [{ id: `f-${key}-1`, page: 5, name: 'Bed 3', areaM2: 12.671, confirmed: true, reviewRequired: false, approvedAt: '2026-11-17T01:05:00.000Z' }] } });
   const register = async (tenant) => {
     const project = await tenant.db.from('builder_commercial_projects').insert({ workspace_id: tenant.workspaceId, project_name: `Takeoff job ${tenant.key} ${run}`, client_name: `Client ${tenant.key}`, source_workbook_job_id: `job-${tenant.key}-${run}`, created_by: tenant.userId }).select('id').single();
     assert(!project.error, `${tenant.key} registers a job: ${project.error?.message}`);
@@ -130,6 +138,53 @@ if (import.meta.url === `file:///${process.argv[1].replace(/\\/g, '/')}` || proc
   check('the owner\'s takeoff is unchanged after the intrusion attempts', ownerView.revision === 10 && !ownerView.intrusion, ownerView);
   const anonymous = await anon().from('builder_commercial_projects').select('id').in('id', [jobA.projectId, jobB.projectId]);
   check('anonymous visitors see no takeoff jobs', !anonymous.error ? anonymous.data.length === 0 : true, anonymous.error?.message || anonymous.data);
+  // 3b. Saved measurements and approvals: B's attempts left every measured element and approval of A's
+  // takeoff exactly as A saved it, and B cannot approve or withdraw A's items.
+  const expectedA = { ...takeoffSummary('A'), revision: 10 };
+  check('A\'s saved measurements, calibrations and approvals are identical (content) after B\'s attempts', canonical(ownerView) === canonical(expectedA), { walls: ownerView.aiPlanTakeoffJob?.completedWallRuns, rooms: ownerView.aiPlanTakeoffJob?.completedFloorplans });
+  const approveAttempt = await B.db.from('builder_estimate_snapshots').update({ workbook_snapshot: { ...expectedA, aiPlanTakeoffJob: { ...expectedA.aiPlanTakeoffJob, completedFloorplans: [{ ...expectedA.aiPlanTakeoffJob.completedFloorplans[0], confirmed: false, approvedAt: null }] } } }).eq('id', jobA.snapshotId).select('id');
+  check('B cannot withdraw or change A\'s approvals', approveAttempt.error || approveAttempt.data.length === 0, approveAttempt.error?.message || approveAttempt.data);
+
+  // 3c. Quotation transfer: the BOQ sections, items and procurement rows a transfer writes for each job
+  // (written as /api/builders/sync-commercial-snapshot does, with the service role scoped to the job's
+  // own workspace) are invisible and untouchable across tenants, and the promotion function that
+  // publishes a transferred quotation cannot be called by a signed-in builder at all.
+  const transfer = {};
+  for (const [tenant, job] of [[A, jobA], [B, jobB]]) {
+    const section = await runSetupQuery(() => admin.from('builder_boq_sections').insert({ workspace_id: tenant.workspaceId, project_id: job.projectId, snapshot_id: job.snapshotId, source_section_key: 'internal-walls', source_section_name: 'Internal walls' }).select('id').single(), `BOQ section ${tenant.key}`);
+    assert(!section.error, `BOQ section ${tenant.key}: ${section.error?.message}`);
+    const item = await runSetupQuery(() => admin.from('builder_boq_items').insert({ workspace_id: tenant.workspaceId, project_id: job.projectId, snapshot_id: job.snapshotId, section_id: section.data.id, item_name: `Approved floor area Bed 3 (${tenant.key})`, quantity: 12.67, unit: 'm2' }).select('id').single(), `BOQ item ${tenant.key}`);
+    assert(!item.error, `BOQ item ${tenant.key}: ${item.error?.message}`);
+    const proc = await runSetupQuery(() => admin.from('builder_procurement_items').insert({ workspace_id: tenant.workspaceId, project_id: job.projectId, snapshot_id: job.snapshotId, item_name: `Internal doors (${tenant.key})`, quantity: 16 }).select('id').single(), `procurement ${tenant.key}`);
+    assert(!proc.error, `procurement ${tenant.key}: ${proc.error?.message}`);
+    transfer[tenant.key] = { sectionId: section.data.id, itemId: item.data.id, procurementId: proc.data.id };
+  }
+  const ownItem = await A.db.from('builder_boq_items').select('id, quantity').eq('id', transfer.A.itemId);
+  check('A reads its own transferred quotation rows', !ownItem.error && ownItem.data.length === 1 && Number(ownItem.data[0].quantity) === 12.67, ownItem.error?.message || ownItem.data);
+  for (const [actor, owner] of [[B, A], [A, B]]) {
+    const rows = transfer[owner.key];
+    const reads = await Promise.all([
+      actor.db.from('builder_boq_sections').select('id').eq('id', rows.sectionId),
+      actor.db.from('builder_boq_items').select('id, item_name, quantity').eq('id', rows.itemId),
+      actor.db.from('builder_procurement_items').select('id').eq('id', rows.procurementId),
+      actor.db.from('builder_boq_items').select('id').eq('project_id', owner === A ? jobA.projectId : jobB.projectId),
+    ]);
+    check(`${actor.key} cannot read ${owner.key}'s transferred quotation (sections, items, procurement)`, reads.every((r) => r.error || r.data.length === 0), reads.map((r) => r.error?.message || r.data.length));
+    const change = await actor.db.from('builder_boq_items').update({ quantity: 999 }).eq('id', rows.itemId).select('id');
+    check(`${actor.key} cannot change ${owner.key}'s transferred quantities`, change.error || change.data.length === 0, change.error?.message || change.data);
+    const remove = await actor.db.from('builder_procurement_items').delete().eq('id', rows.procurementId).select('id');
+    check(`${actor.key} cannot delete ${owner.key}'s procurement rows`, remove.error || remove.data.length === 0, remove.error?.message || remove.data);
+    const inject = await actor.db.from('builder_boq_items').insert({ workspace_id: owner.workspaceId, project_id: owner === A ? jobA.projectId : jobB.projectId, snapshot_id: owner === A ? jobA.snapshotId : jobB.snapshotId, item_name: 'Intrusion' }).select('id');
+    check(`${actor.key} cannot add rows to ${owner.key}'s quotation`, Boolean(inject.error) || inject.data.length === 0, inject.error?.message || inject.data);
+    const promote = await actor.db.rpc('builder_promote_quotation_snapshot', { p_workspace_id: owner.workspaceId, p_project_id: owner === A ? jobA.projectId : jobB.projectId, p_snapshot_id: owner === A ? jobA.snapshotId : jobB.snapshotId, p_sections: 1, p_items: 1, p_procurement: 1 });
+    check(`${actor.key} cannot publish ${owner.key}'s quotation through the promotion function`, Boolean(promote.error), promote.error?.message || promote.data);
+  }
+  const afterItem = (await admin.from('builder_boq_items').select('quantity').eq('id', transfer.A.itemId).single()).data;
+  const afterProc = (await admin.from('builder_procurement_items').select('id').eq('id', transfer.A.procurementId));
+  const injected = (await admin.from('builder_boq_items').select('id').eq('project_id', jobA.projectId).eq('item_name', 'Intrusion'));
+  check('A\'s transferred quotation is unchanged after the intrusion attempts', Number(afterItem.quantity) === 12.67 && afterProc.data.length === 1 && injected.data.length === 0, { quantity: afterItem.quantity, procurement: afterProc.data.length, injected: injected.data.length });
+  const anonRows = await anon().from('builder_boq_items').select('id').in('id', [transfer.A.itemId, transfer.B.itemId]);
+  check('anonymous visitors see no transferred quotation rows', anonRows.error || anonRows.data.length === 0, anonRows.error?.message || anonRows.data);
   // 4. The application's own takeoff API, when an isolated app server is given (no paid call: the server
   // runs with no provider key, and these requests fail authentication or validation before any call).
   if (app) {
@@ -140,6 +195,18 @@ if (import.meta.url === `file:///${process.argv[1].replace(/\\/g, '/')}` || proc
     check('takeoff API refuses a tampered session token', foreign.status === 401, foreign.status);
     const signed = await post(A.session.access_token, { action: 'not-an-action' });
     check('takeoff API accepts a signed-in builder (request then rejected as invalid, before any provider call)', signed.status !== 401 && signed.status < 500, { status: signed.status, body: (await signed.text()).slice(0, 200) });
+    // The quotation transfer endpoint: a builder can only transfer into a workspace they belong to.
+    const sync = (token, workspaceId, body) => fetch(`${app}/api/builders/sync-commercial-snapshot`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(workspaceId ? { 'x-workspace-id': workspaceId } : {}) }, body: JSON.stringify({ workspace_id: workspaceId, ...body }) });
+    const syncNoToken = await sync(null, A.workspaceId, { workbook: { jobId: `job-A-${run}` } });
+    check('quotation transfer API refuses a request without a session', syncNoToken.status === 401, syncNoToken.status);
+    const syncForeign = await sync(B.session.access_token, A.workspaceId, { workbook: { jobId: `job-A-${run}`, workspaceId: A.workspaceId }, project: { id: jobA.projectId } });
+    check('quotation transfer API refuses B writing into A\'s workspace', syncForeign.status === 403, { status: syncForeign.status, body: (await syncForeign.text()).slice(0, 200) });
+    const syncTampered = await sync(`${B.session.access_token.slice(0, -4)}AAAA`, B.workspaceId, { workbook: { jobId: `job-B-${run}` } });
+    check('quotation transfer API refuses a tampered session token', syncTampered.status === 401, syncTampered.status);
+    const syncCrossJob = await sync(B.session.access_token, B.workspaceId, { workbook: { jobId: `job-A-${run}`, workspaceId: A.workspaceId }, project: { id: jobA.projectId } });
+    check('quotation transfer API refuses a workbook that belongs to another workspace', syncCrossJob.status >= 400 && syncCrossJob.status < 500, { status: syncCrossJob.status, body: (await syncCrossJob.text()).slice(0, 200) });
+    const stillA = (await admin.from('builder_boq_items').select('quantity').eq('project_id', jobA.projectId));
+    check('A\'s quotation rows are unchanged after the API attempts', stillA.data.length === 1 && Number(stillA.data[0].quantity) === 12.67, stillA.data);
   }
   evidence.passed = evidence.checks.every((item) => item.pass);
   if (outFile) fs.writeFileSync(outFile, JSON.stringify(evidence, null, 2));

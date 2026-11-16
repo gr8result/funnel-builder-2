@@ -4,7 +4,7 @@
 import assert from 'node:assert/strict';
 import {
   addWall, addOpening, addSeparator, computeRooms, createLevel, createPlanModel, addLevelToModel, withLevel, deleteWall, deleteOpening,
-  describeLevel, drawWall, mergeDetections, moveNode, nameRoomAt, openingPosition, updateWall, wallCategories, wallLengthMm, wallNetLengthMm,
+  describeLevel, drawWall, mergeDetections, moveNode, nameRoomAt, openingPosition, updateWall, wallCategories, wallLengthMm, wallPoints, wallNetLengthMm,
 } from '../components/construction-estimation/ai-plan-takeoff/geometry/planModel.js';
 import { levelFromLinework, vectorAnalysisFromLinework } from '../components/construction-estimation/ai-plan-takeoff/geometry/planModelAdapter.js';
 import { detectVectorWalls } from '../components/construction-estimation/ai-plan-takeoff/geometry/vectorWalls.js';
@@ -300,6 +300,45 @@ const box = () => build([
   drawWall(level, { a: { x: 2000, y: 0 }, b: { x: 2000, y: 3000 }, thicknessMm: 90 });
   deleteWall(level, Object.keys(level.walls)[0]);
   assert.equal(JSON.stringify(level), snapshot, 'levels are values: every operation returns a new one');
+}
+
+// ---- An open porch notch is outside, even with the wall line carried across its mouth ------------------------
+// Liberty: nothing is drawn across the 2 m porch mouth, so the unconfirmed gap is bridged to close rooms. The
+// bridge is not an enclosure: the entry wall and porch returns are external; a partition stub that continues the
+// porch return into the open-plan room stays internal. A named (non-outdoor) room in the same notch stays internal.
+{
+  const geometry = (labelled) => ({
+    walls: [
+      { id: 'top', nodes: [{ x: 0, y: 0 }, { x: 10000, y: 0 }], measuredThicknessMm: 230 },
+      { id: 'right', nodes: [{ x: 10000, y: 0 }, { x: 10000, y: 6000 }], measuredThicknessMm: 230 },
+      { id: 'bottom', nodes: [{ x: 10000, y: 6000 }, { x: 0, y: 6000 }], measuredThicknessMm: 230 },
+      { id: 'left-a', nodes: [{ x: 0, y: 0 }, { x: 0, y: 2000 }], measuredThicknessMm: 230 },
+      { id: 'left-b', nodes: [{ x: 0, y: 4000 }, { x: 0, y: 6000 }], measuredThicknessMm: 230 },
+      { id: 'porch-top', nodes: [{ x: 0, y: 2000 }, { x: 2500, y: 2000 }], measuredThicknessMm: 200 },
+      { id: 'entry', nodes: [{ x: 700, y: 2000 }, { x: 700, y: 4000 }], measuredThicknessMm: 90 },
+      { id: 'porch-bottom', nodes: [{ x: 0, y: 4000 }, { x: 700, y: 4000 }], measuredThicknessMm: 90 },
+    ],
+    openings: [{ id: 'mouth', x: 0, y: 3000, axis: 'v', widthMm: 2000, hostThicknessMm: 230, kind: 'opening', confirmed: false }],
+    labels: [{ x: 5000, y: 3000, name: 'Living' }, ...(labelled ? [{ x: 350, y: 3000, name: 'Linen' }] : [])],
+  });
+  const categoriesOf = (labelled) => {
+    const input = geometry(labelled);
+    const { level } = levelFromLinework(input, { id: 'g', name: 'Ground', page: 1, pixelsPerMm: 1 }, { labels: input.labels, bridgeUnconfirmedMaxMm: 2500 });
+    const categories = wallCategories(level);
+    const byKey = (key, test = () => true) => Object.values(level.walls).filter((wall) => wall.detectionKey === `linework:${key}` && test(wallPoints(level, wall))).map((wall) => categories[wall.id]);
+    return {
+      entry: byKey('entry'), porchBottom: byKey('porch-bottom'),
+      porchReturn: byKey('porch-top', (points) => Math.max(...points.map((point) => point.x)) <= 760),
+      stub: byKey('porch-top', (points) => Math.min(...points.map((point) => point.x)) >= 640),
+    };
+  };
+  const open = categoriesOf(false);
+  assert.deepEqual(open.entry, ['exterior'], 'the entry wall faces the open porch');
+  assert.deepEqual(open.porchBottom, ['exterior'], 'the porch return faces the open porch');
+  assert.deepEqual(open.porchReturn, ['exterior'], 'the porch side of the continuing wall is external');
+  assert.deepEqual(open.stub, ['interior'], 'the stub of that wall inside the open-plan room stays internal');
+  const named = categoriesOf(true);
+  assert.deepEqual(named.entry, ['interior'], 'a named room in the notch keeps its walls internal');
 }
 
 console.log('plan model: all checks passed');
