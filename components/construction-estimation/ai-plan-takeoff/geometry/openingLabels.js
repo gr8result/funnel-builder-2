@@ -147,6 +147,13 @@ const CAVITY = /\b(CSD|CAV|CAVITY)\b/;
 
 export function normaliseLabelText(text) {
   let t = String(text || '').toUpperCase().replace(/[|]/g, '1').replace(/[^A-Z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+  // A type word read with look-alike digits (O85 -> OBS, L0UVRE-style mixes): letter-mapped only when
+  // the word mixes letters and digits and the mapped word is exactly a recognised type word.
+  t = t.split(' ').map((w, i) => {
+    if (!i || !/[A-Z]/.test(w) || !/\d/.test(w)) return w;
+    const mapped = w.replace(/0/g, 'O').replace(/5/g, 'S').replace(/8/g, 'B').replace(/1/g, 'I').replace(/6/g, 'G');
+    return new RegExp(`^(?:${SLIDING.source}|${WINDOW_TYPES.source}|${CAVITY.source})$`).test(mapped) ? mapped : w;
+  }).join(' ');
   // Common OCR confusions inside numbers only: O->0, I/L->1, S->5 when flanked by digits.
   t = t.replace(/(?<=\d)[O](?=\d|\b)|(?<=\b)[O](?=\d)/g, '0').replace(/(?<=\d)[IL](?=\d)|(?<=\b)[IL](?=\d{2,})/g, '1');
   // A leading 0 misread as a round letter (J906, C906 -> 0906), only before exactly three digits.
@@ -185,7 +192,10 @@ export function parseOpeningLabel(text) {
   m = t.match(/^(\d{3})(?: (.*))?$/);
   if (m) {
     const leaf = Number(m[1]); if (!plausibleLeaf(leaf)) return null;
-    return finish(t, { form: 'leaf', leafWidthMm: leaf, leaves: 1, suffix: (m[2] || '').trim() });
+    const suffix = (m[2] || '').trim();
+    // "770 SQUARE SET OPENING" (often read without its "2100 X" height): the opening's width, not a door leaf.
+    if (/\b(SQUARE|OPENING)\b/.test(suffix)) return finish(t, { form: 'width', widthMm: leaf, suffix });
+    return finish(t, { form: 'leaf', leafWidthMm: leaf, leaves: 1, suffix });
   }
   return null;
 }
@@ -352,6 +362,8 @@ export function applyOpeningLabels(openings, association, overrides = {}) {
     if (parsed.form === 'code' || parsed.form === 'explicit') {
       m.labelFrameWidthMm = parsed.widthMm; m.labelHeightMm = parsed.heightMm;
       opening.heightMm = parsed.heightMm;
+    } else if (parsed.form === 'width') {
+      m.labelFrameWidthMm = parsed.widthMm;
     } else {
       m.labelLeafWidthMm = parsed.leafWidthMm;
     }
@@ -362,7 +374,15 @@ export function applyOpeningLabels(openings, association, overrides = {}) {
     // settled by one label whose width spans the whole of it. Unread gaps are not: a label beside a gap
     // does not show what fills it.
     const heldFrame = opening.needsClassification && opening.confirmed !== false && (opening.frameUnit || opening.panelCount >= 2 || opening.kind === 'window' || opening.kind === 'sliding-door');
-    if (heldFrame && labelKind) {
+    // The one label that does say what fills a bare gap: "OPENING" / "SQUARE SET" - nothing (no door,
+    // no window). With its width agreeing with the measured gap it confirms the gap as an opening; the
+    // builder still confirms the type of every Other Opening before it is used.
+    const bareGapOpening = parsed.kind === 'opening' && opening.kind === 'opening' && opening.confirmed === false && !SWING.has(opening.kind);
+    if (bareGapOpening) {
+      opening.confirmed = true; opening.classifiedBy = 'printed-label';
+      opening.evidence = `gap in the wall line; printed label "${parsed.text}" names it an opening ${parsed.widthMm} wide (measured ${Math.round(opening.widthMm)} mm)`;
+      report.resolved.push({ id: opening.id, kind: 'opening', text: parsed.text, was: 'unconfirmed gap' });
+    } else if (heldFrame && labelKind) {
       const was = opening.frameUnit ? 'frame' : opening.panelCount >= 2 ? `${opening.panelCount}-panel window box` : opening.kind;
       opening.kind = labelKind; opening.needsClassification = false; opening.classifiedBy = 'printed-label';
       opening.evidence = `${opening.evidence || was}; printed label "${parsed.text}" spans it: ${labelKind === 'window' ? 'one window' : 'a sliding door'} ${parsed.widthMm} wide`;

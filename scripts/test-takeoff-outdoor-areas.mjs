@@ -8,6 +8,8 @@ import { traceOutdoorArea, outdoorTypeOf } from '../components/construction-esti
 import { detectVectorWalls } from '../components/construction-estimation/ai-plan-takeoff/geometry/vectorWalls.js';
 import { vectorProductionAnalysis } from '../components/construction-estimation/ai-plan-takeoff/ai-integration/vectorProductionAnalysis.js';
 import { roomLabelsFromText } from '../components/construction-estimation/ai-plan-takeoff/ai-integration/localVectorAnalysis.js';
+import { normalizePlanAnalysis } from '../components/construction-estimation/ai-plan-takeoff/ai-integration/analysisContract.js';
+import { convertAiTakeoffDetections } from '../components/construction-estimation/ai-plan-takeoff/ai-integration/adapter.js';
 
 const seg = (x1, y1, x2, y2) => ({ x1, y1, x2, y2 });
 const rect = (l, t, r, b) => [seg(l, t, r, t), seg(r, t, r, b), seg(r, b, l, b), seg(l, b, l, t)];
@@ -78,6 +80,23 @@ for (const [page, type, printedM2] of [[5, 'Balcony', printed.lowerBalconyM2], [
   const overlap = (() => { const fp = footprint.nodes, o = outdoor[0].nodes; const inFp = (p) => { let inside = false; for (let i = 0, j = fp.length - 1; i < fp.length; j = i++) { const a = fp[i], b = fp[j]; if ((a.y > p.y) !== (b.y > p.y) && p.x < (b.x - a.x) * (p.y - a.y) / (b.y - a.y) + a.x) inside = !inside; } return inside; };
     const cx = o.reduce((s, p) => s + p.x, 0) / o.length, cy = o.reduce((s, p) => s + p.y, 0) / o.length; return inFp({ x: cx, y: cy }); })();
   assert.equal(overlap, false, 'the outdoor area lies outside the building footprint');
+  // Exercise the normalization stage that the old quick-accuracy path bypassed. An outside
+  // balcony/terrace must change neither the house walls nor their hosted openings.
+  const context = { jobId: 'outdoor-regression', takeoffId: 'outdoor-regression', documentHash: 'fixture',
+    pixelsPerMm: input.pixelsPerMm, pages: [{ pageNumber: page, logicalWidth: input.logicalWidth, logicalHeight: input.logicalHeight }],
+    completedWallRuns: [], placedOpenings: [], completedFloorplans: [], sheetLevels: { [page]: 'Ground Floor' } };
+  const normalize = (response, ctx = context) => normalizePlanAnalysis({ context: ctx, responses: [response], runId: 'outdoor', modelVersion: detected.engine });
+  const baseline = normalize({ ...measured.response, buildingAreas: measured.response.buildingAreas.filter(a => a.measuredFrom !== 'drawn-outline') });
+  const actual = normalize(measured.response);
+  const house = result => result.batch.detections.filter(d => d.kind === 'wall' || d.kind === 'opening');
+  assert.deepEqual(house(actual), house(baseline), `sheet ${page}: outdoor outline preserves every house wall and hosted opening, without inflation`);
+  assert.equal(actual.analysis.openEdges.length, 0, `sheet ${page}: no house wall misreported as an open edge`);
+  const canonical = convertAiTakeoffDetections(actual.batch, context);
+  const wallKeys = canonical.completedWallRuns.map(w => JSON.stringify(w.nodes));
+  assert.equal(new Set(wallKeys).size, wallKeys.length, 'no duplicate canonical wall geometry');
+  const rerun = normalize(measured.response, { ...context, ...canonical });
+  assert.equal(house(rerun).length, 0, `sheet ${page}: rerun adds no duplicate walls or openings`);
+  console.log(`Jesmond sheet ${page}: ${canonical.completedWallRuns.length} walls, ${canonical.placedOpenings.length} openings retained with outdoor outlines; rerun adds none.`);
   results.push(`${type} ${areaM2.toFixed(2)} m² vs printed ${printedM2} (${(error * 100).toFixed(1)}%)`);
 }
 console.log(`Outdoor areas: synthetic cases passed; Jesmond ${results.join(', ')}.`);

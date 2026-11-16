@@ -33,7 +33,7 @@ export function canonicalPlanReading(canonical, rooms, pixelsPerMm) {
   }
   return {
     walls: canonical.completedWallRuns.map(wall => ({ id: wall.ai?.detectionId || wall.id, points: wall.nodes.map(toMm), thicknessMm: wall.thicknessMm, category: wall.category })),
-    openings: canonical.placedOpenings.map(opening => ({ id: opening.ai?.detectionId || opening.id, ...toMm(opening), widthMm: opening.widthMm, kind: opening.type, hostWallId: opening.hostWallId })),
+    openings: canonical.placedOpenings.map(opening => ({ id: opening.ai?.detectionId || opening.id, ...toMm(opening), widthMm: opening.widthMm, kind: opening.openingClass === 'Other Opening' ? 'opening' : opening.type, hostWallId: opening.hostWallId })),
     rooms: rooms.map(room => ({ id: room.id, name: room.name, polygon: room.polygon.map(toMm) })),
     junctions: junctions.filter(junction => junction.wallIds.size >= 2)
       .map(junction => ({ ...toMm(junction), walls: junction.wallIds.size })),

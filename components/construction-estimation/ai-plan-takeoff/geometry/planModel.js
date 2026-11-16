@@ -17,6 +17,8 @@
 
 export const PLAN_MODEL_SCHEMA = 'gr8-plan-model.v1';
 
+import { OUTDOOR_LABEL } from './outdoorAreas.js';
+
 export const PLAN_MODEL_DEFAULTS = {
   snapMm: 60,               // a wall end this close to a node joins it
   joinReachMm: 200,         // a wall end pointing at a wall this far beyond its face meets it: no door is this narrow
@@ -1182,12 +1184,13 @@ export function nameRoomAt(level, point, name, { source = 'manual' } = {}, overr
  */
 export function wallCategories(level) {
   const { faces, edges } = networkFaces(level);
+  const open = outdoorFaces(level, faces, edges);
   const outside = new Set(), enclosed = new Set();
-  for (const face of faces) {
+  faces.forEach((face, index) => {
     const owners = face.nodeIds.map((id, i) => edgeOf(edges, id, face.nodeIds[(i + 1) % face.nodeIds.length])).filter((edge) => edge?.kind === 'wall').map((edge) => edge.owner);
-    for (const id of owners) (Math.sign(face.signedArea) === BOUNDED_SIGN ? enclosed : outside).add(id);
-  }
-  const bounded = boundedFacePolygons(level, faces);
+    for (const id of owners) (Math.sign(face.signedArea) === BOUNDED_SIGN && !open.has(index) ? enclosed : outside).add(id);
+  });
+  const bounded = boundedFacePolygons(level, faces.filter((_, index) => !open.has(index)));
   // A wall on the outer face of one piece of the network can still have a room of another piece on its
   // far side (a house drawn as blocks whose outlines do not join). External means outside lies beyond
   // one face: rooms on both sides along (nearly) all of the wall = internal. A wall with a run outside is
@@ -1226,6 +1229,47 @@ export function wallCategories(level) {
   }));
 }
 
+// Closed faces of the wall network that are outside space, not rooms, for external/internal purposes:
+//  - a face named as an outdoor area on the plan (porch, patio, balcony, alfresco ...); or
+//  - an unnamed notch, no larger than OPEN_RECESS_MAX_M2, closed only by the span across a gap
+//    nothing confirms (no wall, door or window was found there) with the building's outside beyond it.
+// That span is drawn so rooms can close; it is not evidence of an enclosure. A named room, a larger
+// space, or a face closed by a confirmed opening keeps its walls internal.
+export const OPEN_RECESS_MAX_M2 = 6;
+function outdoorFaces(level, faces, edges) {
+  const keyOf = (u, v) => (u < v ? `${u}|${v}` : `${v}|${u}`);
+  const facesOn = new Map();
+  faces.forEach((face, index) => face.nodeIds.forEach((id, i) => {
+    const key = keyOf(id, face.nodeIds[(i + 1) % face.nodeIds.length]);
+    if (!facesOn.has(key)) facesOn.set(key, []);
+    facesOn.get(key).push(index);
+  }));
+  const openings = Object.values(level.openings || {});
+  const unconfirmedSpan = (wallId) => {
+    const wall = level.walls[wallId];
+    if (!wall || wall.categorySource === 'manual' || !(wall.attributes?.spansOpening || String(wall.detectionKey || '').startsWith('linework-bridge:'))) return false;
+    const hosted = openings.filter((opening) => opening.wallId === wallId);
+    return hosted.length > 0 && hosted.every((opening) => opening.attributes?.unconfirmed);
+  };
+  const names = level.roomNames || [];
+  const open = new Set();
+  faces.forEach((face, index) => {
+    if (Math.sign(face.signedArea) !== BOUNDED_SIGN) return;
+    const owners = face.nodeIds.map((id, i) => ({ key: keyOf(id, face.nodeIds[(i + 1) % face.nodeIds.length]), edge: edgeOf(edges, id, face.nodeIds[(i + 1) % face.nodeIds.length]) }));
+    const wallIds = [...new Set(owners.filter((item) => item.edge?.kind === 'wall').map((item) => item.edge.owner))];
+    const named = names.filter((label) => jaccard(label.wallIds, wallIds) >= PLAN_MODEL_DEFAULTS.roomNameShare);
+    if (named.length) {
+      if (named.every((label) => OUTDOOR_LABEL.test(String(label.name || '')))) open.add(index);
+      return;
+    }
+    if (Math.abs(face.signedArea) / 1e6 > OPEN_RECESS_MAX_M2) return;
+    const openToOutside = owners.some((item) => item.edge?.kind === 'wall' && unconfirmedSpan(item.edge.owner)
+      && (facesOn.get(item.key) || []).some((other) => other !== index && Math.sign(faces[other].signedArea) !== BOUNDED_SIGN));
+    if (openToOutside) open.add(index);
+  });
+  return open;
+}
+
 // Share of a wall run (sampled every 200 mm, just beyond each face) with a room on both sides.
 function roomsBothSidesShare(points, thicknessMm, bounded) {
   const half = (thicknessMm || 0) / 2 + 150;
@@ -1259,19 +1303,23 @@ export function splitWallsByExposure(level) {
   const next = clone(level);
   const { faces, edges } = networkFaces(next);
   const outsideEdges = new Set(), faceEdges = new Set();
-  for (const face of faces) {
+  // An outdoor notch closed only by an unconfirmed span is outside here too (see outdoorFaces).
+  const open = outdoorFaces(next, faces, edges);
+  faces.forEach((face, index) => {
     face.nodeIds.forEach((id, i) => {
       const v = face.nodeIds[(i + 1) % face.nodeIds.length], key = id < v ? `${id}|${v}` : `${v}|${id}`;
       faceEdges.add(key);
-      if (Math.sign(face.signedArea) !== BOUNDED_SIGN) outsideEdges.add(key);
+      if (Math.sign(face.signedArea) !== BOUNDED_SIGN || open.has(index)) outsideEdges.add(key);
     });
-  }
-  const bounded = boundedFacePolygons(next, faces);
+  });
+  const bounded = boundedFacePolygons(next, faces.filter((_, index) => !open.has(index)));
   for (const wall of Object.values(next.walls)) {
     if (wall.nodeIds.length < 3 || wall.locked || wall.edited || wall.categorySource === 'manual' || wall.categorySource === 'plan-evidence') continue;
     const exposure = wall.nodeIds.slice(1).map((v, i) => {
       const u = wall.nodeIds[i], key = u < v ? `${u}|${v}` : `${v}|${u}`;
-      if (!faceEdges.has(key)) return null; // a dangling tail bounds nothing: it stays with its neighbours
+      // A dangling tail bounds nothing: it stays with its neighbours, unless it stands inside a room
+      // (a partition stub in an open-plan space), which makes it internal whatever its neighbour faces.
+      if (!faceEdges.has(key)) return roomsBothSidesShare([next.nodes[u], next.nodes[v]], wall.thicknessMm, bounded) > 0.5 ? 'enclosed' : null;
       if (!outsideEdges.has(key)) return 'enclosed';
       return roomsBothSidesShare([next.nodes[u], next.nodes[v]], wall.thicknessMm, bounded) > 0.5 ? 'enclosed' : 'outside';
     });

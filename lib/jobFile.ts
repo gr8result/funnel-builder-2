@@ -434,27 +434,125 @@ function timestampForBackupFileName(date = new Date()): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
 }
 
-async function existingZipBackups(existingBytes?: ArrayBuffer): Promise<Array<{ path: string; bytes: ArrayBuffer }>> {
-  if (!existingBytes || !looksLikeZip(existingBytes)) return [];
+const BACKUP_PATH = /^backups\/.+\.gr8job$/i;
+
+// One earlier version of the job on its own: its sections and manifest, without the backups it
+// carried. Embedding a whole earlier file nested every older backup inside each new one, so a
+// file grew by about the size of all its predecessors at every save. JSZip reuses the stored
+// compressed bytes of entries it loaded, so nothing is inflated or deflated again here.
+async function flattenedBackup(zip: JSZip): Promise<ArrayBuffer> {
+  const nested = Object.keys(zip.files).filter((path) => path.startsWith("backups/"));
+  if (!nested.length) return zip.generateAsync({ type: "arraybuffer", compression: "DEFLATE" });
+  nested.forEach((path) => zip.remove(path));
+  return zip.generateAsync({ type: "arraybuffer", compression: "DEFLATE" });
+}
+
+async function existingZipBackups(existingBytes?: ArrayBuffer): Promise<{ previous: ArrayBuffer | null; older: Array<{ path: string; bytes: ArrayBuffer }> }> {
+  if (!existingBytes || !looksLikeZip(existingBytes)) return { previous: null, older: [] };
   try {
     const existingZip = await JSZip.loadAsync(existingBytes);
     const backupPaths = Object.keys(existingZip.files)
-      .filter((path) => /^backups\/.+\.gr8job$/i.test(path))
+      .filter((path) => BACKUP_PATH.test(path))
       .sort()
       .reverse()
       .slice(0, BACKUP_VERSION_LIMIT - 1);
-    return Promise.all(backupPaths.map(async (path) => ({
-      path,
-      bytes: await existingZip.file(path)!.async("arraybuffer"),
-    })));
+    const older: Array<{ path: string; bytes: ArrayBuffer }> = [];
+    for (const path of backupPaths) {
+      const bytes = await existingZip.file(path)!.async("arraybuffer");
+      // A backup written before backups were flattened can itself hold nested backups.
+      let flat = bytes;
+      if (looksLikeZip(bytes)) {
+        try {
+          const inner = await JSZip.loadAsync(bytes);
+          if (Object.keys(inner.files).some((name) => name.startsWith("backups/"))) flat = await flattenedBackup(inner);
+        } catch { flat = bytes; }
+      }
+      older.push({ path, bytes: flat });
+    }
+    const previous = existingZip.file("manifest.json") ? await flattenedBackup(existingZip) : null;
+    return { previous, older };
   } catch {
-    return [];
+    return { previous: null, older: [] };
+  }
+}
+
+// The takeoff job is held in several places of the workbook (aiPlanTakeoffJob, takeoffEngine's
+// copy, and the estimate section's whole workbook), each a full copy of the plan images. In the
+// package it is written once, in the takeoff section; every identical copy is written as a
+// reference to it and restored on read (resolvePackageReferences).
+const PACKAGE_REF_KEY = "$gr8PackageRef";
+const TAKEOFF_REFERENCE_TARGETS = ["aiPlanTakeoffJob", "aiTakeoffProject"] as const;
+
+function sameJson(value: unknown, target: unknown, targetText: string): boolean {
+  if (value === target) return true;
+  if (!value || typeof value !== "object") return false;
+  return JSON.stringify(value) === targetText;
+}
+
+function dedupeTakeoffCopies(sections: Record<string, unknown>): Record<string, unknown> {
+  const takeoff = asRecord(sections.takeoff);
+  if (!takeoff) return sections;
+  const targets = TAKEOFF_REFERENCE_TARGETS
+    .filter((key) => takeoff[key] && typeof takeoff[key] === "object")
+    .map((key) => ({ key, value: takeoff[key], text: "" }));
+  if (!targets.length) return sections;
+  const referenceFor = (value: unknown): Record<string, string> | null => {
+    if (!value || typeof value !== "object") return null;
+    for (const target of targets) {
+      if (!target.text && value !== target.value) target.text = JSON.stringify(target.value);
+      if (sameJson(value, target.value, target.text)) return { [PACKAGE_REF_KEY]: `takeoff.${target.key}` };
+    }
+    return null;
+  };
+  const withEngineReference = (engine: unknown) => {
+    const record = asRecord(engine);
+    const reference = record ? referenceFor(record.aiPlanTakeoffJob) : null;
+    return reference ? { ...record, aiPlanTakeoffJob: reference } : engine;
+  };
+  const next: Record<string, unknown> = { ...sections, takeoff: { ...takeoff, takeoffEngine: withEngineReference(takeoff.takeoffEngine) } };
+  const estimate = asRecord(sections.estimate);
+  const workbook = asRecord(estimate?.workbook);
+  if (estimate && workbook) {
+    const nextWorkbook: Record<string, unknown> = { ...workbook };
+    for (const key of TAKEOFF_REFERENCE_TARGETS) {
+      const reference = referenceFor(workbook[key]);
+      if (reference) nextWorkbook[key] = reference;
+    }
+    if (workbook.takeoffEngine) nextWorkbook.takeoffEngine = withEngineReference(workbook.takeoffEngine);
+    next.estimate = { ...estimate, workbook: nextWorkbook };
+  }
+  return next;
+}
+
+function resolvePackageReferences(sections: Record<string, Record<string, unknown>>): void {
+  const takeoff = sections.takeoff || {};
+  const resolve = (value: unknown): unknown => {
+    const record = asRecord(value);
+    const path = record && typeof record[PACKAGE_REF_KEY] === "string" ? String(record[PACKAGE_REF_KEY]) : null;
+    if (!path) return value;
+    const key = path.replace(/^takeoff\./, "");
+    if (!path.startsWith("takeoff.") || !(TAKEOFF_REFERENCE_TARGETS as readonly string[]).includes(key) || !takeoff[key]) {
+      throw new Error(`Job file verification failed: reference ${path} has no saved target.`);
+    }
+    return takeoff[key];
+  };
+  const resolveEngine = (engine: unknown) => {
+    const record = asRecord(engine);
+    return record && asRecord(record.aiPlanTakeoffJob)?.[PACKAGE_REF_KEY] ? { ...record, aiPlanTakeoffJob: resolve(record.aiPlanTakeoffJob) } : engine;
+  };
+  if (sections.takeoff?.takeoffEngine) sections.takeoff = { ...sections.takeoff, takeoffEngine: resolveEngine(sections.takeoff.takeoffEngine) };
+  const workbook = asRecord(sections.estimate?.workbook);
+  if (workbook) {
+    const nextWorkbook: Record<string, unknown> = { ...workbook };
+    for (const key of TAKEOFF_REFERENCE_TARGETS) if (key in workbook) nextWorkbook[key] = resolve(workbook[key]);
+    if (workbook.takeoffEngine) nextWorkbook.takeoffEngine = resolveEngine(workbook.takeoffEngine);
+    sections.estimate = { ...sections.estimate, workbook: nextWorkbook };
   }
 }
 
 async function serializeJobPackage(payload: JobFileData, existing?: { fileName: string; bytes: ArrayBuffer } | null): Promise<{ blob: Blob; data: JobFileData }> {
   const zip = new JSZip();
-  const sections = sectionFileEntries(payload);
+  const sections = dedupeTakeoffCopies(sectionFileEntries(payload));
   const sectionChecksums: Record<string, string> = {};
   Object.entries(sections).forEach(([name, value]) => {
     const text = JSON.stringify(value || {}, null, 2);
@@ -462,16 +560,18 @@ async function serializeJobPackage(payload: JobFileData, existing?: { fileName: 
     zip.file(`${name}.json`, text);
   });
 
-  const backups = await existingZipBackups(existing?.bytes);
+  const { previous, older } = await existingZipBackups(existing?.bytes);
+  const backups = older;
   if (existing?.bytes?.byteLength) {
     const backupName = slugFileName(existing.fileName.replace(/\.gr8job$/i, "") || payload.jobName || "Job");
     backups.unshift({
       path: `backups/${backupName} - ${timestampForBackup()}.gr8job`,
-      bytes: existing.bytes,
+      bytes: previous || existing.bytes,
     });
   }
+  // A backup is already a compressed package: stored as it is, not deflated a second time.
   backups.slice(0, BACKUP_VERSION_LIMIT).forEach((backup) => {
-    zip.file(backup.path, backup.bytes);
+    zip.file(backup.path, backup.bytes, { compression: "STORE" });
   });
 
   const data = {
@@ -569,14 +669,20 @@ async function readMasterZipPackage(buffer: ArrayBuffer): Promise<JobFileData> {
   const manifest = await readJson("manifest.json");
   const sectionNames = ["job-details", "estimate", "takeoff", "client-selections", "quotation", "boq", "procurement", "variations", "project-documents", "assets"];
   const expectedChecksums = asRecord(manifest.sectionChecksums) || {};
-  for (const [name, expected] of Object.entries(expectedChecksums)) {
+  const sections: Record<string, Record<string, unknown>> = {};
+  // A plan package can contain hundreds of MB of image data. Verify and parse the
+  // same decompressed text, one section at a time, rather than inflating every
+  // section twice and holding all decompression buffers concurrently.
+  for (const name of new Set([...sectionNames, ...Object.keys(expectedChecksums)])) {
     const file = zip.file(`${name}.json`);
-    if (!file || checksumText(await file.async("text")) !== expected) {
+    const text = file ? await file.async("text") : "";
+    if (Object.prototype.hasOwnProperty.call(expectedChecksums, name)
+      && (!file || checksumText(text) !== expectedChecksums[name])) {
       throw new Error(`Job file verification failed: ${name} is missing or its checksum does not match.`);
     }
+    if (sectionNames.includes(name)) sections[name] = JSON.parse(text || "{}");
   }
-  const sectionEntries = await Promise.all(sectionNames.map(async (name) => [name, await readJson(`${name}.json`)] as const));
-  const sections = Object.fromEntries(sectionEntries) as Record<string, Record<string, unknown>>;
+  resolvePackageReferences(sections);
   const payload: Partial<JobFileData> = {
     manifest,
     "job-details": sections["job-details"],

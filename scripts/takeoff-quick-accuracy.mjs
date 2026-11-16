@@ -6,6 +6,9 @@
 //     scripts/takeoff-quick-accuracy.mjs [--jesmond-pdf <pdf>] [--jesmond-reference <reference.json>] \
 //     [--liberty <frozen fixture dir>] [--cache <dir>] [--overrides '<json>'] [--json <out.json>] [--detail]
 //     [--ocr <tessdata dir>]   also run the local printed-label stage (tesseract.js, local language data)
+//     [--ocr-cache <dir>]      tesseract.js language cache (keyed by language name only: use a separate one per tessdata)
+//                              The app ships public/takeoff-ocr/tessdata (tessdata_fast); pass that to match the browser.
+//     [--production]   include measured footprint/outdoor outlines, as the browser Run path does
 //
 // Pages are rendered once (raster for the ink check, linework, PDF text read exactly as the app does on
 // upload) and cached; reruns score in seconds. The reference is read only after the application
@@ -29,7 +32,7 @@ const root = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace
 const args = Object.fromEntries(process.argv.slice(2).map((arg, index, all) => (arg.startsWith('--') ? [arg.slice(2), all[index + 1]?.startsWith('--') ? true : all[index + 1]] : null)).filter(Boolean));
 const overrides = args.overrides ? JSON.parse(args.overrides) : {};
 const labelReader = args.ocr && args.ocr !== true
-  ? await createTesseractLabelReader({ createWorker: require('tesseract.js').createWorker, langPath: args.ocr, cachePath: path.join(root, 'artifacts/test-results/takeoff-ocr-cache'), toImage: (crop) => Buffer.from(crop.bytes) })
+  ? await createTesseractLabelReader({ createWorker: require('tesseract.js').createWorker, langPath: args.ocr, cachePath: args['ocr-cache'] && args['ocr-cache'] !== true ? path.resolve(args['ocr-cache']) : path.join(root, 'artifacts/test-results/takeoff-ocr-cache'), toImage: (crop) => Buffer.from(crop.bytes) })
   : null;
 const cacheDir = args.cache || path.join(root, 'artifacts/test-results/takeoff-quick-accuracy-cache');
 const ENGINE_DPI = 228.6;
@@ -106,7 +109,8 @@ for (const plan of plans) {
     const context = { jobId: 'quick-accuracy', takeoffId: 'quick-accuracy', documentHash: 'quick', pixelsPerMm: ppm,
       pages: [{ pageNumber, logicalWidth: input.logicalWidth, logicalHeight: input.logicalHeight }],
       completedWallRuns: [], placedOpenings: [], completedFloorplans: [], sheetLevels: { [pageNumber]: level } };
-    const prepared = buildLocalVectorAnalysis({ planPage: input, detected, pixelsPerMm: ppm, level, context, runId: 'quick' });
+    const prepared = buildLocalVectorAnalysis({ planPage: input, detected, pixelsPerMm: ppm, level, context, runId: 'quick',
+      semanticInput: args.production ? { page: pageNumber, level, walls: [], openings: [], rooms: [], review: [] } : null });
     const canonical = convertAiTakeoffDetections(prepared.batch, context);
     const approvedRooms = prepared.rooms.filter((room) => room.confirmed === true && room.reviewRequired !== true);
     const accepted = canonicalPlanReading(canonical, approvedRooms, ppm);

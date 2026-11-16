@@ -94,6 +94,44 @@ export function stampSheetScales(items = [], pixelsPerMm, sheetCalibrations = {}
 }
 
 /**
+ * The calibration record after the estimator calibrates `page` and, by their explicit choice,
+ * applies the same scale to `applyTo` sheets (sheets drawn at the same printed scale). Sheets not
+ * named keep whatever they had: their own calibration, or the job scale. Nothing is assumed.
+ * `base` is the job scale before this calibration (recorded as JOB_SCALE_KEY the first time).
+ */
+export function calibrationsWithSheets(previous = {}, page, pixelsPerMm, { applyTo = [], base = null, calibratedAt = new Date().toISOString() } = {}) {
+  const value = positive(pixelsPerMm);
+  if (!(Number(page) > 0) || !value) return previous;
+  const next = { ...previous, [JOB_SCALE_KEY]: previous[JOB_SCALE_KEY] || { pixelsPerMm: positive(base) || value, calibratedAt },
+    [Number(page)]: { pixelsPerMm: value, calibratedAt } };
+  for (const other of applyTo.map(Number).filter((item) => item > 0 && item !== Number(page))) {
+    next[other] = { pixelsPerMm: value, calibratedAt, appliedFromSheet: Number(page) };
+  }
+  return next;
+}
+
+/** Sheets whose effective scale differs between two calibration records. */
+export function sheetsWithChangedScale(pages = [], before, after) {
+  return pages.map(Number).filter((page) => { const was = positive(before(page)), now = positive(after(page)); return was && now && !sameSheetScale(was, now); });
+}
+
+/**
+ * Approved areas measured on a sheet whose scale changed: the approved figure no longer matches the
+ * geometry, so the approval is withdrawn and the builder confirms the remeasured area again.
+ */
+export function withdrawApprovalsForScaleChange(items = [], changedPages = []) {
+  const changed = new Set(changedPages.map(Number));
+  if (!changed.size || !Array.isArray(items)) return items;
+  let touched = false;
+  const next = items.map((item) => {
+    if (!changed.has(Number(item?.page || 1)) || !(item?.confirmed || item?.approvedAt)) return item;
+    touched = true;
+    return { ...item, confirmed: false, reviewRequired: true, approvedAt: null, reviewReason: 'Sheet calibration changed; confirm the remeasured area again.' };
+  });
+  return touched ? next : items;
+}
+
+/**
  * Stored millimetre lengths of runs after a calibration changed. A run's length was worked out
  * from its points at its sheet's scale, so it follows that sheet's scale and no other:
  * `before` and `after` are (page) => pixelsPerMm.

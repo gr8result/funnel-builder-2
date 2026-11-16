@@ -118,7 +118,13 @@ async function transformWorkbook(workbook, encode) {
     if (!value || typeof value !== 'object') return value;
     if (!encode && typeof value.__gr8StoredDataUrl === 'string' && Object.keys(value).length === 1) {
       const id = value.__gr8StoredDataUrl;
-      if (!assets.has(id)) assets.set(id, readPlanAsset(id));
+      // Same rule as plan pages: artwork this browser never held must not stop the job (and its
+      // quotation) opening. Keep the reference unchanged so a later save keeps it; only the image is absent.
+      if (!assets.has(id)) assets.set(id, readPlanAsset(id).catch((error) => {
+        if (!/^Missing plan asset /.test(error?.message || '')) throw error;
+        console.warn(`[Plan assets] ${error.message} The document opens without this artwork.`);
+        return { __gr8StoredDataUrl: id };
+      }));
       return assets.get(id);
     }
     if (Array.isArray(value)) {

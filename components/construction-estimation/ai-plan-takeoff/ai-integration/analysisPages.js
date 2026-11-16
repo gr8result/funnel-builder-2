@@ -23,10 +23,11 @@ export async function prepareAnalysisPage(page, imageRotation = 0) {
   if (![0, 90, 180, 270].includes(imageRotation)) throw new Error('Unsupported analysis image rotation.');
   if (!page?.dataUrl?.startsWith('data:')) throw new Error(`Sheet ${page?.pageNumber || '?'} has no restored plan image.`);
   const image = new Image();
+  const canvas = document.createElement('canvas');
+  try {
   image.src = page.dataUrl;
   await image.decode();
   const ratio = Math.min(1, 2400 / Math.max(image.naturalWidth, image.naturalHeight));
-  const canvas = document.createElement('canvas');
   const width = Math.max(1, Math.round(image.naturalWidth * ratio));
   const height = Math.max(1, Math.round(image.naturalHeight * ratio));
   canvas.width = imageRotation % 180 ? height : width;
@@ -61,15 +62,21 @@ export async function prepareAnalysisPage(page, imageRotation = 0) {
     imageDataUrl,
     textItems,
   };
+  } finally {
+    canvas.width = 1;
+    canvas.height = 1;
+    image.src = '';
+  }
 }
 
 // A separate visual check exposes approximate AI coordinates against the real
 // drawing. The original unmarked image is always also sent as the source of truth.
 export async function prepareGeometryReviewImage(page, analysis) {
   const image = new Image();
+  const canvas = document.createElement('canvas');
+  try {
   image.src = page.imageDataUrl;
   await image.decode();
-  const canvas = document.createElement('canvas');
   canvas.width = image.naturalWidth;
   canvas.height = image.naturalHeight;
   const context = canvas.getContext('2d');
@@ -108,6 +115,11 @@ export async function prepareGeometryReviewImage(page, analysis) {
   const result = canvas.toDataURL('image/jpeg', 0.9);
   canvas.width = 1; canvas.height = 1;
   return result;
+  } finally {
+    canvas.width = 1;
+    canvas.height = 1;
+    image.src = '';
+  }
 }
 
 // Inverse of the temporary full-page rotation, before Phase 1 sees any geometry.

@@ -1,0 +1,2211 @@
+{
+ "schemaVersion": "gr8-plan-reference.v1",
+ "coordinateSpace": "logical-plan-pixels",
+ "plan": {
+  "name": "Jesmond Road (confidential)",
+  "localOnly": true,
+  "confidential": true
+ },
+ "source": {
+  "method": "walls identified by eye on gridded crops, faces snapped to the PDF linework; rooms traced by hand to inner faces",
+  "tracedIndependentlyOfEngine": true,
+  "tracedOn": "2026-10-15",
+  "scaleEvidence": "lower 11410 mm chain = 323.10 pt between ticks (1:100, -0.1 %)"
+ },
+ "pages": [
+  {
+   "page": 5,
+   "level": "Lower Floor",
+   "pixelsPerMm": 0.02834645669291339
+  },
+  {
+   "page": 4,
+   "level": "Upper Floor",
+   "pixelsPerMm": 0.02834645669291339
+  }
+ ],
+ "printedAreas": {
+  "upperLivingM2": 165.14,
+  "upperTerraceM2": 48.84,
+  "lowerLivingM2": 136.25,
+  "lowerBalconyM2": 24.49,
+  "totalM2": 374.72
+ },
+ "checks": {
+  "lowerEnvelopeM2": 135.23,
+  "printedLowerLivingM2": 136.25,
+  "upperEnvelopeM2": 166.31,
+  "printedUpperLivingM2": 165.14
+ },
+ "walls": [
+  {
+   "id": "L-retaining-west",
+   "a": {
+    "x": 268.2745,
+    "y": 575.58
+   },
+   "b": {
+    "x": 268.2745,
+    "y": 819
+   },
+   "thicknessMm": 190,
+   "category": "exterior",
+   "page": 5,
+   "level": "Lower Floor",
+   "faceCoverage": [
+    1,
+    0.99
+   ]
+  },
+  {
+   "id": "L-retaining-north",
+   "a": {
+    "x": 268.28,
+    "y": 575.5775
+   },
+   "b": {
+    "x": 700,
+    "y": 575.5775
+   },
+   "thicknessMm": 190,
+   "category": "exterior",
+   "page": 5,
+   "level": "Lower Floor",
+   "faceCoverage": [
+    0.56,
+    0.99
+   ]
+  },
+  {
+   "id": "L-north-frame",
+   "a": {
+    "x": 432,
+    "y": 580.8530000000001
+   },
+   "b": {
+    "x": 609.31,
+    "y": 580.8530000000001
+   },
+   "thicknessMm": 89,
+   "category": "exterior",
+   "page": 5,
+   "level": "Lower Floor",
+   "faceCoverage": [
+    1,
+    0.98
+   ]
+  },
+  {
+   "id": "L-store-laundry-east",
+   "a": {
+    "x": 609.328,
+    "y": 580.85
+   },
+   "b": {
+    "x": 609.328,
+    "y": 696.68
+   },
+   "thicknessMm": 68,
+   "category": "exterior",
+   "page": 5,
+   "level": "Lower Floor",
+   "faceCoverage": [
+    0.46,
+    0.35
+   ]
+  },
+  {
+   "id": "L-wir-north-east",
+   "a": {
+    "x": 609.31,
+    "y": 696.6759999999999
+   },
+   "b": {
+    "x": 654.59,
+    "y": 696.6759999999999
+   },
+   "thicknessMm": 89,
+   "category": "exterior",
+   "page": 5,
+   "level": "Lower Floor",
+   "faceCoverage": [
+    0.98,
+    0.97
+   ]
+  },
+  {
+   "id": "L-master-east",
+   "a": {
+    "x": 654.59,
+    "y": 696.68
+   },
+   "b": {
+    "x": 654.59,
+    "y": 937.67
+   },
+   "thicknessMm": 89,
+   "category": "exterior",
+   "page": 5,
+   "level": "Lower Floor",
+   "faceCoverage": [
+    0.98,
+    0.89
+   ]
+  },
+  {
+   "id": "L-south",
+   "a": {
+    "x": 332.6,
+    "y": 937.673
+   },
+   "b": {
+    "x": 654.59,
+    "y": 937.673
+   },
+   "thicknessMm": 89,
+   "category": "exterior",
+   "page": 5,
+   "level": "Lower Floor",
+   "faceCoverage": [
+    0.97,
+    0.39
+   ]
+  },
+  {
+   "id": "L-bed2-west",
+   "a": {
+    "x": 332.6005,
+    "y": 817.7
+   },
+   "b": {
+    "x": 332.6005,
+    "y": 937.67
+   },
+   "thicknessMm": 93,
+   "category": "exterior",
+   "page": 5,
+   "level": "Lower Floor",
+   "faceCoverage": [
+    0.78,
+    0.98
+   ]
+  },
+  {
+   "id": "L-ens3-south-west",
+   "a": {
+    "x": 301.49,
+    "y": 817.7139999999999
+   },
+   "b": {
+    "x": 332.6,
+    "y": 817.7139999999999
+   },
+   "thicknessMm": 68,
+   "category": "exterior",
+   "page": 5,
+   "level": "Lower Floor",
+   "faceCoverage": [
+    0.96,
+    0.96
+   ]
+  },
+  {
+   "id": "L-bed3-west",
+   "a": {
+    "x": 301.48699999999997,
+    "y": 658.25
+   },
+   "b": {
+    "x": 301.48699999999997,
+    "y": 817.7
+   },
+   "thicknessMm": 89,
+   "category": "exterior",
+   "page": 5,
+   "level": "Lower Floor",
+   "faceCoverage": [
+    0.47,
+    0.97
+   ]
+  },
+  {
+   "id": "L-undercroft-fc",
+   "a": {
+    "x": 301.49,
+    "y": 658.248
+   },
+   "b": {
+    "x": 432,
+    "y": 658.248
+   },
+   "thicknessMm": 93,
+   "category": "exterior",
+   "page": 5,
+   "level": "Lower Floor",
+   "faceCoverage": [
+    0.99,
+    0.97
+   ]
+  },
+  {
+   "id": "L-stair-west-north",
+   "a": {
+    "x": 431.997,
+    "y": 580.85
+   },
+   "b": {
+    "x": 431.997,
+    "y": 658.25
+   },
+   "thicknessMm": 68,
+   "category": "exterior",
+   "page": 5,
+   "level": "Lower Floor",
+   "faceCoverage": [
+    0.98,
+    1
+   ]
+  },
+  {
+   "id": "L-stair-west",
+   "a": {
+    "x": 431.997,
+    "y": 658.25
+   },
+   "b": {
+    "x": 431.997,
+    "y": 852.4
+   },
+   "thicknessMm": 68,
+   "category": "interior",
+   "page": 5,
+   "level": "Lower Floor",
+   "faceCoverage": [
+    0.71,
+    0.76
+   ]
+  },
+  {
+   "id": "L-store-west",
+   "a": {
+    "x": 467.967,
+    "y": 580.85
+   },
+   "b": {
+    "x": 467.967,
+    "y": 636.37
+   },
+   "thicknessMm": 68,
+   "category": "interior",
+   "page": 5,
+   "level": "Lower Floor",
+   "faceCoverage": [
+    1,
+    0.96
+   ]
+  },
+  {
+   "id": "L-store-south",
+   "a": {
+    "x": 467.97,
+    "y": 636.3665
+   },
+   "b": {
+    "x": 609.31,
+    "y": 636.3665
+   },
+   "thicknessMm": 72,
+   "category": "interior",
+   "page": 5,
+   "level": "Lower Floor",
+   "faceCoverage": [
+    0.82,
+    0.81
+   ]
+  },
+  {
+   "id": "L-laundry-west",
+   "a": {
+    "x": 498.301,
+    "y": 636.37
+   },
+   "b": {
+    "x": 498.301,
+    "y": 696.68
+   },
+   "thicknessMm": 68,
+   "category": "interior",
+   "page": 5,
+   "level": "Lower Floor",
+   "faceCoverage": [
+    0.6,
+    0.58
+   ]
+  },
+  {
+   "id": "L-laundry-south",
+   "a": {
+    "x": 498.3,
+    "y": 696.6759999999999
+   },
+   "b": {
+    "x": 609.31,
+    "y": 696.6759999999999
+   },
+   "thicknessMm": 89,
+   "category": "interior",
+   "page": 5,
+   "level": "Lower Floor",
+   "faceCoverage": [
+    0.98,
+    0.96
+   ]
+  },
+  {
+   "id": "L-master-wir-west",
+   "a": {
+    "x": 552.9155,
+    "y": 696.68
+   },
+   "b": {
+    "x": 552.9155,
+    "y": 818.19
+   },
+   "thicknessMm": 72,
+   "category": "interior",
+   "page": 5,
+   "level": "Lower Floor",
+   "faceCoverage": [
+    0.79,
+    0.76
+   ]
+  },
+  {
+   "id": "L-master-wir-south",
+   "a": {
+    "x": 552.92,
+    "y": 784.202
+   },
+   "b": {
+    "x": 654.59,
+    "y": 784.202
+   },
+   "thicknessMm": 89,
+   "category": "interior",
+   "page": 5,
+   "level": "Lower Floor",
+   "faceCoverage": [
+    0.87,
+    0.87
+   ]
+  },
+  {
+   "id": "L-ensuite-north",
+   "a": {
+    "x": 467.97,
+    "y": 818.1935000000001
+   },
+   "b": {
+    "x": 552.92,
+    "y": 818.1935000000001
+   },
+   "thicknessMm": 68,
+   "category": "interior",
+   "page": 5,
+   "level": "Lower Floor",
+   "faceCoverage": [
+    0.99,
+    0.97
+   ]
+  },
+  {
+   "id": "L-ensuite-east",
+   "a": {
+    "x": 545.3019999999999,
+    "y": 818.19
+   },
+   "b": {
+    "x": 545.3019999999999,
+    "y": 937.67
+   },
+   "thicknessMm": 68,
+   "category": "interior",
+   "page": 5,
+   "level": "Lower Floor",
+   "faceCoverage": [
+    0.79,
+    0.81
+   ]
+  },
+  {
+   "id": "L-ensuite-west",
+   "a": {
+    "x": 467.967,
+    "y": 818.19
+   },
+   "b": {
+    "x": 467.967,
+    "y": 937.67
+   },
+   "thicknessMm": 68,
+   "category": "interior",
+   "page": 5,
+   "level": "Lower Floor",
+   "faceCoverage": [
+    0.95,
+    0.98
+   ]
+  },
+  {
+   "id": "L-ens2-north",
+   "a": {
+    "x": 419.29,
+    "y": 852.425
+   },
+   "b": {
+    "x": 467.97,
+    "y": 852.425
+   },
+   "thicknessMm": 72,
+   "category": "interior",
+   "page": 5,
+   "level": "Lower Floor",
+   "faceCoverage": [
+    0.94,
+    0.96
+   ]
+  },
+  {
+   "id": "L-ens2-west",
+   "a": {
+    "x": 419.2875,
+    "y": 852.4
+   },
+   "b": {
+    "x": 419.2875,
+    "y": 937.67
+   },
+   "thicknessMm": 68,
+   "category": "interior",
+   "page": 5,
+   "level": "Lower Floor",
+   "faceCoverage": [
+    0.75,
+    0.73
+   ]
+  },
+  {
+   "id": "L-bed2-north",
+   "a": {
+    "x": 332.6,
+    "y": 817.7139999999999
+   },
+   "b": {
+    "x": 432,
+    "y": 817.7139999999999
+   },
+   "thicknessMm": 68,
+   "category": "interior",
+   "page": 5,
+   "level": "Lower Floor",
+   "faceCoverage": [
+    0.4,
+    0.77
+   ]
+  },
+  {
+   "id": "L-bed3-south",
+   "a": {
+    "x": 301.49,
+    "y": 764.7185
+   },
+   "b": {
+    "x": 432,
+    "y": 764.7185
+   },
+   "thicknessMm": 68,
+   "category": "interior",
+   "page": 5,
+   "level": "Lower Floor",
+   "faceCoverage": [
+    0.83,
+    0.81
+   ]
+  },
+  {
+   "id": "L-bed3-wir-west",
+   "a": {
+    "x": 387.574,
+    "y": 658.25
+   },
+   "b": {
+    "x": 387.574,
+    "y": 734.44
+   },
+   "thicknessMm": 72,
+   "category": "interior",
+   "page": 5,
+   "level": "Lower Floor",
+   "faceCoverage": [
+    0.72,
+    0.7
+   ]
+  },
+  {
+   "id": "L-bed3-wir-south",
+   "a": {
+    "x": 387.58,
+    "y": 734.444
+   },
+   "b": {
+    "x": 432,
+    "y": 734.444
+   },
+   "thicknessMm": 72,
+   "category": "interior",
+   "page": 5,
+   "level": "Lower Floor",
+   "faceCoverage": [
+    0.91,
+    0.98
+   ]
+  },
+  {
+   "id": "L-shower-wir",
+   "a": {
+    "x": 373.966,
+    "y": 764.72
+   },
+   "b": {
+    "x": 373.966,
+    "y": 817.7
+   },
+   "thicknessMm": 68,
+   "category": "interior",
+   "page": 5,
+   "level": "Lower Floor",
+   "faceCoverage": [
+    0.96,
+    0.96
+   ]
+  },
+  {
+   "id": "U-north-office",
+   "a": {
+    "x": 299.51,
+    "y": 481.337
+   },
+   "b": {
+    "x": 392.97,
+    "y": 481.337
+   },
+   "thicknessMm": 72,
+   "category": "exterior",
+   "page": 4,
+   "level": "Upper Floor",
+   "faceCoverage": [
+    0.45,
+    0.98
+   ]
+  },
+  {
+   "id": "U-office-east-stub",
+   "a": {
+    "x": 392.97,
+    "y": 481.34
+   },
+   "b": {
+    "x": 392.97,
+    "y": 498.6
+   },
+   "thicknessMm": 72,
+   "category": "exterior",
+   "page": 4,
+   "level": "Upper Floor",
+   "faceCoverage": [
+    0.94,
+    0.93
+   ]
+  },
+  {
+   "id": "U-entry-front",
+   "a": {
+    "x": 392.97,
+    "y": 499.1415
+   },
+   "b": {
+    "x": 503.1,
+    "y": 499.1415
+   },
+   "thicknessMm": 51,
+   "category": "exterior",
+   "page": 4,
+   "level": "Upper Floor",
+   "faceCoverage": [
+    0.33,
+    0.97
+   ]
+  },
+  {
+   "id": "U-pooja-west-outside",
+   "a": {
+    "x": 503.097,
+    "y": 481.34
+   },
+   "b": {
+    "x": 503.097,
+    "y": 498.6
+   },
+   "thicknessMm": 68,
+   "category": "exterior",
+   "page": 4,
+   "level": "Upper Floor",
+   "faceCoverage": [
+    0.93,
+    0.94
+   ]
+  },
+  {
+   "id": "U-north-pooja",
+   "a": {
+    "x": 503.1,
+    "y": 481.337
+   },
+   "b": {
+    "x": 607.59,
+    "y": 481.337
+   },
+   "thicknessMm": 72,
+   "category": "exterior",
+   "page": 4,
+   "level": "Upper Floor",
+   "faceCoverage": [
+    0.76,
+    0.98
+   ]
+  },
+  {
+   "id": "U-east",
+   "a": {
+    "x": 607.5895,
+    "y": 481.34
+   },
+   "b": {
+    "x": 607.5895,
+    "y": 776.83
+   },
+   "thicknessMm": 72,
+   "category": "exterior",
+   "page": 4,
+   "level": "Upper Floor",
+   "faceCoverage": [
+    0.98,
+    0.63
+   ]
+  },
+  {
+   "id": "U-pantry-north",
+   "a": {
+    "x": 607.59,
+    "y": 776.8285000000001
+   },
+   "b": {
+    "x": 653.21,
+    "y": 776.8285000000001
+   },
+   "thicknessMm": 68,
+   "category": "exterior",
+   "page": 4,
+   "level": "Upper Floor",
+   "faceCoverage": [
+    0.98,
+    0.96
+   ]
+  },
+  {
+   "id": "U-pantry-east",
+   "a": {
+    "x": 653.211,
+    "y": 776.83
+   },
+   "b": {
+    "x": 653.211,
+    "y": 898.17
+   },
+   "thicknessMm": 68,
+   "category": "exterior",
+   "page": 4,
+   "level": "Upper Floor",
+   "faceCoverage": [
+    0.97,
+    0.65
+   ]
+  },
+  {
+   "id": "U-south",
+   "a": {
+    "x": 299.51,
+    "y": 898.1665
+   },
+   "b": {
+    "x": 653.21,
+    "y": 898.1665
+   },
+   "thicknessMm": 68,
+   "category": "exterior",
+   "page": 4,
+   "level": "Upper Floor",
+   "faceCoverage": [
+    0.99,
+    0.76
+   ]
+  },
+  {
+   "id": "U-pooja-west",
+   "a": {
+    "x": 502.078,
+    "y": 498.6
+   },
+   "b": {
+    "x": 502.078,
+    "y": 586
+   },
+   "thicknessMm": 140,
+   "category": "interior",
+   "page": 4,
+   "level": "Upper Floor",
+   "faceCoverage": [
+    0.99,
+    0.98
+   ]
+  },
+  {
+   "id": "U-pooja-south",
+   "a": {
+    "x": 503.1,
+    "y": 550.5785000000001
+   },
+   "b": {
+    "x": 607.59,
+    "y": 550.5785000000001
+   },
+   "thicknessMm": 68,
+   "category": "interior",
+   "page": 4,
+   "level": "Upper Floor",
+   "faceCoverage": [
+    0.59,
+    0.59
+   ]
+  },
+  {
+   "id": "U-powder-west",
+   "a": {
+    "x": 330.922,
+    "y": 584.99
+   },
+   "b": {
+    "x": 330.922,
+    "y": 654.95
+   },
+   "thicknessMm": 68,
+   "category": "exterior",
+   "page": 4,
+   "level": "Upper Floor",
+   "faceCoverage": [
+    0.61,
+    0.97
+   ]
+  },
+  {
+   "id": "U-powder-east",
+   "a": {
+    "x": 377.8025,
+    "y": 584.99
+   },
+   "b": {
+    "x": 377.8025,
+    "y": 624.7
+   },
+   "thicknessMm": 76,
+   "category": "interior",
+   "page": 4,
+   "level": "Upper Floor",
+   "faceCoverage": [
+    0.95,
+    0.53
+   ]
+  },
+  {
+   "id": "U-linen-south",
+   "a": {
+    "x": 377.8,
+    "y": 624.077
+   },
+   "b": {
+    "x": 394.95,
+    "y": 624.077
+   },
+   "thicknessMm": 68,
+   "category": "interior",
+   "page": 4,
+   "level": "Upper Floor",
+   "faceCoverage": [
+    0.88,
+    0.94
+   ]
+  },
+  {
+   "id": "U-living-west",
+   "a": {
+    "x": 394.948,
+    "y": 584.99
+   },
+   "b": {
+    "x": 394.948,
+    "y": 898.17
+   },
+   "thicknessMm": 68,
+   "category": "interior",
+   "page": 4,
+   "level": "Upper Floor",
+   "faceCoverage": [
+    0.71,
+    0.92
+   ]
+  },
+  {
+   "id": "U-ensuite-east",
+   "a": {
+    "x": 363.235,
+    "y": 654.95
+   },
+   "b": {
+    "x": 363.235,
+    "y": 782.88
+   },
+   "thicknessMm": 72,
+   "category": "interior",
+   "page": 4,
+   "level": "Upper Floor",
+   "faceCoverage": [
+    0.57,
+    0.61
+   ]
+  },
+  {
+   "id": "U-ensuite-wir",
+   "a": {
+    "x": 299.51,
+    "y": 735.5830000000001
+   },
+   "b": {
+    "x": 363.24,
+    "y": 735.5830000000001
+   },
+   "thicknessMm": 68,
+   "category": "interior",
+   "page": 4,
+   "level": "Upper Floor",
+   "faceCoverage": [
+    0.97,
+    0.97
+   ]
+  },
+  {
+   "id": "U-wir-bed4",
+   "a": {
+    "x": 299.51,
+    "y": 782.883
+   },
+   "b": {
+    "x": 363.24,
+    "y": 782.883
+   },
+   "thicknessMm": 72,
+   "category": "interior",
+   "page": 4,
+   "level": "Upper Floor",
+   "faceCoverage": [
+    0.91,
+    0.98
+   ]
+  },
+  {
+   "id": "U-kitchen-pantry",
+   "a": {
+    "x": 607.5895,
+    "y": 776.83
+   },
+   "b": {
+    "x": 607.5895,
+    "y": 898.17
+   },
+   "thicknessMm": 72,
+   "category": "interior",
+   "page": 4,
+   "level": "Upper Floor",
+   "faceCoverage": [
+    0.58,
+    0.43
+   ]
+  },
+  {
+   "id": "U-west-north",
+   "a": {
+    "x": 299.5085,
+    "y": 481.34
+   },
+   "b": {
+    "x": 299.5085,
+    "y": 584.99
+   },
+   "thicknessMm": 68,
+   "category": "exterior",
+   "page": 4,
+   "level": "Upper Floor",
+   "faceCoverage": [
+    0.8,
+    0.81
+   ]
+  },
+  {
+   "id": "U-west-south",
+   "a": {
+    "x": 299.5085,
+    "y": 654.95
+   },
+   "b": {
+    "x": 299.5085,
+    "y": 898.17
+   },
+   "thicknessMm": 68,
+   "category": "exterior",
+   "page": 4,
+   "level": "Upper Floor",
+   "faceCoverage": [
+    0.8,
+    0.81
+   ]
+  },
+  {
+   "id": "U-office-south-stair",
+   "a": {
+    "x": 299.51,
+    "y": 584.9894999999999
+   },
+   "b": {
+    "x": 330.922,
+    "y": 584.9894999999999
+   },
+   "thicknessMm": 68,
+   "category": "exterior",
+   "page": 4,
+   "level": "Upper Floor",
+   "faceCoverage": [
+    0.97,
+    0.95
+   ]
+  },
+  {
+   "id": "U-office-south",
+   "a": {
+    "x": 330.922,
+    "y": 584.9894999999999
+   },
+   "b": {
+    "x": 394.95,
+    "y": 584.9894999999999
+   },
+   "thicknessMm": 68,
+   "category": "interior",
+   "page": 4,
+   "level": "Upper Floor",
+   "faceCoverage": [
+    0.97,
+    0.95
+   ]
+  },
+  {
+   "id": "U-ensuite-north-stair",
+   "a": {
+    "x": 299.51,
+    "y": 654.951
+   },
+   "b": {
+    "x": 330.922,
+    "y": 654.951
+   },
+   "thicknessMm": 72,
+   "category": "exterior",
+   "page": 4,
+   "level": "Upper Floor",
+   "faceCoverage": [
+    0.97,
+    0.96
+   ]
+  },
+  {
+   "id": "U-ensuite-north",
+   "a": {
+    "x": 330.922,
+    "y": 654.951
+   },
+   "b": {
+    "x": 394.95,
+    "y": 654.951
+   },
+   "thicknessMm": 72,
+   "category": "interior",
+   "page": 4,
+   "level": "Upper Floor",
+   "faceCoverage": [
+    0.97,
+    0.96
+   ]
+  }
+ ],
+ "openings": [
+  {
+   "id": "L-store-door",
+   "wall": "L-store-south",
+   "x": 481,
+   "y": 636.37,
+   "widthMm": 820,
+   "kind": "door",
+   "note": "820, store",
+   "page": 5,
+   "level": "Lower Floor"
+  },
+  {
+   "id": "L-store-external",
+   "wall": "L-store-laundry-east",
+   "x": 609.31,
+   "y": 623,
+   "widthMm": 820,
+   "kind": "door",
+   "note": "820, store to outside",
+   "page": 5,
+   "level": "Lower Floor"
+  },
+  {
+   "id": "L-laundry-gsd",
+   "wall": "L-store-laundry-east",
+   "x": 609.31,
+   "y": 667.5,
+   "widthMm": 1800,
+   "kind": "door",
+   "note": "2118 GSD",
+   "page": 5,
+   "level": "Lower Floor"
+  },
+  {
+   "id": "L-laundry-door",
+   "wall": "L-laundry-west",
+   "x": 498.3,
+   "y": 682.5,
+   "widthMm": 820,
+   "kind": "door",
+   "note": "820",
+   "page": 5,
+   "level": "Lower Floor"
+  },
+  {
+   "id": "L-bed3-door",
+   "wall": "L-stair-west",
+   "x": 432,
+   "y": 750.5,
+   "widthMm": 820,
+   "kind": "door",
+   "note": "820",
+   "page": 5,
+   "level": "Lower Floor"
+  },
+  {
+   "id": "L-bed3-window",
+   "wall": "L-bed3-west",
+   "x": 301.49,
+   "y": 711.5,
+   "widthMm": 1800,
+   "kind": "window",
+   "note": "1818",
+   "page": 5,
+   "level": "Lower Floor"
+  },
+  {
+   "id": "L-ens3-window",
+   "wall": "L-bed3-west",
+   "x": 301.49,
+   "y": 791,
+   "widthMm": 1200,
+   "kind": "window",
+   "note": "0912",
+   "page": 5,
+   "level": "Lower Floor"
+  },
+  {
+   "id": "L-bed3-wir-door",
+   "wall": "L-bed3-wir-west",
+   "x": 387.58,
+   "y": 704.5,
+   "widthMm": 720,
+   "kind": "door",
+   "note": "720",
+   "page": 5,
+   "level": "Lower Floor"
+  },
+  {
+   "id": "L-ens3-door",
+   "wall": "L-bed3-south",
+   "x": 331.5,
+   "y": 764.72,
+   "widthMm": 720,
+   "kind": "door",
+   "note": "720",
+   "page": 5,
+   "level": "Lower Floor"
+  },
+  {
+   "id": "L-bed2-wir-door",
+   "wall": "L-bed2-north",
+   "x": 386.5,
+   "y": 817.7,
+   "widthMm": 720,
+   "kind": "door",
+   "note": "720",
+   "page": 5,
+   "level": "Lower Floor"
+  },
+  {
+   "id": "L-bed2-window",
+   "wall": "L-bed2-west",
+   "x": 332.6,
+   "y": 837.5,
+   "widthMm": 900,
+   "kind": "window",
+   "note": "1809dh",
+   "page": 5,
+   "level": "Lower Floor"
+  },
+  {
+   "id": "L-bed2-door",
+   "wall": "L-stair-west",
+   "x": 432,
+   "y": 833,
+   "widthMm": 820,
+   "kind": "door",
+   "note": "820",
+   "page": 5,
+   "level": "Lower Floor"
+  },
+  {
+   "id": "L-ens2-door",
+   "wall": "L-ens2-west",
+   "x": 419.29,
+   "y": 889,
+   "widthMm": 720,
+   "kind": "door",
+   "note": "720",
+   "page": 5,
+   "level": "Lower Floor"
+  },
+  {
+   "id": "L-bed2-sgd",
+   "wall": "L-south",
+   "x": 377,
+   "y": 937.67,
+   "widthMm": 2400,
+   "kind": "door",
+   "note": "2124 SGD (position from label, +-300 mm)",
+   "page": 5,
+   "level": "Lower Floor"
+  },
+  {
+   "id": "L-ens2-window",
+   "wall": "L-south",
+   "x": 443.6,
+   "y": 937.67,
+   "widthMm": 1500,
+   "kind": "window",
+   "note": "0315 FG OBS (+-300 mm)",
+   "page": 5,
+   "level": "Lower Floor"
+  },
+  {
+   "id": "L-ensuite-window",
+   "wall": "L-south",
+   "x": 525.8,
+   "y": 937.67,
+   "widthMm": 900,
+   "kind": "window",
+   "note": "1809DH OBS (+-300 mm)",
+   "page": 5,
+   "level": "Lower Floor"
+  },
+  {
+   "id": "L-master-stacker",
+   "wall": "L-south",
+   "x": 600,
+   "y": 937.67,
+   "widthMm": 3100,
+   "kind": "door",
+   "note": "2131 stacker (+-300 mm)",
+   "page": 5,
+   "level": "Lower Floor"
+  },
+  {
+   "id": "L-master-window",
+   "wall": "L-master-east",
+   "x": 654.59,
+   "y": 804,
+   "widthMm": 900,
+   "kind": "window",
+   "note": "1809dh",
+   "page": 5,
+   "level": "Lower Floor"
+  },
+  {
+   "id": "L-master-door",
+   "wall": "L-master-wir-west",
+   "x": 552.92,
+   "y": 802,
+   "widthMm": 820,
+   "kind": "door",
+   "note": "820",
+   "page": 5,
+   "level": "Lower Floor"
+  },
+  {
+   "id": "L-master-wir-opening",
+   "wall": "L-master-wir-south",
+   "x": 601.5,
+   "y": 784.2,
+   "widthMm": 900,
+   "kind": "opening",
+   "note": "2100 square set",
+   "page": 5,
+   "level": "Lower Floor"
+  },
+  {
+   "id": "L-ensuite-door",
+   "wall": "L-ensuite-east",
+   "x": 545.3,
+   "y": 830.5,
+   "widthMm": 720,
+   "kind": "door",
+   "note": "720 (in the ensuite east wall; corrected 2026-11-16)",
+   "page": 5,
+   "level": "Lower Floor"
+  },
+  {
+   "id": "U-office-window-1",
+   "wall": "U-north-office",
+   "x": 320.5,
+   "y": 481.34,
+   "widthMm": 900,
+   "kind": "window",
+   "note": "1809DH",
+   "page": 4,
+   "level": "Upper Floor"
+  },
+  {
+   "id": "U-office-window-2",
+   "wall": "U-north-office",
+   "x": 372,
+   "y": 481.34,
+   "widthMm": 900,
+   "kind": "window",
+   "note": "1809DH",
+   "page": 4,
+   "level": "Upper Floor"
+  },
+  {
+   "id": "U-office-door",
+   "wall": "U-west",
+   "x": 299.51,
+   "y": 505,
+   "widthMm": 870,
+   "kind": "door",
+   "note": "870 external, home office (+-150 mm)",
+   "page": 4,
+   "level": "Upper Floor"
+  },
+  {
+   "id": "U-entry-sidelight-1",
+   "wall": "U-entry-front",
+   "x": 415.7,
+   "y": 498.6,
+   "widthMm": 645,
+   "kind": "window",
+   "note": "FG SL 2100 x 645 (+-150 mm)",
+   "page": 4,
+   "level": "Upper Floor"
+  },
+  {
+   "id": "U-entry-doors",
+   "wall": "U-entry-front",
+   "x": 443,
+   "y": 498.6,
+   "widthMm": 1640,
+   "kind": "door",
+   "note": "2 x 820 entry doors",
+   "page": 4,
+   "level": "Upper Floor"
+  },
+  {
+   "id": "U-entry-sidelight-2",
+   "wall": "U-entry-front",
+   "x": 483,
+   "y": 498.6,
+   "widthMm": 645,
+   "kind": "window",
+   "note": "FG SL 2100 x 645 (+-150 mm)",
+   "page": 4,
+   "level": "Upper Floor"
+  },
+  {
+   "id": "U-pooja-window",
+   "wall": "U-north-pooja",
+   "x": 591,
+   "y": 481.34,
+   "widthMm": 900,
+   "kind": "window",
+   "note": "1809DH",
+   "page": 4,
+   "level": "Upper Floor"
+  },
+  {
+   "id": "U-pooja-doors",
+   "wall": "U-pooja-south",
+   "x": 555.5,
+   "y": 550.58,
+   "widthMm": 1440,
+   "kind": "door",
+   "note": "2 x 720",
+   "page": 4,
+   "level": "Upper Floor"
+  },
+  {
+   "id": "U-pantry-window",
+   "wall": "U-pantry-east",
+   "x": 653.21,
+   "y": 854.5,
+   "widthMm": 1500,
+   "kind": "window",
+   "note": "1215",
+   "page": 4,
+   "level": "Upper Floor"
+  },
+  {
+   "id": "U-pantry-opening",
+   "wall": "U-kitchen-pantry",
+   "x": 607.59,
+   "y": 853,
+   "widthMm": 1760,
+   "kind": "opening",
+   "note": "kitchen to pantry",
+   "page": 4,
+   "level": "Upper Floor"
+  },
+  {
+   "id": "U-bed4-sgd",
+   "wall": "U-south",
+   "x": 361.5,
+   "y": 898.17,
+   "widthMm": 2100,
+   "kind": "door",
+   "note": "2121 SGD",
+   "page": 4,
+   "level": "Upper Floor"
+  },
+  {
+   "id": "U-bed4-window",
+   "wall": "U-south",
+   "x": 414.5,
+   "y": 898.17,
+   "widthMm": 900,
+   "kind": "window",
+   "note": "1809DH",
+   "page": 4,
+   "level": "Upper Floor"
+  },
+  {
+   "id": "U-stacker",
+   "wall": "U-south",
+   "x": 497,
+   "y": 898.17,
+   "widthMm": 3600,
+   "kind": "door",
+   "note": "2136 stacker",
+   "page": 4,
+   "level": "Upper Floor"
+  },
+  {
+   "id": "U-kitchen-window",
+   "wall": "U-south",
+   "x": 594.5,
+   "y": 898.17,
+   "widthMm": 2400,
+   "kind": "window",
+   "note": "1224 (+-300 mm)",
+   "page": 4,
+   "level": "Upper Floor"
+  },
+  {
+   "id": "U-powder-window",
+   "wall": "U-powder-west",
+   "x": 330.92,
+   "y": 638,
+   "widthMm": 900,
+   "kind": "window",
+   "note": "1809DH OBS (drawn in the powder west wall; corrected 2026-11-16)",
+   "page": 4,
+   "level": "Upper Floor"
+  },
+  {
+   "id": "U-ensuite-window",
+   "wall": "U-west",
+   "x": 299.51,
+   "y": 702.5,
+   "widthMm": 600,
+   "kind": "window",
+   "note": "1806DH OBS (+-150 mm)",
+   "page": 4,
+   "level": "Upper Floor"
+  },
+  {
+   "id": "U-linen-doors",
+   "wall": "U-living-west",
+   "x": 394.95,
+   "y": 604,
+   "widthMm": 1240,
+   "kind": "door",
+   "note": "2 x 620 linen",
+   "page": 4,
+   "level": "Upper Floor"
+  },
+  {
+   "id": "U-corridor-door",
+   "wall": "U-living-west",
+   "x": 394.95,
+   "y": 668.5,
+   "widthMm": 870,
+   "kind": "door",
+   "note": "870",
+   "page": 4,
+   "level": "Upper Floor"
+  },
+  {
+   "id": "U-ensuite-door",
+   "wall": "U-ensuite-east",
+   "x": 363.24,
+   "y": 701.5,
+   "widthMm": 870,
+   "kind": "door",
+   "note": "870",
+   "page": 4,
+   "level": "Upper Floor"
+  },
+  {
+   "id": "U-wir-door",
+   "wall": "U-ensuite-east",
+   "x": 363.24,
+   "y": 750.5,
+   "widthMm": 870,
+   "kind": "door",
+   "note": "870",
+   "page": 4,
+   "level": "Upper Floor"
+  },
+  {
+   "id": "U-east-window-1",
+   "wall": "U-east",
+   "x": 607.59,
+   "y": 592.6,
+   "widthMm": 900,
+   "kind": "window",
+   "note": "1809LV (drawn; corrected 2026-11-16)",
+   "page": 4,
+   "level": "Upper Floor"
+  },
+  {
+   "id": "U-east-window-2",
+   "wall": "U-east",
+   "x": 607.59,
+   "y": 618.2,
+   "widthMm": 900,
+   "kind": "window",
+   "note": "1809FG (drawn; corrected 2026-11-16)",
+   "page": 4,
+   "level": "Upper Floor"
+  },
+  {
+   "id": "U-east-window-3",
+   "wall": "U-east",
+   "x": 607.59,
+   "y": 644,
+   "widthMm": 900,
+   "kind": "window",
+   "note": "1809FG (drawn; corrected 2026-11-16)",
+   "page": 4,
+   "level": "Upper Floor"
+  },
+  {
+   "id": "U-east-window-4",
+   "wall": "U-east",
+   "x": 607.59,
+   "y": 669.2,
+   "widthMm": 900,
+   "kind": "window",
+   "note": "1809LV (drawn; corrected 2026-11-16)",
+   "page": 4,
+   "level": "Upper Floor"
+  },
+  {
+   "id": "U-powder-door",
+   "wall": "U-living-west",
+   "x": 395.1,
+   "y": 638.9,
+   "widthMm": 870,
+   "kind": "door",
+   "note": "870 powder door (drawn; added 2026-11-16)",
+   "page": 4,
+   "level": "Upper Floor"
+  }
+ ],
+ "rooms": [
+  {
+   "id": "L-store",
+   "name": "Store",
+   "polygon": [
+    {
+     "x": 468.93,
+     "y": 582.11
+    },
+    {
+     "x": 608.37,
+     "y": 582.11
+    },
+    {
+     "x": 608.37,
+     "y": 635.35
+    },
+    {
+     "x": 468.93,
+     "y": 635.35
+    }
+   ],
+   "page": 5,
+   "level": "Lower Floor",
+   "areaM2": 9.239
+  },
+  {
+   "id": "L-laundry",
+   "name": "Laundry",
+   "polygon": [
+    {
+     "x": 499.26,
+     "y": 637.39
+    },
+    {
+     "x": 608.37,
+     "y": 637.39
+    },
+    {
+     "x": 608.37,
+     "y": 695.42
+    },
+    {
+     "x": 499.26,
+     "y": 695.42
+    }
+   ],
+   "page": 5,
+   "level": "Lower Floor",
+   "areaM2": 7.88
+  },
+  {
+   "id": "L-bedroom-3",
+   "name": "Bedroom 3",
+   "polygon": [
+    {
+     "x": 302.75,
+     "y": 659.57
+    },
+    {
+     "x": 386.56,
+     "y": 659.57
+    },
+    {
+     "x": 386.56,
+     "y": 735.46
+    },
+    {
+     "x": 431.04,
+     "y": 735.46
+    },
+    {
+     "x": 431.04,
+     "y": 763.76
+    },
+    {
+     "x": 302.75,
+     "y": 763.76
+    }
+   ],
+   "page": 5,
+   "level": "Lower Floor",
+   "areaM2": 12.434
+  },
+  {
+   "id": "L-bed3-wir",
+   "name": "Bedroom 3 WIR",
+   "polygon": [
+    {
+     "x": 388.59,
+     "y": 659.57
+    },
+    {
+     "x": 431.04,
+     "y": 659.57
+    },
+    {
+     "x": 431.04,
+     "y": 733.42
+    },
+    {
+     "x": 388.59,
+     "y": 733.42
+    }
+   ],
+   "page": 5,
+   "level": "Lower Floor",
+   "areaM2": 3.901
+  },
+  {
+   "id": "L-bed3-ens",
+   "name": "Bedroom 3 ensuite",
+   "polygon": [
+    {
+     "x": 302.75,
+     "y": 765.68
+    },
+    {
+     "x": 373.01,
+     "y": 765.68
+    },
+    {
+     "x": 373.01,
+     "y": 816.75
+    },
+    {
+     "x": 302.75,
+     "y": 816.75
+    }
+   ],
+   "page": 5,
+   "level": "Lower Floor",
+   "areaM2": 4.466
+  },
+  {
+   "id": "L-bed2-wir",
+   "name": "Bedroom 2 WIR",
+   "polygon": [
+    {
+     "x": 374.92,
+     "y": 765.68
+    },
+    {
+     "x": 431.04,
+     "y": 765.68
+    },
+    {
+     "x": 431.04,
+     "y": 816.63
+    },
+    {
+     "x": 374.92,
+     "y": 816.63
+    }
+   ],
+   "page": 5,
+   "level": "Lower Floor",
+   "areaM2": 3.558
+  },
+  {
+   "id": "L-bedroom-2",
+   "name": "Bedroom 2",
+   "polygon": [
+    {
+     "x": 333.92,
+     "y": 818.67
+    },
+    {
+     "x": 431.04,
+     "y": 818.67
+    },
+    {
+     "x": 431.04,
+     "y": 851.41
+    },
+    {
+     "x": 418.33,
+     "y": 851.41
+    },
+    {
+     "x": 418.33,
+     "y": 936.41
+    },
+    {
+     "x": 333.92,
+     "y": 936.41
+    }
+   ],
+   "page": 5,
+   "level": "Lower Floor",
+   "areaM2": 12.886
+  },
+  {
+   "id": "L-ens2",
+   "name": "Bedroom 2 ensuite",
+   "polygon": [
+    {
+     "x": 420.25,
+     "y": 853.44
+    },
+    {
+     "x": 467.01,
+     "y": 853.44
+    },
+    {
+     "x": 467.01,
+     "y": 936.41
+    },
+    {
+     "x": 420.25,
+     "y": 936.41
+    }
+   ],
+   "page": 5,
+   "level": "Lower Floor",
+   "areaM2": 4.828
+  },
+  {
+   "id": "L-ensuite",
+   "name": "Ensuite",
+   "polygon": [
+    {
+     "x": 468.93,
+     "y": 819.15
+    },
+    {
+     "x": 544.34,
+     "y": 819.15
+    },
+    {
+     "x": 544.34,
+     "y": 936.41
+    },
+    {
+     "x": 468.93,
+     "y": 936.41
+    }
+   ],
+   "page": 5,
+   "level": "Lower Floor",
+   "areaM2": 11.005
+  },
+  {
+   "id": "L-master",
+   "name": "Master bedroom",
+   "polygon": [
+    {
+     "x": 553.93,
+     "y": 785.46
+    },
+    {
+     "x": 653.33,
+     "y": 785.46
+    },
+    {
+     "x": 653.33,
+     "y": 936.41
+    },
+    {
+     "x": 546.26,
+     "y": 936.41
+    },
+    {
+     "x": 546.26,
+     "y": 819.15
+    },
+    {
+     "x": 553.93,
+     "y": 819.15
+    }
+   ],
+   "page": 5,
+   "level": "Lower Floor",
+   "areaM2": 19.793
+  },
+  {
+   "id": "L-master-wir",
+   "name": "Master WIR",
+   "polygon": [
+    {
+     "x": 553.93,
+     "y": 697.93
+    },
+    {
+     "x": 653.33,
+     "y": 697.93
+    },
+    {
+     "x": 653.33,
+     "y": 782.94
+    },
+    {
+     "x": 553.93,
+     "y": 782.94
+    }
+   ],
+   "page": 5,
+   "level": "Lower Floor",
+   "areaM2": 10.516
+  },
+  {
+   "id": "L-lobby",
+   "name": "Lobby, stair and corridor",
+   "polygon": [
+    {
+     "x": 432.96,
+     "y": 582.11
+    },
+    {
+     "x": 467.01,
+     "y": 582.11
+    },
+    {
+     "x": 467.01,
+     "y": 637.39
+    },
+    {
+     "x": 497.34,
+     "y": 637.39
+    },
+    {
+     "x": 497.34,
+     "y": 697.93
+    },
+    {
+     "x": 551.9,
+     "y": 697.93
+    },
+    {
+     "x": 551.9,
+     "y": 817.23
+    },
+    {
+     "x": 467.01,
+     "y": 817.23
+    },
+    {
+     "x": 467.01,
+     "y": 851.41
+    },
+    {
+     "x": 432.96,
+     "y": 851.41
+    }
+   ],
+   "note": "The stair (open to the lobby, balustrade not a wall) is inside this space.",
+   "page": 5,
+   "level": "Lower Floor",
+   "areaM2": 26.301
+  },
+  {
+   "id": "U-living",
+   "name": "Entry / office / living / dining / kitchen",
+   "polygon": [
+    {
+     "x": 300.47,
+     "y": 482.36
+    },
+    {
+     "x": 391.95,
+     "y": 482.36
+    },
+    {
+     "x": 391.95,
+     "y": 499.86
+    },
+    {
+     "x": 502.14,
+     "y": 499.86
+    },
+    {
+     "x": 502.14,
+     "y": 551.54
+    },
+    {
+     "x": 606.57,
+     "y": 551.54
+    },
+    {
+     "x": 606.57,
+     "y": 897.21
+    },
+    {
+     "x": 395.91,
+     "y": 897.21
+    },
+    {
+     "x": 395.91,
+     "y": 584.03
+    },
+    {
+     "x": 300.47,
+     "y": 584.03
+    }
+   ],
+   "note": "Office, entry and living have no walls between them on the drawing. The stair void (glass balustrade) and the built-in seat are inside this space.",
+   "page": 4,
+   "level": "Upper Floor",
+   "areaM2": 109.447
+  },
+  {
+   "id": "U-pooja",
+   "name": "Pooja",
+   "polygon": [
+    {
+     "x": 504.06,
+     "y": 482.36
+    },
+    {
+     "x": 606.57,
+     "y": 482.36
+    },
+    {
+     "x": 606.57,
+     "y": 549.62
+    },
+    {
+     "x": 504.06,
+     "y": 549.62
+    }
+   ],
+   "page": 4,
+   "level": "Upper Floor",
+   "areaM2": 8.581
+  },
+  {
+   "id": "U-pantry",
+   "name": "Pantry",
+   "polygon": [
+    {
+     "x": 608.61,
+     "y": 777.79
+    },
+    {
+     "x": 652.25,
+     "y": 777.79
+    },
+    {
+     "x": 652.25,
+     "y": 897.21
+    },
+    {
+     "x": 608.61,
+     "y": 897.21
+    }
+   ],
+   "page": 4,
+   "level": "Upper Floor",
+   "areaM2": 6.486
+  },
+  {
+   "id": "U-powder",
+   "name": "Powder",
+   "polygon": [
+    {
+     "x": 331.88,
+     "y": 585.95
+    },
+    {
+     "x": 376.72,
+     "y": 585.95
+    },
+    {
+     "x": 376.72,
+     "y": 625.7
+    },
+    {
+     "x": 393.99,
+     "y": 625.7
+    },
+    {
+     "x": 393.99,
+     "y": 653.93
+    },
+    {
+     "x": 331.88,
+     "y": 653.93
+    }
+   ],
+   "page": 4,
+   "level": "Upper Floor",
+   "areaM2": 3.794
+  },
+  {
+   "id": "U-linen",
+   "name": "Linen",
+   "polygon": [
+    {
+     "x": 378.88,
+     "y": 585.95
+    },
+    {
+     "x": 393.99,
+     "y": 585.95
+    },
+    {
+     "x": 393.99,
+     "y": 623.12
+    },
+    {
+     "x": 378.88,
+     "y": 623.12
+    }
+   ],
+   "page": 4,
+   "level": "Upper Floor",
+   "areaM2": 0.699
+  },
+  {
+   "id": "U-ensuite",
+   "name": "Ensuite",
+   "polygon": [
+    {
+     "x": 300.47,
+     "y": 655.97
+    },
+    {
+     "x": 362.22,
+     "y": 655.97
+    },
+    {
+     "x": 362.22,
+     "y": 734.62
+    },
+    {
+     "x": 300.47,
+     "y": 734.62
+    }
+   ],
+   "page": 4,
+   "level": "Upper Floor",
+   "areaM2": 6.044
+  },
+  {
+   "id": "U-wir",
+   "name": "WIR",
+   "polygon": [
+    {
+     "x": 300.47,
+     "y": 736.54
+    },
+    {
+     "x": 362.22,
+     "y": 736.54
+    },
+    {
+     "x": 362.22,
+     "y": 781.86
+    },
+    {
+     "x": 300.47,
+     "y": 781.86
+    }
+   ],
+   "page": 4,
+   "level": "Upper Floor",
+   "areaM2": 3.483
+  },
+  {
+   "id": "U-bedroom-4",
+   "name": "Bedroom 4 with corridor",
+   "polygon": [
+    {
+     "x": 364.25,
+     "y": 655.97
+    },
+    {
+     "x": 393.99,
+     "y": 655.97
+    },
+    {
+     "x": 393.99,
+     "y": 897.21
+    },
+    {
+     "x": 300.47,
+     "y": 897.21
+    },
+    {
+     "x": 300.47,
+     "y": 783.9
+    },
+    {
+     "x": 364.25,
+     "y": 783.9
+    }
+   ],
+   "page": 4,
+   "level": "Upper Floor",
+   "areaM2": 17.923
+  }
+ ],
+ "notExpected": [
+  "190 block retaining walls beyond the building are included only where drawn as walls",
+  "stair treads and balustrades",
+  "balcony and terrace edges",
+  "joinery, built-in seat, fixtures, floor tiling grid"
+ ],
+ "corrections": {
+  "date": "2026-11-16",
+  "source": ".claude/worktrees/ai-takeoff-geometry/recovery/plan-references/jesmond-road/reference.json",
+  "note": "Corrected copy; the original reference is unchanged. Each change is from the drawing crops in this folder.",
+  "changes": [
+   {
+    "item": "U-east windows",
+    "change": "3 -> 4 windows at y 592.6/618.2/644.0/669.2",
+    "evidence": "upper-east.png: four panes labelled 1809LV, 1809FG, 1809FG, 1809LV; local OCR reads the same four labels"
+   },
+   {
+    "item": "Powder / west wall",
+    "change": "U-west split (no wall y 585-655); powder west wall and the 1.1 m stair-facing ends of office-south/ensuite-north external; powder window moved to powder west wall; unlabelled cupboard removed",
+    "evidence": "upper-powder.png: west wall line stops beside POWDER; 1809DH OBS drawn in the powder west wall facing the stair (UP)"
+   },
+   {
+    "item": "U-entry-sidelight-1",
+    "change": "x 404 -> 415.7",
+    "evidence": "upper-entry.png: left FG SL 2100x645 drawn centred at x 415.7"
+   },
+   {
+    "item": "L-ensuite-window",
+    "change": "x 497 -> 525.8",
+    "evidence": "lower-ensuite.png: 1809DH OBS centred at x 525.8"
+   },
+   {
+    "item": "L-ensuite-door",
+    "change": "north wall (513, 818.2) -> east wall (545.3, 830.5)",
+    "evidence": "lower-ensuite-door.png: jamb gap and closed leaf in the east wall, swing into ensuite"
+   },
+   {
+    "item": "Powder door / east wall",
+    "change": "add 870 powder door at (395.1, 638.9) in the hall wall; U-powder-east ends at y 624.7 (linen); powder polygon extended to the door",
+    "evidence": "upper-powder-door.png: 870 door with jambs in the hall wall below the linen, swinging into the powder room"
+   }
+  ]
+ }
+}
