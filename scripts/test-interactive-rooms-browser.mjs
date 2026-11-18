@@ -192,9 +192,9 @@ try {
   const roomSnapshot=async()=> (await snapshot()).aiAnalysis.rooms;
   const first=await page.evaluate(()=>harness.point({x:170,y:280}));
   await page.mouse.move(first.x,first.y);await settle();
-  assert((await snapshot()).roomNodes.find(n=>n.name==='room-boundary:test-room-0').fill.includes('0.28'),'Hover fill');
+  assert((await snapshot()).roomNodes.find(n=>n.name==='room-boundary:test-room-0').fill==='rgba(37,99,235,0.30)','Hover fill (roomStatusAppearance hovered)');
   await page.mouse.move(5,5);await settle();
-  assert((await snapshot()).roomNodes.find(n=>n.name==='room-boundary:test-room-0').fill.includes('0.01'),'Hover clears');
+  {const s=await snapshot();const fill=s.roomNodes.find(n=>n.name==='room-boundary:test-room-0').fill;assert(fill.endsWith(',0.01)'),`Hover clears (fill ${fill}, hovered ${JSON.stringify(s.hoveredRoomId??null)})`);}
   await clickPlan({x:170,y:280});
   assert((await roomSnapshot())[0].selected,'Click locks');
   await clickPlan({x:350,y:280});

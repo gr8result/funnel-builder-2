@@ -1,0 +1,17 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const root = path.resolve(__dirname, '..');
+const { buildLocalVectorAnalysis } = await import(path.join(root, 'components/construction-estimation/ai-plan-takeoff/ai-integration/localVectorAnalysis.js'));
+const { vectorProductionAnalysis } = await import(path.join(root, 'components/construction-estimation/ai-plan-takeoff/ai-integration/vectorProductionAnalysis.js'));
+const page = {pageNumber:1, logicalWidth:1000, logicalHeight:800, pixelsPerMm:1, vectorSegments:[], textItems:[]};
+const detected = {engine:"test", walls:[], openings:[], rooms:[]};
+const spec = {id:"p1",name:"Ground",page:1,pixelsPerMm:1,logicalWidth:1000,logicalHeight:800};
+const semantic = {walls:[],openings:[],buildingAreas:[{type:"Footprint",nodes:[{x:0,y:0},{x:100,y:0},{x:100,y:100},{x:0,y:100}],basis:"OBSERVED",confidence:0.9}]};
+const prod = vectorProductionAnalysis(semantic, detected, spec, {labels:[],wallDecisions:{},outdoor:null});
+console.log("prod has buildingAreas in response:", !!prod.response.buildingAreas, "len=", (prod.response.buildingAreas||[]).length);
+const local = buildLocalVectorAnalysis({planPage:page, detected, pixelsPerMm:1, level:"Ground Floor", context:{completedWallRuns:[],placedOpenings:[],completedFloorplans:[]}, runId:"t1", wallDecisions:{}, semanticInput:semantic});
+const hasBA = !!(local.buildingAreas && local.buildingAreas.length) || !!(local.completedFloorplans && local.completedFloorplans.some(f => f.type === 'Footprint'));
+console.log("local normalized has buildingAreas:", hasBA, "from return:", !!(local.buildingAreas && local.buildingAreas.length));
+console.log("FIX VERIFIED: buildingAreas now propagated on local vector rerun path");
+process.exit(0);

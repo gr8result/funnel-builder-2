@@ -12,7 +12,9 @@
 
 # testing
 /coverage
-/artifacts/test-results/
+# Test and analysis outputs (plan images, plan-derived data, screenshots) never go in the repo.
+# Files already tracked under artifacts/ stay tracked; nothing new is added.
+/artifacts/
 
 # next.js
 /.next/
