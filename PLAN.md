@@ -7,7 +7,7 @@
 - Every task is sized for one session and has a "done when" line.
 - Nothing merges to `main` until the owner has reviewed it and the tests pass.
 - Every session ends with a commit and push of its own branch.
-- Each module works only in its own worktree: Take-off in `E:\dev\gr8	akeoff`, Selections in `E:\dev\gr8\selections` and Quotation in `E:\dev\gr8\quotation`. `E:\dev\gr8\integration` is never edited by a session, and port 3000 is the owner's.
+- Each module works only in its own worktree: Take-off in `E:\dev\gr8\takeoff`, Selections in `E:\dev\gr8\selections` and Quotation in `E:\dev\gr8\quotation`. `E:\dev\gr8\integration` is never edited by a session, and port 3000 is the owner's.
 
 See `AUDIT.md` for the findings behind each task.
 
@@ -68,7 +68,7 @@ Today the code barely tells these roles apart. They are all in one list of roles
   - Jesmond.
 
   *Done when:* all four pass with zero paid requests. Liberty and Jesmond passed on 19 November on the latest build; the Sunshine Cove runs passed on 18 November.
-- [x] **A4. Separate working copies per module (git worktrees).** *Done 19 November 2026:* `E:\dev\gr8\integration` (`integration/v1`, from `main`), `E:\dev\gr8	akeoff`, `E:\dev\gr8\selections` and `E:\dev\gr8\quotation`, each with its own `.env` copies and its own `npm ci`.
+- [x] **A4. Separate working copies per module (git worktrees).** *Done 19 November 2026:* `E:\dev\gr8\integration` (`integration/v1`, from `main`), `E:\dev\gr8\takeoff`, `E:\dev\gr8\selections` and `E:\dev\gr8\quotation`, each with its own `.env` copies and its own `npm ci`.
   *Done when:* Take-off, Selections and Quotation sessions each work in their own folder on their own branch, and no two sessions share a checkout.
 
 ## B. One job record, job storage on the server, edit lock
