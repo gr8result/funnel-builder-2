@@ -184,15 +184,15 @@ Today the code barely tells these roles apart. They are all in one list of roles
 Today Take-off, Client Selections and Quotation sessions all edit one checkout on drive E:. Their uncommitted changes mix, a branch switch moves everyone, and E: is failing.
 
 1. **Location: `E:\dev\gr8\`** (owner's decision: no space on C: or Google Drive; E: is backed up by the owner).
-2. **One clone with worktrees.** Clone `funnel-builder-2` once to `C:\dev\gr8\integration` (the integration copy, on `recovery/live-snapshot-20261031` or its successor; no session edits it directly). Then add one worktree per module, each on its own branch:
-   - `git worktree add C:\dev\gr8\takeoff feature/ai-takeoff-v1`
-   - `git worktree add C:\dev\gr8\selections feature/client-selections-v1`
-   - `git worktree add C:\dev\gr8\quotation feature/quotation-v1`
+2. **One clone with worktrees.** Clone `funnel-builder-2` once to `E:\dev\gr8\integration` (the integration copy, on `recovery/live-snapshot-20261031` or its successor; no session edits it directly). Then add one worktree per module, each on its own branch:
+   - `git worktree add E:\dev\gr8\takeoff feature/ai-takeoff-v1`
+   - `git worktree add E:\dev\gr8\selections feature/client-selections-v1`
+   - `git worktree add E:\dev\gr8\quotation feature/quotation-v1`
 3. **Move the uncommitted work first.** The Selections and Quotation sessions commit their uncommitted files from E: to their own feature branches (or a verified backup is taken) before E: is retired. Only files each session owns go into its branch.
 4. **Per-worktree setup.** Its own `npm install` (no shared `node_modules` junction: removing a worktree with a junction once deleted shared packages) and its own git-ignored `.env.local` copy. Its own dev server port: port 3000 stays the owner's; for example take-off 3101, selections 3102, quotation 3103. Run only one or two at a time, because of memory.
 5. **Shared files.** Files several modules touch, such as `hooks/estimate-builder/useEstimateBuilderWorkbook.js`, `EstimateBuilderWorkbook.js` and Supabase migrations, change only through small pull requests into the integration branch, one module at a time, recorded in the shared-file register.
 6. **Merging.** Each module branch merges to the integration branch by pull request after its tests pass, then to `main` after the owner's review.
-7. **Each session is told its folder.** For example, "Take-off: work only in `C:\dev\gr8\takeoff`".
+7. **Each session is told its folder.** For example, "Take-off: work only in `E:\dev\gr8\takeoff`".
 
 ---
 
