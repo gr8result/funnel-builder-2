@@ -72,7 +72,7 @@ try {
   assert.equal(report.checks.initial.formula, '=internalDoors-cavityDoorQty');
   assert(report.checks.initial.text.includes('Internal Doors (20) - Cavity Sliding Doors (4) = 16'));
   await edit('=internalDoors-cavityDoorQty+2');
-  await page.waitForFunction(() => { const el = document.querySelector('#quote-edit-quote-152'); const inputs = [...el.closest('tr').querySelectorAll('input')]; return inputs[inputs.indexOf(el) + 1].value === '18'; });
+  await page.waitForFunction(() => { const el = document.querySelector('#quote-edit-quote-152'); const inputs = [...el.closest('tr').querySelectorAll('input, textarea')]; return inputs[inputs.indexOf(el) + 1].value === '18'; });
   report.checks.edited = await read();
   await pause(3000);
   // Read the actual IndexedDB autosave and reopen its saved workbook as a local job.

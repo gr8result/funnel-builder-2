@@ -99,8 +99,10 @@ const boschDecisions = Object.fromEntries(reconciliation.canonicalAudit.entries
 assert.deepEqual(boschDecisions, {
   oven: PRODUCT_SELECTION_OUTCOME.BLOCKED_MISSING_PRICE,
   cooktop: PRODUCT_SELECTION_OUTCOME.BLOCKED_BUILDER_APPROVAL,
-  rangehood: PRODUCT_SELECTION_OUTCOME.BLOCKED_MISSING_PRICE,
-  dishwasher: PRODUCT_SELECTION_OUTCOME.BLOCKED_MISSING_PRICE,
+  // Rangehood DBB93BC60A ($1,199) and dishwasher SMS2ITI02A ($1,248) gained verified Harvey Norman Commercial
+  // listing prices on 9 Nov 2026 (f76415a, AU-BOSCH-APPLIANCE-RANGE.json); verified prices go to builder approval.
+  rangehood: PRODUCT_SELECTION_OUTCOME.BLOCKED_BUILDER_APPROVAL,
+  dishwasher: PRODUCT_SELECTION_OUTCOME.BLOCKED_BUILDER_APPROVAL,
 }, "only products with a verified price may proceed to builder approval; missing appliance prices stay blocked");
 assert.equal(reconciliation.canonicalAudit.entries.filter((entry) => entry.outcome === PRODUCT_SELECTION_OUTCOME.BLOCKED_UNVERIFIED_BASELINE
   && ["towel-rail", "hand-towel", "toilet-roll-holder", "robe-hook"].includes(entry.requirementKey)).length, 4);
@@ -138,5 +140,10 @@ assert.deepEqual(
   "generated tiling room groups preserve their exact ordering through save and reopen",
 );
 
-assert.equal(calculated.summary.finalQuoteTotal, 830793.38, "the current row-cost calculation, not the saved imported subtotal, controls the quotation total");
+// 830,793.38 (31 Oct code) -> 847,343.90, traced section by section on 15 Nov 2026 (base +10,921.81; commission,
+// overheads, margin and GST on top): TILING +10,797.00 (owner tiling labour rates 11 Nov replaced $0 labour lines;
+// duplicate floor wastes collapsed), ELECTRICAL +1,700.00 and FIX OUT +1,572.20 and PLUMBING +246.00 (owner price
+// book), SHOWER SCREENS -2,310.77 (allowance placeholders -> Supplier Quote Required), ENTRY DOORS -1,082.62 (unpriced
+// door options removed).
+assert.equal(calculated.summary.finalQuoteTotal, 847343.9, "the current row-cost calculation, not the saved imported subtotal, controls the quotation total");
 console.log("Quotation commercial issue repair: canonical selection decisions, cabinetry transfer controls, idempotence, windows, replacements, catalogue evidence, tiling reopen order and the unchanged baseline are verified.");

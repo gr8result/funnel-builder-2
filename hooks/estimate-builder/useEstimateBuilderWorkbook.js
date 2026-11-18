@@ -15,6 +15,8 @@ import { applySelectionProduct, applyInclusionScheduleToQuote } from '../../lib/
 import { applyConstructionBaselineSpecifications } from '../../lib/standard-inclusions/jobBaseline.mjs';
 import { withStableQuoteTargets, preserveQuoteQuantityOwnership } from '../../lib/builders/selectionRegistry.js';
 import { deferUnapprovedQuotationChanges, planSelectionReconciliation } from '../../lib/builders/selectionReconciliation.js';
+import { builderVariationPayload, jobContractLock, postContractVariationRecord } from '../../lib/builders/contractLock.js';
+import { canonicalProjectUuid } from '../../lib/builders/canonicalProjectIdentity.js';
 import { normalizeSelectionPackRoomAliases } from '../../lib/builders/plumbingSelectionPatch.js';
 import { connectExternalLightingToQuotation } from '../../lib/builders/externalLightingQuotation.js';
 import { linkExteriorPaintToQuotation } from '../../lib/builders/exteriorPaintQuotation.js';
@@ -120,6 +122,7 @@ import { applyJobSetupImport } from "../../lib/construction-estimation/jobSetupT
 import { updateQuoteQuantityField } from "../../lib/construction-estimation/quoteQuantityFormula.js";
 import { supabase } from "../../utils/supabase-client";
 import { withWindowsPriceListQuotation, WINDOW_SCHEDULE_UNPRICED_ROW_PREFIX } from "../../lib/construction-estimation/windowsQuotePriceList.js";
+import { windowsPriceListSyncPreview } from "../../lib/construction-estimation/windowsPriceListSync.js";
 import { withEntryDoorLibraryQuotation } from "../../lib/construction-estimation/entryDoorLibraryQuotation.js";
 // One shared formatter: Number#toLocaleString with options builds a new formatter on every call (~40x slower, same text).
 const AUD_2DP = new Intl.NumberFormat("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -2235,6 +2238,23 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     });
   }
 
+  // "Review / Sync Windows": what applying the windows price list would change, and applying it on the
+  // builder's confirmation only. Opening a job never applies it (normalizeWorkbook keeps the saved quote).
+  // Under contract (lib/builders/contractLock.js) the contracted quotation is the baseline: the price list
+  // is not applied to it; a price change after contract goes through a variation.
+  function previewWindowsPriceListSync() {
+    const preview = windowsPriceListSyncPreview(workbookRef.current?.quotation || {});
+    const lock = jobContractLock(workbookRef.current);
+    return lock ? { ...preview, contractLocked: true, contractLockedAt: lock.lockedAt } : preview;
+  }
+
+  function syncWindowsPriceList() {
+    const preview = previewWindowsPriceListSync();
+    if (preview.contractLocked || !preview.changed) return preview;
+    updateWorkbookState((current) => ({ ...current, quotation: windowsPriceListSyncPreview(current.quotation || {}).quotation, windowsPriceListSyncedAt: new Date().toISOString() }));
+    return preview;
+  }
+
   function renumberQuoteDisplay() {
     const current = workbookRef.current;
     const result = renumberWorkbookQuoteDisplay(current);
@@ -3538,6 +3558,29 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
       if (financialImpact.requiresApproval && !approvedImpactMatches) {
         throw new Error(`Reconcile Selections is blocked: explicitly approve the ${financialImpact.rowChanges.length} quotation line change(s) and total change of ${financialImpact.delta > 0 ? "+" : ""}$${financialImpact.delta.toFixed(2)} (${financialImpact.before.toFixed(2)} to ${financialImpact.after.toFixed(2)}).`);
       }
+      // After contract (lib/builders/contractLock.js): the approved change becomes a formal variation
+      // record; the contracted quotation lines are not rewritten.
+      const contractLock = jobContractLock(current);
+      if (contractLock && financialImpact.rowChanges.length) {
+        const existing = Array.isArray(current.selectionVariationRecords) ? current.selectionVariationRecords : [];
+        const { data: sessionData } = await supabase.auth.getSession();
+        const userId = sessionData?.session?.user?.id || null;
+        const record = postContractVariationRecord({ lock: contractLock, financialImpact, existing, createdBy: userId || '', selectionSummary: [...new Set(financialImpact.rowChanges.map((change) => String(change.item || '').trim()).filter(Boolean))] });
+        let cloud = { saved: false, error: '' };
+        const projectUuid = canonicalProjectUuid(current);
+        const workspaceId = current.workspaceId || browserWorkspaceId();
+        if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(projectUuid || '')) && workspaceId) {
+          const { error } = await supabase.from('builder_variations').upsert(builderVariationPayload(record, { workspaceId, projectId: projectUuid, userId }), { onConflict: 'id', ignoreDuplicates: true });
+          cloud = error ? { saved: false, error: error.message || String(error) } : { saved: true, error: '' };
+        }
+        const stored = { ...record, cloudSaved: cloud.saved, cloudError: cloud.error };
+        updateWorkbookState({
+          selectionVariationRecords: [...existing.filter((item) => item.id !== stored.id), stored],
+          selectionReconciliationPending: null,
+          selectionReconciliationDecisionLog: [...(current.selectionReconciliationDecisionLog || []), { id: `post-contract-variation:${stored.id}`, recordedAt: stored.createdAt, variationId: stored.id, financialImpact: { before: financialImpact.before, after: financialImpact.after, delta: financialImpact.delta, signature: financialImpact.signature } }],
+        });
+        return { postContract: true, variation: stored, added: 0, replaced: 0, confirmedMappings: 0 };
+      }
       const recordedAt = new Date().toISOString();
       const approvalRecord = {
         id: `selection-reconciliation:${recordedAt}`,
@@ -3608,6 +3651,8 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     saveQuoteSectionOrder,
     acknowledgeNotification: (notification) => updateWorkbookState((current) => acknowledgeQuotationNotification(current, notification)),
     renumberQuoteDisplay,
+    previewWindowsPriceListSync,
+    syncWindowsPriceList,
     requestPromoteFormula,
     requestPromoteRate,
     saveDraft,

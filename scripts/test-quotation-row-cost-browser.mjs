@@ -92,12 +92,12 @@ async function finalQuoteTotal() {
 
 // Everything the user sees for one quotation row (identified by its description input).
 async function readRow(rowId) {
-  return page.$$eval('input[id^="quote-edit-"]', (descriptions, targetId) => {
+  return page.$$eval('[id^="quote-edit-"]', (descriptions, targetId) => {
     const description = descriptions.find((input) => input.id === `quote-edit-${targetId}` && input.getClientRects().length)
       || descriptions.find((input) => input.id === `quote-edit-${targetId}`);
     if (!description) throw new Error(`Quotation row ${targetId} is not rendered.`);
     const tr = description.closest('tr');
-    const inputs = [...tr.querySelectorAll('input')];
+    const inputs = [...tr.querySelectorAll('input, textarea')];
     const index = inputs.indexOf(description);
     const cells = [...tr.children].map((td) => td.innerText.trim());
     const money = cells.filter((text) => /^\$[\d,]+\.\d\d$/.test(text));
@@ -106,11 +106,11 @@ async function readRow(rowId) {
 }
 
 async function setQty(rowId, next) {
-  await page.$$eval('input[id^="quote-edit-"]', (descriptions, targetId, next) => {
+  await page.$$eval('[id^="quote-edit-"]', (descriptions, targetId, next) => {
     const description = descriptions.find((input) => input.id === `quote-edit-${targetId}` && input.getClientRects().length)
       || descriptions.find((input) => input.id === `quote-edit-${targetId}`);
     if (!description) throw new Error(`Quotation row ${targetId} is not rendered.`);
-    const inputs = [...description.closest('tr').querySelectorAll('input')];
+    const inputs = [...description.closest('tr').querySelectorAll('input, textarea')];
     const qty = inputs[inputs.indexOf(description) + 1];
     qty.focus();
     const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
@@ -120,11 +120,11 @@ async function setQty(rowId, next) {
     qty.blur();
   }, rowId, next);
   await page.waitForFunction((targetId, next) => {
-    const descriptions = [...document.querySelectorAll('input[id^="quote-edit-"]')];
+    const descriptions = [...document.querySelectorAll('[id^="quote-edit-"]')];
     const description = descriptions.find((input) => input.id === `quote-edit-${targetId}` && input.getClientRects().length)
       || descriptions.find((input) => input.id === `quote-edit-${targetId}`);
     if (!description) return false;
-    const inputs = [...description.closest('tr').querySelectorAll('input')];
+    const inputs = [...description.closest('tr').querySelectorAll('input, textarea')];
     const quantity = inputs[inputs.indexOf(description) + 1];
     if (quantity?.value !== next) return false;
     if (next !== '' && next !== '0') return true;
@@ -203,7 +203,7 @@ try {
         const tr = input.closest('tr');
         const cells = [...tr.children].map((td) => td.innerText.trim());
         const cost = cells.filter((text) => /^\$[\d,]+\.\d\d$/.test(text)).at(-1) || '';
-        const inputs = [...tr.querySelectorAll('input')];
+        const inputs = [...tr.querySelectorAll('input, textarea')];
         const qty = inputs[inputs.indexOf(input) + 1];
         return {id:input.id.replace('quote-edit-', ''), item:input.value, cost, editableQty:Boolean(qty) && qty.tagName === 'INPUT' && qty.value !== ''};
       });

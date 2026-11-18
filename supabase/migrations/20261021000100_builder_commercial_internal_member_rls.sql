@@ -23,7 +23,7 @@ as $$
   );
 $$;
 
-revoke all on function public.builder_commercial_is_internal_member(uuid) from public;
+revoke all on function public.builder_commercial_is_internal_member(uuid) from public, anon;
 grant execute on function public.builder_commercial_is_internal_member(uuid) to authenticated;
 
 do $$
@@ -81,6 +81,10 @@ declare
     'client_portal_audit_events'
   ];
 begin
+  drop policy if exists tenant_read on public.builder_requirement_quote_mappings;
+  create policy tenant_read on public.builder_requirement_quote_mappings for select to authenticated
+    using (public.builder_commercial_is_internal_member(workspace_id));
+
   foreach table_name in array internal_tables loop
     if to_regclass('public.' || table_name) is null then
       continue;
@@ -88,10 +92,17 @@ begin
 
     execute format('alter table public.%I enable row level security', table_name);
     execute format('drop policy if exists internal_workspace_members_only on public.%I', table_name);
-    execute format(
-      'create policy internal_workspace_members_only on public.%I as restrictive for all to authenticated using (public.builder_commercial_is_internal_member(workspace_id)) with check (public.builder_commercial_is_internal_member(workspace_id))',
-      table_name
-    );
+    if table_name in ('builder_product_suppliers', 'builder_product_manufacturers') then
+      execute format(
+        'create policy internal_workspace_members_only on public.%I as restrictive for all to authenticated using (workspace_id is null or public.builder_commercial_is_internal_member(workspace_id)) with check (workspace_id is null or public.builder_commercial_is_internal_member(workspace_id))',
+        table_name
+      );
+    else
+      execute format(
+        'create policy internal_workspace_members_only on public.%I as restrictive for all to authenticated using (public.builder_commercial_is_internal_member(workspace_id)) with check (public.builder_commercial_is_internal_member(workspace_id))',
+        table_name
+      );
+    end if;
   end loop;
 end $$;
 

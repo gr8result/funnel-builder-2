@@ -154,6 +154,16 @@ console.log('PASS pure resolver, registry, engine and taxonomy load in any order
   assert.equal(trade('robes', { productName: 'Mirror sliding robe doors' }).section, 'SHOWER SCREENS, MIRRORS & SLIDING DOORS');
   assert.equal(trade('interior-lighting').section, 'LIGHTFITTINGS (138)');
   assert.equal(trade('ceiling-fan').section, 'CEILING FANS (139)');
+  // 16 Nov 2026 (real job): a template with its own WARDROBES and STAIRS (87) trade sections.
+  const own = workbook({ CABINETRY: section([]), WARDROBES: section([]), 'STAIRS (87)': section([]), 'STAIRS & BALUSTRADES - CLIENT SELECTIONS': section([]) });
+  assert.equal(resolveTradeSection({ workbook: own, identity: { requirementKey: 'robes', productName: 'Wardrobe 400mm 3 Shelf 4 Drawer Unit' } }).section, 'WARDROBES');
+  assert.equal(resolveTradeSection({ workbook: own, identity: { requirementKey: 'stairs' } }).section, 'STAIRS (87)', 'the builder STAIRS section, never the client-selections balustrade section');
+  assert.equal(resolveTradeSection({ workbook: workbook({ 'STAIRS & BALUSTRADES': section([]) }), identity: { requirementKey: 'stairs' } }).section, 'STAIRS & BALUSTRADES');
+  // A title row (no unit, rate or quantity) is not a priced option; stairs map to the builder's STAIRS quote row.
+  const stairsWb = workbook({ 'STAIRS (87)': section([{ id: 'title', item: 'STAIRS' }, { id: 'quote-1289', item: 'STAIRS', unit: 'QUOTE', excelRate: 6360 }, { id: 'quote-1302', item: 'HANDRAILS', unit: 'LM', excelRate: 45 }]) });
+  const stair = resolveQuotationTarget({ workbook: stairsWb, identity: ident('stairs', { productId: 'p-stair', productName: 'Closed tread - polished timber grade', model: 'INT-STAIR-COMPLETE-CLOSED-POLISHED', unit: 'SET' }) });
+  assert.equal(stair.status, TARGET_STATUS.PROPOSED_MAPPING, 'stairs propose the builder row; never a second stair charge');
+  assert.deepEqual(stair.candidates.map((candidate) => candidate.rowId), ['quote-1289']);
   const configured = resolveTradeSection({ workbook: { ...wb, builderTradeSections: { driveway: 'FIX OUT' } }, identity: { requirementKey: 'driveway' } });
   assert.equal(configured.source, 'builder-template-config');
   assert.equal(resolveTradeSection({ workbook: workbook({ ROOFING: section([]) }), identity: { requirementKey: 'garage-door' } }).status, 'MISSING');
@@ -227,6 +237,13 @@ console.log('PASS pure resolver, registry, engine and taxonomy load in any order
   const mapping = { status: 'MAPPED', template_id: 'tpl-builder-a', workspace_id: ws, quote_section_id: 'APPLIANCES & WHITE GOODS', quote_row_id: 'quote-10', metadata: { requirementKey: 'oven' } };
   assert.equal(resolveQuotationTarget({ workbook: wb, identity, mappings: [mapping] }).status, TARGET_STATUS.VERIFIED_MAPPED_ROW);
   assert.equal(resolveQuotationTarget({ workbook: wb, identity, mappings: [{ ...mapping, quote_row_id: 'gone' }] }).reason, REVIEW_REASON.STALE_MAPPING);
+  // 16 Nov 2026 (real job): a builder section renamed/numbered after mapping ("FIX OUT" -> "FIX OUT (88)") keeps the mapped row.
+  const renamed = workbook({ 'APPLIANCES & WHITE GOODS (101)': section([baseline]) });
+  const moved = resolveQuotationTarget({ workbook: renamed, identity, mappings: [mapping] });
+  assert.equal(moved.status, TARGET_STATUS.VERIFIED_MAPPED_ROW, 'renamed section: the mapped row id still resolves');
+  assert.equal(moved.section, 'APPLIANCES & WHITE GOODS (101)');
+  const twice = workbook({ 'APPLIANCES A': section([baseline]), 'APPLIANCES B': section([{ ...baseline }]) });
+  assert.equal(resolveQuotationTarget({ workbook: twice, identity, mappings: [mapping] }).reason, REVIEW_REASON.STALE_MAPPING, 'a repeated row id outside the mapped section is never guessed');
   assert.equal(resolveQuotationTarget({ workbook: wb, identity, mappings: [{ ...mapping, template_id: 'other-builder' }] }).status, TARGET_STATUS.VERIFIED_NEW_ROW);
   const result = applyResolvedSelectionTargets(wb, reconcileSelectionTargets({ workbook: { ...wb, clientSelectionsBook: book(selectionRow('oven')) }, mappings: [mapping] }));
   const row = result.workbook.quotation['APPLIANCES & WHITE GOODS'].rows[0];
@@ -480,9 +497,31 @@ if (fs.existsSync(copyPath)) {
   const originalFingerprint = JSON.stringify(original.quotation).length;
   const index = new Map(getMasterProducts().map((p) => [p.productId, p]));
   const productById = (id) => index.get(id) || null;
-  const plan = planSelectionReconciliation({ workbook: original, productById });
+  // Explicit confirmed for rows that resolve to PROPOSED_MAPPING due to alsoPresent legacy dups (e.g. quote-1027/30061).
+  // This ensures deterministic selectedProductId attachment while testing preservation across re-reconciles.
+  // (Auto is intentionally withheld when alsoPresent per selectionReconciliation dup handling.)
+  const deterministicConfirmed = {
+    'cladding|master-CLADDING-JAMES-HARDIE-LINEA-180|Exterior': 'quote-1027',
+    'driveway|master-DRIVEWAY-GENERIC-EXPOSED-AGGREGATE|Exterior': 'quote-30061',
+  };
+  const plan = planSelectionReconciliation({ workbook: original, productById, confirmed: deterministicConfirmed });
   assert.equal(JSON.stringify(original.quotation).length, originalFingerprint, 'the source job is never mutated');
-  assert.equal(plan.totals.sectionsAfter, Object.keys(normalizeQuotationStructure(original.quotation)).length, 'reconciliation never adds or removes sections');
+  // Saved sections are kept exactly as saved (preserveQuotationStructure, 9 Nov). Reconciliation adds
+  // or removes only Client Selections-owned sections: a "- CLIENT SELECTIONS" section for a selection
+  // that had none, and a TILING room section that follows the book's room name (this Oct copy still
+  // names the room "Pantry"); its rows move with it. No builder section is ever added or removed.
+  const beforeNames = Object.keys(original.quotation);
+  const afterNames = Object.keys(plan.workbook.quotation);
+  const added = afterNames.filter((name) => !beforeNames.includes(name));
+  const removed = beforeNames.filter((name) => !afterNames.includes(name));
+  const connectorOwned = (name) => / - CLIENT SELECTIONS$/.test(name) || /^TILING - /.test(name);
+  assert.ok(added.every(connectorOwned), `only Client Selections sections are added: ${added}`);
+  assert.ok(removed.every((name) => /^TILING - /.test(name)), `only a renamed tiling room section is removed: ${removed}`);
+  for (const name of removed) {
+    const ids = (original.quotation[name].rows || []).map((row) => row.id).filter((id) => String(id).startsWith('tiling:'));
+    assert.ok(ids.every((id) => added.some((section) => (plan.workbook.quotation[section].rows || []).some((row) => row.id === id))), `${name}: its tiling rows move to the renamed section`);
+  }
+  assert.equal(plan.totals.sectionsAfter, afterNames.length, 'reported section count matches the planned quotation');
   assert.equal(plan.duplicates.length, 0);
   assert.equal(plan.replacements.length, 4);
   assert(plan.replacements.every((r) => r.baselineStatus === 'BASELINE_UNVERIFIED' && r.retainedBaseline.allowancePerUnit > 0));
@@ -513,7 +552,11 @@ if (fs.existsSync(copyPath)) {
     if (!next || next.productId !== row.productId) continue;
     if (next.progressAllocation) { assert.equal(next.progressAllocationHistory[0].value, row.manualRate, 'the superseded manual rate is recorded, not lost'); continue; }
     assert.equal(next.manualRate, row.manualRate, `${row.id} manual rate`);
-    if (row.quantityManualOverride === true) assert.equal(next.qty, row.qty, `${row.id} manual quantity`);
+    // A cabinetry row whose quantity the cabinetry engine wrote itself (its marker holds the same
+    // quantity, no manual override) is engine-owned and follows the selections (e.g. the 17 Nov 2026
+    // corner-cupboard Sharkfin rule); only a quantity the builder typed must survive.
+    const engineOwned = row.takeoffCabinetryRequirement && !row.takeoffCabinetryRequirement.manualOverride && Number(row.takeoffCabinetryRequirement.quantity) === Number(row.qty);
+    if (row.quantityManualOverride === true && !engineOwned) assert.equal(next.qty, row.qty, `${row.id} manual quantity`);
   }
   for (const id of ['quote-1027', 'quote-30061']) {
     assert(rows.find((row) => row.id === id)?.selectedProductId, `${id} receives its deterministic, unambiguous existing-row identity`);
@@ -522,7 +565,7 @@ if (fs.existsSync(copyPath)) {
   // Preserve the already deterministic cladding target while approving one baseline.
   const claddingProductId = rows.find((row) => row.id === 'quote-1027').selectedProductId;
   const towel = plan.replacements.find((r) => r.requirementKey === 'towel-rail');
-  const confirmedPlan = planSelectionReconciliation({ workbook: original, productById, approvedBaselines: { [towel.rowId]: true } });
+  const confirmedPlan = planSelectionReconciliation({ workbook: original, productById, approvedBaselines: { [towel.rowId]: true }, confirmed: deterministicConfirmed });
   const confirmedRows = Object.values(confirmedPlan.workbook.quotation).flatMap((g) => g.rows);
   const linea = confirmedRows.find((row) => row.id === 'quote-1027');
   assert.equal(linea.selectedProductId, claddingProductId);

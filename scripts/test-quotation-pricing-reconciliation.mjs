@@ -51,7 +51,10 @@ if (!realJob) {
     const result = quotationIssueCheck(quotation);
     const zeroCharged = quotationSectionsForFinalBoq(quotation).flatMap((x) => x.rows).filter((r) => quoteLineTotal(r) === 0);
     assert.equal(result.ok, result.blockers.length === 0);
-    for (const b of result.blockers.filter((x) => !/duplicate/.test(x.reason))) assert(zeroCharged.some((r) => (r.id || r.rowId || "") === b.rowId), `blocked row ${b.item} is priced`);
+    // Blocked rows are $0 charged rows, or (owner rule 16 Nov 2026) "Quote required" lines that carry only a
+    // substitute catalogue price or allowance - those are not supplier prices.
+    const quoteRequiredLines = quotationSectionsForFinalBoq(quotation).flatMap((x) => x.rows).filter((r) => r.lineType === "Quote required");
+    for (const b of result.blockers.filter((x) => !/duplicate/.test(x.reason))) assert(zeroCharged.some((r) => (r.id || r.rowId || "") === b.rowId) || (b.reason === "supplier quote required" && quoteRequiredLines.some((r) => (r.id || r.rowId || "") === b.rowId)), `blocked row ${b.item} is priced`);
     console.log(`     ${result.blockers.length} unpriced charged rows; final quote $${s.finalQuoteTotal}`);
   });
 

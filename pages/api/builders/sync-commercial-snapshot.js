@@ -6,6 +6,8 @@ import { commercialSnapshotSignature } from "../../../lib/builders/commercialSna
 import { quotationBoqStatus } from "../../../lib/builders/quotationRateReview.js";
 import { quotationSectionsForFinalBoq, quoteLineTotal, quoteQuantity, quoteRate, shouldIncludeQuoteRowInFinalBoq } from "../../../lib/construction-estimation/finalQuotationBoq.js";
 import { quotationIssueCheck } from "../../../lib/construction-estimation/quotationIssueGate.js";
+import { reconcileProductSelections } from "../../../lib/builders/productSelectionIntegrity.js";
+import { cabinetryQuotationBriefs } from "../../../lib/construction-estimation/cabinetryRequirements.js";
 
 export const config = {
   api: {
@@ -57,7 +59,12 @@ async function handler(req, res) {
     }
     // Checked before anything is written: a quotation with unpriced or duplicated charged rows must not
     // supersede the current snapshot (Quotation V1 issue gate, ported from a3c7c17).
-    const issue = quotationIssueCheck(quotation);
+    // Same rule as the screen: selected products without a confirmed price block issue (recomputed here
+    // from the submitted job, never trusted from the client).
+    let selectionAudit = null;
+    try { selectionAudit = reconcileProductSelections({ workbook: { ...workbook, quotation } }); }
+    catch (error) { return res.status(409).json({ ok: false, code: "SELECTION_AUDIT_FAILED", error: `Selected-product prices could not be checked, so the quotation was not issued: ${error?.message || error}` }); }
+    const issue = quotationIssueCheck(quotation, { selectionAudit, resolutions: workbook.commercialIssueResolutions || [], cabinetryBriefs: cabinetryQuotationBriefs(workbook) });
     if (!issue.ok) {
       return res.status(409).json({ ok: false, code: "QUOTATION_MISSING_PRICES", error: issue.message, blockers: issue.blockers });
     }
@@ -142,6 +149,19 @@ async function handler(req, res) {
 
     const insertedProcurementItems = await insertRows(TABLES.procurement, procurementRows);
 
+    const { data: promoted, error: promotionError } = await supabaseAdmin.rpc("builder_promote_quotation_snapshot", {
+      p_workspace_id: workspaceId,
+      p_project_id: project.id,
+      p_snapshot_id: snapshot.id,
+      p_sections: sectionRows.length,
+      p_items: boqRows.length,
+      p_procurement: procurementRows.length,
+    });
+    if (promotionError) throw new Error(`Could not publish the completed snapshot: ${promotionError.message}`);
+    if (promoted !== true) {
+      return res.status(409).json({ ok: false, code: "QUOTATION_SUPERSEDED", error: "A newer quotation was issued while this snapshot was saving. Reload Project Commercials before issuing again." });
+    }
+
     return res.status(200).json({
       ok: true,
       project_id: project.id,
@@ -197,8 +217,6 @@ async function createOrUpdateCommercialProject({
     client_phone: source.client_phone,
     site_address: source.site_address,
     status: allowed(projectInput.status, ["draft", "active", "on_hold", "completed", "cancelled", "archived"]) || "active",
-    original_estimate_total: moneyNumber(summary.finalQuoteTotal),
-    contract_total: moneyNumber(summary.finalQuoteTotal),
     currency: firstText(projectInput.currency, workbook.currency) || "AUD",
     source_metadata: stripLargeFields({
       project: projectInput,
@@ -332,7 +350,7 @@ async function createEstimateSnapshot({ workspaceId, userId, projectId, projectI
     project_id: projectId,
     snapshot_number: snapshotNumber,
     snapshot_label: firstText(projectInput.snapshot_label, projectInput.snapshotLabel) || `Snapshot ${snapshotNumber}`,
-    status: "current",
+    status: "draft",
     source_workbook_job_id: source.source_workbook_job_id,
     source_workbook_file_name: source.source_workbook_file_name,
     source_registered_job_id: source.source_registered_job_id,
@@ -369,9 +387,8 @@ async function createEstimateSnapshot({ workspaceId, userId, projectId, projectI
   };
 
   // Two people can issue the same job at once. Both may read the same next number, so a
-  // unique-number conflict (23505) is retried with a fresh number. Superseding happens after the
-  // insert and only for lower numbers, so a failed insert never leaves the job without a current
-  // snapshot and the newest snapshot always ends up current (ported from Quotation V1 a3c7c17).
+  // unique-number conflict (23505) is retried with a fresh number. Keep the candidate draft
+  // until all child rows are saved; the promotion RPC then changes current status atomically.
   const customLabel = firstText(projectInput.snapshot_label, projectInput.snapshotLabel);
   let data = null;
   for (let attempt = 0; attempt < 5 && !data; attempt += 1) {
@@ -389,14 +406,6 @@ async function createEstimateSnapshot({ workspaceId, userId, projectId, projectI
   }
   if (!data) throw new Error("Could not create estimate snapshot: another save kept taking the same snapshot number. Please try again.");
 
-  const { error: supersedeError } = await supabaseAdmin
-    .from(TABLES.snapshots)
-    .update({ status: "superseded" })
-    .eq("workspace_id", workspaceId)
-    .eq("project_id", projectId)
-    .eq("status", "current")
-    .lt("snapshot_number", data.snapshot_number);
-  if (supersedeError) throw new Error(`Could not supersede older snapshots: ${supersedeError.message}`);
   return { snapshot: data, reused: false };
 }
 

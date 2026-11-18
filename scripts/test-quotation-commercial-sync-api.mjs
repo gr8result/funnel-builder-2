@@ -1,3 +1,4 @@
+import { requireQuotationAcceptanceEnvironment } from './lib/quotation-acceptance-environment.mjs';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -19,8 +20,10 @@ const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABAS
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 if (!url || !anonKey || !serviceKey) throw new Error('Supabase URL and authenticated test credentials are required.');
 
-const origin = process.env.QUOTATION_ACCEPTANCE_ORIGIN || 'http://localhost:3000';
-const workspaceId = '846885cd-25b9-4eca-b9f9-3fd02f5882d8';
+const origin = process.env.QUOTATION_ACCEPTANCE_ORIGIN || 'http://127.0.0.1:3107';
+const workspaceId = process.env.QB_ACCEPTANCE_WORKSPACE_ID;
+requireQuotationAcceptanceEnvironment({ origin: origin, supabaseUrl: url, workspaceId });
+
 const sourcePath = path.join(root, 'test-artifacts/isolated-jobs/gr8-reconcile-test-47c50983a480/GR8 RESULT - QUOTATION PROGRESS ALLOCATION TEST.gr8job');
 const expectedSourceHash = '821adadd65ec2bcf45f18549b62cfd30544f6e1349dbe12279e75e54ed476f46';
 const sourceBytes = fs.readFileSync(sourcePath);

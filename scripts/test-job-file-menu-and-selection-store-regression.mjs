@@ -62,7 +62,10 @@ assert.ok(selectionsSource.includes("projectId={projectId}"), "Guided Cabinetry 
 assert.ok(selectionsSource.includes("onFinishCabinetry={saveGuidedCabinetryAndReturnToInterior}"), "Guided selections workflow must receive the explicit Cabinetry finish handler.");
 assert.ok(selectionsSource.includes("onFinishCabinetry={onFinishCabinetry}"), "Guided Cabinetry must receive the finish handler from workflow props.");
 assert.ok(!selectionsSource.includes("onFinishCabinetry={saveGuidedCabinetryAndReturnToInterior}\n          onSaveProgress"), "GuidedSelectionsWorkflow must not reference the parent finish handler directly inside the Cabinetry render.");
-assert.ok(selectionsSource.includes("commitRequirement: !confirmRoom"), "Finish Cabinetry must not route through the generic product auto-advance.");
+// Cabinetry saves never commit through the generic product requirement (which auto-advances); the
+// code now passes commitRequirement: false on every Cabinetry save (stricter than the earlier
+// commitRequirement: !confirmRoom).
+assert.ok(selectionsSource.includes("commitRequirement: false") && !/persistCabinetry\([^)]*commitRequirement:\s*true/.test(selectionsSource), "Finish Cabinetry must not route through the generic product auto-advance.");
 assert.ok(selectionsSource.includes("prior = cabinetryPlainObject(prior) ? prior : {}"), "Kick-panel finish records must tolerate null prior state.");
 assert.ok(!selectionsSource.includes("const globalLatestPayload = JSON.parse(window.localStorage.getItem(globalLatestEmbeddedBookStorageKey())"), "Embedded selections must not hydrate from a global latest job draft.");
 assert.ok(!selectionsSource.includes("function globalLatestEmbeddedBookStorageKey"), "Embedded selections must not keep a global latest job draft key.");

@@ -101,3 +101,79 @@ check("a typed rate that the engine ignores (row still totals $0) does not clear
 });
 
 console.log(`\n${passed} checks passed`);
+
+// ---- Owner rule 16 Nov 2026: unpriced selected products block issue (real job copy) ----------------
+const { default: fs } = await import("node:fs");
+const { default: JSZip } = await import("jszip");
+const { reconcileProductSelections } = await import("../lib/builders/productSelectionIntegrity.js");
+const { calculateEstimateBuilderWorkbook } = await import("../lib/construction-estimation/estimateBuilderWorkbookCalculations.js");
+const { selectionPriceBlockers } = await import("../lib/construction-estimation/quotationIssueGate.js");
+const jobFile = process.env.QUOTATION_JOB_FILE || "E:/dev/quotation-recovery-20261108/restored/New Job 03 09 LATEST VERSION 11-11.gr8job";
+if (fs.existsSync(jobFile)) {
+  const job = JSON.parse(await (await JSZip.loadAsync(fs.readFileSync(jobFile))).file("estimate.json").async("string")).workbook;
+  const silence = console.log; console.log = () => {};
+  const audited = (wb) => { const calc = calculateEstimateBuilderWorkbook(structuredClone(wb)); return { calc, audit: reconcileProductSelections({ workbook: { ...wb, quotation: calc.quotation } }) }; };
+  const base = audited(job);
+  console.log = silence;
+  const unpriced = base.audit.entries.filter((e) => e.outcome === "BLOCKED_MISSING_PRICE");
+
+  check("real job: every selected product without a confirmed price blocks issue and is listed by name", () => {
+    const result = quotationIssueCheck(base.calc.quotation, { selectionAudit: base.audit });
+    const products = result.blockers.filter((b) => b.selection);
+    assert(unpriced.length > 0, "the job copy has unpriced selected products");
+    assert.equal(products.length, new Set(unpriced.map((e) => e.key)).size);
+    assert(products.some((b) => /Basin Mixer/i.test(b.item)), "price-pending basin mixer listed");
+    assert.match(result.message, /selected products? without a confirmed price/);
+    assert.equal(result.ok, false);
+  });
+
+  check("real job: products included in a package, priced in the quote or awaiting approval do not block on price", () => {
+    const result = quotationIssueCheck(base.calc.quotation, { selectionAudit: base.audit });
+    const blockedKeys = new Set(result.blockers.filter((b) => b.selection).map((b) => b.item));
+    for (const e of base.audit.entries.filter((x) => ["VERIFIED_INCLUDED_IN_PACKAGE", "PRICED_IN_QUOTE", "BLOCKED_BUILDER_APPROVAL"].includes(x.outcome))) {
+      assert(!unpriced.some((u) => u.key === e.key), `${e.productName} is not an unpriced block`);
+    }
+    assert(base.audit.entries.some((e) => e.outcome === "VERIFIED_INCLUDED_IN_PACKAGE"), "job has package-included products");
+    assert(blockedKeys.size > 0);
+  });
+
+  check("real job: an optional product marked not required (auditable reason) stops blocking; others still block", () => {
+    const optional = unpriced[0];
+    const resolutions = [{ issueId: `selection:${optional.key}`, type: "NOT_REQUIRED", status: "APPLIED", reason: "Client confirmed this item is not required" }];
+    const result = quotationIssueCheck(base.calc.quotation, { selectionAudit: base.audit, resolutions });
+    assert(!result.blockers.some((b) => b.selection && b.item === String(optional.productName || optional.productId).trim() && b.location === String(optional.location || "").trim()));
+    assert.equal(selectionPriceBlockers(base.audit, { resolutions }).length, selectionPriceBlockers(base.audit).length - 1);
+    assert.equal(result.ok, false, "the remaining unpriced products still block");
+  });
+
+  check("real job: a product removed from the selections (not selected) no longer blocks", () => {
+    const victim = unpriced.find((e) => e.rowId);
+    const copy = structuredClone(job);
+    for (const room of copy.clientSelectionsBook.rooms || []) room.rows = (room.rows || []).filter((row) => row.id !== victim.rowId);
+    console.log = () => {}; const after = audited(copy); console.log = silence;
+    assert(!after.audit.entries.some((e) => e.key === victim.key && e.outcome === "BLOCKED_MISSING_PRICE"));
+  });
+
+  check("a $0 or blank selected-product price is not a price; the audit gives no free pass", () => {
+    const audit = { entries: [
+      { key: "a", outcome: "BLOCKED_MISSING_PRICE", productName: "Zero-dollar placeholder", selectedUnitPrice: 0 },
+      { key: "b", outcome: "PRICED_IN_QUOTE", productName: "Priced tap", selectedUnitPrice: 220 },
+      { key: "c", outcome: "VERIFIED_INCLUDED_IN_PACKAGE", productName: "Included gutter", selectedUnitPrice: 0 },
+    ] };
+    const result = quotationIssueCheck({ s: { rows: [priced] } }, { selectionAudit: audit });
+    assert.deepEqual(result.blockers.map((b) => b.item), ["Zero-dollar placeholder"]);
+  });
+  const { cabinetryQuotationBriefs } = await import("../lib/construction-estimation/cabinetryRequirements.js");
+  check("real job: outstanding cabinetry measurements (Kitchen, Laundry) block issue; entering them clears the block", () => {
+    const briefs = cabinetryQuotationBriefs(job);
+    const result = quotationIssueCheck(base.calc.quotation, { selectionAudit: base.audit, cabinetryBriefs: briefs });
+    const cab = result.blockers.filter((b) => b.cabinetry);
+    assert(cab.some((b) => b.location === "Kitchen" && /benchtop/i.test(b.item)), "Kitchen main benchtop measurement listed");
+    assert(cab.some((b) => b.location === "Laundry"), "Laundry measurement listed");
+    assert.match(result.message, /outstanding cabinetry measurements: Kitchen \(/);
+    const done = briefs.map((b) => ({ ...b, outstanding: 0, measurements: (b.measurements || []).map((m) => ({ ...m, status: "approved" })) }));
+    assert.equal(quotationIssueCheck({ s: { rows: [priced] } }, { cabinetryBriefs: done }).ok, true, "complete measurements do not block");
+  });
+} else console.log("SKIP real-job checks: job file not found", jobFile);
+
+console.log(`\n${passed} checks passed (including selected-product pricing)`);

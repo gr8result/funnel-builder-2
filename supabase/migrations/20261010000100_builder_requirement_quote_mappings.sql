@@ -5,7 +5,7 @@ begin;
 
 create table public.builder_requirement_quote_mappings (
   id uuid primary key default gen_random_uuid(),
-  workspace_id uuid not null references public.workspaces(id),
+  workspace_id uuid not null references public.workspaces(id) on delete cascade,
   template_id text not null default '',
   requirement_key text not null check (length(trim(requirement_key)) > 0),
   location_id text not null default '',
@@ -39,7 +39,7 @@ end $$;
 
 alter table public.builder_requirement_quote_mappings enable row level security;
 create policy tenant_read on public.builder_requirement_quote_mappings for select to authenticated
-  using (public.builder_commercial_is_workspace_member(workspace_id));
+  using (public.builder_selection_is_config_admin(workspace_id));
 create policy tenant_write on public.builder_requirement_quote_mappings for all to authenticated
   using (public.builder_selection_is_config_admin(workspace_id)) with check (public.builder_selection_is_config_admin(workspace_id));
 grant select, insert, update, delete on public.builder_requirement_quote_mappings to authenticated;
