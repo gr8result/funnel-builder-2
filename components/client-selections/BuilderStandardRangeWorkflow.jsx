@@ -17,7 +17,7 @@ const currentPrice = p => {
   return raw==null || raw==='' || !Number.isFinite(Number(raw)) ? null : Number(raw);
 };
 
-export default function BuilderStandardRangeWorkflow({requirement, products=[], selection, workbook={}, projectRoomNames=[], projectRooms=[], onSelectProduct, onBack, onViewDetails}) {
+export default function BuilderStandardRangeWorkflow({requirement, products=[], selection, workbook={}, projectRoomNames=[], projectRooms=[], onSelectProduct, onBack, onViewDetails, onSaveProgress}) {
   const key = requirement.requirementKey;
   const hvac = key === 'air-conditioning';
   const saved = plumbingLinesFromSelection(selection?.selected_details);
@@ -38,6 +38,18 @@ export default function BuilderStandardRangeWorkflow({requirement, products=[], 
   // An assignment being replaced ({lineId, locationKey, location, productName}) and a room that already has a product.
   const [replacing,setReplacing] = useState(null);
   const [occupied,setOccupied] = useState(null);
+  // Save and Continue (15 Nov 2026): this screen had only "Back", so after choosing an air-conditioning
+  // system (or fans / lighting) the client had no way forward. Leaves only after a successful save.
+  const [continuing,setContinuing] = useState(false);
+  const [continueError,setContinueError] = useState('');
+  async function saveAndContinue() {
+    setContinuing(true); setContinueError('');
+    try {
+      const saved = onSaveProgress ? await onSaveProgress() : true;
+      if (saved) onBack(); else setContinueError('The selection could not be saved. Nothing was lost - please try again.');
+    } catch (err) { setContinueError(err?.message || 'The selection could not be saved.'); }
+    finally { setContinuing(false); }
+  }
   const summary = plumbingAllocationSummary(lines);
   const quoteRows = serviceQuoteRequirements(workbook,key);
   const originalDefaults = [...defaults];
@@ -136,6 +148,7 @@ export default function BuilderStandardRangeWorkflow({requirement, products=[], 
     {lines.length>0 && <section aria-label="Selection totals"><SelectionAssignmentsTable lines={lines} rooms={projectRooms.length ? projectRooms : projectRoomNames.map(name=>({name}))} unitLabel={hvac?'system':key==='ceiling-fan'?'fan':'fitting'}
       expected={quoteRows.length ? quoteRows.reduce((n,r)=>n+(Number(r.quantity)||0),0) : null} replacing={replacing} onChange={commit} onReplace={hvac?null:setReplacing} onCancelReplace={()=>setReplacing(null)}/><p>Selected: {money(summary.selectedTotal)} · Allowance: {money(summary.allowanceTotal)} · Variation: {lines.some(l=>l.allowancePending)?'Builder allowance required':money(summary.variation)}</p></section>}
     {lines.filter(l=>!l.isBuilderStandard && l.standardBaseline).flatMap(l=>l.allocations.map(a=><button type="button" key={`${l.lineId}:${a.locationKey}`} onClick={()=>commit(restoreStandardLocation(lines,standards.find(s=>sameTarget(s,l)),a.locationKey))}>Use standard in {a.location}</button>))}
+    {lines.length>0 && <div className="continueBar"><button type="button" className="primary" disabled={continuing || Boolean(draft)} onClick={saveAndContinue} data-testid={`standard-range-save-continue-${key}`}>{continuing ? 'Saving…' : `Save and Continue`}</button>{continueError && <p role="alert">{continueError}</p>}</div>}
     {hvac && lines.filter(l=>!l.standardBaseline).map(l=><button type="button" key={l.lineId} onClick={()=>commit(lines.filter(x=>x.lineId!==l.lineId))}>Remove {l.productName}</button>)}
     <h3>UPGRADES / ALTERNATIVES</h3>
     <div className="filters"><label>Range<select value={range} onChange={e=>setRange(e.target.value)}><option value="standard">Builder standard</option><option value="upgrades">Upgrades</option><option value="all">All products</option></select></label>
@@ -165,6 +178,7 @@ export default function BuilderStandardRangeWorkflow({requirement, products=[], 
         <button type="button" onClick={()=>save('replace')}>Replace existing</button> <button type="button" onClick={()=>save('add')}>Add another</button> <button type="button" onClick={()=>setOccupied(null)}>Cancel</button></div>
       : <><button type="button" onClick={()=>setDraft(null)}>Cancel</button> <button type="button" onClick={()=>save()}>Save selection</button></>}</div></div>}
     <style jsx>{`
+      .continueBar{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:16px 0}.standardRange .continueBar .primary{background:#0f766e;color:#fff;font-weight:800;font-size:16px}.standardRange .continueBar .primary:disabled{opacity:.6;cursor:not-allowed}
       .standardRange{color:#102b42;padding:20px;background:#fff;border:1px solid #d4e0ea;border-radius:12px;font-size:16px}.standardRange h2{font-size:26px}.standardRange h3{font-size:18px}.standardRange p{line-height:1.5}.standardRange header span,.included strong{color:#08766e;font-weight:800}.notice{padding:16px;background:#f1f6fa;border-radius:8px}.standardCards{display:grid;gap:16px}.included{display:flex;gap:24px;padding:22px;background:#ecfdf5;border:2px solid #0f766e;border-radius:12px}.included img{width:200px;object-fit:contain}.standardRange button{padding:10px 16px;border:1px solid #0f766e;color:#0f766e;background:white;border-radius:6px;font-size:16px;cursor:pointer}.included button{margin-top:12px;background:#0f766e;color:white}.filters{display:flex;flex-wrap:wrap;gap:16px;margin:20px 0}.standardRange label{display:grid;gap:6px}.standardRange select,.standardRange input{padding:10px;border:1px solid #bdcdd8;border-radius:6px;font-size:16px}.products{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:18px}.products article{padding:16px;border:1px solid #d4e0ea;border-radius:10px}.products img{width:100%;height:180px;object-fit:contain}.products span{color:#0f766e;font-weight:700}.standardRange table{width:100%;border-collapse:collapse}.standardRange th,.standardRange td{padding:12px;text-align:left;border-bottom:1px solid #d4e0ea}.overlay{position:fixed;inset:0;background:#102b4280;z-index:12000;display:grid;place-items:center;padding:24px}.dialog{background:white;border-radius:12px;padding:24px;max-width:650px;max-height:90vh;overflow:auto;width:100%}.dialog label{margin:15px 0}.dialog input[type=checkbox]{width:20px;height:20px}@media(max-width:700px){.included{flex-direction:column}.filters{flex-direction:column}.standardRange table{font-size:16px}}
     `}</style>
   </section>;

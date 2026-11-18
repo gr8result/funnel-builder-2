@@ -29,11 +29,18 @@ report.variationPages = variationPages.map((page) => page.number);
 check("variation summary printed", variationPages.length > 0);
 const variationText = variationPages.map((page) => page.text).join("\n");
 check("bulkhead removal printed", /Cabinetry bulkheads/.test(variationText) && /Remove bulkheads/.test(variationText));
-check("confirmed bulkhead credit -$831.60", /-\$831\.60 inc GST/.test(variationText) && /Confirmed by builder/.test(variationText));
-check("client acceptance recorded", /Accepted/.test(variationText));
+// Since 11 Nov 2026 the client amount is the cost difference with the job's margin and GST
+// (clientPriceOfCost), so the printed credit is the captured row's own amount, not cost x 1.1.
+const bulkheadRow = (body.previewSchedule.variationSummary?.rows || []).find((row) => /bulkhead/i.test(`${row.requirementLabel} ${row.selected}`));
+const bulkheadAmount = bulkheadRow && Number.isFinite(Number(bulkheadRow.amountIncGst)) ? `-$${Math.abs(Number(bulkheadRow.amountIncGst)).toLocaleString("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} inc GST` : "";
+check("confirmed bulkhead credit printed at its client amount", Boolean(bulkheadAmount) && Number(bulkheadRow.amountIncGst) < 0 && variationText.includes(bulkheadAmount) && /Confirmed by builder/.test(variationText), bulkheadAmount);
+// The client's decision prints as "Approved" (three-figure approval, 11 Nov 2026).
+check("client acceptance recorded", /Confirmed by builder\s+Approved\s+Approved/.test(variationText));
 check("Builder Review Required entries", (variationText.match(/Builder Review Required/g) || []).length >= 1);
 check("auto-estimates labelled", /Auto-estimated . subject to builder confirmation/i.test(variationText));
-check("estimated prices shown with allowance caveat, outside totals", /inc GST \(price\)/.test(variationText) && /allowance not recorded/i.test(variationText) && /Auto-estimated prices, allowance to confirm/i.test(variationText));
+// Client-safe since 11 Nov 2026: a change whose allowance is not recorded shows no price at all - only
+// that the builder will confirm the difference - and never the item's full price.
+check("unknown-allowance changes worded client-safe, no item price", /Price difference to be confirmed/.test(variationText) && /Your builder will confirm the difference/.test(variationText) && !/inc GST \(price\)/.test(variationText));
 check("estimates labelled subject to approval", /(Estimate|Auto-estimated) . subject to builder (approval|confirmation)/i.test(variationText));
 check("no unresolved price shown as $0", !/[+-]?\$0\.00 inc GST/.test(variationText));
 check("summary not presented as final", /DRAFT\s*.\s*NOT A FINAL VARIATION/i.test(variationText) && !/CONFIRMED VARIATIONS/i.test(variationText.replace(/Confirmed by builder/gi, "")));

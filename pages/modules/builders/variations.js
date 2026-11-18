@@ -7,6 +7,8 @@ import FlooringProjectSchedule from "../../../components/client-selections/Floor
 import { getEffectiveApplianceCatalogue, getEffectiveProductCatalogue } from "../../../lib/product-library/catalogueService.js";
 import { calculateEstimateBuilderWorkbook } from "../../../lib/construction-estimation/estimateBuilderWorkbookCalculations";
 import { standardInclusionUpgradeProposals, priceStandardInclusionUpgrade, standardInclusionUpgradeDraftId } from "../../../lib/standard-inclusions/upgradeVariation.mjs";
+import { CLIENT_APPROVED_SOURCE } from "../../../lib/builders/contractLock.js";
+import { openPrintableDocument, variationDocumentHtml, variationInvoiceHtml } from "../../../lib/builders/variationDocuments.js";
 
 const GST_RATE = 10;
 
@@ -105,6 +107,30 @@ export default function BuilderVariationsPage({ workbook = null, embedded = fals
       setLineItems([{ ...emptyLineItem, description: `${priced.includedProductName} replaced by ${priced.productName}${priced.locationId ? ` (${priced.locationId})` : ""}`, quantity: priced.quantity, unit: priced.unit, unitCost: priced.unitDifferenceExGst, sellPrice: priced.subtotal / priced.quantity, marginPercentage: priced.pricingRules.marginPercent, sourceQuoteRowId: priced.sourceQuoteRowId, gstTotal: priced.gst }]);
       setSuccess("Upgrade priced using the job's quotation rules. Save it as a draft for builder review; the quotation is unchanged.");
     } catch (reviewError) { setError(reviewError.message); }
+  }
+
+  // Client-approved selection variations: builder sign-off, then the tax invoice (server-checked roles).
+  async function transitionSelectionVariation(variation, action) {
+    let invoiceNumber = "";
+    let reason = "";
+    if (action === "reject") {
+      reason = typeof window !== "undefined" ? (window.prompt("Reason for rejecting this variation (the client sees this in Client Selections)", "") || "").trim() : "";
+      if (!reason) return;
+    }
+    if (action === "invoice") {
+      invoiceNumber = typeof window !== "undefined" ? (window.prompt("Invoice number for this variation", `INV-${variation.variation_number}`) || "").trim() : "";
+      if (!invoiceNumber) return;
+    }
+    setSaving(true); setError(''); setSuccess('');
+    try {
+      const response = await apiFetch('/api/builders/selection-variation', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ projectId: selectedProjectId, variationId: variation.id, action, invoiceNumber, reason, expectedUpdatedAt: variation.updated_at }) });
+      const body = await response.json();
+      if (!response.ok) throw Error(body.error || 'The variation could not be updated.');
+      setVariations(current => current.map(item => item.id === variation.id ? body.variation : item));
+      if (action === 'invoice') openPrintableDocument(variationInvoiceHtml(body.variation, { project: selectedProject || {} }));
+      setSuccess(action === 'reject' ? 'Rejected. The client sees your reason in Client Selections and can revise or resubmit.' : action === 'sign_off' ? 'Signed off. Open the variation document to issue it, then prepare the invoice.' : `Invoice ${invoiceNumber} prepared. Payment is outstanding.`);
+    } catch (actionError) { setError(actionError.message); }
+    finally { setSaving(false); }
   }
 
   async function transitionUpgrade(variation, action) {
@@ -764,13 +790,27 @@ export default function BuilderVariationsPage({ workbook = null, embedded = fals
                       <span style={{ ...styles.statusPill, ...statusStyle(uiStatus) }}>{titleCase(uiStatus)}</span>
                     </div>
                     <p style={styles.reasonText}>{variation.reason || variation.notes || "No reason recorded."}</p>
+                    {variation.metadata?.source === CLIENT_APPROVED_SOURCE ? <div data-testid="selection-variation-actions">
+                      <p>{variation.metadata.clientDescription}</p>
+                      <p>Client approved{variation.approved_by_name ? ` by ${variation.approved_by_name}` : ""}{variation.metadata.clientApprovedAt ? ` on ${new Date(variation.metadata.clientApprovedAt).toLocaleDateString("en-AU")}` : ""}. Builder sign-off: {variation.metadata.builderReviewStatus === 'approved' ? 'signed off' : 'pending'}. Payment: {String(variation.metadata.paymentStatus || 'not requested').replace(/_/g, ' ')}.{variation.metadata.invoice?.number ? ` Invoice ${variation.metadata.invoice.number}.` : ""}</p>
+                      {variation.metadata.approvalFigures ? <p>Approved before: {money(variation.metadata.approvalFigures.previousTotalIncGst, selectedProject?.currency)} · This variation: {money(variation.metadata.approvalFigures.currentIncGst, selectedProject?.currency)} · New total: {money(variation.metadata.approvalFigures.newTotalIncGst, selectedProject?.currency)}</p> : null}
+                      {Number.isFinite(Number(variation.metadata.costDifferenceExGst)) ? <p>Builder only: cost difference {money(variation.metadata.costDifferenceExGst, selectedProject?.currency)} ex GST, margin {money(variation.margin_total, selectedProject?.currency)}.</p> : null}
+                      {variation.metadata.builderRejection?.reason ? <p role="status" data-testid="selection-variation-rejection">Rejected by builder: {variation.metadata.builderRejection.reason}. Waiting for the client to revise or resubmit.</p> : null}
+                      {(variation.metadata.rejectionHistory || []).length ? <p data-testid="selection-variation-rejection-history">Earlier rejections: {variation.metadata.rejectionHistory.map((entry) => entry.reason).join("; ")}{variation.metadata.resubmittedAt ? ` · resubmitted ${new Date(variation.metadata.resubmittedAt).toLocaleDateString("en-AU")}` : ""}</p> : null}
+                      {variation.status === 'submitted' && variation.client_status === 'approved' ? <button type="button" style={styles.smallButtonPrimary} disabled={saving} onClick={() => transitionSelectionVariation(variation, 'sign_off')}>Builder sign-off</button> : null}
+                      {variation.status === 'submitted' && variation.client_status === 'approved' ? <button type="button" style={styles.smallButton} disabled={saving} onClick={() => transitionSelectionVariation(variation, 'reject')} data-testid="selection-variation-reject">Reject…</button> : null}
+                      <button type="button" style={styles.smallButton} disabled={saving} onClick={() => openPrintableDocument(variationDocumentHtml(variation, { project: selectedProject || {} }))}>Open variation document</button>
+                      {variation.status === 'approved' && variation.metadata.builderReviewStatus === 'approved' ? <button type="button" style={styles.smallButtonPrimary} disabled={saving} onClick={() => transitionSelectionVariation(variation, 'invoice')}>Prepare invoice</button> : null}
+                      {variation.status === 'invoiced' && variation.metadata.invoice?.number ? <button type="button" style={styles.smallButton} onClick={() => openPrintableDocument(variationInvoiceHtml(variation, { project: selectedProject || {} }))}>Open invoice</button> : null}
+                    </div> : null}
+                    {variation.metadata?.source === 'client_selection_post_contract' && variations.some(item => item.metadata?.source === CLIENT_APPROVED_SOURCE && !['void', 'rejected'].includes(item.status)) ? <p role="status" style={styles.notice}>This draft comes from a quotation change. The client has also approved selection variations on this job: if this draft repeats one of them, void it so the client is not charged twice.</p> : null}
                     {variation.metadata?.source === 'standard_inclusion_upgrade' ? <div>
                       <p>Builder review: {variation.metadata.builderReviewStatus || 'pending'}. Client: {variation.client_status || 'not issued'}. Payment: {variation.metadata.paymentStatus || 'not requested'}.</p>
                       {variation.status === 'draft' && variation.metadata.builderReviewStatus !== 'approved' ? <button type="button" style={styles.smallButtonPrimary} disabled={saving} onClick={() => transitionUpgrade(variation, 'approve')}>Approve builder review</button> : null}
                       {['draft', 'submitted'].includes(variation.status) && variation.metadata.builderReviewStatus === 'approved' ? <button type="button" style={styles.smallButtonPrimary} disabled={saving} onClick={() => transitionUpgrade(variation, 'issue')}>{variation.status === 'submitted' ? 'Retry client issue' : 'Issue to client'}</button> : null}
                     </div> : null}
                     <div style={styles.cardTotals}>
-                      <MiniTotal label="Cost" value={money(items.reduce((sum, item) => sum + numberValue(item.cost_total), 0), selectedProject?.currency)} />
+                      <MiniTotal label="Cost" value={money(variation.metadata?.source === CLIENT_APPROVED_SOURCE ? numberValue(variation.metadata.costDifferenceExGst) : items.reduce((sum, item) => sum + numberValue(item.cost_total), 0), selectedProject?.currency)} />
                       <MiniTotal label="Sell ex GST" value={money(variation.subtotal, selectedProject?.currency)} />
                       <MiniTotal label="Total" value={money(variation.total, selectedProject?.currency)} />
                     </div>
@@ -930,6 +970,7 @@ const styles = {
   lineHeader: { marginTop: 18, display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" },
   sectionTitle: { margin: 0, fontSize: 16, fontWeight: 900 },
   smallButtonPrimary: { background: "#0f172a", border: "1px solid #0f172a", color: "#ffffff", borderRadius: 8, padding: "8px 10px", fontWeight: 800, cursor: "pointer" },
+  smallButton: { background: "#ffffff", border: "1px solid #0f172a", color: "#0f172a", borderRadius: 8, padding: "8px 10px", fontWeight: 800, cursor: "pointer", marginLeft: 8 },
   lineItems: { display: "flex", flexDirection: "column", gap: 12, marginTop: 12 },
   lineItem: { border: "1px solid #e2e8f0", borderRadius: 10, background: "#f8fafc", padding: 12, display: "grid", gridTemplateColumns: "repeat(4, minmax(120px, 1fr))", gap: 10 },
   lineTotals: { gridColumn: "1 / span 2", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 },

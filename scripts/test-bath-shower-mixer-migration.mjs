@@ -74,3 +74,34 @@ console.log(`Migrated: ${vividLine.productName} qty ${vividLine.quantity} -> ${v
 console.log(`Totals: selected $${merged.guidedSelection.selectedTotal} before and after; category qty ${merged.guidedSelection.quantity}`);
 console.log(`Quotation: ${sectionRows[0].item || sectionRows[0].productName} qty ${sectionRows[0].quantity ?? sectionRows[0].qty}${procurement.length ? `; procurement qty ${procurement.map((i) => i.qty).join(",")}` : ""}`);
 console.log("\nBath & Shower Mixers migration tests passed.");
+
+// Regression (found on the real job 2026-11-12): the project-room clean-up turns "Ensuite Shower"
+// into room "Ensuite" + fixture "Shower". On the next load this migration must treat that as already
+// labelled; it used to re-label every such shower mixer "Ensuite Bath" and drop the fixture.
+{
+  const { canonicaliseSelectionAllocations } = await import("../lib/builders/selectionAllocationRooms.js");
+  const model = { rooms: ["Main Bathroom", "Ensuite", "B2 Ensuite"].map((name) => ({ id: name, key: name.toLowerCase().replace(/\s+/g, "-"), name })) };
+  const showers = [line("PLB-ONOVO", "O.Novo Style Shower/Bath Mixer", 199, [
+    { location: "Ensuite Shower", quantity: 1 }, { location: "Main Bathroom Shower", quantity: 2 }, { location: "B2 Ensuite Shower", quantity: 1 },
+  ]), line("PLB-VIVID-BATH", "Vivid Shower/Bath Mixer", 229, [{ location: "Main Bathroom Bath", quantity: 1 }])];
+  const saved = { rooms: [{ name: "Plumbing Fixtures", rows: [row(bathRequirement, showers, "Bath & Shower Mixer")] }] };
+  const fixtures = (rooms) => plumbingLinesFromSelection(rooms[0].rows[0].guidedSelection)
+    .flatMap((l) => l.allocations.map((a) => `${l.productId}|${a.location}|${a.fixture || ""}|${a.quantity}`)).sort();
+  // Load 1: clean-up -> saved form. Loads 2 and 3: migration, then clean-up again (the app's order).
+  let book = canonicaliseSelectionAllocations(saved, model).book;
+  const afterFirstLoad = fixtures(book.rooms);
+  assert.deepEqual(afterFirstLoad, [
+    "PLB-ONOVO|B2 Ensuite|Shower|1", "PLB-ONOVO|Ensuite|Shower|1", "PLB-ONOVO|Main Bathroom|Shower|2", "PLB-VIVID-BATH|Main Bathroom|Bath|1",
+  ]);
+  for (let reload = 0; reload < 2; reload += 1) {
+    const migrated = migrateBathShowerMixerRooms(book.rooms);
+    assert.equal(migrated, book.rooms, "a cleaned-up book (room + fixture) needs no migration");
+    book = canonicaliseSelectionAllocations({ ...book, rooms: migrated }, model).book;
+    assert.deepEqual(fixtures(book.rooms), afterFirstLoad, `reload ${reload + 2}: shower mixers stay showers, bath stays bath`);
+  }
+  // A genuinely unlabelled room (no name suffix, no fixture) is still labelled Bath, keeping its other fields.
+  const bare = migrateBathShowerMixerRooms([{ name: "Plumbing Fixtures", rows: [row(bathRequirement, [line("PLB-X", "X Mixer", 100, [{ location: "Laundry", quantity: 1, levelId: "ground" }])], "Bath & Shower Mixer")] }]);
+  const bareAllocation = plumbingLinesFromSelection(bare[0].rows[0].guidedSelection)[0].allocations[0];
+  assert.equal(bareAllocation.location, "Laundry Bath");
+  console.log("Room clean-up + reload keeps shower mixers as Shower (3 load cycles); bare rooms still labelled Bath");
+}

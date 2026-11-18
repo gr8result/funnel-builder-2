@@ -69,6 +69,8 @@ const routes = {
   "project-inclusions": "../pages/api/builders/project-inclusions.js",
   "convert-to-live-project": "../pages/api/builders/convert-to-live-project.js",
   "standard-inclusions/upgrade-variation": "../pages/api/standard-inclusions/upgrade-variation.js",
+  // Builder sign-off / invoicing of client-approved selection variations (2026-11-11).
+  "builders/selection-variation": "../pages/api/builders/selection-variation.js",
 };
 // What a client can forge from the browser: the screen switch in storage, headers, body and query fields.
 const forgeries = [

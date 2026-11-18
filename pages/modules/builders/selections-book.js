@@ -5,11 +5,14 @@ import { canonicaliseSelectionAllocations } from '../../../lib/builders/selectio
 import LazySchedulePage from '../../../components/client-selections/LazySchedulePage.jsx';
 import { createSelectionsCover, renderSelectionsCover, selectionsCoverCss } from "../../../lib/builders/selectionsCover.js";
 import { buildSelectionsSchedule, scheduleRowNeedsProductImage, scheduleRowRequiresProductImage } from "../../../lib/builders/selectionsScheduleDocument.js";
-import { MULTI_PRODUCT_REQUIREMENTS, selectionAttention, selectionDecisionSummary } from "../../../lib/builders/selectionAttention.js";
+import { MULTI_PRODUCT_REQUIREMENTS, baselineConfirmableRowIds, bookWithBaselineConfirmed, selectionAttention, selectionDecisionSummary } from "../../../lib/builders/selectionAttention.js";
 import { roomConflicts, saveLineWithDecision } from "../../../lib/builders/selectionAssignments.js";
 import SelectionAttentionPanel from "../../../components/client-selections/SelectionAttentionPanel.jsx";
+import { ClientDifference, ClientPriceContext, HideFromClient, useClientPriceView } from "../../../components/client-selections/ClientPrice.jsx";
 import VariationSummaryPanel, { readEstimatorView, writeEstimatorView } from "../../../components/client-selections/VariationSummaryPanel.jsx";
-import { builderReviewTaskId, builderReviewTasks, bookWithPricingReviews, recordBuilderPricingReview, recordClientVariationDecision, selectionPricingReviews, selectionVariationItems, variationSummary } from "../../../lib/builders/selectionVariationPricing.js";
+import { bookWithContractLock, clientApprovedVariationPayload, CLIENT_APPROVED_SOURCE, createContractLock, jobContractLock } from "../../../lib/builders/contractLock.js";
+import { persistSelectionVariationDecision } from "../../../lib/builders/selectionVariationPersistence.js";
+import { approvePriceItemsInBulk, bulkApprovablePriceItems, quotationPricingRules, variationApprovalFigures, builderReviewTaskId, builderReviewTasks, bookWithPricingReviews, recordBuilderPricingReview, recordClientVariationDecision, selectionPricingReviews, selectionVariationItems, variationPricingState, variationSummary, PRICING_STATES as VARIATION_PRICING_STATES } from "../../../lib/builders/selectionVariationPricing.js";
 import { browserTenantKey } from '../../../lib/builders/browserTenantStorage.js';
 import GarageDoorChoiceGrid from "../../../components/product-library/GarageDoorChoiceGrid";
 import GarageDoorReviewPreview from "../../../components/product-library/GarageDoorReviewPreview";
@@ -17,25 +20,29 @@ import ExteriorHardwareWizard from '../../../components/estimate-builder/Exterio
 import {matchesDoorGlassType} from '../../../lib/builders/exteriorHardwareWizard.js';
 import EntryDoorFurnitureSchedule from '../../../components/estimate-builder/EntryDoorFurnitureSchedule';
 import Router, { useRouter } from "next/router";
-import { exteriorEntryDoors, defaultManualEntryDoor, selectionsFromDoorDetails, patchEntryDoorDraft, entryDoorDetails, entryDoorBookCandidates, upsertEntryDoorSelection, entryDoorSelectionSchedules } from "../../../lib/builders/entryDoorFurnitureSelection.js";
+import { exteriorEntryDoors, defaultManualEntryDoor, selectionsFromDoorDetails, patchEntryDoorDraft, entryDoorDetails, entryDoorBookCandidates, upsertEntryDoorSelection, entryDoorSelectionSchedules, entryDoorMissingChoices, furnitureFinishAfterProductChange } from "../../../lib/builders/entryDoorFurnitureSelection.js";
 import InternalCataloguePicker from '../../../components/product-library/InternalCataloguePicker';
 import DoorProductImage from '../../../components/product-library/DoorProductImage';
 import { isDoorProduct } from '../../../lib/product-library/productPresentation.js';
 import StairSelectionWizard from '../../../components/product-library/StairSelectionWizard';
-import { stairFlightsFromJobSetup } from "../../../lib/construction-estimation/estimateBuilderWorkbookCalculations.js";
+import { calculateEstimateBuilderWorkbook, stairFlightsFromJobSetup } from "../../../lib/construction-estimation/estimateBuilderWorkbookCalculations.js";
 import { bulkheadRuns, cabinetryScheduleCatalogue, cabinetryRoomKey, cabinetryWetAreaTag, sharkfinUpgrade } from "../../../lib/construction-estimation/cabinetryRequirements.js";
-import { BulkheadRunsEditor, OpenShelvingUnitsEditor, SharkfinUpgradeDetail } from "../../../components/client-selections/CabinetScheduleExtras.jsx";
+import { OpenShelvingUnitsEditor } from "../../../components/client-selections/CabinetScheduleExtras.jsx";
+import { BULKHEAD_FINISH_OPTIONS, bulkheadFinishOption } from "../../../lib/construction-estimation/cabinetryRequirements.js";
 import {INTERNAL_SELECTION_KEYS,internalRequirementMatchesRow} from '../../../lib/product-library/internalSelection.js';
 import { rowOwnedByOtherRequirement } from "../../../lib/builders/selectionRowOwnership.js";
 import { INDICATIVE_RATE_BASIS } from "../../../lib/builders/allocatedSelectionQuotation.js";
 import InternalPaintColourSpecification from "../../../components/client-selections/InternalPaintColourSpecification.jsx";
+import BulkheadPaintColourPicker from "../../../components/client-selections/BulkheadPaintColourPicker.jsx";
 import ElectricalScheduleWorkflow from "../../../components/client-selections/ElectricalScheduleWorkflow.jsx";
 import BenchtopSelectionWorkflow from "../../../components/client-selections/BenchtopSelectionWorkflow.jsx";
 import BenchtopPriceGroupSettings from "../../../components/client-selections/BenchtopPriceGroupSettings.jsx";
 import ProjectRoomManager from "../../../components/client-selections/ProjectRoomManager.jsx";
 import { getBuilderBenchtopRangeMapping, saveBuilderBenchtopRangeMapping, supplierPriceGroups } from "../../../lib/builders/benchtopRangeMapping.js";
 import { ROOM_LOCATION_OPTIONS } from "../../../components/construction-estimation/ai-plan-takeoff/takeoffRunData.js";
-import { benchtopLocationPatch } from "../../../lib/builders/benchtopSelection.js";
+import { benchtopAreasFor, benchtopLocationPatch, clientEdgeProfileLabel } from "../../../lib/builders/benchtopSelection.js";
+import { surfaceName } from "../../../lib/builders/benchtopInheritance.js";
+import { benchtopSpecificationText } from "../../../lib/builders/benchtopFabrication.js";
 import { addProjectRoom, assignSelectionAllocationToRoom, confirmProjectRooms, keepRoomsSeparate, keepSelectionAllocationUnallocated, mergeProjectRooms, possibleDuplicateRooms, projectRoomModel, projectRoomUsage, projectRoomsConfirmed, removeDuplicateSelectionAllocation, removeProjectRoom, removeRoomRecords, removedProjectRooms, renameProjectRoom, renameRoomRecords, restoreProjectRoom, roomMergeConflicts, unlistedSelectionLocations, updateProjectRoom } from "../../../lib/builders/projectRoomModel.js";
 import { ELECTRICAL_SCHEDULE_REQUIREMENT_KEY, electricalEstimateCounts, electricalInclusionBaseline, electricalScheduleLines, electricalScheduleProgress, electricalSelectionPatch, normaliseElectricalSchedule } from "../../../lib/builders/electricalSchedule.js";
 import { choiceSwatch, colourLabel, internalPaintScheduleLines, internalPaintSchemeStatus, internalPaintSummary, normaliseInternalPaintScheme } from "../../../lib/builders/internalPaintColours.js";
@@ -43,7 +50,7 @@ import { serviceProjectRequirement, serviceQuoteRequirements, RESIDENTIAL_SERVIC
 import { STANDARD_RANGE_KEYS, standardRangeDefaults } from '../../../lib/builders/builderStandardRange.js';
 import { standardInclusionClientSelectionPatches } from '../../../lib/standard-inclusions/clientSelectionBaseline.mjs';
 import BuilderStandardRangeWorkflow from '../../../components/client-selections/BuilderStandardRangeWorkflow.jsx';
-import { plumbingSelectionPatch } from "../../../lib/builders/plumbingSelectionPatch.js";
+import { clearPlaceholderQuoteCredits, plumbingSelectionPatch } from "../../../lib/builders/plumbingSelectionPatch.js";
 import TilingRoomsWorkflow from "../../../components/client-selections/TilingRoomsWorkflow";
 import FlooringSelectionWorkflow from "../../../components/client-selections/FlooringSelectionWorkflow";
 import { carpetEstimateRates } from "../../../lib/builders/carpetSelection.js";
@@ -71,7 +78,9 @@ import { createWindowAndDoorSchedules } from "../../../components/construction-e
 import { canonicalWindowScheduleFromTakeoffJob, windowScheduleLevelSortIndex } from "../../../lib/builders/windowScheduleProjection.js";
 import { canonicalProjectUuid } from "../../../lib/builders/canonicalProjectIdentity.js";
 import Head from "next/head";
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+// A cloud-linked commercial project id (variations are stored against it).
+const CLOUD_PROJECT_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 import { ArrowLeft, ArrowUp, CheckCircle2, Upload } from "lucide-react";
 import { useWorkspace } from "../../../hooks/useWorkspace";
 import {
@@ -181,18 +190,29 @@ import {
   applyRoomColoursToTargets,
   buildCabinetrySelectionPayload,
   approveCabinetryRoom,
-  applyCabinetryBulkheadChoice,
-  cabinetryBulkheadOptions,
   cabinetryProjectRoomOptions,
   isCabinetryRoomApproved,
   isCabinetryRoomComplete,
   cabinetryLocationMissingRequirements,
+  cabinetryBuilderConfirmedItems,
+  cabinetryHandleChosen,
   cabinetryRoomProgress,
   cabinetryRoomSequence,
+  copiedIslandBenchBack,
+  removeCopiedIslandBenchBack,
   cabinetryScheduleScope,
   clearInheritedColourMarker,
   cleanIncorrectButlersPantryCopiedScheduleRows,
   copyCabinetryLocation,
+  cabinetryNotesWithoutCopyProvenance,
+  cabinetryCopiedItems,
+  resolveCabinetryCopiedItems,
+  ownBenchtopAreaLabel,
+  cabinetryKitchenFirstPending,
+  applyKitchenFinishesToRooms,
+  applyRoomFinishesToRooms,
+  roomFinishesCopyVerified,
+  kitchenFinishTargetRooms,
   defaultCabinetryDraft,
   kitchenPantryCopiedScheduleLine,
   normaliseCabinetrySelection,
@@ -962,6 +982,14 @@ const COVER_BRAND_FALLBACK = {
 };
 
 // URL parameters that describe where the client is in Client Selections.
+// Client Selections is the client's screen (18 Nov 2026 owner brief): it has no builder / client
+// switch. The builder's own cabinetry setup (quantities, island cabinets, benchtop construction,
+// builder checks, pricing review) opens only from the Quotation Builder, with ?cabinetryBuilder=1.
+// The old per-browser "estimator view" flag is ignored, so no client ever lands in builder view.
+function readSelectionsBuilderSetup() {
+  try { return typeof window !== "undefined" && new URL(window.location.href).searchParams.get("cabinetryBuilder") === "1"; } catch { return false; }
+}
+
 const SELECTION_NAVIGATION_PARAMS = ["selectionArea", "selectionCategory", "selectionRequirement", "guided", "room", "roomCategory", "roomProduct", "door", "doorStep", "mode", "returnPage", "applianceFamily", "applianceBrand", "applianceProduct", "applianceMode", "appliancePackage"];
 
 const GUIDED_AREA_CARDS = [
@@ -2495,18 +2523,146 @@ function BuilderSelectionsBookPageContent({
   // Variation pricing (selectionVariationPricing.js): every change from the standard inclusions in
   // one of three states, the builder-review queue, and the end-of-selections variation summary.
   const [estimatorView, setEstimatorView] = useState(false);
-  useEffect(() => { setEstimatorView(readEstimatorView()); }, []);
+  useEffect(() => { setEstimatorView(readSelectionsBuilderSetup()); }, []);
+  // The job's margin / GST settings as the quotation calculator applies them. Read only: the
+  // quotation is calculated, never changed. With no linked quotation, amounts carry GST only.
+  // The calculator takes ~1s on a full job, so it re-runs only when an input of those percentages
+  // changes: the summary adjustments, or the job setting rows it falls back to.
+  const pricingWorkbookRef = useRef(embeddedWorkbook);
+  pricingWorkbookRef.current = embeddedWorkbook;
+  const variationPricingKey = useMemo(() => {
+    const sections = Object.values(embeddedWorkbook?.data || {});
+    const setting = (key) => sections.map((section) => section?.rows?.[key]?.value).find((value) => value !== undefined) ?? null;
+    return JSON.stringify([Boolean(embeddedWorkbook?.quotation), embeddedWorkbook?.summaryAdjustments || null, ["overheadsPercent", "marginPercent", "profitPercent", "salesCommissionPercent"].map(setting)]);
+  }, [embeddedWorkbook]);
+  const variationPricingRules = useMemo(() => {
+    const workbook = pricingWorkbookRef.current;
+    if (!workbook?.quotation) return null;
+    try { return quotationPricingRules(calculateEstimateBuilderWorkbook(workbook).summary); } catch { return null; }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- re-run only when a pricing input changes
+  }, [variationPricingKey]);
   const selectionVariation = useMemo(() => {
     const jobId = selectedProjectId || "";
     const reviews = selectionPricingReviews(book);
     // Unpriced selections take the saved supplier price or the Product Library reference price
     // (selectionVariationPricing.js resolvers); nothing is invented.
-    const items = selectionVariationItems(book, { jobId, productLookup: scheduleProductLookup, requirementUnit: (key) => guidedRequirementByKey(key)?.unit || "" }).map((item) => {
+    const items = selectionVariationItems(book, { jobId, productLookup: scheduleProductLookup, requirementUnit: (key) => guidedRequirementByKey(key)?.unit || "", pricingRules: variationPricingRules }).map((item) => {
       const id = builderReviewTaskId(item);
-      return { ...item, __id: id, reviewUnitPrice: reviews[id]?.unitPrice, reviewIncludesGst: reviews[id]?.priceIncludesGst, reviewAllowance: reviews[id]?.allowance };
+      const pricing = variationPricingState(item, reviews[id]);
+      // __costDifferenceExGst is builder-only (shown in builder view, never in client view or PDF).
+      return { ...item, __id: id, reviewUnitPrice: reviews[id]?.unitPrice, reviewIncludesGst: reviews[id]?.priceIncludesGst, reviewAllowance: reviews[id]?.allowance, __costDifferenceExGst: pricing.costDifferenceExGst };
     });
     return { items, reviews, summary: variationSummary(items, reviews), tasks: builderReviewTasks(items, reviews) };
-  }, [book, selectedProjectId, scheduleProductLookup]);
+  }, [book, selectedProjectId, scheduleProductLookup, variationPricingRules]);
+  // Approved variations recorded in the Variations module that are not one of the rows above
+  // (e.g. a builder's own variation), so "approved so far" is the job's whole running total.
+  const [otherApprovedVariationsTotal, setOtherApprovedVariationsTotal] = useState(0);
+  // Variations the builder rejected in the Variations module, by selection row id: the client sees the
+  // reason and can revise the selection or approve again (resubmission).
+  const [builderVariationRejections, setBuilderVariationRejections] = useState({});
+  const [builderVariationsRefresh, setBuilderVariationsRefresh] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    setOtherApprovedVariationsTotal(0);
+    setBuilderVariationRejections({});
+    if (!workspaceId || !CLOUD_PROJECT_UUID.test(String(selectedProjectId || ""))) return undefined;
+    supabase.from("builder_variations").select("id, total, status, client_status, metadata").eq("workspace_id", workspaceId).eq("project_id", selectedProjectId)
+      .then(({ data, error: loadError }) => {
+        if (cancelled || loadError || !Array.isArray(data)) return;
+        const total = data.filter((variation) => variation.metadata?.source !== CLIENT_APPROVED_SOURCE && (["approved", "invoiced"].includes(variation.status) || variation.client_status === "approved"))
+          .reduce((sum, variation) => sum + (Number(variation.total) || 0), 0);
+        setOtherApprovedVariationsTotal(Math.round(total * 100) / 100);
+        setBuilderVariationRejections(Object.fromEntries(data
+          .filter((variation) => variation.metadata?.source === CLIENT_APPROVED_SOURCE && variation.status === "rejected" && variation.metadata?.selectionTaskId)
+          .map((variation) => [variation.metadata.selectionTaskId, { reason: variation.metadata.builderRejection?.reason || "", at: variation.metadata.builderRejection?.at || "", number: variation.variation_number || "" }])));
+      }, () => {});
+    return () => { cancelled = true; };
+  }, [workspaceId, selectedProjectId, builderVariationsRefresh]);
+  const clientPriceView = useMemo(() => ({ clientView: !estimatorView, rules: variationPricingRules }), [estimatorView, variationPricingRules]);
+  const variationFiguresFor = useCallback((rowId) => variationApprovalFigures(selectionVariation.summary, rowId, { otherApprovedTotalIncGst: otherApprovedVariationsTotal }), [selectionVariation.summary, otherApprovedVariationsTotal]);
+  // The client's approval. After contract, an approved change goes straight to the Variations module
+  // for the builder's sign-off (before contract the approved selection reaches the quotation through
+  // the existing reconciliation, so it is never charged twice).
+  const clientApprovalPendingRef = useRef(new Set());
+  async function recordClientApproval(item, decision) {
+    if (clientApprovalPendingRef.current.has(item.__id)) return;
+    const figures = variationFiguresFor(item.__id);
+    const loadedBookKey = loadedBookKeyRef.current;
+    clientApprovalPendingRef.current.add(item.__id);
+    try {
+      // Validate before writing; keep the checkbox unchanged if the cloud rejects the decision.
+      recordClientVariationDecision(selectionVariation.reviews, item, decision);
+      if (jobContractLock(book)) {
+        if (!workspaceId || !CLOUD_PROJECT_UUID.test(String(selectedProjectId || ""))) {
+          throw new Error("Link this job to a cloud project before recording a post-contract variation decision.");
+        }
+        const row = selectionVariation.summary.rows.find((entry) => entry.id === item.__id);
+        if (!row || !Number.isFinite(row.amountIncGst)) throw new Error("This variation needs a verified amount.");
+        const { data: sessionData } = await supabase.auth.getSession();
+        const userId = sessionData?.session?.user?.id || null;
+        const payload = clientApprovedVariationPayload(row, { workspaceId, projectId: selectedProjectId, userId, approvedAt: new Date().toISOString(), clientName: book.projectInfo?.clientName || projectContext?.client || "", costDifferenceExGst: item.__costDifferenceExGst, figures });
+        const resubmission = Boolean(builderVariationRejections[row.id]);
+        await persistSelectionVariationDecision(supabase, payload, decision);
+        setBuilderVariationsRefresh((value) => value + 1);
+        if (loadedBookKeyRef.current !== loadedBookKey) return;
+        setSuccess(decision === "accepted" ? `Variation ${payload.variation_number} ${resubmission ? "resubmitted" : "sent"} to the Variations module for builder sign-off.` : `Variation ${payload.variation_number} approval withdrawn.`);
+      }
+      if (loadedBookKeyRef.current === loadedBookKey) updateSelectionPricingReviews((reviews) => recordClientVariationDecision(reviews, item, decision));
+    } catch (sendError) {
+      if (loadedBookKeyRef.current === loadedBookKey) setError(`The variation decision could not be saved: ${sendError?.message || sendError}. Reload and retry.`);
+    } finally {
+      clientApprovalPendingRef.current.delete(item.__id);
+    }
+  }
+  // Final contract issue needs every client decision made (attention readiness) AND every variation
+  // price resolved: no Builder Review Required item and no price still waiting on its allowance.
+  const contractLockState = jobContractLock(book);
+  const unresolvedVariationPrices = selectionVariation.summary.reviewCount + (selectionVariation.summary.estimatedPriceCount || 0);
+  const canIssueContract = scheduleAttention.readiness.ready && unresolvedVariationPrices === 0;
+  // Bulk builder shortcut on the Review & Preview Readiness card. It only does what is safe in bulk:
+  //  - confirms prices that cannot add cost or come from a verified supplier price: a known price
+  //    within the allowance, or a Product Library verified supplier price (never an indicative rate or
+  //    a price above the allowance that is still unconfirmed);
+  //  - approves cabinetry rooms whose specification is complete (the same explicit approval record as
+  //    the per-room button). Rooms with missing items, and every other client decision, stay open.
+  const bulkApproval = useMemo(() => {
+    const prices = bulkApprovablePriceItems(selectionVariation.items, selectionVariation.reviews);
+    const cabinetryRow = (book.rooms || []).flatMap((room) => room.rows || []).find((row) => row.guidedSelection?.cabinetrySelection);
+    const selection = cabinetryRow ? normaliseCabinetrySelection(cabinetryRow.guidedSelection.cabinetrySelection, projectRoomModel(book, embeddedWorkbook)) : null;
+    const jobId = selection?.projectId || selectedProjectId || "";
+    const rooms = selection ? selection.locations.filter((room) => !isCabinetryRoomApproved(room, selection.schedule, jobId) && !cabinetryLocationMissingRequirements(room).length) : [];
+    const baselineRowIds = baselineConfirmableRowIds(book);
+    return { prices, rooms, selection, jobId, baselineRowIds, count: prices.length + rooms.length + baselineRowIds.length };
+  }, [selectionVariation, book, embeddedWorkbook, selectedProjectId]);
+  function runBulkApproval() {
+    const { prices, rooms, selection, jobId, baselineRowIds } = bulkApproval;
+    if (!prices.length && !rooms.length && !baselineRowIds.length) return;
+    const message = [
+      baselineRowIds.length ? `Confirm ${baselineRowIds.length} standard inclusion${baselineRowIds.length === 1 ? "" : "s"} kept as selected (no price change).` : "",
+      prices.length ? `Confirm ${prices.length} price${prices.length === 1 ? "" : "s"} that are within the allowance or are verified supplier prices.` : "",
+      rooms.length ? `Approve the complete cabinetry specification for: ${rooms.map((room) => room.location).join(", ")}.` : "",
+      "Rooms with missing items and all other client decisions stay open.",
+    ].filter(Boolean).join("\n\n");
+    if (typeof window !== "undefined" && !window.confirm(message)) return;
+    setBook((current) => {
+      let next = current;
+      let reviews = selectionPricingReviews(current);
+      try {
+        if (baselineRowIds.length) next = bookWithBaselineConfirmed(next, baselineRowIds);
+        reviews = approvePriceItemsInBulk(reviews, prices);
+        next = bookWithPricingReviews(next, reviews);
+        if (rooms.length && selection) {
+          const approved = rooms.reduce((working, room) => approveCabinetryRoom(working, room.projectRoomId || room.id, jobId), selection);
+          const cabinetryRequirement = guidedRequirementByKey("cabinetry");
+          next = guidedBookWithRequirementPatch(next, cabinetryRequirement, cabinetryRequirementPatch(cabinetryRequirement, approved));
+        }
+      } catch (bulkError) { setError(bulkError.message); return current; }
+      saveEmbeddedBookDraft(next);
+      queueSelectionAutosave(next);
+      setSuccess(`${baselineRowIds.length ? `${baselineRowIds.length} standard inclusion${baselineRowIds.length === 1 ? "" : "s"} confirmed; ` : ""}${prices.length} price${prices.length === 1 ? "" : "s"} confirmed${rooms.length ? `; ${rooms.map((room) => room.location).join(", ")} cabinetry approved` : ""}.`);
+      return next;
+    });
+  }
   function updateSelectionPricingReviews(change) {
     setBook((current) => {
       let reviews;
@@ -2682,6 +2838,18 @@ function BuilderSelectionsBookPageContent({
     }
     applyApplianceUrlState();
   }, [selectionRouterReady, selectionRoutePath]);
+  // The Quotation Builder's "Builder cabinetry setup" link (?cabinetryBuilder=1&cabinetryRoom=...)
+  // opens the cabinetry workflow directly once the book has loaded. Declared after the route effect
+  // above, which first resets the screen for this URL, so the cabinetry workflow is what stays open.
+  const builderSetupOpenedRef = useRef(false);
+  useEffect(() => {
+    if (builderSetupOpenedRef.current || typeof window === "undefined" || !selectionRouterReady) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("cabinetryBuilder") !== "1") { builderSetupOpenedRef.current = true; return; }
+    if (!guidedRequirementByKey("cabinetry")) return;
+    builderSetupOpenedRef.current = true;
+    if (guidedRequirementKey !== "cabinetry") openGuidedRequirement("cabinetry");
+  }, [selectionRouterReady, book]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -4247,7 +4415,8 @@ function BuilderSelectionsBookPageContent({
       const selection = { ...patch.guidedSelection, configurationComplete: true, status:'complete', door: option.door, quantity: option.door.quantity, entryDoorFurniture: option.entryDoorFurniture, furnitureFinish: option.furnitureFinish, furnitureImageUrl: option.furnitureImageUrl, furnitureCompatibility: option.furnitureCompatibility, glassSelection: option.glassSelection, hardwareOptions: {...option.hardwareOptions,selectedAt:now} };
       const entryDoors = upsertEntryDoorSelection(selectionsFromDoorDetails(details), selection);
       patch.guidedSelection = { ...details, ...selection, entryDoors, entryDoorDrafts:{...details.entryDoorDrafts,[option.door.id]:{...details.entryDoorDrafts?.[option.door.id],Complete:true,HardwareConfirmed:true,Step:'review'}}, ...entryDoorSelectionSchedules(entryDoors) };
-      commitGuidedRequirementPatch(requirement, patch, { autoAdvance: false, persist: true, successMessage: `Door ${option.door.doorReference} saved.`, onSaved: committed => {
+      // Returned so Review & Confirm can show Saving / Not saved instead of appearing to do nothing.
+      return commitGuidedRequirementPatch(requirement, patch, { autoAdvance: false, persist: true, successMessage: `Door ${option.door.doorReference} saved.`, onSaved: committed => {
         const remainingDoor = exteriorEntryDoors({workbook:embeddedWorkbook,details:patch.guidedSelection}).find(door=>!entryDoors.some(s=>s.door.id===door.id&&s.entryDoorFurniture&&s.configurationComplete));
         if(remainingDoor) {
           const url = new URL(window.location.href);
@@ -5436,6 +5605,10 @@ function BuilderSelectionsBookPageContent({
       setError(`${projectPreflight.projectName ? `${projectPreflight.projectName}: ` : ""}the schedule cannot be generated until these project details are added: ${projectPreflight.missing.join(", ")}.`);
       return;
     }
+    if (documentStatus === "contract" && unresolvedVariationPrices > 0) {
+      setError(`Resolve the ${unresolvedVariationPrices} variation price${unresolvedVariationPrices === 1 ? "" : "s"} in the Variation Summary (Builder Review Required or allowance to confirm) before issuing the final contract schedule.`);
+      return;
+    }
     if (documentStatus === "contract" && !scheduleAttention.readiness.ready) {
       setError("Resolve the listed client decisions, conflicts, specifications and contract approvals before issuing the final contract schedule.");
       return;
@@ -5541,6 +5714,18 @@ function BuilderSelectionsBookPageContent({
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload?.ok) throw new Error(payload?.error || payload?.details?.reason || "Could not generate the schedule PDF.");
       setScheduleDocument(payload.document || null);
+      if (documentStatus === "contract") {
+        // The issued contract schedule locks the job (contractLock.js): from now on approved selection
+        // changes become variations and never rewrite the contracted quotation.
+        const lock = createContractLock({ lockedBy: userId || "", scheduleDocumentId: payload.document?.id || "", quotationTotal: embeddedWorkbook?.summary?.finalQuoteTotal ?? null });
+        setBook((current) => {
+          const next = bookWithContractLock(current, lock);
+          if (next === current) return current;
+          saveEmbeddedBookDraft(next);
+          persistBookData(next, "in_progress", { autosave: true, successMessage: "Contract locked." });
+          return next;
+        });
+      }
       setSuccess(`${documentStatus === "contract" ? "Final contract schedule issued" : documentStatus === "for_approval" ? "Approval schedule generated" : "Draft schedule generated"}: ${payload.document?.fileName || payload.document?.file_name || "PDF"}`);
     } catch (generationError) {
       setError(generationError?.message || "Could not generate the schedule PDF.");
@@ -5718,7 +5903,7 @@ function BuilderSelectionsBookPageContent({
   }
 
   return (
-    <>
+    <ClientPriceContext.Provider value={clientPriceView}>
       <Head>
         <title>Selections Book | Builders Platform</title>
       </Head>
@@ -5760,6 +5945,12 @@ function BuilderSelectionsBookPageContent({
               setGuidedRequirementKey,
               embedded: Boolean(embeddedWorkbook),
               onEmbeddedBack,
+              onHomeRoute: () => {
+                const url = new URL(window.location.href);
+                for (const key of SELECTION_NAVIGATION_PARAMS) url.searchParams.delete(key);
+                url.searchParams.delete("selectionCategory");
+                safeSelectionNavigate(selectionRouterRef.current, url.href, { shallow: true, scroll: false });
+              },
             })} aria-label="Back">
               <ArrowLeft size={18} />
               <span>Back</span>
@@ -5819,11 +6010,19 @@ function BuilderSelectionsBookPageContent({
               <button type="button" aria-label="Send inclusions and selections schedule for approval" onClick={() => generateFinalSchedule("for_approval")} disabled={Boolean(scheduleGenerating)}>
                 {scheduleGenerating === "for_approval" ? "Generating..." : "Send for Approval"}
               </button>
-              <button type="button" className="primary" aria-label="Issue final contract inclusions and selections schedule" onClick={() => generateFinalSchedule("contract")} disabled={Boolean(scheduleGenerating) || !scheduleAttention.readiness.ready}>
-                {scheduleGenerating === "contract" ? "Issuing..." : "Issue Final Contract Schedule"}
+              <button type="button" className="primary" aria-label="Issue final contract inclusions and selections schedule" onClick={() => generateFinalSchedule("contract")} disabled={Boolean(scheduleGenerating) || !canIssueContract} data-testid="issue-contract-schedule">
+                {scheduleGenerating === "contract" ? "Issuing..." : contractLockState ? "Re-issue Final Contract Schedule" : "Issue Final Contract Schedule"}
               </button>
             </div>
-            <SelectionAttentionPanel attention={scheduleAttention} onAction={(action) => {
+            {contractLockState ? (
+              <p className="scheduleContractLock" data-testid="contract-lock-banner">Contract locked {new Date(contractLockState.lockedAt).toLocaleString("en-AU")}. Selection changes now create variations for builder approval and client acceptance; the contracted quotation is not changed.</p>
+            ) : !canIssueContract ? (
+              <p className="scheduleContractBlocked" data-testid="contract-issue-blockers">Final contract issue needs: {[
+                !scheduleAttention.readiness.ready ? `${scheduleAttention.readiness.blockingItems} requirement${scheduleAttention.readiness.blockingItems === 1 ? "" : "s"} in Review & Preview Readiness` : "",
+                unresolvedVariationPrices ? `${unresolvedVariationPrices} variation price${unresolvedVariationPrices === 1 ? "" : "s"} resolved in the Variation Summary` : "",
+              ].filter(Boolean).join(" and ")}.</p>
+            ) : null}
+            <SelectionAttentionPanel attention={scheduleAttention} bulkAction={{ count: bulkApproval.count, prices: bulkApproval.prices.length, rooms: bulkApproval.rooms.map((room) => room.location), onRun: runBulkApproval }} onAction={(action) => {
               if (action.kind === "rooms") setReviewingProjectRooms(true);
               else if (action.kind === "project") setCoverSettingsOpen(true);
               else if (action.rowId) {
@@ -5842,9 +6041,8 @@ function BuilderSelectionsBookPageContent({
               }
             }} />
             <VariationSummaryPanel summary={selectionVariation.summary} tasks={selectionVariation.tasks} items={selectionVariation.items} estimatorView={estimatorView}
-              onToggleEstimatorView={() => { writeEstimatorView(!estimatorView); setEstimatorView(!estimatorView); }}
-              onReview={(item, values) => updateSelectionPricingReviews((reviews) => recordBuilderPricingReview(reviews, item, { ...values, by: "builder" }))}
-              onClientDecision={(item, decision) => updateSelectionPricingReviews((reviews) => recordClientVariationDecision(reviews, item, decision))} />
+              onReview={estimatorView ? (item, values) => updateSelectionPricingReviews((reviews) => recordBuilderPricingReview(reviews, item, { ...values, by: "builder" })) : null}
+              onClientDecision={recordClientApproval} approvalFigures={variationFiguresFor} builderRejections={builderVariationRejections} />
             {scheduleDocument ? (
               <a className="scheduleDocumentLink" href={scheduleDocument.publicUrl || scheduleDocument.public_url || "#"} target="_blank" rel="noreferrer">
                 Open latest generated PDF
@@ -6162,7 +6360,7 @@ function BuilderSelectionsBookPageContent({
       </main>
 
       <style jsx>{styles}</style>
-    </>
+    </ClientPriceContext.Provider>
   );
 }
 
@@ -6542,7 +6740,7 @@ function GuidedSelectionsWorkflow({
       return <BuilderStandardRangeWorkflow key={`${projectId}:${requirement.requirementKey}`} requirement={requirement}
         products={products} selection={selections.get(requirement.requirementKey)} workbook={workbook || {}}
         projectRoomNames={projectRoomNames} projectRooms={projectRooms} onSelectProduct={onSelectProduct} onViewDetails={onViewDetails}
-        onBack={() => onOpenCategory(productCategory?.key || '')} />;
+        onSaveProgress={onSaveProgress} onBack={() => onOpenCategory(productCategory?.key || '')} />;
     }
     if (requirement.requirementKey === 'interior-paint') {
       return <InternalPaintColourSpecification key={projectId || 'paint'}
@@ -7220,6 +7418,8 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
   const [stageIndex, setStageIndex] = useState(0);
   const [customLocationName, setCustomLocationName] = useState("");
   const [copyFromLocation, setCopyFromLocation] = useState("");
+  // Room-level notice (e.g. "Kitchen approved. Now: Butler's Pantry") shown above the room's steps.
+  const [cabinetryRoomNotice, setCabinetryRoomNotice] = useState("");
   const [kitchenPantryCopyOpen, setKitchenPantryCopyOpen] = useState(false);
   const [kitchenPantryColourAreaKeys, setKitchenPantryColourAreaKeys] = useState([]);
   const [kitchenPantryOverwriteColours, setKitchenPantryOverwriteColours] = useState(false);
@@ -7251,12 +7451,26 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
   const normalisedDraft = normaliseCabinetrySelection({ ...draft, projectId }, cabinetryRoomModel);
   const summary = normalisedDraft.summary;
   const activeLocation = normalisedDraft.locations.find((location) => location.location === editingLocationName);
+  // What still blocks this room, worked out from the room as it is now (the same rule the
+  // validator uses), so an item clears from the list the moment it is chosen.
+  const liveMissingRequirements = activeLocation ? cabinetryLocationMissingRequirements(activeLocation) : [];
+  const builderConfirmedRequirements = activeLocation ? cabinetryBuilderConfirmedItems(activeLocation) : [];
+  const liveMissingKey = liveMissingRequirements.map((item) => item.key).join("|");
+  useEffect(() => {
+    // Everything that blocked the last Confirm is now resolved: drop the old error.
+    if (!liveMissingKey && cabinetryMissingRequirements.length) {
+      setCabinetryMissingRequirements([]);
+      setCabinetrySelectionMessage("");
+    }
+  }, [liveMissingKey, cabinetryMissingRequirements.length]);
   const safeActiveLocation = createSafeCabinetryActiveLocation(activeLocation, editingLocationName);
   const safeAreaSelections = safeActiveLocation.areaSelections;
   const safeDefaultColour = safeActiveLocation.defaultColour;
   const safeSupplier = safeActiveLocation.supplier || "Polytec";
   const activeIsBathroomCabinetry = isBathroomCabinetryLocation(safeActiveLocation.location);
   const activeSchedule = activeLocation ? normalisedDraft.schedule.filter((line) => line.location === activeLocation.location && (!activeIsBathroomCabinetry || wetAreaScheduleType(line))) : [];
+  // Review & Confirm lists each benchtop area with its own specification (18 Nov 2026).
+  const reviewBenchtopAreas = activeLocation ? benchtopAreasFor(activeLocation, { scheduleLines: normalisedDraft.schedule.filter((line) => line.location === activeLocation.location) }).filter((area) => area.surface) : [];
   const activeCabinetryAreaKeys = cabinetryAreaKeysForLocation(safeActiveLocation, activeSchedule);
   const activeCabinetryAreaKeySet = new Set(activeCabinetryAreaKeys);
   // What the open room contains, read from its Cabinet Schedule (there is no Scope step).
@@ -7305,7 +7519,21 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
   // benchtop lengths, panel and kick sizes. They stay on the job and in the quotation; the builder
   // switches to estimator view to edit them.
   const [cabinetryEstimatorView, setCabinetryEstimatorView] = useState(false);
-  useEffect(() => { setCabinetryEstimatorView(readEstimatorView()); }, []);
+  useEffect(() => { setCabinetryEstimatorView(readSelectionsBuilderSetup()); }, []);
+  const [applyColoursReplace, setApplyColoursReplace] = useState(false);
+  const lastCabinetryCommitRef = useRef(null);
+  // Kitchen first (17 Nov 2026 owner brief): until the Kitchen has been approved once, the client
+  // cannot open the other cabinetry rooms. The builder / estimator view is not locked.
+  const kitchenFirstPending = !cabinetryEstimatorView && cabinetryKitchenFirstPending(normalisedDraft, projectId);
+  const lockedUntilKitchen = (locationName) => kitchenFirstPending && locationName !== "Kitchen";
+  // A deep link or restored room cannot skip the Kitchen either.
+  useEffect(() => {
+    if (editingLocationName && lockedUntilKitchen(editingLocationName) && normalisedDraft.locations.some((location) => location.location === "Kitchen")) {
+      setEditingLocationName("Kitchen");
+      setStageIndex(0);
+      setCabinetryRoomNotice(`Start with the Kitchen. ${editingLocationName} opens once the Kitchen is approved.`);
+    }
+  }, [editingLocationName, kitchenFirstPending]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { setBenchtopRangeMapping(getBuilderBenchtopRangeMapping(organisationId)); }, [organisationId]);
   useEffect(() => {
     setCabinetryColourSearch("");
@@ -7373,13 +7601,14 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
     cabinetryHasSyncedFromSavedRef.current = true;
     setDraft(normalised);
     saveLatestCabinetryDraftToStorage(normalised, projectId);
-    if (commitRequirement) onSelectProduct(requirement, normalised, { stayOnScreen });
+    if (commitRequirement) lastCabinetryCommitRef.current = onSelectProduct(requirement, normalised, { stayOnScreen });
     return normalised;
   }
 
   function updateDraft(patch, persist = false) {
     setDraft((current) => {
-      const next = normaliseCabinetrySelection({ ...current, ...patch, confirmed: false });
+      const resolved = typeof patch === "function" ? patch(current) : patch;
+      const next = normaliseCabinetrySelection({ ...current, ...resolved, confirmed: false });
       if (persist) {
         saveLatestCabinetryDraftToStorage(next, projectId);
         onSelectProduct(requirement, next, { stayOnScreen: true });
@@ -7388,10 +7617,17 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
     });
   }
 
+  // patch may be a function of the room's latest state. The room list is read from the latest
+  // draft (not this render's copy), so a second pick made before the screen redraws never undoes
+  // the first.
   function updateLocation(locationName, patch, persist = false) {
-    updateDraft({
-      locations: normalisedDraft.locations.map((location) => location.location === locationName ? { ...location, ...patch, status: patch.status || "in_progress" } : location),
-    }, persist);
+    updateDraft((current) => ({
+      locations: normaliseCabinetrySelection({ ...current, projectId }, cabinetryRoomModel).locations.map((location) => {
+        if (location.location !== locationName) return location;
+        const resolved = typeof patch === "function" ? patch(location) : patch;
+        return { ...location, ...resolved, status: resolved.status || "in_progress" };
+      }),
+    }), persist);
   }
 
   // The builder's supplier price group -> quotation range mapping. Saving it re-reads the range of
@@ -7399,16 +7635,19 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
   function saveBenchtopRangeMapping(groups) {
     const mapping = saveBuilderBenchtopRangeMapping(organisationId, groups, { catalogue: activeStoneProducts });
     setBenchtopRangeMapping(mapping);
-    updateDraft({
-      locations: normalisedDraft.locations.map((location) => (Array.isArray(location.benchtopAreas) && location.benchtopSetup
-        ? { ...location, ...benchtopLocationPatch({ location, setup: location.benchtopSetup, areas: location.benchtopAreas, ranges: { mapping, classifications: normalisedDraft.benchtopClassifications } }) }
-        : location)),
-    }, true);
+    updateDraft((current) => ({
+      locations: current.locations.map((location) => {
+        if (!Array.isArray(location.benchtopAreas) || !location.benchtopSetup) return location;
+        const patch = benchtopLocationPatch({ location, setup: location.benchtopSetup, areas: location.benchtopAreas, ranges: { mapping, classifications: current.benchtopClassifications, remapGroupKeys: Object.keys(groups) } });
+        const changed = patch.benchtopAreas.some((area, index) => area.surface?.rangeKey !== location.benchtopAreas[index]?.surface?.rangeKey);
+        return changed ? { ...location, ...patch, status: "in_progress", confirmedAt: "", reviewApproval: null } : location;
+      }),
+    }), true);
   }
 
   function addLocation(locationName, projectRoomId = "") {
     const cleanName = String(locationName || "").trim();
-    if (!cleanName) return;
+    if (!cleanName || lockedUntilKitchen(cleanName)) return;
     const existing = normalisedDraft.locations.find((location) => location.location === cleanName);
     if (existing) {
       openCabinetryLocation(existing.location);
@@ -7516,7 +7755,8 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
     if (!record) return "Colour not selected.";
     if (record.finishMode === "raw_mdf_wall_paint") return cabinetryAreaColourFinishText(record, cabinetryLinkedPaintSelection("wall"));
     if (record.finishMode === "raw_mdf_ceiling_paint") return cabinetryAreaColourFinishText(record, cabinetryLinkedPaintSelection("ceiling"));
-    if (record.finishMode === "raw_mdf_custom_paint") return cabinetryAreaColourFinishText(record);
+    if (record.finishMode === "raw_mdf_custom_paint") { const paint = cabinetryAreaColourFinishText(record); return paint === "Raw MDF - custom paint colour" ? BULKHEAD_FINISH_CLIENT_LABELS.raw_mdf_custom_paint : `${BULKHEAD_FINISH_CLIENT_LABELS.raw_mdf_custom_paint}: ${paint}`; }
+    if (BULKHEAD_FINISH_CLIENT_LABELS[record.finishMode]) return BULKHEAD_FINISH_CLIENT_LABELS[record.finishMode];
     if (record.finishMode === "brushed_aluminium") return "Brushed aluminium.";
     if (record.finishMode === "stainless_steel_look") return "Stainless-steel look.";
     if (record.finishMode === "black_aluminium") return "Black aluminium.";
@@ -7582,6 +7822,14 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
       coloursAndFinishes: {
         bulkheadFinishMode: mode,
       },
+    });
+  }
+
+  function updateBulkheadCustomPaintFields(patch) {
+    const current = activeLocation?.areaSelections?.bulkheads || {};
+    updateAreaFinishRecord("bulkheads", createBulkheadFinishRecord("raw_mdf_custom_paint", { ...current, ...patch }), {
+      bulkheadFinishMode: "raw_mdf_custom_paint",
+      coloursAndFinishes: { bulkheadFinishMode: "raw_mdf_custom_paint" },
     });
   }
 
@@ -7670,6 +7918,7 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
   }
 
   function openCabinetryLocation(locationName) {
+    if (lockedUntilKitchen(locationName)) return;
     if (locationName === "Butler's Pantry") {
       setDraft((current) => cleanIncorrectButlersPantryCopiedScheduleRows(current));
     }
@@ -7933,30 +8182,34 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
       onToggle: () => (item ? (item.quantity > 0 && takeoffQuantity ? setQuantity(0) : item.quantity > 0 ? removeScheduleLine(item.componentId) : setQuantity(takeoffQuantity || 1)) : takeoffQuantity ? setQuantity(0) : setQuantity(1)),
       quantity: item ? item.quantity : takeoffQuantity || 0,
       onQuantityChange: (event) => setQuantity(event.target.value),
-      notesValue: item?.notes || "",
+      notesValue: cabinetryNotesWithoutCopyProvenance(item?.notes),
       onNotesChange: (event) => item ? updateScheduleLine(item.componentId, { notes: event.target.value }) : addScheduleLine(type.label, { ...base, quantity: takeoffQuantity || 1, handleQuantity: takeoffQuantity || 1, notes: event.target.value }),
       actions: item ? <button type="button" className="cabinetrySelectionReset" onClick={(event) => { event.preventDefault(); removeScheduleLine(item.componentId); }}>Reset</button> : null,
     };
     // Three items are not a plain count (cabinetryRequirements.js): each keeps the row and adds its own editor.
     if (/^bulkhead_/.test(type.id)) {
-      // A bulkhead is a length: runs entered in mm, quoted as their total in LM.
+      // One bulkhead selection per room: included or not, and its type (17 Nov 2026). The length is
+      // never entered in Client Selections - it comes from the approved takeoff or the builder in the
+      // Quotation Builder. Runs already measured are kept as they are and shown read-only.
       const measured = bulkheadRuns(item || {});
       const included = Boolean(item) && (item.quantity > 0 || measured.recorded);
-      const setRuns = (runs) => { const lm = bulkheadRuns({ runs }).lm; if (item) updateScheduleLine(item.componentId, { runs, quantity: lm, handleQuantity: 0 }); else addScheduleLine(type.label, { ...base, runs, quantity: lm, handleQuantity: 0 }); };
-      const runs = measured.recorded ? (item.runs || []) : included ? [{ id: "run-1", location: "", lengthMm: "" }] : [];
-      return { ...row, selected: included, quantity: null, notesValue: item ? row.notesValue : null,
-        description: measured.lm > 0 ? `${measured.lm.toFixed(2)} LM across ${measured.measured.length} run${measured.measured.length === 1 ? "" : "s"}` : included ? "Measurement required - enter the length of each run" : "Not included",
-        onToggle: () => (included ? removeScheduleLine(item.componentId) : setRuns([{ id: `run-${Date.now()}`, location: "", lengthMm: "" }])),
-        detail: included ? <BulkheadRunsEditor runs={runs} lm={measured.lm} savedCount={measured.recorded ? 0 : item.quantity} onChange={setRuns} /> : null };
+      // 18 Nov 2026: the row reads "MDF bulkhead — 300 mm" only. Lengths, measured runs and the
+      // builder measurement requirement stay in the data and reach the Quotation Builder unchanged.
+      return { ...row, name: bulkheadTypeLabel(type.id || type.label), selected: included, quantity: null, notesValue: item ? row.notesValue : null,
+        description: included ? null : "Not included",
+        onToggle: () => (included ? removeScheduleLine(item.componentId) : addScheduleLine(type.label, { ...base, runs: [], quantity: 0, handleQuantity: 0 })),
+        detail: null };
     }
     if (type.id === "handle_upgrade_sharkfin") {
       // Charged once per eligible short door / external drawer front of this room's own cabinets.
       const upgrade = sharkfinUpgrade(activeLocation, activeSchedule);
       const write = (patch) => (item ? updateScheduleLine(item.componentId, patch) : addScheduleLine(type.label, { ...base, quantity: 1, handleQuantity: 0, ...patch }));
+      // Selected / Not selected only (17 Nov 2026): no front arithmetic or manual quantity here. The
+      // builder verifies the number of fronts, including corner cupboards, in the Quotation Builder.
       return { ...row, selected: upgrade.applies, quantity: null, notesValue: item ? row.notesValue : null,
-        description: upgrade.applies ? `${upgrade.quantity} front${upgrade.quantity === 1 ? "" : "s"} - ${upgrade.manual ? "manual quantity" : "calculated from this room's doors and drawers"}` : "Not included. Choose Sharkfin in Handles, or tick to apply it to the base cabinets.",
-        onToggle: () => (upgrade.applies ? write({ sharkfinExcluded: true, quantity: 0, quantityOverride: "" }) : write({ sharkfinExcluded: false, quantity: 1 })),
-        detail: upgrade.applies ? <SharkfinUpgradeDetail upgrade={upgrade} override={item?.quantityOverride ?? ""} includeTall={item?.includeTall === true} onOverride={(value) => write({ quantityOverride: value })} onIncludeTall={(value) => write({ includeTall: value })} /> : null };
+        description: upgrade.applies ? null : "Not selected",
+        onToggle: () => (upgrade.applies ? write({ sharkfinExcluded: true, quantity: 0 }) : write({ sharkfinExcluded: false, quantity: 1 })),
+        detail: null };
     }
     if (type.id === "open_shelf") {
       // Each line is one unit configuration (a standard size or custom), so a room can hold several.
@@ -7971,54 +8224,29 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
     return row;
   }
 
-  // "Would you like bulkheads above your overhead kitchen cabinetry?" - keep standard / add / remove,
-  // never a length (applyCabinetryBulkheadChoice). The estimator measures and prices it.
-  function chooseBulkheads(choice) {
-    const current = latestDraftRef.current || normalisedDraft;
-    let next;
-    try { next = normaliseCabinetrySelection(applyCabinetryBulkheadChoice(normaliseCabinetrySelection({ ...current, projectId }, cabinetryRoomModel), activeLocation.location, choice)); }
-    catch (choiceError) { setCabinetrySelectionMessage(choiceError.message); return; }
-    setCabinetrySelectionMessage("");
-    updateDraft({ schedule: next.schedule, locations: next.locations.map((location) => location.location === activeLocation.location ? { ...location, status: "in_progress" } : location) }, true);
-    queueCabinetryQuoteSync();
-  }
-
-  function renderBulkheadQuestion() {
-    if (activeIsBathroomCabinetry) return null;
-    const bulkheads = cabinetryBulkheadOptions(activeLocation, normalisedDraft.schedule);
-    const roomLabel = String(activeLocation.location || "kitchen").toLowerCase();
-    return (
-      <section className="cabinetryScheduleGroup cabinetryBulkheadQuestion" data-testid="cabinetry-bulkhead-question" data-choice={bulkheads.choice} data-standard={bulkheads.standardIncluded ? "included" : "not-included"}>
-        <h3>Would you like bulkheads above your overhead {roomLabel} cabinetry?</h3>
-        <div className="cabinetryBulkheadBody">
-          <figure className="cabinetryBulkheadReference">
-            <img src="/images/client-selections/kitchen-bulkhead-reference.jpeg" alt="Kitchen with bulkheads: a finished enclosure from the top of the overhead cabinets to the ceiling" loading="lazy" />
-            <figcaption>A bulkhead closes the gap between the top of the overhead cabinets and the ceiling. It is not an island bench, dropped ceiling or lighting feature.</figcaption>
-          </figure>
-          <div className="cabinetryBulkheadOptions" role="radiogroup" aria-label="Bulkheads">
-            {bulkheads.options.map((option) => (
-              <button key={option.key} type="button" role="radio" aria-checked={bulkheads.choice === option.key} disabled={!option.available} className={bulkheads.choice === option.key ? "selected" : ""} onClick={() => chooseBulkheads(option.key)} data-testid={`cabinetry-bulkhead-${option.key}`}>
-                <strong>{option.label}</strong><span>{option.detail}</span>
-              </button>
-            ))}
-            {bulkheads.choice !== "standard" ? <p className="cabinetryBulkheadNote" data-testid="cabinetry-bulkhead-review">Builder Review Required: your builder will confirm the bulkhead measurements and price and send you the final variation amount for approval. You do not need to measure anything.</p> : null}
-            {cabinetryEstimatorView && bulkheads.standardIncluded ? <label className="cabinetryBulkheadPermit"><input type="checkbox" checked={bulkheads.removalPermitted} onChange={(event) => updateLocation(activeLocation.location, { bulkheadRemovalPermitted: event.target.checked }, true)} data-testid="cabinetry-bulkhead-permit-remove" /> Builder: allow the client to remove bulkheads in this room</label> : null}
-          </div>
-        </div>
-      </section>
-    );
-  }
+  // The separate "Would you like bulkheads above your overhead kitchen cabinetry?" question, with
+  // its kitchen photograph and keep / add / remove buttons, was removed on 17 Nov 2026: it duplicated
+  // the bulkhead selection in the Cabinet Schedule and the bulkhead finish in Colours & Finishes,
+  // which are now the one authoritative bulkhead selection per room. Choices already saved by it
+  // (bulkheadChoice, a clientAddedBulkhead line) are kept and still reach the quotation.
 
   // Client view of the Cabinet Schedule: what the builder has allowed for, with no quantity, width
   // or length to enter.
   function renderClientCabinetLayout() {
-    const lines = normalisedDraft.schedule.filter((line) => line.location === activeLocation.location && !/^bulkhead_/.test(line.cabinetTypeId || "") && Number(line.quantity) > 0);
+    const roomLines = normalisedDraft.schedule.filter((line) => line.location === activeLocation.location);
+    const lines = roomLines.filter((line) => !/^(bulkhead_|handle_upgrade_sharkfin)/.test(line.cabinetTypeId || "") && Number(line.quantity) > 0);
     const names = [...new Set(lines.map((line) => line.variantLabel || line.unitType || line.type).filter(Boolean))];
+    // Bulkheads are listed by type only; their length is the builder's measurement (17 Nov 2026).
+    const bulkheads = [...new Set(roomLines.filter((line) => /^bulkhead_/.test(line.cabinetTypeId || "") && (Number(line.quantity) > 0 || Array.isArray(line.runs)))
+      .map((line) => bulkheadTypeLabel(line.cabinetTypeId || line.variantLabel || line.unitType)))];
+    // Sharkfin handle upgrade: Selected / Not selected - the same row the builder sees, without arithmetic.
+    const sharkfinType = cabinetryScheduleCatalogue(activeLocation.location).flatMap((group) => group.items).find((type) => type.id === "handle_upgrade_sharkfin");
     return (
       <section className="cabinetryScheduleGroup" data-testid="cabinetry-client-layout">
         <h3>Your {activeLocation.location} cabinetry layout</h3>
-        <p className="cabinetryClientLayoutNote">Your builder has set the cabinet layout, sizes and quantities from your plans. You only choose finishes, colours, handles and benchtops.</p>
         {names.length ? <ul className="cabinetryClientLayoutList">{names.map((name) => <li key={name}>{name}</li>)}</ul> : <p className="cabinetryClientLayoutNote">The layout for this room will be confirmed by your builder.</p>}
+        {bulkheads.length ? <div className="cabinetryClientBulkheads" data-testid="cabinetry-client-bulkheads"><h4>Bulkheads</h4><ul>{bulkheads.map((name) => <li key={name}><strong>{name}</strong></li>)}</ul></div> : null}
+        {sharkfinType ? <div data-testid="cabinetry-client-sharkfin"><CabinetrySelectionList items={[cabinetCatalogueScheduleRow(sharkfinType, 0)].map((item) => ({ ...item, name: "Sharkfin handle upgrade", notesValue: null, actions: null }))} /></div> : null}
       </section>
     );
   }
@@ -8033,6 +8261,14 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
         <CabinetrySelectionList items={group.items.map((type) => cabinetCatalogueScheduleRow(type, takeoff[type.id] || 0))} />
       </section>
     ));
+  }
+
+  // "Match <cupboard>" is offered only for a different cupboard this room actually has: the floor
+  // vanity's own doors are never offered "Match floor vanity" (18 Nov 2026 - that named no colour).
+  function bathroomColourShortcuts(areaKey) {
+    const scope = Array.isArray(activeLocation?.bathroomScopeKeys) ? activeLocation.bathroomScopeKeys : [];
+    return [["match_floor_vanity", "Match floor vanity", "floorVanity", "floorMountedVanity"], ["match_wall_vanity", "Match wall vanity", "wallVanity", "wallMountedVanity"], ["match_tall_linen", "Match tall linen", "tallLinen", "tallLinenCupboard"]]
+      .filter(([, , prefix, scopeKey]) => !String(areaKey).startsWith(prefix) && scope.includes(scopeKey));
   }
 
   function toggleBathroomColourShortcut(areaKey, mode) {
@@ -8076,8 +8312,18 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
 
   function updateBathroomHandle(targetKey, patch) {
     if (!activeLocation) return;
-    const current = cabinetryPlainObject(activeLocation.bathroomHandles) ? activeLocation.bathroomHandles : {};
-    updateLocation(activeLocation.location, { bathroomHandles: { ...current, [targetKey]: { ...(current[targetKey] || {}), targetKey, ...patch } } });
+    updateLocation(activeLocation.location, (location) => {
+      const current = cabinetryPlainObject(location.bathroomHandles) ? location.bathroomHandles : {};
+      const chosen = { ...(current[targetKey] || {}), targetKey, ...patch };
+      const next = { ...current, [targetKey]: chosen };
+      // Choosing a handle fills the room's other cabinet types that have none yet (never replaces one).
+      if (patch.openingMethod) {
+        BATHROOM_HANDLE_TARGETS.forEach(([otherKey]) => {
+          if (otherKey !== targetKey && bathroomScopeHasCabinetry(location, otherKey) && !cabinetryHandleChosen(next[otherKey])) next[otherKey] = { ...chosen, targetKey: otherKey };
+        });
+      }
+      return { bathroomHandles: next };
+    }, Boolean(patch.openingMethod));
   }
 
   function applyBathroomHandleToAll(sourceKey) {
@@ -8112,10 +8358,73 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
     updateLocation(activeLocation.location, { featureOptions: next, features: next });
   }
 
+  // Items a full room copy left in this room (17 Nov 2026): listed with the room they came from, for
+  // an explicit keep or remove. Nothing is removed without this choice; removals stay in the history.
+  function renderCopiedItemsNotice() {
+    if (!activeLocation) return null;
+    const copied = cabinetryCopiedItems(normalisedDraft, activeLocation.location);
+    if (!copied.lines.length && !copied.benchtopAreas.length) return null;
+    const decide = (decision) => {
+      const next = resolveCabinetryCopiedItems(latestDraftRef.current || normalisedDraft, activeLocation.location, decision);
+      latestDraftRef.current = next;
+      setDraft(next);
+      persistCabinetry(next, { stayOnScreen: true });
+      setCabinetrySelectionMessage(decision === "remove"
+        ? `The items copied from ${copied.fromLocation} were removed from ${activeLocation.location}. ${copied.fromLocation} is unchanged; the removed items are kept in the history. ${activeLocation.location} needs approving again.`
+        : `The items copied from ${copied.fromLocation} are kept in ${activeLocation.location}.`);
+    };
+    return (
+      <div className="cabinetryRoomNotice" role="alert" data-testid="cabinetry-copied-items" style={{ borderColor: "#b45309", background: "#fffbeb", color: "#78350f", display: "grid", gap: 8 }}>
+        <strong style={{ fontSize: 18 }}>{copied.lines.length ? `${activeLocation.location} contains items copied from ${copied.fromLocation}` : `${activeLocation.location} has a benchtop named after ${copied.fromLocation}`}</strong>
+        <span style={{ fontSize: 16 }}>{copied.lines.length ? <>An earlier &quot;Copy complete specification&quot; put these {copied.fromLocation} items into {activeLocation.location}, so they may be charged in both rooms:</> : <>An earlier copy from {copied.fromLocation} renamed this room&apos;s own benchtop. {copied.fromLocation} keeps its own benchtop; nothing in {copied.fromLocation} changes.</>}</span>
+        <ul style={{ margin: 0, paddingLeft: 20, fontSize: 16 }}>
+          {copied.lines.map((line) => <li key={line.componentId}>{String(line.unitType || line.type).replace(/\s*-\s*LM$/i, "")}</li>)}
+          {copied.benchtopAreas.map((area) => <li key={area.id} data-testid="cabinetry-copied-benchtop-area">Benchtop area named &quot;{area.label}&quot; - becomes &quot;{ownBenchtopAreaLabel(activeLocation.location, area)}&quot;, keeping its surface</li>)}
+        </ul>
+        <span style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <button type="button" className="cabinetryReviewEdit" style={{ fontSize: 16 }} onClick={() => decide("remove")} data-testid="cabinetry-copied-items-remove">{copied.lines.length ? `Remove the copied ${copied.fromLocation} items` : `Rename to ${activeLocation.location}'s own benchtop`}</button>
+          <button type="button" className="cabinetryReviewEdit" style={{ fontSize: 16 }} onClick={() => decide("keep")} data-testid="cabinetry-copied-items-keep">Keep them</button>
+        </span>
+      </div>
+    );
+  }
+
+  // A Kitchen island bench back copied into this room by an earlier colour copy (16 Nov 2026).
+  function renderCopiedIslandNotice() {
+    // Builder setup only (18 Nov 2026): whether a room has an island is the builder's schedule, so the
+    // client never sees this. The Quotation Builder card raises the same room as an island review.
+    if (!cabinetryEstimatorView || !activeLocation || !copiedIslandBenchBack(activeLocation, normalisedDraft.schedule)) return null;
+    return (
+      <div className="cabinetryRoomNotice" role="alert" data-testid="cabinetry-copied-island" style={{ borderColor: "#b45309", background: "#fffbeb", color: "#78350f" }}>
+        <span>An island bench back was copied into {activeLocation.location} from the Kitchen colours, but {activeLocation.location} has no island cabinets. It also lists an island benchtop.</span>
+        <button type="button" className="cabinetryReviewEdit" style={{ fontSize: 16 }} onClick={() => { setDraft(removeCopiedIslandBenchBack(normalisedDraft, activeLocation.location)); setCabinetrySelectionMessage(`Island bench back removed from ${activeLocation.location}.`); }} data-testid="cabinetry-remove-copied-island">Remove island from {activeLocation.location}</button>
+      </div>
+    );
+  }
+
+  // Leaves the builder setup for the Quotation Builder it was opened from; the work is saved first.
+  function leaveCabinetryBuilderSetup() {
+    persistCabinetry(latestDraftRef.current || normalisedDraft, { stayOnScreen: true });
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    for (const key of ["cabinetryBuilder", "cabinetryRoom", "cabinetryStage", "selectionArea", "selectionRequirement", "selectionCategory"]) url.searchParams.delete(key);
+    url.searchParams.set("page", "quotation");
+    Router.push(`${url.pathname}${url.search}`);
+  }
+
   function copySelectionsIntoActiveRoom() {
-    if (!activeLocation || !copyFromLocation) return;
+    // The Kitchen is the master cabinetry room: it is never overwritten from another room.
+    if (!activeLocation || !copyFromLocation || activeLocation.location === "Kitchen") return;
+    // A full replacement needs an explicit yes (16 Nov 2026). The replaced specification is kept in
+    // the selection's audit history (copyCabinetryLocation), and the room needs approving again.
+    if (typeof window !== "undefined" && !window.confirm(`Replace the whole ${activeLocation.location} cabinetry specification with ${copyFromLocation}'s?
+
+This replaces the cabinet scope and schedule, colours, bulkhead and kick-panel finishes, benchtops, handles and features. The current ${activeLocation.location} specification is kept in the history, and ${activeLocation.location} will need to be approved again.
+
+To copy only finishes, use "Apply Kitchen finishes to other rooms" from the Kitchen instead.`)) return;
     const copied = copyCabinetryLocation(normalisedDraft, copyFromLocation, [activeLocation.location]);
     setDraft(copied);
+    setCabinetrySelectionMessage(`${activeLocation.location} now uses ${copyFromLocation}'s complete specification. The previous ${activeLocation.location} specification is kept in the history. Review it and approve ${activeLocation.location} again.`);
   }
 
   // Rooms are worked through in one fixed sequence: the project's configured cabinetry locations
@@ -8158,6 +8467,20 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
       : `Complete the required ${locationName} cabinetry selections before continuing.`;
   }
 
+  // Builder takes over (or hands back) items that would otherwise block approval. Stored on the
+  // room, so the approval covers them and undoing one needs a fresh approval.
+  function setBuilderConfirmItems(items, confirm) {
+    if (!activeLocation) return;
+    const keys = new Set(items.map((item) => item.key));
+    const at = new Date().toISOString();
+    updateLocation(activeLocation.location, (location) => {
+      const kept = (location.builderConfirmItems || []).filter((item) => !keys.has(item.key));
+      return { builderConfirmItems: confirm ? [...kept, ...items.map(({ key, label, stage }) => ({ key, label, stage, by: "builder", at }))] : kept };
+    }, true);
+    setCabinetryMissingRequirements([]);
+    setCabinetrySelectionMessage("");
+  }
+
   function goToMissingCabinetryRequirement(stageLabel) {
     const stageIndex = CABINETRY_WORKFLOW_STAGES.indexOf(stageLabel);
     if (stageIndex === -1) return;
@@ -8193,6 +8516,13 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
     scheduleSyncPendingRef.current = false;
     try {
       const next = approveCabinetryRoom(startingDraft, activeLocation.projectRoomId || activeLocation.id, projectId);
+      // 17 Nov 2026: success only when THIS room is approved - by its name, not just its identity
+      // (two rooms once shared an identity and the wrong one was approved while success was shown).
+      const approvedRoom = next.locations.find((location) => location.location === confirmedRoomName);
+      if (!approvedRoom || !isCabinetryRoomApproved(approvedRoom, next.schedule, projectId)) {
+        setCabinetrySelectionMessage(`${confirmedRoomName} could not be approved. Nothing was saved as approved - please try again.`);
+        return { ok: false };
+      }
       const message = `${confirmedRoomName} cabinetry approved and saved.`;
       const result = await onFinishCabinetry(next, { successMessage: message, returnToDashboard: false });
       if (result?.ok !== true) {
@@ -8202,6 +8532,24 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
       latestDraftRef.current = next;
       persistCabinetry(next, { commitRequirement: false });
       setCabinetrySelectionMessage(message);
+      // 16 Nov 2026: after approving a room, go straight to the next room that is not approved (in
+      // the room sequence, wrapping round), at its first step - no more Back clicks through the menus.
+      // When every room is approved, return to the cabinetry overview.
+      const sequence = cabinetryRoomSequence(next.locations);
+      const confirmedIndex = sequence.findIndex((location) => location.location === confirmedRoomName);
+      const ordered = [...sequence.slice(confirmedIndex + 1), ...sequence.slice(0, Math.max(0, confirmedIndex))];
+      const pendingRoom = ordered.find((location) => !isCabinetryRoomApproved(location, next.schedule, projectId));
+      if (pendingRoom) {
+        const position = sequence.findIndex((location) => location.location === pendingRoom.location) + 1;
+        setCabinetryRoomNotice(`${message} Now: ${pendingRoom.location} (room ${position} of ${sequence.length}).`);
+        goToCabinetryRoom(pendingRoom.location, 0);
+        // Kitchen approved: offer its finishes to the other rooms straight away (17 Nov 2026 brief).
+        if (confirmedRoomName === "Kitchen" && Object.values(approvedRoom.areaSelections || {}).some((record) => cabinetryAreaRecordComplete(record)) && kitchenFinishTargetRooms(next.locations).length) openApplyColoursModal("Kitchen");
+      } else {
+        setCabinetryRoomNotice(`${message} Every cabinetry room is approved.`);
+        setEditingLocationName("");
+        setStageIndex(0);
+      }
       return result;
     } catch (error) {
       console.error("[Client Selections] cabinetry approval failed", error);
@@ -8245,10 +8593,11 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
               <CabinetrySelectionList items={BATHROOM_HANDLE_OPTIONS.map((option) => ({
                 id: `${targetKey}-${option}`,
                 name: option,
-                description: option === "Other/custom" ? "Record a custom bathroom handle/opening method." : `Apply to this ${activeLocation.location} cabinet type only.`,
+                description: null,
                 selected: current.openingMethod === option,
                 onToggle: () => updateBathroomHandle(targetKey, { openingMethod: option, productName: option, priceStatus: option === "Other/custom" ? "supplier_quote_required" : "price_pending" }),
               }))} />
+              {targets.length > 1 ? <p className="clientNotice">Your first handle choice is used for the other {activeLocation.location} cabinets too. Change any of them here.</p> : null}
               <div className="cabinetryCustomFields">
                 <label><span>Product / code</span><input value={current.productCode || ""} onChange={(event) => updateBathroomHandle(targetKey, { productCode: event.target.value })} /></label>
                 <label><span>Finish</span><input value={current.selectedFinish || ""} onChange={(event) => updateBathroomHandle(targetKey, { selectedFinish: event.target.value })} /></label>
@@ -8275,11 +8624,16 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
       <section className="cabinetryReviewLocation" data-testid="bathroom-cabinetry-review-summary">
         <h3>{activeLocation.location}</h3>
         <dl>
-          {sectionItems.map(([label, types]) => <><dt key={`${label}-dt`}>{label}</dt><dd key={`${label}-dd`}>{types.map((type) => scheduleByType.get(type)).filter(Boolean).map((line) => `${line.unitType} x ${line.quantity}${line.width ? ` / ${line.width} mm` : ""}${line.notes ? ` / ${line.notes}` : ""}`).join(", ") || "Not selected"}</dd></>)}
+          {sectionItems.map(([label, types]) => <><dt key={`${label}-dt`}>{label}</dt><dd key={`${label}-dd`}>{types.map((type) => scheduleByType.get(type)).filter(Boolean).map((line) => `${line.unitType} x ${line.quantity}${line.width ? ` / ${line.width} mm` : ""}${cabinetryNotesWithoutCopyProvenance(line.notes) ? ` / ${cabinetryNotesWithoutCopyProvenance(line.notes)}` : ""}`).join(", ") || "Not selected"}</dd></>)}
           <dt>Colours/finishes</dt>
           <dd>{activeCabinetryAreaKeys.map((areaKey) => `${CABINETRY_AREA_LABELS[areaKey]}: ${cabinetryAreaColourFinishText(cabinetryAreaAssignment(areaKey), ["linenBulkhead", "bulkheads"].includes(areaKey) ? cabinetryLinkedPaintSelection("wall") : null)}`).join("; ") || "Not selected"}</dd>
           <dt>Benchtops</dt>
-          <dd>{["floorMountedVanity", "wallMountedVanity"].map((key) => bathroomBenchtopSelectionText(activeLocation.bathroomBenchtops?.[key])).filter((value) => value !== "Not selected").join("; ") || "Not selected"}</dd>
+          <dd data-testid="bathroom-review-benchtops">{["floorMountedVanity", "wallMountedVanity"].map((key) => {
+            // What the client chose (18 Nov 2026): the stone and the vanity specification from its benchtop
+            // area; the fabricator's construction ("mitred drop front") stays in the quotation.
+            const area = (activeLocation.benchtopAreas || []).find((item) => item?.id === key && item.surface);
+            return area ? [surfaceName(area.surface), benchtopSpecificationText(area, { vanityTarget: key, client: !cabinetryEstimatorView })].filter(Boolean).join(" · ") : bathroomBenchtopSelectionText(activeLocation.bathroomBenchtops?.[key], { client: !cabinetryEstimatorView });
+          }).filter((value) => value !== "Not selected").join("; ") || "Not selected"}</dd>
           <dt>Bulkhead</dt>
           <dd>{cabinetryAreaColourFinishText(cabinetryAreaAssignment("linenBulkhead"), cabinetryLinkedPaintSelection("wall"))}</dd>
           <dt>Handles</dt>
@@ -8363,13 +8717,12 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
   // style source only ever offers other bathroom-style rooms, and vice versa - nothing hardcoded
   // to a specific pair of room names.
   function offerableColourTargetRooms(sourceLocationName) {
+    // Kitchen finishes go to any of this job's other cabinetry rooms, bathrooms included (17 Nov 2026).
+    if (sourceLocationName === "Kitchen") return kitchenFinishTargetRooms(normalisedDraft.locations).map((item) => ({ location: item.location, exists: true, alreadyLinked: item.alreadyLinked }));
     const sourceIsWetArea = isBathroomCabinetryLocation(sourceLocationName);
-    const linked = new Map(applicableColourTargetRooms(normalisedDraft.locations, sourceLocationName).map((item) => [item.location, item.alreadyLinked]));
-    return CABINETRY_LOCATIONS.filter((name) => name !== sourceLocationName && name !== "Other" && isBathroomCabinetryLocation(name) === sourceIsWetArea).map((name) => ({
-      location: name,
-      exists: normalisedDraft.locations.some((item) => item.location === name),
-      alreadyLinked: linked.get(name) || false,
-    }));
+    return kitchenFinishTargetRooms(normalisedDraft.locations, sourceLocationName)
+      .filter((item) => item.location !== "Kitchen" && isBathroomCabinetryLocation(item.location) === sourceIsWetArea)
+      .map((item) => ({ location: item.location, exists: true, alreadyLinked: item.alreadyLinked }));
   }
 
   function openApplyColoursModal(sourceLocationName, { onContinue } = {}) {
@@ -8412,33 +8765,41 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
 
   function applySelectedColoursToTargets() {
     if (!applyColoursTargetKeys.length) {
-      setCabinetrySelectionMessage("No colours were applied. Tick at least one room to copy colours to.");
-      return;
+      setCabinetrySelectionMessage("No finishes were applied. Tick at least one room to copy them to.");
+      return null;
     }
-    let workingDraft = normalisedDraft;
-    const missingLocations = applyColoursTargetKeys.filter((name) => !workingDraft.locations.some((item) => item.location === name));
-    if (missingLocations.length) {
-      workingDraft = normaliseCabinetrySelection({
-        ...workingDraft,
-        locations: [...workingDraft.locations, ...missingLocations.map((name) => bareCabinetryLocation(name))],
-      });
+    const sourceName = applyColoursSource;
+    const { selection: next, appliedSummary, skippedSummary = {}, filledSummary = {} } = applyRoomFinishesToRooms(latestDraftRef.current || normalisedDraft, { sourceLocationName: sourceName, targetLocationNames: applyColoursTargetKeys, overwrite: applyColoursReplace });
+    const appliedRooms = Object.entries(appliedSummary).filter(([, items]) => items.length).map(([room]) => room);
+    const unchanged = applyColoursTargetKeys.filter((room) => !appliedRooms.includes(room));
+    const keptText = unchanged.length ? `${unchanged.map((room) => (filledSummary[room]?.length ? `${room} already has its own ${filledSummary[room].join(", ").toLowerCase()}` : `${room} has nothing ${sourceName} can fill`)).join("; ")}.${unchanged.some((room) => filledSummary[room]?.length) && !applyColoursReplace ? ` To use ${sourceName}'s instead, tick "Replace the finishes these rooms already have" and apply again.` : ""}` : "";
+    if (!appliedRooms.length) {
+      // Nothing changed, so nothing is saved and nothing is reported as applied.
+      setCabinetrySelectionMessage(`No finishes were applied. ${keptText}`.trim());
+      return null;
     }
-    const { selection: next, appliedSummary } = applyRoomColoursToTargets(workingDraft, {
-      sourceLocationName: applyColoursSource,
-      targetLocationNames: applyColoursTargetKeys,
-      overwrite: false,
-    });
-    setDraft(next);
-    const appliedRooms = Object.entries(appliedSummary).filter(([, keys]) => keys.length).map(([room]) => room);
-    setCabinetrySelectionMessage(appliedRooms.length
-      ? `${applyColoursSource} colours applied to ${appliedRooms.join(", ")}.`
-      : "No colours were changed - the selected rooms already have their own colours for every matching area.");
-    return next;
+    const saved = persistCabinetry(next, { stayOnScreen: true });
+    const verified = roomFinishesCopyVerified(saved, { sourceLocationName: sourceName, appliedSummary });
+    const failed = appliedRooms.filter((room) => !verified[room]);
+    const done = appliedRooms.filter((room) => verified[room]);
+    const skippedText = Object.keys(skippedSummary).length ? `Not copied where the room does not have that item: ${Object.entries(skippedSummary).map(([room, items]) => `${room} - ${items.join(", ")}`).join("; ")}.` : "";
+    const report = (savedOk) => [
+      done.length ? `${sourceName} finishes ${savedOk ? "applied and saved" : "applied but NOT saved"} for ${done.map((room) => `${room} (${appliedSummary[room].join(", ")})`).join("; ")}.` : "",
+      failed.length ? `${failed.join(", ")}: the copied finishes could not be confirmed in the saved selection. Check ${failed.length > 1 ? "these rooms" : "this room"} before approving.` : "",
+      keptText, skippedText,
+      done.length ? "Cabinets, vanity layout, quantities and benchtop sizes were not changed." : "",
+    ].filter(Boolean).join(" ");
+    setCabinetrySelectionMessage(`Saving the ${sourceName} finishes...`);
+    Promise.resolve(lastCabinetryCommitRef.current)
+      .then(() => setCabinetrySelectionMessage(report(true)))
+      .catch(() => setCabinetrySelectionMessage(report(false)));
+    return saved;
   }
 
   function closeApplyColoursModal(applyFirst) {
     const result = applyFirst ? applySelectedColoursToTargets() : null;
     setApplyColoursModalOpen(false);
+    setApplyColoursReplace(false);
     const onContinue = applyColoursOnContinue;
     setApplyColoursOnContinue(null);
     if (onContinue) onContinue(result);
@@ -8452,21 +8813,39 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
         <section className="cabinetrySelectionComposer cabinetrySelectionModal">
           <button type="button" className="cabinetryInspectClose" aria-label="Close" onClick={() => closeApplyColoursModal(false)}>Cancel</button>
           <div>
-            <h3>{applyColoursSource} Complete</h3>
-            <p>Would you like to use these cabinetry colours in other rooms?</p>
-            <strong>Apply {applyColoursSource} Colours To</strong>
+            {applyColoursSource === "Kitchen" ? <>
+              <h3>Apply Kitchen finishes to other rooms</h3>
+              <p>Choose which rooms use the Kitchen colours, door material, handles, benchtop surface and bulkhead / kick-panel finish. Only areas a room already has, and has not chosen itself, are filled. Cabinet layouts, quantities and measurements are not copied, and each room can be changed afterwards without changing the Kitchen.</p>
+              <strong>Apply Kitchen finishes to</strong>
+            </> : <>
+              <h3>Apply {applyColoursSource} finishes to other rooms</h3>
+              <p>Use the {applyColoursSource} colours, handles and benchtop stone in other rooms. Each room keeps its own cabinets, vanity layout and sizes.</p>
+              <strong>Apply {applyColoursSource} finishes to</strong>
+            </>}
             {targets.length ? (
               <CabinetrySelectionList items={targets.map((target) => ({
                 id: target.location,
                 name: target.location,
-                description: target.alreadyLinked ? `Currently using ${applyColoursSource} colours` : target.exists ? "Not currently linked/copied" : "Not yet added to this project",
+                description: target.alreadyLinked ? `Currently using ${applyColoursSource} ${applyColoursSource === "Kitchen" ? "finishes" : "colours"}` : target.exists ? "Not currently linked/copied" : "Not yet added to this project",
                 selected: applyColoursTargetKeys.includes(target.location),
                 onToggle: () => toggleApplyColoursTarget(target.location),
               }))} />
             ) : <p className="cabinetrySelectionMessage" role="status">No other applicable rooms for {applyColoursSource}.</p>}
+            {(() => {
+              if (!applyColoursTargetKeys.length) return null;
+              const preview = applyRoomFinishesToRooms(normalisedDraft, { sourceLocationName: applyColoursSource, targetLocationNames: applyColoursTargetKeys });
+              const filled = Object.entries(preview.filledSummary || {}).filter(([, items]) => items.length);
+              if (!filled.length) return null;
+              return (
+                <label className="cabinetryReplaceFinishes" data-testid="cabinetry-apply-replace">
+                  <input type="checkbox" checked={applyColoursReplace} onChange={(event) => setApplyColoursReplace(event.target.checked)} />
+                  <span><strong>Replace the finishes these rooms already have</strong>{filled.map(([room, items]) => <span key={room} className="cabinetryReplaceRoom">{room}: {items.join(", ")}</span>)}</span>
+                </label>
+              );
+            })()}
             <div className="cabinetryColourActions">
               <button type="button" onClick={() => closeApplyColoursModal(false)}>{applyColoursOnContinue ? "Skip" : "Close"}</button>
-              <button type="button" className="primary" onClick={() => closeApplyColoursModal(true)} disabled={!targets.length}>Apply Selected Colours{applyColoursOnContinue ? " and Continue" : ""}</button>
+              <button type="button" className="primary" onClick={() => closeApplyColoursModal(true)} disabled={!targets.length}>{`Apply ${applyColoursSource} finishes`}{applyColoursOnContinue ? " and Continue" : ""}</button>
             </div>
           </div>
         </section>
@@ -8569,16 +8948,18 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
             <GuidedMiniTotal label="Allowance" value={money(summary.allowance)} />
           </div>
         </div>
+        {kitchenFirstPending ? <p className="clientNotice" role="status" data-testid="cabinetry-kitchen-first" style={{ fontSize: 18 }}>Start with the Kitchen. It is the master cabinetry room: once it is approved you can apply its finishes to the other rooms, and each room can still be changed on its own.</p> : null}
         <div className="cabinetryRoomGrid" data-testid="cabinetry-room-landing">
           {roomOptions.map(({ name: roomName, id: projectRoomId }) => {
             const room = includedByName.get(roomName);
             const approved = room && isCabinetryRoomApproved(room, normalisedDraft.schedule, projectId);
             const status = room ? isCabinetryRoomComplete(room) ? "complete" : "in_progress" : "not_started";
+            const locked = lockedUntilKitchen(roomName);
             return (
-            <button key={projectRoomId || roomName} type="button" className={`cabinetryRoomCard ${status}`} data-testid={`cabinetry-room-${slug(roomName)}`} data-room-id={projectRoomId || room?.id || ""} data-approved={Boolean(approved)} onClick={() => room ? openCabinetryLocation(room.location) : addLocation(roomName, projectRoomId)}>
+            <button key={projectRoomId || roomName} type="button" className={`cabinetryRoomCard ${status}`} data-testid={`cabinetry-room-${slug(roomName)}`} data-room-id={projectRoomId || room?.id || ""} data-approved={Boolean(approved)} data-locked={locked} disabled={locked} style={locked ? { opacity: 0.6, cursor: "not-allowed" } : undefined} onClick={() => room ? openCabinetryLocation(room.location) : addLocation(roomName, projectRoomId)}>
                 <strong>{roomName}</strong>
-                <span>{approved ? "Approved" : status === "complete" ? "Specification complete - approval required" : status === "in_progress" ? "Specification in progress" : "Not added"}</span>
-                <em>{status === "complete" ? "Review" : status === "in_progress" ? "Continue" : "Add Cabinetry"}</em>
+                <span>{locked ? "Opens after the Kitchen is approved" : approved ? "Approved" : status === "complete" ? "Specification complete - approval required" : status === "in_progress" ? "Specification in progress" : "Not added"}</span>
+                <em>{locked ? "Kitchen first" : approved ? "Edit selections" : status === "complete" ? "Review" : status === "in_progress" ? "Continue" : "Add Cabinetry"}</em>
               </button>
             );
           })}
@@ -8606,6 +8987,28 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
         </div>
         <button type="button" onClick={handleCabinetryBack}>Back</button>
       </div>
+      {/* Room navigation (16 Nov 2026): every room one click away, with its status; Back to Overview. */}
+      <nav className="cabinetryRoomNav" aria-label="Cabinetry rooms" data-testid="cabinetry-room-nav">
+        <button type="button" className="cabinetryRoomNavOverview" onClick={() => { persistCabinetry(latestDraftRef.current || normalisedDraft, { commitRequirement: false }); setCabinetryRoomNotice(""); setEditingLocationName(""); setStageIndex(0); }} data-testid="cabinetry-back-to-overview">&larr; Cabinetry Overview</button>
+        <ol>
+          {cabinetryRoomSequence(normalisedDraft.locations).map((location, index) => {
+            const approved = isCabinetryRoomApproved(location, normalisedDraft.schedule, projectId);
+            const status = approved ? "approved" : isCabinetryRoomComplete(location) ? "complete" : "in_progress";
+            const current = location.location === activeLocation.location;
+            const locked = !current && lockedUntilKitchen(location.location);
+            return (
+              <li key={location.projectRoomId || location.id || location.location}>
+                <button type="button" className={`cabinetryRoomNavItem ${status}${current ? " current" : ""}`} aria-current={current ? "step" : undefined} disabled={locked} data-locked={locked} style={locked ? { opacity: 0.55, cursor: "not-allowed" } : undefined} onClick={() => { if (!current && !locked) { setCabinetryRoomNotice(""); goToCabinetryRoom(location.location, 0); } }} data-testid={`cabinetry-room-nav-${slug(location.location)}`} data-status={status}>
+                  <span className="cabinetryRoomNavIndex">{index + 1}</span>
+                  <span>{location.location}</span>
+                  <small>{locked ? "After Kitchen" : approved ? "\u2713 Approved" : status === "complete" ? "Ready to approve" : "In progress"}</small>
+                </button>
+              </li>
+            );
+          })}
+        </ol>
+      </nav>
+      {cabinetryRoomNotice ? <p className="cabinetryRoomNotice" role="status" data-testid="cabinetry-room-notice">{cabinetryRoomNotice}<button type="button" onClick={() => setCabinetryRoomNotice("")} aria-label="Dismiss">&times;</button></p> : null}
       {cabinetryNavigationActions("top")}
       <div className="guidedProductLayout cabinetryLayout">
         <aside className="guidedProgressMenu cabinetryStepMenu" data-testid="cabinetry-progress-menu">
@@ -8618,20 +9021,21 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
           ))}
         </aside>
         <main className="guidedProductPanel cabinetryPanel" ref={cabinetryPanelRef}>
-          <div className="cabinetryViewToggle" data-testid="cabinetry-view-toggle" data-view={cabinetryEstimatorView ? "estimator" : "client"}>
-            <span>{cabinetryEstimatorView ? "Builder / estimator view: cabinet quantities and measurements can be edited." : "Choose your finishes, colours, handles and benchtops. Your builder looks after all measurements and quantities."}</span>
-            <button type="button" onClick={() => { writeEstimatorView(!cabinetryEstimatorView); setCabinetryEstimatorView(!cabinetryEstimatorView); }} data-testid="cabinetry-view-toggle-button">{cabinetryEstimatorView ? "Switch to client view" : "Builder: edit quantities"}</button>
-          </div>
+          {cabinetryEstimatorView ? <div className="cabinetryViewToggle" data-testid="cabinetry-builder-setup" data-view="estimator">
+            <span>Builder cabinetry setup: cabinet quantities, island cabinets, benchtop construction and builder checks. The client never sees this screen.</span>
+            <button type="button" onClick={leaveCabinetryBuilderSetup} data-testid="cabinetry-builder-setup-close">Back to Quotation Builder</button>
+          </div> : null}
+          <header className="cabinetryStageHeading" data-testid="cabinetry-stage-heading"><span>{activeLocation.location}</span><h2>{CABINETRY_WORKFLOW_STAGES[stageIndex]}</h2></header>
           {stageIndex === 0 ? (
             <div className="cabinetryStage" data-testid="cabinetry-builder-schedule">
+              {renderCopiedItemsNotice()}
+              {renderCopiedIslandNotice()}
               {cabinetryEstimatorView ? <>
                 <div className="clientNotice">This schedule defines {activeLocation.location} cabinetry only. Appliance cabinets are openings or panels, not appliance product selections.</div>
                 {renderRoomCabinetSchedule()}
-                {renderBulkheadQuestion()}
                 <div className="cabinetryInlineEditor"><button type="button" onClick={() => removeLocation(activeLocation.location)}>Remove this room from Cabinetry</button></div>
               </> : <>
                 {renderClientCabinetLayout()}
-                {renderBulkheadQuestion()}
               </>}
             </div>
           ) : null}
@@ -8679,10 +9083,10 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
           ) : null}
           {stageIndex === 2 ? (
             <div className="cabinetryStage" data-testid="cabinetry-colour-selector">
-              <div className="cabinetryStageContext"><strong>{activeLocation.doorMaterialGroup}</strong><span>Supplier, product range, colour, finish, swatch and price status.</span></div>
-              {locationHasColourSelections(activeLocation.location) && offerableColourTargetRooms(activeLocation.location).length ? <button type="button" className="cabinetryCopyPantryButton" onClick={() => openApplyColoursModal(activeLocation.location)}>Apply {activeLocation.location} Colours to Other Rooms</button> : null}
+              <div className="cabinetryStageContext"><strong>{activeLocation.doorMaterialGroup}</strong><span>Choose a colour for each cabinetry area.</span></div>
+              {locationHasColourSelections(activeLocation.location) && offerableColourTargetRooms(activeLocation.location).length ? <button type="button" className="cabinetryCopyPantryButton" onClick={() => openApplyColoursModal(activeLocation.location)} data-testid="cabinetry-apply-finishes-open">{activeLocation.location === "Kitchen" ? "Apply Kitchen finishes to other rooms" : `Apply ${activeLocation.location} Colours to Other Rooms`}</button> : null}
               <section className="cabinetryApplyPanel" data-testid="cabinetry-apply-colour-to">
-                <div className="cabinetryStageContext"><strong>Apply colour to</strong><span>Choose one or more enabled cabinetry areas before selecting a catalogue colour.</span></div>
+                <div className="cabinetryStageContext cabinetrySectionHead"><h3>Apply colour to</h3><span>Tick the areas, then choose a colour below.</span></div>
                 <CabinetrySelectionList items={(activeLocation.enabledAreaKeys?.length ? activeLocation.enabledAreaKeys.filter((areaKey) => activeCabinetryAreaKeys.includes(areaKey)) : activeCabinetryAreaKeys).map((areaKey) => ({
                   id: areaKey,
                   name: CABINETRY_AREA_LABELS[areaKey],
@@ -8692,43 +9096,35 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
                 }))} />
                 {!activeIsBathroomCabinetry ? (
                   <div className="bulkheadFinishPanel" data-testid="cabinetry-bulkhead-finish-options">
-                    <strong>Bulkhead finish</strong>
-                    <CabinetrySelectionList items={[
-                      ["raw_mdf_wall_paint", "Raw MDF - painted to match walls", "Links this bulkhead finish to the room's internal wall paint selection."],
-                      ["raw_mdf_ceiling_paint", "Raw MDF - painted to match ceiling", "Links this bulkhead finish to the room's ceiling paint selection."],
-                      ["raw_mdf_custom_paint", "Raw MDF - custom paint colour", "Record paint brand, range, colour, code and sheen."],
-                      ["laminex_colour", "Laminex decorative board", "Use the Laminex decorative board catalogue below."],
-                      ["polytec_colour", "Polytec decorative board", "Use the Polytec decorative board catalogue below."],
-                      ["match_overheads", "Match overhead cabinetry", "Link bulkheads to the overhead cabinetry selection."],
-                      ["other_custom", "Other/custom", "Record a non-standard bulkhead finish for builder confirmation."],
-                    ].map(([id, name, description]) => ({
-                      id,
-                      name,
-                      description,
-                      selected: (activeLocation.bulkheadFinishMode || activeLocation.coloursAndFinishes?.bulkheadFinishMode || activeLocation.areaSelections?.bulkheads?.finishMode || "") === id,
-                      onToggle: () => updateBulkheadFinishMode(id),
+                    <h3>Bulkhead finish</h3>
+                    {/* Exactly four options (BULKHEAD_FINISH_OPTIONS), shown with short client labels (18 Nov 2026).
+                        Rates and Builder Review Required for the unpriced three are handled in the Quotation Builder. */}
+                    <CabinetrySelectionList items={BULKHEAD_FINISH_OPTIONS.map((option) => ({
+                      id: option.key,
+                      name: BULKHEAD_FINISH_CLIENT_LABELS[option.key] || option.label,
+                      description: null,
+                      selected: bulkheadFinishOption(activeLocation.bulkheadFinishMode || activeLocation.coloursAndFinishes?.bulkheadFinishMode || activeLocation.areaSelections?.bulkheads?.finishMode || "")?.key === option.key,
+                      onToggle: () => updateBulkheadFinishMode(option.key),
                     }))} />
-                    <p className="cabinetrySelectionMessage" role="status">Current bulkhead finish: {cabinetryAreaAssignmentText("bulkheads")}</p>
+                    {(() => {
+                      const savedMode = activeLocation.bulkheadFinishMode || activeLocation.coloursAndFinishes?.bulkheadFinishMode || activeLocation.areaSelections?.bulkheads?.finishMode || "";
+                      const saved = bulkheadFinishOption(savedMode);
+                      return savedMode && (!saved || saved.legacy) ? <p className="cabinetryQuietNote" role="status" data-testid="cabinetry-bulkhead-legacy-finish">Previously chosen: {saved?.label || savedMode}. Choose one of the options above.</p> : null;
+                    })()}
                     {activeLocation.areaSelections?.bulkheads?.finishMode === "raw_mdf_custom_paint" ? (
-                      <div className="cabinetryCustomFields" data-testid="cabinetry-bulkhead-custom-paint-fields">
-                        <label><span>Paint brand</span><input value={activeLocation.areaSelections.bulkheads.paintBrand || ""} onChange={(event) => updateBulkheadCustomPaint("paintBrand", event.target.value)} /></label>
-                        <label><span>Paint range</span><input value={activeLocation.areaSelections.bulkheads.paintRange || ""} onChange={(event) => updateBulkheadCustomPaint("paintRange", event.target.value)} /></label>
-                        <label><span>Colour name</span><input value={activeLocation.areaSelections.bulkheads.paintColourName || ""} onChange={(event) => updateBulkheadCustomPaint("paintColourName", event.target.value)} /></label>
-                        <label><span>Colour code</span><input value={activeLocation.areaSelections.bulkheads.paintColourCode || ""} onChange={(event) => updateBulkheadCustomPaint("paintColourCode", event.target.value)} /></label>
-                        <label><span>Finish / sheen</span><input value={activeLocation.areaSelections.bulkheads.paintSheen || ""} onChange={(event) => updateBulkheadCustomPaint("paintSheen", event.target.value)} /></label>
-                      </div>
+                      <BulkheadPaintColourPicker value={activeLocation.areaSelections.bulkheads} onChange={updateBulkheadCustomPaintFields} />
                     ) : null}
                   </div>
                 ) : null}
                 {activeLocation.enabledAreaKeys?.includes("linenBulkhead") ? (
                   <div className="bulkheadFinishPanel" data-testid="cabinetry-bathroom-linen-bulkhead-finish-options">
-                    <strong>Bulkhead over tall cupboard</strong>
+                    <h3>Bulkhead over tall cupboard</h3>
                     <CabinetrySelectionList items={[
-                      ["no_bulkhead", "No bulkhead", `Remove the bulkhead finish from this ${activeLocation.location}.`],
-                      ["raw_mdf_wall_paint", "Raw MDF - painted to match walls", `Links this bulkhead to the ${activeLocation.location} wall paint selection.`],
-                      ["raw_mdf_ceiling_paint", "Raw MDF - painted to match ceiling", `Links this bulkhead to the ${activeLocation.location} ceiling paint selection.`],
-                      ["match_tall_linen", "Match tall linen cupboard", "Use the tall linen cupboard cabinetry finish."],
-                      ["other_custom", "Other/custom", "Record a non-standard bulkhead finish for builder confirmation."],
+                      ["no_bulkhead", "No bulkhead", null],
+                      ["raw_mdf_wall_paint", "Raw MDF — painted to match walls", null],
+                      ["raw_mdf_ceiling_paint", "Raw MDF — painted to match ceiling", null],
+                      ["match_tall_linen", "Match tall linen cupboard", null],
+                      ["other_custom", "Other / custom", null],
                     ].map(([id, name, description]) => ({
                       id,
                       name,
@@ -8736,13 +9132,12 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
                       selected: (activeLocation.bathroomLinenBulkheadMode || activeLocation.areaSelections?.linenBulkhead?.finishMode || "") === id,
                       onToggle: () => updateBathroomLinenBulkheadMode(id),
                     }))} />
-                    {activeLocation.areaSelections?.linenBulkhead?.finishMode === "raw_mdf_wall_paint" ? <p className="cabinetrySelectionMessage" role="status">{cabinetryAreaColourFinishText(activeLocation.areaSelections.linenBulkhead, cabinetryLinkedPaintSelection("wall"))}</p> : null}
-                    {activeLocation.areaSelections?.linenBulkhead?.finishMode === "raw_mdf_ceiling_paint" ? <p className="cabinetrySelectionMessage" role="status">{cabinetryAreaColourFinishText(activeLocation.areaSelections.linenBulkhead, cabinetryLinkedPaintSelection("ceiling"))}</p> : null}
+
                   </div>
                 ) : null}
                 {!activeIsBathroomCabinetry ? (
                   <div className="bulkheadFinishPanel" data-testid="cabinetry-kick-panel-finish-options">
-                    <strong>Kick-panel finish</strong>
+                    <h3>Kick-panel finish</h3>
                     <CabinetrySelectionList items={[
                       ["brushed_aluminium", "Brushed aluminium", "Save aluminium kick panels directly without a board colour."],
                       ["stainless_steel_look", "Stainless-steel look", "Save a stainless-look metal kick-panel finish."],
@@ -8761,7 +9156,7 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
                     <p className="cabinetrySelectionMessage" role="status">Current kick-panel finish: {cabinetryAreaAssignmentText("kickPanels")}</p>
                     {["brushed_aluminium", "stainless_steel_look", "black_aluminium"].includes(activeLocation.areaSelections?.kickPanels?.finishMode) ? (
                       <div className="cabinetryCustomFields" data-testid="cabinetry-kick-panel-metal-fields">
-                        <label><span>Price status</span><select value={activeLocation.areaSelections.kickPanels.priceStatus || "included"} onChange={(event) => updateKickPanelField("priceStatus", event.target.value)}><option value="included">Included</option><option value="upgrade">Upgrade</option><option value="supplier_quote_required">Supplier quote required</option></select></label>
+                        {cabinetryEstimatorView ? <label><span>Price status</span><select value={activeLocation.areaSelections.kickPanels.priceStatus || "included"} onChange={(event) => updateKickPanelField("priceStatus", event.target.value)}><option value="included">Included</option><option value="upgrade">Upgrade</option><option value="supplier_quote_required">Supplier quote required</option></select></label> : null}
                         <label><span>Supplier</span><input value={activeLocation.areaSelections.kickPanels.supplier || ""} onChange={(event) => updateKickPanelField("supplier", event.target.value)} placeholder="Not specified" /></label>
                         {cabinetryEstimatorView ? <label><span>Height mm</span><input type="number" min="0" value={activeLocation.areaSelections.kickPanels.heightMm || ""} onChange={(event) => updateKickPanelField("heightMm", event.target.value)} /></label> : null}
                         <label><span>Notes</span><input value={activeLocation.areaSelections.kickPanels.notes || ""} onChange={(event) => updateKickPanelField("notes", event.target.value)} /></label>
@@ -8777,7 +9172,7 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
                   {activeCabinetryAreaKeys.map((areaKey) => {
                     const record = cabinetryAreaAssignment(areaKey);
                     const linkedPaint = ["bulkheads", "linenBulkhead"].includes(areaKey) && record?.finishMode === "raw_mdf_wall_paint" ? cabinetryLinkedPaintSelection("wall") : ["bulkheads", "linenBulkhead"].includes(areaKey) && record?.finishMode === "raw_mdf_ceiling_paint" ? cabinetryLinkedPaintSelection("ceiling") : null;
-                    return <div key={areaKey} role="row"><span>{CABINETRY_AREA_LABELS[areaKey]}</span><span>{cabinetryAreaMaterialText(record)}</span><span>{cabinetryAreaColourFinishText(record, linkedPaint)}</span><span>{cabinetryAreaSupplierText(record)}</span><span className="cabinetrySummaryActions">{activeIsBathroomCabinetry && !record ? <><button type="button" onClick={() => toggleBathroomColourShortcut(areaKey, "match_floor_vanity")}>Match floor vanity</button><button type="button" onClick={() => toggleBathroomColourShortcut(areaKey, "match_wall_vanity")}>Match wall vanity</button><button type="button" onClick={() => toggleBathroomColourShortcut(areaKey, "match_tall_linen")}>Match tall linen</button></> : null}<button type="button" onClick={() => selectCabinetryApplyAreaOnly(areaKey)}>{record ? "Change" : "Select"}</button></span></div>;
+                    return <div key={areaKey} role="row"><span>{CABINETRY_AREA_LABELS[areaKey]}</span><span>{cabinetryAreaMaterialText(record)}</span><span>{cabinetryAreaColourFinishText(record, linkedPaint)}</span><span>{cabinetryAreaSupplierText(record)}</span><span className="cabinetrySummaryActions">{activeIsBathroomCabinetry && !record ? bathroomColourShortcuts(areaKey).map(([mode, label]) => <button key={mode} type="button" onClick={() => toggleBathroomColourShortcut(areaKey, mode)}>{label}</button>) : null}<button type="button" onClick={() => selectCabinetryApplyAreaOnly(areaKey)}>{record ? "Change" : "Select"}</button></span></div>;
                   })}
                 </div>
                 {incompleteColourAreaKeys.length ? <p className="cabinetrySelectionMessage" role="status">Incomplete areas: {incompleteColourAreaKeys.map((areaKey) => CABINETRY_AREA_LABELS[areaKey]).join(", ")}</p> : null}
@@ -8822,7 +9217,7 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
                     );
                   })}</div>
                   {visibleCabinetryColourGroups.length < cabinetryColourGroups.length ? <button type="button" className="cabinetryLoadMore" onClick={() => setCabinetryVisibleColourCount((count) => count + CABINETRY_COLOUR_PAGE_SIZE)}>Load more colours ({visibleCabinetryColourGroups.length} of {cabinetryColourGroups.length})</button> : null}
-                  {pendingCabinetryGroup ? <div className="cabinetryInspectOverlay" role="dialog" aria-modal="true" data-testid="cabinetry-colour-selection-modal"><section className="cabinetrySelectionComposer cabinetrySelectionModal" data-testid="cabinetry-finish-selector"><button type="button" className="cabinetryInspectClose" aria-label="Cancel colour selection" onClick={() => { setPendingCabinetryColourKey(""); setPendingCabinetryRecordId(""); setCabinetrySelectionMessage(""); }}>Cancel</button>{pendingCabinetryGroup.swatchImage ? <CabinetrySwatchImage src={pendingCabinetryGroup.swatchImage} alt={`${pendingCabinetryGroup.supplier} ${pendingCabinetryGroup.colourName} swatch`} /> : <div className="cabinetrySwatchUnavailable">Swatch unavailable</div>}<div><span>{pendingCabinetryGroup.supplier}</span><h3>{pendingCabinetryGroup.colourName}</h3><p>{cabinetrySelectionMessage || "Choose where this colour will be used."}</p><dl><div><dt>Supplier</dt><dd>{pendingCabinetryGroup.supplier}</dd></div><div><dt>Colour</dt><dd>{pendingCabinetryGroup.colourName}</dd></div><div><dt>Family</dt><dd>{pendingCabinetryGroup.colourFamily || "Not classified"}</dd></div><div><dt>Price status</dt><dd>{pendingCabinetryGroup.priceStatuses.join(", ")}</dd></div></dl><CabinetrySelectionList items={pendingCabinetryGroup.records.map((record) => ({
+                  {pendingCabinetryGroup ? <div className="cabinetryInspectOverlay" role="dialog" aria-modal="true" data-testid="cabinetry-colour-selection-modal"><section className="cabinetrySelectionComposer cabinetrySelectionModal" data-testid="cabinetry-finish-selector"><button type="button" className="cabinetryInspectClose" aria-label="Cancel colour selection" onClick={() => { setPendingCabinetryColourKey(""); setPendingCabinetryRecordId(""); setCabinetrySelectionMessage(""); }}>Cancel</button>{pendingCabinetryGroup.swatchImage ? <CabinetrySwatchImage src={pendingCabinetryGroup.swatchImage} alt={`${pendingCabinetryGroup.supplier} ${pendingCabinetryGroup.colourName} swatch`} /> : <div className="cabinetrySwatchUnavailable">Swatch unavailable</div>}<div><span>{pendingCabinetryGroup.supplier}</span><h3>{pendingCabinetryGroup.colourName}</h3><p>{cabinetrySelectionMessage || "Choose where this colour will be used."}</p><dl><div><dt>Supplier</dt><dd>{pendingCabinetryGroup.supplier}</dd></div><div><dt>Colour</dt><dd>{pendingCabinetryGroup.colourName}</dd></div><div><dt>Family</dt><dd>{pendingCabinetryGroup.colourFamily || "Not classified"}</dd></div>{cabinetryEstimatorView ? <div><dt>Price status</dt><dd>{pendingCabinetryGroup.priceStatuses.join(", ")}</dd></div> : null}</dl><CabinetrySelectionList items={pendingCabinetryGroup.records.map((record) => ({
                     id: record.id,
                     name: `${record.productRange || record.productFamily} / ${record.finish}`,
                     description: `${record.application || "Cabinetry door/panel"} / ${cabinetryPriceStatusLabel(record.priceStatus)}`,
@@ -8835,7 +9230,7 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
                     selected: activeColourTargetKeys.includes(areaKey),
                     onToggle: () => toggleCabinetryApplyArea(areaKey),
                   }))} /></div><div className="cabinetryColourActions"><button type="button" onClick={() => { setPendingCabinetryColourKey(""); setPendingCabinetryRecordId(""); setCabinetrySelectionMessage(""); }}>Cancel</button><button type="button" className="primary" disabled={!pendingCabinetryRecord} onClick={() => applyCabinetryRecordToAreas(pendingCabinetryRecord)}>Apply Colour</button></div></div></section></div> : null}
-                  {mainColour ? <section className="cabinetryAppliedSummary" data-testid="cabinetry-applied-summary"><h3>Current selected colour</h3><dl><div><dt>Supplier</dt><dd>{mainColour.supplier || activeLocation.supplier}</dd></div><div><dt>Colour</dt><dd>{mainColour.colourName}</dd></div><div><dt>Family</dt><dd>{mainColour.colourFamily || "Not classified"}</dd></div><div><dt>Range</dt><dd>{mainColour.productRange || mainColour.productFamily || activeLocation.productRange}</dd></div><div><dt>Finish</dt><dd>{mainColour.finish || "Not selected"}</dd></div><div><dt>Applied to</dt><dd>{Object.entries(activeLocation.areaSelections || {}).filter(([, record]) => record?.id === mainColour.id).map(([key]) => CABINETRY_AREA_LABELS[key]).join(", ") || "Lower base-unit doors"}</dd></div><div><dt>Room</dt><dd>{activeLocation.location}</dd></div><div><dt>Price status</dt><dd>{cabinetryPriceStatusLabel(mainColour.priceStatus)}</dd></div></dl><div className="cabinetryColourActions"><button type="button" onClick={() => setPendingCabinetryColourKey(cabinetryColourKey(mainColour))}>Change Colour</button><button type="button" onClick={() => setCabinetryInspectRecord(mainColour)}>Inspect</button>{CABINETRY_SUPPLIER_CONFIG[mainColour.supplier || activeLocation.supplier] ? <a href={CABINETRY_SUPPLIER_CONFIG[mainColour.supplier || activeLocation.supplier].url} target="_blank" rel="noopener noreferrer">{CABINETRY_SUPPLIER_CONFIG[mainColour.supplier || activeLocation.supplier].label}</a> : null}</div></section> : null}
+                  {mainColour ? <section className="cabinetryAppliedSummary" data-testid="cabinetry-applied-summary"><h3>Current selected colour</h3><dl><div><dt>Supplier</dt><dd>{mainColour.supplier || activeLocation.supplier}</dd></div><div><dt>Colour</dt><dd>{mainColour.colourName}</dd></div><div><dt>Family</dt><dd>{mainColour.colourFamily || "Not classified"}</dd></div><div><dt>Range</dt><dd>{mainColour.productRange || mainColour.productFamily || activeLocation.productRange}</dd></div><div><dt>Finish</dt><dd>{mainColour.finish || "Not selected"}</dd></div><div><dt>Applied to</dt><dd>{Object.entries(activeLocation.areaSelections || {}).filter(([, record]) => record?.id === mainColour.id).map(([key]) => CABINETRY_AREA_LABELS[key]).join(", ") || "Lower base-unit doors"}</dd></div><div><dt>Room</dt><dd>{activeLocation.location}</dd></div>{cabinetryEstimatorView ? <div><dt>Price status</dt><dd>{cabinetryPriceStatusLabel(mainColour.priceStatus)}</dd></div> : null}</dl><div className="cabinetryColourActions"><button type="button" onClick={() => setPendingCabinetryColourKey(cabinetryColourKey(mainColour))}>Change Colour</button><button type="button" onClick={() => setCabinetryInspectRecord(mainColour)}>Inspect</button>{CABINETRY_SUPPLIER_CONFIG[mainColour.supplier || activeLocation.supplier] ? <a href={CABINETRY_SUPPLIER_CONFIG[mainColour.supplier || activeLocation.supplier].url} target="_blank" rel="noopener noreferrer">{CABINETRY_SUPPLIER_CONFIG[mainColour.supplier || activeLocation.supplier].label}</a> : null}</div></section> : null}
                   {cabinetryInspectRecord ? <div className="cabinetryInspectOverlay" role="dialog" aria-modal="true" data-testid="cabinetry-inspection-modal" onMouseDown={(event) => { if (event.target === event.currentTarget) setCabinetryInspectRecord(null); }}><section className="cabinetryInspectModal"><button type="button" className="cabinetryInspectClose" aria-label="Close inspection" onClick={() => setCabinetryInspectRecord(null)}>Close</button>{cabinetryInspectRecord.fullSheetImage || cabinetryInspectRecord.swatchImage || cabinetryInspectRecord.swatchThumbnail ? <CabinetrySwatchImage src={cabinetryInspectRecord.fullSheetImage || cabinetryInspectRecord.swatchImage || cabinetryInspectRecord.swatchThumbnail} alt={`${cabinetryInspectRecord.supplier} ${cabinetryInspectRecord.colourName} large swatch`} /> : <div className="cabinetrySwatchUnavailable">Official swatch unavailable locally</div>}<div><span>{cabinetryInspectRecord.supplier}</span><h3>{cabinetryInspectRecord.colourName}</h3><dl><div><dt>Colour family</dt><dd>{cabinetryInspectRecord.colourFamily}</dd></div><div><dt>Product range</dt><dd>{cabinetryInspectRecord.productRange || cabinetryInspectRecord.productFamily}</dd></div><div><dt>Available finishes</dt><dd>{activeColourRecords.filter((record) => cabinetryColourKey(record) === cabinetryColourKey(cabinetryInspectRecord)).map((record) => record.finish).filter((value, index, array) => array.indexOf(value) === index).join(", ")}</dd></div><div><dt>Applications</dt><dd>{cabinetryInspectRecord.application}</dd></div><div><dt>Pricing</dt><dd>{cabinetryPriceStatusLabel(cabinetryInspectRecord.priceStatus)}</dd></div><div><dt>Availability</dt><dd>{cabinetryInspectRecord.availabilityStatus || cabinetryInspectRecord.status}</dd></div><div><dt>Verified</dt><dd>{cabinetryInspectRecord.verifiedAt || cabinetryInspectRecord.lastVerifiedDate}</dd></div></dl><p>On-screen colours are indicative only. Confirm final selections against physical {cabinetryInspectRecord.supplier || "supplier"} samples and the current supplier availability guide.</p><div className="cabinetryColourActions"><button type="button" className="primary" onClick={() => { applyCabinetryRecordToAreas(cabinetryInspectRecord); setCabinetryInspectRecord(null); }}>Select This Colour</button>{cabinetryInspectRecord.officialProductUrl || cabinetryInspectRecord.sourceUrl ? <a href={cabinetryInspectRecord.officialProductUrl || cabinetryInspectRecord.sourceUrl} target="_blank" rel="noopener noreferrer">Visit Official Colour</a> : null}</div></div></section></div> : null}
                 </>
               ) : activeLocation.doorMaterialGroup === "Standard colourboard" ? <p className="cabinetrySelectionMessage" role="status">Select an area that requires a Laminex or Polytec colour to open the catalogue.</p> : <div className="cabinetryCustomFields"><label><span>Supplier</span><input value={activeLocation.customSupplier || ""} onChange={(event) => updateLocation(activeLocation.location, { customSupplier: event.target.value })} /></label><label><span>Product range</span><input value={activeLocation.customRange || ""} onChange={(event) => updateLocation(activeLocation.location, { customRange: event.target.value })} /></label><label><span>Colour</span><input value={activeLocation.customColour || ""} onChange={(event) => updateLocation(activeLocation.location, { customColour: event.target.value })} /></label><label><span>Finish</span><input value={activeLocation.customFinish || ""} onChange={(event) => updateLocation(activeLocation.location, { customFinish: event.target.value })} /></label></div>}
@@ -8843,6 +9238,8 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
           ) : null}
           {stageIndex === 3 ? (
             <div className="cabinetryStage" data-testid="cabinetry-benchtop-stage">
+              {renderCopiedItemsNotice()}
+              {renderCopiedIslandNotice()}
               <BenchtopSelectionWorkflow
                 key={activeLocation.location}
                 location={activeLocation}
@@ -8895,66 +9292,78 @@ function GuidedCabinetryWorkflow({ requirement, projectId = "", organisationId =
           ) : null}
           {stageIndex === 6 ? (
             <div className="cabinetryStage cabinetryReview" data-testid="cabinetry-review-confirm">
-              {cabinetryMissingRequirements.length ? (
-                <section className="cabinetryMissingRequirements" data-testid="cabinetry-missing-requirements" role="alert">
+              {renderCopiedIslandNotice()}
+              {liveMissingRequirements.length ? (
+                <section className="cabinetryMissingRequirements" data-testid="cabinetry-missing-requirements" role={cabinetryMissingRequirements.length ? "alert" : "status"}>
                   <strong>{activeLocation.location} cannot be completed yet.</strong>
                   <span>Still required:</span>
                   <ul>
-                    {cabinetryMissingRequirements.map((item) => (
-                      <li key={item.key}>
+                    {liveMissingRequirements.map((item) => (
+                      <li key={item.key} className="cabinetryMissingItem">
                         <button type="button" onClick={() => goToMissingCabinetryRequirement(item.stage)}>{item.label} &rarr; Go to {item.stage}</button>
+                        {cabinetryEstimatorView ? <button type="button" className="cabinetryBuilderConfirm" onClick={() => setBuilderConfirmItems([item], true)} data-testid="cabinetry-builder-confirm-item">Builder will confirm</button> : null}
                       </li>
                     ))}
                   </ul>
+                  {cabinetryEstimatorView && liveMissingRequirements.length > 1 ? <button type="button" className="cabinetryBuilderConfirm" onClick={() => setBuilderConfirmItems(liveMissingRequirements, true)} data-testid="cabinetry-builder-confirm-all">Builder will confirm all {liveMissingRequirements.length} items</button> : null}
                 </section>
               ) : null}
-              {locationHasColourSelections(activeLocation.location) && offerableColourTargetRooms(activeLocation.location).length ? <button type="button" className="cabinetryCopyPantryButton primary" onClick={() => openApplyColoursModal(activeLocation.location)}>Apply {activeLocation.location} Colours to Other Rooms</button> : null}
-              <div className="cabinetryInlineEditor"><label><span>Copy complete specification from another room</span><select value={copyFromLocation} onChange={(event) => setCopyFromLocation(event.target.value)}><option value="">Select room</option>{normalisedDraft.locations.filter((location) => location.location !== activeLocation.location).map((location) => <option key={location.location} value={location.location}>{location.location}</option>)}</select></label><button type="button" disabled={!copyFromLocation} onClick={copySelectionsIntoActiveRoom}>Copy complete specification</button></div>
-              <p className="clientNotice">This replaces the whole {activeLocation.location} specification - scope, schedule, colours, bulkhead/kick-panel finish, benchtop, handles, features and notes - with the selected room's. To copy only cabinetry colours from Kitchen to Butler's Pantry, use &quot;Apply Kitchen Colours to Butler's Pantry&quot; instead.</p>
+              {builderConfirmedRequirements.length ? (
+                <section className="cabinetryBuilderConfirmed" data-testid="cabinetry-builder-confirmed" role="status">
+                  <strong>Your builder will confirm:</strong>
+                  <ul>{builderConfirmedRequirements.map((item) => <li key={item.key}>{item.label}{cabinetryEstimatorView ? <button type="button" onClick={() => setBuilderConfirmItems([item], false)} data-testid="cabinetry-builder-confirm-undo">Undo</button> : null}</li>)}</ul>
+                </section>
+              ) : null}
+              {locationHasColourSelections(activeLocation.location) && offerableColourTargetRooms(activeLocation.location).length ? <button type="button" className="cabinetryCopyPantryButton primary" onClick={() => openApplyColoursModal(activeLocation.location)} data-testid="cabinetry-apply-finishes-open">{activeLocation.location === "Kitchen" ? "Apply Kitchen finishes to other rooms" : `Apply ${activeLocation.location} Colours to Other Rooms`}</button> : null}
+              {cabinetryEstimatorView && activeLocation.location !== "Kitchen" ? <><div className="cabinetryInlineEditor"><label><span>Copy complete specification from another room</span><select value={copyFromLocation} onChange={(event) => setCopyFromLocation(event.target.value)}><option value="">Select room</option>{normalisedDraft.locations.filter((location) => location.location !== activeLocation.location).map((location) => <option key={location.location} value={location.location}>{location.location}</option>)}</select></label><button type="button" disabled={!copyFromLocation} onClick={copySelectionsIntoActiveRoom}>Copy complete specification</button></div>
+              <p className="clientNotice">This replaces the whole {activeLocation.location} specification - scope, schedule, colours, bulkhead/kick-panel finish, benchtop, handles, features and notes - with the selected room's. To copy only finishes, use &quot;Apply Kitchen finishes to other rooms&quot; from the Kitchen instead.</p></> : null}
               {activeLocation.copiedSelectionsEditable ? <p className="clientNotice">Copied from {activeLocation.copiedFromLocation || "another room"}. These are editable {activeLocation.location} selections.</p> : null}
               {activeIsBathroomCabinetry ? renderBathroomReviewSummary() : (
                 <section className="cabinetryReviewLocation" data-testid="cabinetry-review-location-summary">
                   <h3>{activeLocation.location}</h3>
                   <section className="cabinetryReviewGroup" data-testid="cabinetry-review-configuration">
-                    <h4>Cabinet configuration</h4>
+                    <div className="cabinetryReviewHead"><h4>Cabinet configuration</h4><button type="button" className="cabinetryReviewEdit" onClick={() => navigateCabinetryStage(CABINETRY_WORKFLOW_STAGES.indexOf("Cabinet Schedule"))} data-testid="cabinetry-review-edit-schedule">Edit</button></div>
                     <dl>
                       <div><dt>Cabinet areas</dt><dd>{(activeLocation.enabledAreaKeys || []).filter((key) => key !== "kickPanels" && key !== "bulkheads").map((key) => CABINETRY_AREA_LABELS[key]).join(", ") || "Not selected"}</dd></div>
-                      <div><dt>Cabinet schedule and quantities</dt><dd>{activeSchedule.map((line) => `${line.unitType} x ${line.quantity}`).join(", ") || "No rows added"}</dd></div>
-                      <div><dt>Door and panel material</dt><dd>{activeLocation.doorMaterialGroup}</dd></div>
+                      <div><dt>{cabinetryEstimatorView ? "Cabinet schedule and quantities" : "Cabinet layout"}</dt><dd>{activeSchedule.map((line) => (/^bulkhead_/.test(line.cabinetTypeId || "") ? (Number(line.quantity) > 0 || Array.isArray(line.runs) ? bulkheadTypeLabel(line.cabinetTypeId || line.unitType) : "")
+                        : line.cabinetTypeId === "handle_upgrade_sharkfin" ? (sharkfinUpgrade(activeLocation, activeSchedule).applies ? "Sharkfin handle upgrade - selected" : "")
+                        : cabinetryEstimatorView ? `${line.unitType} x ${line.quantity}` : Number(line.quantity) > 0 ? line.unitType : "")).filter(Boolean).join(", ") || "No rows added"}</dd></div>
+                      <div><dt>Door and panel material</dt><dd>{activeLocation.doorMaterialGroup} <button type="button" className="cabinetryReviewEdit" onClick={() => navigateCabinetryStage(CABINETRY_WORKFLOW_STAGES.indexOf("Doors & Panels"))} data-testid="cabinetry-review-edit-doors">Edit</button></dd></div>
                       <div><dt>Supplier</dt><dd>{activeLocation.supplier}</dd></div>
                     </dl>
                   </section>
                   <section className="cabinetryReviewGroup" data-testid="cabinetry-review-colours">
-                    <h4>Cabinet colours & finishes</h4>
+                    <div className="cabinetryReviewHead"><h4>Cabinet colours & finishes</h4><button type="button" className="cabinetryReviewEdit" onClick={() => navigateCabinetryStage(CABINETRY_WORKFLOW_STAGES.indexOf("Colours & Finishes"))} data-testid="cabinetry-review-edit-colours">Edit</button></div>
                     <dl>{activeCabinetryAreaKeys.length ? activeCabinetryAreaKeys.map((areaKey) => <div key={areaKey}><dt>{CABINETRY_AREA_LABELS[areaKey]}</dt><dd>{cabinetryAreaAssignmentText(areaKey)}</dd></div>) : <div><dt>Colour</dt><dd>Not selected</dd></div>}</dl>
                   </section>
                   <section className="cabinetryReviewGroup" data-testid="cabinetry-review-bulkhead">
-                    <h4>Bulkhead</h4>
+                    <div className="cabinetryReviewHead"><h4>Bulkhead</h4><button type="button" className="cabinetryReviewEdit" onClick={() => navigateCabinetryStage(CABINETRY_WORKFLOW_STAGES.indexOf("Colours & Finishes"))} data-testid="cabinetry-review-edit-bulkhead">Edit</button></div>
                     <dl><div><dt>Finish</dt><dd>{cabinetryAreaAssignmentText("bulkheads")}</dd></div></dl>
                   </section>
                   <section className="cabinetryReviewGroup" data-testid="cabinetry-review-kick-panels">
-                    <h4>Kick panels</h4>
+                    <div className="cabinetryReviewHead"><h4>Kick panels</h4><button type="button" className="cabinetryReviewEdit" onClick={() => navigateCabinetryStage(CABINETRY_WORKFLOW_STAGES.indexOf("Colours & Finishes"))} data-testid="cabinetry-review-edit-kick-panels">Edit</button></div>
                     <dl><div><dt>Finish</dt><dd>{cabinetryAreaAssignmentText("kickPanels")}</dd></div></dl>
                   </section>
                   <section className="cabinetryReviewGroup" data-testid="cabinetry-review-benchtop">
-                    <h4>Benchtop</h4>
-                    {activeLocation.benchtop ? (
+                    <div className="cabinetryReviewHead"><h4>Benchtop</h4><button type="button" className="cabinetryReviewEdit" onClick={() => navigateCabinetryStage(CABINETRY_WORKFLOW_STAGES.indexOf("Benchtops"))} data-testid="cabinetry-review-edit-benchtop">Edit</button></div>
+                    {reviewBenchtopAreas.length ? (
+                      <dl data-testid="cabinetry-review-benchtop-areas">{reviewBenchtopAreas.map((area) => <div key={area.id}><dt>{area.label}</dt><dd>{[surfaceName(area.surface), benchtopSpecificationText(area, { client: !cabinetryEstimatorView }), (cabinetryEstimatorView ? (value) => value : clientEdgeProfileLabel)(area.edgeProfile || activeLocation.benchtopEdge || area.surface?.edgeProfile)].filter(Boolean).join(" · ") || "Not selected"}</dd></div>)}</dl>
+                    ) : activeLocation.benchtop ? (
                       <dl>
                         <div><dt>Material type</dt><dd>{activeLocation.benchtop.category || activeLocation.benchtop.materialType || activeLocation.benchtop.materialChoice || "Not specified"}</dd></div>
                         <div><dt>Brand/supplier</dt><dd>{activeLocation.benchtop.supplier || "Not specified"}</dd></div>
                         <div><dt>Product/colour</dt><dd>{[activeLocation.benchtop.productCode, activeLocation.benchtop.colourName || activeLocation.benchtop.colour, activeLocation.benchtop.range].filter(Boolean).join(" / ") || "Not specified"}</dd></div>
                         <div><dt>Thickness</dt><dd>{activeLocation.benchtop.slabThickness || activeLocation.benchtop.thickness || "Not specified"}</dd></div>
-                        {activeLocation.benchtop.edgeProfile ? <div><dt>Edge/profile</dt><dd>{activeLocation.benchtop.edgeProfile}{activeLocation.benchtop.finishedEdgeThickness ? ` (${activeLocation.benchtop.finishedEdgeThickness})` : ""}</dd></div> : null}
-                        <div><dt>Price status</dt><dd>{cabinetryPriceStatusLabel(activeLocation.benchtop.priceStatus || activeLocation.benchtop.pricingStatus)}</dd></div>
+                        {activeLocation.benchtop.edgeProfile ? <div><dt>Edge/profile</dt><dd>{cabinetryEstimatorView ? activeLocation.benchtop.edgeProfile : clientEdgeProfileLabel(activeLocation.benchtop.edgeProfile)}{activeLocation.benchtop.finishedEdgeThickness ? ` (${activeLocation.benchtop.finishedEdgeThickness})` : ""}</dd></div> : null}
                       </dl>
                     ) : <p className="clientNotice">Not selected.</p>}
                   </section>
                   <section className="cabinetryReviewGroup" data-testid="cabinetry-review-handles">
-                    <h4>Handles</h4>
+                    <div className="cabinetryReviewHead"><h4>Handles</h4><button type="button" className="cabinetryReviewEdit" onClick={() => navigateCabinetryStage(CABINETRY_WORKFLOW_STAGES.indexOf("Handles"))} data-testid="cabinetry-review-edit-handles">Edit</button></div>
                     <dl><div><dt>Base units</dt><dd>{activeLocation.handles?.base?.productName || activeLocation.handles?.base?.openingMethod || "Not selected"}</dd></div><div><dt>Overheads</dt><dd>{activeLocation.handles?.overhead?.openingMethod || "Not selected"}</dd></div></dl>
                   </section>
                   <section className="cabinetryReviewGroup" data-testid="cabinetry-review-features">
-                    <h4>Features</h4>
+                    <div className="cabinetryReviewHead"><h4>Features</h4><button type="button" className="cabinetryReviewEdit" onClick={() => navigateCabinetryStage(CABINETRY_WORKFLOW_STAGES.indexOf("Features"))} data-testid="cabinetry-review-edit-features">Edit</button></div>
                     <dl><div><dt>Selected</dt><dd>{(activeLocation.featureOptions || []).map(featureOptionName).join(", ") || "Not required"}</dd></div></dl>
                   </section>
                   <dl><div><dt>Specification</dt><dd>{isCabinetryRoomComplete(activeLocation) ? "Complete" : "In progress"}</dd></div><div><dt>Review approval</dt><dd>{isCabinetryRoomApproved(activeLocation, normalisedDraft.schedule, projectId) ? "Approved - current specification" : "Explicit approval required"}</dd></div></dl>
@@ -9007,7 +9416,7 @@ function CabinetrySelectionList({ items = [] }) {
     <div className="cabinetrySelectionList">
       {items.map((item) => (
         <Fragment key={item.id || item.name}>
-        <label className={`cabinetrySelectionRow ${item.selected ? "selected" : ""} ${item.disabled ? "disabled" : ""}`} data-cabinet-item={item.id || ""}>
+        <label className={`cabinetrySelectionRow ${item.selected ? "selected" : ""} ${item.disabled ? "disabled" : ""} ${item.quantity == null && item.widthValue == null && item.notesValue == null && !item.actions ? "simple" : ""}`} data-cabinet-item={item.id || ""}>
           <input type="checkbox" checked={Boolean(item.selected)} disabled={Boolean(item.disabled)} onChange={item.onToggle} />
           <span className="cabinetrySelectionMain">
             <strong>{item.name}</strong>
@@ -9157,18 +9566,23 @@ function bathroomColourAreaKeysForLocation(location = {}, schedule = []) {
 }
 
 function cabinetryAreaKeysForLocation(location = {}, schedule = []) {
-  return isBathroomCabinetryLocation(location.location || location.name)
-    ? bathroomColourAreaKeysForLocation(location, schedule)
-    : CABINETRY_LOCATION_AREA_KEYS;
+  if (!isBathroomCabinetryLocation(location.location || location.name)) return CABINETRY_LOCATION_AREA_KEYS;
+  // 17 Nov 2026: every area approval asks a colour for (the room's enabled areas) can be chosen here,
+  // even when the room's schedule no longer lists a cabinet for it - otherwise the room listed
+  // "Incomplete areas" with nothing to select and could never be approved.
+  const fromSchedule = bathroomColourAreaKeysForLocation(location, schedule);
+  const enabled = (Array.isArray(location.enabledAreaKeys) ? location.enabledAreaKeys : []).filter((key) => CABINETRY_AREA_KEYS.includes(key) && !fromSchedule.includes(key));
+  return enabled.length ? [...fromSchedule, ...enabled] : fromSchedule;
 }
 
 function bathroomScopeHasCabinetry(location = {}, key) {
   return bathroomScopeKeysForLocation(location).includes(key);
 }
 
-function bathroomBenchtopSelectionText(record = {}) {
+function bathroomBenchtopSelectionText(record = {}, { client = false } = {}) {
   if (!cabinetryPlainObject(record)) return "Not selected";
-  return [record.materialChoice, record.supplier, record.productRange || record.range, record.colourName || record.colour, record.finish, record.dropFrontDetail].filter(Boolean).join(" / ") || "Not selected";
+  // The client sees the stone only; the material construction ("Stone with mitred drop front") is the builder's.
+  return [client ? "" : record.materialChoice, record.supplier, record.productRange || record.range, record.colourName || record.colour, record.finish, client ? "" : record.dropFrontDetail].filter(Boolean).join(" / ") || "Not selected";
 }
 
 function bathroomHandleSelectionText(record = {}) {
@@ -9206,7 +9620,39 @@ function cabinetryPriceStatusLabel(value = "") {
   return "Price pending";
 }
 
+// Client-facing bulkhead wording (18 Nov 2026 "FINAL CABINETRY UI CLEANUP"): the type only, and short
+// finish labels. Quotation labels, rates and builder reviews are unchanged (cabinetryRequirements.js).
+function bulkheadTypeLabel(value = "") {
+  const mm = String(value).match(/(300|450)/)?.[1];
+  return mm ? `MDF bulkhead — ${mm} mm` : "MDF bulkhead";
+}
+const BULKHEAD_FINISH_CLIENT_LABELS = Object.freeze({
+  raw_mdf_site_paint: "Raw MDF — painted on site to match walls",
+  raw_mdf_custom_paint: "Raw MDF — custom paint colour",
+  laminex_decorative_300: "Laminex decorative board — 300 mm",
+  laminex_decorative_450: "Laminex decorative board — 450 mm",
+});
+
 function createBulkheadFinishRecord(mode, prior = {}) {
+  if (mode === "raw_mdf_site_paint" || mode === "laminex_decorative_300" || mode === "laminex_decorative_450") {
+    const option = bulkheadFinishOption(mode);
+    const laminex = mode !== "raw_mdf_site_paint";
+    return {
+      id: `bulkheads-${mode.replace(/_/g, "-")}`,
+      areaKey: "bulkheads",
+      material: laminex ? "Laminex Decorative Board" : "Raw MDF",
+      finalFinish: laminex ? "Decorative board" : "Site-painted",
+      ...(option?.heightMm ? { heightMm: option.heightMm } : {}),
+      colourName: option.label,
+      finish: option.label,
+      supplier: laminex ? "Laminex" : "",
+      productRange: option.label,
+      priceStatus: option.priced ? "included" : "rate_required",
+      finishMode: mode,
+      scheduleDescription: laminex ? `Supply and install ${option.label} bulkheads.` : "Supply and install Raw MDF bulkheads (300mm / 450mm), painted on site.",
+      procurementDescription: laminex ? `Supply and install ${option.label} bulkheads.` : "Supply and install Raw MDF bulkheads (300mm / 450mm), painted on site.",
+    };
+  }
   if (mode === "raw_mdf_wall_paint") {
     return {
       id: "bulkheads-raw-mdf-wall-paint",
@@ -9434,13 +9880,23 @@ function cabinetryAreaSupplierText(record) {
 
 function cabinetryAreaColourFinishText(record, currentLinkedPaint = null) {
   if (!cabinetryPlainObject(record)) return "Colour not selected";
+  // Kitchen-type bulkheads saved before the four options (10 Nov 2026): the selector shows these as
+  // "Raw MDF 300/450 (site-painted)" (bulkheadFinishOption) and they are quoted on the MDF rows, so the
+  // summary names the same substrate, with the paint colour as a separate item still to come. It used
+  // to read "Painted to match walls - Awaiting wall colour selection", disagreeing with the selector.
+  // The saved record is not rewritten (that would withdraw an existing room approval).
+  if (record.areaKey === "bulkheads" && /^raw_mdf_(wall|ceiling)_paint$/.test(record.finishMode || "")) {
+    const surface = record.finishMode === "raw_mdf_wall_paint" ? "walls" : "ceiling";
+    const paint = linkedCabinetryPaintSelection(record, currentLinkedPaint);
+    return `Raw MDF — painted on site to match ${surface}${paint ? ` (${paint})` : ""}`;
+  }
   if (record.finishMode === "raw_mdf_wall_paint") {
     const paint = linkedCabinetryPaintSelection(record, currentLinkedPaint);
-    return paint ? `Raw MDF - painted ${paint} to match walls` : "Painted to match walls - Awaiting wall colour selection.";
+    return paint ? `Raw MDF — painted ${paint} to match walls` : "Raw MDF — painted to match walls";
   }
   if (record.finishMode === "raw_mdf_ceiling_paint") {
     const paint = linkedCabinetryPaintSelection(record, currentLinkedPaint);
-    return paint ? `Raw MDF - painted ${paint} to match ceiling` : "Painted to match ceiling - Awaiting ceiling colour selection.";
+    return paint ? `Raw MDF — painted ${paint} to match ceiling` : "Raw MDF — painted to match ceiling";
   }
   if (record.finishMode === "raw_mdf_custom_paint") {
     const paint = [record.paintBrand, record.paintRange, record.paintColourName, record.paintColourCode, record.paintSheen].filter(Boolean).join(" ");
@@ -11776,6 +12232,7 @@ function ScheduledEntryDoorWorkflow({ project, projectInfo, workbook, snapshot, 
       onEntryDoorNavigateStep={next=>navigate(door.id,next)}
       onGlazingConfirm={()=>{update({GlazingConfirmed:true});advance();}}
       onHardwareConfirm={()=>{update({HardwareConfirmed:true});advance();}}
+      savedFurnitureCode={saved?.entryDoorFurniture?.productCode||''} savedFurnitureFinish={saved?.furnitureFinish||''}
       onSelectProduct={(requirement,option)=>props.onSelectProduct(requirement,{...option,door,hardwareOptions:draft.HardwareOptions||saved?.hardwareOptions||{quantity:door.quantity}})}/>}
   </section>;
 }
@@ -11811,6 +12268,8 @@ function GuidedEntryDoorWorkflow({
   onEntryDoorFurnitureFinishChange,
   onSelectProduct,
   onViewDetails,
+  savedFurnitureCode = "",
+  savedFurnitureFinish = "",
 }) {
   const [finishReviewPrompt, setFinishReviewPrompt] = useState(false);
   const [entryDoorSearch, setEntryDoorSearch] = useState("");
@@ -11845,7 +12304,13 @@ function GuidedEntryDoorWorkflow({
   const furnitureOptions = entryDoorFurnitureOptions(furnitureProducts);
   const selectedFurniture = entryDoorFurnitureByCode(furnitureOptions, entryDoorHardware);
   const furnitureFinishes = entryDoorFurnitureFinishOptions(selectedFurniture);
-  const selectedFurnitureFinish = entryDoorFurnitureFinish || furnitureFinishes[0] || "";
+  // The finish is what the client chose. It is never filled in with the first option (that showed
+  // "Bright Chrome" in Review while the saved schedule said "Satin Chrome"); only a product with a
+  // single finish needs no choice.
+  const selectedFurnitureFinish = entryDoorFurnitureFinish || (furnitureFinishes.length === 1 ? furnitureFinishes[0] : "");
+  const savedFinishDiffers = Boolean(selectedFurniture && savedFurnitureCode === selectedFurniture.productCode && savedFurnitureFinish && selectedFurnitureFinish && savedFurnitureFinish !== selectedFurnitureFinish);
+  const [finishDifferenceAccepted, setFinishDifferenceAccepted] = useState("");
+  const [confirmState, setConfirmState] = useState({ state: "idle", message: "" });
   const currentStep = entryDoorStep || "supplier";
   const progressSteps = [
     ["supplier", "Supplier", entryDoorSupplier],
@@ -11890,7 +12355,7 @@ function GuidedEntryDoorWorkflow({
   };
   const saveSelection = (patch = {}) => {
     const product = patch.product || selectedProduct;
-    if (!product) return;
+    if (!product) return Promise.resolve({ ok: false, missing: ["Door / Design"] });
     const nextSize = patch.size ?? entryDoorSize;
     const nextConfiguration = patch.configuration ?? entryDoorConfiguration;
     const nextFinish = patch.finish ?? entryDoorFinish;
@@ -11898,13 +12363,20 @@ function GuidedEntryDoorWorkflow({
     const nextGlass = patch.glassOption || entryDoorGlassByName(product, nextGlazing);
     const nextHardware = patch.hardware ?? entryDoorHardware;
     const nextFurniture = patch.furniture || entryDoorFurnitureByCode(furnitureOptions, nextHardware);
-    const nextFurnitureFinish = patch.furnitureFinish ?? entryDoorFurnitureFinish ?? entryDoorFurnitureFinishOptions(nextFurniture)[0] ?? "";
+    const nextFurnitureFinishOptions = entryDoorFurnitureFinishOptions(nextFurniture);
+    const nextFurnitureFinish = patch.furnitureFinish || entryDoorFurnitureFinish || (nextFurnitureFinishOptions.length === 1 ? nextFurnitureFinishOptions[0] : "");
     const nextFurnitureImage = entryDoorFurnitureImageForFinish(nextFurniture, nextFurnitureFinish);
     const requiredSizes = entryDoorSizeOptions(product);
     const requiredConfigurations = entryDoorAttributeOptions(product, "configurations", product?.configuration);
     const requiredFinishes = entryDoorAttributeOptions(product, "finishOptions", product?.finish || product?.colour);
     const requiredGlazings = entryDoorGlassOptions(product);
-    if ((requiredSizes.length && !nextSize) || (requiredConfigurations.length && !nextConfiguration) || (requiredFinishes.length && !nextFinish) || (requiredGlazings.length && !nextGlazing) || !nextFurniture || (nextFurniture.finishOptions.length && !nextFurnitureFinish)) return;
+    // A missing choice is reported, never a silent no-op (the client was left on Review & Confirm).
+    const missing = entryDoorMissingChoices({
+      size: requiredSizes.length && !nextSize, configuration: requiredConfigurations.length && !nextConfiguration,
+      finish: requiredFinishes.length && !nextFinish, glazing: requiredGlazings.length && !nextGlazing,
+      furniture: !nextFurniture, furnitureFinish: Boolean(nextFurniture?.finishOptions?.length) && !nextFurnitureFinish,
+    });
+    if (missing.length) return Promise.resolve({ ok: false, missing });
     const compatibility = entryDoorFurnitureCompatibility(product, nextFurniture, {
       size: nextSize,
       configuration: nextConfiguration,
@@ -11941,7 +12413,8 @@ function GuidedEntryDoorWorkflow({
         selectedFurnitureImageUrl: nextFurnitureImage,
       },
     };
-    onSelectProduct(requirement, {
+    // Resolves to { ok } once the job save finishes (the caller shows Saving / Not saved / moves on).
+    return Promise.resolve(onSelectProduct(requirement, {
       ...product,
       size: nextSize,
       configuration: nextConfiguration,
@@ -11992,6 +12465,19 @@ function GuidedEntryDoorWorkflow({
         ...(product.metadata || {}),
         productEntity: patchedEntity,
       },
+    })).then((result) => (result === false ? { ok: false, saveFailed: true } : { ok: true }), (error) => ({ ok: false, saveFailed: true, message: error?.message || "" }));
+  };
+
+  const confirmDoorSelection = async () => {
+    if (confirmState.state === "saving") return;
+    setConfirmState({ state: "saving", message: "" });
+    const result = await saveSelection({ hardware: selectedFurniture?.productCode, furniture: selectedFurniture, furnitureFinish: selectedFurnitureFinish });
+    if (result?.ok) { setConfirmState({ state: "saved", message: "" }); return; }
+    setConfirmState({
+      state: "failed",
+      message: result?.missing?.length
+        ? `Still to choose: ${result.missing.join(", ")}.`
+        : `The door selection was not saved${result?.message ? `: ${result.message}` : ""}. The reason is shown at the top of the page. Your choices are kept; press Confirm again to retry.`,
     });
   };
 
@@ -12131,18 +12617,37 @@ function GuidedEntryDoorWorkflow({
             />
           ) : currentStep === "hardware" ? (
             <ExteriorHardwareWizard options={furnitureOptions} selectedCode={entryDoorHardware} finish={selectedFurnitureFinish} door={door} values={hardwareOptions} ui={hardwareUi} onUiChange={onHardwareUiChange} onOptionsChange={onHardwareOptionsChange} onLocationChange={onDoorLocationChange}
-              onSelect={item=>{onEntryDoorHardwareChange(item.productCode);onEntryDoorFurnitureFinishChange(item.finishOptions?.[0]||'');}}
+              onSelect={item=>{onEntryDoorHardwareChange(item.productCode);onEntryDoorFurnitureFinishChange(furnitureFinishAfterProductChange(item, entryDoorFurnitureFinish));}}
               onFinishChange={onEntryDoorFurnitureFinishChange} onDetails={item=>onViewDetails?.(item)} onContinue={onHardwareConfirm}/>
           ) : (
             <div className="entryDoorOptionPanel" data-testid="entry-door-review-step">
-              <EntryDoorSelectionSummary product={{...selectedProduct,size:entryDoorSize,configuration:entryDoorConfiguration,finish:entryDoorFinish}} glass={selectedGlass} furniture={selectedFurniture} furnitureFinish={selectedFurnitureFinish} onNavigateStep={onEntryDoorStepChange} /><p>{door?.doorReference} ? {door?.location} ? {door?.level} ? Hardware quantity {hardwareOptions?.quantity || door?.quantity}</p><p>{hardwareOptions?.lockType || selectedFurniture?.lockingType}</p>
+              <EntryDoorSelectionSummary product={{...selectedProduct,size:entryDoorSize,configuration:entryDoorConfiguration,finish:entryDoorFinish}} glass={selectedGlass} furniture={selectedFurniture} furnitureFinish={selectedFurnitureFinish} onNavigateStep={onEntryDoorStepChange} /><p>{door?.doorReference} · {door?.location} · {door?.level} · Hardware quantity {hardwareOptions?.quantity || door?.quantity}</p><p>{hardwareOptions?.lockType || selectedFurniture?.lockingType}</p>
               <div className="entryDoorCompatibility warning" data-testid="entry-door-review-compatibility">
                 <strong>Review & Confirm</strong>
                 <span>Confirm the selected door, glass, furniture finish and locking compatibility before saving this job selection.</span>
               </div>
-              <button type="button" className="primary" disabled={!selectedFurniture || (selectedFurniture.finishOptions.length > 0 && !selectedFurnitureFinish)} onClick={() => saveSelection({ hardware: selectedFurniture?.productCode, furniture: selectedFurniture, furnitureFinish: selectedFurnitureFinish })}>
-                Confirm complete door selection
+              {selectedFurniture && furnitureFinishes.length > 1 && !selectedFurnitureFinish ? (
+                <div className="entryDoorCompatibility warning" data-testid="entry-door-review-finish-required">
+                  <strong>Choose the door furniture finish</strong>
+                  <span>{selectedFurniture.productName} comes in {furnitureFinishes.length} finishes.</span>
+                  <div>{furnitureFinishes.map((finish) => <button key={finish} type="button" onClick={() => onEntryDoorFurnitureFinishChange(finish)}>{finish}</button>)}</div>
+                </div>
+              ) : null}
+              {savedFinishDiffers && finishDifferenceAccepted !== selectedFurnitureFinish ? (
+                <div className="entryDoorCompatibility warning" data-testid="entry-door-review-finish-differs">
+                  <strong>The furniture finish differs from the saved selection</strong>
+                  <span>Saved: {savedFurnitureFinish}. This review: {selectedFurnitureFinish}. Choose which one to keep - nothing is changed until you confirm.</span>
+                  <div>
+                    <button type="button" onClick={() => onEntryDoorFurnitureFinishChange(savedFurnitureFinish)}>Keep {savedFurnitureFinish}</button>
+                    <button type="button" onClick={() => setFinishDifferenceAccepted(selectedFurnitureFinish)}>Use {selectedFurnitureFinish}</button>
+                  </div>
+                </div>
+              ) : null}
+              <button type="button" className="primary" data-testid="entry-door-confirm" disabled={confirmState.state === "saving" || !selectedFurniture || (furnitureFinishes.length > 0 && !selectedFurnitureFinish) || (savedFinishDiffers && finishDifferenceAccepted !== selectedFurnitureFinish)} onClick={confirmDoorSelection}>
+                {confirmState.state === "saving" ? "Saving door selection..." : "Confirm complete door selection"}
               </button>
+              {confirmState.state === "failed" ? <p className="entryDoorCompatibility warning" role="alert" data-testid="entry-door-confirm-error">{confirmState.message}</p> : null}
+              {confirmState.state === "saved" ? <p data-testid="entry-door-confirm-saved">Door selection saved.</p> : null}
             </div>
           )}
         </main>
@@ -14250,7 +14755,19 @@ function GuidedBudgetDock({ totals }) {
   );
 }
 
-function GuidedMiniTotal({ label, value, tone = "" }) {
+// fullPrice: a price / allowance / product total - builder view only. clientCostExGst: a cost
+// difference (ex GST) - shown to the client as their upgrade / downgrade (margin + GST included).
+function GuidedMiniTotal({ label, value, tone = "", fullPrice = false, clientCostExGst, clientLabel = "Price difference" }) {
+  const { clientView } = useClientPriceView();
+  if (clientView && fullPrice) return null;
+  if (clientView && clientCostExGst !== undefined) {
+    return (
+      <div className={`guidedMiniTotal ${tone}`}>
+        <span>{clientLabel}</span>
+        <strong><ClientDifference costExGst={clientCostExGst} /></strong>
+      </div>
+    );
+  }
   return (
     <div className={`guidedMiniTotal ${tone}`}>
       <span>{label}</span>
@@ -15301,7 +15818,7 @@ function normaliseDocumentBook(value, context) {
   value = applyConfirmedClientSelectionCorrections(value);
   // Bath Mixers + Shower Mixers are one category now; merge any saved Shower Mixer selection into it.
   if (Array.isArray(value?.rooms)) {
-    const rooms = migrateBathShowerMixerRooms(value.rooms);
+    const rooms = clearPlaceholderQuoteCredits(migrateBathShowerMixerRooms(value.rooms));
     if (rooms !== value.rooms) value = { ...value, rooms };
   }
   if (value?.documentType === "luxury_selections_book" && Array.isArray(value.rooms)) {
@@ -17917,6 +18434,7 @@ function handleGuidedBack({
   setGuidedRequirementKey,
   embedded = false,
   onEmbeddedBack = null,
+  onHomeRoute = null,
 }) {
   if (guidedScreen === "appliance-products") {
     if (guidedApplianceStep === "details") {
@@ -18169,6 +18687,9 @@ function handleGuidedBack({
   if (guidedScreen === "interior" || guidedScreen === "exterior" || guidedScreen === "review") {
     setGuidedScreen("areas");
     setGuidedArea("");
+    // 15 Nov 2026: the URL kept ?selectionArea=interior after this Back, so a reload (or browser
+    // Back / Forward) reopened Interior instead of the home screen the client had returned to.
+    onHomeRoute?.();
     return;
   }
   if (embedded) {
@@ -18235,6 +18756,12 @@ const styles = `
   .cabinetryMissingRequirements ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
   .cabinetryMissingRequirements li button { min-height: 38px; border: 1px solid #d97706; border-radius: 8px; background: #ffffff; color: #92400e; padding: 8px 12px; font-weight: 900; text-align: left; width: 100%; }
   .cabinetryMissingRequirements li button:hover { background: #fef3c7; }
+  .cabinetryMissingRequirements li.cabinetryMissingItem { display: flex; gap: 8px; flex-wrap: wrap; }
+  .cabinetryMissingRequirements li.cabinetryMissingItem button:first-child { flex: 1 1 260px; }
+  .cabinetryMissingRequirements .cabinetryBuilderConfirm, .cabinetryMissingRequirements li button.cabinetryBuilderConfirm { width: auto; min-height: 38px; border: 1px solid #0f766e; border-radius: 8px; background: #f0fdfa; color: #115e59; padding: 8px 12px; font-size: 16px; font-weight: 900; }
+  .cabinetryBuilderConfirmed { display: grid; gap: 6px; border: 1px solid #0f766e; border-radius: 8px; background: #f0fdfa; color: #115e59; padding: 12px 16px; font-size: 16px; }
+  .cabinetryBuilderConfirmed ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+  .cabinetryBuilderConfirmed li button { margin-left: 10px; border: 1px solid #0f766e; border-radius: 6px; background: #ffffff; color: #115e59; padding: 4px 10px; font-size: 16px; font-weight: 800; }
   .guidedAreaGrid, .guidedCategoryGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; }
   .guidedImageCard { min-height: clamp(300px, 22vw, 360px); position: relative; overflow: hidden; display: grid; align-content: start; gap: 8px; border: 1px solid #d7deea; border-radius: 8px; padding: 16px; background: #f8fafc; color: #ffffff; text-align: left; box-shadow: 0 14px 30px rgba(15,23,42,.10); cursor: pointer; }
   .guidedImageCard img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 1; filter: brightness(1.08) saturate(1.08); transition: transform .22s ease; pointer-events: none; }
@@ -18826,11 +19353,57 @@ const styles = `
   .cabinetryWorkflow .guidedProductPanel { gap: 16px; }
   /* Wraps instead of squeezing the title behind the totals on narrower screens. */
   .cabinetryBanner { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 16px; }
+  /* Room navigation, room notice and review Edit buttons (16 Nov 2026). Readable text is never below 16px. */
+  .cabinetryRoomNav { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin: 12px 0; padding: 12px 14px; border: 1px solid #cbd5e1; border-radius: 12px; background: #f8fafc; font-size: 16px; }
+  .cabinetryRoomNav ol { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+  .cabinetryRoomNavOverview { font-size: 16px; font-weight: 800; padding: 10px 14px; border-radius: 10px; border: 1px solid #0f766e; background: #fff; color: #0f766e; cursor: pointer; }
+  .cabinetryRoomNavItem { display: grid; grid-template-columns: auto 1fr; column-gap: 8px; align-items: center; text-align: left; min-width: 150px; font-size: 16px; padding: 8px 12px; border-radius: 10px; border: 2px solid #cbd5e1; background: #fff; color: #0f172a; cursor: pointer; }
+  .cabinetryRoomNavItem small { grid-column: 2; font-size: 16px; color: #475569; }
+  .cabinetryRoomNavItem.approved { border-color: #10b981; } .cabinetryRoomNavItem.approved small { color: #047857; font-weight: 700; }
+  .cabinetryRoomNavItem.complete { border-color: #f59e0b; }
+  .cabinetryRoomNavItem.current { border-color: #0f766e; background: #ecfdf5; box-shadow: 0 0 0 2px #0f766e inset; font-weight: 800; }
+  .cabinetryRoomNavIndex { grid-row: span 2; display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: #0f172a; color: #fff; font-weight: 800; font-size: 16px; }
+  .cabinetryRoomNotice { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 8px 0 12px; padding: 12px 14px; border-radius: 10px; border: 1px solid #10b981; background: #ecfdf5; color: #064e3b; font-size: 16px; font-weight: 700; }
+  .cabinetryRoomNotice button { font-size: 20px; line-height: 1; border: 0; background: transparent; color: #064e3b; cursor: pointer; }
+  .cabinetryReviewHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .cabinetryReviewEdit { font-size: 16px; font-weight: 800; padding: 6px 14px; border-radius: 8px; border: 1px solid #0f766e; background: #fff; color: #0f766e; cursor: pointer; }
+  .cabinetryReviewEdit:hover, .cabinetryRoomNavOverview:hover { background: #0f766e; color: #fff; }
+  /* Cabinetry heading hierarchy (18 Nov 2026 "FINAL CABINETRY UI CLEANUP"), the same on all seven steps of
+     every room: step heading (28px) > section heading (21px) > subsection heading (18px). Body text,
+     product descriptions and rows keep their compact sizes. */
+  .cabinetryPanel .cabinetryStageHeading { display: grid; gap: 2px; margin: 0 0 4px; padding-bottom: 12px; border-bottom: 3px solid #0f766e; }
+  .cabinetryPanel .cabinetryStageHeading span { font-size: 16px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #0f766e; }
+  .cabinetryPanel .cabinetryStageHeading h2 { margin: 0; font-size: 28px; line-height: 1.15; font-weight: 900; color: #071827; }
+  .cabinetryPanel .cabinetryStage { gap: 22px; }
+  .cabinetryPanel .cabinetryScheduleGroup,
+  .cabinetryPanel .cabinetryApplyPanel,
+  .cabinetryPanel .bulkheadFinishPanel,
+  .cabinetryPanel .cabinetryReviewGroup { padding: 18px; gap: 14px; }
+  .cabinetryPanel .cabinetryScheduleGroup > h3,
+  .cabinetryPanel .bulkheadFinishPanel > h3,
+  .cabinetryPanel .cabinetrySectionHead h3,
+  .cabinetryPanel .cabinetryAppliedSummary h3,
+  .cabinetryPanel .cabinetryAreaSummary h3 { margin: 0; padding-bottom: 8px; border-bottom: 1px solid #d7deea; font-size: 21px; line-height: 1.2; font-weight: 900; letter-spacing: 0; color: #071827; }
+  .cabinetryPanel .cabinetryStageContext { display: grid; gap: 4px; }
+  .cabinetryPanel .cabinetryStageContext > strong { font-size: 21px; font-weight: 900; color: #071827; }
+  /* A choice with no quantity, width or notes uses the full width for its name (no wrapped words). */
+  .cabinetrySelectionRow.simple { grid-template-columns: 28px minmax(0, 1fr); }
+  .cabinetryPanel .cabinetrySectionHead { display: grid; gap: 6px; }
+  .cabinetryPanel .cabinetrySectionHead span,
+  .cabinetryPanel .cabinetryStageContext > span { font-size: 16px; color: #475569; font-weight: 600; }
+  .cabinetryPanel .cabinetryReviewGroup h4,
+  .cabinetryPanel .cabinetryClientBulkheads h4 { margin: 0; font-size: 18px; font-weight: 900; color: #071827; }
+  .cabinetryPanel .cabinetryClientBulkheads { display: grid; gap: 6px; border-top: 1px solid #e2e8f0; padding-top: 12px; }
+  .cabinetryPanel .cabinetryClientBulkheads ul { margin: 0; padding-left: 20px; font-size: 16px; }
+  .cabinetryPanel .cabinetryQuietNote { margin: 0; font-size: 16px; color: #475569; }
+  .cabinetryPanel .cabinetryReviewGroup { border-top: 1px solid #e2e8f0; }
   .cabinetryBanner > div:first-child { flex: 1 1 280px; }
   .cabinetryBanner > .guidedTotals { flex: 1 1 520px; min-width: 0; max-width: 900px; }
   .cabinetryBanner > button { flex: 0 0 auto; }
         .cabinetryViewToggle { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; padding: 12px 14px; border-radius: 12px; background: #f1f5f9; font-size: 16px; }
-        .cabinetryViewToggle button { font-size: 16px; padding: 8px 14px; border-radius: 10px; border: 1px solid #94a3b8; background: #fff; cursor: pointer; }
+        .cabinetryViewToggle button { font-size: 16px; padding: 8px 14px; border-radius: 10px; border: 1px solid #94a3b8; background: #fff; color: #0f172a; font-weight: 700; cursor: pointer; }
+        .cabinetryViewToggle[data-view="client"] { justify-content: flex-end; padding: 0; background: transparent; margin-bottom: 4px; }
+        .cabinetryViewToggle[data-view="client"] button { font-size: 16px; padding: 6px 12px; color: #475569; }
         .cabinetryBulkheadBody { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; }
         .cabinetryBulkheadReference { flex: 1 1 260px; max-width: 360px; margin: 0; }
         .cabinetryBulkheadReference img { width: 100%; border-radius: 12px; display: block; }
@@ -18920,6 +19493,10 @@ const styles = `
      which this list never populates. Those reserved tracks were stealing width from the name
      column, forcing room names like "Powder Room" to wrap letter-by-letter. Two columns only. */
   [data-testid="cabinetry-apply-colours-modal"] .cabinetrySelectionRow { grid-template-columns: 28px 1fr; }
+  .cabinetryReplaceFinishes { display: flex; gap: 10px; align-items: flex-start; margin: 14px 0 4px; padding: 12px 14px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 16px; color: #0f172a; cursor: pointer; }
+  .cabinetryReplaceFinishes input { width: 20px; height: 20px; margin-top: 2px; }
+  .cabinetryReplaceFinishes > span { display: grid; gap: 4px; }
+  .cabinetryReplaceRoom { color: #334155; }
   .cabinetrySelectionQuantity,
   .cabinetrySelectionWidth,
   .cabinetrySelectionNotes { display: grid; gap: 4px; min-width: 0; color: #475569; font-size: 16px; font-weight: 950; }

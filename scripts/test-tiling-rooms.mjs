@@ -149,7 +149,11 @@ const repeatedPatch = tilingSelectionPatch(requirement, [repeatedWasteRoom], { p
 const repeatedQuote = connectTilingSelectionsToQuotation({ quotation: {}, procurement: { items: [] } }, { rooms: [{ rows: [{ guidedSelection: repeatedPatch.guidedSelection }] }] }, { productById });
 const repeatedWasteRows = repeatedQuote.quotation["TILING - REPEATED WASTE"].rows.filter((row) => row.id.includes("waste-fw-insert-Shower"));
 assert.equal(repeatedWasteRows.length, 1, "identical product/application allocations become one quote row");
-assert.equal(repeatedWasteRows[0].quantity, 2, "aggregation preserves each allocated unit");
+// Two IDENTICAL entries (same product, application, quantity, price, no id) are a clone left by the old
+// editor, charged once (Quotation V1 hotfix 7d510db; owner-approved handoff 2026-11-12). A second real
+// floor waste is entered as quantity 2 or as a separately identified entry.
+assert.equal(repeatedWasteRows[0].quantity, 1, "an exact clone floor waste is charged once");
+assert.equal(repeatedPatch.guidedSelection.tilingRooms[0].floorWastes.length, 1, "the clone is not saved again");
 assert.equal(repeatedQuote.procurement.items.filter((item) => item.id === repeatedWasteRows[0].id).length, 1);
 
 const tileLayerRates = { quotation: { "TILE LAYER": { rows: [

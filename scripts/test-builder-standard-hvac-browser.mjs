@@ -12,7 +12,9 @@ import {createEstimateBuilderWorkbookDefaults} from '../lib/construction-estimat
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 dotenv.config({path:path.join(root, '.env.local'), quiet:true});
 dotenv.config({path:path.join(root, '.env'), quiet:true});
-const origin = process.env.CLIENT_SELECTIONS_BASE_URL || 'http://localhost:3000';
+const origin = process.env.CLIENT_SELECTIONS_BASE_URL || 'http://localhost:3101';
+// Never the shared development server: run against an isolated server (CLIENT_SELECTIONS_BASE_URL).
+if (new URL(origin).port === '3000') { console.error('Refusing to run against port 3000; set CLIENT_SELECTIONS_BASE_URL to an isolated server.'); process.exit(2); }
 const out = path.join(root, 'artifacts/test-artifacts/builder-standard-hvac-browser');
 fs.mkdirSync(out, {recursive:true});
 const projectId = `local-standard-hvac-${Date.now()}`;
@@ -233,6 +235,14 @@ try {
   assert.equal(record.workbook.quotation['AIR CONDITIONING'].rows.length,1);
   report.tests.splitCanonicalRoomAndReplacement=true;
   await screenshot('split-system-room');
+  // 15 Nov 2026: the AC screen had only "Back" - the client could not move on after choosing a system.
+  // Save and Continue saves, then returns to the category; the saved system survives a reload.
+  await page.$eval('[data-testid="standard-range-save-continue-air-conditioning"]',b=>b.click());
+  await page.waitForFunction(()=>!document.querySelector('[data-testid="builder-standard-range-air-conditioning"]'),{timeout:60000});
+  record=await savedLocalRecord();assert.equal(record.workbook.quotation['AIR CONDITIONING'].rows[0].selectedProducts[0].hvac.systemType,'Split');
+  await page.reload({waitUntil:'domcontentloaded',timeout:180000});await delay(2000);
+  record=await savedLocalRecord();assert.equal(record.workbook.quotation['AIR CONDITIONING'].rows[0].selectedProducts[0].allocations[0].location,'Master Bedroom');
+  report.tests.hvacSaveAndContinue=true;
   await page.goto(`${origin}/modules/estimate-builder?page=productLibrary&browse=all&catalogueSection=hvac`,{waitUntil:'domcontentloaded',timeout:180000});
   await page.waitForSelector('.catalogue-items-row',{timeout:90000});
   assert.equal(await page.$$eval('.catalogue-items-row',rows=>rows.length),6);

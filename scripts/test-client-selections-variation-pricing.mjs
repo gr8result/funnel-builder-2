@@ -82,8 +82,17 @@ assert.throws(() => recordBuilderPricingReview(reviews, byKey["cabinetry-bulkhea
 reviews = recordBuilderPricingReview(reviews, byKey["cabinetry-bulkheads"], { quantity: 4.2, unitPrice: 180, priceIncludesGst: false });
 assert.equal(variationPricingState(byKey["cabinetry-bulkheads"], reviews[builderReviewTaskId(byKey["cabinetry-bulkheads"])]).amountExGst, 756);
 assert.equal(builderReviewTasks(items, reviews).length, 1, "resolved task leaves the queue");
-// Approval is separate from client acceptance.
-assert.throws(() => recordClientVariationDecision(reviews, byKey["cabinetry-bulkheads"], "accepted"), /not been confirmed/);
+// The client may approve once the amount is known (2026-11-11 rule); builder sign-off comes after.
+// An item with no amount yet cannot be approved by the client.
+assert.throws(() => recordClientVariationDecision(reviews, byKey.rangehood, "accepted"), /does not have an amount/);
+const clientFirst = recordClientVariationDecision(reviews, byKey["cabinetry-bulkheads"], "accepted");
+assert.equal(variationPricingState(byKey["cabinetry-bulkheads"], clientFirst[builderReviewTaskId(byKey["cabinetry-bulkheads"])]).clientDecision, "accepted");
+// Builder signs off the same amount: the client's approval stands.
+const signedOff = recordBuilderPricingReview(clientFirst, byKey["cabinetry-bulkheads"], { approve: true, by: "builder" });
+assert.equal(variationPricingState(byKey["cabinetry-bulkheads"], signedOff[builderReviewTaskId(byKey["cabinetry-bulkheads"])]).clientDecision, "accepted");
+// A different amount re-opens the client's decision.
+const repriced = recordBuilderPricingReview(clientFirst, byKey["cabinetry-bulkheads"], { unitPrice: 200 });
+assert.equal(variationPricingState(byKey["cabinetry-bulkheads"], repriced[builderReviewTaskId(byKey["cabinetry-bulkheads"])]).clientDecision, "pending");
 reviews = recordBuilderPricingReview(reviews, byKey["cabinetry-bulkheads"], { approve: true, by: "builder" });
 let confirmed = variationPricingState(byKey["cabinetry-bulkheads"], reviews[builderReviewTaskId(byKey["cabinetry-bulkheads"])]);
 assert.equal(confirmed.state, PRICING_STATES.confirmed);
@@ -172,6 +181,18 @@ assert.equal(credit.amountExGst, -540);
   assert.equal(claddingState.state, S.builderReview);
   assert.deepEqual(claddingState.missing.map((entry) => entry.key), ["quantity"]);
   assert.match(claddingState.missing[0].label, /quantity in 4200 x 180 x 16mm board/);
+
+  // Quick resolution: the builder enters the board count and the Product Library price is used...
+  assert.equal(cladding.reference.price, 44.56);
+  const boards = recordBuilderPricingReview({}, cladding, { quantity: 120, unitPrice: cladding.reference.price, priceIncludesGst: true });
+  const boardState = variationPricingState(cladding, boards[builderReviewTaskId(cladding)]);
+  assert.equal(boardState.state, S.estimatedPrice, "priced, but cladding has no recorded allowance");
+  assert.equal(boardState.priceIncGst, Math.round(44.56 * 120 * 100) / 100);
+  // ...or records that it is already covered by the contract price: resolved, no variation.
+  const included = recordBuilderPricingReview({}, cladding, { quantity: 1, unitPrice: 0, allowance: 0, priceIncludesGst: false, approve: true });
+  const includedState = variationPricingState(cladding, included[builderReviewTaskId(cladding)]);
+  assert.equal(includedState.state, S.confirmed);
+  assert.equal(includedState.amountIncGst, 0);
 
   // Allowance not recorded (0, no baseline, not "set"): the PRICE is shown, never counted as the variation.
   const door = guidedRowVariationItem(guidedRow({ requirementKey: "entry-door", productId: "door-1", allowance: 0, selectedPrice: null, quantity: 1, unit: "entry door", priceState: "Quote Required", variationPending: true }), { jobId, productLookup: lookup });

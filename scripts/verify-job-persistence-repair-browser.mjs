@@ -126,7 +126,7 @@ try {
  const ids=await page.$$eval(sectionSelector+' [data-quote-row]',els=>els.map(e=>e.dataset.quoteRow));
  const editedId=ids[0],deletedId=ids[1];
  const rowSelector=id=>`[data-quote-row=${JSON.stringify(id)}]`;
- await input(rowSelector(editedId)+' input[id^="quote-edit"]','Persisted edited description');
+ await input(rowSelector(editedId)+' [id^="quote-edit"]','Persisted edited description');
  const fields=await page.$$eval(rowSelector(editedId)+' input',els=>els.map((e,i)=>({i,id:e.id,value:e.value})));
  console.log('Quote fields',fields);
  // Product name, quantity, unit, rate, then notes are the editable row inputs.
@@ -136,7 +136,7 @@ try {
  await page.$eval(rowSelector(editedId),e=>[...e.querySelectorAll('button')].find(b=>b.innerText==='Insert below').click());
  await page.waitForFunction((selector,count)=>document.querySelectorAll(selector+' [data-quote-row]').length>count,{},sectionSelector,ids.length);
  const insertedId=(await page.$$eval(sectionSelector+' [data-quote-row]',els=>els.map(e=>e.dataset.quoteRow))).find(id=>!ids.includes(id));
- await input(rowSelector(insertedId)+' input[id^="quote-edit"]','New persistent row');
+ await input(rowSelector(insertedId)+' [id^="quote-edit"]','New persistent row');
  await input(rowSelector(insertedId)+' td:nth-child(9) input','3');
  await input(rowSelector(insertedId)+' td:nth-child(11) input','42');
  await page.$eval(rowSelector(deletedId),e=>[...e.querySelectorAll('button')].find(b=>b.innerText==='Delete').click());
@@ -174,7 +174,7 @@ try {
  await clickText('Calculations');await page.waitForSelector('#formula-edit-lowerSlabAreaM2');
  assert.equal(await page.$eval('#formula-edit-lowerSlabAreaM2',e=>e.value),'123+7');
  await clickText('Quote Sheet');await page.waitForSelector(rowSelector(editedId));
- assert.equal(await page.$eval(rowSelector(editedId)+' input[id^="quote-edit"]',e=>e.value),'Persisted edited description');
+ assert.equal(await page.$eval(rowSelector(editedId)+' [id^="quote-edit"]',e=>e.value),'Persisted edited description');
  await page.screenshot({path:path.join(outDir,'reopened.png'),fullPage:false});
  // Exercise the actual persistence implementation against this browser's real database.
  const good=await record('job:'+target.jobId);

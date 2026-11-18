@@ -1,0 +1,189 @@
+{
+  "importedAt": "2026-11-16T07:27:28.312Z",
+  "products": [
+    {
+      "productCode": "EXT-HILLS-80150661",
+      "sku": "80150661",
+      "model": "Compact Folding Frame",
+      "manufacturer": "Hills",
+      "brand": "Hills",
+      "supplier": "Hills",
+      "productName": "Hills Compact Folding Frame Clothesline - Monument®",
+      "familyKey": "clothesline",
+      "requirementKeys": [
+        "clothesline"
+      ],
+      "categoryKey": "external-accessories",
+      "subcategory": "Folding frame",
+      "productType": "Folding frame",
+      "topLevelArea": "exterior",
+      "colour": "Monument®",
+      "finish": "Powder coated galvanised steel",
+      "officialProductUrl": "https://hillshome.com.au/products/compact-folding-frame-clothesline-strut?variant=43008684425396",
+      "sourceUrl": "https://hillshome.com.au/products/compact-folding-frame-clothesline-strut",
+      "sourceType": "manufacturer_product_feed",
+      "sourceVerifiedAt": "2026-11-16T07:27:28.312Z",
+      "sourceRetrievedAt": "2026-11-16T07:27:28.312Z",
+      "lastImportedAt": "2026-11-16T07:27:28.312Z",
+      "primaryImageUrl": "/images/catalogues/external-accessories/EXT-HILLS-80150661.jpg",
+      "imageSourceUrl": "https://cdn.shopify.com/s/files/1/0640/4348/3316/files/80150661_CompactFoldingFrame_Monument_WEB_dee7de56-6f95-4968-9378-7aef3601f15b.jpg?v=1713765526",
+      "imageStatus": "verified_exact",
+      "imageVerifiedAt": "2026-11-16T07:27:28.312Z",
+      "rrp": null,
+      "clientPrice": null,
+      "priceStatus": "quote_required",
+      "priceUnit": "EACH",
+      "currency": "AUD",
+      "active": true,
+      "attributes": {
+        "clientSelectionRequirement": "clothesline",
+        "supplierAvailability": "Confirm availability when ordering",
+        "priceNote": "Builder supply and installation quotation required. Retail product pricing is not an installed rate.",
+        "selectionFacets": {
+          "Type": "Folding frame",
+          "Brand": "Hills",
+          "Colour": "Monument®",
+          "Finish": "Powder coated galvanised steel"
+        }
+      }
+    },
+    {
+      "productCode": "EXT-HILLS-80150678",
+      "sku": "80150678",
+      "model": "Compact Folding Frame",
+      "manufacturer": "Hills",
+      "brand": "Hills",
+      "supplier": "Hills",
+      "productName": "Hills Compact Folding Frame Clothesline - Surfmist®",
+      "familyKey": "clothesline",
+      "requirementKeys": [
+        "clothesline"
+      ],
+      "categoryKey": "external-accessories",
+      "subcategory": "Folding frame",
+      "productType": "Folding frame",
+      "topLevelArea": "exterior",
+      "colour": "Surfmist®",
+      "finish": "Powder coated galvanised steel",
+      "officialProductUrl": "https://hillshome.com.au/products/compact-folding-frame-clothesline-strut?variant=43008684458164",
+      "sourceUrl": "https://hillshome.com.au/products/compact-folding-frame-clothesline-strut",
+      "sourceType": "manufacturer_product_feed",
+      "sourceVerifiedAt": "2026-11-16T07:27:28.312Z",
+      "sourceRetrievedAt": "2026-11-16T07:27:28.312Z",
+      "lastImportedAt": "2026-11-16T07:27:28.312Z",
+      "primaryImageUrl": "/images/catalogues/external-accessories/EXT-HILLS-80150678.jpg",
+      "imageSourceUrl": "https://cdn.shopify.com/s/files/1/0640/4348/3316/files/80150678_CompactFoldingFrame_Surfmist_WEB.jpg?v=1713847792",
+      "imageStatus": "verified_exact",
+      "imageVerifiedAt": "2026-11-16T07:27:28.312Z",
+      "rrp": null,
+      "clientPrice": null,
+      "priceStatus": "quote_required",
+      "priceUnit": "EACH",
+      "currency": "AUD",
+      "active": true,
+      "attributes": {
+        "clientSelectionRequirement": "clothesline",
+        "supplierAvailability": "Confirm availability when ordering",
+        "priceNote": "Builder supply and installation quotation required. Retail product pricing is not an installed rate.",
+        "selectionFacets": {
+          "Type": "Folding frame",
+          "Brand": "Hills",
+          "Colour": "Surfmist®",
+          "Finish": "Powder coated galvanised steel"
+        }
+      }
+    },
+    {
+      "productCode": "EXT-MILKCAN-710WH-WH",
+      "sku": "710WH-WH",
+      "model": "Monte Carlo",
+      "manufacturer": "Milkcan",
+      "brand": "Milkcan",
+      "supplier": "Milkcan",
+      "productName": "Milkcan Monte Carlo Parcel Pillar Letterbox - White",
+      "familyKey": "letterbox",
+      "requirementKeys": [
+        "letterbox"
+      ],
+      "categoryKey": "external-accessories",
+      "subcategory": "Parcel pillar",
+      "productType": "Parcel pillar",
+      "topLevelArea": "exterior",
+      "colour": "White",
+      "finish": "Powder coat",
+      "officialProductUrl": "https://www.milkcan.com.au/products/monte-carlo-parcel-pillar-letterbox-white?variant=52818604327224",
+      "sourceUrl": "https://www.milkcan.com.au/products/monte-carlo-parcel-pillar-letterbox-white",
+      "sourceType": "manufacturer_product_feed",
+      "sourceVerifiedAt": "2026-11-16T07:27:28.312Z",
+      "sourceRetrievedAt": "2026-11-16T07:27:28.312Z",
+      "lastImportedAt": "2026-11-16T07:27:28.312Z",
+      "primaryImageUrl": "/images/catalogues/external-accessories/EXT-MILKCAN-710WH-WH.jpg",
+      "imageSourceUrl": "https://cdn.shopify.com/s/files/1/0908/1775/7496/files/Milkcan-710WH-WH-monte-carlo-white-pillar-letterbox-parcel-front-1100px_b4b821a1-1791-4e24-a622-b041c161decf.jpg?v=1787019037",
+      "imageStatus": "verified_exact",
+      "imageVerifiedAt": "2026-11-16T07:27:28.312Z",
+      "rrp": null,
+      "clientPrice": null,
+      "priceStatus": "quote_required",
+      "priceUnit": "EACH",
+      "currency": "AUD",
+      "active": true,
+      "attributes": {
+        "clientSelectionRequirement": "letterbox",
+        "supplierAvailability": "Confirm availability when ordering",
+        "priceNote": "Builder supply and installation quotation required. Retail product pricing is not an installed rate.",
+        "selectionFacets": {
+          "Type": "Parcel pillar",
+          "Brand": "Milkcan",
+          "Colour": "White",
+          "Finish": "Powder coat"
+        }
+      }
+    },
+    {
+      "productCode": "EXT-MILKCAN-710BK-BK",
+      "sku": "710BK-BK",
+      "model": "Monte Carlo",
+      "manufacturer": "Milkcan",
+      "brand": "Milkcan",
+      "supplier": "Milkcan",
+      "productName": "Milkcan Monte Carlo Parcel Pillar Letterbox - Black",
+      "familyKey": "letterbox",
+      "requirementKeys": [
+        "letterbox"
+      ],
+      "categoryKey": "external-accessories",
+      "subcategory": "Parcel pillar",
+      "productType": "Parcel pillar",
+      "topLevelArea": "exterior",
+      "colour": "Black",
+      "finish": "Powder coat",
+      "officialProductUrl": "https://www.milkcan.com.au/products/monte-carlo-parcel-pillar-letterbox?variant=49700183343416",
+      "sourceUrl": "https://www.milkcan.com.au/products/monte-carlo-parcel-pillar-letterbox",
+      "sourceType": "manufacturer_product_feed",
+      "sourceVerifiedAt": "2026-11-16T07:27:28.312Z",
+      "sourceRetrievedAt": "2026-11-16T07:27:28.312Z",
+      "lastImportedAt": "2026-11-16T07:27:28.312Z",
+      "primaryImageUrl": "/images/catalogues/external-accessories/EXT-MILKCAN-710BK-BK.jpg",
+      "imageSourceUrl": "https://cdn.shopify.com/s/files/1/0908/1775/7496/files/Milkcan-710BK-BK-monte-carlo-black-pillar-letterbox-parcel-front-1100px.jpg?v=1739204441",
+      "imageStatus": "verified_exact",
+      "imageVerifiedAt": "2026-11-16T07:27:28.312Z",
+      "rrp": null,
+      "clientPrice": null,
+      "priceStatus": "quote_required",
+      "priceUnit": "EACH",
+      "currency": "AUD",
+      "active": true,
+      "attributes": {
+        "clientSelectionRequirement": "letterbox",
+        "supplierAvailability": "Confirm availability when ordering",
+        "priceNote": "Builder supply and installation quotation required. Retail product pricing is not an installed rate.",
+        "selectionFacets": {
+          "Type": "Parcel pillar",
+          "Brand": "Milkcan",
+          "Colour": "Black",
+          "Finish": "Powder coat"
+        }
+      }
+    }
+  ]
+}

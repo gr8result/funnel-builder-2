@@ -141,12 +141,19 @@ pass('Kitchen 8.00 lm reaches the Mid Range Stone rows, with cut-outs and upstan
 // The builder re-maps the supplier group to High End Stone: saved benchtops follow, the quantity MOVES.
 mapping = saveBuilderBenchtopRangeMapping(owner, { [benchtopPriceGroupKey(eclipse)]: 'high_end_stone' }, { catalogue: STONE_BENCHTOP_CATALOGUE });
 ranges = { mapping, classifications: {} };
+assert.equal(surfaceWithSetup(saved.benchtopAreas[0].surface, { area: saved.benchtopAreas[0], setup, ranges }).rangeKey, 'mid_range_stone', 'another browser mapping cannot reprice a saved surface on an ordinary edit');
+assert.equal(surfaceWithSetup(saved.benchtopAreas[0].surface, { area: saved.benchtopAreas[0], setup, ranges: { ...ranges, remapGroupKeys: [benchtopPriceGroupKey(prestige)] } }).rangeKey, 'mid_range_stone', 'an explicit change to another group cannot reprice this surface');
+ranges = { ...ranges, remapGroupKeys: [benchtopPriceGroupKey(eclipse)] };
 assert.equal(surfaceWithSetup(saved.benchtopAreas[0].surface, { area: saved.benchtopAreas[0], setup, ranges }).rangeKey, 'high_end_stone');
 selection = selectionWith(saved.benchtopAreas, ranges);
 quoted = quote(selection, quoted);
 assert.deepEqual([qty(quoted, 'benchtop_600', 'mid_range_stone'), qty(quoted, 'benchtop_900', 'mid_range_stone'), qty(quoted, 'benchtop_600', 'high_end_stone'), qty(quoted, 'benchtop_900', 'high_end_stone')], [null, null, 4.8, 3.2]);
 assert.equal(benchQuantity(quoted), 8, 'no duplicate quantity anywhere in the benchtop ranges');
 pass('changing a group mapping moves the Kitchen quantity from Mid Range Stone to High End Stone');
+const cleared = surfaceWithSetup(saved.benchtopAreas[0].surface, { area: saved.benchtopAreas[0], setup, ranges: { mapping: { groups: {} }, remapGroupKeys: [benchtopPriceGroupKey(eclipse)] } });
+assert.equal(benchtopLocationPatch({ location: { ...islandKitchen, benchtopDimensions: 'Builder record: 4800 x 600 mm' }, setup, areas: saved.benchtopAreas, ranges }).benchtopDimensions, 'Builder record: 4800 x 600 mm', 'a finish edit preserves historical builder dimensions');
+assert.equal(cleared.rangeKey, '', 'explicitly unsetting a group removes its saved range');
+assert.equal(surfaceWithSetup(cleared, { area: saved.benchtopAreas[0], setup, ranges: { mapping, classifications: { [benchtopPriceGroupKey(eclipse)]: 'mid_range_stone' } } }).rangeKey, '', 'another browser or legacy confirmation cannot undo an explicit unset');
 
 // Main benchtop = Eclipse (High End), Island = a Prestige product (Mid Range): independent.
 const mixed = areas.map(area => ({ ...area, ...(area.id === ISLAND_AREA_ID ? { sameAsMain: false } : {}), surface: stoneSurfaceForArea(area.id === ISLAND_AREA_ID ? prestige : eclipse, { room: 'Kitchen', area, setup, ranges }) }));

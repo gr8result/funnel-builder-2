@@ -1,11 +1,12 @@
 import { clientSelectionTradeParentNames } from "../../lib/construction-estimation/quoteTradeHierarchy.js";
+import { windowsSyncSummary } from "../../lib/construction-estimation/windowsPriceListSync.js";
 import { browserTenantKey, builderLocalStorage, builderSessionStorage } from '../../lib/builders/browserTenantStorage.js';
 import SelectionBaselineControl from './SelectionBaselineControl.jsx';
 import ClientSelectionsErrorBoundary from './ClientSelectionsErrorBoundary.jsx';
 import { safeSelectionNavigate } from "../../lib/navigation/selectionNavigation.js";
 import { masterJobId, linkTakeoffToMasterJob } from "../../lib/construction-estimation/masterJob.js";
 import EntryDoorFurnitureSchedule from './EntryDoorFurnitureSchedule.jsx';
-import CabinetryReconciliation from './CabinetryReconciliation.jsx';
+import CabinetryReconciliation, { CabinetrySectionBuilderNotes } from './CabinetryReconciliation.jsx';
 import SelectionReconcilePanel from './SelectionReconcilePanel.jsx';
 import ProductSelectionIntegrityPanel from './ProductSelectionIntegrityPanel.jsx';
 import { reconcileProductSelections } from '../../lib/builders/productSelectionIntegrity.js';
@@ -63,6 +64,7 @@ import { windowDoorSizeCodeForRow } from "../../lib/construction-estimation/esti
 import { SUBCONTRACTOR_QUOTE_DEDUCTIONS, V4_DATA_SECTIONS } from "../../lib/construction-estimation/estimateWorksheetV4Schema";
 import { quotationSectionsForFinalBoq, quoteLineTotal, quoteQuantity, quoteRate } from "../../lib/construction-estimation/finalQuotationBoq";
 import { quotationIssueCheck } from "../../lib/construction-estimation/quotationIssueGate";
+import { cabinetryQuotationBriefs } from "../../lib/construction-estimation/cabinetryRequirements.js";
 import { syncCommercialSnapshot } from "../../lib/builders/syncCommercialSnapshot";
 import { BUILDER_INCLUSION_SECTION_TITLES, normaliseEstimateInclusions, selectedEstimateInclusionsPackage } from "../../lib/builders/estimateInclusions";
 import { normaliseStandardInclusions, selectedStandardInclusionsPackage } from "../../lib/builders/standardInclusions";
@@ -1082,6 +1084,12 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
 
   // Quotation V1 issue workflow (ported from 7207be6): check locally, confirm, then issue once.
   const issueStatus = (state, message, extra = {}) => setCommercialSyncStatus({ state, message, projectId: "", snapshotId: "", syncedAt: "", blockers: [], ...extra });
+  // The same product-selection audit the customer PDF uses; an unpriced selected product blocks issue.
+  // If the audit cannot run, issue is refused rather than allowed without it.
+  const issueSelectionAudit = () => {
+    if (typeof sheet.productSelectionIntegrity !== "function") return null;
+    return sheet.productSelectionIntegrity();
+  };
   function requestQuotationIssue() {
     if (previewMode || isCommercialSyncing || issueInFlightRef.current) return;
     if (openJobDetails.noJobOpen) return issueStatus("error", "Open a job before issuing a quotation.");
@@ -1089,7 +1097,9 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
     const calculated = calculateEstimateBuilderWorkbook(sheet.getCurrentWorkbook());
     const chargedRows = quotationSectionsForFinalBoq(calculated.quotation || {}).reduce((count, section) => count + section.rows.length, 0);
     if (!chargedRows) return issueStatus("error", "There is nothing to issue yet: the quotation has no charged rows.");
-    const check = quotationIssueCheck(calculated.quotation || {});
+    let check;
+    try { check = quotationIssueCheck(calculated.quotation || {}, { selectionAudit: issueSelectionAudit(), resolutions: sheet.getCurrentWorkbook()?.commercialIssueResolutions || [], cabinetryBriefs: cabinetryQuotationBriefs(sheet.getCurrentWorkbook() || {}) }); }
+    catch (error) { return issueStatus("error", `Selected-product prices could not be checked, so the quotation was not issued: ${error?.message || error}`); }
     if (!check.ok) return issueStatus("error", check.message, { blockers: check.blockers });
     setIssueConfirm({ chargedRows, total: calculated.summary?.finalQuoteTotal || 0, gst: calculated.summary?.gst || 0 });
   }
@@ -1137,7 +1147,7 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
       ]);
       const calculated = calculateEstimateBuilderWorkbook(sourceWorkbook);
       // Same gate as the server: nothing is sent while a charged row has no confirmed price or is a duplicate.
-      const check = quotationIssueCheck(calculated.quotation || {});
+      const check = quotationIssueCheck(calculated.quotation || {}, { selectionAudit: issueSelectionAudit(), resolutions: sheet.getCurrentWorkbook()?.commercialIssueResolutions || [], cabinetryBriefs: cabinetryQuotationBriefs(sheet.getCurrentWorkbook() || {}) });
       if (!check.ok) {
         const error = new Error(check.message);
         error.blockers = check.blockers;
@@ -1513,11 +1523,11 @@ function EstimateBuilderWorkbookContent({ previewMode = false, mode = "", recent
             <span>{commercialSyncStatus.message}</span>
             {commercialSyncStatus.syncedAt ? <small>{new Date(commercialSyncStatus.syncedAt).toLocaleString()}</small> : null}
             {commercialSyncStatus.blockers?.length ? (
-              <ul data-testid="issue-quotation-blockers">
-                {commercialSyncStatus.blockers.slice(0, 12).map((blocker) => (
-                  <li key={`${blocker.sectionKey}-${blocker.rowId}-${blocker.item}`}>{blocker.section}: {blocker.item}{blocker.location ? ` (${blocker.location})` : ""} - {blocker.reason}</li>
+              // Every outstanding item is listed (scrolls), so the builder can work through all of them.
+              <ul data-testid="issue-quotation-blockers" style={{ maxHeight: 320, overflowY: "auto", margin: "6px 0", paddingLeft: 20 }}>
+                {commercialSyncStatus.blockers.map((blocker, index) => (
+                  <li key={`${blocker.sectionKey}-${blocker.rowId}-${blocker.item}-${index}`}>{blocker.section}: {blocker.item}{blocker.location ? ` (${blocker.location})` : ""} - {blocker.reason}</li>
                 ))}
-                {commercialSyncStatus.blockers.length > 12 ? <li>and {commercialSyncStatus.blockers.length - 12} more</li> : null}
               </ul>
             ) : null}
             {commercialSyncStatus.state !== "syncing" ? (
@@ -3691,6 +3701,7 @@ function QuotationSheet({ sheet, onFormulaTarget, canEditFormulas = false }) {
         </div>
         {!isQuoteSectionCollapsed(section) && showQuoteRows && (
         <>
+        {finalCabinetrySection ? <CabinetrySectionBuilderNotes workbook={sheet.workbook} /> : null}
         {subgroupModel && (
           <div data-testid="quotation-subgroup-controls" style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', padding: '6px 8px' }}>
             {[['Expand all', true], ['Collapse all', false]].map(([label, open]) => (
@@ -3708,11 +3719,12 @@ function QuotationSheet({ sheet, onFormulaTarget, canEditFormulas = false }) {
               : ["Move", "Description", "Qty", "Unit", "Price", "Cost", "Selection", "Actions"])}
           compactColumns={readonly ? [] : [0]}
           columnPreferencesKey={sectionHasPhysicalProduct ? "quotation-products" : "quotation-standard"}
+          minColumnWidths={sectionHasPhysicalProduct ? { Product: 220, "Brand / Manufacturer": 150, Supplier: 140, "SKU / Model": 130, Description: 280 } : {}}
           defaultColumnWidths={sectionHasPhysicalProduct
             ? {
               Move: 72,
               Image: 96,
-              Product: 230,
+              Product: 260,
               "Brand / Manufacturer": 190,
               Supplier: 170,
               "SKU / Model": 150,
@@ -3929,11 +3941,14 @@ function QuotationSheet({ sheet, onFormulaTarget, canEditFormulas = false }) {
                 {moveCell}
                 <Cell><QuoteProductImageCell row={row} /></Cell>
                 <Cell>
-                  <BufferedInput
+                  {/* Wraps inside the column so a long product title never runs into Brand / Supplier. */}
+                  <BufferedTextarea
                     id={rowDomId("quote-edit", row.id)}
                     style={{ ...styles.itemInput, ...styles.quoteProductNameInput }}
+                    rows={Math.min(4, Math.max(1, Math.ceil(String(quoteItem(row) || "").length / 26)))}
                     value={quoteItem(row)}
-                    onCommit={(next) => sheet.updateQuote(section, row.id, "item", next)}
+                    onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); event.currentTarget.blur(); } }}
+                    onCommit={(next) => sheet.updateQuote(section, row.id, "item", String(next).replace(/\s*\n\s*/g, " "))}
                   />
                 </Cell>
                 <Cell><span style={styles.quoteWrapText}>{quoteProductBrand(row)}</span></Cell>
@@ -3992,7 +4007,19 @@ function QuotationSheet({ sheet, onFormulaTarget, canEditFormulas = false }) {
   }
 
   return (
-    <div style={styles.pageStack}>
+    <div style={styles.pageStack} className="qb-compact" data-testid="quotation-sheet">
+      {/* Owner request: compact quotation text. Scoped to this sheet only, so Client Selections keeps its
+          16px minimum and other modules are unchanged. !important overrides the shared inline styles. */}
+      <style>{`
+        .qb-compact table { font-size: 14px !important; }
+        .qb-compact th { padding: 6px 7px !important; font-size: 13px !important; }
+        .qb-compact td { padding: 3px 6px !important; }
+        .qb-compact td input, .qb-compact td textarea, .qb-compact td select { font-size: 14px !important; padding: 4px 6px !important; }
+        .qb-compact [data-quote-section] > div:first-child button,
+        .qb-compact [data-quote-section] > div:first-child strong { font-size: 15px !important; }
+        .qb-compact [data-quote-section] [data-quote-section] > div:first-child button,
+        .qb-compact [data-quote-section] [data-quote-section] > div:first-child strong { font-size: 13px !important; }
+      `}</style>
       {!readonly && (
         <div style={styles.tabBar}>
           <button style={styles.primaryButton} onClick={openOrderManager}>Manage Section Order</button>
@@ -4002,6 +4029,20 @@ function QuotationSheet({ sheet, onFormulaTarget, canEditFormulas = false }) {
           <span style={styles.okPill} data-testid="quote-structure-count" title="Every saved category is shown, either as a trade heading or nested under its trade.">
             {quoteStructureCountLabel(sheet.quoteSections, sheet.workbook.quotation)}
           </span>
+          {sheet.previewWindowsPriceListSync && (
+            <button
+              type="button"
+              data-testid="review-sync-windows"
+              style={styles.secondaryButton}
+              title="Shows what the current windows / flyscreens price list would change in this quotation, and applies it only if you confirm."
+              onClick={() => {
+                // Applied only on the builder's confirmation; opening a job never changes the WINDOWS section.
+                const preview = sheet.previewWindowsPriceListSync();
+                if (preview.contractLocked || !preview.changed) { window.alert(windowsSyncSummary(preview)); return; }
+                if (window.confirm(windowsSyncSummary(preview))) sheet.syncWindowsPriceList();
+              }}
+            >Review / Sync Windows</button>
+          )}
           {sheet.renumberReport && (
             <span style={sheet.renumberReport.ok ? styles.okPill : styles.warningPill}>{sheet.renumberReport.message}</span>
           )}
@@ -5782,7 +5823,10 @@ export function ClientPageSheet({ sheet }) {
         if (!response.ok) throw new Error(`Could not download Project Estimate PDF: HTTP ${response.status}`);
         const blob = await response.blob();
         downloadBlob(blob, projectEstimateDocument.fileName || projectEstimateDocument.title || proposalPdfFileName(sheet, rawBuilder));
-        setStatusMessage("PDF downloaded.");
+        // This is the builder's uploaded document, not one generated from the quotation: say so, so an
+        // out-of-date price is never sent unknowingly (16 Nov 2026).
+        const uploadedOn = projectEstimateDocument.uploadedAt ? new Date(projectEstimateDocument.uploadedAt).toLocaleDateString("en-AU") : "";
+        setStatusMessage(`PDF downloaded: this is your uploaded Project Estimate file${uploadedOn ? ` (uploaded ${uploadedOn})` : ""}. It does not update when the quotation changes - check its prices against the current quotation total before sending.`);
         return;
       }
       const rawInclusionsCheck = validateActiveInclusionsState(rawBuilder.importedDocuments || {});
@@ -15793,6 +15837,7 @@ function Spreadsheet({
   compactColumns = [],
   columnPreferencesKey = "",
   defaultColumnWidths = {},
+  minColumnWidths = {},
 }) {
   const compactSet = new Set(compactColumns);
   const storageKey = columnPreferencesKey
@@ -15809,12 +15854,14 @@ function Spreadsheet({
     }
   });
   const resizable = Boolean(columnPreferencesKey);
+  // A column is never narrower than its readable minimum (text columns), whatever width was saved.
+  const minimumFor = (header) => Math.max(72, Number(minColumnWidths[header]) || 0);
   const widthFor = (header, index) => {
     if (!resizable) return null;
     const savedWidth = Number(columnWidths[header]);
     const defaultWidth = Number(defaultColumnWidths[header]);
-    if (Number.isFinite(savedWidth) && savedWidth >= 72) return savedWidth;
-    if (Number.isFinite(defaultWidth) && defaultWidth >= 72) return defaultWidth;
+    if (Number.isFinite(savedWidth) && savedWidth >= 72) return Math.max(savedWidth, minimumFor(header));
+    if (Number.isFinite(defaultWidth) && defaultWidth >= 72) return Math.max(defaultWidth, minimumFor(header));
     return compactSet.has(index) ? 72 : 160;
   };
   const resolvedWidths = headers.map(widthFor);
@@ -15870,7 +15917,7 @@ function Spreadsheet({
                 style={{
                   ...styles.th,
                   ...(compactSet.has(index) ? styles.compactColumn : {}),
-                  ...(resizable ? { width: resolvedWidths[index] } : {}),
+                  ...(resizable ? { width: resolvedWidths[index], whiteSpace: "normal", overflowWrap: "break-word" } : {}),
                 }}
               >
                 {header}
@@ -20904,10 +20951,10 @@ const styles = {
   quoteNotesInput: { width: 118, maxWidth: 118 },
   quoteProductThumbnail: { width: 64, height: 54, display: "block", border: "1px solid #cbd5e1", borderRadius: 6, backgroundColor: "#f8fafc", backgroundSize: "contain", backgroundPosition: "center", backgroundRepeat: "no-repeat" },
   quoteImagePlaceholder: { width: 64, height: 54, boxSizing: "border-box", display: "grid", placeItems: "center", border: "1px dashed #cbd5e1", borderRadius: 6, background: "#f8fafc", color: "#64748b", fontSize: 11, fontWeight: 800, textAlign: "center" },
-  quoteProductNameInput: { minWidth: 240, whiteSpace: "normal", overflowWrap: "anywhere" },
+  quoteProductNameInput: { minWidth: 0, width: "100%", display: "block", resize: "vertical", whiteSpace: "normal", overflowWrap: "anywhere", wordBreak: "break-word", lineHeight: 1.35, fontFamily: "inherit" },
   quoteCompactDescriptionInput: { minWidth: 420, whiteSpace: "normal", overflowWrap: "anywhere" },
-  quoteWrapText: { display: "block", minWidth: 110, maxWidth: 180, whiteSpace: "normal", overflowWrap: "anywhere", lineHeight: 1.35, fontSize: 13, fontWeight: 700, color: "#334155" },
-  quoteDescriptionText: { display: "block", minWidth: 220, maxWidth: 360, whiteSpace: "normal", overflowWrap: "anywhere", lineHeight: 1.38, fontSize: 13, fontWeight: 650, color: "#475569" },
+  quoteWrapText: { display: "block", minWidth: 0, maxWidth: "100%", whiteSpace: "normal", overflowWrap: "anywhere", wordBreak: "break-word", lineHeight: 1.35, fontSize: 13, fontWeight: 700, color: "#334155" },
+  quoteDescriptionText: { display: "block", minWidth: 0, maxWidth: "100%", whiteSpace: "normal", overflowWrap: "anywhere", wordBreak: "break-word", lineHeight: 1.38, fontSize: 13, fontWeight: 650, color: "#475569" },
   selectionReferenceCell: { minWidth: 210, display: "grid", gap: 5 },
   selectionSpecInput: { width: "100%", boxSizing: "border-box", border: "1px solid #94a3b8", borderRadius: 5, padding: "6px 7px", color: "#0f172a", fontSize: 13, fontWeight: 700 },
   selectionReferenceMeta: { display: "flex", flexWrap: "wrap", gap: 5, color: "#475569", fontSize: 11, fontWeight: 800 },

@@ -24,7 +24,7 @@ const migration = async filename => (await fs.readFile(`supabase/migrations/${fi
 const asUser = async user => { await db.exec('reset role'); await db.query(`select set_config('request.jwt.claim.sub',$1,false)`, [user]); await db.exec('set role authenticated'); };
 const asService = () => db.exec('reset role');
 
-await db.exec(`create role authenticated; create schema auth;
+await db.exec(`create role anon; create role authenticated; create schema auth; -- anon: Supabase always has it; later migrations grant to it
   create table auth.users (id uuid primary key);
   create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
   create table public.workspaces (id uuid primary key, name text);

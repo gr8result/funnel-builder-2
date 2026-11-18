@@ -359,7 +359,11 @@ const colourOnlyPantry = applyKitchenColoursToButlersPantry(cleanedPantryDraft, 
 const colourOnlyKitchen = colourOnlyPantry.locations.find((item) => item.location === "Kitchen");
 const colourOnlyPantryRoom = colourOnlyPantry.locations.find((item) => item.location === "Butler's Pantry");
 assert.equal(colourOnlyPantryRoom.areaSelections.lowerDoorsDrawers?.colourName, colourOnlyKitchen.areaSelections.lowerDoorsDrawers?.colourName, "Kitchen lower door colour copies to existing Pantry lower doors");
-assert.equal(colourOnlyPantryRoom.areaSelections.overheadDoors?.colourName, colourOnlyKitchen.areaSelections.overheadDoors?.colourName, "Kitchen overhead colour copies to existing Pantry overheads");
+// 16 Nov 2026: copying finishes never changes a room's scope. This Pantry schedules no overhead
+// cabinets (normalisation leaves overheadDoors out of its scope), so the Kitchen overhead colour is
+// skipped rather than adding overhead doors to the Pantry.
+assert.equal(colourOnlyPantryRoom.areaSelections.overheadDoors?.colourName, undefined, "Kitchen overhead colour is not copied into a Pantry with no overhead cabinets");
+assert.ok(!colourOnlyPantryRoom.enabledAreaKeys.includes("overheadDoors"), "copying colours does not add overhead doors to the Pantry scope");
 assert.equal(colourOnlyPantryRoom.areaSelections.endPanels?.colourName, "Agave", "existing Pantry colour is preserved by default");
 assert.deepEqual(colourOnlyPantryRoom.areaSelections.kickPanels, colourOnlyKitchen.areaSelections.kickPanels, "explicitly requested Kitchen kick-panel finish copies to the Pantry");
 assert.deepEqual(colourOnlyPantryRoom.areaSelections.bulkheads, colourOnlyKitchen.areaSelections.bulkheads, "explicitly requested Kitchen bulkhead finish copies to the Pantry");
@@ -388,7 +392,8 @@ assert.match(selectionsSource, /data-workflow-type=\{CABINETRY_WORKFLOW_TYPE\}/,
 assert.match(selectionsSource, /data-testid="cabinetry-apply-colour-to"/, "Colours & Finishes exposes an Apply colour to area selector");
 assert.match(selectionsSource, /data-testid="cabinetry-area-colour-summary"/, "Colours & Finishes exposes a per-area colour summary");
 assert.match(selectionsSource, /Select at least one cabinetry area before applying this colour/, "Colour application cannot silently fail without areas");
-assert.match(cabinetryUiContractSource, /Raw MDF - painted to match walls/, "Bulkheads expose Raw MDF painted-to-wall option");
+// 18 Nov 2026 owner wording: "Raw MDF — painted on site to match walls" (selections-book BULKHEAD_FINISH_CLIENT_LABELS).
+assert.match(cabinetryUiContractSource, /Raw MDF — painted on site to match walls|Raw MDF — painted on site to match walls/, "Bulkheads expose Raw MDF painted-to-wall option");
 assert.match(cabinetryUiContractSource, /Brushed aluminium/, "Kick panels expose brushed aluminium option");
 assert.match(selectionsSource, /WET_AREA_CABINETRY_CONFIG/, "Bathroom and Ensuite share one wet-area cabinetry configuration");
 assert.doesNotMatch(selectionsSource, /cabinetry-location-stage|Select the vanity cabinetry required in the|Enable only the cabinetry areas that exist/, "the Scope step is gone: the Cabinet Schedule defines the room");
@@ -403,7 +408,8 @@ assert.doesNotMatch(selectionsSource, /renderBathroomBenchtops|stone-benchtop-co
 assert.ok(!selectionsSource.includes('<label><span>Supplier</span><input value={current.supplier || ""}'), "Bathroom vanity benchtops no longer start with disconnected supplier text fields");
 assert.match(selectionsSource, /bathroom-cabinetry-review-summary/, "Bathroom review renders a room-specific grouped summary");
 assert.match(selectionsSource, /isWetAreaCabinetryLocationName\(locationName\)/, "any bathroom-type room (Ensuite, Main Bathroom, WC ...) resolves to wet-area cabinetry");
-assert.match(selectionsSource, /Apply Kitchen Colours to Butler's Pantry/, "Kitchen review exposes the Pantry colours-only action");
+// 17 Nov 2026: the Kitchen is the master room; its finishes-only copy goes to any chosen room.
+assert.match(selectionsSource, /Apply Kitchen finishes to other rooms/, "Kitchen review exposes the finishes-only copy action");
 assert.doesNotMatch(selectionsSource, /Copy Kitchen Selections to Butler's Pantry/, "Kitchen-to-Pantry UI does not expose a full specification-copy action");
 assert.doesNotMatch(selectionsSource, /Copy this section to Butler's Pantry/, "Kitchen-to-Pantry modal does not offer section-level copying");
 assert.match(selectionsSource, /data-testid=\"cabinetry-copy-kitchen-pantry-modal\"/, "Kitchen-to-Pantry copy confirmation modal is rendered");

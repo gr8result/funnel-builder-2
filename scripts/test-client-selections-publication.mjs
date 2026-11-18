@@ -23,6 +23,7 @@ const savedRows = [
 ];
 let portalEnabled = true;
 let omitClientRow = false;
+let failUpdate = null;
 const updates = [];
 globalThis.__selectionPublishDb = {
   from(table) {
@@ -49,6 +50,7 @@ globalThis.__selectionPublishDb = {
           return Promise.resolve({ data: result }).then(resolve, reject);
         }
         if (table === "builder_client_selections" && updatePayload) {
+          if (failUpdate && failUpdate(updatePayload)) return Promise.resolve({ data: null, error: new Error("network dropped") }).then(resolve, reject);
           const ids = filters.id || [];
           const matched = savedRows.filter((row) => row.id && ids.includes(row.id) && row.metadata.selection_book_id === "book-a");
           updates.push({ filters, payload: updatePayload, ids: matched.map((row) => row.id) });
@@ -89,5 +91,37 @@ const missingSync = response();
 await handler(request(), missingSync);
 assert.equal(missingSync.code, 409, "a persisted book without its synced project row is not publishable");
 assert.equal(updates.length, 1);
+omitClientRow = false;
+
+// Republishing withdraws a row the client can still see but this publication no longer includes
+// (here: made internal-only after an earlier publish, and a row from an older book) - BEFORE publishing.
+savedRows.find((row) => row.id === "selection-internal").client_visible = true;
+savedRows.push({ id: "older-book-row", is_active: true, client_visible: true, metadata: { selection_book_id: "book-a", selection_book_row_id: "row-gone" }, selected_details: {} });
+updates.length = 0;
+const republish = response();
+await handler(request(), republish);
+assert.equal(republish.code, 200, JSON.stringify(republish.body));
+assert.equal(republish.body.withdrawnCount, 2);
+assert.deepEqual(updates[0].payload.client_visible, false, "stale rows are withdrawn first");
+assert.deepEqual(updates[0].ids.sort(), ["older-book-row", "selection-internal"]);
+assert.deepEqual(updates[1].ids, ["selection-client"]);
+assert.equal(updates[1].payload.client_visible, true);
+
+// Interrupted: if withdrawing fails, nothing new is published (the client never sees a stale row).
+updates.length = 0;
+failUpdate = (payload) => payload.client_visible === false;
+const interrupted = response();
+await handler(request(), interrupted);
+assert.equal(interrupted.code, 500);
+assert.match(interrupted.body.error, /Nothing new was published/);
+assert.equal(updates.length, 0, "the publish update is never sent after a failed withdrawal");
+
+// A failed publish update reports that nothing was published; publishing again is safe.
+failUpdate = (payload) => payload.client_visible === true;
+const failedPublish = response();
+await handler(request(), failedPublish);
+assert.equal(failedPublish.code, 500);
+assert.match(failedPublish.body.error, /Nothing was published: network dropped/);
+failUpdate = null;
 
 console.log("PASS publication requires a same-workspace saved book, enabled Portal and synced rows; only active client-safe rows are exposed.");

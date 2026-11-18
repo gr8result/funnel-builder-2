@@ -2,7 +2,8 @@ import { builderLocalStorage } from '../../../lib/builders/browserTenantStorage.
 import InternalPaintColourSpecification from '../../../components/client-selections/InternalPaintColourSpecification.jsx';
 import Head from "next/head";
 import NextImage from "next/image";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/router";
 import { ArrowLeft, Check, Download, ExternalLink, Eye, FileText, Home, RefreshCw } from "lucide-react";
 import { useWorkspace } from "../../../hooks/useWorkspace";
 import { useBuilderSelectionFoundation } from '../../../hooks/useBuilderSelectionFoundation';
@@ -158,9 +159,42 @@ function BuilderClientSelectionsPageContent() {
   const [finalScheduleDocument, setFinalScheduleDocument] = useState(null);
   const [finalScheduleGenerating, setFinalScheduleGenerating] = useState(false);
 
+  const router = useRouter();
+  // Restore navigation (project/screen/area/requirement) from the URL on reload, reopen and Back/Forward.
+  // The project is restored too: without it the page reopened with no project and the restored
+  // screen and session were cleared again by the "no project" reset below.
+  const [navHydrated, setNavHydrated] = useState(false);
+  useEffect(() => {
+    if (!router.isReady || navHydrated) return;
+    const q = router.query || {};
+    if (q.project) setSelectedProjectId(String(q.project));
+    if (q.screen) setScreen(String(q.screen));
+    if (q.area) setSelectedArea(String(q.area));
+    if (q.requirement) setSelectedRequirementKey(String(q.requirement));
+    setNavHydrated(true);
+  }, [router.isReady, router.query, navHydrated]);
+
   const selectedProject = useMemo(() => projects.find((project) => project.id === selectedProjectId) || null, [projects, selectedProjectId]);
   const selectedSnapshot = useMemo(() => snapshots.find((snapshot) => snapshot.id === selectedSnapshotId) || null, [snapshots, selectedSnapshotId]);
   const selectedSession = useMemo(() => sessions.find((session) => session.id === selectedSessionId) || null, [sessions, selectedSessionId]);
+
+  // Push navigation state to URL (shallow) so back/forward, refresh and reopen preserve where the user was.
+  useEffect(() => {
+    // Not before the URL has been read: on the first render screen is still "areas", and writing it
+    // would replace the ?screen=... being restored.
+    if (!router.isReady || !navHydrated) return;
+    const next = { ...router.query };
+    next.screen = screen;
+    if (selectedProjectId) next.project = selectedProjectId; else delete next.project;
+    if (selectedArea) next.area = selectedArea; else delete next.area;
+    if (selectedRequirementKey) next.requirement = selectedRequirementKey; else delete next.requirement;
+    // Only update if changed to avoid loops
+    const curr = JSON.stringify({p:router.query.project,s:router.query.screen,a:router.query.area,r:router.query.requirement});
+    const want = JSON.stringify({p:next.project,s:next.screen,a:next.area,r:next.requirement});
+    if (curr !== want) {
+      router.replace({ query: next }, undefined, { shallow: true }).catch(() => {});
+    }
+  }, [screen, selectedArea, selectedRequirementKey, selectedProjectId, router.isReady, router, navHydrated]);
 
   useEffect(() => {
     if (!workspaceId) {
@@ -204,6 +238,18 @@ function BuilderClientSelectionsPageContent() {
     }
   }, [demoSelections, workspaceId]);
 
+  // Where the user was belongs to one project: switching to another project starts at its areas.
+  // Not on first load (no project yet), which would wipe the screen restored from the URL.
+  const navigationProjectRef = useRef("");
+  useEffect(() => {
+    const previous = navigationProjectRef.current;
+    navigationProjectRef.current = selectedProjectId;
+    if (!previous || previous === selectedProjectId) return;
+    setScreen("areas");
+    setSelectedArea("");
+    setSelectedRequirementKey("");
+  }, [selectedProjectId]);
+
   useEffect(() => {
     if (!workspaceId || !selectedProjectId) {
       setSnapshots([]);
@@ -240,7 +286,8 @@ function BuilderClientSelectionsPageContent() {
         setSelections(selectionResult.data || []);
         setProducts(mergeSharedCladdingProducts((productResult.data || []).map(mapDbProductToEntity)));
         setSelectedSnapshotId((current) => snapshotRows.find((snapshot) => snapshot.id === current)?.id || sessionRows[0]?.snapshot_id || snapshotRows[0]?.id || "");
-        setSelectedSessionId((current) => sessionRows.find((session) => session.id === current)?.id || sessionRows[0]?.id || "");
+        const storedSession = (() => { try { return builderLocalStorage.getItem(`client-selections:last-session:${workspaceId}:${selectedProjectId}`) || ""; } catch { return ""; } })();
+        setSelectedSessionId((current) => sessionRows.find((session) => session.id === (current || storedSession))?.id || sessionRows.find((s) => s.id === storedSession)?.id || sessionRows[0]?.id || "");
       }
       setLoading(false);
     }
@@ -249,6 +296,11 @@ function BuilderClientSelectionsPageContent() {
       cancelled = true;
     };
   }, [workspaceId, selectedProjectId]);
+
+  useEffect(() => {
+    if (!workspaceId || !selectedProjectId || !selectedSessionId) return;
+    try { builderLocalStorage.setItem(`client-selections:last-session:${workspaceId}:${selectedProjectId}`, selectedSessionId); } catch {}
+  }, [workspaceId, selectedProjectId, selectedSessionId]);
 
   const persistedSelections = workspaceId ? selections : demoSelections;
   const sessionSelections = useMemo(() => persistedSelections.filter((selection) => {

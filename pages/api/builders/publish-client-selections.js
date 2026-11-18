@@ -35,7 +35,7 @@ async function handler(req, res) {
 
   const { data: rows, error: rowsError } = await supabaseAdmin
     .from("builder_client_selections")
-    .select("id, is_active, metadata, selected_details")
+    .select("id, is_active, client_visible, metadata, selected_details")
     .eq("workspace_id", workspaceId)
     .eq("project_id", projectId);
   if (rowsError) return res.status(500).json({ ok: false, error: rowsError.message || "Could not verify saved selections." });
@@ -55,6 +55,28 @@ async function handler(req, res) {
   const publishRows = bookRows.map((row) => rowByBookRowId.get(row.id)).filter((row) => row.is_active !== false && row.metadata?.internalOnly !== true && row.selected_details?.internalOnly !== true && row.selected_details?.displayInSelectionsSchedule !== false);
   if (!publishRows.length) return res.status(409).json({ ok: false, error: "There are no saved client selections to publish." });
   const publishedAt = new Date().toISOString();
+
+  // The portal shows every client-visible row of the project. A Selections Book row published before
+  // and not part of this publication (made internal-only, removed, hidden, or from an older book) is
+  // withdrawn FIRST: if anything fails after this, the client sees less, never a stale selection.
+  // Both steps are idempotent, so publishing again completes an interrupted publication.
+  const publishIds = new Set(publishRows.map((row) => row.id));
+  const staleIds = (rows || [])
+    .filter((row) => row.client_visible === true && row.metadata?.selection_book_id && !publishIds.has(row.id))
+    .map((row) => row.id);
+  if (staleIds.length) {
+    const { data: withdrawnRows, error: withdrawError } = await supabaseAdmin
+      .from("builder_client_selections")
+      .update({ client_visible: false, updated_by: req.user.id, updated_at: publishedAt })
+      .eq("workspace_id", workspaceId)
+      .eq("project_id", projectId)
+      .in("id", staleIds)
+      .select("id");
+    if (withdrawError || withdrawnRows?.length !== staleIds.length) {
+      return res.status(500).json({ ok: false, error: `Nothing new was published: ${staleIds.length} earlier selection${staleIds.length === 1 ? "" : "s"} could not be withdrawn from the Client Portal. Publish again.` });
+    }
+  }
+
   const { data: publishedRows, error: publishError } = await supabaseAdmin
     .from("builder_client_selections")
     .update({ client_visible: true, client_status: "awaiting_client", updated_by: req.user.id, updated_at: publishedAt })
@@ -62,11 +84,16 @@ async function handler(req, res) {
     .eq("project_id", projectId)
     .in("id", publishRows.map((row) => row.id))
     .select("id");
-  if (publishError || publishedRows?.length !== publishRows.length) {
-    return res.status(500).json({ ok: false, error: publishError?.message || "The server could not confirm publication of every saved selection." });
+  // One UPDATE statement: Postgres applies it to every row or none. A short count means some rows
+  // disappeared between the read and the update; say exactly what happened.
+  if (publishError) {
+    return res.status(500).json({ ok: false, error: `Nothing was published: ${publishError.message || "the update failed"}. Publish again.`, withdrawnCount: staleIds.length });
+  }
+  if (publishedRows?.length !== publishRows.length) {
+    return res.status(500).json({ ok: false, error: `${publishedRows?.length || 0} of ${publishRows.length} selections were published; the others were changed or removed while publishing. Save the book and publish again.`, publishedCount: publishedRows?.length || 0, withdrawnCount: staleIds.length });
   }
 
-  return res.status(200).json({ ok: true, publishedCount: publishedRows.length, publishedAt });
+  return res.status(200).json({ ok: true, publishedCount: publishedRows.length, withdrawnCount: staleIds.length, publishedAt });
 }
 
 export default withWorkspace(handler, { roles: INTERNAL_COMMERCIAL_ROLES });

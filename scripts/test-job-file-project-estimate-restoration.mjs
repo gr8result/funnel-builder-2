@@ -17,7 +17,7 @@ const { applyCabinetryRequirementsToQuotation } = await import("../lib/construct
 const { withWindowsPriceListQuotation } = await import("../lib/construction-estimation/windowsQuotePriceList.js");
 const { withWallLiningMappings } = await import("../lib/construction-estimation/quotationWallLinings.js");
 const { withEntryDoorLibraryQuotation } = await import("../lib/construction-estimation/entryDoorLibraryQuotation.js");
-const { quotationSectionOrderAfterNormalize } = await import("../lib/construction-estimation/quotationStructure.js");
+const { quotationSectionOrderAfterNormalize, preserveQuotationStructure } = await import("../lib/construction-estimation/quotationStructure.js");
 const { normalizeQuotationStructure } = await import("../lib/construction-estimation/quotationStructure.js");
 const { quotationSectionOrderIds } = await import("../lib/construction-estimation/quotationOrder.js");
 const { persistedSectionOrder } = await import("../lib/construction-estimation/quotationOrder.js");
@@ -40,10 +40,33 @@ const functionNames = [
   "migrateWorkbookToMasterTemplate", "applyTemplateDefaultsToJob", "normalizeWorkbook", "workbookHasExplicitJobIdentity",
   "workbookJobKey", "prepareWorkbookForJobSave", "productByIdForWorkbook", "calculationWorkbookCopy", "orderedQuoteSections", "normalizeQuoteSectionOrder", "withPersistedQuotationOrder", "quoteSectionBaseName", "withLinea180PlankQuoteRow", "normalizePainterPatioCeilingFormula", "compactWorkbookForStorage", "takeoffPersistenceCounts",
 ];
-const definitions = sectionKeys + functionNames.map((name) => {
-  assert.ok(functions.has(name), `Missing actual loader helper ${name}`);
-  return functions.get(name);
-}).join("\n");
+functionNames.forEach((name) => assert.ok(functions.has(name), `Missing actual loader helper ${name}`));
+// Plus every other function in the hook that those helpers call (transitively), except the ones the
+// harness stubs (storage, React setters) - a real declaration would shadow the stub.
+function definitionsExcept(stubbed) {
+  const included = new Set(functionNames);
+  for (let queue = [...functionNames]; queue.length;) {
+    const text = functions.get(queue.shift());
+    for (const candidate of functions.keys()) {
+      if (!included.has(candidate) && !stubbed.has(candidate) && new RegExp(`\\b${candidate}\\s*\\(`).test(text)) { included.add(candidate); queue.push(candidate); }
+    }
+  }
+  return sectionKeys + [...included].map((name) => functions.get(name)).join("\n");
+}
+// The hook's own lib imports, so helpers it starts using later do not break this harness.
+// Modules that cannot load outside the browser are skipped; explicit stubs below still win.
+const hookImports = {};
+for (const statement of tree.statements) {
+  if (!ts.isImportDeclaration(statement) || !statement.importClause?.namedBindings || !ts.isNamedImports(statement.importClause.namedBindings)) continue;
+  const specifier = statement.moduleSpecifier.text;
+  if (!specifier.startsWith("../../lib/")) continue;
+  let loaded;
+  try { loaded = await import(new URL(specifier.replace(/^\.\.\/\.\.\//, "../") + (/\.[cm]?js$/.test(specifier) ? "" : ".js"), import.meta.url)); } catch { continue; }
+  for (const element of statement.importClause.namedBindings.elements) {
+    const exported = (element.propertyName || element.name).text;
+    if (exported in loaded) hookImports[element.name.text] = loaded[exported];
+  }
+}
 const persistenceSource = fs.readFileSync("lib/construction-estimation/jobPersistence.js", "utf8");
 const { validateJobWorkbook: validate } = await import("../lib/construction-estimation/jobPersistence.js");
 
@@ -52,7 +75,9 @@ const { validateJobWorkbook: validate } = await import("../lib/construction-esti
 function harness() {
   const state = {};
   const dependencies = {
-    createEstimateBuilderWorkbookDefaults, normalizeTakeoffInputSection, V4_DATA_SECTIONS, restoreCompleteWorkbook, PROTECTED_RECOVERY_JOB_KEY, completedJobLoadVersionRef: { current: [] }, builderRequirementMappingsRef: { current: [] }, reconcileProductSelections, calculateEstimateBuilderWorkbook, stampQuotationOrder, quotationNamesForSectionIds, applyPersistedQuotationOrder, reconcileCabinetryQuotation, applyCabinetryRequirementsToQuotation, withWindowsPriceListQuotation, withWallLiningMappings, withEntryDoorLibraryQuotation, quotationSectionOrderAfterNormalize, normalizeQuotationStructure, quotationSectionOrderIds, persistedSectionOrder, withStableQuoteTargets, ensureQuotationSectionIds, migrateWorkbookCabinetSchedules, normalizeJobForCurrentSchema,
+    ...hookImports,
+    calculatedWorkbookPreviews: new WeakMap(),
+    createEstimateBuilderWorkbookDefaults, normalizeTakeoffInputSection, V4_DATA_SECTIONS, restoreCompleteWorkbook, PROTECTED_RECOVERY_JOB_KEY, completedJobLoadVersionRef: { current: [] }, builderRequirementMappingsRef: { current: [] }, reconcileProductSelections, calculateEstimateBuilderWorkbook, stampQuotationOrder, quotationNamesForSectionIds, applyPersistedQuotationOrder, reconcileCabinetryQuotation, applyCabinetryRequirementsToQuotation, withWindowsPriceListQuotation, withWallLiningMappings, withEntryDoorLibraryQuotation, quotationSectionOrderAfterNormalize, preserveQuotationStructure, normalizeQuotationStructure, quotationSectionOrderIds, persistedSectionOrder, withStableQuoteTargets, ensureQuotationSectionIds, migrateWorkbookCabinetSchedules, normalizeJobForCurrentSchema,
     workbookRef: { current: {} }, workbookLoadOperationRef: { current: 0 }, autosavePausedRef: { current: false },
     MASTER_TEMPLATE_KEY: "template:master-estimate-template", MASTER_TEMPLATE_NAME: "Master Estimate Template",
     CORRUPT_ESTIMATE_JOB_FILE_NAME: "estimate-job.json", estimateBuilderLog: () => {},
@@ -70,6 +95,7 @@ function harness() {
     describeJobFileSelectionConflict: () => ({ conflict: false }),
     jobFileSelectionDecisionRef: { current: "carry" },
   };
+  const definitions = definitionsExcept(new Set(Object.keys(dependencies)));
   const helpers = new Function(...Object.keys(dependencies), `${definitions}; return { loadJobFileData, collectSavedJobPackageSections, restoreSavedJobPackageSections };`)(...Object.values(dependencies));
   return { ...helpers, state };
 }

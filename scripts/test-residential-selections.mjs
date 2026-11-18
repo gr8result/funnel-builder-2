@@ -4,7 +4,18 @@ import { getMasterProducts } from '../lib/product-library/catalogueService.js';
 import { clientSelectionCategoryProducts, filterPlumbingFixtureProducts, plumbingFixtureFilterOptions } from '../lib/product-library/plumbingFixtureCatalogue.js';
 import { plumbingLocationsForRequirement, plumbingLineFromProduct, plumbingLineWithTotals } from '../lib/builders/plumbingFixtureAllocation.js';
 import { connectAllocatedSelectionsToQuotation } from '../lib/builders/allocatedSelectionQuotation.js';
-import { serviceProjectRequirement } from '../lib/builders/residentialServices.js';
+import { serviceProjectRequirement, serviceQuoteRequirements } from '../lib/builders/residentialServices.js';
+
+// 16 Nov 2026 real job: the builder's AC section is "AIR CONDITIONERS (141)" with "... SPLIT AIR COND" rows.
+{
+  const quotation = {
+    'AIR CONDITIONERS (141)': { rows: [{ id: 'q-ducted', item: 'DUCTED AIR CONDITIONER', unit: 'ITEM', excelRate: 18000 }, { id: 'q-split', item: 'KELVINATOR 2.6 KW SPLIT AIR COND', unit: 'ITEM', excelRate: 445 }, { id: 'q-install', item: 'INSTALLATION & ELECTRICAL', unit: 'EACH', excelRate: 450 }] },
+    'ELECTRICAL (84)': { rows: [{ id: 'q-circuit', item: '20 AMP AIR CONDITIONER INC ISOLATOR', unit: 'ITEM', excelRate: 300 }] },
+    'AIR CONDITIONING - CLIENT SELECTIONS': { rows: [{ id: 'q-managed', item: 'Split system', unit: 'EACH' }] },
+  };
+  const rows = serviceQuoteRequirements({ quotation }, 'air-conditioning').map((row) => row.rowId);
+  assert.deepEqual(rows, ['q-ducted', 'q-split'], 'AC units in the builder AC section are offered; installation, electrical circuits and managed rows are not');
+}
 import { paintSchemeComplete, newPaintScheme, resolvePaintChoice, snapshotPaintScheme, connectPaintSchemeToQuotation, paintLitres, paintMaterialOrder, paintSchemeFromInclusions } from '../lib/builders/paintScheme.js';
 const read = n => JSON.parse(fs.readFileSync(`data/product-library/catalogues/residential/${n}.json`, 'utf8'));
 const catalogue = getMasterProducts('residential-regression');

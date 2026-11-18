@@ -61,7 +61,9 @@ check('A BULKHEAD COUNT IS NEVER READ AS A LENGTH', () => {
   assert.equal(find(before, K, std, 'MDF bulkhead - 450mm - LM').quantity, '', 'no LM is invented');
   const [item] = entry(before, 'Kitchen', 'bulkhead_450');
   assert.deepEqual([item.outcome, item.flag, item.reason, item.quantity], [CABINETRY_ACTION_REQUIRED, CABINETRY_MEASUREMENT_REQUIRED, 'Bulkhead length required - saved as a count of 2, not a length', 0]);
-  assert.match(item.action.label, /Enter the length of each bulkhead run in Client Selections > Cabinetry > Kitchen > Cabinet Schedule/);
+  // The builder enters the length in the Quotation Builder; Client Selections never asks for it (17 Nov 2026).
+  assert.equal(item.action.kind, 'enter-bulkhead-length');
+  assert.match(item.action.label, /Enter total bulkhead length/);
   assert.equal(selectionOf(before).schedule[0].quantity, 2, 'the saved line is kept as it was');
   assert.deepEqual(cabinetScheduleMeasure(selectionOf(before).schedule[0]), { quantity: 0, unit: 'LM', name: '', note: 'Length required' });
   // Runs added but not yet measured are still "length required"; an unticked bulkhead asks for nothing.

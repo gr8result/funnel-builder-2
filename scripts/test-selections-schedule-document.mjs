@@ -173,7 +173,8 @@ check("CABINETRY PRINTS COMPONENTS AND EXPLICIT REVIEW REQUIREMENTS", () => {
   assert.equal(item("Base cabinets").qtyLocation, "Qty 2");
   assert.match(item("Base cabinets").product, /Arcadia Oak/);
   assert.equal(item("Overhead cupboards").qtyLocation, "Qty 2");
-  assert.match(item("Bulkheads").qtyLocation, /linear measurement to confirm/);
+  // A client document never shows a bulkhead count or asks the client to measure (17 Nov 2026).
+  assert.equal(item("Bulkheads").qtyLocation, "Measured by your builder");
   assert.equal(item("Cabinet carcasses").status, SCHEDULE_STATUS.tbc);
   assert.match(item("Cabinet carcasses").product, /review required/i);
   assert.match(item("Benchtops").product, /Stone Ambassador.*Eclipse.*20 mm/);

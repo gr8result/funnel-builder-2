@@ -1,8 +1,10 @@
 // VARIATION SUMMARY: every change from the standard inclusions, with its pricing state
 // (lib/builders/selectionVariationPricing.js). Estimated and confirmed amounts are shown apart; an
 // unresolved price reads "Builder Review Required", never $0. In builder view the builder supplies
-// the missing quantity / price and approves a variation for issue; the client then accepts or
-// declines it. Readable text is never below 16px.
+// the missing quantity / price and signs variations off. The client approves a variation with a
+// checkbox beside three figures (approved so far, this variation, new total). Privacy: the client
+// view shows only the net difference of each change - never an item price, cost, allowance or rate.
+// Readable text is never below 16px.
 import { useState } from "react";
 import { AUTO_ESTIMATE_LABEL, BUILDER_REVIEW_HEADING, BUILDER_REVIEW_MESSAGE, PRICING_STATES } from "../../lib/builders/selectionVariationPricing.js";
 
@@ -35,7 +37,54 @@ function ReviewEditor({ row, item, onReview }) {
   );
 }
 
-export default function VariationSummaryPanel({ summary, tasks = [], items = [], estimatorView = false, onReview, onClientDecision, onToggleEstimatorView }) {
+// Builder-only quick resolution inside a Builder Review card: enter the count the reference price is
+// sold by (e.g. boards) to use the Product Library price, or record that the item is already covered
+// by the contract price (no variation). Never shown to the client.
+// The client's approval: three figures and one checkbox. Amounts are the net difference inc GST.
+function ClientApproval({ row, item, figures, onClientDecision, rejection = null }) {
+  // A builder rejection re-opens the decision: the box is clear again and ticking it resubmits.
+  const approved = row.clientAcceptance === "accepted" && !rejection;
+  const signedOff = row.builderApproval === "approved";
+  const f = figures || { previousTotalIncGst: 0, currentIncGst: 0, newTotalIncGst: 0 };
+  return (
+    <div className="vsp-approve" data-testid="variation-client-approval">
+      {rejection ? <p className="vsp-rejected" role="status" data-testid="variation-builder-rejected">Your builder could not accept this variation{rejection.reason ? `: ${rejection.reason}` : "."} Choose another selection, or tick the box below to send it to your builder again.</p> : null}
+      <dl className="vsp-figures">
+        <div><dt>Variations approved so far</dt><dd data-testid="variation-previous-total">{money(f.previousTotalIncGst || 0)}</dd></div>
+        <div><dt>This variation</dt><dd data-testid="variation-current-amount">{signed(f.currentIncGst || 0)}</dd></div>
+        <div><dt>New total of approved variations</dt><dd data-testid="variation-new-total">{money(f.newTotalIncGst || 0)}</dd></div>
+      </dl>
+      <label className="vsp-check">
+        <input type="checkbox" checked={approved} disabled={approved && signedOff} onChange={(event) => onClientDecision(item, event.target.checked ? "accepted" : "pending")} data-testid="variation-approve-checkbox" />
+        <span>I approve this variation of {signed(f.currentIncGst || 0)} inc GST</span>
+      </label>
+      {!approved && row.clientAcceptance !== "declined" ? <button type="button" className="vsp-decline" onClick={() => onClientDecision(item, "declined")} data-testid="variation-decline">Decline this change</button> : null}
+      {row.clientAcceptance === "declined" ? <span className="vsp-status" data-testid="variation-declined">Declined. Choose another selection or approve the variation above.</span> : null}
+      {approved ? <span className="vsp-status" data-testid="variation-approved-note">{signedOff ? "Approved and signed off by your builder." : "Approved. Sent to your builder for final sign-off."}</span> : null}
+    </div>
+  );
+}
+
+function QuickResolve({ item, onReview }) {
+  const [count, setCount] = useState("");
+  const [allowance, setAllowance] = useState("");
+  const reference = item.reference;
+  return (
+    <div className="vsp-quick" data-testid="variation-quick-resolve">
+      {reference ? (
+        <>
+          <label><span>Number of {reference.unit.split(" ").slice(-2).join(" ").replace(/supply-only|installed/g, "").trim() || "units"}</span><input type="number" min="0" step="1" value={count} onChange={(event) => setCount(event.target.value)} data-testid="variation-quick-count" /></label>
+          <span className="vsp-source">× {reference.label}</span>
+          <label><span>Allowance per unit (ex GST, optional)</span><input type="number" min="0" step="0.01" value={allowance} onChange={(event) => setAllowance(event.target.value)} data-testid="variation-quick-allowance" /></label>
+          <button type="button" className="primary" disabled={!(Number(count) > 0)} onClick={() => onReview(item, { quantity: count, unitPrice: reference.price, priceIncludesGst: reference.includesGst === true, ...(allowance === "" ? {} : { allowance }) })} data-testid="variation-quick-apply">Use Product Library price</button>
+        </>
+      ) : null}
+      <button type="button" onClick={() => onReview(item, { quantity: 1, unitPrice: 0, allowance: 0, priceIncludesGst: false, approve: true })} data-testid="variation-quick-included">Included in the contract price (no variation)</button>
+    </div>
+  );
+}
+
+export default function VariationSummaryPanel({ summary, tasks = [], items = [], estimatorView = false, onReview, onClientDecision, onToggleEstimatorView, approvalFigures = null, builderRejections = {} }) {
   if (!summary) return null;
   const itemById = new Map(items.map((item) => [item.__id, item]));
   // One click from a row to its pricing fields: switches to builder view and scrolls to that row.
@@ -50,14 +99,15 @@ export default function VariationSummaryPanel({ summary, tasks = [], items = [],
       <header>
         <div>
           <h3>VARIATION SUMMARY</h3>
-          <p>Changes from your standard inclusions. Estimated amounts are subject to builder approval; only confirmed amounts are issued for your acceptance.</p>
+          <p>Changes from your standard inclusions, shown as the difference in price (inc GST). Tick a variation to approve it; your builder then signs it off.</p>
         </div>
         {onToggleEstimatorView ? <button type="button" className="vsp-toggle" onClick={onToggleEstimatorView} data-testid="variation-estimator-toggle">{estimatorView ? "Switch to client view" : "Builder pricing review"}</button> : null}
       </header>
       <div className="vsp-totals">
         <span data-testid="variation-estimated-total"><b>Estimated</b>{summary.estimatedCount ? signed(summary.estimatedTotalIncGst) : "—"}<small>{summary.estimatedCount} item{summary.estimatedCount === 1 ? "" : "s"} · inc GST · subject to builder approval</small></span>
         <span data-testid="variation-confirmed-total"><b>Confirmed</b>{summary.confirmedCount ? signed(summary.confirmedTotalIncGst) : "—"}<small>{summary.confirmedCount} item{summary.confirmedCount === 1 ? "" : "s"} · inc GST</small></span>
-        {summary.estimatedPriceCount ? <span className="info" data-testid="variation-estimated-price-total"><b>Auto-estimated prices</b>{money(summary.estimatedPriceTotalIncGst)}<small>{summary.estimatedPriceCount} item{summary.estimatedPriceCount === 1 ? "" : "s"} · inc GST · allowance to be confirmed by your builder · not in the variation total</small></span> : null}
+        {summary.estimatedPriceCount ? <span className="info" data-testid="variation-estimated-price-total"><b>{estimatorView ? "Auto-estimated prices (builder view)" : "Price difference to confirm"}</b>{estimatorView ? money(summary.estimatedPriceTotalIncGst) : summary.estimatedPriceCount}<small>{estimatorView ? `${summary.estimatedPriceCount} item${summary.estimatedPriceCount === 1 ? "" : "s"} · full client price inc GST · allowance needed · not in the variation total` : `selection${summary.estimatedPriceCount === 1 ? "" : "s"} · your builder will confirm the difference`}</small></span> : null}
+        {summary.acceptedCount ? <span data-testid="variation-approved-total"><b>Approved by you</b>{signed(summary.acceptedTotalIncGst)}<small>{summary.acceptedCount} item{summary.acceptedCount === 1 ? "" : "s"} · inc GST</small></span> : null}
         <span className={summary.reviewCount ? "warn" : ""} data-testid="variation-review-total"><b>{BUILDER_REVIEW_HEADING}</b>{summary.reviewCount}<small>{summary.reviewCount ? "your builder needs to supply what is listed" : "nothing waiting on your builder"}</small></span>
       </div>
       {!summary.rows.length ? <p className="vsp-empty" data-testid="variation-none">No changes from the standard inclusions.</p> : (
@@ -79,12 +129,14 @@ export default function VariationSummaryPanel({ summary, tasks = [], items = [],
                       <span>{BUILDER_REVIEW_MESSAGE}</span>
                       <span className="vsp-missing" data-testid="variation-missing">Needed: {row.missing.map((entry) => entry.label).join("; ")}</span>
                       {onReview && item && !estimatorView ? <button type="button" className="vsp-link" onClick={() => resolveRow(row.id)} data-testid="variation-resolve">Builder: add the missing figures →</button> : null}
+                      {onReview && item && estimatorView ? <QuickResolve item={item} onReview={onReview} /> : null}
                     </div>
                   ) : row.state === PRICING_STATES.estimatedPrice ? (
                     <div className="vsp-amount estimated_price" data-testid="variation-estimated-price">
-                      <b data-testid="variation-price">{money(row.priceIncGst)} inc GST</b>
-                      <span>{row.autoEstimated ? AUTO_ESTIMATE_LABEL : "Estimated price — subject to builder confirmation"}</span>
-                      <span className="vsp-source">{row.priceSourceLabel ? `${row.priceSourceLabel}. ` : ""}Your allowance for this item has not been recorded, so your builder will confirm the difference.</span>
+                      {/* The full item price is builder-only; the client sees differences only. */}
+                      {estimatorView ? <b data-testid="variation-price">{money(row.priceIncGst)} inc GST (full price)</b> : <b data-testid="variation-price-to-confirm">Price difference to be confirmed</b>}
+                      <span>{estimatorView ? (row.autoEstimated ? AUTO_ESTIMATE_LABEL : "Estimated price — subject to builder confirmation") : "Your builder will confirm the difference from your standard inclusion."}</span>
+                      {estimatorView ? <span className="vsp-source">{row.priceSourceLabel ? `${row.priceSourceLabel}. ` : ""}No allowance is recorded for this item: enter it to work out the difference.</span> : null}
                       {onReview && item && !estimatorView ? <button type="button" className="vsp-link" onClick={() => resolveRow(row.id)} data-testid="variation-resolve">Builder: enter the allowance →</button> : null}
                     </div>
                   ) : (
@@ -93,16 +145,13 @@ export default function VariationSummaryPanel({ summary, tasks = [], items = [],
                       <span>{row.state === PRICING_STATES.confirmed ? "Confirmed by your builder" : row.autoEstimated ? AUTO_ESTIMATE_LABEL : "Estimated — subject to builder approval"}</span>
                       {row.state !== PRICING_STATES.confirmed && row.priceSourceLabel ? <span className="vsp-source">{row.priceSourceLabel}</span> : null}
                       {row.state === PRICING_STATES.calculable && row.amountIncGst <= 0 ? <span className="vsp-source">Within your allowance.</span> : null}
+                      {estimatorView && item && Number.isFinite(item.__costDifferenceExGst) ? <span className="vsp-builder-only" data-testid="variation-builder-cost">Builder view only: cost difference {money(item.__costDifferenceExGst)} ex GST. {row.marginApplied ? "Client amount adds the job's margin and GST from the quotation settings." : "No quotation linked: no margin added, GST only."}</span> : null}
                     </div>
                   )}
-                  <span className="vsp-status" data-testid="variation-approval">Builder approval: {row.builderApproval === "approved" ? "Approved" : "Pending"}</span>
-                  <span className="vsp-status" data-testid="variation-acceptance">Client acceptance: {row.clientAcceptance === "accepted" ? "Accepted" : row.clientAcceptance === "declined" ? "Declined" : row.clientAcceptance === "pending" ? "Awaiting your decision" : "Not yet issued"}</span>
-                  {row.state === PRICING_STATES.confirmed && item && onClientDecision ? (
-                    <div className="vsp-decide">
-                      <button type="button" className={row.clientAcceptance === "accepted" ? "primary" : ""} onClick={() => onClientDecision(item, "accepted")} data-testid="variation-accept">Record client acceptance</button>
-                      <button type="button" className={row.clientAcceptance === "declined" ? "primary" : ""} onClick={() => onClientDecision(item, "declined")} data-testid="variation-decline">Record client decline</button>
-                    </div>
-                  ) : null}
+                  <span className="vsp-status" data-testid="variation-approval">Builder sign-off: {row.builderApproval === "approved" ? "Signed off" : "Pending"}</span>
+                  {[PRICING_STATES.calculable, PRICING_STATES.confirmed].includes(row.state) && item && onClientDecision && approvalFigures ? (
+                    <ClientApproval row={row} item={item} figures={approvalFigures(row.id)} onClientDecision={onClientDecision} rejection={builderRejections[row.id] || null} />
+                  ) : <span className="vsp-status" data-testid="variation-acceptance">Your approval: {row.state === PRICING_STATES.builderReview ? "available once your builder confirms the amount" : "available once the difference is confirmed"}</span>}
                 </div>
                 {estimatorView && item && onReview && row.state !== PRICING_STATES.confirmed ? <ReviewEditor key={`${row.id}:${row.state}`} row={{ ...row, unitPrice: item.reviewUnitPrice, priceIncludesGst: item.reviewIncludesGst }} item={item} onReview={onReview} /> : null}
                 {estimatorView && item && onReview && row.state === PRICING_STATES.confirmed ? <div className="vsp-editor"><button type="button" onClick={() => onReview(item, { withdraw: true })} data-testid="variation-review-withdraw">Withdraw approval and edit</button></div> : null}
@@ -134,6 +183,9 @@ const VSP_CSS = `
 .vsp-totals span.warn { background: #fef3c7; }
 .vsp-totals span.info { background: #e0f2fe; }
 .vsp-source { color: #475569; }
+.vsp-quick { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; margin-top: 8px; }
+.vsp-quick label { display: flex; flex-direction: column; gap: 4px; font-size: 16px; }
+.vsp-quick input { font-size: 16px; padding: 6px 8px; border: 1px solid #94a3b8; border-radius: 8px; width: 140px; }
 .vsp-amount.estimated_price b { color: #075985; }
 .vsp-panel button.vsp-link { align-self: flex-start; margin-top: 6px; background: #0f766e; color: #fff; border-color: #0f766e; }
 .vsp-totals b { font-size: 16px; font-weight: 700; color: #334155; }
@@ -146,8 +198,18 @@ const VSP_CSS = `
 .vsp-review b { font-size: 18px; color: #92400e; }
 .vsp-missing { color: #92400e; }
 .vsp-amount b { font-size: 20px; }
+.vsp-approve { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; padding: 12px; border: 1px solid #99f6e4; border-radius: 10px; background: #f0fdfa; }
+.vsp-figures { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin: 0; }
+.vsp-figures div { display: flex; flex-direction: column; gap: 2px; }
+.vsp-figures dt { font-size: 16px; color: #334155; }
+.vsp-figures dd { margin: 0; font-size: 20px; font-weight: 800; color: #0f172a; }
+.vsp-check { display: flex; gap: 10px; align-items: center; font-size: 18px; font-weight: 700; cursor: pointer; }
+.vsp-check input { width: 22px; height: 22px; }
+.vsp-panel button.vsp-decline { align-self: flex-start; }
+.vsp-builder-only { color: #6b21a8; }
 .vsp-amount.confirmed b { color: #065f46; }
 .vsp-status { color: #475569; }
+.vsp-rejected { margin: 0 0 8px; padding: 10px 12px; border-radius: 8px; background: #fff1f2; border: 1px solid #fecaca; color: #991b1b; font-size: 16px; font-weight: 700; }
 .vsp-decide, .vsp-editor { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; flex-basis: 100%; }
 .vsp-editor label { display: flex; flex-direction: column; gap: 4px; font-size: 16px; }
 .vsp-editor input, .vsp-editor select { font-size: 16px; padding: 6px 8px; border: 1px solid #94a3b8; border-radius: 8px; width: 150px; }

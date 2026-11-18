@@ -3,7 +3,7 @@
 // Readable text is never below 16px.
 import { useState } from "react";
 
-export default function SelectionAttentionPanel({ attention, onAction }) {
+export default function SelectionAttentionPanel({ attention, onAction, bulkAction = null }) {
   const [openGroups, setOpenGroups] = useState({});
   if (!attention) return null;
   const { groups, total, blocking, completion, readiness } = attention;
@@ -21,6 +21,12 @@ export default function SelectionAttentionPanel({ attention, onAction }) {
           <span className={readiness.ready ? "ok" : "todo"} data-testid="attention-readiness">{readiness.ready ? "Ready for final contract issue" : `${readiness.blockingItems} requirement${readiness.blockingItems === 1 ? "" : "s"} remain before final contract issue`}</span>
         </div>
       </header>
+      {bulkAction?.onRun ? (
+        <div className="sap-bulk" data-testid="attention-bulk">
+          <button type="button" className="sap-bulkButton" disabled={!bulkAction.count} onClick={bulkAction.onRun} data-testid="attention-bulk-approve">Auto-Approve All Baseline &amp; Within-Allowance Items{bulkAction.count ? ` (${bulkAction.count})` : ""}</button>
+          <span>{bulkAction.count ? `Confirms ${bulkAction.prices} price${bulkAction.prices === 1 ? "" : "s"} within allowance or verified by the supplier${(bulkAction.rooms||[]).length ? ` and approves the complete ${(bulkAction.rooms||[]).join(", ")} cabinetry` : ""}. Incomplete rooms and other client decisions stay open.` : "Nothing can be approved in bulk: the remaining items need a decision or a price."}</span>
+        </div>
+      ) : null}
       {total === 0 ? <p className="sap-clear">Nothing needs your attention.</p> : groups.map((group) => {
         const open = openGroups[group.key] ?? ["decisions", "contract"].includes(group.key);
         return (
@@ -52,6 +58,9 @@ export default function SelectionAttentionPanel({ attention, onAction }) {
 }
 
 const ATTENTION_CSS = `
+.sap-bulk { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin: 12px 0; padding: 12px 14px; border-radius: 12px; background: #ecfdf5; border: 1px solid #10b981; font-size: 16px; color: #064e3b; }
+.sap-bulkButton { font-size: 16px; font-weight: 800; padding: 10px 16px; border-radius: 10px; border: 0; background: #047857; color: #fff; cursor: pointer; }
+.sap-bulkButton:disabled { background: #94a3b8; cursor: not-allowed; }
 .sap-panel { grid-column: 1 / -1; border: 1px solid #d7deea; border-radius: 10px; background: #fff; padding: 16px; display: grid; gap: 12px; font-size: 16px; color: #0f172a; }
 .sap-panel header { display: flex; justify-content: space-between; gap: 14px; align-items: center; flex-wrap: wrap; }
 .sap-heading { display: grid; gap: 4px; }

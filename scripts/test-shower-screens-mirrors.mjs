@@ -379,8 +379,12 @@ check("selections flow into the Quotation Builder and Procurement", () => {
   assert.equal(ensuiteRow.variation, null, "unapproved inclusion baseline blocks posting the variation");
   assert.equal(ensuiteRow.historicalVariation, 300, "the computed ex-GST difference remains available for review");
   assert.equal(bathroomRow.supplier, "Stegbar");
+  // No quote and no builder LM mirror rate: Supplier Quote Required, no substituted price (owner 12 Nov 2026).
   assert.equal(mirrorRow.priceStatus, "Supplier Quote Required");
   assert.equal(mirrorRow.excelRate, "");
+  assert.equal(mirrorRow.quoteRequired, true);
+  assert.equal(mirrorRow.rfq_status, "Pending Supplier Quote");
+  assert.equal(ensuiteRow.rfq_status, null, "a referenced supplier quote is not pending");
   assert.equal(cabinetRow.priceStatus, "Current Price");
   assert.equal(cabinetRow.model, cabinetLine.supplierCode);
   const items = workbook.procurement.items;
@@ -390,6 +394,7 @@ check("selections flow into the Quotation Builder and Procurement", () => {
   assert.equal(items[0].rateStatus, "Supplier quote RQ-TEST-1");
   assert.equal(items[2].rateStatus, "Supplier quote required");
   assert.equal(items[2].estimatedTotal, null);
+  assert.equal(items[2].rfq_status, "Pending Supplier Quote");
   assert.deepEqual(items[0].locationSchedule, [{ location: "Ensuite", quantity: 1 }]);
   // Re-running replaces this connector's rows rather than duplicating them.
   assert.equal(connectAllocatedSelectionsToQuotation(workbook, book).quotation["SHOWER SCREENS & MIRRORS - CLIENT SELECTIONS"].rows.length, 4);

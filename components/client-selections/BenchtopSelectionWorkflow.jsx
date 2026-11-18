@@ -7,22 +7,34 @@
 //   4. SELECTED         what was chosen, per area
 // Project geometry is not recreated here: the main run, an island the cabinetry scope shows and
 // each vanity are listed already; only a length the project does not hold is asked for.
-// Slab thickness, finished edge, templates, supplier quotes and sample sign-off are fabricator /
-// supplier matters, and the quotation range comes from the builder's supplier price group mapping:
-// neither is a client question (lib/builders/benchtopSelection.js, benchtopRangeMapping.js).
+// Each benchtop area takes its own finished thickness (20 / 40 / 60 mm) and, for a vanity top, its
+// depth, basin and drop-front (benchtopFabrication.js, 17 Nov 2026), chosen in step 2 beside the
+// area itself (18 Nov 2026). The client chooses the finished thickness; the builder view also shows
+// the edge construction (solid slab or mitred / built-up) and the fabricator checks. Measurements,
+// LM totals, quotation ranges and builder reviews are never shown to the client - they reach the
+// Quotation Builder from the same saved data (cabinetryRequirements.js). Templates,
+// supplier quotes, sample sign-off and every measurement stay with the builder / fabricator, and the
+// quotation range comes from the builder's supplier price group mapping (benchtopRangeMapping.js).
 // Readable text is never below 16px.
 import { useMemo, useRef, useState } from "react";
 import { BENCHTOP_RANGES } from "../../lib/construction-estimation/cabinetryRequirements.js";
 import {
   BENCHTOP_AREA_PRESETS, BENCHTOP_SAMPLE_NOTE, BENCHTOP_UPSTAND_OPTIONS, ISLAND_AREA_ID, WATERFALL_END_OPTIONS,
-  benchRunFromSchedule, benchtopAreaLm, benchtopAreasFor, benchtopDepthsForRoom, benchtopLocationPatch, benchtopProfile, benchtopQuantitySummary, benchtopRangeByKey,
-  benchtopRangeKeyFor, benchtopSetupComplete, benchtopSetupFor, laminateSurfaceForArea, newBenchtopArea, stoneSurfaceForArea,
+  benchRunFromSchedule, benchtopAreasFor, benchtopDepthsForRoom, benchtopLocationPatch, benchtopProfile, benchtopRangeByKey,
+  benchtopRangeKeyFor, benchtopSetupComplete, benchtopSetupFor, clientEdgeProfileOptions, laminateSurfaceForArea, newBenchtopArea, stoneSurfaceForArea,
 } from "../../lib/builders/benchtopSelection.js";
 import { isIslandArea, islandInheritsMain, mainBenchtopArea, setIslandSameAsMain, surfaceName } from "../../lib/builders/benchtopInheritance.js";
+import { BENCHTOP_THICKNESSES, COMPATIBILITY_SUPPORTED, VANITY_DROP_FRONTS, VANITY_TYPE_LABELS, benchtopFabrication, benchtopFabricationReviews, benchtopThicknessOptions, isStoneSurface, vanityBasinOptions, vanityDepthOptions, withThickness } from "../../lib/builders/benchtopFabrication.js";
+
+// A thickness chosen before the stone keeps its millimetres; the edge construction is settled from
+// the stone's slab data when the stone is chosen (withThickness). A laminate top clears it.
+function fabricationForSurface(area, surface) {
+  const current = benchtopFabrication(area);
+  return current.thicknessMm ? withThickness({ ...area, surface }, current.thicknessMm) : current;
+}
 
 const PAGE_SIZE = 24;
 const UNCLASSIFIED = "unclassified";
-const lm = (value) => `${Number(value || 0).toFixed(2)} lm`;
 const unique = (values) => [...new Set(values.filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b)));
 const RANGE_SOURCE_NOTES = { "supplier-price-group": "from the supplier price group", "job-confirmation": "confirmed earlier on this job", material: "by material", override: "set for this benchtop" };
 
@@ -35,7 +47,6 @@ export default function BenchtopSelectionWorkflow({ location, scheduleLines = []
   const areas = useMemo(() => benchtopAreasFor(location, { scheduleLines, workbook }), [location, scheduleLines, workbook]);
   const run = useMemo(() => benchRunFromSchedule(scheduleLines, room), [scheduleLines, room]);
   const depths = useMemo(() => benchtopDepthsForRoom(room), [room]);
-  const quantity = benchtopQuantitySummary(areas);
   const setupDone = benchtopSetupComplete(setup);
   const [editingAreaState, setEditingAreas] = useState(false);
   // Client view: benchtop lengths are the builder's measurement, never asked of the client.
@@ -81,10 +92,14 @@ export default function BenchtopSelectionWorkflow({ location, scheduleLines = []
   const surfaceFor = (surface, area) => (surface.kind === "laminate" ? laminateSurfaceForArea(surface.product, { area, setup }) : stoneSurfaceForArea(surface.product, { room, area, setup, ranges }));
   function selectSurface(surface) {
     if (!target) return;
-    commit(setup, areas.map((area) => (area.id === target.id ? { ...area, surface: surfaceFor(surface, area) } : area)));
+    commit(setup, areas.map((area) => {
+      if (area.id !== target.id) return area;
+      const next = surfaceFor(surface, area);
+      return { ...area, surface: next, fabrication: fabricationForSurface(area, next) };
+    }));
     setTargetId(target.id);
   }
-  const applyToAll = (from) => commit(setup, areas.map((area) => ({ ...area, surface: { ...from.surface, applications: [area.label] } })));
+  const applyToAll = (from) => commit(setup, areas.map((area) => { const next = { ...from.surface, applications: [area.label] }; return { ...area, surface: next, fabrication: fabricationForSurface(area, next) }; }));
   // Island link: ON follows the main benchtop; OFF keeps what it has as the starting point; ON again warns before replacing an independent choice.
   function toggleIslandLink(on, force = false) {
     const result = setIslandSameAsMain(areas, on, { force });
@@ -118,7 +133,7 @@ export default function BenchtopSelectionWorkflow({ location, scheduleLines = []
         <div className="bts-head"><div><span className="bts-step">Step 1</span><h3>{vanity ? "Vanity benchtop setup" : "Benchtop setup"}</h3><p>{vanity ? `How the ${room} vanity benchtop is finished.` : `How the ${room} benchtops are finished. This applies to every benchtop in the room.`}</p></div>
           {setupDone ? <span className="bts-pill done" data-testid="benchtop-setup-status">✓ Setup confirmed</span> : <span className="bts-pill" data-testid="benchtop-setup-status">Confirm to continue</span>}</div>
         <div className="bts-fields">
-          <label><span>Edge profile</span><select value={setup.edgeProfile} onChange={(event) => changeSetup({ edgeProfile: event.target.value })} data-testid="benchtop-edge">{profile.edgeProfiles.map((value) => <option key={value}>{value}</option>)}</select></label>
+          <label><span>Edge profile</span><select value={setup.edgeProfile} onChange={(event) => changeSetup({ edgeProfile: event.target.value })} data-testid="benchtop-edge">{clientEdgeProfileOptions(profile.edgeProfiles, setup.edgeProfile).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
           {profile.waterfall ? <label><span>Waterfall ends</span><select value={setup.waterfallEnds} onChange={(event) => changeSetup({ waterfallEnds: event.target.value })} data-testid="benchtop-waterfall">{WATERFALL_END_OPTIONS.map((value) => <option key={value}>{value}</option>)}</select></label> : null}
           <label><span>{vanity ? "Upstand / splashback" : "Upstand"}</span><select value={setup.upstand} onChange={(event) => changeSetup({ upstand: event.target.value })} data-testid="benchtop-upstand">{BENCHTOP_UPSTAND_OPTIONS.map((value) => <option key={value}>{value}</option>)}</select></label>
           {setup.upstand === "Custom" ? <label><span>Upstand height (mm)</span><input type="number" min="0" step="10" value={setup.upstandCustomMm} onChange={(event) => changeSetup({ upstandCustomMm: event.target.value }, false)} data-testid="benchtop-upstand-custom" /></label> : null}
@@ -133,33 +148,34 @@ export default function BenchtopSelectionWorkflow({ location, scheduleLines = []
       </section>
 
       <section className="bts-block" data-testid="benchtop-areas">
-        <div className="bts-head"><div><span className="bts-step">Step 2</span><h3>{vanity ? "Vanity benchtops" : "Benchtop areas"}</h3><p>{vanity ? "The vanity benchtops this room has, from its cabinet schedule." : "The benchtops this room has, from the project. Each can have its own surface."}{clientView ? " Your builder confirms every benchtop measurement." : ""}</p></div>
-          {clientView ? null : <button type="button" className="bts-secondary" onClick={() => { if (editingAreas) commit(setup, areas); setEditingAreas((value) => !value); }} data-testid="benchtop-edit-dimensions">{editingAreas ? "Done" : "Edit dimensions"}</button>}</div>
-        <table className="bts-areas">
-          <tbody>
+        <div className="bts-head"><div><span className="bts-step">Step 2</span><h3>{vanity ? "Vanity benchtops" : "Benchtop areas"}</h3><p>{vanity ? "Choose the thickness, depth and basin for each vanity benchtop." : "Choose the finished stone thickness for each benchtop."}</p></div>
+          {clientView ? null : <button type="button" className="bts-secondary" onClick={() => { if (editingAreas) commit(setup, areas); setEditingAreas((value) => !value); }} data-testid="benchtop-edit-dimensions">{editingAreas ? "Done" : "Edit benchtop areas"}</button>}</div>
+        {editingAreas ? (
+          <table className="bts-areas">
+            <tbody>
+              {areas.map((area) => (
+                <tr key={area.id} data-testid="benchtop-area" data-area={area.label} data-source={area.source}>
+                  <td>{profile.canAddAreas ? <label><span>Benchtop</span><input value={area.label} onChange={(event) => changeArea(area.id, { label: event.target.value }, false)} data-testid="benchtop-area-label" /></label> : <strong>{area.label}</strong>}</td>
+                  {/* No length entry or LM figure in Client Selections: lengths come from the approved takeoff or the builder in the Quotation Builder. */}
+                  <td>{depths.length > 1 ? <label><span>Width</span><select value={area.depthMm} onChange={(event) => changeArea(area.id, { depthMm: Number(event.target.value) })} data-testid="benchtop-area-depth">{depths.map((depth) => <option key={depth} value={depth}>{depth} mm</option>)}</select></label> : <span>{area.depthMm} mm wide</span>}</td>
+                  <td>{profile.canAddAreas && areas.length > 1 ? <button type="button" className="bts-link danger" onClick={() => removeArea(area)} data-testid="benchtop-area-remove">Remove</button> : null}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <div className="bts-areaRows">
             {areas.map((area) => (
-              <tr key={area.id} data-testid="benchtop-area" data-area={area.label} data-source={area.source}>
-                {editingAreas ? (
-                  <>
-                    <td>{profile.canAddAreas ? <label><span>Benchtop</span><input value={area.label} onChange={(event) => changeArea(area.id, { label: event.target.value }, false)} data-testid="benchtop-area-label" /></label> : <strong>{area.label}</strong>}</td>
-                    <td><label><span>Length (mm)</span><input type="number" min="0" step="50" value={area.lengthMm} onChange={(event) => changeArea(area.id, { lengthMm: event.target.value === "" ? "" : Number(event.target.value) }, false)} data-testid="benchtop-area-length" /></label></td>
-                    <td>{depths.length > 1 ? <label><span>Width</span><select value={area.depthMm} onChange={(event) => changeArea(area.id, { depthMm: Number(event.target.value) })} data-testid="benchtop-area-depth">{depths.map((depth) => <option key={depth} value={depth}>{depth} mm</option>)}</select></label> : <span>{area.depthMm} mm wide</span>}</td>
-                    <td>{profile.canAddAreas && areas.length > 1 ? <button type="button" className="bts-link danger" onClick={() => removeArea(area)} data-testid="benchtop-area-remove">Remove</button> : null}</td>
-                  </>
-                ) : (
-                  <>
-                    <th scope="row">{area.label}</th>
-                    <td data-testid="benchtop-area-lm">{benchtopAreaLm(area) ? lm(benchtopAreaLm(area)) : clientView ? <span className="bts-muted">Measured by your builder</span> : <b className="bts-warn">Length needed</b>}</td>
-                    <td>{area.depthMm} mm wide</td>
-                    <td className="bts-muted" data-testid="benchtop-area-source">{area.source === "cabinetry" ? "From the cabinet schedule" : area.evidence ? `From the project - ${area.evidence}` : benchtopAreaLm(area) ? "Entered" : ""}</td>
-                  </>
-                )}
-              </tr>
+              <div key={area.id} className="bts-areaRow" data-testid="benchtop-area" data-area={area.label} data-source={area.source}>
+                <div className="bts-areaName">
+                  <h4>{area.label}</h4>
+                  <span>{area.surface ? surfaceName(area.surface) : "Stone not chosen yet"}</span>
+                </div>
+                <BenchtopFabricationFields area={area} room={room} vanity={vanity} clientView={clientView} onChange={(fabrication) => changeArea(area.id, { fabrication })} />
+              </div>
             ))}
-          </tbody>
-          {!editingAreas ? <tfoot><tr><th scope="row">Total</th><td data-testid="benchtop-total-lm">{lm(quantity.totalLm)}</td><td /><td /></tr></tfoot> : null}
-        </table>
-        {quantity.missing.length && !clientView ? <p className="bts-note warn" data-testid="benchtop-length-needed">{!vanity && run.unknown.length ? `The cabinet schedule has no width recorded for: ${[...new Set(run.unknown)].join(", ")}, so the bench length cannot be worked out from it. ` : ""}Use Edit dimensions to enter the length of {quantity.missing.join(" and ")}. The quotation needs it.</p> : null}
+          </div>
+        )}
         {editingAreas && profile.canAddAreas ? (
           <div className="bts-actions start">
             <label className="bts-inline"><span>Add a benchtop the project does not show</span><select value="" onChange={(event) => { if (event.target.value) commit(setup, [...areas, newBenchtopArea(event.target.value === "Other" ? "Benchtop" : event.target.value === "Island" ? "Island benchtop" : event.target.value, { depthMm: depths.includes(900) && /island|breakfast/i.test(event.target.value) ? 900 : depths[0] })]); }} data-testid="benchtop-add-area"><option value="">Choose…</option>{BENCHTOP_AREA_PRESETS.filter((name) => name !== "Island" || !areas.some((area) => /\bisland\b/i.test(area.label))).map((name) => <option key={name}>{name}</option>)}</select></label>
@@ -176,10 +192,10 @@ export default function BenchtopSelectionWorkflow({ location, scheduleLines = []
             {target && isIslandArea(target) && main ? (
               <div className="bts-link-panel" data-testid="benchtop-island-link" data-linked={linked ? "true" : "false"}>
                 <label className="bts-check"><input type="checkbox" checked={linked} onChange={(event) => toggleIslandLink(event.target.checked)} data-testid="benchtop-island-same-as-main" /><span>Use same benchtop as Main Benchtop</span></label>
-                {linked ? <p className="bts-muted" data-testid="benchtop-island-inherited">{main.surface ? `The island follows the Main benchtop: ${surfaceName(main.surface)}. Change the Main benchtop and the island changes with it. Length and depth stay separate.` : "The island will take the Main benchtop's selection as soon as one is chosen."}</p>
+                {linked ? <p className="bts-muted" data-testid="benchtop-island-inherited">{main.surface ? `The island follows the Main benchtop: ${surfaceName(main.surface)}. Change the Main benchtop and the island changes with it.` : "The island will take the Main benchtop's selection as soon as one is chosen."}</p>
                   : <p className="bts-muted">The island has its own selection. The Main benchtop no longer changes it.</p>}
                 {!linked && target.surface ? (
-                  <label className="bts-inline"><span>Island edge profile</span><select value={target.edgeProfile || setup.edgeProfile} onChange={(event) => changeArea(target.id, { edgeProfile: event.target.value })} data-testid="benchtop-island-edge">{profile.edgeProfiles.map((value) => <option key={value}>{value}</option>)}</select></label>
+                  <label className="bts-inline"><span>Island edge profile</span><select value={target.edgeProfile || setup.edgeProfile} onChange={(event) => changeArea(target.id, { edgeProfile: event.target.value })} data-testid="benchtop-island-edge">{clientEdgeProfileOptions(profile.edgeProfiles, target.edgeProfile || setup.edgeProfile).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
                 ) : null}
                 {linkWarning ? (
                   <div className="bts-note warn" role="alertdialog" data-testid="benchtop-island-link-warning">
@@ -246,18 +262,27 @@ export default function BenchtopSelectionWorkflow({ location, scheduleLines = []
                   <div className="bts-summaryBody">
                     <span className="bts-eyebrow">{area.label}{surface.inheritedFromAreaId && islandInheritsMain(area) ? " (same as Main benchtop)" : ""}</span>
                     <strong className="bts-name">{surface.supplier} {surface.colourName || surface.range}</strong>
-                    <dl>
-                      <div><dt>Range</dt><dd>{surface.collection || surface.range || "Not recorded"}</dd></div>
-                      <div><dt>Colour</dt><dd>{surface.colourName || surface.colour || "Not recorded"}{surface.colourFamily ? ` (${surface.colourFamily})` : ""}</dd></div>
-                      {clientView ? null : <div><dt>Quotation classification</dt><dd data-testid="benchtop-classification">{range ? <>{range.label}{RANGE_SOURCE_NOTES[surface.rangeSource] ? <span className="bts-muted"> · {RANGE_SOURCE_NOTES[surface.rangeSource]}</span> : null}</> : <b className="bts-warn">Not set for {group || "this surface"}</b>}</dd></div>}
-                      <div><dt>Application</dt><dd>{room} - {area.label}</dd></div>
-                      <div><dt>Quantity</dt><dd>{benchtopAreaLm(area) ? `${lm(benchtopAreaLm(area))}, ${area.depthMm} mm wide` : clientView ? "Measured by your builder" : "Length needed"}</dd></div>
-                      <div><dt>Edge</dt><dd>{setup.edgeProfile}</dd></div>
-                      {profile.waterfall ? <div><dt>Waterfall ends</dt><dd>{setup.waterfallEnds}</dd></div> : null}
-                      <div><dt>Upstand</dt><dd>{setup.upstand === "Custom" ? `${setup.upstandCustomMm || "Custom"} mm` : setup.upstand}</dd></div>
-                      <div><dt>Cut-outs</dt><dd>{setup.cutouts.map((name) => profile.cutoutLabels[name]).join(", ") || "None"}</dd></div>
-                    </dl>
-                    {!range && clientView ? <p className="bts-note warn" data-testid="benchtop-builder-review">Builder Review Required: your builder will confirm the measurements and price for this benchtop and send you the final variation amount for approval.</p> : null}
+                    {(() => {
+                      // What the client chose, in plain words. Pricing, ranges, quantities and builder checks
+                      // stay in the data for the Quotation Builder (18 Nov 2026).
+                      const fabrication = benchtopFabrication(area);
+                      const upstand = setup.upstand === "Custom" ? `${setup.upstandCustomMm || "Custom"} mm` : setup.upstand;
+                      const cutouts = setup.cutouts.map((name) => profile.cutoutLabels[name]).join(", ");
+                      return (
+                        <dl data-testid="benchtop-summary-details">
+                          <div><dt>Brand</dt><dd>{surface.supplier || "Not recorded"}</dd></div>
+                          <div><dt>Range</dt><dd>{surface.collection || surface.range || "Not recorded"}</dd></div>
+                          <div><dt>Colour</dt><dd>{surface.colourName || surface.colour || "Not recorded"}</dd></div>
+                          {isStoneSurface(surface) ? <div><dt>Finished thickness</dt><dd data-testid="benchtop-summary-thickness">{fabrication.thicknessMm ? `${fabrication.thicknessMm} mm` : "Choose in Benchtop areas above"}</dd></div> : null}
+                          <div><dt>Edge profile</dt><dd>{area.edgeProfile || setup.edgeProfile}</dd></div>
+                          {profile.waterfall && setup.waterfallEnds && setup.waterfallEnds !== "None" ? <div><dt>Waterfall ends</dt><dd>{setup.waterfallEnds}</dd></div> : null}
+                          {upstand && upstand !== "None" ? <div><dt>Upstand</dt><dd>{upstand}</dd></div> : null}
+                          {vanity && fabrication.basinType ? <div><dt>Basin</dt><dd>{fabrication.basinType}{fabrication.dropFrontMm ? ` · ${fabrication.dropFrontMm} mm drop-front` : ""}</dd></div> : null}
+                          {cutouts ? <div><dt>Cut-outs</dt><dd>{cutouts}</dd></div> : null}
+                          {clientView ? null : <div><dt>Quotation classification</dt><dd data-testid="benchtop-classification">{range ? <>{range.label}{RANGE_SOURCE_NOTES[surface.rangeSource] ? <span className="bts-muted"> · {RANGE_SOURCE_NOTES[surface.rangeSource]}</span> : null}</> : <b className="bts-warn">Not set for {group || "this surface"}</b>}</dd></div>}
+                        </dl>
+                      );
+                    })()}
                     {!range && !clientView ? <p className="bts-note warn" data-testid="benchtop-range-missing">The builder has not yet set which quotation range {group || "this surface"} belongs to, so this benchtop is not priced in the quotation yet.{onOpenRangeSettings ? <> <button type="button" className="bts-link" onClick={onOpenRangeSettings}>Set supplier price groups</button></> : null}</p> : null}
                     <div className="bts-actions start">
                       <button type="button" className="bts-secondary" onClick={() => changeSurface(area)} data-testid="benchtop-change-surface">Change surface</button>
@@ -278,13 +303,80 @@ export default function BenchtopSelectionWorkflow({ location, scheduleLines = []
   );
 }
 
+// Thickness, edge construction and (vanity tops) depth, basin and drop-front for ONE benchtop area.
+// Each area keeps its own: the same stone on another benchtop never copies these (benchtopFabrication.js).
+function BenchtopFabricationFields({ area, room, vanity, clientView, onChange }) {
+  const surface = area.surface;
+  const fabrication = benchtopFabrication(area);
+  const stone = !surface || isStoneSurface(surface);
+  // With a stone chosen, its slab data decides what is offered; before that, the three finished thicknesses.
+  const thicknesses = surface ? benchtopThicknessOptions(surface) : BENCHTOP_THICKNESSES.map((thicknessMm) => ({ thicknessMm, constructions: [] }));
+  const option = surface ? thicknesses.find((item) => item.thicknessMm === fabrication.thicknessMm) : null;
+  const reviews = clientView ? [] : benchtopFabricationReviews(area, { room });
+  const set = (patch) => onChange({ ...fabrication, ...patch });
+  const chooseThickness = (value) => onChange(surface ? withThickness(area, value) : { ...fabrication, thicknessMm: Number(value) || "", edgeConstruction: "" });
+  const confirm = (item) => (clientView || !item.constructions.length || item.constructions.some((construction) => construction.status === COMPATIBILITY_SUPPORTED) ? "" : " (builder to confirm)");
+  return (
+    <div className="bts-fabrication" data-testid="benchtop-fabrication" data-area={area.label}>
+      <div className="bts-fields">
+        {stone && thicknesses.length ? (
+          <label><span>Stone thickness</span>
+            <select value={fabrication.thicknessMm || ""} onChange={(event) => chooseThickness(event.target.value)} data-testid="benchtop-thickness">
+              <option value="">Choose…</option>
+              {thicknesses.map((item) => <option key={item.thicknessMm} value={item.thicknessMm}>{item.thicknessMm} mm{confirm(item)}</option>)}
+            </select>
+          </label>
+        ) : <p className="bts-muted" data-testid="benchtop-thickness-na">Laminate — standard thickness</p>}
+        {!clientView && option ? (
+          <label><span>Edge construction (builder)</span>
+            <select value={fabrication.edgeConstruction} onChange={(event) => set({ edgeConstruction: event.target.value })} data-testid="benchtop-edge-construction">
+              {option.constructions.map((construction) => <option key={construction.key} value={construction.key}>{construction.label}{construction.status === COMPATIBILITY_SUPPORTED ? "" : " - builder to confirm"}</option>)}
+            </select>
+          </label>
+        ) : null}
+        {vanity ? (
+          <>
+            <p className="bts-vanityType" data-testid="benchtop-vanity-type"><b>Vanity</b> {VANITY_TYPE_LABELS[area.id] || "Vanity"}</p>
+            <label><span>Benchtop depth</span>
+              <select value={fabrication.vanityDepthMm || ""} onChange={(event) => set({ vanityDepthMm: Number(event.target.value) || "" })} data-testid="benchtop-vanity-depth">
+                <option value="">Choose…</option>
+                {vanityDepthOptions(area.id).map((depth) => <option key={depth} value={depth}>{depth} mm{depth === 350 ? " (narrow wall-hung)" : ""}</option>)}
+              </select>
+            </label>
+            <label><span>Basin</span>
+              <select value={fabrication.basinType} onChange={(event) => set({ basinType: event.target.value })} data-testid="benchtop-basin">
+                <option value="">Choose…</option>
+                {vanityBasinOptions(surface).map((type) => <option key={type}>{type}</option>)}
+              </select>
+            </label>
+            {stone ? (
+              <label><span>Stone drop-front</span>
+                <select value={fabrication.dropFrontMm || ""} onChange={(event) => set({ dropFrontMm: Number(event.target.value) || "" })} data-testid="benchtop-drop-front">
+                  <option value="">None</option>
+                  {VANITY_DROP_FRONTS.map((mm) => <option key={mm} value={mm}>{mm} mm</option>)}
+                </select>
+              </label>
+            ) : null}
+          </>
+        ) : null}
+      </div>
+      {reviews.length ? (
+        <div className="bts-note warn" data-testid="benchtop-fabrication-review">
+          <strong>Builder / stone fabricator to confirm</strong>
+          <ul>{reviews.map((review) => <li key={review}>{review}</li>)}</ul>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 const BENCHTOP_CSS = `
 .bts-shell { display: grid; gap: 18px; font-size: 16px; color: #0f172a; }
 .bts-shell h3, .bts-shell p, .bts-shell dl, .bts-shell dd { margin: 0; }
 .bts-shell button, .bts-shell input, .bts-shell select { font-size: 16px; font-family: inherit; }
 .bts-block { border: 1px solid #d7deea; border-radius: 12px; background: #fff; padding: 20px 22px; display: grid; gap: 16px; }
 .bts-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
-.bts-head h3 { font-size: 22px; font-weight: 900; } .bts-head p { color: #334155; margin-top: 2px; }
+.bts-head h3 { font-size: 24px; font-weight: 900; color: #071827; } .bts-head p { color: #334155; margin-top: 2px; }
 .bts-step, .bts-eyebrow { font-size: 16px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #475569; }
 .bts-pill { padding: 8px 16px; border-radius: 999px; background: #fef3c7; color: #78350f; font-weight: 800; } .bts-pill.done { background: #dcfce7; color: #14532d; }
 .bts-fields, .bts-filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
@@ -328,6 +420,12 @@ const BENCHTOP_CSS = `
 .bts-summary dl div { display: grid; gap: 2px; } .bts-summary dt { font-weight: 700; color: #475569; } .bts-summary dd { font-size: 17px; }
 .bts-sample { color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 10px; }
 @media (max-width: 720px) { .bts-summary { grid-template-columns: 1fr; } }
+.bts-fabrication { display: grid; gap: 12px; }
+.bts-areaRows { display: grid; gap: 14px; }
+.bts-areaRow { display: grid; grid-template-columns: minmax(200px, 260px) 1fr; gap: 14px 22px; align-items: start; border: 1px solid #d7deea; border-left: 5px solid #0f766e; border-radius: 12px; padding: 16px 18px; background: #f8fafc; }
+.bts-areaName { display: grid; gap: 4px; } .bts-areaName h4 { margin: 0; font-size: 20px; font-weight: 900; color: #071827; } .bts-areaName span { color: #475569; }
+@media (max-width: 720px) { .bts-areaRow { grid-template-columns: 1fr; } }
+.bts-fabrication ul { margin: 6px 0 0; padding-left: 20px; } .bts-vanityType { align-self: end; font-size: 17px; }
 .bts-link-panel { border: 1px solid #99f6e4; background: #f0fdfa; border-radius: 10px; padding: 14px 16px; display: grid; gap: 10px; }
 .bts-shell label.bts-check { display: flex; align-items: center; gap: 10px; }
 .bts-shell label.bts-check input { min-height: 0; width: 22px; height: 22px; }

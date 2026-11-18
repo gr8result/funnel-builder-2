@@ -217,9 +217,10 @@ check('LEGACY MIGRATION', () => {
   // 5. One quotation row per cabinet; archived lines contribute nothing.
   const migrated = saveSelections(base, legacy);
   // The kitchen's base handle is Sharkfin, so the upgrade is charged on its eligible fronts:
-  // corner 1 + sink 2 + bin 1 + 2 x 4 drawers + 5 drawers = 17.
+  // corner 2 + sink 2 + bin 1 + 2 x 4 drawers + 5 drawers = 18. Both linked corner fronts take the
+  // Sharkfin so they match (owner rule 17 Nov 2026; was 1 front, total 17).
   assert.deepEqual(quoted(migrated, K, std), { 'Corner base cabinet': 1, 'Sink base cabinet': 1, 'Pull-out bin cabinet': 1, 'Underbench oven cabinet': 1, 'Dishwasher cabinet': 1, 'Microwave cabinet': 1, 'Rangehood cabinet': 1, '4 drawer base unit': 2, '5 drawer base unit': 1,
-    'Sharkfin handle upgrade - per unit': 17 });
+    'Sharkfin handle upgrade - per unit': 18 });
   assert.deepEqual(quoted(migrated, BP, std), { 'Sink base cabinet': 1 }); assert.deepEqual(quoted(migrated, L, std), { 'Laundry sink cabinet': 1 });
   assert.equal(populated(migrated), 12); assert.deepEqual(structure(migrated), structure(base));
   // Archived lines are never silently discarded: each is an UNMATCHED requirement with its reason,

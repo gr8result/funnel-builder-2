@@ -81,4 +81,22 @@ assert.match(warned, /Missing plan asset/);
 const resaved = await externalizeTakeoffPlanPages(openedForeign);
 assert.equal(resaved.aiPlanTakeoffJob.plan.pages[0].dataUrlAssetId, 'f'.repeat(64), 'a later save keeps the reference');
 console.log('PASS a plan image this browser never held no longer stops the job opening; its reference survives a save');
+
+// Project Estimate artwork this browser never held (15 Nov 2026: one missing brochure background made
+// the whole job, quotation included, fail to reopen). The artwork keeps its reference; a held one opens.
+const missingArt = { __gr8StoredDataUrl: 'e'.repeat(64) };
+const foreignDoc = { projectEstimateBuilder: { pages: [
+  { baseArtwork: missingArt, design: { backgroundImageUrl: { ...missingArt } } },
+  { baseArtwork: first.projectEstimateBuilder.pages[0].baseArtwork },
+] } };
+let artWarned = ''; console.warn = message => { artWarned = String(message); };
+const openedDoc = await materializeTakeoffPlanPages(foreignDoc);
+console.warn = warn;
+assert.deepEqual(openedDoc.projectEstimateBuilder.pages[0].baseArtwork, missingArt, 'missing artwork keeps its reference');
+assert.deepEqual(openedDoc.projectEstimateBuilder.pages[0].design.backgroundImageUrl, missingArt);
+assert.equal(openedDoc.projectEstimateBuilder.pages[1].baseArtwork, art, 'artwork this browser holds still opens');
+assert.match(artWarned, /Missing plan asset/);
+const resavedDoc = await externalizeTakeoffPlanPages(openedDoc);
+assert.deepEqual(resavedDoc.projectEstimateBuilder.pages[0].baseArtwork, missingArt, 'a later save keeps the artwork reference');
+console.log('PASS Project Estimate artwork this browser never held no longer stops the job (and its quotation) opening; reference survives a save');
 console.log('Plan asset storage: all checks passed.');

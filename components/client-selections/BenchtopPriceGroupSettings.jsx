@@ -31,7 +31,7 @@ export default function BenchtopPriceGroupSettings({ groups = [], mapping = { gr
         <div className="bpg-head">
           <div>
             <h3>Supplier price groups</h3>
-            <p>Builder setting. Choose which quotation range each supplier price group is priced on. Every benchtop surface in that group then uses it automatically, on every job.</p>
+            <p>Builder setting. Choose the quotation range for each supplier price group. Changes apply to selected surfaces in this job and new selections in this browser. Existing selections in other jobs keep their saved range.</p>
           </div>
           <button type="button" className="bpg-close" onClick={onClose} aria-label="Close" data-testid="price-groups-close">×</button>
         </div>
