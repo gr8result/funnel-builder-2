@@ -38,13 +38,14 @@ export async function readPrintedOpeningLabels({ detected, raster, logicalWidth,
     };
     detected.stats = { ...(detected.stats || {}), printedLabels: { read: read.stats.labels, applied: applied.applied, settled: applied.resolved.length, split: applied.split.length, conflicts: applied.conflicts.length } };
     // Room names with no text layer (outlined glyphs, scans), read with the same local worker.
-    let roomLabels = [];
+    let roomLabels = [], sheetNotes = [];
     try {
       const rooms = await recogniseRoomLabels({ raster, logicalWidth, pixelsPerMm, walls: detected.walls, textItems, reader, alreadyRead: read.unreadable || [] });
       roomLabels = rooms.labels;
-      report.roomLabels = { ...rooms.stats, names: rooms.labels.map((l) => l.text) };
+      sheetNotes = rooms.notes || [];
+      report.roomLabels = { ...rooms.stats, names: rooms.labels.map((l) => l.text), notes: sheetNotes.map((n) => n.text) };
     } catch { /* room names are optional; openings above are unaffected */ }
-    return { report, warning: null, roomLabels };
+    return { report, warning: null, roomLabels, sheetNotes };
   } catch (error) {
     return { report: null, warning: `Printed opening labels were not read on this sheet (${error.message}). Openings are measured from the linework only.` };
   }

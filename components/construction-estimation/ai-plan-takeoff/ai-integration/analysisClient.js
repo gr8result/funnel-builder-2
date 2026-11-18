@@ -29,7 +29,15 @@ async function readSession(signal, attempts = 4) {
   }
 }
 
-export async function requestTakeoffAnalysis(payload, signal) {
+export const PROVIDER_NOT_AUTHORISED = 'provider_not_authorised';
+
+// Every paid provider request goes through here. Nothing is sent unless the builder explicitly
+// authorised this AI-assisted run (the screen asks first); the local measurement never calls this.
+export async function requestTakeoffAnalysis(payload, signal, { authorised = false } = {}) {
+  if (authorised !== true) {
+    throw Object.assign(new Error('AI-assisted analysis was not authorised, so no request was sent to OpenAI and nothing was charged.'),
+      { code: PROVIDER_NOT_AUTHORISED, hard: true });
+  }
   const { data, error } = await readSession(signal);
   if (error || !data?.session?.access_token) throw Object.assign(new Error('Sign in before running AI Takeoff.'), { code: 'authentication_required', hard: true });
   for (let attempt = 0; attempt < 2; attempt += 1) {

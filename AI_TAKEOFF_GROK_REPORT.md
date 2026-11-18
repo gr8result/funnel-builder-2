@@ -1,5 +1,288 @@
 # AI Plan Takeoff Verification Report (GROK Continuation)
 
+## Sunshine Cove room-by-room defects, 18 November 2026, round 3 (uncommitted)
+
+Builder-reported defects on the real Sunshine Cove takeoff, reproduced on sheets 4 and 5 with the production local
+pipeline, then fixed with general rules (no plan-specific coordinates or labels). Ports 3000 and 3102 untouched;
+nothing committed or pushed; local-first and paid-AI authorisation unchanged.
+
+| # | Defect | Cause found | General fix |
+|---|---|---|---|
+| 1 | Balcony missed | Outdoor tracer read only the PDF text layer; this sheet's text is outlined (OCR only) | Outdoor areas traced from OCR labels too |
+| 2 | Foyer roof in upper area | Roof box drawn inside wall lines closed as an unnamed room | Unnamed area with a roof word inside (pitch, roof, gutter, awning…) is roof-only: out of rooms and outline; walls bounding only it held for review |
+| 3–4 | Bed 4 and its robe missing | Top wall = short stub + window frame: frame closure skipped because the stub lay along part of it; frame 180 mm off the wall corner | Close only the uncovered stretch from the stub's end; corner within 220 mm |
+| 5 | Bath as a room | Bath rim read as a wall pair | Small unnamed area, no door on its edges, beside a named wet room, with a drawn figure inside → fixture folded into that room |
+| 6 | Bed 3 merged with robe | Robe front drawn as sliding-door lines, no wall end to extend | Drawn front: straight run of lines from boundary to boundary that leaves each label alone, robe depth → divider (never a wall) |
+| 7 | Robe doors missing | Fronts had no opening record | Robe fronts and frame closures listed as review openings (excluded from quantities until confirmed) |
+| 8 | Ground floor unusable | Lightweight walls in a pen the sheet's masonry never uses; stacker door from a wall corner; closure split by another closure dropped from the graph | Pen proved by jambed openings in its pairs; frame closures from corners; every piece of a split separator kept (bug fix) |
+
+Guards added after regressions found on reference plans: opened pens never lighter than wall pens (Jesmond grey
+paving); frame closures enclosing only an unnamed scrap against the outside removed (Liberty AC unit); hatching and
+slatted grilles are not frames; doors judged by position on a fixture's edges, windows ignored; fixture host = wet room
+met across a divider. OCR: two-glyph lines (WC) proposed for the room pass; glued marks and one misread letter in long
+names accepted ("aLLDRY"→LDRY, "BITCHEN"→KITCHEN, "mWIR"→WIR); names stay unconfirmed.
+
+Measured (local pipeline, browser identical):
+
+| Sheet | Before | Now | Printed |
+|---|---|---|---|
+| Sunshine ground footprint | 55.7 m² (garage, laundry, powder only) | 115.47 m² | 117.66 (living 72.68 + garage 44.98) |
+| Sunshine upper footprint | 110.47 (incl. roof, without Bed 4) | 116.19 | 115.56 |
+| Sunshine balcony | not measured | 7.54 (3.94 × 1.91 drawn outline) | 9.82 (printed; drawn balustrade-to-wall span is ~3.9 m) |
+
+Upper rooms: ENSUITE 7.88, BED 1 19.20, WIR 5.68, RUMPUS 27.46, BED 2 9.61, BED 3 9.32, BED 4 9.26, BATH 4.98 (bath folded in),
+linen 3.08, robes 1.08 / 0.89 / 1.12, two unnamed (WC 1.40, stair 2.00). Drawing dimensions: BED 1 4133×4641 = 19.18,
+ENSUITE 2980×2641 = 7.87, BED 2 2957×3230 = 9.55, BED 4 3187×2870 = 9.15. Ground rooms: KITCHEN/DINING/FAMILY 56.61
+(open plan, no walls between), pantry 1.43, LDRY 4.87, linen 0.57, GARAGE/STORAGE 42.15, PWD unnamed 2.25 (label crossed
+by the door swing, OCR reads "Pwo").
+
+Regression: suite 104/104 plus new scripts/test-takeoff-room-schedule-rules.mjs; quick accuracy identical (Jesmond Lower
+82.0/97.2/99.9, 19/21, 12/12; Upper 93.8/91.7/94.8, 18/23, 8/9; Liberty 98.7/98.6/99.8, 32/33, 15/15); Chermside first
+now splits Bed 3/robe and Bed 4/robe (17 rooms); Jesmond Lower showers folded into their ensuites; Mountain Creek ground
+177.9 vs 174.7.
+
+Browser (OpenAI disabled, disposable jobs): Sunshine PASS — 0 AI requests, save/reopen identical (103 walls, 31 openings,
+3 areas, 20 rooms), retry adds nothing, quotation gated (31 items). Mechanism run with the harness's builder-settling
+inputs: approval recorded (LDRY 4.87 m²) and quotation still gated on the unapproved balcony. Liberty PASS and Jesmond
+PASS (full acceptance incl. save/reopen and downstream schedules).
+
+Open: PWD and WC labels crossed by door swings stay unnamed; ground open-plan not split into kitchen/dining/family (no
+walls drawn); printed balcony area disagrees with the drawn outline; Mountain Creek first parapet (+4.3%); scanned plans.
+
+## Wall continuity, door openings and room names, 18 November 2026, round 2 (uncommitted)
+
+Ports 3000 and 3102 untouched; nothing committed or pushed; local-first and paid-AI authorisation unchanged.
+
+### Changes (all general rules)
+1. **Frames in a wall's gap** (`vectorWalls.js`). A pair accepted only on length (thickness not one the drawing uses), lying end to end between two pieces of one wall at a different thickness, is the sliding door, stacker or window frame in that gap, not a wall. The gap then becomes an opening between the real pieces. Pieces the chain rule established as one wall are protected.
+2. **Virtual closures** (`planModel.closeWallGaps`, called from `levelFromLinework`). A dangling wall end is joined, for rooms and the outline only, in two cases:
+   - to the wall or wall end it runs towards within 500 mm (narrower than any door);
+   - across a wider gap of up to 6.2 m, only where a door or window frame figure (read, not taken as wall) starts at that end and runs along the line.
+
+   Closures are separators (basis `gap-closure` / `opening-closure`), never wall length. Rooms bounded by them stay flagged for review. Frame pieces along one line are merged into runs (`mergeFrameRuns`).
+3. **Groups joined through doors** (detector building-group step). Wall groups linked by a chain of frame figures (a stacker turning into a sliding door) are one building. A lone pair reached only through a frame is not joined.
+4. **Footprint envelope** includes the closures.
+5. **Room names** (`localLabelOcr.roomNameFromReading`):
+   - Each OCR reading is cleaned of short marks at its ends and stray trailing digits (bedrooms keep their numbers).
+   - Only an exact dictionary room name is accepted, at any score; Tesseract scores correct outlined text 0.
+   - The rotation that yields an exact name wins.
+   - Every name stays unapproved until the builder confirms the room.
+
+Tests: new `test-vector-wall-continuity.mjs` covers:
+- a short gap closes;
+- an unexplained 1.5 m gap stays open;
+- a 2.4 m drawn sliding door closes the room without adding wall length;
+- a frame in a gap is an opening;
+- name cleaning.
+
+Suite **104/104**. Quick accuracy unchanged (Jesmond Lower 82.0 / 97.2 / 99.9 / 19 of 21 / 12 of 12; Upper 93.8 / 91.7 / 94.8 / 18 of 23 / 8 of 9; Liberty 98.7 / 98.6 / 99.8 / 32 of 33 / 15 of 15). One regression found and fixed on the way: the frame join first pulled a lone 1.6 m pair into Jesmond Upper (precision 91.7% to 90.3%).
+
+### Measured footprint against printed area (offline survey of the app's local pipeline)
+
+| Sheet | Round 1 | Now | Printed | Difference |
+|---|---|---|---|---|
+| Sunshine Cove upper | 91.2 | **110.5** | 115.6 | −4.4% |
+| Mountain Creek first | 91.7 | **109.7** | 105.3 | +4.3% (includes a parapet wall over the garage) |
+| Mountain Creek ground | 178.2 | 179.5 | 174.7 | +2.7% |
+| Chermside ground | 185.0 | 187.6 | 188.3 | −0.3% (internal walls 2 → 37; held 34 → 5) |
+| Chermside first | 138.4 | 138.4 | 136.5 | +1.4% |
+| Jesmond upper / lower | 163.5 / 135.6 | same | 165.1 / 136.3 | −1.0% / −0.5% |
+| Liberty | 267.8 | 269.0 | 261.3 (living + garage) | +2.9% |
+| Sunshine Cove ground | 6.0 | **55.7** | 119.3 | garage, laundry and powder room measured; living area not |
+
+Rooms named:
+
+| Sheet | Before | Now |
+|---|---|---|
+| Sunshine upper | 5 | 9 (BED 1–3, BATH, WIR, ENSUITE, RUMPUS) |
+| Mountain Creek first | 5 | 9 |
+| Chermside first | 7 | 11 |
+| Liberty | 5 | 8 |
+| ADU | 1 | 3 |
+
+### Browser (final code)
+- **Sunshine Cove, OpenAI disabled** (`artifacts/test-results/takeoff-sunshine-cove-browser/continuity/`): 0 AI requests and 0 provider calls. Paid-AI prompts shown. Upper 110.47 m² with BED 1 19.20 m². Ground: garage 42.15 m². Save and reopen identical (79 walls / 21 openings / 17 rooms); retry adds nothing; quotation gated (27 items).
+- **Liberty:** first-run score identical (walls 88, R 0.99 / P 0.986, ext-int 0.998, 33 of 33, rooms 15 of 15). The memory guard then stopped the browser (free commit 896 MB; two non-test node processes hold about 11.5 GB). Save, reopen and quotation were not reached in this round.
+- **Jesmond browser** not run this round for the same memory reason. Offline accuracy unchanged.
+
+### Still open
+- **Sunshine Cove ground living area:**
+  - The dining walls are drawn only in a pen this sheet never uses for a clean wall, and they're broken by three windows.
+  - Accepting such walls needs a rule that does not admit joinery or fixture lines on other drawings; not done.
+  - The kitchen walls are now found but held, because the living outline cannot close without the dining walls.
+- **Mountain Creek first +4.3%:** a parapet wall drawn over the garage below is read as external wall of this floor.
+- **Scanned or image-only plans:** still not measured locally (see the earlier section).
+
+## General-purpose detection work and capability status, 18 November 2026 (uncommitted)
+
+Ports 3000 and 3102 untouched; nothing committed or pushed; no live job touched.
+
+### Permanence
+Local-first Run Takeoff, explicit paid-AI authorisation and the provider-failure fallback are application code in the normal path for every builder:
+- `useAiTakeoffAnalysis.js`, `AiTakeoffAction.jsx` and `analysisClient.js`;
+- no feature flag, no test-only branch, no job or plan identifiers.
+
+The engine contains no plan-specific logic; sample plans appear only in explanatory comments. Every engine change below is a general drawing rule, checked against Jesmond and Liberty and against plans that are not reference jobs.
+
+### Test set beyond the three reference jobs (offline survey of the app's own local pipeline)
+
+| Sheet | Drafting style | Calibration |
+|---|---|---|
+| Mountain Creek first floor | easyway; sheet drawn sideways | title block 1:100 |
+| Mountain Creek ground dimensions | easyway; sideways; "NOT TO SCALE" | from printed 13000 overall (1:150) |
+| Chermside ground and first | easyway; "PLAN NOT TO SCALE" | from printed 11490 / 9600 overall (1:130) |
+| ADU Modstructure sheet | different drafter; solid-filled walls; four plan variants and photos on one sheet | from printed 5670 |
+| Fold House brochure plan | image only (no linework) | from printed 5100 |
+
+All the vector sheets have outlined lettering (no PDF text layer). Each was calibrated from a printed dimension, as a builder would. Printed floor-area tables were used as an independent check.
+
+### General causes found and fixed
+1. **Dimension strings with no text layer** were read as walls. Pairs of extension lines look like walls, and they dominated pen learning. New `tickedDimensionStrokes` (`dimensionLinework.js`): a dimension point is a paper-size 45-degree tick with two perpendicular lines through it, one crossing it. Corner mitres (both lines ending at the tick) are protected. Liberty: no wall face affected.
+2. **Title blocks taught the drawing's wall pens.** Their double frame lines are long and "clean". A line running edge to edge across the sheet no longer teaches pens or thicknesses. Anything inside a title-block or notes strip is not a wall. A strip is bounded by two lines that each run 80% of the sheet from one of its edges; it is wider than any wall, narrower than a quarter of the sheet, and has no door swing in it. A plan cropped tight to its building keeps its walls (tested).
+3. **Footprint was the union of rooms that close,** so an open-plan area that did not close as a room dropped out. The outline now also uses the connected wall model (external walls and spans across openings), via `buildingOutlines(..., envelopeWalls)`. It still needs builder approval before use.
+4. **False garage doors** on upper floors and decks. A wide gap with one line across it is no longer counted as a garage door unless a garage or carport is named within 9 m (PDF text or local OCR). Otherwise its geometry still closes the outline, but its type waits for the builder.
+
+Footprint against printed area:
+
+| Sheet | Before | Now | Printed |
+|---|---|---|---|
+| Chermside ground | none (no walls; wrong pens) | 185.0 | 188.25 living + garage |
+| Chermside first | 4.2 | 138.4 | 136.49 |
+| Mountain Creek ground | 31 | 178.2 | 174.72 living + garage |
+| Jesmond upper, first run | 35 | 163.5 | 165.14 |
+| Jesmond lower | — | 135.6 | 136.25 |
+| Sunshine upper | 89.0 | 91.2 | 115.56 |
+| Mountain Creek first | 87.3 | 91.7 | 105.25 |
+
+False garage doors removed on Sunshine upper, Mountain Creek first and the ADU (5). The Liberty garage door is kept; Jesmond's is now "to confirm" (its CARPORT label is more than 9 m away).
+
+Tried and **rejected** because they regressed Jesmond or Liberty:
+- learning wall pens only from wall groups containing door swings;
+- the first form of the sheet-furniture rule, which broke cropped plans;
+- an unconfirmed-gap form of the garage rule, which broke the outline when OCR is unavailable.
+
+Regression: Jesmond and Liberty quick accuracy unchanged (Lower R 82.0 / P 97.2, Upper 93.8 / 91.7, Liberty 98.7 / 98.6 / 32 of 33 / 15 of 15). Suite **103/103** (new `test-vector-sheet-annotations.mjs`).
+
+### Browser (OpenAI disabled), Sunshine Cove, final code (`artifacts/test-results/takeoff-sunshine-cove-browser/general/`)
+- 0 requests reached the AI endpoint, 0 provider calls.
+- Both paid-AI buttons show the authorisation prompt; cancelling sends nothing.
+- Results identical to the offline survey.
+- Save and reopen identical; retry adds nothing.
+- The quotation is refused ("Resolve or reject the 22 required review item(s)"). **No builder decision was invented in this run.**
+
+### Browser acceptance on the final code (`artifacts/test-results/takeoff-general-bundle2/`)
+The harness now chooses each sheet's level in the screen's level control, as a builder does: local Run Takeoff measures levelled sheets. It asserts that **no request reaches the AI endpoint**.
+
+| Job | Result |
+|---|---|
+| Liberty | PASS: walls 86, R 0.99 / P 0.986, ext-int 0.998, openings 33 of 33, rooms 15 of 15, save, reopen, .gr8job, quotation |
+| Jesmond Ground (lower) | PASS: R 0.82 / P 0.972, ext-int 0.999, 19 of 21, rooms 12 of 12 |
+| Jesmond Second (upper) | PASS: R 0.938 / P 0.917, 0.948, 19 of 23, rooms 8 of 9; quotation downstream PASS |
+| Sunshine Cove (`…/takeoff-sunshine-cove-browser/general-final/`) | PASS: 0 AI requests, 0 provider calls; paid prompts; save, reopen, retry; quotation gated with 22 items outstanding |
+
+These quotation checks settle the review against each job's reference; no decisions were invented for Sunshine Cove.
+
+### Capability status
+**Production-ready (evidence above):**
+- Local-first measurement with no provider calls.
+- Explicit authorisation for paid AI.
+- Provider failure (429, timeout) never discards or corrupts local measurement.
+- Rerun without duplicates.
+- Save and reopen.
+- The quotation gate that keeps unreviewed quantities out.
+- Vector plans in the reference style (Liberty, Jesmond).
+- Wall-pen and dimension handling for outlined-text CAD exports.
+
+**Limited:**
+- **Footprints:** within about 2% of the printed area where the external wall ring closes (Chermside ground and first, Jesmond upper and lower, Mountain Creek ground). They fall short where a full-width sliding door or held wall leaves a room open (Sunshine upper −21%, Mountain Creek first −13%).
+- **Sunshine Cove ground floor:** still not measured. The dining walls use a pen not otherwise used for walls on that sheet, and the yard side is almost all door frames.
+- **Mountain Creek ground:** footprint and walls good. Many openings are held "to confirm" (13 windows), and only 4 of 8 rooms are named.
+- **Room names:** OCR of sideways sheets is limited, and many rooms stay "Unlabelled". Wall classification needs a closed outline; open walls are held for the builder by design.
+- **ADU-style sheets** with several plan variants on one sheet produce one combined outline.
+- **Calibration:** "not to scale" sheets need the builder to calibrate from a written dimension. There is no automatic scale from printed dimensions without a text layer.
+
+**Missing (needs implementation):**
+- **Scanned or image-only plans locally.** The existing raster engine was tested on an image-only plan and is not fit: false walls from deck boards and benches, external walls missed. The local run therefore names such sheets and does not measure them. The supported paths are manual takeoff tools or authorised AI-assisted analysis. A validated raster wall and room engine is required.
+- Automatic scale from printed dimensions on outlined-text PDFs (OCR of dimension values).
+- Text-direction handling for sideways sheets in local OCR.
+- A larger labelled reference set (more drafters and states) to measure accuracy generally rather than on two reference jobs.
+
+## Local-first takeoff (no OpenAI credit needed), 18 November 2026 (uncommitted)
+
+Ports 3000 and 3102 untouched; live job not touched (disposable job in an isolated browser); nothing committed or pushed.
+
+### Why the button still called OpenAI
+"RUN AI TAKEOFF" always ran the OpenAI path: it sent an `inspect` request for every sheet without a saved reading, then the evidence pass and the measure requests. The local path (`runVectorTakeoff`) was reachable only from a development-only control. With no credit, the first request returned HTTP 429 `insufficient_quota`, a hard failure, and the run stopped with nothing measured.
+
+### What changed
+- **Run Takeoff is local by default** (`useAiTakeoffAnalysis.js`, `run()` / `measureLocally`). It measures the floor-plan sheets the builder has given a level; if none has a level, it uses the job's saved sheet readings and asks the builder to confirm the level. It uses only calibrated vector sheets, through the same production linework pipeline (`detectVectorWalls`, local OCR labels and room names, `vectorProductionAnalysis`, `normalizePlanAnalysis`). There is no provider request and no evidence pass. A sheet it cannot measure is named with the reason ("no drawing linework", "not calibrated"), which becomes a review decision. Its run id (`ai-takeoff-v3-local`) is separate, so a rerun says "already been measured" and adds nothing twice.
+- **Paid requests need explicit authorisation, at two layers.** In the hook, `providerCall` refuses unless the run was authorised. In the client, `requestTakeoffAnalysis(…, { authorised: true })` throws `provider_not_authorised` before any fetch. The screen shows a "Paid OpenAI requests" prompt for "Optional: AI-assisted analysis (OpenAI — paid)…" and for "READ ROOMS WITH AI (OPENAI — PAID)". The opt-in region-opening reader runs only on authorised AI runs.
+- **A provider failure never discards local measurement.** If an authorised AI run fails (429, timeout, bad key), the plan is measured locally instead, or the takeoff already measured stays unchanged. The message names the failure ("AI-assisted analysis stopped: OpenAI API quota exhausted … Measuring the plan locally instead (no AI, no charge)."). AI after local cannot double count: existing walls, openings and areas are skipped (`analysisContract.js`).
+- **The screen** (`AiTakeoffAction.jsx`) shows three blocks: "Measured locally from the drawing (no AI)" (counts in the takeoff); "Requires builder review" (items to confirm, walls held back until classified, rooms to approve); and "AI-assisted analysis" (not used / used with model and request count).
+- **Engine** (`vectorWalls.js`), each change checked on Jesmond and Liberty (quick accuracy, unchanged: Jesmond Lower R 82.0 / P 97.2 / ext-int 99.9 / 19 of 21 / rooms 12 of 12; Upper 93.8 / 91.5 / 94.8 / 18 of 23 / 8 of 9; Liberty 98.7 / 98.6 / 99.8 / 32 of 33 / 15 of 15):
+  - Wall-pen share threshold 0.1 → 0.03 (`wallPenShare`).
+  - A wall drawn as pieces on the same two face lines across capped, opening-sized breaks is one run (test `test-vector-wall-between-windows.mjs`).
+  - A cavity slider is at most two door leaves wide. This removed a false 5.86 m "cavity slider" across the Sunshine Cove concrete yard.
+  - Tried and **rejected** because they regressed Jesmond or Liberty: sharing wall pens across a plan set's sheets; an "outline recess" rule; a stricter clean test for the long-pair exception.
+- Tests: orchestration test extended (local run sends nothing; unauthorised AI run and AI room reading send nothing; 429 falls back to local measurement with no further request). AI-path tests now authorise explicitly. Suite **102/102**.
+
+### Sunshine Cove, real browser, OpenAI disabled (`artifacts/test-results/takeoff-sunshine-cove-browser/local-first/`)
+`GR8_PROVIDER=none`: any request to `/api/ai/takeoff-analyse` or the provider fails the check; the page can reach nothing outside the isolated server. Result: **0 analysis-endpoint requests, 0 provider calls**, run time 10–12 s.
+
+| Item | Result |
+|---|---|
+| Second Level (sheet 5) | 53 walls (97.8 m: 26 external, 27 internal), 15 openings (6 windows, 9 doors), 11 rooms incl. ENSUITE 7.88, RUMPUS 27.44, BED 2 9.61, BED 3/robe 10.21 m²; footprint 89.01 m² (printed upper living 115.56 m²). One wrong "garage door" (3.77 m) on this level. |
+| Ground Floor (sheet 4) | **Weak**: 5 walls (5.4 m), 1 door, 1 room admitted; 14 measured walls held for builder classification. The dining walls are drawn only in a pen this sheet does not show to be a wall pen. The garage-yard and stacker lines are almost all door frames, so the outline never closes and walls cannot be classified automatically. |
+| Save and reopen | PASS: 58 walls / 16 openings / 1 floor area / 12 rooms identical; levels persist |
+| Retry | PASS: "This plan has already been measured", no duplicates |
+| Quotation | PASS after settling the review as a builder would (suggested answers: rendered brick veneer, 2400 ceilings, 70 mm frames, 2040 doors; walls "checked"; 11 rooms rejected; footprint removed as it disagrees with the printed area): ENSUITE 7.88 m² → quote sheet 7.88 → quotation 7.88, one Floor Tiling row. These answers are test inputs on a disposable job, not facts read from the plan. |
+
+### Not done / open
+- Liberty/Jesmond **browser** acceptance on the final bundle: stopped by the memory guard twice (free commit 885 MB, then 390 MB, with three non-test node processes using ~14.5 GB). Only offline accuracy shows them unchanged.
+- The Sunshine browser run used the bundle from before two late changes (summary wording fix; a browser check that both AI buttons show the authorisation prompt). Not rerun, for the same memory reason.
+- Sunshine ground-floor coverage (dining walls, outline closure, room boundaries) and the false upper-level garage door.
+- localhost:3000 is the dev server on this working tree, so it serves these changes after a page refresh; it was not restarted or touched.
+
+## CORRECTION — localhost:3000 failure on the Sunshine Cove job, 17 November 2026 (uncommitted)
+
+**The 17 November "all gates pass / ready for production" status below is withdrawn.** Its browser acceptance stubbed `/api/ai/takeoff-analyse` with sheet-type-only replies, so the real provider's latency was never exercised. On the owner's job (Sunshine Cove, 15-page plan) the real button failed with "AI Takeoff could not measure the plan. Sheet analysis failed: The AI analysis timed out. No measurements were inserted."
+
+Port 3000 and port 3102 untouched. Nothing committed or pushed. The live job was read only from copies of Chrome's storage; nothing was written back.
+
+### Cause (with evidence)
+- localhost:3000 is the dev server on this working tree, so it runs the same code as the isolated bundles built here (built from the working tree, bundle checked for the repair's code).
+- The Run AI Takeoff button uses the OpenAI path: `gpt-5.4`, reasoning effort medium, non-streaming, server timeout 285 s (`lib/construction-estimation/aiTakeoffAnalysis.js`), route `maxDuration` 300.
+- Provider healthy but slow: `scripts/diagnose-takeoff-provider-timing.mjs` sent the app's own measure request for sheet 4 (without evidence/context images): geometry half **241 s** (11,042 output tokens, 9,592 of them reasoning), items half **223 s** (11,970 / 7,755); both HTTP 200 completed. The app's real requests add plan evidence and up to 3 context images, so they exceed 285 s.
+- The old code then threw away the whole sheet when any measure half failed, although the sheet is a styled vector PDF the linework engine can measure; every floor-plan sheet failed, so the run ended in the error above. Up to four sequential 4-minute calls per sheet (measure x2, refine x2) also made a run 30+ minutes.
+- The missing level was **not** the cause: unassigned sheets are used as supporting evidence. Levels must still be set by the builder (sheet 4 Ground Floor, sheet 5 Second Level were the job's own inspections).
+- Reproduced in a real browser with the HEAD code and the provider timing out (`artifacts/test-results/takeoff-sunshine-cove-browser/reproduce-original/`): the exact localhost message, 0 measurements.
+
+### Repair (no timeout raised)
+- `useAiTakeoffAnalysis.js`: a failed AI half on a sheet the linework engine can measure no longer drops the sheet. The other half is kept, the sheet is measured from its linework, and a decision item names the failure ("The wall and area reading of sheet 4 (OpenAI gpt-5.4) did not finish within 285 s ..."). Refinement calls are skipped on linework sheets (the linework is authoritative). Two sheets are measured in parallel (the route allows 2 active requests per user); the second starts only after the provider has answered once, so a quota/auth failure still stops everything before more paid calls.
+- `aiTakeoffAnalysis.js`: timeout/network messages name the sheet, the part of the reading, the model and the limit, and are logged on the server.
+- `reviewSummary.js`: new decision `sheet-reading-failed` ("Measured from linework only: the AI plan reading failed"), with Rerun.
+- `vectorWalls.js` `readProjectedWindowBox`: a "projected window/slider frame" wider than any opening (`openingMaxMm`, 6200 mm) is not a frame. On sheet 4 the whole 18.2 m, 200 mm exterior wall had been rejected as a frame. Test `scripts/test-vector-long-wall-not-frame.mjs` (reproduces without the bound).
+- Liberty/Jesmond browser acceptance on the final bundle (`artifacts/test-results/takeoff-vector-plan-browser-final/`): Liberty R 0.99 / P 0.986, openings 33/33, rooms 15/15, full workflow PASS; Jesmond Lower R 0.82 / P 0.972, 19/21, rooms 12/12; Upper R 0.938 / P 0.915, 19/23 — identical to baseline. Jesmond's last step (quotation) was cut by the test's memory guard (free commit 1871 MB < 2000 MB floor), not by a failure; that step passed in the run on the pre-frame-fix bundle.
+- Tests: `test-takeoff-ai-orchestration.mjs` extended (timeouts on linework sheets, items-only failure, parallel lanes, quota stops after one call). Suite **101/101**. Liberty and Jesmond offline accuracy unchanged.
+
+### Real-browser workflow on the Sunshine Cove plan (`scripts/test-takeoff-sunshine-cove-browser.mjs`)
+Harness: the live Takeoff component inside the real Estimate Builder workbook hook, the real server handler on an isolated port, a disposable new job, the same 15-page PDF uploaded through the screen, levels chosen in the level dropdown, calibration entered on sheet 4 and applied to sheet 5. Supabase auth is stubbed and Next routing bypassed; sheet inspections are replayed from the job's own cached inspections (as the app does).
+
+| Step | Result (`final-timeout/`, every AI call timing out as on localhost) |
+|---|---|
+| Run completes | YES in 19 s: "AI TAKEOFF REQUIRES REVIEW", named failure per sheet (was: "could not measure the plan", 0 measurements) |
+| Sheet 5 (Second Level) | 28 walls (62.8 m, 22 exterior), 6 openings (2 windows, 4 doors), 6 rooms (BED 2 9.61 m², BED 3/robe 10.21 m², robe, 3 unlabelled), footprint 30.94 m², all on Second Level |
+| Sheet 4 (Ground Floor) | **0 admitted**: 7 wall candidates (incl. the full 18.2 m exterior wall) held for builder classification, 2 openings on review walls, no rooms. The top and left perimeter walls are not detected, so no outline closes. Printed areas (lower 119.27 m², upper 125.38 m²) are not yet reached. Before the frame fix: 5 short walls (6.91 m) admitted. |
+| Save, reopen | PASS: 28 / 6 / 1 / 6 identical; levels persist |
+| Retry | PASS: "already analysed", no duplicates |
+| Quotation | **Blocked by design**: "Takeoff is not ready for quotation. Resolve or reject the 13 required review item(s)". Settling them is the builder's decision on this job; not automated. |
+
+### Live provider run: BLOCKED
+The live browser run (real OpenAI, cap 10 requests) stopped at the first paid call: OpenAI HTTP 429 `insufficient_quota` / `credit_balance_exhausted` (request `req_3ff4699c15aa4ec8a025f451740e707b`). The app reported it correctly ("OpenAI API quota exhausted ... No measurements were inserted.") and made no further calls. **The repaired code has not been proven against the real provider.** Needed: OpenAI credit on the key in `.env.local`, then rerun with `GR8_PROVIDER=live GR8_LIVE_PROVIDER_APPROVED=yes GR8_LIVE_PROVIDER_MAX_REQUESTS=10` (about 6 calls, roughly 4 minutes each, two at a time).
+
+### Status
+Not production-ready. Open: live-provider proof; Sunshine Cove sheet 4 linework (perimeter walls, room boundaries, floor areas); wall classification on sheet 5 (all "unclassified, review required"); intermittent "Another tab is still saving or signing in" lock message seen once at run start (not reproduced; root cause not investigated); the provider's 4-minute response time (consider streaming or lower reasoning effort, but only with evidence of unchanged accuracy).
+
 ## Claude final acceptance — 17 November 2026 (uncommitted)
 
 Port 3000 and port 3102 untouched. Local commit 6d47a4c (owner-approved; not pushed). Unused auto-restarted Docker test containers stopped with owner authorisation (volumes kept); no other session's processes stopped.

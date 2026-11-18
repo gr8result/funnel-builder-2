@@ -38,5 +38,5 @@ const setup = fs.readFileSync('components/estimate-builder/JobSetupTakeoffImport
 assert.match(setup, /decision\.topic === "wall-check"/);
 assert.match(setup, /disabled=\{!selectedKeys\.length \|\| busy \|\| Boolean\(importBlocked\)\}/);
 const action = fs.readFileSync('components/construction-estimation/ai-plan-takeoff/ai-integration/AiTakeoffAction.jsx', 'utf8');
-assert.match(action, /report\.status === 'review' \|\| review\.decisions\.length \? 'AI TAKEOFF REQUIRES REVIEW'/);
+assert.match(action, /report\.status === 'review' \|\| review\.decisions\.length \? 'TAKEOFF REQUIRES REVIEW'/);
 console.log('Wall check: required per sheet of detected walls, explicit limitation, covered-wall tracking, rerun preservation, Job Setup import blocked while open.');

@@ -100,5 +100,27 @@ export function useAiTakeoffBridge(options) {
     return { status: 'appended', added: additions.length };
   }, [getContext]);
 
-  return { getContext, appendDetections, updateObjects, appliedRuns, restoreAppliedRuns };
+  // Take an earlier run's own objects back out (to measure the plan again with the current engine). Only the
+  // objects that run created and nobody approved are removed; anything drawn by hand or approved stays, and the
+  // caller refuses the re-measure when any of the run's objects has been approved. Returns what was removed.
+  const removeRun = useCallback((receipt) => {
+    const current = latest.current;
+    if (current.readOnly) return { removed: 0 };
+    const ofRun = (item) => item?.source === 'ai' && item.ai?.runId === receipt.runId && item.ai?.documentHash === receipt.documentHash
+      && String(item.id || '').startsWith(`ai:${encodeURIComponent(receipt.jobId)}:${encodeURIComponent(receipt.takeoffId)}:`);
+    const untouched = (item) => item.confirmed !== true && !item.approvedAt && !item.confirmedAt;
+    let removed = 0;
+    for (const key of AI_TAKEOFF_COLLECTIONS) {
+      const list = current.collections[key] || [];
+      const kept = list.filter((item) => !(ofRun(item) && untouched(item)));
+      if (kept.length !== list.length) { removed += list.length - kept.length; current.setters[key](kept); }
+    }
+    const nextReceipts = receiptsRef.current.filter((item) => !sameRun(item, receipt));
+    receiptsRef.current = nextReceipts;
+    setAppliedRuns(nextReceipts);
+    current.markCompleted('ai-takeoff-remeasure');
+    return { removed };
+  }, []);
+
+  return { getContext, appendDetections, updateObjects, appliedRuns, restoreAppliedRuns, removeRun };
 }

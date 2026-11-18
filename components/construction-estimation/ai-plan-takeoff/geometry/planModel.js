@@ -119,8 +119,11 @@ export function networkSegments(level, { separators = true } = {}) {
       list.push({ owner: wall.id, kind: 'wall', index: i - 1, u: wall.nodeIds[i - 1], v: wall.nodeIds[i], a: level.nodes[wall.nodeIds[i - 1]], b: level.nodes[wall.nodeIds[i]], half: (wall.thicknessMm || 0) / 2 });
     }
   }
+  // A separator gains nodes where another boundary meets it (planarize inserts them), so every piece counts.
   if (separators) for (const separator of Object.values(level.separators)) {
-    list.push({ owner: separator.id, kind: 'separator', index: 0, u: separator.nodeIds[0], v: separator.nodeIds[1], a: level.nodes[separator.nodeIds[0]], b: level.nodes[separator.nodeIds[1]], half: 0 });
+    for (let i = 1; i < separator.nodeIds.length; i += 1) {
+      list.push({ owner: separator.id, kind: 'separator', index: i - 1, u: separator.nodeIds[i - 1], v: separator.nodeIds[i], a: level.nodes[separator.nodeIds[i - 1]], b: level.nodes[separator.nodeIds[i]], half: 0 });
+    }
   }
   return list;
 }
@@ -1047,7 +1050,322 @@ export function computeRooms(level, overrides = {}) {
 
 // Room types that are closed off from the spaces around them (a pantry, robe, laundry, bathroom or
 // bedroom), as opposed to living, dining, kitchen, entry and hall spaces that are often open plan.
-export const ENCLOSED_ROOM_LABEL = /^(pan|pantry|wil|w\.i\.l\.?|wir|w\.i\.r\.?|robe|linen|store|l'?dry|laundry|powder|pwd|wc|toilet|bath|bathroom|ens|ensuite|e-suite|bed|bedroom|master|media)\b/i;
+/**
+ * Virtual closures for short gaps the drawing leaves in a wall line: a wall end that meets nothing (a
+ * sliding-door frame drawn a little off the wall's centreline, a wall that stops short of the corner it is
+ * drawn to) is joined to the nearest wall end or wall it is travelling towards, when that is closer than any
+ * door (gapMaxMm). The closure bounds rooms and the building outline only: it is a separator, never a wall
+ * and never a wall quantity, and rooms bounded by it stay flagged for the builder's review.
+ * @returns {{ level, closures: [{ separatorId, fromWall, lengthMm }] }}
+ */
+// A frame closure on the building's edge that encloses only a scrap (an air-conditioner box, a meter box, a
+// planter drawn against the outside wall): the frame is not a door or window into a room, so it is not closed.
+/**
+ * Gap and frame closures that, once the level is complete, enclose only a scrap against the outside (an
+ * air-conditioner or meter box drawn against the outside wall, its own short lines joined to the closure):
+ * taken out, so the scrap is neither a room nor makes the house wall beside it internal.
+ */
+export function dropScrapClosures(level, labels = [], overrides = {}) {
+  const options = { closureScrapM2: 2.5, ...PLAN_MODEL_DEFAULTS, ...overrides, labels: labels.filter((label) => Number.isFinite(label.x) && Number.isFinite(label.y) && label.name) };
+  const next = clone(level);
+  const dropped = [];
+  for (let pass = 0; pass < 50; pass += 1) {
+    const scrap = Object.values(next.separators).find((separator) => separator.basis === 'opening-closure' && encloseScrap({ level: next, separatorId: separator.id }, options));
+    if (!scrap) break;
+    delete next.separators[scrap.id];
+    tidy(next, options);
+    dropped.push(scrap.detectionKey || scrap.id);
+  }
+  return { level: next, dropped };
+}
+
+function encloseScrap(trial, options) {
+  const separator = trial.level.separators[trial.separatorId];
+  const keys = new Set(separator.nodeIds.slice(1).map((id, i) => { const u = separator.nodeIds[i]; return u < id ? `${u}|${id}` : `${id}|${u}`; }));
+  const { faces } = networkFaces(trial.level);
+  const touching = faces.filter((face) => face.nodeIds.some((id, i) => { const v = face.nodeIds[(i + 1) % face.nodeIds.length]; return keys.has(id < v ? `${id}|${v}` : `${v}|${id}`); }));
+  const bounded = touching.filter((face) => Math.sign(face.signedArea) === BOUNDED_SIGN);
+  const outside = touching.some((face) => Math.sign(face.signedArea) !== BOUNDED_SIGN);
+  // A space with a room name in it (a robe against the outside wall) is a room, however small.
+  const named = (face) => (options.labels || []).some((label) => pointInPolygon(label, face.nodeIds.map((id) => trial.level.nodes[id])));
+  return outside && bounded.length > 0 && bounded.every((face) => Math.abs(face.signedArea) / 1e6 < options.closureScrapM2 && !named(face));
+}
+
+export function closeWallGaps(level, overrides = {}) {
+  const options = { gapMaxMm: 500, frameStartMm: 350, openingMaxMm: 6200, frameMinMm: 600, frameCoverMm: 200, frameNodeOffMm: 220, hatchReachMm: 1200, frameGapMinMm: 400, closureScrapM2: 2.5, frames: [], ...PLAN_MODEL_DEFAULTS, ...overrides };
+  let next = clone(level);
+  const closures = [];
+  const ends = [];
+  for (const wall of Object.values(next.walls)) for (const index of [0, wall.nodeIds.length - 1]) {
+    const id = wall.nodeIds[index];
+    if (nodeDegree(next, id) === 1) ends.push({ id, wallId: wall.id });
+  }
+  for (const end of ends) {
+    const v = next.nodes[end.id], wall = next.walls[end.wallId];
+    if (!v || !wall || nodeDegree(next, end.id) !== 1) continue; // joined by an earlier closure
+    const outward = outwardAt(next, end.id);
+    if (!outward) continue;
+    let best = null;
+    for (const other of ends) {
+      if (other.id === end.id || other.wallId === end.wallId) continue;
+      const w = next.nodes[other.id];
+      if (!w || nodeDegree(next, other.id) !== 1) continue;
+      const d = dist(v, w);
+      if (d < EPS || d > options.gapMaxMm || dot(unit(sub(w, v)), outward) < 0.5) continue;
+      if (!best || d < best.d) best = { d, point: { x: w.x, y: w.y } };
+    }
+    for (const segment of networkSegments(next)) {
+      if (segment.owner === end.wallId) continue;
+      const hit = project(v, segment.a, segment.b);
+      if (hit.raw <= 0 || hit.raw >= 1 || hit.distance < EPS || hit.distance > options.gapMaxMm) continue;
+      if (dot(unit(sub(hit.foot, v)), outward) < 0.7) continue;
+      if (!best || hit.distance < best.d) best = { d: hit.distance, point: hit.foot };
+    }
+    // A wider gap is closed only across a door or window drawn in it: a frame figure that starts at this
+    // wall end and runs along the wall line (a sliding door from the corner of the wall), reaching a wall
+    // or another wall end within an opening's width. Its direction is the frame's, not the wall's.
+    if (!best) for (const frame of options.frames || []) {
+      const [near, far] = dist(frame.a, v) <= dist(frame.b, v) ? [frame.a, frame.b] : [frame.b, frame.a];
+      if (dist(near, v) > options.frameStartMm) continue;
+      const along = unit(sub(far, near)), length = dist(near, far);
+      if (length < 400 || length > options.openingMaxMm) continue;
+      let target = null;
+      for (const other of ends) {
+        if (other.id === end.id || other.wallId === end.wallId) continue;
+        const w = next.nodes[other.id];
+        if (!w || nodeDegree(next, other.id) !== 1) continue;
+        const t = dot(sub(w, v), along), off = Math.abs(cross(along, sub(w, v)));
+        if (t > length * 0.8 && t <= length + options.gapMaxMm && off <= options.frameStartMm && (!target || t < target.t)) target = { t, point: { x: w.x, y: w.y } };
+      }
+      for (const segment of networkSegments(next)) {
+        if (segment.owner === end.wallId) continue;
+        const e = sub(segment.b, segment.a), denom = cross(along, e);
+        if (Math.abs(denom) < EPS) continue;
+        const t = cross(sub(segment.a, v), e) / denom, u = cross(sub(segment.a, v), along) / denom;
+        if (u < -EPS || u > 1 + EPS || t <= length * 0.8 || t > length + options.gapMaxMm) continue;
+        if (!target || t < target.t) target = { t, point: add(v, mul(along, t)) };
+      }
+      if (target && (!best || target.t < best.d)) best = { d: target.t, point: target.point, frame: true };
+    }
+    if (!best) continue;
+    const trial = addSeparator(next, { a: { x: v.x, y: v.y }, b: best.point }, options);
+    if (!trial.separatorId || (best.frame && encloseScrap(trial, options))) continue;
+    next = trial.level;
+    Object.assign(next.separators[trial.separatorId], { source: 'detected', basis: best.frame ? 'opening-closure' : 'gap-closure', detectionKey: `gap:${wall.detectionKey || wall.id}:${end.id}`,
+      evidence: best.frame
+        ? `A door or window frame is drawn across the ${Math.round(best.d)} mm from the end of drawn wall ${wall.detectionKey || wall.id}; the wall line is closed across it for room and outline boundaries only. It is an opening, not a wall: confirm its type.`
+        : `Gap of ${Math.round(best.d)} mm where drawn wall ${wall.detectionKey || wall.id} stops short of the wall it runs to (narrower than any door); closed for room and outline boundaries only, not a wall.` });
+    closures.push({ separatorId: trial.separatorId, fromWall: wall.detectionKey || wall.id, lengthMm: Math.round(best.d), acrossFrame: Boolean(best.frame) });
+  }
+  // A door or window frame that runs from the wall network to the wall network, where no wall is drawn along
+  // it, closes that side as an opening even when it starts at a corner rather than a free wall end (a stacker
+  // door along the whole side of a room, from the corner of one wall to the face of another).
+  // Hatching (roof sheeting, cladding, a paved area) repeats one figure side by side; a door frame stands alone.
+  const hatched = (frame) => {
+    const along = unit(sub(frame.b, frame.a)), length = dist(frame.a, frame.b);
+    return (options.frames || []).filter((other) => {
+      if (other === frame) return false;
+      const d = unit(sub(other.b, other.a));
+      if (Math.abs(cross(along, d)) > 0.05) return false;
+      const off = Math.abs(cross(along, sub(other.a, frame.a)));
+      if (off < options.frameNodeOffMm || off > options.hatchReachMm) return false;
+      const s0 = dot(sub(other.a, frame.a), along), s1 = dot(sub(other.b, frame.a), along);
+      return Math.min(length, Math.max(s0, s1)) - Math.max(0, Math.min(s0, s1)) >= 0.8 * length;
+    }).length >= 2;
+  };
+  for (const frame of options.frames || []) {
+    const length = dist(frame.a, frame.b);
+    if (length < options.frameMinMm || length > options.openingMaxMm || hatched(frame)) continue;
+    const along = unit(sub(frame.b, frame.a));
+    const segments = networkSegments(next);
+    const hits = [];
+    for (const segment of segments) {
+      const e = sub(segment.b, segment.a), denom = cross(along, e);
+      if (Math.abs(denom) < EPS || Math.abs(denom) < 0.7 * Math.hypot(e.x, e.y)) continue; // crossing, not alongside
+      const t = cross(sub(segment.a, frame.a), e) / denom, u = cross(sub(segment.a, frame.a), along) / denom;
+      if (u < -EPS || u > 1 + EPS) continue;
+      hits.push({ t, point: add(frame.a, mul(along, t)) });
+    }
+    // A wall corner just off the frame's line (the frame drawn inside the wall's thickness) is its end too.
+    for (const node of Object.values(next.nodes)) {
+      if (!nodeDegree(next, node.id)) continue;
+      const t = dot(sub(node, frame.a), along), off = Math.abs(cross(along, sub(node, frame.a)));
+      if (off <= options.frameNodeOffMm) hits.push({ t, point: { x: node.x, y: node.y } });
+    }
+    const start = hits.filter((h) => h.t >= -options.frameStartMm && h.t <= 0.2 * length).sort((p, q) => Math.abs(p.t) - Math.abs(q.t))[0];
+    const end = hits.filter((h) => h.t >= 0.8 * length && h.t <= length + options.gapMaxMm).sort((p, q) => Math.abs(p.t - length) - Math.abs(q.t - length))[0];
+    if (!start || !end || end.t - start.t < options.frameMinMm) continue;
+    let a = start.point, b = end.point;
+    // Where a wall (or a closure made above) already runs along part of the line, only the stretch nothing
+    // covers is closed, from the covering wall's end (a stub of wall beside a window, then the window).
+    const alongside = segments.filter((segment) => { const e = unit(sub(segment.b, segment.a));
+      return Math.abs(cross(e, along)) < 0.2 && [segment.a, segment.b].some((p) => Math.abs(cross(along, sub(p, frame.a))) <= options.frameCoverMm)
+        && Math.abs(cross(along, sub(add(segment.a, mul(sub(segment.b, segment.a), 0.5)), frame.a))) <= options.frameCoverMm; })
+      .map((segment) => { const ta = dot(sub(segment.a, frame.a), along), tb = dot(sub(segment.b, frame.a), along);
+        return ta <= tb ? { lo: ta, hi: tb, lop: segment.a, hip: segment.b } : { lo: tb, hi: ta, lop: segment.b, hip: segment.a }; })
+      .filter((cover) => cover.hi > start.t + 1 && cover.lo < end.t - 1).sort((p, q) => p.lo - q.lo);
+    if (alongside.length) {
+      // The uncovered stretches between start and end; the longest is the opening.
+      const gaps = []; let at = start.t, atPoint = start.point;
+      for (const cover of alongside) { if (cover.lo > at + 1) gaps.push({ lo: at, hi: cover.lo, a: atPoint, b: cover.lop }); if (cover.hi > at) { at = cover.hi; atPoint = cover.hip; } }
+      if (end.t > at + 1) gaps.push({ lo: at, hi: end.t, a: atPoint, b: end.point });
+      const gap = gaps.sort((p, q) => (q.hi - q.lo) - (p.hi - p.lo))[0];
+      if (!gap || gap.hi - gap.lo < options.frameGapMinMm) continue;
+      a = gap.a; b = gap.b;
+    }
+    const trial = addSeparator(next, { a, b }, options);
+    if (!trial.separatorId || encloseScrap(trial, options)) continue;
+    next = trial.level;
+    const span = Math.round(dist(a, b));
+    Object.assign(next.separators[trial.separatorId], { source: 'detected', basis: 'opening-closure', detectionKey: `gap:frame:${Math.round(a.x)}:${Math.round(a.y)}:${Math.round(b.x)}:${Math.round(b.y)}`,
+      evidence: `A door or window frame is drawn along ${span} mm between drawn walls where no wall is drawn; the side is closed across it for room and outline boundaries only. It is an opening, not a wall: confirm its type.` });
+    closures.push({ separatorId: trial.separatorId, fromWall: null, lengthMm: span, acrossFrame: true });
+  }
+  // Once every closure is in, a frame closure that encloses only a scrap against the outside is taken out again.
+  return { level: next, closures };
+}
+
+export const WET_ROOM_LABEL = /^(bath|bathroom|ens|ensuite|e-suite|l'?dry|laundry|wc|toilet|powder|pwd|shower|kitchen|scullery|butler)\b/i;
+
+/**
+ * Fixtures closed off as faces: a bath, shower base or bench whose outline happens to close against the walls
+ * of the wet room it stands in. A small unnamed face with no door or opening in its edges, beside a named wet
+ * room, holding a drawn figure inside it (a bath's basin), is that room's fixture: the edges it shares with the
+ * room are removed so the room's floor is whole. Nothing outside the shared edges changes.
+ * @returns {{ level, fixtures: [{ room, areaM2, widthMm, depthMm, removedWalls, evidence }] }}
+ */
+export function foldFixtureFaces(level, labels = [], overrides = {}) {
+  const options = { fixtureMaxM2: 3, fixtureInsetMm: 40, fixtureDoorReachMm: 120, fixtureFigureShare: 0.6, wetRoomLabel: WET_ROOM_LABEL, drawnLines: [], ...PLAN_MODEL_DEFAULTS, ...overrides };
+  let next = clone(level);
+  const fixtures = [];
+  if (!options.drawnLines.length) return { level: next, fixtures };
+  const named = labels.filter((label) => Number.isFinite(label.x) && Number.isFinite(label.y) && label.name);
+  for (let pass = 0; pass < 20; pass += 1) {
+    const rooms = computeRooms(next, options);
+    const nameOf = (room) => named.find((label) => pointInPolygon(label, room.boundary))?.name || null;
+    const edgeSet = (room) => new Set(room.nodeIds.map((id, i) => { const v = room.nodeIds[(i + 1) % room.nodeIds.length]; return id < v ? `${id}|${v}` : `${v}|${id}`; }));
+    // A door or opening leads into a room; a window in an outside wall says nothing (a shower under a window).
+    // Judged by where the door is, not by its wall: one wall can run past a shower to the room's door.
+    const doors = Object.values(next.openings).filter((opening) => opening.kind !== 'window').map((opening) => openingPosition(next, opening)).filter(Boolean);
+    const doorOnEdge = (face) => doors.some((p) => face.boundary.some((c, j) => project(p, c, face.boundary[(j + 1) % face.boundary.length]).distance <= options.fixtureDoorReachMm));
+    let folded = false;
+    for (const face of rooms) {
+      if (face.areaM2 > options.fixtureMaxM2 || nameOf(face)) continue;
+      if (doorOnEdge(face)) continue;
+      const edges = edgeSet(face);
+      // The wet room the fixture stands in: the one it meets across a divider (no wall), else the longest edge.
+      const separatorKeys = new Set(Object.values(next.separators).flatMap((separator) => separator.nodeIds.slice(1).map((id, i) => { const u = separator.nodeIds[i]; return u < id ? `${u}|${id}` : `${id}|${u}`; })));
+      const edgeLength = (key) => { const [u, v] = key.split('|'); return dist(next.nodes[u], next.nodes[v]); };
+      const hosts = rooms.filter((room) => room !== face && options.wetRoomLabel.test(String(nameOf(room) || '').trim()))
+        .map((room) => { const keys = [...edgeSet(room)].filter((key) => edges.has(key)); return { room, open: keys.some((key) => separatorKeys.has(key)), length: keys.reduce((sum, key) => sum + edgeLength(key), 0) }; })
+        .filter((item) => item.length > 0).sort((p, q) => Number(q.open) - Number(p.open) || q.length - p.length);
+      if (!hosts.length) continue;
+      const host = hosts[0].room;
+      // A drawn figure inside the face, clear of its edges, running most of its perimeter.
+      const inset = (p) => pointInPolygon(p, face.boundary) && face.boundary.every((c, j) => project(p, c, face.boundary[(j + 1) % face.boundary.length]).distance > options.fixtureInsetMm);
+      let figure = 0;
+      for (const line of options.drawnLines) {
+        const a = { x: line.x1, y: line.y1 }, b = { x: line.x2, y: line.y2 };
+        if (inset(a) && inset(b)) figure += dist(a, b);
+      }
+      const perimeter = face.boundary.reduce((sum, p, i) => sum + dist(p, face.boundary[(i + 1) % face.boundary.length]), 0);
+      if (figure < options.fixtureFigureShare * perimeter) continue;
+      const shared = new Set([...edgeSet(host)].filter((key) => edges.has(key)));
+      const onShared = (ids) => ids.slice(1).every((id, i) => shared.has(ids[i] < id ? `${ids[i]}|${id}` : `${id}|${ids[i]}`));
+      const walls = Object.values(next.walls).filter((wall) => onShared(wall.nodeIds));
+      const separators = Object.values(next.separators).filter((separator) => onShared(separator.nodeIds));
+      if (!walls.length && !separators.length) continue;
+      const xs = face.boundary.map((p) => p.x), ys = face.boundary.map((p) => p.y);
+      const widthMm = Math.round(Math.max(...xs) - Math.min(...xs)), depthMm = Math.round(Math.max(...ys) - Math.min(...ys));
+      for (const wall of walls) delete next.walls[wall.id];
+      for (const separator of separators) delete next.separators[separator.id];
+      tidy(next, options);
+      fixtures.push({ room: nameOf(host), areaM2: Math.round(face.areaM2 * 100) / 100, widthMm, depthMm, removedWalls: walls.map((wall) => wall.detectionKey || wall.id),
+        polygon: face.boundary.map((p) => ({ x: p.x, y: p.y })),
+        evidence: `A ${widthMm} × ${depthMm} mm outline with a drawn figure inside it and no door, closed against the walls of "${nameOf(host)}": a fixture (bath, shower base or bench) in that room, not a room. Its outline is not wall.` });
+      folded = true;
+      break;
+    }
+    if (!folded) break;
+  }
+  return { level: next, fixtures };
+}
+
+// Spaces whose front is often drawn as doors or a cupboard line rather than a wall.
+export const FRONT_ROOM_LABEL = /^(robe|br|wir|w\.i\.r\.?|wil|w\.i\.l\.?|linen|lin|pan|pantry|store|cupboard|cpd|broom)\b/i;
+
+// The drawn front of a robe, linen cupboard or pantry inside a room it shares with another label: a straight
+// run of drawn lines (sliding door panels, a cupboard front) from boundary to boundary of the room, dividing it
+// so each label is alone in its part, with the front's space no deeper than a walk-in robe.
+function drawnFront(level, room, target, inside, labelsIn, options) {
+  const box = room.boundary.reduce((b, p) => ({ x0: Math.min(b.x0, p.x), y0: Math.min(b.y0, p.y), x1: Math.max(b.x1, p.x), y1: Math.max(b.y1, p.y) }), { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity });
+  const lines = options.drawnLines.filter((l) => Math.min(l.x1, l.x2) >= box.x0 - 50 && Math.max(l.x1, l.x2) <= box.x1 + 50 && Math.min(l.y1, l.y2) >= box.y0 - 50 && Math.max(l.y1, l.y2) <= box.y1 + 50
+    && Math.hypot(l.x2 - l.x1, l.y2 - l.y1) >= options.frontPieceMinMm);
+  // Runs along each axis direction: pieces on (nearly) one line, joined across small breaks.
+  const runs = [];
+  for (const horizontal of [true, false]) {
+    const pieces = lines.filter((l) => horizontal ? Math.abs(l.y2 - l.y1) <= 0.02 * Math.abs(l.x2 - l.x1) : Math.abs(l.x2 - l.x1) <= 0.02 * Math.abs(l.y2 - l.y1))
+      .map((l) => ({ c: horizontal ? (l.y1 + l.y2) / 2 : (l.x1 + l.x2) / 2, lo: horizontal ? Math.min(l.x1, l.x2) : Math.min(l.y1, l.y2), hi: horizontal ? Math.max(l.x1, l.x2) : Math.max(l.y1, l.y2) }))
+      .sort((p, q) => p.c - q.c);
+    const groups = [];
+    for (const piece of pieces) { const group = groups.find((g) => Math.abs(g.c - piece.c) <= options.frontBandMm); if (group) { group.items.push(piece); group.c = group.items.reduce((s, i) => s + i.c, 0) / group.items.length; } else groups.push({ c: piece.c, items: [piece] }); }
+    for (const group of groups) {
+      const items = group.items.sort((p, q) => p.lo - q.lo);
+      let run = null;
+      for (const item of items) {
+        if (run && item.lo <= run.hi + options.frontBreakMm) run.hi = Math.max(run.hi, item.hi);
+        else { if (run) runs.push(run); run = { horizontal, c: group.c, lo: item.lo, hi: item.hi }; }
+      }
+      if (run) runs.push(run);
+    }
+  }
+  // What a front can end on: the room's outline, and walls standing inside it that touch only one other wall
+  // (a robe's side wall, which the room's outline does not trace), with their ends.
+  const inBox = (p) => p.x >= box.x0 - 1 && p.x <= box.x1 + 1 && p.y >= box.y0 - 1 && p.y <= box.y1 + 1;
+  const edges = [...room.boundary.map((c, j) => [c, room.boundary[(j + 1) % room.boundary.length]]),
+    ...networkSegments(level).filter((segment) => inBox(segment.a) && inBox(segment.b)).map((segment) => [segment.a, segment.b])];
+  const corners = [...room.boundary, ...edges.flat()];
+  const boundaryHit = (p, d) => {
+    let best = null;
+    for (const [c, f] of edges) {
+      const e = sub(f, c), denom = cross(d, e);
+      if (Math.abs(denom) < EPS) continue;
+      const t = cross(sub(c, p), e) / denom, u = cross(sub(c, p), d) / denom;
+      if (u < -EPS || u > 1 + EPS || t < -options.frontReachMm || t > options.frontReachMm) continue;
+      if (!best || Math.abs(t) < Math.abs(best.t)) best = { t, point: add(p, mul(d, t)) };
+    }
+    // The wall the front runs to may stop a little short of the front's line (it ends at a door jamb): its
+    // corner is the front's end.
+    if (!best) for (const corner of corners) {
+      const r = dist(corner, p);
+      if (r <= options.frontCornerMm && (!best || r < best.r)) best = { t: r, r, point: { x: corner.x, y: corner.y } };
+    }
+    return best;
+  };
+  const tried = runs.filter((run) => run.hi - run.lo >= options.frontMinMm).sort((p, q) => (q.hi - q.lo) - (p.hi - p.lo));
+  for (const run of tried) {
+    const d = run.horizontal ? { x: 1, y: 0 } : { x: 0, y: 1 };
+    const at = (s) => (run.horizontal ? { x: s, y: run.c } : { x: run.c, y: s });
+    if (!pointInPolygon(at((run.lo + run.hi) / 2), room.boundary)) continue;
+    const start = boundaryHit(at(run.lo), mul(d, -1)), end = boundaryHit(at(run.hi), d);
+    if (!start || !end) continue;
+    const lengthMm = dist(start.point, end.point);
+    if (lengthMm < options.frontMinMm) continue;
+    const trial = addSeparator(level, { a: start.point, b: end.point }, options);
+    if (!trial.separatorId) continue;
+    const after = computeRooms(trial.level, options);
+    const own = after.find((item) => pointInPolygon(target, item.boundary));
+    if (!own || own.areaM2 < options.frontMinRoomM2 || labelsIn(own).length !== 1) continue;
+    const rest = after.find((item) => item !== own && labelsIn(item).some((label) => inside.includes(label)));
+    if (!rest || rest.areaM2 < options.dividerMinRoomM2) continue;
+    const depthMm = own.areaM2 * 1e6 / lengthMm;
+    if (depthMm < options.frontDepthMinMm || depthMm > options.frontDepthMaxMm) continue;
+    return { level: trial.level, separatorId: trial.separatorId, a: start.point, b: end.point, lengthMm, depthMm };
+  }
+  return null;
+}
+
+export const ENCLOSED_ROOM_LABEL =/^(pan|pantry|wil|w\.i\.l\.?|wir|w\.i\.r\.?|robe|linen|store|l'?dry|laundry|powder|pwd|wc|toilet|bath|bathroom|ens|ensuite|e-suite|bed|bedroom|master|media)\b/i;
 
 /**
  * Virtual room dividers (separators) where the drawing shows a room ends without a wall: the line of a
@@ -1059,7 +1377,8 @@ export const ENCLOSED_ROOM_LABEL = /^(pan|pantry|wil|w\.i\.l\.?|wir|w\.i\.r\.?|r
  * @returns {{ level, dividers: [{ separatorId, fromWall, toWall, lengthMm, separates }] }}
  */
 export function inferThresholdDividers(level, labels = [], overrides = {}) {
-  const options = { thresholdMaxMm: 3000, dividerMinRoomM2: 1, enclosedRoomLabel: ENCLOSED_ROOM_LABEL, ...PLAN_MODEL_DEFAULTS, ...overrides };
+  const options = { thresholdMaxMm: 3000, dividerMinRoomM2: 1, enclosedRoomLabel: ENCLOSED_ROOM_LABEL, frontRoomLabel: FRONT_ROOM_LABEL, drawnLines: [],
+    frontPieceMinMm: 250, frontBandMm: 80, frontBreakMm: 150, frontReachMm: 200, frontCornerMm: 300, frontMinMm: 600, frontMinRoomM2: 0.5, frontDepthMinMm: 350, frontDepthMaxMm: 2500, ...PLAN_MODEL_DEFAULTS, ...overrides };
   let next = clone(level);
   const dividers = [];
   const named = labels.filter((label) => Number.isFinite(label.x) && Number.isFinite(label.y) && label.name);
@@ -1104,6 +1423,18 @@ export function inferThresholdDividers(level, labels = [], overrides = {}) {
       if (!rest || rest.areaM2 < options.dividerMinRoomM2) continue;
       accepted = { candidate, trial };
       break;
+    }
+    if (!accepted && options.drawnLines?.length && options.frontRoomLabel.test(target.name.trim())) {
+      const front = drawnFront(next, room, target, inside, labelsIn, options);
+      if (front) {
+        next = front.level;
+        const separator = next.separators[front.separatorId];
+        Object.assign(separator, { source: 'detected', basis: 'drawn-front', detectionKey: `front:${Math.round(front.a.x)}:${Math.round(front.a.y)}:${Math.round(front.b.x)}:${Math.round(front.b.y)}`,
+          evidence: `Front of "${target.name}": a line drawn from wall to wall across ${Math.round(front.lengthMm)} mm (sliding doors or a cupboard front), ${Math.round(front.depthMm)} mm deep, separating it from ${inside.filter((label) => label !== target).map((label) => `"${label.name}"`).join(', ')}. A room boundary only, not a wall; its doors are listed for review.` });
+        dividers.push({ separatorId: separator.id, front: true, lengthMm: Math.round(front.lengthMm), depthMm: Math.round(front.depthMm), a: front.a, b: front.b,
+          separates: [target.name, ...inside.filter((label) => label !== target).map((label) => label.name)] });
+        continue;
+      }
     }
     if (!accepted) { unresolved.add(target); continue; }
     next = accepted.trial.level;

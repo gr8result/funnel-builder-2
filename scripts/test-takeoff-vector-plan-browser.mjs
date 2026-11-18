@@ -82,7 +82,10 @@ function mapHooks(file, functionName, stack = new Set()) {
 }
 const indexes = mapHooks(componentPath, 'AIPlanTakeoffStandalone').indexes;
 const loader = path.join(out, 'jsx-loader.cjs');
-fs.writeFileSync(loader, `const ts=require(${JSON.stringify(require.resolve('typescript'))});module.exports=function(source){if(require('path').basename(this.resourcePath)==='EstimateBuilderWorkbook.js')source=require(${JSON.stringify(path.join(root, 'scripts/lib/takeoff-quotation-test-module.cjs'))})(source,this.resourcePath);return ts.transpileModule(source,{fileName:this.resourcePath,compilerOptions:{jsx:ts.JsxEmit.ReactJSX,module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2020}}).outputText;};`);
+// GR8_SOURCE_OVERRIDES={"<repo file>":"<replacement file>"} bundles another version of a file in its place
+// (e.g. the committed version, to reproduce a defect before its repair). The repo file is not touched.
+const sourceOverrides = Object.fromEntries(Object.entries(JSON.parse(process.env.GR8_SOURCE_OVERRIDES || '{}')).map(([from, to]) => [path.resolve(root, from).toLowerCase(), path.resolve(to)]));
+fs.writeFileSync(loader, `const ts=require(${JSON.stringify(require.resolve('typescript'))});const overrides=${JSON.stringify(sourceOverrides)};module.exports=function(source){const swap=overrides[require('path').resolve(this.resourcePath).toLowerCase()];if(swap){source=require('fs').readFileSync(swap,'utf8');this.addDependency(swap);}if(require('path').basename(this.resourcePath)==='EstimateBuilderWorkbook.js')source=require(${JSON.stringify(path.join(root, 'scripts/lib/takeoff-quotation-test-module.cjs'))})(source,this.resourcePath);return ts.transpileModule(source,{fileName:this.resourcePath,compilerOptions:{jsx:ts.JsxEmit.ReactJSX,module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2020}}).outputText;};`);
 const entry = path.join(out, 'browser-entry.cjs');
 fs.writeFileSync(entry, `
 const React=require('react');
@@ -160,6 +163,7 @@ async function exportImport(){
 }
 window.harness={snapshot,exportImport,saveResults:()=>saveResults,saveInputs:()=>saveInputs,ready:()=>Boolean(currentSheet?.hydrated),
  async newJob(){const workbook={...createEstimateBuilderWorkbookDefaults(),jobId,projectId:jobId,commercialProjectId:jobId,projectName:'Real plan replay',registeredJob:{jobId,jobName:'Real plan replay'},jobFileMeta:{projectId:jobId,jobName:'Real plan replay'}};workbook.quotation={'Takeoff browser check':{collapsed:false,rows:[{id:'takeoff-browser-priced-check',item:'Disposable door labour check',quantityKey:'internalDoors',manualRate:'100',unit:'EACH',active:true,formulas:{}},{id:'takeoff-browser-room-check',item:'Disposable approved room floor tiling',quantity:'0',manualRate:'100',unit:'M2',active:true,formulas:{}}]}};delete workbook.aiPlanTakeoffJob;if(workbook.takeoffEngine)delete workbook.takeoffEngine.aiPlanTakeoffJob;const result=await currentSheet.loadJobFileData({workbook,jobName:'Real plan replay'},'stubbed-ai-takeoff.gr8job');if(!result.ok)throw Error(result.message);return result;},
+ async loadCopy(source){const result=await currentSheet.loadJobFileData({workbook:source.workbook,jobName:source.name||'Job copy'},'job-copy.gr8job');if(result?.ok===false)throw Error(result.message);return {ok:true};},
  reopen:()=>control.reopen(),
  blockers(){const schedule=value('takeoffSchedule')?.[0];if(!schedule)return null;const payload=createJobSetupPayload(schedule,{sheetLevels:value('sheetLevels')});return payload.commercialBlockers.map(({id,title,detail})=>({id,title,detail}));},
  setTool(tool){dispatch('activeTool',tool);},
@@ -198,7 +202,8 @@ if (!reuseBundle) await new Promise((resolve, reject) => {
       // auth-lock repair under test). The app's own file is not touched.
       ...(process.env.GR8_LOCK_MODULE ? [new webpack.NormalModuleReplacementPlugin(/[\\/]nonStealingLock\.js$/,path.resolve(process.env.GR8_LOCK_MODULE))] : []),
       new webpack.optimize.LimitChunkCountPlugin({ maxChunks: 1 }), new webpack.ProvidePlugin({ process: require.resolve('next/dist/build/polyfills/process') }), new webpack.IgnorePlugin({ resourceRegExp: /^node:/ }), new webpack.DefinePlugin({ 'process.env.NEXT_PUBLIC_SUPABASE_URL': JSON.stringify(supabaseUrl), 'process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY': JSON.stringify(supabaseAnon) })],
-    cache: { type: 'filesystem', cacheDirectory: path.join(root,'artifacts/test-results/takeoff-browser-webpack-cache') },
+    // Overridden sources must not be served from (or written to) the shared transform cache.
+    cache: Object.keys(sourceOverrides).length ? false : { type: 'filesystem', cacheDirectory: path.join(root,'artifacts/test-results/takeoff-browser-webpack-cache') },
     optimization: { minimize: false }, performance: { hints: false },
   });
   compiler.run((error, stats) => {
@@ -430,16 +435,25 @@ try {
       assert.ok(Math.abs(appliedCalibrations[sheet].pixelsPerMm - calibrated) / calibrated < 1e-9, `sheet ${sheet} has the same scale`);
     }
 
-    // 3. RUN AI TAKEOFF. The vector engine measures; the stub provider supplies sheet type only.
+    // 2b. Each measured sheet's level, chosen in the screen's "Sheet N is which level?" control as a builder does
+    // (Run Takeoff measures the floor plans the builder has given a level; it makes no provider request).
+    for (const sheet of set.sheets) {
+      const chosen = ['Ground Floor', 'Second Level', 'Third Level'].includes(sheet.level) ? sheet.level : /lower|ground/i.test(sheet.level) ? 'Ground Floor' : 'Second Level';
+      await goToPage(sheet.page);
+      await page.select('#ai-plan-takeoff-sheet-level-select', chosen);
+      await settle();
+      sheet.level = chosen;
+    }
+    // 3. RUN TAKEOFF (local). The vector engine measures; no provider request is made.
     const run = async () => {
       await page.click('#run-ai-takeoff');
-      await page.waitForFunction(() => /AI TAKEOFF COMPLETE|REQUIRES REVIEW|already been analysed|already in|could not|failed|error|confirm the scale/i.test(document.querySelector('#ai-takeoff-status')?.textContent || ''), { timeout: 600000 });
+      await page.waitForFunction(() => /TAKEOFF COMPLETE|REQUIRES REVIEW|already been|already in|could not|failed|error|confirm the scale|Choose the level|Nothing could be measured/i.test(document.querySelector('#ai-takeoff-status')?.textContent || ''), { timeout: 600000 });
       // A scale proposal from the inspection is confirmed explicitly when the screen asks for it.
       for (let i = 0; i < 3; i += 1) {
         const confirmScale = await page.$('[data-testid="confirm-ai-scale"]');
         if (!confirmScale) break;
         await confirmScale.click(); await settle();
-        await page.waitForFunction(() => /AI TAKEOFF COMPLETE|REQUIRES REVIEW|could not|failed|error/i.test(document.querySelector('#ai-takeoff-status')?.textContent || ''), { timeout: 600000 });
+        await page.waitForFunction(() => /TAKEOFF COMPLETE|REQUIRES REVIEW|could not|failed|error/i.test(document.querySelector('#ai-takeoff-status')?.textContent || ''), { timeout: 600000 });
       }
       await settle();
       return page.$eval('#ai-takeoff-status', (element) => element.textContent);
@@ -548,7 +562,7 @@ try {
     const wallCheckIds = async () => page.evaluate(() => [...document.querySelectorAll('[data-review-decision^="wall-check:"]')].map((el) => el.getAttribute('data-review-decision')).sort());
     const requiredChecks = await wallCheckIds();
     assert.deepEqual(requiredChecks, set.sheets.map((sheet) => `wall-check:${sheet.page}`).sort(), `every sheet with detected walls requires a wall check (${requiredChecks})`);
-    assert.ok(await page.evaluate(() => document.body.textContent.includes('AI TAKEOFF REQUIRES REVIEW')), 'not presented as complete while wall checks are open');
+    assert.ok(await page.evaluate(() => document.body.textContent.includes('TAKEOFF REQUIRES REVIEW')), 'not presented as complete while wall checks are open');
     result.wallCheck = { required: requiredChecks };
     if (set.name === 'Jesmond Road') {
       await goToPage(4); await settle();
@@ -789,6 +803,8 @@ try {
   }
   assert.deepEqual(report.errors, [], 'No browser runtime errors');
   report.ok = true;
+  // Run Takeoff measures locally: unless a live provider run was asked for, nothing reaches the analysis endpoint.
+  if (!live) assert.deepEqual(apiRequests, [], 'Run Takeoff sent no request to the AI analysis endpoint');
   console.log('Vector plan browser acceptance passed.');
 } catch (error) {
   report.error = error.stack || String(error);
@@ -821,6 +837,10 @@ async function checkCanvas(name) {
     const canvas = stage.container().getBoundingClientRect();
     return { visibleShapes, transform: t, markers, canvas: { x: canvas.x, y: canvas.y, width: canvas.width, height: canvas.height } };
   });
+  // Size labels on doors and windows are an overlay the builder switches on (the default view is a clean room
+  // overview); switch it on to check the labels.
+  await page.evaluate(() => { const box = [...document.querySelectorAll('[data-testid="plan-overlay-key"] label')].find((label) => /size labels/i.test(label.textContent))?.querySelector('input'); if (box && !box.checked) box.click(); });
+  await new Promise((resolve) => setTimeout(resolve, 300));
   const before = await read();
   assert.ok(before, 'plan canvas is mounted');
   const windows = before.markers.filter((m) => m.shape === 'Circle');
@@ -836,7 +856,7 @@ async function checkCanvas(name) {
   const clip = { x: Math.max(before.canvas.x, before.canvas.x + focus.x - 260), y: Math.max(before.canvas.y, before.canvas.y + focus.y - 160), width: 520, height: 320 };
   await page.screenshot({ path: path.join(out, `${name}-markers-closeup.png`), clip });
   const keys = await page.$$eval('[data-testid="plan-overlay-key"] input[type="checkbox"]', (boxes) => boxes.length);
-  assert.equal(keys, 3, 'Plan overlays key offers floor areas, rooms and eaves');
+  assert.equal(keys, 7, 'Plan overlays key offers floor areas, rooms, eaves, walls, openings, size labels and review items');
   const toggles = {};
   for (const [index, key] of ['floorAreas', 'rooms', 'eaves'].entries()) {
     await page.$$eval('[data-testid="plan-overlay-key"] input[type="checkbox"]', (boxes, i) => boxes[i].click(), index); await settle();
@@ -849,6 +869,14 @@ async function checkCanvas(name) {
     toggles[key] = { shapesHidden: before.visibleShapes - off.visibleShapes };
   }
   assert.ok(toggles.floorAreas.shapesHidden > 0 || toggles.rooms.shapesHidden > 0, `${name}: the overlay toggles hide shapes (${JSON.stringify(toggles)})`);
+  // Walls and openings have their own switches too.
+  for (const [index, key] of [[3, 'walls'], [4, 'openings']]) {
+    await page.$$eval('[data-testid="plan-overlay-key"] input[type="checkbox"]', (boxes, i) => boxes[i].click(), index); await settle();
+    const off = await read();
+    assert.ok(off.visibleShapes < before.visibleShapes, `${name}: hiding ${key} hides its shapes`);
+    await page.$$eval('[data-testid="plan-overlay-key"] input[type="checkbox"]', (boxes, i) => boxes[i].click(), index); await settle();
+    assert.equal((await read()).visibleShapes, before.visibleShapes, `${name}: showing ${key} again restores them`);
+  }
   await page.$$eval('[data-testid="plan-overlay-key"] input[type="checkbox"]', (boxes) => boxes.forEach((box) => box.click())); await settle();
   await page.screenshot({ path: path.join(out, `${name}-overlays-off.png`) });
   const allOff = await read();

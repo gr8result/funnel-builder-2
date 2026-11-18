@@ -104,8 +104,51 @@ export async function recogniseOpeningLabels({ raster, logicalWidth, pixelsPerMm
 // building that reads clearly as a short room name becomes a room label; lines already read by the
 // opening pass are reused, not read again. Anything else (notes, sizes, ceiling heights) is ignored.
 export const ROOM_NAME_WORDS = /^(?:(?:master|main|guest|kids?|upper|lower|side|front|rear|open|outdoor)\s+)?(?:bed(?:room)?(?:\s*\d)?|living|lounge|family|dining|meals|kitchen|ens(?:uite)?|bath(?:room)?|wc|toilet|powder|pdr|laundry|ldry|wir|wip|robe|pantry|study|office|media|theatre|garage|carport|porch|alfresco|entry|foyer|hall(?:way)?|linen|lin|store|storage|rumpus|games|activity|retreat|patio|deck|balcony|terrace|scullery|butler|mud\s*room|pooja|gym|cellar|nook|lobby|void)(?:\s*\d)?$/i;
+// A room name inside an OCR reading: the whole line, or the line with up to two short marks (an adjacent
+// wall line or tick read as 'll', 'I', 'f') dropped at either end, or one stray stroke character off the end.
+// Only an exact dictionary room name is returned; anything else is not a name.
+export function roomNameFromReading(raw) {
+  const name = roomNameCore(raw);
+  // Only bedrooms (and their numbered robes/ensuites) are numbered: a digit after another name is a nearby
+  // ceiling height or note read into the line ("FAMILY 7", "FOYER2").
+  return name && !/^(?:master\s+)?bed(?:room)?(?=\s|\d|$)/i.test(name) ? name.replace(/\s*\d+$/, '') || null : name;
+}
+function roomNameCore(raw) {
+  const text = String(raw || '').replace(/\s+/g, ' ').trim();
+  if (!text) return null;
+  if (ROOM_NAME_WORDS.test(text)) return text;
+  const tokens = text.split(' ');
+  for (let a = 0; a <= Math.min(2, tokens.length - 1); a += 1) for (let b = tokens.length; b >= Math.max(a + 1, tokens.length - 2); b -= 1) {
+    if (a === 0 && b === tokens.length) continue;
+    if ([...tokens.slice(0, a), ...tokens.slice(b)].some((token) => token.length > 2)) continue;
+    const middle = tokens.slice(a, b).join(' ');
+    if (ROOM_NAME_WORDS.test(middle)) return middle;
+  }
+  const trimmed = text.replace(/^[Il|!.,'`]\s*|\s*[Il|!.,'`]$/g, '');
+  if (trimmed !== text && ROOM_NAME_WORDS.test(trimmed)) return trimmed;
+  // One word of the line with up to two marks glued to either end ("aLLDRY": a wall line and a tick read
+  // into the word; "STORAGEN"), the rest of the line being short marks only.
+  const words = text.split(' ').filter((word) => word.length > 2);
+  if (words.length !== 1 || text.split(' ').some((token) => token !== words[0] && token.length > 2)) return null;
+  const word = words[0];
+  for (let a = 0; a <= 2; a += 1) for (let b = 0; b <= 2; b += 1) {
+    if (!a && !b) continue;
+    const core = word.slice(a, word.length - b);
+    // Four letters or more; a three-letter capital name only where the marks are not capitals ("mWIR").
+    const marks = word.slice(0, a) + word.slice(word.length - b);
+    const ok = core.length >= 4 || (core.length === 3 && core === core.toUpperCase() && !/[A-Z]/.test(marks));
+    if (ok && /^[a-z]+$/i.test(core) && ROOM_NAME_WORDS.test(core)) return core;
+  }
+  // A long name with one letter misread (a dimension line through it: "BITCHEN"), never a short one.
+  if (/^[a-z]{6,}$/i.test(word)) for (const name of LONG_ROOM_NAMES) if (name.length === word.length && [...name].filter((c, i) => c !== word[i].toLowerCase()).length === 1) return word.length === name.length ? matchCase(name, word) : null;
+  return null;
+}
+const LONG_ROOM_NAMES = ['bedroom', 'living', 'family', 'dining', 'kitchen', 'ensuite', 'bathroom', 'toilet', 'powder', 'laundry', 'pantry', 'office', 'theatre', 'garage', 'carport', 'alfresco', 'hallway', 'storage', 'rumpus', 'activity', 'retreat', 'balcony', 'terrace', 'scullery', 'butler', 'cellar', 'lounge'];
+const matchCase = (name, like) => (like === like.toUpperCase() ? name.toUpperCase() : name);
+
 export async function recogniseRoomLabels({ raster, logicalWidth, pixelsPerMm, walls = [], textItems = [], reader, alreadyRead = [] }, overrides = {}) {
-  const o = { ...LABEL_DEFAULTS, minRoomOcrConfidence: 85, roomNameTextReachMm: 3000, ...overrides };
+  // Two-letter names (WC) are room names too; a two-glyph line is accepted only if it reads as an exact name.
+  const o = { ...LABEL_DEFAULTS, minRoomOcrConfidence: 85, roomNameTextReachMm: 3000, minGlyphs: 2, ...overrides };
   if (!walls.length) return { labels: [], stats: { read: 0, labels: 0 } };
   const pts = walls.flatMap((w) => w.nodes || []);
   const box = { x0: Math.min(...pts.map((p) => p.x)), x1: Math.max(...pts.map((p) => p.x)), y0: Math.min(...pts.map((p) => p.y)), y1: Math.max(...pts.map((p) => p.y)) };
@@ -114,33 +157,40 @@ export async function recogniseRoomLabels({ raster, logicalWidth, pixelsPerMm, w
   const covered = (line) => textItems.some((t) => Math.hypot((t.x ?? 0) - line.logical.x, (t.y ?? 0) - line.logical.y) <= Math.max(3, line.logical.length / 2));
   const readBefore = (line) => alreadyRead.find((r) => Math.hypot(r.x - line.logical.x, r.y - line.logical.y) <= 0.5);
   const near = (line) => walls.some((w) => w.nodes?.length >= 2 && segmentDistance(line.logical, w.nodes[0], w.nodes[w.nodes.length - 1]) <= o.nearWallMm * pixelsPerMm);
-  const labels = []; let read = 0;
+  const labels = [], notes = []; let read = 0;
   for (const line of inside) {
     if (covered(line)) continue;
     const before = readBefore(line);
     if (!before && near(line)) continue; // the opening pass read it and it was a size label
     // The opening pass ranks readings for size codes; a line it did not read as a room name is read again.
-    let best = before && ROOM_NAME_WORDS.test(String(before.text || '').trim()) ? { text: before.text, ocrConfidence: before.ocrConfidence } : null;
+    const beforeName = before ? roomNameFromReading(before.text) : null;
+    let best = beforeName ? { text: beforeName, ocrConfidence: before.ocrConfidence, exact: true } : null;
     if (!best) {
       read += 1;
+      // The reading that yields an exact room name wins over a higher-scoring reading that does not (the
+      // score of outlined glyphs is often 0 for a correct reading).
       for (const rotation of line.orientation === 'h' ? [0] : [90, 270]) {
         const r = await reader.read(labelCrop(raster, line, rotation));
-        const candidate = { text: String(r.text || '').trim(), ocrConfidence: r.confidence || 0 };
-        if (!best || candidate.ocrConfidence > best.ocrConfidence) best = candidate;
+        const name = roomNameFromReading(r.text);
+        const candidate = { text: name || String(r.text || '').trim(), ocrConfidence: r.confidence || 0, exact: Boolean(name) };
+        if (!best || (candidate.exact && !best.exact) || (candidate.exact === best.exact && candidate.ocrConfidence > best.ocrConfidence)) best = candidate;
       }
     }
     const text = String(best?.text || '').replace(/\s+/g, ' ').trim();
-    // Outlined (hollow) glyphs read correctly but with a low score; a whole line that is exactly a room
-    // name of five or more letters is not produced by chance, so it is accepted at any score.
-    const exactLongName = ROOM_NAME_WORDS.test(text) && text.replace(/[^A-Za-z]/g, '').length >= 5;
-    if (!text || !ROOM_NAME_WORDS.test(text) || (best.ocrConfidence < o.minRoomOcrConfidence && !exactLongName)) continue;
+    // Other words printed inside the building are kept as sheet notes (a roof pitch, "box gutter", "void"):
+    // they name what an unnamed space is, never a room, and are matched by their own word lists downstream.
+    if (text && !best.exact && /[a-z]{4,}/i.test(text)) notes.push({ text, x: line.logical.x, y: line.logical.y, ocrConfidence: Math.round(best.ocrConfidence || 0), source: 'local-ocr' });
+    // An exact dictionary room name read from a line inside the building is not produced by chance, so it is
+    // accepted at any score (outlined glyphs read correctly with low scores). Its score is kept with the label,
+    // and every room name stays unapproved until the builder confirms the room.
+    if (!text || !best.exact) continue;
     // The PDF already prints this name here: its own text is exact, so the reading adds nothing.
     const sameName = (t) => String(t.text || '').trim().toLowerCase() === text.toLowerCase()
       && Math.hypot((t.x ?? 0) - line.logical.x, (t.y ?? 0) - line.logical.y) <= o.roomNameTextReachMm * pixelsPerMm;
     if (textItems.some(sameName)) continue;
     labels.push({ text, x: line.logical.x, y: line.logical.y, ocrConfidence: Math.round(best.ocrConfidence), source: 'local-ocr' });
   }
-  return { labels, stats: { lines: inside.length, read, labels: labels.length } };
+  return { labels, notes, stats: { lines: inside.length, read, labels: labels.length, notes: notes.length } };
 }
 
 // The number and its suffix are scored separately: a faint suffix (LV, DH) read with low confidence is

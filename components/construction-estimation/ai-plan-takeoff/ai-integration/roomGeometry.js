@@ -84,6 +84,17 @@ export function validateRoomSet(rooms=[]) {
       const endA=a.polygon[(k+1)%a.polygon.length],endB=b.polygon[(l+1)%b.polygon.length];
       return cross(p,endA,q)*cross(p,endA,endB)<0&&cross(q,endB,p)*cross(q,endB,endA)<0;
     }));
+    // Rooms that meet along a shared line (a divider with no wall) touch, they do not overlap: the shared floor is
+    // sampled, and an overlap is one that covers more than a sliver of the smaller room.
+    const touching=()=>{
+      const x0=Math.max(first.minX,second.minX),x1=Math.min(first.maxX,second.maxX),y0=Math.max(first.minY,second.minY),y1=Math.min(first.maxY,second.maxY);
+      const steps=40;let both=0;
+      for(let u=0;u<steps;u++)for(let v=0;v<steps;v++){const q={x:x0+(x1-x0)*(u+.5)/steps,y:y0+(y1-y0)*(v+.5)/steps};if(roomContains(a.polygon,q)&&roomContains(b.polygon,q))both++;}
+      const shared=both/(steps*steps)*(x1-x0)*(y1-y0);
+      const ringArea=r=>Math.abs(r.reduce((sum,q,k)=>{const n=r[(k+1)%r.length];return sum+q.x*n.y-n.x*q.y;},0))/2;
+      return shared<0.02*Math.min(ringArea(a.polygon),ringArea(b.polygon));
+    };
+    if(!identical&&(crossing||first.probes.some(p=>roomContains(b.polygon,p))||second.probes.some(p=>roomContains(a.polygon,p)))&&touching())continue;
     if(identical||crossing||first.probes.some(p=>roomContains(b.polygon,p))||second.probes.some(p=>roomContains(a.polygon,p))) {
       overlaps.set(a.id,[...(overlaps.get(a.id)||[]),b.id]);overlaps.set(b.id,[...(overlaps.get(b.id)||[]),a.id]);
     }

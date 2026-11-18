@@ -21,7 +21,7 @@ import { crossHatchedPiers, crossHatchedRegions, pairIsPierRim } from './hatched
 import { classifyDrawingElements } from './elementClassifier.js';
 import { squareSetAssemblies, isSquareSetHost } from './squareSetLinework.js';
 import { basinRimPaths, pairUsesBasinRim } from './basinLinework.js';
-import { dimensionAnnotationStrokes } from './dimensionLinework.js';
+import { dimensionAnnotationStrokes, tickedDimensionStrokes } from './dimensionLinework.js';
 import { annotatedNicheWalls } from './annotatedNicheWalls.js';
 import { measuredGlazedEntrances } from './glazedEntranceAssemblies.js';
 import { pairedPartialSwingDoors } from './pairedPartialSwingDoors.js';
@@ -41,6 +41,11 @@ export const VECTOR_WALL_DEFAULTS = {
   capInsetMm: 150,            // a jamb drawn across a wall may sit this far inside the pair's end (head-line dash merged on)
   thicknessToleranceMm: 12, thicknessToleranceShare: 0.08,
   strongWallMm: 1200,         // clean pairs this long teach the drawing's wall pens and thicknesses
+  sheetFurnitureShare: 0.8,   // a line this share of the sheet's height or width, run edge to edge, is sheet furniture
+  sheetEdgeShare: 0.06,       // ... ending within this share of both opposite sheet edges
+  frameJoinReachMm: 350,      // a door or window frame whose ends come this close to walls of two clusters joins them
+  wallPenShare: 0.03,         // a pen drawing this share of the clean walls' face length is one of the drawing's wall pens
+  openedPenMinMm: 450,        // a clean pair this long in a pen proved by walls with openings drawn in them is a wall
   minIsolatedWallMm: 900,     // a wall that meets no other wall must be at least this long
   meetReachMm: 150,           // an end this far beyond the face of another wall meets it
   besideReachMm: 250,         // a pair this close alongside a longer wall ...
@@ -319,6 +324,9 @@ function readProjectedWindowBox(gap, half, lines, straight, mmPx, options) {
       const atLo = crossing.filter((cap) => cap.s >= gap.lo - near && cap.s <= gap.lo + near + slackLo).sort((a, b) => a.s - b.s)[0];
       const atHi = crossing.filter((cap) => cap.s <= gap.hi + near && cap.s >= gap.hi - near - slackHi).sort((a, b) => b.s - a.s)[0];
       if (!atLo || !atHi) continue;
+      // A box wider than any opening is not a window or slider frame: an exterior wall capped by the
+      // walls at its ends, with a hairline outer face, has the same shape (Sunshine Cove sheet 4, 18.2 m).
+      if (atHi.s - atLo.s > options.openingMaxMm * mmPx) continue;
       const depth = Math.min(side > 0 ? atLo.hi : -atLo.lo, side > 0 ? atHi.hi : -atHi.lo) * side;
       const outer = lines.some((line) => side * (line.c - outerFace) >= options.projectedBoxMinMm * mmPx && Math.abs(line.c - depth) <= 20 * mmPx
         && line.lo <= atLo.s + near && line.hi >= atHi.s - near && (line.hi - line.lo) <= (atHi.s - atLo.s) + 2 * near);
@@ -343,6 +351,8 @@ export function detectVectorWalls(segments, context, overrides = {}) {
   const W = context.logicalWidth, H = context.logicalHeight;
   const onPage = (s) => !(W > 0 && H > 0) || [[s.x1, s.y1], [s.x2, s.y2]].every(([x, y]) => x >= -1 && y >= -1 && x <= W + 1 && y <= H + 1);
   const dimensionStrokes = dimensionAnnotationStrokes(segments || [], context.textItems, mmPx);
+  // Dimension strings with no text layer to confirm them: recognised from their ticks and extension lines.
+  if (options.tickedDimensions !== false) for (const stroke of tickedDimensionStrokes(segments || [])) dimensionStrokes.add(stroke);
   const squareSets = squareSetAssemblies((segments || []).filter(s => !dimensionStrokes.has(s) && onPage(s)), context.textItems, mmPx, options);
   const straight = (segments || []).filter((s) => !squareSets.headerStrokes.has(s) && !dimensionStrokes.has(s) && !s.curve && !s.dashed && len(s) >= mmPx && onPage(s));
   // Door swings: drawn as curves, or (from many CAD programs) as a run of short straight chords.
@@ -449,7 +459,41 @@ export function detectVectorWalls(segments, context, overrides = {}) {
       if (sides.size === 4 && !sides.has(null)) sheetFramePaths.add(path);
     }
   }
-  const longClean = all.filter((candidate) => !candidate.faces.some(face => face.pieces.some(piece => sheetFramePaths.has(piece.segment.path))) && candidate.occupied < 0.1 && candidate.lengthMm >= options.strongWallMm && candidate.faces.every((face) => luminance(face.style) <= options.lightPenLuminance));
+  // Sheet furniture: a line running most of the sheet's height or width is a border, a title-block strip or a
+  // notes column, never a building wall (a sheet that carries margins, dimensions and a title block cannot be
+  // spanned by one wall). Such pairs teach nothing and are not walls.
+  // The face line as drawn (its merged pieces), measured against the sheet in the face's own direction.
+  // Edge to edge: from within a few per cent of one sheet edge to within a few per cent of the opposite one
+  // (a plan cropped tight to its building can have a wall nearly as long as the sheet, but not edge to edge).
+  const edgeToEdge = (angle, lo, hi) => {
+    const horizontal = Math.abs(Math.cos(angle)) > 0.999, vertical = Math.abs(Math.sin(angle)) > 0.999;
+    if (!(W > 0 && H > 0) || (!horizontal && !vertical)) return false;
+    const span = horizontal ? W : H, from = Math.min(Math.abs(lo), Math.abs(hi)), to = Math.max(Math.abs(lo), Math.abs(hi));
+    return to - from >= options.sheetFurnitureShare * span && from <= options.sheetEdgeShare * span && to >= (1 - options.sheetEdgeShare) * span;
+  };
+  const sheetSpan = (candidate, face) => edgeToEdge(candidate.angle, face.lo, face.hi);
+  const onSheetFurnitureLine = (candidate) => candidate.faces.some((face) => sheetSpan(candidate, face) || face.pieces.some((piece) => sheetFramePaths.has(piece.segment.path)));
+  // Two sheet-spanning lines less than a quarter of the sheet apart bound a title-block or notes strip; its
+  // tables (amendments, notes, floor-area boxes) are drawn as parallel pairs too, and none of them is a wall.
+  const stripSwings = groupArcs(curves).filter((arc) => arc.radius / mmPx >= options.leafMinMm && arc.radius / mmPx <= options.leafMaxMm && arc.sweepDeg >= 60 && arc.sweepDeg <= 120);
+  const strips = { x: [], y: [] };
+  if (W > 0 && H > 0) for (const [angle, lines] of linesByDirection) {
+    const vertical = Math.abs(Math.sin(angle)) > 0.999, horizontal = Math.abs(Math.cos(angle)) > 0.999;
+    if (!vertical && !horizontal) continue;
+    const span = vertical ? H : W, across = vertical ? W : H;
+    // Strip edges: lines running most of the sheet from one of its edges (a title block's inner frame line
+    // can stop short of the far edge where the block meets the notes column).
+    const fromAnEdge = (line) => { const from = Math.min(Math.abs(line.lo), Math.abs(line.hi)), to = Math.max(Math.abs(line.lo), Math.abs(line.hi));
+      return to - from >= options.sheetFurnitureShare * span && (from <= options.sheetEdgeShare * span || to >= (1 - options.sheetEdgeShare) * span); };
+    const at = lines.filter(fromAnEdge).map((line) => Math.abs(line.c)).sort((p, q) => p - q);
+    // Wider than any wall (the two faces of a wall in a tightly cropped plan are not a strip), narrower than a quarter of the sheet.
+    // A strip with a door swing in it is part of a plan, not a title block.
+    const swingIn = (lo, hi) => stripSwings.some((arc) => (vertical ? arc.centre.x : arc.centre.y) > lo && (vertical ? arc.centre.x : arc.centre.y) < hi);
+    for (let i = 1; i < at.length; i += 1) if (at[i] - at[i - 1] > Math.max(0.015 * across, 1.2 * options.maxThicknessMm * mmPx) && at[i] - at[i - 1] < 0.25 * across && !swingIn(at[i - 1], at[i])) strips[vertical ? 'x' : 'y'].push([at[i - 1], at[i]]);
+  }
+  const inStrip = (candidate) => { const { a, b } = endpoints(candidate); return strips.x.some(([lo, hi]) => [a, b].every((p) => p.x >= lo - 1 && p.x <= hi + 1)) || strips.y.some(([lo, hi]) => [a, b].every((p) => p.y >= lo - 1 && p.y <= hi + 1)); };
+  const onSheetFurniture = (candidate) => onSheetFurnitureLine(candidate) || inStrip(candidate);
+  const longClean = all.filter((candidate) => !onSheetFurniture(candidate) && candidate.occupied < 0.1 && candidate.lengthMm >= options.strongWallMm && candidate.faces.every((face) => luminance(face.style) <= options.lightPenLuminance));
   const endsOf = (candidate) => { const u = { x: Math.cos(candidate.angle), y: Math.sin(candidate.angle) }, n = { x: -u.y, y: u.x }; return [candidate.lo, candidate.hi].map((sv) => ({ x: u.x * sv + n.x * candidate.c, y: u.y * sv + n.y * candidate.c })); };
   // At a corner each wall stops at the other's inner face, so the reach runs round the corner too.
   const nearBody = (p, other, own) => { const u = { x: Math.cos(other.angle), y: Math.sin(other.angle) }, n = { x: -u.y, y: u.x }; const sv = p.x * u.x + p.y * u.y, cv = p.x * n.x + p.y * n.y; const along = (own.thicknessMm / 2 + options.meetReachMm) * mmPx; return sv >= other.lo - along && sv <= other.hi + along && Math.abs(cv - other.c) <= (other.thicknessMm / 2 + options.meetReachMm) * mmPx; };
@@ -474,7 +518,7 @@ export function detectVectorWalls(segments, context, overrides = {}) {
     penWeight.set(pen, (penWeight.get(pen) || 0) + candidate.lengthMm);
   }
   const penTotal = [...penWeight.values()].reduce((sum, value) => sum + value, 0);
-  const wallPens = new Set([...penWeight].filter(([style, value]) => value >= penTotal * 0.1 && luminance(style) <= options.lightPenLuminance).map(([style]) => style));
+  const wallPens = new Set([...penWeight].filter(([style, value]) => value >= penTotal * options.wallPenShare && luminance(style) <= options.lightPenLuminance).map(([style]) => style));
 
   const reject = (candidate, reason) => { candidate.rejected = reason; rejected.push({ reason, thicknessMm: Math.round(candidate.thicknessMm), lengthMm: Math.round(candidate.lengthMm), ...endpoints(candidate) }); };
   function endpoints(candidate) {
@@ -613,6 +657,7 @@ export function detectVectorWalls(segments, context, overrides = {}) {
     list.forEach((candidate, index) => cleanRunMm.set(candidate, totals.get(find(index))));
   }
   const continuedAcrossOpening = new Map();
+  const openedWall = new Set();
   // A wall carries on past an opening in it. A short clean piece on exactly the same two face lines as a
   // long clean wall, across an opening-sized break with a jamb drawn across the wall at both sides of the
   // break, is the same wall and keeps its thickness (Liberty: the 200 mm dining/foyer wall either side of
@@ -642,9 +687,63 @@ export function detectVectorWalls(segments, context, overrides = {}) {
       });
       if (anchor) { cleanRunMm.set(piece, runOf(anchor) + piece.lengthMm); continuedAcrossOpening.set(piece, anchor); }
     }
+    // The same holds when no single piece is long: a wall drawn as several pieces on exactly the same two
+    // face lines, each break opening-sized with a jamb drawn across the wall at both sides, is one wall as
+    // long as its pieces together (Sunshine Cove: the kitchen wall between two windows, 1.06 + 1.12 + 0.53 m).
+    const short = all.filter((piece) => piece.occupied < 0.1 && runOf(piece) < options.cleanLongWallMm)
+      .sort((p, q) => p.angle - q.angle || p.c0 - q.c0 || p.lo - q.lo);
+    const used = new Set();
+    for (const start of short) {
+      if (used.has(start)) continue;
+      const chain = [start];
+      for (;;) {
+        const last = chain[chain.length - 1];
+        const next = short.filter((piece) => !used.has(piece) && !chain.includes(piece) && piece.angle === last.angle
+          && Math.abs(piece.c0 - last.c0) <= mmPx && Math.abs(piece.c1 - last.c1) <= mmPx && piece.lo > last.hi)
+          .sort((p, q) => p.lo - q.lo)[0];
+        if (!next) break;
+        const breakMm = (next.lo - last.hi) / mmPx;
+        if (breakMm < options.openingMinMm || breakMm > options.openingMaxMm || !cappedAcross(last, last.hi, -1) || !cappedAcross(next, next.lo, 1)) break;
+        chain.push(next);
+      }
+      const total = chain.reduce((sum, piece) => sum + piece.lengthMm, 0);
+      if (chain.length < 2 || total < options.cleanLongWallMm) continue;
+      chain.forEach((piece, index) => { used.add(piece); cleanRunMm.set(piece, total); continuedAcrossOpening.set(piece, chain[index ? index - 1 : 1]); });
+    }
+    // Openings drawn in a pair prove it is a wall whatever pen it is drawn in: clean pieces on the same two
+    // face lines, at a thickness the drawing uses for walls, broken by opening-sized gaps with a jamb drawn
+    // across the wall at both sides, the whole run (openings included) a wall's length. Joinery, benches and
+    // fixtures are not broken by jambed openings. (A lightweight extension drawn in a finer pen than the
+    // masonry: its windows sit in its gaps.)
+    const fitted = all.filter((piece) => piece.occupied < 0.1 && fits(piece.thicknessMm)).sort((p, q) => p.angle - q.angle || p.c0 - q.c0 || p.lo - q.lo);
+    const seen = new Set();
+    for (const start of fitted) {
+      if (seen.has(start)) continue;
+      const chain = [start];
+      for (;;) {
+        const last = chain[chain.length - 1];
+        const next = fitted.filter((piece) => !seen.has(piece) && !chain.includes(piece) && piece.angle === last.angle
+          && Math.abs(piece.c0 - last.c0) <= mmPx && Math.abs(piece.c1 - last.c1) <= mmPx && piece.lo > last.hi).sort((p, q) => p.lo - q.lo)[0];
+        if (!next) break;
+        const breakMm = (next.lo - last.hi) / mmPx;
+        if (breakMm < options.openingMinMm || breakMm > options.openingMaxMm || !cappedAcross(last, last.hi, -1) || !cappedAcross(next, next.lo, 1)) break;
+        chain.push(next);
+      }
+      const spanMm = (chain[chain.length - 1].hi - chain[0].lo) / mmPx;
+      if (chain.length < 2 || spanMm < options.cleanLongWallMm) continue;
+      chain.forEach((piece) => { seen.add(piece); openedWall.add(piece); });
+    }
   }
+  // A pen that draws walls with openings in them is a wall pen on this sheet.
+  // Never lighter than the drawing's own wall pens: grey linework draws paving, outlines above or below and hatching.
+  const darkest = Math.max(0, ...[...wallPens].map((pen) => luminance(pen)));
+  const openedPens = new Set([...openedWall].flatMap((piece) => piece.faces.map((face) => facePen(face, piece.lo, piece.hi))).filter((pen) => pen && !wallPens.has(pen) && luminance(pen) <= darkest + 0.02));
+  for (const piece of [...openedWall]) if (!piece.faces.every((face) => { const pen = facePen(face, piece.lo, piece.hi); return wallPens.has(pen) || openedPens.has(pen); })) openedWall.delete(piece);
   let pool = [];
   for (const candidate of all) {
+    // An edge-to-edge line only teaches nothing (a plan cropped tight to its building has walls edge to edge);
+    // what lies inside a title-block strip is not a wall.
+    if (inStrip(candidate)) { reject(candidate, 'inside a title-block or notes strip (tables and frames, not walls)'); continue; }
     if (pairUsesBasinRim(candidate, basinPaths)) { reject(candidate, 'face belongs to a basin rim with an inset rim and drawn tap'); continue; }
     if (candidate.faces.some(face => doorLeafFaces.get(face)?.some(leaf => candidate.lo >= leaf.lo && candidate.hi <= leaf.hi))) { reject(candidate, 'open door leaf with swing and perpendicular measured host'); continue; }
     const projectedFrame = projectedFrames.some(box => candidate.angle === box.angle
@@ -652,13 +751,22 @@ export function detectVectorWalls(segments, context, overrides = {}) {
       && candidate.c0 >= Math.min(box.inner, box.c0, box.c1) - 3 * mmPx
       && candidate.c1 <= Math.max(box.inner, box.c0, box.c1) + 3 * mmPx);
     if (projectedFrame) { reject(candidate, 'inside a fully capped projected frame adjoining a measured wall'); continue; }
-    if (!fits(candidate.thicknessMm) && !(candidate.occupied < 0.1 && (cleanRunMm.get(candidate) || candidate.lengthMm) >= options.cleanLongWallMm)) { reject(candidate, 'thickness not one the drawing uses for walls'); continue; }
+    if (!fits(candidate.thicknessMm)) {
+      if (!(candidate.occupied < 0.1 && (cleanRunMm.get(candidate) || candidate.lengthMm) >= options.cleanLongWallMm)) { reject(candidate, 'thickness not one the drawing uses for walls'); continue; }
+      candidate.lengthOnly = true; // a wall by its length alone, at a thickness the drawing does not otherwise use
+    }
     if (candidate.occupied > options.occupiedShare) { reject(candidate, 'another line runs between the faces (joinery, a frame, or the outer faces of a multi-leaf wall)'); continue; }
     // Collinear detail outside this candidate must not change its pen. A stair
     // tread can extend a wall face with a different weight; inspect the actual
     // strokes covering this pair, retaining the same dominant-pen rule.
 
-    if (wallPens.size && !candidate.faces.every((face) => wallPens.has(facePen(face, candidate.lo, candidate.hi)))) { reject(candidate, 'faces not drawn with the drawing\'s wall pens'); continue; }
+    if (wallPens.size && !candidate.faces.every((face) => wallPens.has(facePen(face, candidate.lo, candidate.hi)))) {
+      // A pen proved by openings drawn in its walls: its clean pairs at a wall thickness are walls too.
+      const opened = !candidate.lengthOnly && candidate.occupied < 0.1 && candidate.lengthMm >= options.openedPenMinMm
+        && candidate.faces.every((face) => { const pen = facePen(face, candidate.lo, candidate.hi); return wallPens.has(pen) || openedPens.has(pen); });
+      if (!openedWall.has(candidate) && !opened) { reject(candidate, 'faces not drawn with the drawing\'s wall pens'); continue; }
+      candidate.openedPen = true;
+    }
     pool.push(candidate);
   }
   // A face line can be one face of one wall only: where two pairs share a face, the nearer, cleaner,
@@ -712,6 +820,22 @@ export function detectVectorWalls(segments, context, overrides = {}) {
       if (hits / samples < options.inkShare) { reject(candidate, 'not visible on the rendered page (hidden or white linework)'); return false; }
       return true;
     });
+  }
+
+  // ---- Frames in a wall's gap ---------------------------------------------------------------------------
+  // A pair taken as a wall only for its length, lying end to end in the gap between two pieces of one wall,
+  // at a different thickness from both, is the frame of the sliding door, stacker or window in that gap (its
+  // two frame lines look like a long clean pair). The gap is then read as an opening between the real pieces.
+  {
+    const tolerance = options.frameCapToleranceMm * 3 * mmPx;
+    const runOf = (frame, wall) => wall !== frame && wall.angle === frame.angle && Math.abs(wall.thicknessMm - frame.thicknessMm) > options.thicknessToleranceMm + 3
+      && Math.abs(wall.c - frame.c) <= (wall.thicknessMm + frame.thicknessMm) / 2 * mmPx;
+    // Pieces already established as one wall across its openings (the chain rule) are wall, not frame.
+    const frames = pool.filter((frame) => frame.lengthOnly && frame.lengthMm <= options.openingMaxMm && !continuedAcrossOpening.has(frame)
+      && pool.some((wall) => runOf(frame, wall) && Math.abs(wall.hi - frame.lo) <= tolerance)
+      && pool.some((wall) => runOf(frame, wall) && Math.abs(wall.lo - frame.hi) <= tolerance));
+    for (const frame of frames) reject(frame, 'frame of a door or window filling the gap between two pieces of one wall (not a wall)');
+    if (frames.length) pool = pool.filter((candidate) => !frames.includes(candidate));
   }
 
   // ---- Continuity: a wall interrupted only by a crossing wall continues -----------------------------------
@@ -854,6 +978,32 @@ export function detectVectorWalls(segments, context, overrides = {}) {
     const acrossGap = (p, q) => p.angle === q.angle && Math.abs(p.c - q.c) <= 10 * mmPx && Math.max(p.lo, q.lo) - Math.min(p.hi, q.hi) <= options.openingMaxMm * mmPx;
     for (let i = 0; i < accepted.length; i += 1) for (let j = i + 1; j < accepted.length; j += 1) if (meets(accepted[i], accepted[j]) || acrossGap(accepted[i], accepted[j])
       || cornerWindowConnects(accepted[i], accepted[j]) || cornerWindowConnects(accepted[j], accepted[i])) parent[find(i)] = find(j);
+    // Joined through a door or window: a frame figure (read, but not taken as a wall) whose two ends meet
+    // walls of two clusters joins them (a kitchen wing reached only across a stacker door is the same house).
+    const frameReach = options.frameJoinReachMm * mmPx;
+    const touching = (point) => accepted.map((wall, index) => { const { a, b } = endpoints(wall);
+      const l2 = (b.x - a.x) ** 2 + (b.y - a.y) ** 2, t = l2 ? Math.max(0, Math.min(1, ((point.x - a.x) * (b.x - a.x) + (point.y - a.y) * (b.y - a.y)) / l2)) : 0;
+      return Math.hypot(point.x - a.x - t * (b.x - a.x), point.y - a.y - t * (b.y - a.y)) <= frameReach + wall.thicknessMm / 2 * mmPx ? index : -1; }).filter((index) => index >= 0);
+    const frameRuns = mergeFrameRuns(rejected.filter((frame) => frame.a && frame.b && frame.thicknessMm >= 40 && frame.thicknessMm <= 250 && frame.lengthMm >= 600
+      && /wall pens|frame of a door|thickness not one|another line runs between/.test(frame.reason)), frameReach, 150 * mmPx);
+    // Frames link walls, and frames that meet link each other (a stacker door turning into a sliding door).
+    const runs = frameRuns.filter((frame) => Math.hypot(frame.b.x - frame.a.x, frame.b.y - frame.a.y) / mmPx <= options.openingMaxMm);
+    const near = (point, frame) => { const l2 = (frame.b.x - frame.a.x) ** 2 + (frame.b.y - frame.a.y) ** 2;
+      const t = l2 ? Math.max(0, Math.min(1, ((point.x - frame.a.x) * (frame.b.x - frame.a.x) + (point.y - frame.a.y) * (frame.b.y - frame.a.y)) / l2)) : 0;
+      return Math.hypot(point.x - frame.a.x - t * (frame.b.x - frame.a.x), point.y - frame.a.y - t * (frame.b.y - frame.a.y)) <= frameReach; };
+    const frameParent = runs.map((_, index) => index);
+    const findFrame = (i) => (frameParent[i] === i ? i : (frameParent[i] = findFrame(frameParent[i])));
+    for (let i = 0; i < runs.length; i += 1) for (let j = i + 1; j < runs.length; j += 1)
+      if ([runs[j].a, runs[j].b].some((point) => near(point, runs[i])) || [runs[i].a, runs[i].b].some((point) => near(point, runs[j]))) frameParent[findFrame(i)] = findFrame(j);
+    const wallsOfChain = new Map();
+    runs.forEach((frame, index) => { const root = findFrame(index); wallsOfChain.set(root, [...(wallsOfChain.get(root) || []), ...touching(frame.a), ...touching(frame.b)]); });
+    // A wing joined through a door has walls of its own: a lone pair reached only through a frame is not one.
+    const sizeBefore = new Map(); accepted.forEach((_, index) => sizeBefore.set(find(index), (sizeBefore.get(find(index)) || 0) + 1));
+    const groupOf = new Map(accepted.map((_, index) => [index, find(index)]));
+    for (const wallsTouched of wallsOfChain.values()) {
+      const groups = wallsTouched.filter((index) => sizeBefore.get(groupOf.get(index)) >= 2);
+      for (let k = 1; k < groups.length; k += 1) parent[find(groups[0])] = find(groups[k]);
+    }
     const totals = new Map();
     accepted.forEach((wall, index) => totals.set(find(index), (totals.get(find(index)) || 0) + wall.lengthMm));
     const main = Math.max(0, ...totals.values());
@@ -1046,7 +1196,8 @@ export function detectVectorWalls(segments, context, overrides = {}) {
     const pocket = lines.filter((line) => Math.abs(line.c - gap.c) < half - 5 * mmPx && Math.abs(line.c - gap.c) <= half
       && (Math.abs(line.lo - gap.hi) <= 120 * mmPx || Math.abs(line.hi - gap.lo) <= 120 * mmPx || (line.lo < gap.lo && line.hi > gap.lo) || (line.lo < gap.hi && line.hi > gap.hi))
       && (line.hi - line.lo) / mmPx >= widthMm * 0.6 && (line.hi - line.lo) / mmPx <= widthMm * 2.3);
-    if (kind === 'opening' && pocket.length) { kind = 'cavity-slider'; evidence.push('door leaf drawn in a wall pocket'); }
+    // A cavity slider pockets one or two door leaves; a wider gap with a line beside it is not one.
+    if (kind === 'opening' && pocket.length && widthMm <= 2 * options.leafMaxMm) { kind = 'cavity-slider'; evidence.push('door leaf drawn in a wall pocket'); }
     // Barn doors drawn slid part-way open: each leaf a pair of close parallel lines just outside one face,
     // overlapping the gap; the leaves on that side add up to about the gap's width (one leaf, or two
     // parting to each end).
@@ -1188,7 +1339,7 @@ export function detectVectorWalls(segments, context, overrides = {}) {
         && (Math.abs(item.lo - span.hi) <= 150 * mmPx || Math.abs(item.hi - span.lo) <= 150 * mmPx) && widthMm >= (item.hi - item.lo) / mmPx * 0.6 && widthMm <= (item.hi - item.lo) / mmPx * 1.5);
       if (gap) {
         const at = openings.find((opening) => Math.hypot(opening.x - toXY(gap.angle, (gap.lo + gap.hi) / 2, gap.c).x, opening.y - toXY(gap.angle, (gap.lo + gap.hi) / 2, gap.c).y) <= 50 * mmPx);
-        if (at && at.kind === 'opening') { at.kind = 'cavity-slider'; at.confirmed = true; at.evidence = 'door leaf drawn in the wall pocket beside the gap'; }
+        if (at && at.kind === 'opening' && at.widthMm <= 2 * options.leafMaxMm) { at.kind = 'cavity-slider'; at.confirmed = true; at.evidence = 'door leaf drawn in the wall pocket beside the gap'; }
         continue;
       }
       openings.push({ id: `vo-${openings.length + 1}`, ...centre, axis: Math.abs(Math.cos(wall.angle)) > 0.999 ? 'h' : Math.abs(Math.sin(wall.angle)) > 0.999 ? 'v' : 'd',
@@ -1465,7 +1616,7 @@ export function detectVectorWalls(segments, context, overrides = {}) {
   return {
     engine: 'vector-walls-3', walls: classified ? classified.walls : out, openings, rejected, hatchedRegions: crossHatchedRegions(straight, mmPx),
     ...(classified ? { structures: classified.structures, classification: classified.records } : {}),
-    stats: { ...(classified ? { classifier: classified.stats } : {}), annotatedNiches: measuredNiches.length, projectedFrames: projectedFrames.length, projectedFrameOpeningsAdded: frameStats.added, projectedFramePiecesMerged: frameStats.merged, directionsDeg: directions.map((value) => Math.round(value / deg * 10) / 10), thicknessModesMm: modes.map((value) => Math.round(value)), wallPens: [...wallPens], candidates: all.length, accepted: out.length, rejected: rejected.length },
+    stats: { ...(classified ? { classifier: classified.stats } : {}), annotatedNiches: measuredNiches.length, projectedFrames: projectedFrames.length, projectedFrameOpeningsAdded: frameStats.added, projectedFramePiecesMerged: frameStats.merged, directionsDeg: directions.map((value) => Math.round(value / deg * 10) / 10), thicknessModesMm: modes.map((value) => Math.round(value)), wallPens: [...wallPens], openedPens: [...openedPens], penWeights: Object.fromEntries([...penWeight].map(([style, value]) => [style, Math.round(value)])), cleanWalls: clean.length, candidates: all.length, accepted: out.length, rejected: rejected.length },
   };
 }
 
@@ -1499,4 +1650,30 @@ function groupArcs(chordsIn) {
     arcs.push({ centre: { x: ux, y: uy }, radius, sweepDeg: sweep, start: p, end: r });
   }
   return arcs;
+}
+
+/**
+ * Door and window frame pieces drawn along one line (a stub, then a sliding door's panels) merged into runs.
+ * @param frames [{ a, b }] any consistent unit; maxGap / maxOffset in the same unit
+ */
+export function mergeFrameRuns(frames, maxGap, maxOffset) {
+  const runs = frames.map((frame) => ({ a: { ...frame.a }, b: { ...frame.b } }));
+  for (let merged = true; merged;) {
+    merged = false;
+    for (let i = 0; i < runs.length && !merged; i += 1) for (let j = i + 1; j < runs.length && !merged; j += 1) {
+      const p = runs[i], q = runs[j];
+      const length = Math.hypot(p.b.x - p.a.x, p.b.y - p.a.y); if (!length) continue;
+      const u = { x: (p.b.x - p.a.x) / length, y: (p.b.y - p.a.y) / length };
+      const qx = q.b.x - q.a.x, qy = q.b.y - q.a.y, ql = Math.hypot(qx, qy);
+      if (!ql || Math.abs(u.x * qx + u.y * qy) / ql < 0.995) continue;
+      const along = (pt) => (pt.x - p.a.x) * u.x + (pt.y - p.a.y) * u.y, off = (pt) => Math.abs(-(pt.x - p.a.x) * u.y + (pt.y - p.a.y) * u.x);
+      if (off(q.a) > maxOffset || off(q.b) > maxOffset) continue;
+      const qa = along(q.a), qb = along(q.b);
+      if (Math.max(Math.min(qa, qb) - length, -Math.max(qa, qb)) > maxGap) continue;
+      const lo = Math.min(0, qa, qb), hi = Math.max(length, qa, qb);
+      runs[i] = { a: { x: p.a.x + u.x * lo, y: p.a.y + u.y * lo }, b: { x: p.a.x + u.x * hi, y: p.a.y + u.y * hi } };
+      runs.splice(j, 1); merged = true;
+    }
+  }
+  return runs;
 }

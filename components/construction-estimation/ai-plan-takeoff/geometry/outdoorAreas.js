@@ -141,7 +141,7 @@ export function againstBuilding(polygon, building, reachMm = 1500, overrides = {
  * @param building [{x,y}] building outline (outer wall faces), mm
  * @returns {{ polygon, areaM2, type, label, evidence } | { failed: string }}
  */
-export function traceOutdoorArea({ segments, label, building, options: overrides = {} }) {
+export function traceOutdoorArea({ segments, label, building, exclude = [], options: overrides = {} }) {
   const options = { ...OUTDOOR_DEFAULTS, ...overrides };
   const L = { x: label.x, y: label.y };
   if (!Array.isArray(building) || building.length < 3) return { failed: 'no building outline to attach the area to' };
@@ -167,6 +167,8 @@ export function traceOutdoorArea({ segments, label, building, options: overrides
       const rect = { l: l.c, r: r.c, t: t.c, b: b.c };
       if (tickAtCorner(rect, ticks, tickTol)) continue;
       if (overlapArea(building, rect) / 1e6 > options.houseOverlapM2 + options.houseStripMm * Math.max(width, b.c - t.c) / 1e6) continue;
+      // Nor over a space that is not part of it (a roof over the storey below beside a balcony).
+      if (exclude.some((poly) => poly?.length >= 3 && overlapArea(poly, rect) / 1e6 > options.houseOverlapM2 + options.houseStripMm * Math.max(width, b.c - t.c) / 1e6)) continue;
       const sides = [{ horizontal: true, c: t.c, a: l.c, b: r.c }, { horizontal: true, c: b.c, a: l.c, b: r.c }, { horizontal: false, c: l.c, a: t.c, b: b.c }, { horizontal: false, c: r.c, a: t.c, b: b.c }];
       if (!sides.some((side) => sideToHouse(side, building, options) <= options.touchHouseMm)) continue;
       best = { rect, areaM2 };

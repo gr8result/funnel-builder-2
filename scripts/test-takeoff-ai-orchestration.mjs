@@ -87,7 +87,7 @@ const root = createRoot(document.getElementById('root'));
 const render = () => act(() => root.render(React.createElement(Harness)));
 try {
   await render();
-  await act(() => current.analysis.run());
+  await act(() => current.analysis.run({ assisted: true, authorised: true }));
   assert.equal(current.analysis.stage, 'scale');
   assert.equal(calls.length, 1, 'Scale confirmation happens before measurement request.');
   assert.equal(current.pixelsPerMm, null, 'Inspection does not silently calibrate.');
@@ -100,11 +100,11 @@ try {
   assert.equal(current.collections.completedWallRuns[0].source, 'ai');
   assert.equal(current.collections.completedWallRuns[0].ai.analysisEvidence.basis, 'OBSERVED');
   assert.equal(current.analysis.report.rooms[0].name, 'Kitchen');
-  await act(() => current.analysis.run());
+  await act(() => current.analysis.run({ assisted: true, authorised: true }));
   assert.equal(calls.length, 5, 'An already admitted run never repeats a paid analysis.');
   configuration = { ...configuration, jobId: 'newly-attached-project' };
   await render();
-  await act(() => current.analysis.run());
+  await act(() => current.analysis.run({ assisted: true, authorised: true }));
   assert.equal(calls.length, 5, 'Attaching the same takeoff to a project cannot duplicate its existing AI run.');
   configuration = { ...configuration, jobId: 'unit-job' };
   await render();
@@ -129,14 +129,14 @@ try {
   let release;
   getResponse = async () => new Promise((resolve) => { release = resolve; });
   let running;
-  await act(async () => { running = current.analysis.run(); while (!release) await new Promise((resolve) => setTimeout(resolve, 1)); });
+  await act(async () => { running = current.analysis.run({ assisted: true, authorised: true }); while (!release) await new Promise((resolve) => setTimeout(resolve, 1)); });
   await act(() => current.analysis.cancel());
   await act(async () => { release(inspection); await running; });
   assert.deepEqual(current.collections, before, 'Cancelled analysis never inserts late provider results.');
 
   getResponse = async () => new Promise((resolve) => { release = resolve; });
   release = null;
-  await act(async () => { running = current.analysis.run(); while (!release) await new Promise((resolve) => setTimeout(resolve, 1)); });
+  await act(async () => { running = current.analysis.run({ assisted: true, authorised: true }); while (!release) await new Promise((resolve) => setTimeout(resolve, 1)); });
   configuration = { ...configuration, jobId: 'another-job' };
   await render();
   await act(async () => { release(inspection); await running; });
@@ -149,7 +149,7 @@ try {
   getResponse = async (payload) => payload.action === 'inspect'
     ? { ...inspection, scale: { denominator: null, ...observedEvidence } }
     : { ...measurement, walls: [], review: ['No wall boundary could be established reliably.'] };
-  await act(() => current.analysis.run());
+  await act(() => current.analysis.run({ assisted: true, authorised: true }));
   assert.equal(current.analysis.stage, 'review', current.analysis.message);
   assert.equal(current.analysis.report.added, 0);
   assert.ok(current.analysis.report.review.some((item) => /No wall boundary/.test(item.message)));
@@ -160,7 +160,7 @@ try {
     if (payload.action === 'inspect') return inspection;
     throw new Error('The AI provider rejected the analysis request (HTTP 500). No measurements were inserted.');
   };
-  await act(() => current.analysis.run());
+  await act(() => current.analysis.run({ assisted: true, authorised: true }));
   assert.equal(current.analysis.stage, 'error', 'All measured sheets failing is an error, not a review-only result.');
   assert.match(current.analysis.message, /could not measure the plan.*HTTP 500/, 'The actual provider error is shown in the status message.');
   assert.equal(current.analysis.report, null, 'A failed measurement does not publish an empty takeoff report.');
@@ -176,7 +176,7 @@ try {
     if (payload.action === 'refine') throw new Error('Provider geometry check timed out');
     return measurement;
   };
-  await act(() => current.analysis.run());
+  await act(() => current.analysis.run({ assisted: true, authorised: true }));
   assertFinished(current.analysis, current.analysis.message);
   assert.equal(current.pixelsPerMm, .03, 'Existing calibrated scale is used without another confirmation gate.');
   assert.equal(current.collections.completedWallRuns.length, 1, 'A failed optional refinement cannot discard a valid measured page.');
@@ -192,7 +192,7 @@ try {
   getResponse = async (payload) => payload.action === 'inspect'
     ? { ...inspection, page: payload.page.pageNumber }
     : { ...measurement, page: payload.page.pageNumber };
-  await act(() => current.analysis.run());
+  await act(() => current.analysis.run({ assisted: true, authorised: true }));
   assertFinished(current.analysis, 'A second presentation of the same floor must not abort the full takeoff.', ['duplicate-level']);
   assert.deepEqual(calls.slice(duplicateStart).filter((item) => item.action === 'measure' && item.measurementScope === 'geometry').map((item) => item.page.pageNumber), [1]);
   assert.equal(current.collections.completedWallRuns.length, 1, 'Duplicate floor presentations are not counted twice.');
@@ -206,7 +206,7 @@ try {
     if (payload.action === 'inspect' && payload.page.pageNumber === 2) throw Object.assign(new Error('Supporting page connection failed'), { status: 502 });
     return payload.action === 'inspect' ? inspection : measurement;
   };
-  await act(() => current.analysis.run());
+  await act(() => current.analysis.run({ assisted: true, authorised: true }));
   assertFinished(current.analysis, undefined, ['inspection-failed']);
   assert.equal(current.collections.completedWallRuns.length, 1, 'A failed supporting-page inspection cannot discard a successfully inspected floor plan.');
   assert.ok(current.analysis.report.review.some((item) => item.code === 'inspection-failed'));
@@ -227,7 +227,7 @@ try {
   getResponse = async (payload) => payload.action === 'inspect' ? inspectByPage(payload)
     : payload.action === 'measure' && payload.measurementScope === 'items' && failMeasureItems ? providerFailure(502, 'provider_unavailable', 'OpenAI is temporarily unavailable.', 0) : measurement;
   let start = calls.length;
-  await act(() => current.analysis.run());
+  await act(() => current.analysis.run({ assisted: true, authorised: true }));
   let sequence = calls.slice(start).map((item) => `${item.action}:${item.measurementScope || ''}:${item.page.pageNumber}`);
   assert.deepEqual(sequence, ['inspect::1', 'inspect::2', 'measure:geometry:1', 'measure:items:1', 'measure:items:1'], 'Only the failed items half is retried; the successful geometry half is not repeated.');
   assert.equal(current.analysis.stage, 'error');
@@ -245,7 +245,7 @@ try {
   // Re-run after the failure: no re-inspection, geometry half reused, items half requested.
   failMeasureItems = false;
   start = calls.length;
-  await act(() => current.analysis.run());
+  await act(() => current.analysis.run({ assisted: true, authorised: true }));
   sequence = calls.slice(start).map((item) => `${item.action}:${item.measurementScope || ''}:${item.page.pageNumber}`);
   assert.deepEqual(sequence, ['measure:items:1', 'refine:geometry:1', 'refine:items:1'], 'Re-run never re-inspects unchanged pages nor repeats the successful geometry half.');
   assertFinished(current.analysis, current.analysis.message);
@@ -255,13 +255,13 @@ try {
   // Saved inspections restored on reopen still prevent re-inspection; a changed page image is re-inspected.
   await resetRun(cachedInspections);
   start = calls.length;
-  await act(() => current.analysis.run());
+  await act(() => current.analysis.run({ assisted: true, authorised: true }));
   assert.ok(!calls.slice(start).some((item) => item.action === 'inspect'), 'Reopened takeoff reuses saved page inspections.');
   configuration = { ...configuration, planPages: [page, { ...elevation, dataUrl: 'data:image/png;base64,changed' }] };
   await render();
   await resetRun(cachedInspections);
   start = calls.length;
-  await act(() => current.analysis.run());
+  await act(() => current.analysis.run({ assisted: true, authorised: true }));
   assert.deepEqual(calls.slice(start).filter((item) => item.action === 'inspect').map((item) => item.page.pageNumber), [2], 'Only the changed page is inspected again.');
   configuration = { ...configuration, planPages: [page, elevation] };
   await render();
@@ -279,7 +279,7 @@ try {
     }
     return measurement;
   };
-  await act(() => current.analysis.run());
+  await act(() => current.analysis.run({ assisted: true, authorised: true }));
   assertFinished(current.analysis, current.analysis.message);
   assert.equal(stamps.length, 2);
   assert.ok(stamps[1] - stamps[0] >= 390, `Retry waited for retry-after (${stamps[1] - stamps[0]} ms).`);
@@ -287,7 +287,7 @@ try {
   start = calls.length;
   getResponse = async (payload) => payload.action === 'inspect' ? inspectByPage(payload)
     : payload.measurementScope === 'items' ? providerFailure(429, 'provider_rate_limit', 'OpenAI rate limit reached. Retry after 600s.', 600) : measurement;
-  await act(() => current.analysis.run());
+  await act(() => current.analysis.run({ assisted: true, authorised: true }));
   assert.equal(calls.slice(start).filter((item) => item.measurementScope === 'items').length, 1, 'A retry-after beyond the wait limit is reported, not retried.');
   assert.match(current.analysis.message, /Retry after 600s/);
 
@@ -301,7 +301,7 @@ try {
     getResponse = async (payload) => payload.action === 'inspect' ? { ...inspection, page: payload.page.pageNumber, level: payload.page.pageNumber === 2 ? 'Second Level' : 'Ground Floor' }
       : providerFailure(status, code, text);
     start = calls.length;
-    await act(() => current.analysis.run());
+    await act(() => current.analysis.run({ assisted: true, authorised: true }));
     sequence = calls.slice(start).map((item) => `${item.action}:${item.measurementScope || ''}:${item.page.pageNumber}`);
     assert.deepEqual(sequence, ['inspect::1', 'inspect::2', 'measure:geometry:1'], `${code} during measurement stops all further requests.`);
     assert.equal(current.analysis.stage, 'error');
@@ -310,11 +310,90 @@ try {
     await resetRun();
     getResponse = async () => providerFailure(status, code, text);
     start = calls.length;
-    await act(() => current.analysis.run());
+    await act(() => current.analysis.run({ assisted: true, authorised: true }));
     assert.deepEqual(calls.slice(start).map((item) => `${item.action}:${item.page.pageNumber}`), ['inspect:1'], `${code} during inspection stops all further requests.`);
     assert.ok(current.analysis.message.includes(text));
   }
   assert.deepEqual(current.collections, emptyCollections(), 'Failed runs insert nothing.');
+
+  // Calibrated vector floor plans (styled PDF linework) are measured from their own linework, so a plan
+  // reading that times out must not discard them, and their geometry check is not requested.
+  const box = (x1, y1, x2, y2) => [[x1, y1, x2, y1], [x2, y1, x2, y2], [x2, y2, x1, y2], [x1, y2, x1, y1]]
+    .map(([ax, ay, bx, by], index) => ({ x1: ax, y1: ay, x2: bx, y2: by, path: 1, subpath: index, widthPx: 0.7, paint: 'stroke', color: '#000000', dashed: false }));
+  const vectorSegments = [...box(100, 100, 700, 500), ...box(107, 107, 693, 493)];
+  configuration = { ...configuration, planPages: [{ ...page, vectorSegments }, { ...page, pageNumber: 2, vectorSegments }] };
+  await render();
+  const linework = async (respond) => {
+    await resetRun();
+    await act(() => current.setPixelsPerMm(.03));
+    getResponse = async (payload) => payload.action === 'inspect'
+      ? { ...inspection, drawingType: 'floor_plan', page: payload.page.pageNumber, level: payload.page.pageNumber === 2 ? 'Second Level' : 'Ground Floor' }
+      : respond(payload);
+    start = calls.length;
+    await act(() => current.analysis.run({ assisted: true, authorised: true }));
+    return calls.slice(start).map((item) => `${item.action}:${item.measurementScope || ''}:${item.page.pageNumber}`);
+  };
+  const timedOut = (payload) => providerFailure(504, 'analysis_timeout', `The wall and area reading of sheet ${payload.page.pageNumber} (OpenAI gpt-5.4) did not finish within 285 s, so it was stopped. No measurements were inserted.`);
+  sequence = await linework(timedOut);
+  assert.notEqual(current.analysis.stage, 'error', `A timed-out reading does not fail a sheet measured from linework: ${current.analysis.message}`);
+  assert.doesNotMatch(current.analysis.message, /could not measure the plan/);
+  assert.ok(current.analysis.report, 'The linework measurement is published');
+  const readingFailures = current.analysis.report.review.filter((item) => item.code === 'sheet-reading-failed');
+  assert.deepEqual([...new Set(readingFailures.map((item) => item.page))].sort(), [1, 2], 'Each sheet says its reading failed');
+  assert.ok(readingFailures.every((item) => item.audience === 'decision' && /did not finish within 285 s/.test(item.message)), 'The builder sees the actual failure, as a decision');
+  assert.ok(!sequence.some((item) => item.startsWith('refine:')), `No geometry check is requested on linework sheets (${sequence})`);
+  assert.deepEqual(sequence.filter((item) => item.startsWith('measure:')).sort(), ['measure:geometry:1', 'measure:geometry:2', 'measure:items:1', 'measure:items:2'], 'Both halves of both sheets were tried once each');
+  assert.equal(sequence.indexOf('measure:geometry:1') < sequence.indexOf('measure:geometry:2'), true, 'The second sheet starts only after the first request has been answered');
+  // One half answered, one timed out: the answered half is kept and the failure is named.
+  sequence = await linework((payload) => payload.measurementScope === 'items' ? timedOut(payload) : measurement);
+  assert.notEqual(current.analysis.stage, 'error', current.analysis.message);
+  assert.ok(current.analysis.report.review.some((item) => item.code === 'sheet-reading-failed' && /door, window and room reading/.test(item.message)), 'The failed half is named');
+  assert.ok(!sequence.some((item) => item.startsWith('refine:')), 'No geometry check on linework sheets');
+  // Hard failures still stop everything: the second sheet sends nothing.
+  sequence = await linework(() => providerFailure(503, 'provider_quota_exhausted', 'OpenAI API quota exhausted'));
+  assert.deepEqual(sequence, ['inspect::1', 'inspect::2', 'measure:geometry:1'], 'A hard failure on a linework plan still stops all further requests');
+  // No credit is not a total failure: the plan is measured locally instead, with no further provider request.
+  for (let wait = 0; wait < 200 && (current.analysis.stage === 'reading' || current.analysis.stage === 'measuring' || current.analysis.stage === 'building'); wait += 1) await act(() => new Promise((resolve) => setTimeout(resolve, 10)));
+  assert.equal(calls.length - start, 3, 'the local fallback sends nothing to the provider');
+  assert.notEqual(current.analysis.stage, 'error', current.analysis.message);
+  assert.match(current.analysis.message, /AI-assisted analysis stopped: OpenAI API quota exhausted.*locally/s, 'the builder sees the provider failure and that the plan was measured locally');
+  assert.equal(current.analysis.report.provider, 'GR8 Result local measurement (no AI)');
+  assert.deepEqual(Object.keys(current.analysis.report.linework || {}).sort(), ['1', '2'], 'both sheets were measured from their own linework');
+
+  // Local-first: Run Takeoff measures the levelled, calibrated vector sheets and sends nothing to any provider.
+  const sent = () => calls.length + evidenceCalls.length;
+  await resetRun();
+  configuration = { ...configuration, sheetLevels: {} };
+  await render();
+  let sentBefore = sent();
+  await act(() => current.analysis.run());
+  assert.equal(sent(), sentBefore, 'with no level chosen nothing is sent');
+  assert.match(current.analysis.message, /Choose the level of each floor-plan sheet/, current.analysis.message);
+  configuration = { ...configuration, sheetLevels: { 1: 'Ground Floor', 2: 'Second Level' } };
+  await render();
+  await act(() => current.setPixelsPerMm(.03));
+  await act(() => current.analysis.run());
+  assert.equal(sent(), sentBefore, 'the local run sends nothing to the provider');
+  assert.notEqual(current.analysis.stage, 'error', current.analysis.message);
+  assert.equal(current.analysis.report.provider, 'GR8 Result local measurement (no AI)');
+  assert.equal(current.analysis.report.aiAssisted, null);
+  assert.deepEqual(current.analysis.report.requests, []);
+  assert.deepEqual(Object.keys(current.analysis.report.linework || {}).sort(), ['1', '2'], 'both levelled sheets were measured locally');
+  assert.match(current.analysis.message, /no AI requests, no charges/);
+  const afterLocal = JSON.stringify(current.collections);
+  await act(() => current.analysis.run());
+  assert.equal(sent(), sentBefore, 'a rerun sends nothing');
+  assert.equal(JSON.stringify(current.collections), afterLocal, 'a rerun adds nothing twice');
+  // Paid requests need explicit authorisation: without it nothing is sent.
+  await act(() => current.analysis.run({ assisted: true }));
+  assert.equal(sent(), sentBefore, 'AI-assisted analysis without authorisation sends nothing');
+  assert.match(current.analysis.message, /Authorise it first; nothing was sent/);
+  await act(() => current.analysis.rooms.read());
+  assert.equal(sent(), sentBefore, 'reading rooms with AI without authorisation sends nothing');
+  assert.match(current.analysis.rooms.message, /Authorise it first; nothing was sent/);
+  configuration = { ...configuration, sheetLevels: undefined };
+  configuration = { ...configuration, planPages: [page] };
+  await render();
 
   const rotated ={ walls: [{ nodes: [{ x: .2, y: .3 }, { x: .4, y: .5 }] }], openings: [{ x: .6, y: .7 }], buildingAreas: [], rooms: [], fixtures: [] };
   assert.deepEqual(restoreAnalysisCoordinates(rotated, 270).walls[0].nodes, [{ x: .7, y: .2 }, { x: .5, y: .4 }]);
@@ -324,7 +403,7 @@ try {
   configuration = {...configuration, planPages:[page], sheetLevels:{1:'Ground Floor'}};
   await render(); await resetRun();
   getResponse = async () => ({...measurement,walls:[],rooms:[{page:1,name:'Main Bathroom',x:.3,y:.3,polygon:[{x:.1,y:.1},{x:.5,y:.1},{x:.5,y:.5},{x:.1,y:.5}],boundaryClosed:true,printedAreaM2:null,dimensionReferences:[],...observedEvidence}]});
-  await act(()=>current.analysis.rooms.read());
+  await act(()=>current.analysis.rooms.read({ authorised: true }));
   assert.equal(current.analysis.rooms.error,false,current.analysis.rooms.message);
   const detectedRoom=current.analysis.report.rooms[0];
   assert.equal(detectedRoom.polygon.length,4);
@@ -334,7 +413,7 @@ try {
   const originalArea=current.analysis.report.rooms[0].areaM2;
   await act(()=>current.setPixelsPerMm(current.pixelsPerMm*2));
   assert.equal(current.analysis.report.rooms[0].areaM2,originalArea/4,'Sheet calibration recalculates room area');
-  await act(()=>current.analysis.rooms.read());
+  await act(()=>current.analysis.rooms.read({ authorised: true }));
   assert.equal(current.analysis.report.rooms.length,1,'Confirmed boundary is not duplicated on reread');
   assert.deepEqual(current.analysis.report.rooms[0].actions,['Floor Tiling']);
 

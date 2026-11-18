@@ -26,12 +26,23 @@ export function vectorProductionAnalysis(response,detected,spec,{wallDecisions={
     &&raw.explicitWidthMm/gap.widthMm>=.75&&raw.explicitWidthMm/gap.widthMm<=1.25)}));
   const confirmations=new Map();
   for(const match of matches)if(match.gaps.length===1&&matches.filter(other=>other.gaps.includes(match.gaps[0])).length===1)confirmations.set(match.gaps[0],match.raw);
+  // A wide gap with one line across it is a garage door only where the sheet names a garage (or carport)
+  // within reach. Elsewhere the same figure may be a balustrade, a void edge or an open side (upper floors,
+  // decks): the measured gap keeps closing the wall line (so the outline and rooms still close), but its type
+  // waits for the builder and it is not counted as a garage door.
+  const garageWords=[...labels.map(label=>({text:label.name,x:label.x,y:label.y})),...((outdoor?.textItems)||[]).map(item=>({text:item.text,x:item.x+(Number(item.width)||0)/2,y:item.y}))]
+    .filter(item=>/garage|carport/i.test(String(item.text||''))&&validPoint(item));
+  const garageNamed=gap=>garageWords.some(item=>Math.hypot(item.x-gap.x,item.y-gap.y)/spec.pixelsPerMm<=9000);
   const measuredGeometry={...detected,openings:(detected.openings||[]).map(gap=>{
-    const raw=confirmations.get(gap);if(!raw)return gap;
+    const raw=confirmations.get(gap);
+    if(!raw&&gap.kind==='garage-door'&&!garageNamed(gap))return {...gap,needsClassification:true,garageUnconfirmed:true,
+      evidence:`${gap.evidence}; no garage is named near it, so it may be a balustrade, void edge or open side: confirm what it is`};
+    if(!raw)return gap;
     const kind=raw.openingClass==='Other Opening'?'opening':raw.type==='window'?'window':/barn/i.test(raw.subType||'')?'barn-door':'door';
     return {...gap,confirmed:true,kind,evidence:`Measured gap confirmed by documented opening annotation: ${raw.evidence}`};
   })};
-  const initial=vectorAnalysisFromLinework(measuredGeometry,spec,{labels,wallDecisions});
+  const drawnLines=(outdoor?.segments)||[];
+  const initial=vectorAnalysisFromLinework(measuredGeometry,spec,{labels,wallDecisions,drawnLines});
   const classifications={};
   for(const wall of Object.values(initial.level.walls)){
     const points=wallPoints(initial.level,wall).map(p=>({x:p.x*spec.pixelsPerMm,y:p.y*spec.pixelsPerMm}));
@@ -46,7 +57,7 @@ export function vectorProductionAnalysis(response,detected,spec,{wallDecisions={
     });
     if(matches.length&&new Set(matches.map(m=>m.category)).size===1)classifications[wall.detectionKey]={category:matches[0].category,evidence:matches[0].evidence};
   }
-  const vector=Object.keys(classifications).length ? vectorAnalysisFromLinework(measuredGeometry,spec,{labels,classifications,wallDecisions}) : initial;
+  const vector=Object.keys(classifications).length ? vectorAnalysisFromLinework(measuredGeometry,spec,{labels,classifications,wallDecisions,drawnLines}) : initial;
   const used=new Set();
   const openings=vector.response.openings.map(measured=>{
     const near=(response.openings||[]).filter(raw=>observed(raw)&&validPoint(raw)&&!used.has(raw)).map(raw=>({raw,d:Math.hypot((raw.x-measured.x)*spec.logicalWidth,(raw.y-measured.y)*spec.logicalHeight)/spec.pixelsPerMm})).filter(x=>x.d<=400).sort((a,b)=>a.d-b.d);
@@ -68,13 +79,59 @@ export function vectorProductionAnalysis(response,detected,spec,{wallDecisions={
   vector.report.openingsNeedingClassification = openings.filter(opening=>opening.needsClassification).length;
   vector.report.documentedGapConfirmations = confirmations.size;
   vector.response = {...vector.response,openings};
-  const buildingAreas=measuredBuildingAreas(response.buildingAreas||[],vector,spec,outdoor);
+  // Words printed on the sheet: its text layer, room names read locally, and other words read locally.
+  const sheetText=[...((outdoor?.textItems)||[]).map(item=>({text:String(item.text||item.str||''),x:item.x+(Number(item.width)||0)/2,y:item.y})),
+    ...((outdoor?.notes)||[]).map(item=>({text:String(item.text||''),x:item.x,y:item.y})),...labels.map(label=>({text:label.name,x:label.x,y:label.y}))].filter(item=>item.text&&validPoint(item));
+  excludeRoofOnlySpaces(vector,spec,sheetText);
+  const buildingAreas=measuredBuildingAreas(response.buildingAreas||[],vector,spec,{...(outdoor||{}),sheetText});
   vector.report.footprint=buildingAreas.report;
   return {vector,detected:measuredGeometry,response:{...response,...vector.response,openings,rooms:vector.rooms,buildingAreas:buildingAreas.areas,
     review:[...(response.review||[]),...(unmatched.length?[`${unmatched.length} AI opening annotations lack an unambiguous measured opening; they were withheld from quantities.`]:[])]}};
 }
 
 const OUTDOOR=/\b(alfresco|patio|balcony|porch|verandah|veranda|deck|terrace|courtyard|portico)\b/i;
+// Words that mark a drawn area as roof, not floor: the roof over the storey below drawn on an upper plan
+// (a porch or entry roof inside the upper walls' lines), with its pitch, gutter or sheeting noted.
+export const ROOF_WORDS=/\b(roof|roofing|pitch|pitched|gutter|awnings?|skillion|sheeting|colorbond|polycarbonate|metal\s*deck)\b|\d\s*°/i;
+const unnamed=room=>!room.name||/^unlabelled room/i.test(room.name);
+
+// An enclosed area with no room name and a roof word printed inside it is roof (over the storey below),
+// not a room of this storey: it is left out of the room schedule and the floor outline, and walls that bound
+// nothing but it wait for the builder (a parapet, a fascia or a low wall, not a house wall of this storey).
+function excludeRoofOnlySpaces(vector,spec,sheetText){
+  const marks=sheetText.filter(item=>ROOF_WORDS.test(item.text)).map(item=>({...item,nx:item.x/spec.logicalWidth,ny:item.y/spec.logicalHeight}));
+  if(!marks.length)return;
+  const inside=(room,mark)=>pointInPolygon({x:mark.nx,y:mark.ny},room.polygon);
+  const roof=(vector.rooms||[]).filter(room=>unnamed(room)&&room.polygon?.length>=3&&marks.some(mark=>inside(room,mark)));
+  if(!roof.length)return;
+  const words=room=>[...new Set(marks.filter(mark=>inside(room,mark)).map(mark=>mark.text))];
+  vector.roofOnlySpaces=roof.map(room=>({id:room.id,polygon:room.polygon,areaM2:room.measurementBases?.grossRoomAreaM2??null,words:words(room),
+    evidence:`Enclosed area with no room name and "${words(room).join('", "')}" printed inside it: roof over the storey below, not floor of this storey. Left out of the rooms and the floor outline; confirm.`}));
+  vector.rooms=vector.rooms.filter(room=>!roof.includes(room));
+  if(vector.report)vector.report.roofOnlySpaces=roof.length;
+  // Walls whose every side is roof or outside: held for review instead of counted as house walls.
+  const mm=p=>({x:p.x*spec.logicalWidth/spec.pixelsPerMm,y:p.y*spec.logicalHeight/spec.pixelsPerMm});
+  const roofRings=roof.map(room=>room.polygon.map(mm)),roomRings=vector.rooms.filter(room=>room.polygon?.length>=3).map(room=>room.polygon.map(mm));
+  const near=(p,rings,reach)=>rings.some(r=>pointInPolygon(p,r)||r.some((a,i)=>distance(p,a,r[(i+1)%r.length])<=reach));
+  const hosted=new Set((vector.response.openings||[]).map(opening=>opening.hostDetectionId).filter(Boolean));
+  const held=[];
+  const walls=(vector.response.walls||[]).filter(wall=>{
+    if(hosted.has(wall.detectionId)||!(wall.nodes?.length>=2))return true;
+    const pts=wall.nodes.map(mm),reach=(Number(wall.thicknessMm)||90)/2+60;let byRoof=0,total=0;
+    for(let i=1;i<pts.length;i++)for(let k=0;k<8;k++){const t=(k+.5)/8,p={x:pts[i-1].x+(pts[i].x-pts[i-1].x)*t,y:pts[i-1].y+(pts[i].y-pts[i-1].y)*t};total++;
+      if(!near(p,roomRings,reach)&&near(p,roofRings,reach))byRoof++;}
+    if(!(total&&byRoof/total>=.75))return true;
+    held.push(wall);return false;
+  });
+  if(!held.length)return;
+  const lineage=new Map((vector.wallLineage||[]).map(item=>[item.detectionId,item]));
+  vector.response={...vector.response,walls};
+  vector.reviewWallCandidates=[...(vector.reviewWallCandidates||[]),...held.map(wall=>{const item=lineage.get(wall.detectionId)||{};return {
+    id:`review-wall-${item.modelWallId||wall.detectionId}`,modelWallId:item.modelWallId||null,detectionKey:item.detectionKey||null,absorbedKeys:item.absorbedKeys||[],page:spec.page,
+    nodes:wall.nodes.map(p=>({x:p.x*spec.logicalWidth,y:p.y*spec.logicalHeight})),normalizedNodes:wall.nodes,thicknessMm:wall.thicknessMm,category:null,status:'review-required',
+    reason:'Bounds only an area marked as roof (and outside): a parapet, fascia or low wall rather than a house wall of this storey. Confirm it as External to measure it, or mark it Not a wall.'};})];
+  if(vector.report)vector.report.roofOnlyWallsHeld=held.length;
+}
 const OUTDOOR_TYPES=['Alfresco','Patio','Porch','Balcony','Deck'];
 const ringArea=r=>Math.abs(r.reduce((s,p,i)=>{const q=r[(i+1)%r.length];return s+p.x*q.y-q.x*p.y;},0))/2;
 
@@ -88,8 +145,13 @@ function measuredBuildingAreas(readings,vector,spec,outdoor=null){
   const fromMm=p=>({x:p.x*spec.pixelsPerMm/spec.logicalWidth,y:p.y*spec.pixelsPerMm/spec.logicalHeight});
   const indoor=(vector.rooms||[]).filter(room=>room.polygon?.length>=3&&!OUTDOOR.test(room.name||''));
   const walls=(vector.response.walls||[]).map(wall=>({nodes:wall.nodes.map(toMm),thicknessMm:wall.thicknessMm}));
-  const outlines=indoor.length?buildingOutlines(indoor.map(room=>room.polygon.map(toMm)),walls):[];
-  const report={measured:Boolean(outlines.length),outlineM2:outlines[0]?+outlines[0].areaM2.toFixed(2):null,rooms:indoor.length};
+  // The connected wall model (mm), spans across openings included: the building's envelope even where a
+  // space inside it does not close as a room.
+  const envelope=vector.level?[...Object.values(vector.level.walls).map(wall=>({nodes:wallPoints(vector.level,wall),thicknessMm:wall.thicknessMm})),
+    ...Object.values(vector.level.separators||{}).filter(item=>item.basis==='gap-closure'||item.basis==='opening-closure').map(item=>({nodes:item.nodeIds.map(id=>vector.level.nodes[id]).filter(Boolean),thicknessMm:90}))]:[];
+  const roofRings=(vector.roofOnlySpaces||[]).map(space=>space.polygon.map(toMm));
+  const outlines=indoor.length?buildingOutlines(indoor.map(room=>room.polygon.map(toMm)),walls,roofRings.length?{exclude:roofRings}:{},envelope):[];
+  const report={measured:Boolean(outlines.length),outlineM2:outlines[0]?+outlines[0].areaM2.toFixed(2):null,rooms:indoor.length,...(roofRings.length?{roofOnlyExcluded:roofRings.length}:{})};
   if(!outlines.length)return {areas:readings,report};
   const outline=outlines[0];
   const evidence=`Outline of the ${indoor.length} measured rooms with their walls out to the outer face (${outline.areaM2.toFixed(2)} m²), measured from the vector linework on sheet ${spec.page}; door and window gaps closed.`;
@@ -115,13 +177,15 @@ function measuredBuildingAreas(readings,vector,spec,outdoor=null){
   }
   // Outdoor areas named on the sheet, measured from their drawn outline (geometry/outdoorAreas.js). A plan
   // reading of the same area keeps only its label and position; the outline is the drawing's.
-  if(outdoor?.segments?.length&&outdoor?.textItems?.length){
+  // Labels from the text layer and from local reading of outlined text (a sheet with no text layer).
+  const outdoorText=outdoor?.sheetText||((outdoor?.textItems)||[]).map(t=>({text:String(t.text||t.str||''),x:t.x+(Number(t.width)||0)/2,y:t.y}));
+  if(outdoor?.segments?.length&&outdoorText.length){
     const segments=outdoor.segments.map(s=>({x1:s.x1/spec.pixelsPerMm,y1:s.y1/spec.pixelsPerMm,x2:s.x2/spec.pixelsPerMm,y2:s.y2/spec.pixelsPerMm}));
-    const labels=outdoor.textItems.filter(t=>OUTDOOR_LABEL.test(String(t.text||t.str||''))&&Number.isFinite(t.x)&&Number.isFinite(t.y))
-      .map(t=>({text:String(t.text||t.str).trim(),x:(t.x+(Number(t.width)||0)/2)/spec.pixelsPerMm,y:t.y/spec.pixelsPerMm}));
+    const labels=outdoorText.filter(t=>OUTDOOR_LABEL.test(String(t.text||''))&&Number.isFinite(t.x)&&Number.isFinite(t.y))
+      .map(t=>({text:String(t.text).trim(),x:t.x/spec.pixelsPerMm,y:t.y/spec.pixelsPerMm}));
     report.outdoor=[];const traced=[];
     for(const label of labels){
-      const found=traceOutdoorArea({segments,label,building:outline.polygon});
+      const found=traceOutdoorArea({segments,label,building:outline.polygon,exclude:roofRings});
       if(found.failed){report.outdoor.push({label:label.text,failed:found.failed});continue;}
       const centre={x:found.polygon.reduce((s,p)=>s+p.x,0)/found.polygon.length,y:found.polygon.reduce((s,p)=>s+p.y,0)/found.polygon.length};
       if(traced.some(t=>pointInPolygon(centre,t.polygon)))continue; // a second label in the same area

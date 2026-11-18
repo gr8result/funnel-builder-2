@@ -107,7 +107,7 @@ pass('the Rooms schedule is the Takeoff Schedule rooms and the project room list
 // ---- the takeoff screen ----
 const action = fs.readFileSync('components/construction-estimation/ai-plan-takeoff/ai-integration/AiTakeoffAction.jsx', 'utf8');
 const hook = fs.readFileSync('components/construction-estimation/ai-plan-takeoff/ai-integration/useAiTakeoffAnalysis.js', 'utf8');
-assert(action.includes('id="read-rooms-from-plans"') && action.includes('READ ROOMS FROM PLANS') && action.includes('id="add-room"'));
+assert(action.includes('id="read-rooms-from-plans"') && action.includes('READ ROOMS WITH AI (OPENAI — PAID)') && action.includes('id="confirm-ai-rooms"') && action.includes('id="add-room"'));
 assert(hook.includes('measurementScope: ROOMS_SCOPE') && !/readRooms[\s\S]{0,3000}appendDetections/.test(hook.slice(hook.indexOf('const readRooms'), hook.indexOf('const addRoom'))), 'reading rooms never adds geometry to the canvas');
 pass('the takeoff has a Read Rooms from Plans action that leaves the canvas alone');
 console.log('\nRooms from plans: all checks passed');

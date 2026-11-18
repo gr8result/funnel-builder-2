@@ -12,6 +12,7 @@ export const OUTLINE_DEFAULTS = {
   closeMm: 160,        // gaps narrower than twice this (door and window gaps, wall joints) are closed
   minComponentM2: 4,   // separate pieces smaller than this are not a building
   simplifyMm: 30,
+  excludeWallMm: 280,  // an excluded area (roof) leaves the outline with its walls to this depth, unless they bound a room
 };
 
 const shoelace = (polygon) => polygon.reduce((sum, p, i) => { const q = polygon[(i + 1) % polygon.length]; return sum + p.x * q.y - q.x * p.y; }, 0) / 2;
@@ -150,12 +151,17 @@ function simplify(points, tolerance) {
  * @param walls measured walls (mm) [{ nodes: [{x,y}...], thicknessMm }]
  * @returns [{ polygon (mm, outer face of the walls), areaM2, roomsM2, rooms: number }] largest first
  */
-export function buildingOutlines(rooms = [], walls = [], overrides = {}) {
+// envelopeWalls: the connected wall model's own walls (external walls and the spans it draws across door and
+// window gaps). They belong to the building however far they are from a closed room, so an open-plan area
+// that does not close as a room (a stair void, an open side to another space) is still inside the outline
+// when the external walls round it are measured.
+export function buildingOutlines(rooms = [], walls = [], overrides = {}, envelopeWalls = []) {
   const options = { ...OUTLINE_DEFAULTS, ...overrides };
   const roomRings = rooms.filter((ring) => Array.isArray(ring) && ring.length >= 3 && Math.abs(shoelace(ring)) > 0);
   if (!roomRings.length) return [];
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   for (const ring of roomRings) for (const p of ring) { x0 = Math.min(x0, p.x); y0 = Math.min(y0, p.y); x1 = Math.max(x1, p.x); y1 = Math.max(y1, p.y); }
+  for (const wall of envelopeWalls) for (const p of wall?.nodes || []) if (Number.isFinite(p?.x) && Number.isFinite(p?.y)) { x0 = Math.min(x0, p.x); y0 = Math.min(y0, p.y); x1 = Math.max(x1, p.x); y1 = Math.max(y1, p.y); }
   const margin = options.wallReachMm + options.closeMm + 4 * options.cellMm;
   x0 -= margin; y0 -= margin; x1 += margin; y1 += margin;
   const cell = options.cellMm;
@@ -166,7 +172,8 @@ export function buildingOutlines(rooms = [], walls = [], overrides = {}) {
   for (const ring of roomRings) fillPolygon(roomGrid, ring, toCell);
   const near = morph(roomGrid, Math.round(options.wallReachMm / cell), true);
   const wallGrid = { width, height, data: new Uint8Array(width * height) };
-  for (const wall of walls) {
+  const envelopeGrid = { width, height, data: new Uint8Array(width * height) };
+  for (const [grid, list] of [[wallGrid, walls], [envelopeGrid, envelopeWalls]]) for (const wall of list) {
     const nodes = (wall?.nodes || []).filter((p) => Number.isFinite(p?.x) && Number.isFinite(p?.y));
     const half = (Number(wall?.thicknessMm) || 90) / 2;
     for (let i = 0; i < nodes.length - 1; i += 1) {
@@ -174,13 +181,23 @@ export function buildingOutlines(rooms = [], walls = [], overrides = {}) {
       const length = Math.hypot(b.x - a.x, b.y - a.y);
       if (!length) continue;
       const nx = -(b.y - a.y) / length * half, ny = (b.x - a.x) / length * half;
-      fillPolygon(wallGrid, [{ x: a.x + nx, y: a.y + ny }, { x: b.x + nx, y: b.y + ny }, { x: b.x - nx, y: b.y - ny }, { x: a.x - nx, y: a.y - ny }], toCell);
+      fillPolygon(grid, [{ x: a.x + nx, y: a.y + ny }, { x: b.x + nx, y: b.y + ny }, { x: b.x - nx, y: b.y - ny }, { x: a.x - nx, y: a.y - ny }], toCell);
     }
   }
   const union = { width, height, data: new Uint8Array(width * height) };
-  for (let i = 0; i < union.data.length; i += 1) union.data[i] = roomGrid.data[i] || (wallGrid.data[i] && near.data[i]) ? 1 : 0;
+  for (let i = 0; i < union.data.length; i += 1) union.data[i] = roomGrid.data[i] || envelopeGrid.data[i] || (wallGrid.data[i] && near.data[i]) ? 1 : 0;
   const r = Math.round(options.closeMm / cell);
   const closed = fillHoles(morph(morph(union, r, true), r, false));
+  // Areas that are not floor (a roof over the storey below, drawn inside walls on this sheet): out of the
+  // outline, with the walls round them out to their outer face, except where those walls also bound a room.
+  const exclude = (options.exclude || []).filter((ring) => Array.isArray(ring) && ring.length >= 3);
+  if (exclude.length) {
+    const out = { width, height, data: new Uint8Array(width * height) };
+    for (const ring of exclude) fillPolygon(out, ring, toCell);
+    const reach = Math.round(options.excludeWallMm / cell);
+    const outer = morph(out, reach, true), keep = morph(roomGrid, reach, true);
+    for (let i = 0; i < closed.data.length; i += 1) if (outer.data[i] && !keep.data[i] && !roomGrid.data[i]) closed.data[i] = 0;
+  }
   const { label, list } = components(closed);
   const cellM2 = (cell * cell) / 1e6;
   const out = [];

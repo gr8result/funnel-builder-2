@@ -140,3 +140,61 @@ export function dimensionedThicknesses(segments, textItems, pixelsPerMm, { maxTh
   }
   return intervals;
 }
+
+// Dimension strings recognised from their drawn figure alone, for PDFs with no text layer (outlined
+// lettering is common in CAD exports, so dimensionAnnotationStrokes above finds no labels there). A
+// dimension point is a short 45-degree tick (drawn at paper size) with two perpendicular lines through
+// its centre, one of them crossing it: the dimension line and the extension line across it. Excluded: the ticks; a line with ticks at both
+// of its ends (the dimension line between its end ticks); and a line drawn with the tick's pen that ends
+// at a tick (an extension line or the stub beyond the end tick). A wall face crossing a dimension neither
+// ends at the tick nor shares the dimension pen, so it is kept. Positions are in PDF units (points).
+export function tickedDimensionStrokes(segments, { tickMinPt = 2, tickMaxPt = 16, onLinePt = 0.8, endPt = 12, witnessEndPt = 6 } = {}) {
+  const excluded = new Set();
+  const straight = (segments || []).filter((s) => s.paint === 'stroke' && !s.curve && Number.isFinite(s.x1) && Number.isFinite(s.y2));
+  const length = (s) => Math.hypot(s.x2 - s.x1, s.y2 - s.y1);
+  const pen = (s) => `${(Math.round((s.widthPx || 0) * 100) / 100).toFixed(2)}|${s.color || '#000000'}`;
+  const ticks = straight.filter((s) => { const l = length(s), dx = Math.abs(s.x2 - s.x1), dy = Math.abs(s.y2 - s.y1); return l >= tickMinPt && l <= tickMaxPt && Math.abs(dx - dy) <= 0.2 * l; });
+  if (!ticks.length) return excluded;
+  const tickSet = new Set(ticks);
+  // Grid of the other strokes by the cells they cross, so each tick only looks at strokes near it.
+  const cell = 24, grid = new Map();
+  const key = (i, j) => `${i},${j}`;
+  for (const s of straight) {
+    if (tickSet.has(s)) continue;
+    const i0 = Math.floor(Math.min(s.x1, s.x2) / cell), i1 = Math.floor(Math.max(s.x1, s.x2) / cell);
+    const j0 = Math.floor(Math.min(s.y1, s.y2) / cell), j1 = Math.floor(Math.max(s.y1, s.y2) / cell);
+    if ((i1 - i0 + 1) * (j1 - j0 + 1) > 400) continue; // a border or title-block frame line
+    for (let i = i0; i <= i1; i += 1) for (let j = j0; j <= j1; j += 1) { const k = key(i, j); if (!grid.has(k)) grid.set(k, []); grid.get(k).push(s); }
+  }
+  const through = (s, p) => {
+    const l = length(s); if (l < 1e-6) return null;
+    const ux = (s.x2 - s.x1) / l, uy = (s.y2 - s.y1) / l;
+    const t = (p.x - s.x1) * ux + (p.y - s.y1) * uy, c = -(p.x - s.x1) * uy + (p.y - s.y1) * ux;
+    return Math.abs(c) <= onLinePt && t >= -onLinePt && t <= l + onLinePt ? { t, l, ux, uy } : null;
+  };
+  const onStroke = new Map(); // stroke -> [{ t, tick }]
+  for (const tick of ticks) {
+    const p = { x: (tick.x1 + tick.x2) / 2, y: (tick.y1 + tick.y2) / 2 };
+    const tl = length(tick), tu = { x: (tick.x2 - tick.x1) / tl, y: (tick.y2 - tick.y1) / tl };
+    const near = grid.get(key(Math.floor(p.x / cell), Math.floor(p.y / cell))) || [];
+    const on = [];
+    for (const s of near) {
+      const hit = through(s, p);
+      if (!hit || Math.abs(Math.abs(hit.ux * tu.x + hit.uy * tu.y) - Math.SQRT1_2) > 0.12) continue; // 45 degrees to the tick
+      on.push({ s, hit });
+    }
+    // The extension line crosses the dimension line at the tick. At a building corner with a mitre or hatch
+    // stroke both lines END there, so a corner is never a dimension point.
+    const crosses = (item) => item.hit.t > onLinePt + 2 && item.hit.t < item.hit.l - onLinePt - 2;
+    if (!on.some((a) => crosses(a) && on.some((b) => b !== a && Math.abs(a.hit.ux * b.hit.ux + a.hit.uy * b.hit.uy) < 0.1))) continue;
+    excluded.add(tick);
+    for (const { s, hit } of on) { if (!onStroke.has(s)) onStroke.set(s, []); onStroke.get(s).push({ t: hit.t, l: hit.l, tick }); }
+  }
+  for (const [s, hits] of onStroke) {
+    const l = hits[0].l, ts = hits.map((h) => h.t);
+    const bothEnds = Math.min(...ts) <= endPt && Math.max(...ts) >= l - endPt && hits.length >= 2;
+    const endsAtTick = hits.some((h) => Math.min(Math.abs(h.t), Math.abs(l - h.t)) <= witnessEndPt && pen(h.tick) === pen(s));
+    if (bothEnds || endsAtTick) excluded.add(s);
+  }
+  return excluded;
+}

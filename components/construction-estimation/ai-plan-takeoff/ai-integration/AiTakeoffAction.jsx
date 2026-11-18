@@ -3,11 +3,27 @@ import { createJobSetupPayload } from '../takeoffSchedule.js';
 import { BUILDING_LEVELS, floorPlanSheets, roomsByLevel } from './roomSchedule.js';
 
 const buttonStyle = { padding: '10px 12px', border: 0, borderRadius: 5, cursor: 'pointer', fontWeight: 700 };
+
+// A paid OpenAI request never starts from one click: the builder sees what is sent and that it is charged,
+// then authorises it.
+function PaidConfirmation({ id, what, onConfirm, onCancel }) {
+  return (
+    <div id={id} role="alertdialog" aria-label="Authorise paid AI requests" style={{ marginTop: 8, padding: 10, border: '1px solid #f59e0b', background: '#fffbeb', borderRadius: 6 }}>
+      <strong style={{ display: 'block', color: '#78350f' }}>Paid OpenAI requests</strong>
+      <div style={{ color: '#451a03', margin: '4px 0 8px' }}>{what} The plan sheets are sent to OpenAI and every request is charged to the OpenAI API account set up for this app. Nothing is sent unless you authorise it.</div>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        <button id={`${id}-authorise`} type="button" onClick={onConfirm} style={{ ...buttonStyle, background: '#b45309', color: '#fff' }}>Authorise paid AI requests</button>
+        <button id={`${id}-cancel`} type="button" onClick={onCancel} style={{ ...buttonStyle, background: '#e2e8f0' }}>Cancel</button>
+      </div>
+    </div>
+  );
+}
 const reviewText = (value) => typeof value === 'string' ? value : value?.message || value?.reason || value?.evidence || JSON.stringify(value);
 
 // The Rooms schedule: every room of the house, by level. Read from the room names on the
 // floor-plan sheets, corrected by hand, and used by every room-based Client Selection.
 function RoomsSchedule({ analysis, sheetLevels, disabled }) {
+  const [confirming, setConfirming] = useState(false);
   const rooms = analysis.report?.rooms || [];
   const control = analysis.rooms;
   const sheets = floorPlanSheets(sheetLevels);
@@ -20,11 +36,13 @@ function RoomsSchedule({ analysis, sheetLevels, disabled }) {
     <div id="takeoff-rooms-schedule" style={{ marginTop: 12, borderTop: '1px solid #cbd5e1', paddingTop: 12 }}>
       <strong style={{ display: 'block' }}>Rooms schedule{rooms.length ? ` — ${rooms.length} room${rooms.length === 1 ? '' : 's'}` : ''}</strong>
       <div style={{ color: '#475569', margin: '4px 0 8px' }}>The rooms of this house. Cabinetry, floor coverings, tiles, paint and the other room-by-room selections use this list.</div>
-      <button id="read-rooms-from-plans" type="button" disabled={disabled || control.busy} onClick={control.read}
+      <button id="read-rooms-from-plans" type="button" disabled={disabled || control.busy} onClick={() => setConfirming(true)}
         style={{ ...buttonStyle, width: '100%', background: disabled || control.busy ? '#94a3b8' : '#1d4ed8', color: 'white' }}>
-        {control.busy ? 'Reading room names…' : rooms.some((room) => room.source === 'plan') ? 'READ ROOMS FROM PLANS AGAIN' : 'READ ROOMS FROM PLANS'}
+        {control.busy ? 'Reading room names…' : rooms.some((room) => room.source === 'plan') ? 'READ ROOMS WITH AI AGAIN (OPENAI — PAID)' : 'READ ROOMS WITH AI (OPENAI — PAID)'}
       </button>
-      <div style={{ color: '#64748b', marginTop: 4 }}>Detects room names and editable boundaries. Review amber boundaries on the plan before using their quantities.</div>
+      {confirming && <PaidConfirmation id="confirm-ai-rooms" what="Reading room names with AI makes one or two requests per floor-plan sheet."
+        onCancel={() => setConfirming(false)} onConfirm={() => { setConfirming(false); control.read({ authorised: true }); }} />}
+      <div style={{ color: '#64748b', marginTop: 4 }}>Run Takeoff already reads printed room names locally (no charge). This optional AI reading can help where names are unreadable. Review amber boundaries on the plan before using their quantities.</div>
       {control.message && <div id="read-rooms-status" role="status" aria-live="polite" style={{ marginTop: 8, color: control.error ? '#b91c1c' : '#334155' }}>{control.message}</div>}
       {roomsByLevel(rooms).map((group) => (
         <div key={group.level} style={{ marginTop: 10 }} data-rooms-level={group.level}>
@@ -81,8 +99,42 @@ function ReviewDecision({ decision, disabled, onResolve, onGoToPage }) {
   );
 }
 
+// What the takeoff holds, in the three kinds the builder must tell apart: measured from the drawing and
+// accepted, waiting for the builder's review, and the optional AI-assisted analysis.
+function TakeoffSummary({ report, review }) {
+  const counts = report.counts || {};
+  const local = !report.aiAssisted;
+  const withheldWalls = (report.wallReviewCandidates || []).length;
+  const roomsToApprove = (report.rooms || []).filter((room) => room.polygon?.length >= 3 && !room.confirmed && !room.excluded).length;
+  const measured = [
+    [counts.walls, 'wall', 'walls'], [counts.windows, 'window', 'windows'], [counts.doors, 'door', 'doors'], [counts.floorAreas, 'floor area', 'floor areas'],
+    [counts.roomBoundaries, 'room with a measured boundary', 'rooms with measured boundaries'],
+  ].filter(([value]) => value > 0).map(([value, one, many]) => `${value} ${value === 1 ? one : many}`);
+  return (
+    <div id="takeoff-summary" style={{ marginTop: 8, display: 'grid', gap: 6 }}>
+      <div id="takeoff-measured-summary" data-kind="measured" style={{ padding: 8, borderRadius: 6, background: '#f0fdf4', border: '1px solid #86efac' }}>
+        <strong style={{ color: '#166534' }}>{local ? 'Measured locally from the drawing (no AI)' : 'Measured from the drawing'}</strong>
+        <div style={{ color: '#14532d' }}>{measured.length ? `${measured.join(', ')} in the takeoff.` : 'Nothing was measured on the selected sheets.'} Lengths, areas and positions come from the PDF's own linework and your calibration.</div>
+      </div>
+      <div id="takeoff-review-summary" data-kind="review" style={{ padding: 8, borderRadius: 6, background: review.decisions.length || withheldWalls || roomsToApprove ? '#fffbeb' : '#f8fafc', border: '1px solid #fcd34d' }}>
+        <strong style={{ color: '#92400e' }}>Requires builder review</strong>
+        <div style={{ color: '#451a03' }}>
+          {review.decisions.length} item{review.decisions.length === 1 ? '' : 's'} to confirm
+          {withheldWalls ? `; ${withheldWalls} measured wall${withheldWalls === 1 ? '' : 's'} held back until you classify ${withheldWalls === 1 ? 'it' : 'them'} (not in quantities)` : ''}
+          {roomsToApprove ? `; ${roomsToApprove} room boundar${roomsToApprove === 1 ? 'y' : 'ies'} to approve before ${roomsToApprove === 1 ? 'its' : 'their'} area is used` : ''}.
+        </div>
+      </div>
+      <div id="takeoff-ai-summary" data-kind="ai" style={{ padding: 8, borderRadius: 6, background: '#f8fafc', border: '1px solid #cbd5e1' }}>
+        <strong style={{ color: '#334155' }}>AI-assisted analysis</strong>
+        <div style={{ color: '#475569' }}>{report.aiAssisted ? `Used: OpenAI ${report.aiAssisted.model || ''}, ${report.aiAssisted.requests} request${report.aiAssisted.requests === 1 ? '' : 's'}.` : 'Not used. Optional; needs an available OpenAI account and your authorisation for each run.'}</div>
+      </div>
+    </div>
+  );
+}
+
 export function AiTakeoffAction({ analysis, schedule, sheetLevels = {}, disabled, onCalibrate, onReview, onSave, onGoToPage }) {
   const { stage, message, report, scaleProposal } = analysis;
+  const [confirmingAssisted, setConfirmingAssisted] = useState(false);
   const busy = ['reading', 'measuring', 'building'].includes(stage);
   const pending = busy || stage === 'scale' || stage === 'calibration';
   // The same review Job Setup shows when these quantities are imported.
@@ -97,10 +149,24 @@ export function AiTakeoffAction({ analysis, schedule, sheetLevels = {}, disabled
     : `${scaleProposal?.source || 'Drawing evidence'} (${Number(scaleProposal?.pixelsPerMm || 0).toPrecision(6)} px/mm)`;
   return (
     <section aria-label="AI Takeoff" style={{ border: '1px solid #cbd5e1', borderRadius: 6, padding: 12, background: '#f8fafc', fontSize: 13 }}>
-      <button id="run-ai-takeoff" type="button" disabled={disabled || pending} onClick={analysis.run}
+      <button id="run-ai-takeoff" type="button" disabled={disabled || pending} onClick={() => analysis.run()}
         style={{ ...buttonStyle, width: '100%', background: disabled || pending ? '#94a3b8' : '#0f766e', color: 'white' }}>
-        {busy ? 'Analysing plan…' : 'RUN AI TAKEOFF'}
+        {busy ? 'Measuring plan…' : 'RUN TAKEOFF — MEASURE LOCALLY (NO AI CHARGES)'}
       </button>
+      <div style={{ color: '#475569', marginTop: 4 }}>Measures the floor-plan sheets you have given a level, from the PDF's own linework, on this computer. Nothing is sent to OpenAI.</div>
+      {analysis.report?.runId === 'ai-takeoff-v3-local' && (
+        <button id="remeasure-takeoff" type="button" disabled={disabled || pending}
+          onClick={() => { if (typeof window === 'undefined' || window.confirm('Measure the plan again with the current measuring rules? The earlier local measurement is replaced; anything drawn by hand is kept. This is refused if anything from the earlier measurement has been approved.')) analysis.run({ remeasure: true }); }}
+          style={{ ...buttonStyle, width: '100%', marginTop: 8, background: disabled || pending ? '#e2e8f0' : '#fff', color: '#0f766e', border: '1px solid #0f766e' }}>
+          Re-measure with the current rules (replaces the unapproved local measurement)
+        </button>
+      )}
+      <button id="run-ai-assisted-takeoff" type="button" disabled={disabled || pending} onClick={() => setConfirmingAssisted(true)}
+        style={{ ...buttonStyle, width: '100%', marginTop: 8, background: disabled || pending ? '#e2e8f0' : '#fff', color: '#92400e', border: '1px solid #f59e0b' }}>
+        Optional: AI-assisted analysis (OpenAI — paid)…
+      </button>
+      {confirmingAssisted && <PaidConfirmation id="confirm-ai-assisted" what="AI-assisted analysis reads every sheet and adds opening types, room names and plan notes (several requests per sheet, a few minutes each). Locally measured quantities are kept if it fails."
+        onCancel={() => setConfirmingAssisted(false)} onConfirm={() => { setConfirmingAssisted(false); analysis.run({ assisted: true, authorised: true }); }} />}
       {message && <div id="ai-takeoff-status" role="status" aria-live="polite" style={{ marginTop: 10, color: stage === 'error' ? '#b91c1c' : '#334155' }}>{message}</div>}
       {stage === 'scale' && scaleProposal && (
         <div style={{ marginTop: 10 }}>
@@ -118,7 +184,8 @@ export function AiTakeoffAction({ analysis, schedule, sheetLevels = {}, disabled
       {pending && <button type="button" onClick={analysis.cancel} style={{ ...buttonStyle, display: 'block', marginTop: 8 }}>Cancel analysis</button>}
       {report && report.status !== 'rooms' && (
         <div id="ai-takeoff-result" style={{ marginTop: 12 }}>
-          <strong>{report.status === 'review' || review.decisions.length ? 'AI TAKEOFF REQUIRES REVIEW' : 'AI TAKEOFF COMPLETE'}</strong>
+          <strong>{report.status === 'review' || review.decisions.length ? 'TAKEOFF REQUIRES REVIEW' : 'TAKEOFF COMPLETE'}</strong>
+          <TakeoffSummary report={report} review={review} />
           <div style={{ marginTop: 8 }}>
             {review.checklist.map((item) => <div key={item.label} style={{ color: '#166534' }}>✓ {item.label}</div>)}
             {report.counts?.alreadyMeasured > 0 && <div style={{ color: '#475569' }}>{report.counts.alreadyMeasured} item{report.counts.alreadyMeasured === 1 ? '' : 's'} already in this takeoff {report.counts.alreadyMeasured === 1 ? 'was' : 'were'} kept, not added twice</div>}
@@ -135,7 +202,7 @@ export function AiTakeoffAction({ analysis, schedule, sheetLevels = {}, disabled
             <button id="ai-takeoff-save" type="button" disabled={disabled || pending} onClick={onSave} style={{ ...buttonStyle, background: '#2563eb', color: '#fff' }}>SAVE TAKEOFF</button>
           </div>
           <details id="ai-takeoff-diagnostics" style={{ marginTop: 10 }}>
-            <summary>Advanced AI diagnostics ({review.diagnostics.length})</summary>
+            <summary>Advanced diagnostics ({review.diagnostics.length})</summary>
             <p>Technical notes from the analysis. Nothing here needs action. OBSERVED = read from the drawing. DERIVED = calculated from reliable geometry, dimensions or another sheet. ASSUMED = a default, shown above when it needs confirming.</p>
             {review.diagnostics.map((item, index) => <p key={index}>{item}</p>)}
             {inspections.map((item) => <p key={item.page}>Sheet {item.page}: {item.drawingType}, {item.level}. {item.scale?.evidence}</p>)}

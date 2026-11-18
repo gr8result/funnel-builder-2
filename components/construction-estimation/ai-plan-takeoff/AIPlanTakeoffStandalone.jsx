@@ -509,6 +509,9 @@ export default function AIPlanTakeoffStandalone({
   const [editingRoomId, setEditingRoomId] = useState(null);
   // Room under the pointer in the room list or on the plan: highlighted in both.
   const [hoveredRoomId, setHoveredRoomId] = useState(null);
+  // The room or outdoor area the builder picked from the list or the plan: highlighted and, from the list, centred.
+  const [focusedRoomId, setFocusedRoomId] = useState(null);
+  const [pendingFocus, setPendingFocus] = useState(null);
   const [totalPages, setTotalPages] = useState(1);
 
   const [vectorSegments, setVectorSegments] = useState([]);
@@ -559,7 +562,9 @@ export default function AIPlanTakeoffStandalone({
   // Opening whose quick-edit popup is open beside its marker on the plan.
   const [quickEditOpeningId, setQuickEditOpeningId] = useState(null);
   // Which plan overlays are drawn (the key on the canvas names each colour and can hide it).
-  const [overlayVisibility, setOverlayVisibility] = useState({ floorAreas: true, rooms: true, eaves: true });
+  // A clean room overview by default: rooms and floor areas, wall lines and opening markers; text labels on walls and
+  // openings and the review-only candidates are switched on from the overlay key when wanted.
+  const [overlayVisibility, setOverlayVisibility] = useState({ floorAreas: true, rooms: true, eaves: true, walls: true, openings: true, labels: false, review: false });
   const [overlayKeyOpen, setOverlayKeyOpen] = useState(true);
   const [selectedMeasurementId, setSelectedMeasurementId] = useState(null);
 
@@ -1121,7 +1126,10 @@ export default function AIPlanTakeoffStandalone({
     await loadJobData(restored, fallbackName);
   };
 
+  // The saved takeoff whose plan could not be loaded: relinking its original plan opens this job with it.
+  const failedPlanJobRef = useRef(null);
   const reportPlanLoadFailure = (error, source, job) => {
+    if (job) failedPlanJobRef.current = { job, source };
     const message = error?.message || String(error);
     logTakeoffPlanLoad('open-failed', { source, takeoffId: job?.takeoffId || null, message });
     console.error('TAKEOFF_PLAN_LOAD open failed:', message);
@@ -2598,6 +2606,23 @@ setSavedRevision(verifiedSave.revision);
           embeddedPages.push(await renderPdfPageForJob(loadedPdf, pageNumber));
         }
 
+        // Relinking the plan of a saved takeoff that could not be opened (its plan images were missing from this
+        // browser): that takeoff is opened with the relinked pages, keeping everything measured in it. The page
+        // count must match; otherwise nothing is opened and the builder is told.
+        const failed = preserveTakeoffs ? failedPlanJobRef.current : null;
+        if (failed?.job) {
+          const expected = Number(failed.job.totalPages || failed.job.plan?.pages?.length || 0);
+          if (expected && expected !== embeddedPages.length) {
+            setPlanLoadError({ source: failed.source, jobName: failed.job.takeoffName || failed.job.jobName || '',
+              message: `${file.name} has ${embeddedPages.length} pages but the saved takeoff was measured on a ${expected}-page plan. Relink the original plan file.` });
+            return;
+          }
+          failedPlanJobRef.current = null;
+          setPlanLoadError(null);
+          await loadJobData({ ...failed.job, planFilename: failed.job.planFilename || file.name,
+            plan: { ...(failed.job.plan || {}), type: 'pdf', totalPages: embeddedPages.length, pages: embeddedPages } }, failed.job.takeoffName || failed.job.jobName || '');
+          return;
+        }
         sheetViewStateRef.current = {};
         fittedSheetViewKeyRef.current = '';
         setPlanFilename(file.name);
@@ -2731,6 +2756,29 @@ setSavedRevision(verifiedSave.revision);
   useEffect(() => () => {
     if (mouseHoverFrameRef.current) window.cancelAnimationFrame(mouseHoverFrameRef.current);
   }, []);
+
+  // Centre (and if it is small on screen, zoom to) a polygon in plan coordinates, through the plan layer's own
+  // transform so a rotated sheet is handled.
+  const centreOnPolygon = useCallback((polygon, fill = 0.45) => {
+    const layer = layerRef.current;
+    if (!layer || !Array.isArray(polygon) || polygon.length < 3) return;
+    const transform = layer.getAbsoluteTransform();
+    const screen = polygon.map((point) => transform.point(point));
+    const xs = screen.map((p) => p.x), ys = screen.map((p) => p.y);
+    const centre = { x: (Math.min(...xs) + Math.max(...xs)) / 2, y: (Math.min(...ys) + Math.max(...ys)) / 2 };
+    const size = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys), 1);
+    // Framed in the part of the canvas the floating panels leave clear (room list on the right, overlay key at the
+    // bottom left), so the picked room or the house is not under a panel.
+    const clear = { x0: 0, y0: 0, x1: Math.max(320, canvasSize.width - 360), y1: Math.max(240, canvasSize.height - 60) };
+    const target = Math.min(clear.x1 - clear.x0, clear.y1 - clear.y0) * fill;
+    const factor = size < target * 0.5 || size > target * 1.6 ? Math.max(0.25, Math.min(6, target / size)) : 1;
+    const nextScale = Math.max(0.05, Math.min(20, stageScale * factor));
+    // The centre in unscaled stage coordinates, then placed in the middle of the canvas at the new scale.
+    const unscaled = { x: (centre.x - stagePos.x) / stageScale, y: (centre.y - stagePos.y) / stageScale };
+    const nextPos = { x: (clear.x0 + clear.x1) / 2 - unscaled.x * nextScale, y: (clear.y0 + clear.y1) / 2 - unscaled.y * nextScale };
+    setStageScale(nextScale);
+    setStagePos(nextPos);
+  }, [canvasSize.width, canvasSize.height, stageScale, stagePos.x, stagePos.y]);
 
   const rememberCurrentSheetView = useCallback((view = null) => {
     const stage = stageRef.current;
@@ -3601,6 +3649,56 @@ setSavedRevision(verifiedSave.revision);
   const activePageAreas = React.useMemo(() => completedAreas.filter((a) => Number(a.page || a.pageId || 1) === Number(currentPage)), [completedAreas, currentPage]);
   const activePageOpenings = React.useMemo(() => placedOpenings.filter((o) => Number(o.page || o.pageId || 1) === Number(currentPage)), [placedOpenings, currentPage]);
   const activePageFloorplans = React.useMemo(() => completedFloorplans.filter((f) => Number(f.page || f.pageId || 1) === Number(currentPage)), [completedFloorplans, currentPage]);
+  // Outdoor areas (balcony, patio, alfresco...) listed apart from the rooms: never living area.
+  const outdoorAreas = React.useMemo(() => completedFloorplans
+    .filter((f) => /balcony|patio|alfresco|porch|deck|verandah|terrace/i.test(String(f.type || f.label || '')) && Array.isArray(f.nodes) && f.nodes.length >= 3)
+    .map((f) => ({ id: f.id, page: Number(f.page || f.pageId || 1), type: f.type, label: f.label, nodes: f.nodes,
+      areaM2: calculatePolygonAreaM2(f.nodes, pixelsPerMm) })), [completedFloorplans, pixelsPerMm]);
+  // Pick a room (from the list, or by clicking it on the plan): it alone is selected and highlighted, its sheet is
+  // shown, and from the list the drawing is centred on it.
+  const focusRoom = (room, { centre = true } = {}) => {
+    if (!room?.id) return;
+    const control = aiTakeoffAnalysis.rooms;
+    const others = (aiTakeoffAnalysis.report?.rooms || []).filter((item) => item.selected && item.id !== room.id).map((item) => item.id);
+    if (others.length) control.update(others, { selected: false });
+    if (!room.selected) control.update([room.id], { selected: true });
+    setFocusedRoomId(room.id);
+    if (centre) setPendingFocus({ page: room.page, polygon: room.polygon });
+    if (Number(room.page) !== Number(currentPage)) setCurrentPage(room.page);
+  };
+  // The whole measured house on this sheet: its rooms and floor areas, framed to fill most of the view.
+  const zoomToRooms = (page = currentPage) => {
+    const points = [...(aiTakeoffAnalysis.report?.rooms || []).filter((room) => Number(room.page) === Number(page) && !room.excluded).flatMap((room) => room.polygon || []),
+      ...completedFloorplans.filter((f) => Number(f.page || f.pageId || 1) === Number(page)).flatMap((f) => f.nodes || [])];
+    if (points.length < 3) return false;
+    const xs = points.map((p) => p.x), ys = points.map((p) => p.y);
+    const box = [{ x: Math.min(...xs), y: Math.min(...ys) }, { x: Math.max(...xs), y: Math.min(...ys) }, { x: Math.max(...xs), y: Math.max(...ys) }, { x: Math.min(...xs), y: Math.max(...ys) }];
+    setPendingFocus({ page, polygon: box, fill: 0.85 });
+    return true;
+  };
+  // When a run finishes, the sheet on screen is shown as a room overview.
+  const previousStageRef = useRef(aiTakeoffAnalysis.stage);
+  useEffect(() => {
+    const before = previousStageRef.current;
+    previousStageRef.current = aiTakeoffAnalysis.stage;
+    if (['reading', 'measuring'].includes(before) && ['review', 'complete'].includes(aiTakeoffAnalysis.stage)) {
+      const sheet = (aiTakeoffAnalysis.report?.rooms || []).some((room) => Number(room.page) === Number(currentPage)) ? currentPage
+        : aiTakeoffAnalysis.report?.rooms?.[0]?.page;
+      if (sheet) { if (Number(sheet) !== Number(currentPage)) setCurrentPage(sheet); zoomToRooms(sheet); }
+    }
+  }, [aiTakeoffAnalysis.stage]); // eslint-disable-line react-hooks/exhaustive-deps
+  const focusArea = (area) => {
+    setFocusedRoomId(area.id);
+    setSelectedFloorplanId(area.id);
+    setPendingFocus({ page: area.page, polygon: area.nodes });
+    if (Number(area.page) !== Number(currentPage)) setCurrentPage(area.page);
+  };
+  // Centre once the picked room's sheet is the one on screen (its image and layer transform are in place).
+  useEffect(() => {
+    if (!pendingFocus || Number(pendingFocus.page) !== Number(currentPage) || !image) return undefined;
+    const timer = setTimeout(() => { centreOnPolygon(pendingFocus.polygon, pendingFocus.fill || 0.45); setPendingFocus(null); }, 60);
+    return () => clearTimeout(timer);
+  }, [pendingFocus, currentPage, image, centreOnPolygon]);
   const activePageMeasurements = React.useMemo(() => completedMeasurements.filter((m) => Number(m.page || m.pageId || 1) === Number(currentPage)), [completedMeasurements, currentPage]);
   const activePageEaves = React.useMemo(() => completedEaves.filter((e) => Number(e.page || e.pageId || 1) === Number(currentPage)), [completedEaves, currentPage]);
   const activePagePillars = React.useMemo(() => completedPillars.filter((p) => Number(p.page || p.pageId || 1) === Number(currentPage)), [completedPillars, currentPage]);
@@ -5845,8 +5943,9 @@ setSavedRevision(verifiedSave.revision);
           enabled={activeTool === 'rooms'} setEnabled={enabled => setActiveTool(enabled ? 'rooms' : 'select')}
           editing={editingRoomId} setEditing={id => { setEditingRoomId(id); const room = aiTakeoffAnalysis.report?.rooms?.find(room => room.id === id); if (room) setCurrentPage(room.page); }} readOnly={isRecoveryPreview}
           hoveredId={hoveredRoomId} setHoveredId={setHoveredRoomId}
+          onFocus={focusRoom} focusedId={focusedRoomId} outdoorAreas={outdoorAreas} onFocusArea={focusArea} currentPage={currentPage}
           toolKey={activeTool} collapseForTool={PLAN_CLICK_TOOLS.has(activeTool)} />}
-        {image && ((aiTakeoffAnalysis.report?.wallReviewCandidates || []).some(candidate => candidate.page === currentPage)
+        {image && overlayVisibility.review && ((aiTakeoffAnalysis.report?.wallReviewCandidates || []).some(candidate => candidate.page === currentPage)
           || (aiTakeoffAnalysis.report?.bridgeReviewCandidates || []).some(candidate => candidate.page === currentPage)
           || (aiTakeoffAnalysis.report?.openingReviewCandidates || []).some(candidate => candidate.page === currentPage)) && (() => {
           const wallCandidates = (aiTakeoffAnalysis.report?.wallReviewCandidates || []).filter(candidate => candidate.page === currentPage);
@@ -5857,20 +5956,20 @@ setSavedRevision(verifiedSave.revision);
               {wallCandidates.length > 0 && <><strong>{wallCandidates.length} measured wall segments need classification</strong><div>Dashed amber lines are review-only and excluded from quantities. Click one to classify it.</div></>}
               {bridgeCandidates.length > 0 && <><strong>{bridgeCandidates.length} confirmed-opening spans need wall classification</strong><div>Teal dotted spans support topology only and are not wall quantities.</div></>}
               {(() => {
-                const special = openingCandidates.filter(candidate => ['window-frame-internal', 'open-threshold'].includes(candidate.modelKind));
+                const special = openingCandidates.filter(candidate => ['window-frame-internal', 'open-threshold', 'robe-front', 'frame-closure'].includes(candidate.modelKind));
                 const hosted = openingCandidates.length - special.length;
                 return <>
                   {hosted > 0 && <><strong>{hosted} openings have review-only hosts</strong><div>Amber circles mark openings excluded from quantities until their host wall is classified.</div></>}
                   {special.length > 0 && <><strong>{special.length} possible opening{special.length === 1 ? '' : 's'} for you to confirm</strong>
                     <ul data-testid="opening-review-reasons" style={{ margin: '2px 0 0', paddingLeft: 16 }}>
-                      {special.map(candidate => <li key={candidate.id}>{candidate.modelKind === 'open-threshold' ? `Open threshold, ${candidate.widthMm} mm` : `Frame on an internal wall, ${candidate.widthMm} mm`}: not counted. Place it with the opening tool if it is real.</li>)}
+                      {special.map(candidate => <li key={candidate.id}>{({ 'open-threshold': `Open threshold, ${candidate.widthMm} mm`, 'robe-front': `Robe or cupboard doors, ${candidate.widthMm} mm`, 'frame-closure': `Door or window frame across a closed side, ${candidate.widthMm} mm` })[candidate.modelKind] || `Frame on an internal wall, ${candidate.widthMm} mm`}: not counted. Place it with the opening tool if it is real.</li>)}
                     </ul></>}
                 </>;
               })()}
             </div>
           );
         })()}
-        {image && <WallCandidatePanel
+        {image && overlayVisibility.review && <WallCandidatePanel
           candidates={(aiTakeoffAnalysis.report?.wallReviewCandidates || []).filter(item => item.page === currentPage)}
           selectedId={selectedReviewWallId} onSelect={id => { setSelectedReviewWallId(id); setActiveTool('select'); }}
           onResolve={aiTakeoffAnalysis.resolveWallCandidate}
@@ -5942,14 +6041,21 @@ setSavedRevision(verifiedSave.revision);
             {activePageFloorplans.map((fp) => {
               if (!overlayVisibility.floorAreas) return null;
               const isSelected = fp.id === selectedFloorplanId;
-              const fpCentre = fp.nodes.reduce((sum, n) => ({ x: sum.x + n.x / fp.nodes.length, y: sum.y + n.y / fp.nodes.length }), { x: 0, y: 0 });
+              // The building outline is named at its corner, so its label never sits on the room names inside it;
+              // other areas (garage, balcony, alfresco) are named in their middle. Outdoor areas say they are outdoor.
+              const fpOutline = /footprint/i.test(String(fp.type || fp.label || ''));
+              const fpOutdoor = /balcony|patio|alfresco|porch|deck|verandah|terrace/i.test(String(fp.type || fp.label || ''));
+              const fpCentre = fpOutline
+                ? fp.nodes.reduce((best, n) => (n.x + n.y < best.x + best.y ? n : best), fp.nodes[0])
+                : fp.nodes.reduce((sum, n) => ({ x: sum.x + n.x / fp.nodes.length, y: sum.y + n.y / fp.nodes.length }), { x: 0, y: 0 });
               const fpPending = fp.source === 'ai' && fp.confirmed !== true;
               return (
                 <React.Fragment key={fp.id}>
                   <Line
                     points={fp.nodes.flatMap((n) => [n.x, n.y])}
-                    fill={fp.color}
-                    stroke={isSelected ? '#d32f2f' : fp.stroke}
+                    fill={fpOutline && overlayVisibility.rooms ? 'rgba(33,150,243,0.05)' : fpOutdoor ? 'rgba(13,148,136,0.22)' : fp.color}
+                    dash={fpOutline ? [10 / stageScale, 6 / stageScale] : undefined}
+                    stroke={isSelected ? '#d32f2f' : fpOutdoor ? '#0f766e' : fp.stroke}
                     strokeWidth={(isSelected ? 3 : 2) / stageScale}
                     closed
                     listening={markupListening}
@@ -5964,7 +6070,7 @@ setSavedRevision(verifiedSave.revision);
                   <Label x={fpCentre.x} y={fpCentre.y} rotation={-(Number(rotation) || 0)} listening={false}>
                     <Tag fill="rgba(255,255,255,0.9)" stroke={fp.stroke} strokeWidth={1 / stageScale} cornerRadius={3 / stageScale} />
                     <Text
-                      text={`${fpPending ? 'AI - review: ' : ''}${fp.label}: ${calculatePolygonAreaM2(fp.nodes, pixelsPerMm).toFixed(2)} m²`}
+                      text={`${fpPending ? 'Review: ' : ''}${fp.label}${fpOutdoor ? ' (outdoor, not living area)' : ''}: ${calculatePolygonAreaM2(fp.nodes, pixelsPerMm).toFixed(2)} m²`}
                       fontSize={13 / stageScale}
                       padding={3 / stageScale}
                       fill={fp.stroke}
@@ -6116,7 +6222,7 @@ setSavedRevision(verifiedSave.revision);
             })}
 
             {/* Walls & Vertex Handles */}
-            {(aiTakeoffAnalysis.report?.wallReviewCandidates || []).filter(candidate => candidate.page === currentPage).map(candidate => (
+            {(overlayVisibility.review || selectedReviewWallId ? (aiTakeoffAnalysis.report?.wallReviewCandidates || []) : []).filter(candidate => candidate.page === currentPage && (overlayVisibility.review || candidate.id === selectedReviewWallId)).map(candidate => (
               <Line
                 key={candidate.id}
                 name="wall-review-candidate"
@@ -6131,15 +6237,15 @@ setSavedRevision(verifiedSave.revision);
                 onTap={event => { event.cancelBubble = true; setSelectedReviewWallId(candidate.id); }}
               />
             ))}
-            {(aiTakeoffAnalysis.report?.bridgeReviewCandidates || []).filter(candidate => candidate.page === currentPage).map(candidate => (
+            {(overlayVisibility.review ? (aiTakeoffAnalysis.report?.bridgeReviewCandidates || []) : []).filter(candidate => candidate.page === currentPage).map(candidate => (
               <Line key={candidate.id} name="bridge-review-candidate" points={candidate.nodes.flatMap(node => [node.x, node.y])}
                 stroke="#0f766e" strokeWidth={2.5 / stageScale} dash={[2 / stageScale, 6 / stageScale]} opacity={0.95} listening={false} />
             ))}
-            {(aiTakeoffAnalysis.report?.openingReviewCandidates || []).filter(candidate => candidate.page === currentPage).map(candidate => (
+            {(overlayVisibility.review ? (aiTakeoffAnalysis.report?.openingReviewCandidates || []) : []).filter(candidate => candidate.page === currentPage).map(candidate => (
               <Circle key={candidate.id} name="opening-review-candidate" x={candidate.nodes[0].x} y={candidate.nodes[0].y}
                 radius={8 / stageScale} stroke="#d97706" strokeWidth={2.5 / stageScale} listening={false} />
             ))}
-            {activePageWalls.map((run) => {
+            {(overlayVisibility.walls ? activePageWalls : []).map((run) => {
               const polyPoints = generateOffsetPolygon(run.nodes, run.thicknessMm * (pixelsPerMm || 1), run.alignment);
               const isSelected = run.id === selectedWallId;
               const isHovered = run.id === hoveredWallId;
@@ -6232,7 +6338,7 @@ setSavedRevision(verifiedSave.revision);
             })}
 
             {/* Openings (Doors/Windows) with draggable capability */}
-            {activePageOpenings.map((op, idx) => {
+            {(overlayVisibility.openings ? activePageOpenings : []).map((op, idx) => {
               const tagPrefix = op.type === 'window' ? 'W' : 'D';
               const itemTag = String(op.itemTag || op.label || `${tagPrefix}${idx + 1}`);
               const dynamicTag = `${tagPrefix}${idx + 1}: ${itemTag.includes(': ') ? itemTag.split(': ')[1] : itemTag}`;
@@ -6240,7 +6346,8 @@ setSavedRevision(verifiedSave.revision);
               // A small centre marker (circle = window, triangle = door) coloured by review state,
               // with the size beside it - the drawing underneath stays visible.
               const marker = openingMarkerStyle(op);
-              const markerRadius = 11 / stageScale;
+              // Sized with the opening on screen (a whole-sheet view gets small markers, a close view full-size ones).
+              const markerRadius = Math.max(5, Math.min(11, (Number(op.widthMm) || 800) * (pixelsPerMm || 0.02) * stageScale * 0.25)) / stageScale;
               const sizeLabel = openingSizeLabel(op, dynamicTag.split(': ')[0]);
               return (
                 <Group
@@ -6266,10 +6373,10 @@ setSavedRevision(verifiedSave.revision);
                   {marker.shape === 'circle'
                     ? <Circle name="opening-marker" radius={markerRadius} fill={marker.fill} stroke={isSelected ? '#0f172a' : marker.stroke} strokeWidth={(isSelected ? 2.5 : 1.5) / stageScale} />
                     : <RegularPolygon name="opening-marker" sides={3} radius={markerRadius * 1.25} fill={marker.fill} stroke={isSelected ? '#0f172a' : marker.stroke} strokeWidth={(isSelected ? 2.5 : 1.5) / stageScale} />}
-                  <Label x={markerRadius * 1.8} y={-12 / stageScale} rotation={-(Number(rotation) || 0)} listening={false}>
+                  {(overlayVisibility.labels || op.id === selectedOpeningId) && <Label x={markerRadius * 1.8} y={-12 / stageScale} rotation={-(Number(rotation) || 0)} listening={false}>
                     <Tag fill="rgba(255,255,255,0.88)" stroke={marker.stroke} strokeWidth={0.75 / stageScale} cornerRadius={3 / stageScale} />
                     <Text text={sizeLabel} fontSize={16 / stageScale} padding={4 / stageScale} fill="#0f172a" fontStyle="bold" />
-                  </Label>
+                  </Label>}
                 </Group>
               );
             })}
@@ -6636,7 +6743,8 @@ setSavedRevision(verifiedSave.revision);
             <RoomBoundaryLayer key={`${openedTakeoffJob?.takeoffId}-${currentPage}-${editingRoomId || ''}`} rooms={(aiTakeoffAnalysis.report?.rooms || []).filter(room => room.page === currentPage)}
               control={aiTakeoffAnalysis.rooms} enabled={activeTool === 'rooms' && !isRecoveryPreview} editing={editingRoomId}
               scale={stageScale} width={logicalImageWidth} height={logicalImageHeight} suppressClick={suppressNextStageClickRef}
-              hoveredId={hoveredRoomId} setHoveredId={setHoveredRoomId} walls={activePageWalls} pixelsPerMm={pixelsPerMm || 1} visible={overlayVisibility.rooms} />
+              hoveredId={hoveredRoomId} setHoveredId={setHoveredRoomId} walls={activePageWalls} pixelsPerMm={pixelsPerMm || 1} visible={overlayVisibility.rooms}
+              rotation={rotation} focusedId={focusedRoomId} onFocus={focusRoom} />
             {/* Pointer crosshair. This is the last child of the layer, so it paints on top of every
                 markup, and it is pinned to the cursor - which means its hit region sits under the
                 pointer on every single click. It must never listen, or it swallows the click that
@@ -6669,12 +6777,17 @@ setSavedRevision(verifiedSave.revision);
           <div data-testid="plan-overlay-key" style={{ position: 'absolute', left: 12, bottom: 12, zIndex: 6, background: 'rgba(255,255,255,0.95)', border: '1px solid #94a3b8', borderRadius: 8, padding: '8px 10px', fontSize: 14, display: 'grid', gap: 4, boxShadow: '0 2px 8px #0002' }}>
             <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
               <strong style={{ fontSize: 14 }}>Plan overlays</strong>
+              <button type="button" data-testid="zoom-to-rooms" onClick={() => zoomToRooms()}>Zoom to rooms</button>
               <button type="button" data-testid="plan-overlay-key-toggle" aria-expanded={overlayKeyOpen} onClick={() => setOverlayKeyOpen((open) => !open)}>{overlayKeyOpen ? 'Hide' : 'Show'}</button>
             </span>
             {overlayKeyOpen && [
               ['floorAreas', 'rgba(33,150,243,0.35)', '#1565c0', 'Floor areas (footprint, garage, alfresco...)'],
               ['rooms', 'rgba(22,163,74,0.25)', '#d97706', 'Rooms (green approved, amber review)'],
               ['eaves', 'rgba(0,188,212,0.35)', '#00838f', 'Eaves'],
+              ['walls', 'rgba(71,85,105,0.25)', '#475569', 'Walls'],
+              ['openings', 'rgba(255,255,255,0.9)', '#7c3aed', 'Doors and windows'],
+              ['labels', 'rgba(255,255,255,0.9)', '#0f172a', 'Door and window size labels'],
+              ['review', 'rgba(217,119,6,0.15)', '#d97706', 'Review items (walls and openings to check)'],
             ].map(([key, fill, stroke, text]) => (
               <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
                 <input type="checkbox" checked={overlayVisibility[key]} onChange={() => setOverlayVisibility((current) => ({ ...current, [key]: !current[key] }))} />

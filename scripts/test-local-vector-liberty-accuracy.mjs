@@ -21,13 +21,17 @@ const mm=point=>({x:point.x/input.pixelsPerMm,y:point.y/input.pixelsPerMm});
 const walls=compareWalls(reference.walls.map(w=>({...w,a:mm(w.a),b:mm(w.b)})),reading.walls);
 const openings=compareOpenings(reference.openings.map(o=>({...o,...mm(o)})),reading.openings);
 const rooms=compareRooms(reference.rooms.map(r=>({...r,polygon:r.polygon.map(mm)})),reading.rooms);
-assert.ok(walls.recall>=.95,`Liberty wall recall regressed: ${walls.recall}`);
+// Floors raised 2026-11-15 after the dashed-head, barn-door and wall-continuation repairs
+// (recall 0.987, 32/33 without OCR; the 33rd, the Bed 1 WIR, is settled by its printed label via OCR).
+assert.ok(walls.recall>=.98,`Liberty wall recall regressed: ${walls.recall}`);
 assert.ok(walls.precision>=.985,`Liberty wall precision regressed: ${walls.precision}`);
-assert.ok(openings.matched>=28,`Liberty matched openings regressed: ${openings.matched}`);
+assert.ok(openings.matched>=32,`Liberty matched openings regressed: ${openings.matched}`);
 assert.ok(rooms.matched>=9,`Liberty room candidates regressed: ${rooms.matched}`);
 assert.ok(canonical.placedOpenings.every(o=>o.widthMm>0),'calibrated widths must survive normalization and canonical admission');
-assert.equal(canonical.placedOpenings.filter(o=>o.needsClassification).length,10,'new projected-frame types need confirmation before quantities');
-assert.equal(openings.extra.length,0,'collinear wall remnants cannot become an additional wide slider');
+// No silent acceptance: every gap with nothing drawn in it waits for the builder's classification.
+assert.ok(canonical.placedOpenings.filter(o=>o.unconfirmed).every(o=>o.needsClassification),'unconfirmed gaps need classification before quantities');
+const heldIds=new Set(canonical.placedOpenings.filter(o=>o.needsClassification).map(o=>o.ai?.detectionId||o.id));
+assert.deepEqual(openings.extra.filter(o=>!heldIds.has(o.id)).map(o=>o.id),[],'no confirmed opening outside the reference (collinear wall remnants cannot become an additional wide slider)');
 assert.ok(result.rooms.every(r=>!r.confirmed),'candidate accuracy must not silently approve rooms');
 const rerunContext={...context,completedWallRuns:canonical.completedWallRuns,placedOpenings:canonical.placedOpenings};
 const rerun=buildLocalVectorAnalysis({planPage:input,detected,pixelsPerMm:input.pixelsPerMm,level:'Ground Floor',context:rerunContext,runId:'rerun'});

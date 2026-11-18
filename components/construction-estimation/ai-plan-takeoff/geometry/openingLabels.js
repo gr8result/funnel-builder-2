@@ -73,7 +73,7 @@ function groupLines(glyphs, k, o) {
       ? { g, a0: g.x0, a1: g.x1, c0: g.y0, c1: g.y1 }
       : { g, a0: g.y0, a1: g.y1, c0: g.x0, c1: g.x1 })
       .map((it) => ({ ...it, across: it.c1 - it.c0 + 1, along: it.a1 - it.a0 + 1 }))
-      .filter((it) => it.across >= minPx && it.across <= maxPx && it.along <= it.across * 1.6 && it.g.n >= 4);
+      .filter((it) => it.across >= minPx && it.across <= maxPx && it.along <= it.across * (o.glyphAspectMax || 1.6) && it.g.n >= 4);
     items.sort((a, b) => a.a0 - b.a0);
     const parent = items.map((_, i) => i);
     const find = (i) => { while (parent[i] !== i) i = parent[i] = parent[parent[i]]; return i; };

@@ -8,7 +8,7 @@ const LEVELS = ['Ground Floor', 'Second Level', 'Third Level'];
 const LEVEL_PREFIX = { 'Ground Floor': 'lower', 'Second Level': 'upper', 'Third Level': 'third' };
 // Analysis findings that need a person. Anything not listed is a diagnostic.
 const DECISION_CODES = new Set([
-  'possible-missing-openings', 'possible-missing-walls', 'open-edge', 'sheet-failed', 'inspection-failed',
+  'possible-missing-openings', 'possible-missing-walls', 'open-edge', 'sheet-failed', 'sheet-reading-failed', 'sheet-not-measurable', 'sheet-not-calibrated', 'level-from-saved-reading', 'inspection-failed',
   'duplicate-level', 'unassigned-level', 'benchmark-discrepancy', 'dimension-conflict', 'evidence-conflict',
   'scale-conflict', 'unreadable', 'single-face-line', 'unclassified-opening', 'reading-not-in-linework',
   'opening-needs-classification', 'opening-not-in-linework', 'unconfirmed-gaps', 'room-without-boundary',
@@ -34,6 +34,10 @@ const ANALYSIS_TITLES = {
   'possible-missing-openings': 'Possible openings not in your takeoff',
   'possible-missing-walls': 'The plan may have more wall than is traced',
   'sheet-failed': 'A sheet could not be analysed', 'inspection-failed': 'A sheet could not be read',
+  'sheet-reading-failed': 'Measured from linework only: the AI plan reading failed',
+  'sheet-not-measurable': 'A floor-plan sheet could not be measured locally',
+  'sheet-not-calibrated': 'A floor-plan sheet is not calibrated',
+  'level-from-saved-reading': 'Confirm the level of a measured sheet',
   'duplicate-level': 'Two sheets show the same level', 'unassigned-level': 'A floor plan has no level',
   'benchmark-discrepancy': 'Measured quantity differs from the figure printed on the plan',
   'dimension-conflict': 'The plan gives two different sizes for an opening', 'evidence-conflict': 'The sheets disagree',
@@ -212,7 +216,7 @@ export function buildTakeoffReview({ records = [], analysis = null, jobSetupRows
       id: `analysis:${code}`, topic: code, pages: [...new Set(entries.map((item) => item.page).filter(Boolean))],
       title: entries.length > 1 ? `${ANALYSIS_TITLES[code] || 'Check the plan'} (${entries.length})` : (ANALYSIS_TITLES[code] || 'Check the plan'),
       detail: [...new Set(entries.map(reviewText))].join(' '),
-      action: { type: code === 'sheet-failed' || code === 'inspection-failed' ? 'rerun' : 'acknowledge' },
+      action: { type: ['sheet-failed', 'sheet-reading-failed', 'inspection-failed'].includes(code) ? 'rerun' : 'acknowledge' },
     });
   }
   return { checklist, decisions, diagnostics: [...new Set(diagnostics)] };

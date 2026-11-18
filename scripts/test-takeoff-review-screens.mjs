@@ -59,7 +59,7 @@ try {
   await act(() => root.render(panel(takeoff)));
   const result = document.getElementById('ai-takeoff-result');
   // Not presented as complete while decisions (including the required wall check) are open.
-  assert.match(result.textContent, /AI TAKEOFF REQUIRES REVIEW/);
+  assert.match(result.textContent, /TAKEOFF REQUIRES REVIEW/);
   assert.match(result.textContent, /✓ 1 window identified/);
   assert.match(result.textContent, /✓ 1 internal door identified/);
   assert.match(result.textContent, /✓ External walls measured — 7\.0 lm/);
@@ -68,7 +68,7 @@ try {
   assert.match(document.getElementById('ai-takeoff-review-count').textContent, /⚠ 5 items require confirmation/);
   const diagnostics = document.getElementById('ai-takeoff-diagnostics');
   assert.equal(diagnostics.open, false, 'technical diagnostics are collapsed');
-  assert.match(diagnostics.querySelector('summary').textContent, /Advanced AI diagnostics \(\d+\)/);
+  assert.match(diagnostics.querySelector('summary').textContent, /Advanced diagnostics \(\d+\)/);
   assert.match(diagnostics.textContent, /not legible on this sheet/);
   assert.match(diagnostics.textContent, /cannot determine image pixels\/mm/);
   const visible = [...result.children].filter((node) => node !== diagnostics).map((node) => node.textContent).join(' ');

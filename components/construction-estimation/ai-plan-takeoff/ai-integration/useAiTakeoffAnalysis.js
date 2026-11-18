@@ -27,6 +27,9 @@ import { addTrainingExample, buildTrainingExample } from './trainingCapture.js';
 
 const RUN_ID = 'ai-takeoff-v3-linework';
 const LOCAL_VECTOR_RUN_ID = 'ai-takeoff-vector-v3';
+// The default takeoff: measured on this computer from the drawing's own linework, no provider request.
+const LOCAL_RUN_ID = 'ai-takeoff-v3-local';
+export const LOCAL_PROVIDER = 'GR8 Result local measurement (no AI)';
 const nextFrame = () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 const closeScale = (a, b) => a > 0 && b > 0 && Math.abs(a - b) / b < 0.000001;
 const CONTEXT_TEXT_CHARS = 20000;
@@ -36,6 +39,18 @@ const EVIDENCE_ORDER = ['window_door_schedule', 'elevation', 'section', 'details
 const MAX_EVIDENCE_SHEETS = 8;
 const EVIDENCE_BATCH_BYTES = 7 * 1024 * 1024;
 const imageBytes = (page) => Math.ceil(String(page?.imageDataUrl || '').length * 0.75);
+// PDF linework with stroke width and colour: the local vector engine can measure the sheet itself.
+const hasStyledVectors = (planPage) => Boolean(planPage?.vectorSegments?.some((segment) => segment.paint === 'stroke' && Number.isFinite(segment.widthPx) && typeof segment.color === 'string'));
+// A plan reading that adds no semantics: the sheet's geometry comes entirely from its linework.
+// Paid provider requests need the builder's explicit authorisation for this run (the screen asks first).
+// The local measurement never reaches here; this is the second check after analysisClient's own.
+const providerCall = (work, payload) => {
+  if (work?.providerAuthorised !== true) {
+    throw Object.assign(new Error('AI-assisted analysis was not authorised, so no request was sent to OpenAI and nothing was charged.'), { code: 'provider_not_authorised', hard: true });
+  }
+  return requestTakeoffAnalysis(payload, work.signal, { authorised: true });
+};
+const emptySheetReading = (page, level) => ({ page, level: level || 'Unassigned', walls: [], openings: [], buildingAreas: [], pillars: [], eaves: [], rooms: [], fixtures: [], documentedQuantities: [], review: [] });
 
 function sanitizeCalibrations(saved) {
   if (!saved || typeof saved !== 'object' || Array.isArray(saved)) return {};
@@ -93,6 +108,20 @@ function electricalForPages(planPages = [], pages = [], scaleOf, saved = {}) {
     }
   }
   return next;
+}
+
+// What stops a re-measure: anything from the earlier run that the builder approved, edited or answered.
+export function remeasureBlockers(current, report, receipt) {
+  const ofRun = (item) => item?.source === 'ai' && item.ai?.runId === receipt.runId && item.ai?.documentHash === receipt.documentHash;
+  const objects = [...(current.completedWallRuns || []), ...(current.placedOpenings || []), ...(current.completedFloorplans || [])].filter(ofRun);
+  const approved = objects.filter((item) => item.confirmed === true || item.approvedAt || item.confirmedAt).length;
+  const rooms = (report?.rooms || []).filter((room) => room.confirmed || room.boundaryLocked || room.nameEdited || room.boundaryEdited || room.levelEdited).length;
+  const answers = Object.keys(report?.resolvedDecisions || {}).length;
+  return [
+    approved ? `${approved} measured item${approved === 1 ? ' is' : 's are'} approved` : '',
+    rooms ? `${rooms} room${rooms === 1 ? ' has' : 's have'} been approved or edited` : '',
+    answers ? `${answers} review question${answers === 1 ? ' has' : 's have'} been answered` : '',
+  ].filter(Boolean);
 }
 
 export function useAiTakeoffAnalysis(options) {
@@ -180,8 +209,10 @@ export function useAiTakeoffAnalysis(options) {
       setMessage('AI TAKEOFF REQUIRES REVIEW — check unresolved walls, openings and room boundaries below.');
     }
   }, [report?.status, stage]);
-  const readRooms = async () => {
+  // Reading room names with the AI provider is paid: it runs only when the builder authorises it.
+  const readRooms = async ({ authorised = false } = {}) => {
     if (pending.current || roomsState.busy) return;
+    if (authorised !== true) { setRoomsState({ busy: false, error: true, message: 'Reading rooms with AI sends the floor plans to OpenAI and is charged to your OpenAI account. Authorise it first; nothing was sent.' }); return; }
     const current = latest.current;
     if (current.readOnly || !current.jobId || !current.takeoffId || !current.planPages.length) {
       setRoomsState({ busy: false, error: true, message: 'Open an editable job and upload its construction plan first.' }); return;
@@ -189,7 +220,7 @@ export function useAiTakeoffAnalysis(options) {
     let sheets = floorPlanSheets(current.sheetLevels, current.planPages);
     const abort = new AbortController();
     controller.current = abort;
-    const work = { jobId: current.jobId, takeoffId: current.takeoffId, planPages: current.planPages, generation: current.lifecycle.hydrationVersion, signal: abort.signal };
+    const work = { jobId: current.jobId, takeoffId: current.takeoffId, planPages: current.planPages, generation: current.lifecycle.hydrationVersion, signal: abort.signal, providerAuthorised: true };
     pending.current = work;
     setRoomsState({ busy: true, error: false, message: 'Detecting room boundaries from the plans…' });
     try {
@@ -199,7 +230,7 @@ export function useAiTakeoffAnalysis(options) {
           assertCurrent(work);
           setRoomsState({ busy: true, error: false, message: `Identifying floor plans and levels — sheet ${planPage.pageNumber}…` });
           const prepared = await prepareAnalysisPage(planPage);
-          const inspected = await requestTakeoffAnalysis({ action: 'inspect', jobId: work.jobId, takeoffId: work.takeoffId, documentHash, runId: ROOMS_RUN_ID, page: prepared }, work.signal);
+          const inspected = await providerCall(work, { action: 'inspect', jobId: work.jobId, takeoffId: work.takeoffId, documentHash, runId: ROOMS_RUN_ID, page: prepared });
           assertCurrent(work);
           if (['floor_plan','floor-plan'].includes(inspected.analysis.drawingType)) sheets.push({ page: planPage.pageNumber, level: inspected.analysis.level || 'Unassigned' });
         }
@@ -212,8 +243,8 @@ export function useAiTakeoffAnalysis(options) {
         assertCurrent(work);
         setRoomsState({ busy: true, error: false, message: `Detecting room boundaries — sheet ${sheet.page} (${sheet.level})…` });
         const prepared = await prepareAnalysisPage(work.planPages.find((page) => page.pageNumber === sheet.page));
-        const result = await requestTakeoffAnalysis({ action: 'measure', measurementScope: ROOMS_SCOPE, jobId: work.jobId, takeoffId: work.takeoffId, documentHash, runId: ROOMS_RUN_ID,
-          page: { ...prepared, drawingType: 'floor_plan', level: sheet.level }, pixelsPerMm: latest.current.pixelsPerMm > 0 ? latest.current.pixelsPerMm : 1 }, work.signal);
+        const result = await providerCall(work, { action: 'measure', measurementScope: ROOMS_SCOPE, jobId: work.jobId, takeoffId: work.takeoffId, documentHash, runId: ROOMS_RUN_ID,
+          page: { ...prepared, drawingType: 'floor_plan', level: sheet.level }, pixelsPerMm: latest.current.pixelsPerMm > 0 ? latest.current.pixelsPerMm : 1 });
         assertCurrent(work);
         model = result.model || model;
         const raster = await readRoomRaster(prepared.imageDataUrl);
@@ -356,15 +387,36 @@ export function useAiTakeoffAnalysis(options) {
 
   const fail = (error, work) => {
     if (work.signal.aborted || pending.current !== work) return;
+    pending.current = null;
+    if (work.assisted && error?.code !== 'provider_not_authorised') {
+      const notice = `AI-assisted analysis stopped: ${error.message || 'the provider request failed.'}`;
+      // A provider that cannot answer (no credit, bad key, timeout) never costs the builder the measurement:
+      // the plan is measured locally instead, or the takeoff already measured stays exactly as it was.
+      const measuredLocally = latest.current.bridge.appliedRuns.some((receipt) => receipt.documentHash === work.documentHash
+        && receipt.takeoffId === work.takeoffId && receipt.runId === LOCAL_RUN_ID);
+      if (!measuredLocally && work.documentHash) { void run({ notice: `${notice} Measuring the plan locally instead (no AI, no charge).` }); return; }
+      setStage(reportRef.current ? (reportRef.current.status === 'review' ? 'review' : 'complete') : 'error');
+      setMessage(`${notice} ${reportRef.current ? 'The measured takeoff already in this job is unchanged.' : ''}`.trim());
+      return;
+    }
     setStage('error');
     setMessage(error.message || 'AI Takeoff could not complete.');
-    pending.current = null;
   };
 
   const requestHalf = async (work, key, payload) => {
     const cached = halves.current.get(key);
-    if (cached) return cached;
-    const result = await requestTakeoffAnalysis(payload, work.signal);
+    if (cached) { work.onProviderSettled?.(); return cached; }
+    // No credit, bad key or no model access: nothing further is sent once any request has hit one.
+    if (work.hardFailure) throw work.hardFailure;
+    let result;
+    try {
+      result = await providerCall(work, payload);
+    } catch (error) {
+      if (error.hard) work.hardFailure = error;
+      else work.onProviderSettled?.();
+      throw error;
+    }
+    work.onProviderSettled?.();
     assertCurrent(work, true);
     work.requests.push({ action: payload.action, scope: payload.measurementScope, page: payload.page.pageNumber, requestId: result.requestId, model: result.model });
     halves.current.set(key, result);
@@ -421,14 +473,16 @@ export function useAiTakeoffAnalysis(options) {
       work.pixelsPerMm = context.pixelsPerMm;
       const projectDefaults = projectDefaultsFromJobSetup(latest.current.jobSetupRows || {});
       setStage('measuring');
-      const planEvidence = await collectEvidence(work);
+      const planEvidence = work.assisted ? await collectEvidence(work) : mergePlanEvidence([]);
       const sharedEvidence = compactPlanEvidence(planEvidence, projectDefaults);
-      const responses = [];
-      for (const inspection of work.inspections.filter((item) => item.relevant || item.drawingType === 'roof_plan')) {
+      // Each measured sheet's readings are independent of the others, so the sheets are read at the
+      // same time: one plan reading takes minutes (about 4 for a single A3 floor plan on gpt-5.4), and
+      // reading a two-storey plan sheet after sheet multiplied that wait for the builder.
+      const measureSheet = async (inspection) => {
         assertCurrent(work, true);
-        setStage('measuring');
-        setMessage(`Analysing plan — measuring sheet ${inspection.page} of ${work.planPages.length}…`);
         const page = work.planPages.find((item) => item.pageNumber === inspection.page);
+        // Local measurement: the sheet goes straight to its own linework, with no plan reading at all.
+        if (!work.assisted) return { ...emptySheetReading(inspection.page, inspection.level), drawingType: inspection.drawingType };
         const rotation = inspection.rotationToUpright || 0;
         const prepared = rotation ? await prepareAnalysisPage(page, rotation) : work.prepared.get(inspection.page);
         // Supporting sheets travel only with the items half, as line-grouped text
@@ -444,17 +498,42 @@ export function useAiTakeoffAnalysis(options) {
           ...(measurementScope === 'items' ? { contextPages } : {}), planEvidence: sharedEvidence, ...extra,
         });
         const halfKey = (action, scope, previous = '') => [work.documentHash, inspection.page, rotation, context.pixelsPerMm, action, scope, previous].join('|');
+        // A calibrated vector floor plan is measured from its own linework whatever the reading returns.
+        const measurableLinework = inspection.drawingType === 'floor_plan' && hasStyledVectors(page) && sheetScale(inspection.page) > 0;
         try {
           // Geometry then items, one at a time: a failure stops before the next paid
           // request and the shared request prefix can be served from the provider cache.
           const measured = {};
-          for (const scope of MEASUREMENT_SCOPES) measured[scope] = await requestHalf(work, halfKey('measure', scope), scoped('measure', scope));
+          const failedScopes = [];
+          for (const scope of MEASUREMENT_SCOPES) {
+            try {
+              measured[scope] = await requestHalf(work, halfKey('measure', scope), scoped('measure', scope));
+            } catch (error) {
+              // A sheet that cannot be measured without the reading stops here, as before. A linework
+              // sheet keeps whichever half succeeded; one failed half is reported, not fatal.
+              if (error.hard || !measurableLinework) throw error;
+              assertCurrent(work, true);
+              failedScopes.push({ scope, error });
+              if (failedScopes.length === MEASUREMENT_SCOPES.length) throw error;
+              measured[scope] = { analysis: emptySheetReading(inspection.page, inspection.level), model: null, failed: true };
+            }
+          }
+          for (const { scope, error } of failedScopes) {
+            work.warnings.push({ page: inspection.page, code: 'sheet-reading-failed', audience: 'decision',
+              message: `The AI ${scope === 'geometry' ? 'wall and area' : 'door, window and room'} reading of sheet ${inspection.page} failed: ${error.message} ${scope === 'geometry' ? 'Walls and areas were classified from the linework alone; check internal/external walls and the floor areas.' : 'Openings and rooms were measured from the linework without it; check opening types and room names.'}` });
+          }
           const firstPass = mergeMeasurementScopes(measured.geometry.analysis, measured.items.analysis);
-          work.model = measured.items.model;
-          setMessage(`Checking geometry against the drawing — sheet ${inspection.page}…`);
+          work.model = measured.items.model || measured.geometry.model || work.model;
           const refined = { geometry: measured.geometry.analysis, items: measured.items.analysis };
           let geometryPreviewDataUrl = null;
-          for (const scope of MEASUREMENT_SCOPES) {
+          // The geometry check corrects the reading's own approximate coordinates against the drawing.
+          // On a linework sheet those coordinates only pair labels with measured objects (every wall,
+          // opening and room is measured from the linework), so the two further multi-minute requests
+          // are not made there.
+          const refineScopes = measurableLinework ? [] : MEASUREMENT_SCOPES;
+          if (refineScopes.length) setMessage(`Checking geometry against the drawing — sheet ${inspection.page}…`);
+          for (const scope of refineScopes) {
+            if (measured[scope].failed) continue;
             try {
               geometryPreviewDataUrl ??= await prepareGeometryReviewImage(prepared, firstPass);
               const checked = await requestHalf(work, halfKey('refine', scope, JSON.stringify(firstPass)), scoped('refine', scope, { previousAnalysis: firstPass, geometryPreviewDataUrl }));
@@ -466,14 +545,45 @@ export function useAiTakeoffAnalysis(options) {
               work.warnings.push({ page: inspection.page, message: `Geometry check failed${scope === 'items' ? ' for openings and rooms' : ''}: ${error.message} Valid first-pass detections are retained for review.`, code: 'refinement-failed' });
             }
           }
-          responses.push({ ...restoreAnalysisCoordinates(mergeMeasurementScopes(refined.geometry, refined.items), rotation), drawingType: inspection.drawingType });
+          return { ...restoreAnalysisCoordinates(mergeMeasurementScopes(refined.geometry, refined.items), rotation), drawingType: inspection.drawingType };
         } catch (error) {
           // No credit, bad key or no model access: every further sheet would fail the same way.
           if (error.hard) throw error;
           assertCurrent(work, true);
+          // Walls, openings and rooms on a calibrated vector sheet are measured from its own PDF
+          // linework; the plan reading only adds semantics (opening types, room names). A failed
+          // reading must not discard a sheet that can still be measured: it goes on with no
+          // semantics and says exactly what failed, so the builder checks those items.
+          if (measurableLinework) {
+            work.warnings.push({ page: inspection.page, code: 'sheet-reading-failed', audience: 'decision',
+              message: `The AI plan reading of sheet ${inspection.page} failed: ${error.message} Walls, openings and rooms on this sheet were measured from the drawing's own linework without it; check opening types and room names before relying on them.` });
+            return { ...emptySheetReading(inspection.page, inspection.level), drawingType: inspection.drawingType, readingFailed: true };
+          }
           work.warnings.push({ page: inspection.page, message: `Sheet analysis failed: ${error.message}`, code: 'sheet-failed' });
+          return null;
         }
-      }
+      };
+      const measuredSheets = work.inspections.filter((item) => item.relevant || item.drawingType === 'roof_plan');
+      assertCurrent(work, true);
+      setStage('measuring');
+      setMessage(work.assisted ? `AI-assisted analysis — reading sheet${measuredSheets.length === 1 ? '' : 's'} ${measuredSheets.map((item) => item.page).join(', ')} of ${work.planPages.length} with OpenAI. Each sheet takes a few minutes…`
+        : `Measuring sheet${measuredSheets.length === 1 ? '' : 's'} ${measuredSheets.map((item) => item.page).join(', ')} locally from the drawing (no AI)…`);
+      // Two sheets at a time (the analysis route serves two requests per builder at once). The first
+      // sheet's first request goes alone: if the account has no credit, a bad key or no model access,
+      // that one request finds out and no other sheet sends anything. The second lane starts once it has
+      // been answered (or has failed for an ordinary reason such as a timeout).
+      let releaseOthers;
+      const providerAnswered = new Promise((resolve) => { releaseOthers = resolve; });
+      work.onProviderSettled = () => releaseOthers();
+      const sheetResults = [];
+      let nextSheet = 1;
+      const lane = async (first) => {
+        if (first !== undefined) sheetResults[first] = await measureSheet(measuredSheets[first]).finally(() => releaseOthers());
+        while (nextSheet < measuredSheets.length) { const index = nextSheet++; sheetResults[index] = await measureSheet(measuredSheets[index]); }
+      };
+      if (measuredSheets.length) await Promise.all([lane(0), providerAnswered.then(() => lane())]);
+      work.onProviderSettled = null;
+      const responses = sheetResults.filter(Boolean);
       assertCurrent(work, true);
       // Every measured sheet failing is a request failure, not "no reliable geometry".
       // Surface the actual errors instead of a review-only result that hides them.
@@ -500,7 +610,7 @@ export function useAiTakeoffAnalysis(options) {
           // Doors and windows read region by region (off unless the takeoff asks for it): each
           // region is enlarged, read on its own and mapped back to the sheet. A sheet whose regions
           // could not all be read keeps the whole-sheet reading as well, and says so.
-          if (latest.current.regionOpenings === true) {
+          if (latest.current.regionOpenings === true && work.assisted) {
             const walls = detectPlanGeometry(raster, sheet, { proposeRooms: false }).walls.flatMap((wall) => wall.nodes);
             if (walls.length) {
               const bounds = { x: Math.min(...walls.map((p) => p.x)), y: Math.min(...walls.map((p) => p.y)), x2: Math.max(...walls.map((p) => p.x)), y2: Math.max(...walls.map((p) => p.y)) };
@@ -516,7 +626,7 @@ export function useAiTakeoffAnalysis(options) {
               response.regionOpenings = read.report;
             }
           }
-          const styledVectors = planPage.vectorSegments?.some(segment => segment.paint === 'stroke' && Number.isFinite(segment.widthPx) && typeof segment.color === 'string');
+          const styledVectors = hasStyledVectors(planPage);
           if (styledVectors) {
             const detected = detectVectorWalls(planPage.vectorSegments, { ...sheet, raster, textItems: planPage.textItems || [] });
             // Printed size labels, read locally from the sheet image; off when the takeoff says so.
@@ -530,7 +640,7 @@ export function useAiTakeoffAnalysis(options) {
             const measured = vectorProductionAnalysis(response, detected, {
               id: `page-${pageNumber}`, name: response.level, page: pageNumber, pixelsPerMm: sheetPixelsPerMm,
               logicalWidth: sheet.logicalWidth, logicalHeight: sheet.logicalHeight,
-            }, { labels: roomLabelsFromText({ ...planPage, ocrRoomLabels: printedLabels.roomLabels || [] }), outdoor: { segments: planPage.vectorSegments || [], textItems: planPage.textItems || [] } });
+            }, { labels: roomLabelsFromText({ ...planPage, ocrRoomLabels: printedLabels.roomLabels || [] }), outdoor: { segments: planPage.vectorSegments || [], textItems: planPage.textItems || [], notes: printedLabels.sheetNotes || [] } });
             responses[index] = { ...measured.response, drawingType: response.drawingType };
             measuredRoomPages.add(pageNumber);
             vectorReadings.push({ page: pageNumber, vector: measured.vector, detected: measured.detected,
@@ -559,7 +669,7 @@ export function useAiTakeoffAnalysis(options) {
       setMessage('Building Takeoff Schedule…');
       const { batch, analysis } = normalizePlanAnalysis({
         context: { ...context, completedFloorplans: latest.current.completedFloorplans || [], sheetLevels: latest.current.sheetLevels || {} },
-        responses, runId: RUN_ID, modelVersion: work.model, planEvidence, projectDefaults,
+        responses, runId: work.runId, modelVersion: work.model, planEvidence, projectDefaults,
       });
       const scaleReview = [...(work.scale?.review || []), ...(work.scale?.notes || [])].map((item) => ({ message: typeof item === 'string' ? item : item.message, code: 'scale-review' }));
       // Only findings a person has to settle are decisions; the rest is kept as diagnostics.
@@ -576,7 +686,8 @@ export function useAiTakeoffAnalysis(options) {
         : { status: analysis.alreadyMeasured.length ? 'unchanged' : 'review', added: 0 };
       assertCurrent(work, true);
       let completed = {
-        ...analysis, runId: RUN_ID, documentHash: work.documentHash, provider: 'OpenAI', modelVersion: work.model,
+        ...analysis, runId: work.runId, documentHash: work.documentHash, provider: work.assisted ? 'OpenAI' : LOCAL_PROVIDER, modelVersion: work.model,
+        aiAssisted: work.assisted ? { model: work.model, requests: work.requests.length } : null,
         inspections: work.inspections, scale: work.scale, requests: work.requests,
         completedAt: new Date().toISOString(), added: result.added, status: result.status,
       };
@@ -617,9 +728,12 @@ export function useAiTakeoffAnalysis(options) {
       setReport(completed);
       latest.current.markCompleted('ai-takeoff-analysis');
       setStage(completed.status === 'review' ? 'review' : 'complete');
-      setMessage(completed.status === 'review' ? 'AI TAKEOFF REQUIRES REVIEW — check unresolved walls, openings and room boundaries below.'
+      const paidRequests = work.requests.filter((item) => !item.cached).length;
+      const how = work.assisted ? `AI-assisted: OpenAI ${work.model || ''}, ${paidRequests} paid request${paidRequests === 1 ? '' : 's'}`
+        : 'measured locally from the drawing — no AI requests, no charges';
+      setMessage(`${work.notice ? `${work.notice} ` : ''}${completed.status === 'review' ? `TAKEOFF REQUIRES REVIEW (${how}) — check unresolved walls, openings and room boundaries below.`
         : result.status === 'duplicate' ? 'This analysis run is already in the takeoff.'
-          : result.status === 'unchanged' ? 'AI TAKEOFF COMPLETE — everything found on the plans is already in this takeoff.' : 'AI TAKEOFF COMPLETE');
+          : result.status === 'unchanged' ? `TAKEOFF COMPLETE (${how}) — everything found on the plans is already in this takeoff.` : `TAKEOFF COMPLETE (${how})`}`);
       setScaleProposal(null);
       // React must commit geometry, receipts and evidence before the existing
       // save action builds its payload. Never save the previous render's arrays.
@@ -701,7 +815,7 @@ export function useAiTakeoffAnalysis(options) {
           identity: { jobId: current.jobId, takeoffId: current.takeoffId, documentHash: identity.documentHash }, page: planPage.pageNumber, pixelsPerMm,
           detected, detectionKey: candidate.detectionKey, decision: wallDecision.value, segments: planPage.vectorSegments || [] }));
       }
-      const { vector, batch, analysis, rooms: readings, detected: admittedGeometry } = buildLocalVectorAnalysis({ planPage: { ...planPage, ocrRoomLabels: printedLabels.roomLabels || [] }, detected, pixelsPerMm, level, context, runId, wallDecisions, semanticInput: saved?.vectorPlanEvidence?.[reviewIdentity] || null, admitReviewedWallKeys: wallDecision && wallDecision.value !== 'reject'
+      const { vector, batch, analysis, rooms: readings, detected: admittedGeometry } = buildLocalVectorAnalysis({ planPage: { ...planPage, ocrRoomLabels: printedLabels.roomLabels || [], ocrSheetNotes: printedLabels.sheetNotes || [] }, detected, pixelsPerMm, level, context, runId, wallDecisions, semanticInput: saved?.vectorPlanEvidence?.[reviewIdentity] || null, admitReviewedWallKeys: wallDecision && wallDecision.value !== 'reject'
         ? [saved.wallReviewCandidates.find(item => item.id === wallDecision.id && item.page === planPage.pageNumber).detectionKey] : [] });
       const admission = batch.detections.length
         ? await current.bridge.appendDetections(batch, { signal: work.signal })
@@ -746,11 +860,96 @@ export function useAiTakeoffAnalysis(options) {
     } catch (error) { fail(error, work); }
   };
 
-  const run = async () => {
+  // Which sheets the local measurement measures: the floor plans the builder gave a level, else the job's
+  // saved sheet readings (no request is made for them). A sheet it cannot measure is named with the reason.
+  const measureLocally = async (work) => {
+    const levels = latest.current.sheetLevels || {};
+    const chosen = [];
+    const fromSaved = [];
+    for (const page of work.planPages) {
+      const saved = inspectionsRef.current[`${RUN_ID}:${await fingerprintTakeoffPage(page)}`]?.analysis || null;
+      assertCurrent(work);
+      const builderLevel = levels[page.pageNumber] && levels[page.pageNumber] !== 'Unassigned' ? levels[page.pageNumber] : null;
+      if (builderLevel) chosen.push({ ...(saved || {}), page: page.pageNumber, drawingType: 'floor_plan', level: builderLevel, relevant: true, rotationToUpright: saved?.rotationToUpright || 0, levelSource: 'builder' });
+      else if (saved?.drawingType === 'floor_plan' && saved.relevant && saved.level && saved.level !== 'Unassigned') fromSaved.push({ ...saved, page: page.pageNumber, levelSource: 'saved-reading' });
+    }
+    // The builder's own level choices decide; saved readings are used only when no level has been chosen.
+    const sheets = chosen.length ? chosen : fromSaved;
+    if (!chosen.length) for (const item of fromSaved) work.warnings.push({ page: item.page, code: 'level-from-saved-reading', audience: 'decision',
+      message: `Sheet ${item.page} was measured as ${item.level} from the plan's earlier sheet reading. Confirm the level in the sheet level selector.` });
+    // Two sheets given one level (an elevation or a dimension sheet levelled with the floor plan): the sheet that
+    // reads as that floor's plan is measured — a plan reading that calls it a floor plan first, then the most wall
+    // drawn on it. The other is not measured, so the floor is never counted twice, and the builder is told which.
+    const wallEvidence = new Map();
+    const evidenceOf = (item) => {
+      if (wallEvidence.has(item.page)) return wallEvidence.get(item.page);
+      const page = work.planPages.find((planPage) => planPage.pageNumber === item.page);
+      let metres = 0;
+      try {
+        if (hasStyledVectors(page) && sheetScale(item.page) > 0) {
+          const found = detectVectorWalls(page.vectorSegments, { pageNumber: item.page, pixelsPerMm: sheetScale(item.page), logicalWidth: page.logicalWidth, logicalHeight: page.logicalHeight, textItems: page.textItems || [] });
+          metres = (found.walls || []).reduce((sum, wall) => sum + (Number(wall.lengthMm) || 0), 0) / 1000;
+        }
+      } catch { metres = 0; }
+      const reading = inspectionsRef.current ? Object.values(inspectionsRef.current).find((entry) => entry?.analysis?.page === item.page)?.analysis : null;
+      const evidence = { metres, notPlan: Boolean(reading?.drawingType && reading.drawingType !== 'floor_plan') };
+      wallEvidence.set(item.page, evidence);
+      return evidence;
+    };
+    const byLevel = new Map();
+    for (const item of sheets) byLevel.set(item.level, [...(byLevel.get(item.level) || []), item]);
+    for (const [level, group] of byLevel) {
+      if (group.length < 2) continue;
+      const ranked = [...group].sort((a, b) => Number(evidenceOf(a).notPlan) - Number(evidenceOf(b).notPlan) || evidenceOf(b).metres - evidenceOf(a).metres);
+      const keep = ranked[0];
+      for (const other of ranked.slice(1)) work.warnings.push({ page: other.page, code: 'duplicate-level', audience: 'decision',
+        message: `Sheets ${keep.page} and ${other.page} are both set to ${level}. Sheet ${keep.page} reads as the ${level} plan (${evidenceOf(keep).metres.toFixed(0)} m of wall drawn${evidenceOf(other).notPlan ? `; sheet ${other.page} was read as ${'another kind of drawing'}` : `, against ${evidenceOf(other).metres.toFixed(0)} m on sheet ${other.page}`}), so it was measured and sheet ${other.page} was not, to avoid counting the floor twice. Change the sheet levels if that is wrong.` });
+      sheets.splice(0, sheets.length, ...sheets.filter((item) => item.level !== level || item === keep));
+    }
+    const levelsSeen = new Set();
+    const measurable = [];
+    for (const item of sheets) {
+      const page = work.planPages.find((planPage) => planPage.pageNumber === item.page);
+      if (levelsSeen.has(item.level)) {
+        work.warnings.push({ page: item.page, code: 'duplicate-level', message: `Another floor-plan sheet is already ${item.level}. Sheet ${item.page} was not measured, to avoid counting that floor twice; check which sheet should be measured.` });
+        continue;
+      }
+      if (!hasStyledVectors(page)) {
+        work.warnings.push({ page: item.page, code: 'sheet-not-measurable', audience: 'decision', message: `Sheet ${item.page} (${item.level}) has no drawing linework (a scanned image, or a PDF imported before linework was kept), so it could not be measured locally. Re-import the PDF, measure it with the takeoff tools, or run AI-assisted analysis.` });
+        continue;
+      }
+      if (!(sheetScale(item.page) > 0)) {
+        work.warnings.push({ page: item.page, code: 'sheet-not-calibrated', audience: 'decision', message: `Sheet ${item.page} (${item.level}) is not calibrated, so it was not measured. Calibrate it with the Calibrate tool and run takeoff again.` });
+        continue;
+      }
+      levelsSeen.add(item.level);
+      measurable.push(item);
+    }
+    if (!measurable.length) {
+      pending.current = null;
+      const reasons = work.warnings.map((item) => item.message).join(' ');
+      setStage(work.warnings.some((item) => item.code === 'sheet-not-calibrated') ? 'calibration' : 'error');
+      setMessage((work.notice ? `${work.notice} ` : '') + (sheets.length ? `Nothing could be measured. ${reasons}`
+        : 'Choose the level of each floor-plan sheet (the sheet level selector above the plan), calibrate it, then run takeoff. The local measurement measures the floor plans you have given a level; nothing is sent to AI.'));
+      return;
+    }
+    work.inspections = measurable;
+    work.model = 'local';
+    work.scale = { pixelsPerMm: latest.current.pixelsPerMm, source: 'builder calibration' };
+    await measure(work);
+  };
+
+  // Run takeoff. By default the plan is measured locally from its own linework and nothing is sent to
+  // any provider. AI-assisted analysis (paid OpenAI requests) runs only with assisted + authorised, which
+  // the screen passes after the builder has confirmed the charge.
+  const run = async ({ assisted = false, authorised = false, notice = '', remeasure = false } = {}) => {
     if (pending.current) return;
     const current = latest.current;
     if (current.readOnly || !current.jobId || !current.takeoffId || !current.planPages.length) {
       setStage('error'); setMessage('Open an editable job and upload its construction plan first.'); return;
+    }
+    if (assisted && authorised !== true) {
+      setMessage('AI-assisted analysis sends the plan to OpenAI and is charged to your OpenAI account. Authorise it first; nothing was sent.'); return;
     }
     const abort = new AbortController();
     controller.current = abort;
@@ -758,18 +957,43 @@ export function useAiTakeoffAnalysis(options) {
       jobId: current.jobId, takeoffId: current.takeoffId, planPages: current.planPages,
       generation: current.lifecycle.hydrationVersion, signal: abort.signal,
       prepared: new Map(), inspections: [], requests: [], warnings: [], pixelsPerMm: current.pixelsPerMm,
+      assisted, providerAuthorised: assisted && authorised === true, runId: assisted ? RUN_ID : LOCAL_RUN_ID, notice,
     };
     pending.current = work;
-    setStage('reading'); setMessage('Analysing plan…'); setScaleProposal(null);
+    setStage('reading'); setMessage(assisted ? 'AI-assisted analysis — reading the plan with OpenAI…' : 'Measuring the plan locally (no AI)…'); setScaleProposal(null);
     try {
       work.documentHash = await fingerprintTakeoffDocument(work.planPages);
       assertCurrent(work);
-      if (latest.current.bridge.appliedRuns.some((receipt) => receipt.documentHash === work.documentHash
-        && receipt.takeoffId === work.takeoffId && receipt.runId === RUN_ID)) {
+      // The same run on this takeoff, on this plan or on a relinked copy of it (whose page images can hash
+      // differently): measuring again would add a second set of the same walls and rooms, so it is refused
+      // unless the builder asks to re-measure, which replaces the earlier set.
+      const earlier = latest.current.bridge.appliedRuns.find((receipt) => receipt.documentHash === work.documentHash
+        && receipt.takeoffId === work.takeoffId && receipt.runId === work.runId)
+        || latest.current.bridge.appliedRuns.find((receipt) => receipt.takeoffId === work.takeoffId && receipt.runId === work.runId);
+      if (earlier && !(remeasure && !assisted)) {
         pending.current = null;
-        setStage(reportRef.current?.status === 'review' ? 'review' : 'complete'); setMessage('This plan has already been analysed. Review the existing takeoff.'); return;
+        setStage(reportRef.current?.status === 'review' ? 'review' : 'complete');
+        setMessage(`${notice ? `${notice} ` : ''}This plan has already been ${assisted ? 'analysed with AI' : 'measured'}. Review the existing takeoff${assisted ? '' : ', or re-measure it with the current measuring rules while nothing from it is approved'}.`); return;
       }
-      work.identity = { jobId: work.jobId, takeoffId: work.takeoffId, documentHash: work.documentHash, runId: RUN_ID };
+      if (earlier) {
+        // Measuring again replaces the earlier local measurement: only while nothing from it has been approved or
+        // reviewed, so no approved quantity is lost or doubled. Items drawn by hand are never touched.
+        const blocked = remeasureBlockers(latest.current, reportRef.current, earlier);
+        if (blocked.length) {
+          pending.current = null;
+          setStage(reportRef.current?.status === 'review' ? 'review' : 'complete');
+          setMessage(`Not re-measured: ${blocked.join('; ')}. Re-measuring would replace them. Nothing was changed.`); return;
+        }
+        const { removed } = latest.current.bridge.removeRun(earlier);
+        reportRef.current = null;
+        setReport(null);
+        work.notice = `${work.notice ? `${work.notice} ` : ''}Re-measured: the earlier measurement (${removed} unapproved items) was replaced.`;
+        // Let the removal reach the collections before the new run reads them.
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        assertCurrent(work);
+      }
+      work.identity = { jobId: work.jobId, takeoffId: work.takeoffId, documentHash: work.documentHash, runId: work.runId };
+      if (!assisted) { await measureLocally(work); return; }
       for (const page of work.planPages) {
         assertCurrent(work);
         setMessage(`Analysing plan — reading sheet ${page.pageNumber} of ${work.planPages.length}…`);
@@ -785,7 +1009,7 @@ export function useAiTakeoffAnalysis(options) {
           continue;
         }
         try {
-        const result = await requestTakeoffAnalysis({ action: 'inspect', ...work.identity, page: prepared }, work.signal);
+        const result = await providerCall(work, { action: 'inspect', ...work.identity, page: prepared });
         assertCurrent(work);
         rememberInspection(inspectionKey, result);
         work.inspections.push(structuredClone(result.analysis));

@@ -1,3 +1,4 @@
+import { mergeFrameRuns } from './vectorWalls.js';
 // Linework engine output -> plan model level.
 //
 // The engine measures walls between their own ends, so a doorway is a gap: two wall pieces on one
@@ -6,7 +7,7 @@
 // is bridged with wall of the host's thickness and the opening is placed on it. A gap nothing confirms
 // is left open: it may be a passage, and closing it would invent a room boundary.
 // Coordinates: the engine's logical plan pixels in, millimetres (pixels / pixelsPerMm) out.
-import { computeRooms, createLevel, deleteWall, externalRecesses, inferThresholdDividers, pointInPolygon, splitWallsByExposure, updateWall, mergeDetections, openingPosition, wallCategories, wallPoints } from './planModel.js';
+import { closeWallGaps, computeRooms, createLevel, deleteWall, dropScrapClosures, externalRecesses, foldFixtureFaces, inferThresholdDividers, pointInPolygon, splitWallsByExposure, updateWall, mergeDetections, openingPosition, wallCategories, wallPoints } from './planModel.js';
 
 const toMm = (point, pixelsPerMm) => ({ x: point.x / pixelsPerMm, y: point.y / pixelsPerMm });
 
@@ -107,7 +108,7 @@ export function openingKindOf(found) {
  *                 continues across them and the opening is listed as an unconfirmed 'opening' for review
  * @returns {{ level, report }}
  */
-export function levelFromLinework(geometry, spec, { level = null, labels = [], bridgeUnconfirmedMaxMm = 0 } = {}) {
+export function levelFromLinework(geometry, spec, { level = null, labels = [], bridgeUnconfirmedMaxMm = 0, drawnLines = [] } = {}) {
   const ppm = spec.pixelsPerMm;
   if (!(ppm > 0)) throw new Error('A sheet scale (pixelsPerMm) is needed to build the plan model.');
   const walls = (geometry.walls || []).filter((wall) => Array.isArray(wall.nodes) && wall.nodes.length >= 2).map((wall) => ({
@@ -144,17 +145,51 @@ export function levelFromLinework(geometry, spec, { level = null, labels = [], b
   const roomLabels = labels.map((label) => ({ ...toMm(label, ppm), name: label.name }));
   const merged = mergeDetections(base, { walls: [...walls, ...bridges], openings }, { measuredLinework: true });
   // Virtual room dividers (open thresholds) before rooms are named, so each name lands in its own room.
-  const divided = inferThresholdDividers(merged.level, roomLabels, { measuredLinework: true });
+  // Short gaps the drawing leaves in a wall line (narrower than any door) are closed virtually for rooms and the outline.
+  // Door and window frames the detector read but did not take as walls (wrong pen, frame thickness, lines
+  // between the faces): evidence that a wider gap at the end of a wall line is an opening in it.
+  // The sheet's drawn lines (logical px -> mm): a robe or cupboard front drawn as doors divides its room, and a
+  // grille or hatch is told from a door or window frame by the slats across it.
+  const lines = drawnLines.filter((line) => [line.x1, line.y1, line.x2, line.y2].every(Number.isFinite)).map((line) => ({ x1: line.x1 / ppm, y1: line.y1 / ppm, x2: line.x2 / ppm, y2: line.y2 / ppm }));
+  // A frame crossed by short lines every few centimetres is a grille, louvre or hatch (an air-conditioner, a
+  // vent, slats), not a door or window frame, which has a mullion or two at most.
+  const slatted = (item) => {
+    if (!lines.length) return false;
+    const a = toMm(item.a, ppm), b = toMm(item.b, ppm), length = Math.hypot(b.x - a.x, b.y - a.y);
+    if (!(length > 0)) return false;
+    const u = { x: (b.x - a.x) / length, y: (b.y - a.y) / length }, half = item.thicknessMm / 2 + 40;
+    let count = 0;
+    for (const line of lines) {
+      const dx = line.x2 - line.x1, dy = line.y2 - line.y1, l = Math.hypot(dx, dy);
+      if (!(l > 0) || l > item.thicknessMm + 120 || Math.abs((dx * u.x + dy * u.y) / l) > 0.2) continue;
+      const m = { x: (line.x1 + line.x2) / 2 - a.x, y: (line.y1 + line.y2) / 2 - a.y };
+      const along = m.x * u.x + m.y * u.y, across = Math.abs(m.x * -u.y + m.y * u.x);
+      if (along > 50 && along < length - 50 && across <= half) count += 1;
+    }
+    return count > 3 * length / 1000 + 2;
+  };
+  const frames = (geometry.rejected || []).filter((item) => item?.a && item?.b && item.thicknessMm >= 40 && item.thicknessMm <= 250 && item.lengthMm >= 600
+    && /wall pens|frame of a door|thickness not one|another line runs between/.test(item.reason || '') && !slatted(item)).map((item) => ({ a: toMm(item.a, ppm), b: toMm(item.b, ppm) }));
+  // A frame drawn in pieces along one wall line (a stub, then the sliding door's panels) is one run.
+  const frameRuns = mergeFrameRuns(frames, 350, 150);
+  const closed = closeWallGaps(merged.level, { measuredLinework: true, frames: frameRuns, labels: roomLabels });
+  const divided = inferThresholdDividers(closed.level, roomLabels, { measuredLinework: true, drawnLines: lines });
+  // A bath or shower base whose outline closes against its wet room's walls is that room's fixture.
+  const fixtures = foldFixtureFaces(divided.level, roomLabels, { measuredLinework: true, drawnLines: lines });
   // Walls cut where their exposure changes (external run / internal run), before rooms are named.
-  const named = mergeDetections(splitWallsByExposure(divided.level), { rooms: roomLabels }, { measuredLinework: true });
-  return { level: named.level, report: { ...merged.report, roomsNamed: named.report.roomsNamed, bridges: bridges.length, measuredWalls: walls.length, dividers: divided.dividers } };
+  const named = mergeDetections(splitWallsByExposure(fixtures.level), { rooms: roomLabels }, { measuredLinework: true });
+  // Closures that ended up enclosing only a scrap against the outside are taken out again.
+  const cleaned = dropScrapClosures(named.level, roomLabels, { measuredLinework: true });
+  const dropped = new Set(cleaned.dropped);
+  return { level: cleaned.level, report: { ...merged.report, roomsNamed: named.report.roomsNamed, bridges: bridges.length, measuredWalls: walls.length, dividers: divided.dividers,
+    gapClosures: closed.closures.filter((closure) => !dropped.has(closed.level.separators[closure.separatorId]?.detectionKey)), scrapClosuresDropped: cleaned.dropped.length, fixtures: fixtures.fixtures } };
 }
 
 // Gaps nothing confirms, up to this width, are kept as unconfirmed openings for builder review (the wall
 // line continues across them so rooms can close). They never count as verified openings.
 export const UNCONFIRMED_GAP_REVIEW_MAX_MM = 2500;
 
-export function vectorAnalysisFromLinework(geometry, spec, { labels = [], wallDecisions = {}, classifications = {}, bridgeUnconfirmedMaxMm = UNCONFIRMED_GAP_REVIEW_MAX_MM } = {}) {
+export function vectorAnalysisFromLinework(geometry, spec, { labels = [], wallDecisions = {}, classifications = {}, bridgeUnconfirmedMaxMm = UNCONFIRMED_GAP_REVIEW_MAX_MM, drawnLines = [] } = {}) {
   // Retaining and other external structures found by the classification stage are not house walls.
   // They are listed for review only; once the builder confirms one as Internal or External it is
   // measured like any wall (the decision is keyed to the structure's stable detection key).
@@ -164,7 +199,7 @@ export function vectorAnalysisFromLinework(geometry, spec, { labels = [], wallDe
   const replaced = new Set(confirmedStructures.flatMap((item) => item.coversWallIds || []));
   if (confirmedStructures.length) geometry = { ...geometry, walls: [...(geometry.walls || []).filter((wall) => !replaced.has(wall.id)), ...confirmedStructures.map((item) => ({ id: item.id, nodes: item.nodes,
     measuredThicknessMm: item.thicknessMm, lengthMm: Math.round(Math.hypot(item.nodes[1].x - item.nodes[0].x, item.nodes[1].y - item.nodes[0].y) / spec.pixelsPerMm) }))] };
-  const built = levelFromLinework(geometry, spec, { labels, bridgeUnconfirmedMaxMm });
+  const built = levelFromLinework(geometry, spec, { labels, bridgeUnconfirmedMaxMm, drawnLines });
   let level = built.level;
   const report = built.report;
   for (const wall of Object.values(level.walls)) {
@@ -337,20 +372,32 @@ export function vectorAnalysisFromLinework(geometry, spec, { labels = [], wallDe
   // separate an enclosed room such as a pantry) is a doorway with no jamb on one side. It is listed
   // as an opening for the builder to confirm, measured from the wall end to the facing wall; it is
   // never counted until confirmed, because the finished width depends on what is built there.
+  // Likewise the front of a robe or cupboard drawn as doors (its sliding doors), and a door or window frame
+  // drawn across a side closed for rooms (a stacker or sliding door): listed for the builder, never counted
+  // until confirmed.
+  const separatorOpening = {
+    'open-threshold': { kind: 'opening', model: 'open-threshold', prefix: 'threshold',
+      reason: (mm) => `Open threshold: the wall stops with no jamb and the room is separated across ${mm} mm of open floor to the facing wall. Confirm whether it is an opening (and its finished width) before it is used.` },
+    'drawn-front': { kind: 'door', model: 'robe-front', prefix: 'front',
+      reason: (mm) => `Doors drawn across the ${mm} mm front of a robe or cupboard (sliding or hinged). Confirm the door type, number of panels and height before it is used.` },
+    'opening-closure': { kind: 'door', model: 'frame-closure', prefix: 'frame',
+      reason: (mm) => `A door or window frame is drawn across ${mm} mm where the wall line is closed for rooms (a stacker, sliding door or window). Confirm what it is and its size before it is used.` },
+  };
   for (const separator of Object.values(level.separators)) {
-    if (separator.source !== 'detected' || separator.basis !== 'open-threshold' || separator.nodeIds?.length !== 2) continue;
-    const [a, b] = separator.nodeIds.map((id) => level.nodes[id]);
+    const kind = separatorOpening[separator.basis];
+    if (separator.source !== 'detected' || !kind || !(separator.nodeIds?.length >= 2) || (separator.basis === 'open-threshold' && separator.nodeIds.length !== 2)) continue;
+    const [a, b] = [separator.nodeIds[0], separator.nodeIds[separator.nodeIds.length - 1]].map((id) => level.nodes[id]);
     if (!a || !b) continue;
     const lengthMm = Math.round(Math.hypot(b.x - a.x, b.y - a.y));
     const middle = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
     reviewOpeningCandidates.push({
-      id: `review-opening-threshold-${separator.detectionKey || separator.id}`,
+      id: `review-opening-${kind.prefix}-${separator.detectionKey || separator.id}`,
       page: spec.page,
       nodes: [{ x: middle.x * spec.pixelsPerMm, y: middle.y * spec.pixelsPerMm }],
       normalizedPoint: { x: middle.x * spec.pixelsPerMm / spec.logicalWidth, y: middle.y * spec.pixelsPerMm / spec.logicalHeight },
-      widthMm: lengthMm, openingKind: 'opening', modelKind: 'open-threshold', evidence: separator.evidence || null,
+      widthMm: lengthMm, openingKind: kind.kind, modelKind: kind.model, evidence: separator.evidence || null,
       separatorId: separator.id, status: 'review-required',
-      reason: `Open threshold: the wall stops with no jamb and the room is separated across ${lengthMm} mm of open floor to the facing wall. Confirm whether it is an opening (and its finished width) before it is used.`,
+      reason: kind.reason(lengthMm),
     });
   }
   const unconfirmedSpanWallIds = new Set(reviewBridgeCandidates.filter((item) => /unconfirmed gap/.test(item.reason)).map((item) => item.modelWallId));
@@ -467,7 +514,7 @@ export function vectorAnalysisFromLinework(geometry, spec, { labels = [], wallDe
     virtualDividers: Object.values(level.separators).filter((separator) => separator.source === 'detected').map((separator) => ({
       id: separator.id, basis: separator.basis, detectionKey: separator.detectionKey, evidence: separator.evidence,
       nodes: separator.nodeIds.map((id) => ({ x: level.nodes[id].x * spec.pixelsPerMm, y: level.nodes[id].y * spec.pixelsPerMm })),
-      lengthMm: Math.round(Math.hypot(level.nodes[separator.nodeIds[1]].x - level.nodes[separator.nodeIds[0]].x, level.nodes[separator.nodeIds[1]].y - level.nodes[separator.nodeIds[0]].y)) })),
+      lengthMm: Math.round(separator.nodeIds.slice(1).reduce((sum, id, i) => sum + Math.hypot(level.nodes[id].x - level.nodes[separator.nodeIds[i]].x, level.nodes[id].y - level.nodes[separator.nodeIds[i]].y), 0)) })),
     report: { ...report,
       unclassifiedWalls: reviewWallCandidates.length,
       unclassifiedBridges: Object.values(level.walls).filter((wall) => wall.detectionKey?.startsWith('linework-bridge:') && !['exterior', 'interior'].includes(categories[wall.id])).length,
