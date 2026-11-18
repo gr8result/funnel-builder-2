@@ -1,11 +1,13 @@
 # AI Take-off: plan to a production-ready version 1
 
-**Updated:** 19 November 2026, against `WORKFLOW.md` (the agreed job flow and its decisions D1–D6).
+**Updated:** 19 November 2026, against `WORKFLOW.md` (the agreed job flow and its decisions D1–D7).
 
 **Rules for this plan:**
 - If a task here conflicts with `WORKFLOW.md`, stop and ask.
 - Every task is sized for one session and has a "done when" line.
 - Nothing merges to `main` until the owner has reviewed it and the tests pass.
+- Every session ends with a commit and push of its own branch.
+- Each module works only in its own worktree: Take-off in `E:\dev\gr8	akeoff`, Selections in `E:\dev\gr8\selections` and Quotation in `E:\dev\gr8\quotation`. `E:\dev\gr8\integration` is never edited by a session, and port 3000 is the owner's.
 
 See `AUDIT.md` for the findings behind each task.
 
@@ -14,10 +16,10 @@ See `AUDIT.md` for the findings behind each task.
 | Topic | Decision | Source |
 |---|---|---|
 | One job record | The take-off reads and writes the same job record as every other module (one `job_id`, status `lead → estimate → pre-contract → contracted → live`). It never keeps its own copy of a job. | WORKFLOW rule 1 |
-| Company isolation | Every row of job data carries the company id, enforced by Supabase RLS. | WORKFLOW rule 2 |
+| Company isolation | Every row of job data carries `workspace_id` (a workspace is a company), enforced by Supabase RLS. There is no separate `company_id`. | WORKFLOW rule 2, D7 |
 | Job data in the browser | None. The only exception is a short-lived cache, separated by company and user, cleared on logout. | Owner, rule 5 |
 | Plan files | A private Supabase Storage bucket, separated by company, with a per-company storage quota and automatic clean-up of temporary renders. Builder-owned cloud storage (Drive / OneDrive / Dropbox) is Later. | D1 |
-| Roles | Admin, Estimator, Viewer and Client. Today's eight roles are mapped to these after the owner signs off the mapping below. | D2 |
+| Roles | Admin, Estimator, Viewer and Client, mapped from today's eight roles as below (approved 19 November 2026, with builder = Admin). | D2 |
 | Edit lock | One editor per job module at a time; others read-only. The lock expires after 15 minutes of no activity, with a heartbeat while active. An Admin can take over; the previous user's unsaved changes are saved as a draft, not lost. | D3 |
 | Paid AI | In V1, off by default; only an Admin can enable it. A per-company monthly limit, configurable, stored in Supabase. The hourly limit is held in the database, not server memory. | Owner |
 | AI cost | Tokens reported by the provider × a per-model price, stored in a settings table only GR8 super-admins can edit. Raw token counts are stored as well as cost. Every AI run is logged with company, user and cost. | D4, owner |
@@ -29,7 +31,7 @@ See `AUDIT.md` for the findings behind each task.
 | CI | GitHub Actions. | Owner |
 | Commits | Take-off work is on `feature/ai-takeoff-v1`. The owner reviews before anything merges to `main`. | Owner |
 
-### Roles: proposed mapping (awaiting the owner's sign-off)
+### Roles: approved mapping (19 November 2026)
 
 Today the code barely tells these roles apart. They are all in one list of roles that may use the commercial screens (`lib/commercialAccess.js`). Only owner and admin get extra rights (editing estimate formulas). The meanings below are what each role is for, based on its name and the WORKFLOW.
 
@@ -38,7 +40,7 @@ Today the code barely tells these roles apart. They are all in one list of roles
 | owner | The account holder: the building company's principal, who pays for the account | Company director or owner | **Admin** |
 | admin | Runs the company's account: settings, users, approvals | Office manager, operations manager | **Admin** |
 | builder_admin | The builder's lead person on jobs, with full job rights | Senior builder, construction manager | **Admin** |
-| builder | A builder working jobs end to end: plans, estimates, selections approvals | Site or project builder | **Admin** (WORKFLOW gives "Builder" the approvals in stages 4–9); alternatively Estimator if approvals should stay with the office |
+| builder | A builder working jobs end to end: plans, estimates, selections approvals | Site or project builder | **Admin** |
 | estimator | Measures plans and prepares estimates and quotes | Estimator, quantity surveyor | **Estimator** |
 | builder_staff | Office staff who prepare documents and enter data | Contract administrator, office assistant | **Estimator** |
 | interior_designer | Helps clients choose finishes in Selections; needs to see room sizes and quantities | In-house or contracted designer | **Viewer** |
@@ -51,9 +53,11 @@ Today the code barely tells these roles apart. They are all in one list of roles
 
 - [x] **A1. Commit the current take-off work to `feature/ai-takeoff-v1` and push.**
   *Done:* `7bbedf6`, 39 take-off files.
-- [ ] **A0 (urgent). Remove plan images from the branch.** Earlier commit `6d47a4c` (17 November) added six PNG crops of the Jesmond drawing and a reference JSON taken from it, under `artifacts/takeoff-reference-corrections-20261116/`. They reached GitHub with the push of this branch on 19 November. Rewrite the branch history without them and force-push the feature branch, with the owner's approval. Add `artifacts/` plan outputs to `.gitignore` rules that stop it happening again.
+- [x] **A0. Remove plan images from the branch.** *Done 19 November 2026:* history rewritten from `6d47a4c` onwards without `artifacts/takeoff-reference-corrections-20261116/`, the PLAN.md commit message fixed, `artifacts/` added to `.gitignore` (`3c3513a`), force-pushed.
+  Original note: Earlier commit `6d47a4c` (17 November) added six PNG crops of the Jesmond drawing and a reference JSON taken from it, under `artifacts/takeoff-reference-corrections-20261116/`. They reached GitHub with the push of this branch on 19 November. Rewrite the branch history without them and force-push the feature branch, with the owner's approval. Add `artifacts/` plan outputs to `.gitignore` rules that stop it happening again.
   *Done when:* no commit on `feature/ai-takeoff-v1` contains drawing images or plan-derived files, and a check in CI fails if one is added.
-- [ ] **A0b (urgent). Drive E: is failing again.** Disk errors were logged at 06:37 on 19 November, and files under `supabase/migrations` cannot be read ("the device is not ready"). Move work off E: (see the worktree proposal) and verify the repository against GitHub before any more work there.
+- [ ] **A0b. Drive E: dropped out on 19 November.** The owner reconnected it, is checking its health and has copied the project folder; work stays on E:. Uncommitted Selections and Quotation work was pushed to `feature/client-selections-v1` and `feature/quotation-v1` (and three Standard Inclusions files to `wip/standard-inclusions-20261119`) so there is an off-drive copy.
+  Original note: Disk errors were logged at 06:37 on 19 November, and files under `supabase/migrations` cannot be read ("the device is not ready"). Move work off E: (see the worktree proposal) and verify the repository against GitHub before any more work there.
   *Done when:* each module has a working copy on a healthy drive, `git fsck` is clean, and uncommitted work from E: is either committed or backed up and verified.
 - [ ] **A2. Production build of the branch.**
   *Done when:* `npm run build` passes on `feature/ai-takeoff-v1`, with lint and types, off port 3000.
@@ -64,7 +68,7 @@ Today the code barely tells these roles apart. They are all in one list of roles
   - Jesmond.
 
   *Done when:* all four pass with zero paid requests. Liberty and Jesmond passed on 19 November on the latest build; the Sunshine Cove runs passed on 18 November.
-- [ ] **A4. Separate working copies per module (git worktrees),** as proposed by the owner-approved arrangement.
+- [x] **A4. Separate working copies per module (git worktrees).** *Done 19 November 2026:* `E:\dev\gr8\integration` (`integration/v1`, from `main`), `E:\dev\gr8	akeoff`, `E:\dev\gr8\selections` and `E:\dev\gr8\quotation`, each with its own `.env` copies and its own `npm ci`.
   *Done when:* Take-off, Selections and Quotation sessions each work in their own folder on their own branch, and no two sessions share a checkout.
 
 ## B. One job record, job storage on the server, edit lock
@@ -179,7 +183,7 @@ Today the code barely tells these roles apart. They are all in one list of roles
 
 Today Take-off, Client Selections and Quotation sessions all edit one checkout on drive E:. Their uncommitted changes mix, a branch switch moves everyone, and E: is failing.
 
-1. **New home on a healthy drive** (for example `C:\dev\gr8\`), not E:.
+1. **Location: `E:\dev\gr8\`** (owner's decision: no space on C: or Google Drive; E: is backed up by the owner).
 2. **One clone with worktrees.** Clone `funnel-builder-2` once to `C:\dev\gr8\integration` (the integration copy, on `recovery/live-snapshot-20261031` or its successor; no session edits it directly). Then add one worktree per module, each on its own branch:
    - `git worktree add C:\dev\gr8\takeoff feature/ai-takeoff-v1`
    - `git worktree add C:\dev\gr8\selections feature/client-selections-v1`
@@ -210,7 +214,6 @@ Today Take-off, Client Selections and Quotation sessions all edit one checkout o
 
 ## Open questions
 
-1. Sign off, or change, the role mapping above (especially **builder**: Admin or Estimator).
-2. Approve removing the Jesmond crops from the branch history (A0), which needs a force-push of `feature/ai-takeoff-v1`.
-3. Approve the worktree arrangement and the new folder location, and say who moves the Selections and Quotation work off E:.
-4. The WORKFLOW calls the company `company_id`; the platform's tables use `workspace_id` for the same thing. Keep `workspace_id` (no rename), or rename?
+All four earlier questions are answered (roles approved with builder = Admin; images removed; worktrees on E:; keep `workspace_id`).
+
+1. Approve the plan for splitting the six non-take-off commits into their own pull requests, and the take-off branch being rebuilt on `main` with only take-off commits.
