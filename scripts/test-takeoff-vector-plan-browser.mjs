@@ -12,6 +12,9 @@ import dotenv from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
 import { compareOpenings, compareRooms, compareWalls } from '../components/construction-estimation/ai-plan-takeoff/geometry/planAccuracy.js';
 import { createTakeoffAnalysisHandler } from '../lib/construction-estimation/aiTakeoffAnalysis.js';
+import { privateTestData, PRIVATE_TEST_DATA } from './lib/privateTestData.mjs';
+// Private reference data (never in the repo): see scripts/lib/privateTestData.mjs.
+const JESMOND_REFERENCE = '.claude/worktrees/ai-takeoff-geometry/recovery/plan-references/jesmond-road/reference.json';
 // Vector-plan browser acceptance WITHOUT a paid provider: the original Liberty Terrace and Jesmond Road
 // PDFs are uploaded through the AI Takeoff screen's own file input, a floor-plan sheet is selected and
 // calibrated with the Calibrate tool, and RUN AI TAKEOFF is clicked. The provider endpoint is stubbed
@@ -217,9 +220,9 @@ if (process.env.GR8_BUNDLE_ONLY === '1') { console.log('Bundle built; stopping (
 // ---- Plans under test: the original vector PDFs, scored against independent hand references ----
 const planSets = [
   { name: 'Liberty Terrace', pdf: process.env.GR8_LIBERTY_PDF || 'C:/Users/grant/gr8-e-drive-priority-backup-20261031/08-DOWNLOADS-GR8-RESULT-FILES/25 LIBERTY TERRACE MOOLOOLABA.pdf',
-    reference: path.join(root, 'artifacts/test-results/vector-regression-2026-10-18/frozen/reference.json'), sheets: [{ page: 1, level: 'Ground Floor' }] },
+    reference: privateTestData('vector-regression-2026-10-18', 'frozen', 'reference.json'), sheets: [{ page: 1, level: 'Ground Floor' }] },
   { name: 'Jesmond Road', pdf: process.env.GR8_JESMOND_PDF || 'E:/dev/JESMOND ROAD INDOOROOPILLY CONTRUCTION ISSUE 10 01-07-2025.pdf',
-    reference: path.join(root, '.claude/worktrees/ai-takeoff-geometry/recovery/plan-references/jesmond-road/reference.json'), sheets: [{ page: 5, level: 'Lower Floor' }, { page: 4, level: 'Upper Floor' }] },
+    reference: [process.env.GR8_JESMOND_REFERENCE, path.join(root, JESMOND_REFERENCE), path.join(PRIVATE_TEST_DATA, '..', '..', JESMOND_REFERENCE)].find((candidate) => candidate && fs.existsSync(candidate)) || path.join(root, JESMOND_REFERENCE), sheets: [{ page: 5, level: 'Lower Floor' }, { page: 4, level: 'Upper Floor' }] },
 ].filter((set) => fs.existsSync(set.pdf) && fs.existsSync(set.reference));
 if (!planSets.length) { console.log('SKIPPED vector plan browser acceptance: no plan PDF/reference available.'); process.exit(0); }
 const only = process.env.GR8_VECTOR_PLAN ? planSets.filter((set) => set.name.toLowerCase().startsWith(process.env.GR8_VECTOR_PLAN.toLowerCase())) : planSets;

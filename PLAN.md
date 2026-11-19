@@ -61,13 +61,13 @@ Today the code barely tells these roles apart. They are all in one list of roles
   *Done when:* each module has a working copy on a healthy drive, `git fsck` is clean, and uncommitted work from E: is either committed or backed up and verified.
 - [x] **A2. Production build of the branch.** *Done 20 November 2026:* `npm run build` passes (246 pages). The build had been failing since `c21178c` (12 November) because `builderMirrorRate` was imported but never committed; it is now on this branch, identical to the Selections branch's copy. Take-off suite 105/105; accuracy unchanged (Liberty 98.7/98.6/99.8, 32/33, 15/15; Jesmond lower 82.0/97.2/99.9, 19/21, 12/12; upper 93.8/91.7/94.8, 18/23, 8/9). Tests now read private reference data through `GR8_PRIVATE_TEST_DATA` (`scripts/lib/privateTestData.mjs`), so a worktree without `artifacts/` can run them.
   *Done when:* `npm run build` passes on `feature/ai-takeoff-v1`, with lint and types, off port 3000.
-- [ ] **A3. Browser acceptance on the branch:**
-  - Sunshine Cove fresh job;
-  - Sunshine Cove job copy;
-  - Liberty;
-  - Jesmond.
+- [x] **A3. Browser acceptance on the branch.** *Done 20 November 2026,* from `E:\dev\gr8	akeoff` on the A2 build, with zero paid requests in every run:
+  - Sunshine Cove fresh job: 103 walls, 31 openings, 3 floor areas, 20 rooms; identical after save and reopen; the quotation stays gated.
+  - Sunshine Cove copy of the owner's saved job: re-measured (76 unapproved items replaced), Bedroom 4 picked from the list and approved, identical after save and reopen.
+  - Liberty and Jesmond: full acceptance passed.
 
-  *Done when:* all four pass with zero paid requests. Liberty and Jesmond passed on 19 November on the latest build; the Sunshine Cove runs passed on 18 November.
+  Reports are kept outside the repo. The vector harness now reads its references through `GR8_PRIVATE_TEST_DATA`.
+
 - [x] **A4. Separate working copies per module (git worktrees).** *Done 19 November 2026:* `E:\dev\gr8\integration` (`integration/v1`, from `main`), `E:\dev\gr8\takeoff`, `E:\dev\gr8\selections` and `E:\dev\gr8\quotation`, each with its own `.env` copies and its own `npm ci`.
   *Done when:* Take-off, Selections and Quotation sessions each work in their own folder on their own branch, and no two sessions share a checkout.
 
