@@ -5,7 +5,8 @@ import {detectVectorWalls} from '../components/construction-estimation/ai-plan-t
 import {buildLocalVectorAnalysis} from '../components/construction-estimation/ai-plan-takeoff/ai-integration/localVectorAnalysis.js';
 import {convertAiTakeoffDetections} from '../components/construction-estimation/ai-plan-takeoff/ai-integration/adapter.js';
 import {canonicalPlanReading,compareWalls,compareOpenings,compareRooms} from '../components/construction-estimation/ai-plan-takeoff/geometry/planAccuracy.js';
-const fixture=new URL('../artifacts/test-results/vector-regression-2026-10-18/frozen/',import.meta.url);
+import { privateTestDataUrl } from './lib/privateTestData.mjs';
+const fixture=new URL(privateTestDataUrl('vector-regression-2026-10-18','frozen'));
 const input=JSON.parse(fs.readFileSync(new URL('application-input.json',fixture)));
 const image=await loadImage(fs.readFileSync(new URL('application-raster.png',fixture)));
 const canvas=createCanvas(image.width,image.height);canvas.getContext('2d').drawImage(image,0,0);

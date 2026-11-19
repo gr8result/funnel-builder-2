@@ -59,7 +59,7 @@ Today the code barely tells these roles apart. They are all in one list of roles
 - [ ] **A0b. Drive E: dropped out on 19 November.** The owner reconnected it, is checking its health and has copied the project folder; work stays on E:. Uncommitted Selections and Quotation work was pushed to `feature/client-selections-v1` and `feature/quotation-v1` (and three Standard Inclusions files to `wip/standard-inclusions-20261119`) so there is an off-drive copy.
   Original note: Disk errors were logged at 06:37 on 19 November, and files under `supabase/migrations` cannot be read ("the device is not ready"). Move work off E: (see the worktree proposal) and verify the repository against GitHub before any more work there.
   *Done when:* each module has a working copy on a healthy drive, `git fsck` is clean, and uncommitted work from E: is either committed or backed up and verified.
-- [ ] **A2. Production build of the branch.**
+- [x] **A2. Production build of the branch.** *Done 20 November 2026:* `npm run build` passes (246 pages). The build had been failing since `c21178c` (12 November) because `builderMirrorRate` was imported but never committed; it is now on this branch, identical to the Selections branch's copy. Take-off suite 105/105; accuracy unchanged (Liberty 98.7/98.6/99.8, 32/33, 15/15; Jesmond lower 82.0/97.2/99.9, 19/21, 12/12; upper 93.8/91.7/94.8, 18/23, 8/9). Tests now read private reference data through `GR8_PRIVATE_TEST_DATA` (`scripts/lib/privateTestData.mjs`), so a worktree without `artifacts/` can run them.
   *Done when:* `npm run build` passes on `feature/ai-takeoff-v1`, with lint and types, off port 3000.
 - [ ] **A3. Browser acceptance on the branch:**
   - Sunshine Cove fresh job;

@@ -25,6 +25,7 @@ import { convertAiTakeoffDetections } from '../components/construction-estimatio
 import { readPdfAnalysisEvidence } from '../components/construction-estimation/ai-plan-takeoff/ai-integration/analysisPages.js';
 import { recogniseOpeningLabels, createTesseractLabelReader } from '../components/construction-estimation/ai-plan-takeoff/geometry/localLabelOcr.js';
 import { applyPrintedLabels } from '../components/construction-estimation/ai-plan-takeoff/geometry/openingLabels.js';
+import { privateTestData, PRIVATE_TEST_DATA } from './lib/privateTestData.mjs';
 
 const require = createRequire(import.meta.url);
 const { createCanvas, loadImage } = require('@napi-rs/canvas');
@@ -34,13 +35,17 @@ const overrides = args.overrides ? JSON.parse(args.overrides) : {};
 const labelReader = args.ocr && args.ocr !== true
   ? await createTesseractLabelReader({ createWorker: require('tesseract.js').createWorker, langPath: args.ocr, cachePath: args['ocr-cache'] && args['ocr-cache'] !== true ? path.resolve(args['ocr-cache']) : path.join(root, 'artifacts/test-results/takeoff-ocr-cache'), toImage: (crop) => Buffer.from(crop.bytes) })
   : null;
-const cacheDir = args.cache || path.join(root, 'artifacts/test-results/takeoff-quick-accuracy-cache');
+const cacheDir = args.cache || privateTestData('takeoff-quick-accuracy-cache');
 const ENGINE_DPI = 228.6;
 const plans = [];
 const jesmondPdf = args['jesmond-pdf'] || 'E:/dev/JESMOND ROAD INDOOROOPILLY CONTRUCTION ISSUE 10 01-07-2025.pdf';
-const jesmondReference = args['jesmond-reference'] || path.join(root, '.claude/worktrees/ai-takeoff-geometry/recovery/plan-references/jesmond-road/reference.json');
+// The Jesmond reference is private data too: given explicitly, or in this checkout, or beside the private test
+// data's own checkout (GR8_PRIVATE_TEST_DATA points into it from a worktree).
+const jesmondReferenceRelative = '.claude/worktrees/ai-takeoff-geometry/recovery/plan-references/jesmond-road/reference.json';
+const jesmondReference = [args['jesmond-reference'], process.env.GR8_JESMOND_REFERENCE, path.join(root, jesmondReferenceRelative), path.join(PRIVATE_TEST_DATA, '..', '..', jesmondReferenceRelative)]
+  .find((candidate) => candidate && fs.existsSync(candidate)) || path.join(root, jesmondReferenceRelative);
 if (fs.existsSync(jesmondPdf) && fs.existsSync(jesmondReference)) plans.push({ name: 'Jesmond', pdf: jesmondPdf, reference: JSON.parse(fs.readFileSync(jesmondReference, 'utf8')) });
-const liberty = args.liberty || path.join(root, 'artifacts/test-results/vector-regression-2026-10-18/frozen');
+const liberty = args.liberty || privateTestData('vector-regression-2026-10-18', 'frozen');
 if (fs.existsSync(path.join(liberty, 'application-input.json'))) plans.push({ name: 'Liberty', frozen: liberty });
 if (!plans.length) throw new Error('No reference plan available.');
 

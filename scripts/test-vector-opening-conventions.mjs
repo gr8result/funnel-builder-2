@@ -11,8 +11,9 @@ import fs from 'node:fs';
 import { createCanvas, loadImage } from '@napi-rs/canvas';
 import { detectVectorWalls } from '../components/construction-estimation/ai-plan-takeoff/geometry/vectorWalls.js';
 import { parseOpeningLabel, applyOpeningLabels } from '../components/construction-estimation/ai-plan-takeoff/geometry/openingLabels.js';
+import { privateTestDataUrl } from './lib/privateTestData.mjs';
 
-const fixture = new URL('../artifacts/test-results/vector-regression-2026-10-18/frozen/', import.meta.url);
+const fixture = new URL(privateTestDataUrl('vector-regression-2026-10-18', 'frozen'));
 const input = JSON.parse(fs.readFileSync(new URL('application-input.json', fixture)));
 const image = await loadImage(fs.readFileSync(new URL('application-raster.png', fixture)));
 const canvas = createCanvas(image.width, image.height); canvas.getContext('2d').drawImage(image, 0, 0);

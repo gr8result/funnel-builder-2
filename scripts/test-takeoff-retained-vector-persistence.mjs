@@ -5,8 +5,9 @@ import { createJobData, prepareAiPlanTakeoffJobForSave, verifyAiPlanTakeoffSaved
 import { buildLocalVectorAnalysis } from '../components/construction-estimation/ai-plan-takeoff/ai-integration/localVectorAnalysis.js';
 import { convertAiTakeoffDetections } from '../components/construction-estimation/ai-plan-takeoff/ai-integration/adapter.js';
 import { createTakeoffSchedule, createJobSetupPayload } from '../components/construction-estimation/ai-plan-takeoff/takeoffSchedule.js';
+import { privateTestData } from './lib/privateTestData.mjs';
 
-const trace = JSON.parse(fs.readFileSync(process.argv[2] || 'artifacts/test-results/falsewall-retained-Jesmond-5.json'));
+const trace = JSON.parse(fs.readFileSync(process.argv[2] || privateTestData('falsewall-retained-Jesmond-5.json')));
 const square = trace.canonical.placedOpenings.find(o => o.ai?.analysisEvidence?.evidence?.startsWith('Square-set'));
 assert.ok(square, 'real drawing produced the measured square-set assembly');
 assert.equal(square.widthMm, 897);

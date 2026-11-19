@@ -2,11 +2,12 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import ts from 'typescript';
+import { privateTestData } from './lib/privateTestData.mjs';
 
 // Run only actual startup statements before the manual capture handshake.
 // Files, HTTP, Chrome, Puppeteer, and authentication remain entirely stubbed.
 for (const [filename, handshake] of [['start-real-review-browser.mjs', 'authenticated'], ['capture-real-runtime.mjs', 'exported']]) {
-  const file = path.resolve('artifacts/test-results/takeoff-precommit-review', filename);
+  const file = privateTestData('takeoff-precommit-review', filename);
   const source = readFileSync(file, 'utf8');
   const ast = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
   const prefix = [];
